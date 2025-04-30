@@ -2124,13 +2124,6 @@ function add_url_to_history(url) {
     }
 }
 
-async function show_menu() {
-    sidebar.classList.add("shown");
-    sidebar_buttons.forEach((el)=>el.classList.add("rotated"))
-    await hide_settings();
-    add_url_to_history("#menu");
-}
-
 function open_settings() {
     if (settings.classList.contains("hidden")) {
         chat.classList.add("hidden");
