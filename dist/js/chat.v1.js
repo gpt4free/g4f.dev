@@ -2084,7 +2084,6 @@ sidebar_buttons.forEach((el)=>el.addEventListener("click", async () => {
         });
         sidebar_buttons.forEach((el)=>el.classList.add("rotated"));
         chat.classList.add("hidden");
-        add_url_to_history("#menu");
     } else {
         // On a PC, open the compact sidebar
         sidebar.classList.add("shown");
