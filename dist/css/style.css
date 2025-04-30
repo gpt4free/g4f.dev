@@ -204,6 +204,16 @@ body:not(.white) a:visited{
     margin-bottom: 10px;
 }
 
+.sidebar.compact .new_convo {
+    display: flex;
+    justify-content: center;
+    padding: 8px;
+}
+
+.sidebar.compact .new_convo span {
+    display: none !important;
+}
+
 .sidebar.compact .new_convo, 
 .sidebar.compact .bottom_buttons button {
     padding: 8px;
@@ -215,12 +225,12 @@ body:not(.white) a:visited{
 .sidebar.compact .bottom_buttons button i {
     margin: 0;
 }
+.top.compact-mode .convo {
+    display: none !important;
+}
 
 .sidebar.compact .top {
-    overflow-x: hidden;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    padding-bottom: 0;
 }
 
 .sidebar.compact .bottom_buttons {
@@ -1792,3 +1802,6 @@ form textarea {
     margin-left: 8px;
 }
 
+.sidebar, .sidebar-logo, .convo, .info, .new_convo span, .bottom_buttons button span, .info span {
+    transition: all 0.3s ease;
+}
