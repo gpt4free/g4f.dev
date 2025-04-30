@@ -2038,19 +2038,87 @@ async function hide_sidebar(remove_shown=false) {
     chat.classList.remove("hidden");
     log_storage.classList.add("hidden");
     await hide_settings();
-    if (window.location.pathname.endsWith("#settings")) {
+    if (window.location.hash.endsWith("#menu") || window.location.pathname.endsWith("#settings")) {
         history.back();
     }
 }
 
-async function hide_settings() {
-    settings.classList.add("hidden");
-    let provider_forms = document.querySelectorAll(".provider_forms from");
-    Array.from(provider_forms).forEach((form) => form.classList.add("hidden"));
+// Function to adapt the interface to the screen size
+function adaptInterfaceToScreenSize() {
+    const isMobile = window.matchMedia("(max-width: 40em)").matches;
+    const newConvoIcon = document.querySelector(".chat-top-panel .new_convo_icon");
+    
+    // Adaptation of the new_convo_icon button
+    if (newConvoIcon) {
+        if (!isMobile) {
+            newConvoIcon.removeAttribute("onclick");
+            newConvoIcon.style.display = "none";
+        } else {
+            // Restoring functionality for the mobile version
+            newConvoIcon.setAttribute("onclick", "new_conversation()");
+            newConvoIcon.style.display = "";
+        }
+    }
+    
+    // Adaptation of the sidebar if it is open
+    if (sidebar.classList.contains("shown")) {
+        if (isMobile) {
+            // Full sidebar on mobile devices
+            sidebar.classList.remove("compact");
+            document.querySelector(".sidebar-logo").textContent = "G4F Chat";
+            document.querySelectorAll(".new_convo span, .bottom_buttons button span, .info span").forEach(span => {
+                span.style.display = "";
+            });
+            document.querySelectorAll(".convo").forEach(convo => {
+                convo.style.display = "";
+            });
+            document.querySelectorAll(".info").forEach(info => {
+                info.style.display = "";
+            });
+            document.querySelector(".top").classList.remove("compact-mode");
+            chat.classList.add("hidden");
+        } else if (sidebar.classList.contains("compact")) {
+            // On a PC in compact mode
+            document.querySelector(".sidebar-logo").textContent = "G4F";
+            document.querySelectorAll(".new_convo span, .bottom_buttons button span, .info span").forEach(span => {
+                span.style.display = "none";
+            });
+            document.querySelectorAll(".convo").forEach(convo => {
+                convo.style.display = "none";
+            });
+            document.querySelectorAll(".info").forEach(info => {
+                info.style.display = "none";
+            });
+            document.querySelector(".top").classList.add("compact-mode");
+            chat.classList.remove("hidden");
+        } else {
+            // On a PC in full mode
+            document.querySelector(".sidebar-logo").textContent = "G4F Chat";
+            document.querySelectorAll(".new_convo span, .bottom_buttons button span, .info span").forEach(span => {
+                span.style.display = "";
+            });
+            document.querySelectorAll(".convo").forEach(convo => {
+                convo.style.display = "";
+            });
+            document.querySelectorAll(".info").forEach(info => {
+                info.style.display = "";
+            });
+            document.querySelector(".top").classList.remove("compact-mode");
+            chat.classList.add("hidden");
+        }
+    }
 }
 
+// Call the function when the page loads
+document.addEventListener("DOMContentLoaded", function() {
+    adaptInterfaceToScreenSize();
+    
+    // Add a resize event handler
+    window.addEventListener("resize", adaptInterfaceToScreenSize);
+});
+
+// Modify the click handler on sidebar_buttons
 sidebar_buttons.forEach((el)=>el.addEventListener("click", async () => {
-    // Check if it's a mobile device
     const isMobile = window.matchMedia("(max-width: 40em)").matches;
     
     if (sidebar.classList.contains("shown") || el.classList.contains("rotated")) {
@@ -2068,7 +2136,6 @@ sidebar_buttons.forEach((el)=>el.addEventListener("click", async () => {
         document.querySelectorAll(".info").forEach(info => {
             info.style.display = "";
         });
-        // Show all elements of the chat history
         document.querySelector(".top").classList.remove("compact-mode");
     } else if (isMobile) {
         // On mobile devices, open the regular sidebar
@@ -2084,10 +2151,10 @@ sidebar_buttons.forEach((el)=>el.addEventListener("click", async () => {
         document.querySelectorAll(".info").forEach(info => {
             info.style.display = "";
         });
+        document.querySelector(".top").classList.remove("compact-mode");
         sidebar_buttons.forEach((el)=>el.classList.add("rotated"));
         chat.classList.add("hidden");
-        // Show all elements of the chat history
-        document.querySelector(".top").classList.remove("compact-mode");
+        add_url_to_history("#menu");
     } else {
         // On a PC, open the compact sidebar
         sidebar.classList.add("shown");
@@ -2096,28 +2163,38 @@ sidebar_buttons.forEach((el)=>el.addEventListener("click", async () => {
         document.querySelectorAll(".new_convo span, .bottom_buttons button span, .info span").forEach(span => {
             span.style.display = "none";
         });
-        
-        // Fully hide all elements of the chat history
         document.querySelectorAll(".convo").forEach(convo => {
             convo.style.display = "none";
         });
-        
-        // Add a special class for the history container
-        document.querySelector(".top").classList.add("compact-mode");
-        
         document.querySelectorAll(".info").forEach(info => {
             info.style.display = "none";
         });
+        document.querySelector(".top").classList.add("compact-mode");
         sidebar_buttons.forEach((el)=>el.classList.add("rotated"));
         chat.classList.remove("hidden");
+        add_url_to_history("#menu");
+
     }
     window.scrollTo(0, 0);
 }));
+
+async function hide_settings() {
+    settings.classList.add("hidden");
+    let provider_forms = document.querySelectorAll(".provider_forms from");
+    Array.from(provider_forms).forEach((form) => form.classList.add("hidden"));
+}
 
 function add_url_to_history(url) {
     if (!window?.pywebview) {
         history.pushState({}, null, url);
     }
+}
+
+async function show_menu() {
+    sidebar.classList.add("shown");
+    sidebar_buttons.forEach((el)=>el.classList.add("rotated"))
+    await hide_settings();
+    add_url_to_history("#menu");
 }
 
 function open_settings() {
@@ -3417,135 +3494,3 @@ document.getElementById("showLog").addEventListener("click", ()=> {
     settings.classList.add("hidden");
     log_storage.scrollTop = log_storage.scrollHeight;
 });
-
-// Функція для адаптації інтерфейсу відповідно до розміру екрану
-function adaptInterfaceToScreenSize() {
-    const isMobile = window.matchMedia("(max-width: 40em)").matches;
-    const newConvoIcon = document.querySelector(".chat-top-panel .new_convo_icon");
-    
-    // Адаптація кнопки new_convo_icon
-    if (newConvoIcon) {
-        if (!isMobile) {
-            newConvoIcon.removeAttribute("onclick");
-            newConvoIcon.style.display = "none";
-        } else {
-            // Відновлюємо функціональність для мобільної версії
-            newConvoIcon.setAttribute("onclick", "new_conversation()");
-            newConvoIcon.style.display = "";
-        }
-    }
-    
-    // Адаптація sidebar, якщо він відкритий
-    if (sidebar.classList.contains("shown")) {
-        if (isMobile) {
-            // На мобільних пристроях - повний sidebar
-            sidebar.classList.remove("compact");
-            document.querySelector(".sidebar-logo").textContent = "G4F Chat";
-            document.querySelectorAll(".new_convo span, .bottom_buttons button span, .info span").forEach(span => {
-                span.style.display = "";
-            });
-            document.querySelectorAll(".convo").forEach(convo => {
-                convo.style.display = "";
-            });
-            document.querySelectorAll(".info").forEach(info => {
-                info.style.display = "";
-            });
-            document.querySelector(".top").classList.remove("compact-mode");
-            chat.classList.add("hidden");
-        } else if (sidebar.classList.contains("compact")) {
-            // На ПК в компактному режимі
-            document.querySelector(".sidebar-logo").textContent = "G4F";
-            document.querySelectorAll(".new_convo span, .bottom_buttons button span, .info span").forEach(span => {
-                span.style.display = "none";
-            });
-            document.querySelectorAll(".convo").forEach(convo => {
-                convo.style.display = "none";
-            });
-            document.querySelectorAll(".info").forEach(info => {
-                info.style.display = "none";
-            });
-            document.querySelector(".top").classList.add("compact-mode");
-            chat.classList.remove("hidden");
-        } else {
-            // На ПК в повному режимі
-            document.querySelector(".sidebar-logo").textContent = "G4F Chat";
-            document.querySelectorAll(".new_convo span, .bottom_buttons button span, .info span").forEach(span => {
-                span.style.display = "";
-            });
-            document.querySelectorAll(".convo").forEach(convo => {
-                convo.style.display = "";
-            });
-            document.querySelectorAll(".info").forEach(info => {
-                info.style.display = "";
-            });
-            document.querySelector(".top").classList.remove("compact-mode");
-            chat.classList.add("hidden");
-        }
-    }
-}
-
-// Call the function when the page loads
-document.addEventListener("DOMContentLoaded", function() {
-    adaptInterfaceToScreenSize();
-    
-    // Add a resize event handler
-    window.addEventListener("resize", adaptInterfaceToScreenSize);
-});
-
-// Modify the click handler on sidebar_buttons
-sidebar_buttons.forEach((el)=>el.addEventListener("click", async () => {
-    const isMobile = window.matchMedia("(max-width: 40em)").matches;
-    
-    if (sidebar.classList.contains("shown") || el.classList.contains("rotated")) {
-        // Completely minimize the sidebar
-        await hide_sidebar(true);
-        chat.classList.remove("hidden");
-        sidebar.classList.remove("compact");
-        document.querySelector(".sidebar-logo").textContent = "G4F Chat";
-        document.querySelectorAll(".new_convo span, .bottom_buttons button span, .info span").forEach(span => {
-            span.style.display = "";
-        });
-        document.querySelectorAll(".convo").forEach(convo => {
-            convo.style.display = "";
-        });
-        document.querySelectorAll(".info").forEach(info => {
-            info.style.display = "";
-        });
-        document.querySelector(".top").classList.remove("compact-mode");
-    } else if (isMobile) {
-        // On mobile devices, open the regular sidebar
-        sidebar.classList.add("shown");
-        sidebar.classList.remove("compact");
-        document.querySelector(".sidebar-logo").textContent = "G4F Chat";
-        document.querySelectorAll(".new_convo span, .bottom_buttons button span, .info span").forEach(span => {
-            span.style.display = "";
-        });
-        document.querySelectorAll(".convo").forEach(convo => {
-            convo.style.display = "";
-        });
-        document.querySelectorAll(".info").forEach(info => {
-            info.style.display = "";
-        });
-        document.querySelector(".top").classList.remove("compact-mode");
-        sidebar_buttons.forEach((el)=>el.classList.add("rotated"));
-        chat.classList.add("hidden");
-    } else {
-        // On a PC, open the compact sidebar
-        sidebar.classList.add("shown");
-        sidebar.classList.add("compact");
-        document.querySelector(".sidebar-logo").textContent = "G4F";
-        document.querySelectorAll(".new_convo span, .bottom_buttons button span, .info span").forEach(span => {
-            span.style.display = "none";
-        });
-        document.querySelectorAll(".convo").forEach(convo => {
-            convo.style.display = "none";
-        });
-        document.querySelectorAll(".info").forEach(info => {
-            info.style.display = "none";
-        });
-        document.querySelector(".top").classList.add("compact-mode");
-        sidebar_buttons.forEach((el)=>el.classList.add("rotated"));
-        chat.classList.remove("hidden");
-    }
-    window.scrollTo(0, 0);
-}));
