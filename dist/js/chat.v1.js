@@ -2049,17 +2049,56 @@ async function hide_settings() {
     Array.from(provider_forms).forEach((form) => form.classList.add("hidden"));
 }
 
-
 sidebar_buttons.forEach((el)=>el.addEventListener("click", async () => {
     if (sidebar.classList.contains("shown") || el.classList.contains("rotated")) {
+        // Completely minimize the sidebar
         await hide_sidebar(true);
         chat.classList.remove("hidden");
+        sidebar.classList.remove("compact");
+        document.querySelector(".sidebar-logo").textContent = "G4F Chat";
+        document.querySelectorAll(".new_convo span, .bottom_buttons button span, .info span").forEach(span => {
+            span.style.display = "";
+        });
+        document.querySelectorAll(".convo").forEach(convo => {
+            convo.style.display = "";
+        });
+        document.querySelectorAll(".info").forEach(info => {
+            info.style.display = "";
+        });
     } else {
-        await show_menu();
+        // Open the regular sidebar (not the compact one)
+        sidebar.classList.add("shown");
+        sidebar.classList.remove("compact");
+        document.querySelector(".sidebar-logo").textContent = "G4F Chat";
+        document.querySelectorAll(".new_convo span, .bottom_buttons button span, .info span").forEach(span => {
+            span.style.display = "";
+        });
+        document.querySelectorAll(".convo").forEach(convo => {
+            convo.style.display = "";
+        });
+        document.querySelectorAll(".info").forEach(info => {
+            info.style.display = "";
+        });
+        sidebar_buttons.forEach((el)=>el.classList.add("rotated"));
         chat.classList.add("hidden");
+        add_url_to_history("#menu");
     }
     window.scrollTo(0, 0);
 }));
+
+document.addEventListener("DOMContentLoaded", function() {
+    // Check if it's a mobile device
+    const isMobile = window.matchMedia("(max-width: 40em)").matches;
+    
+    // Find the new_convo_icon button in the chat-top-panel
+    const newConvoIcon = document.querySelector(".chat-top-panel .new_convo_icon");
+    
+    // If this is the PC version, remove the onclick event handler
+    if (!isMobile && newConvoIcon) {
+        newConvoIcon.removeAttribute("onclick");
+        newConvoIcon.style.display = "none"; // You can also hide the button
+    }
+});
 
 function add_url_to_history(url) {
     if (!window?.pywebview) {

@@ -183,6 +183,70 @@ body:not(.white) a:visited{
     cursor: pointer;
 }
 
+.sidebar.compact {
+    width: 60px !important;
+    min-width: 60px;
+}
+
+.sidebar.compact .sidebar-header {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 15px;
+}
+
+.sidebar.compact .sidebar-logo {
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+.sidebar.compact .mobile-sidebar-toggle {
+    margin-bottom: 10px;
+}
+
+.sidebar.compact .new_convo, 
+.sidebar.compact .bottom_buttons button {
+    padding: 8px;
+    justify-content: center;
+    margin-bottom: 5px;
+}
+
+.sidebar.compact .new_convo i, 
+.sidebar.compact .bottom_buttons button i {
+    margin: 0;
+}
+
+.sidebar.compact .top {
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sidebar.compact .bottom_buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.sidebar.compact .bottom_buttons button {
+    width: 40px;
+    height: 40px;
+}
+
+@media only screen and (min-width: 40em) {
+    .sidebar.shown:not(.compact) {
+        width: 300px;
+    }
+    
+    .sidebar.compact + .chat-container {
+        margin-left: 60px;
+    }
+    .chat-top-panel .new_convo_icon {
+        display: none;
+    }
+}
+
 .bottom_buttons i, .mem0 button i {
     width: 14px;
 }
@@ -1706,3 +1770,4 @@ form textarea {
     font-size: 18px;
     margin-left: 8px;
 }
+
