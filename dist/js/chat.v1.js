@@ -2038,7 +2038,7 @@ async function hide_sidebar(remove_shown=false) {
     chat.classList.remove("hidden");
     log_storage.classList.add("hidden");
     await hide_settings();
-    if (window.location.hash.endsWith("#menu") || window.location.pathname.endsWith("#settings")) {
+    if (window.location.pathname.endsWith("#settings")) {
         history.back();
     }
 }
@@ -2050,6 +2050,9 @@ async function hide_settings() {
 }
 
 sidebar_buttons.forEach((el)=>el.addEventListener("click", async () => {
+    // Check if it's a mobile device
+    const isMobile = window.matchMedia("(max-width: 40em)").matches;
+    
     if (sidebar.classList.contains("shown") || el.classList.contains("rotated")) {
         // Completely minimize the sidebar
         await hide_sidebar(true);
@@ -2065,8 +2068,8 @@ sidebar_buttons.forEach((el)=>el.addEventListener("click", async () => {
         document.querySelectorAll(".info").forEach(info => {
             info.style.display = "";
         });
-    } else {
-        // Open the regular sidebar (not the compact one)
+    } else if (isMobile) {
+        // On mobile devices, open the regular sidebar
         sidebar.classList.add("shown");
         sidebar.classList.remove("compact");
         document.querySelector(".sidebar-logo").textContent = "G4F Chat";
@@ -2082,6 +2085,22 @@ sidebar_buttons.forEach((el)=>el.addEventListener("click", async () => {
         sidebar_buttons.forEach((el)=>el.classList.add("rotated"));
         chat.classList.add("hidden");
         add_url_to_history("#menu");
+    } else {
+        // On a PC, open the compact sidebar
+        sidebar.classList.add("shown");
+        sidebar.classList.add("compact");
+        document.querySelector(".sidebar-logo").textContent = "G4F";
+        document.querySelectorAll(".new_convo span, .bottom_buttons button span, .info span").forEach(span => {
+            span.style.display = "none";
+        });
+        document.querySelectorAll(".convo").forEach(convo => {
+            convo.style.display = "none";
+        });
+        document.querySelectorAll(".info").forEach(info => {
+            info.style.display = "none";
+        });
+        sidebar_buttons.forEach((el)=>el.classList.add("rotated"));
+        chat.classList.remove("hidden");
     }
     window.scrollTo(0, 0);
 }));
@@ -2096,7 +2115,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // If this is the PC version, remove the onclick event handler
     if (!isMobile && newConvoIcon) {
         newConvoIcon.removeAttribute("onclick");
-        newConvoIcon.style.display = "none"; // You can also hide the button
+        newConvoIcon.style.display = "none"; // Hide the button
     }
 });
 

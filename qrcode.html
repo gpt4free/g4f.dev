@@ -7,31 +7,145 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
     <script src="dist/js/framework.js" async></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
-        video { width: 400px; height: 400px; border: 1px solid black; display: block; margin: auto; object-fit: cover; max-width: 100%;}
-        #qrcode { margin-top: 20px; }
-        #qrcode img, #qrcode canvas { margin: 0 auto; width: 400px; height: 400px; max-width: 100%;}
-        button { margin: 5px; padding: 10px; }
+        :root {
+            --colour-1: #000000;
+            --colour-2: #ccc;
+            --colour-3: #e4d4ff;
+            --colour-4: #f0f0f0;
+            --colour-5: #181818;
+            --colour-6: #242424;
+            --accent: #8b3dff;
+            --blur-bg: #16101b66;
+            --blur-border: #84719040;
+            --background: #16101b;
+            --font-1: "Inter", sans-serif;
+            --border-radius-1: 8px;
+        }
+
+        body {
+            font-family: var(--font-1);
+            text-align: center;
+            margin: 20px;
+            background-color: var(--background);
+            color: var(--colour-3);
+        }
+
+        h1, h2 {
+            color: var(--colour-3);
+        }
+
+        video {
+            width: 400px;
+            height: 400px;
+            border: 1px solid var(--blur-border);
+            border-radius: var(--border-radius-1);
+            display: block;
+            margin: auto;
+            object-fit: cover;
+            max-width: 100%;
+            background-color: var(--blur-bg);
+        }
+
+        #qrcode {
+            margin-top: 20px;
+            background-color: white;
+            padding: 10px;
+            display: inline-block;
+            border-radius: var(--border-radius-1);
+        }
+
+        #qrcode img, #qrcode canvas {
+            margin: 0 auto;
+            width: 400px;
+            height: 400px;
+            max-width: 100%;
+        }
+
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            background-color: var(--blur-bg);
+            color: var(--colour-3);
+            border: 1px solid var(--blur-border);
+            border-radius: var(--border-radius-1);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background-color: var(--colour-5);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #cam-status, #qrcode-status {
+            color: var(--colour-3);
+            margin: 10px 0;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            background-color: var(--blur-bg);
+            border-radius: var(--border-radius-1);
+            border: 1px solid var(--blur-border);
+        }
+
+        .scan-region-highlight {
+            border: 2px solid var(--accent) !important;
+        }
+
+        /* Додаємо стиль для світлої теми */
+        body.white {
+            --blur-bg: transparent;
+            --accent: #007bff;
+            --colour-3: #212529;
+            --background: #ffffff;
+            --blur-border: #00000040;
+        }
     </style>
 </head>
 <body>
+    <div class="container">
+        <h1>QR Scanner & QR Code</h1>
+        
+        <h2>QR Code Scanner</h2>
+        <video id="video"></video>
+        <div>
+            <button id="startCamera">Start Camera</button>
+            <button id="stopCamera">Stop Camera</button>
+            <button id="switchCamera">Switch Camera</button>
+            <button id="toggleFlash">Toggle Flash</button>
+        </div>
+        <p id="cam-status"></p>
 
-    <h1>QR Scanner & QR Code</h1>
-    
-    <h2>QR Code Scanner</h2>
-    <video id="video"></video>
-    <button id="startCamera">Start Camera</button>
-    <button id="stopCamera">Stop Camera</button>
-    <button id="switchCamera">Switch Camera</button>
-    <button id="toggleFlash">Toggle Flash</button>
-    <p id="cam-status"></p>
-
-    <h2>QR Code</h2>
-    <div id="qrcode"></div>
-    <p><a id="qrcode-status" target="_parent"></a></p>
-    <button id="generateQRCode">Generate QR Code</button>
+        <h2>QR Code</h2>
+        <div id="qrcode"></div>
+        <p><a id="qrcode-status" target="_parent"></a></p>
+        <button id="generateQRCode">Generate QR Code</button>
+    </div>
 
     <script type="module">
+        // Check if the light theme is enabled
+        if (localStorage.getItem("darkMode") == "false") {
+            document.body.classList.add("white");
+        }
+
         const conversation_id = window.location.hash.replace("#", "");
         if (!conversation_id) {
             document.getElementById('generateQRCode')
@@ -95,13 +209,16 @@
             qrcodeStatus.innerText = share;
             qrcodeStatus.href = share;
             document.getElementById("qrcode").innerHTML = '';
+            
+            // Використовуємо кольори з теми
+            const isDarkMode = !document.body.classList.contains('white');
             const qrcode = new QRCode(
                 document.getElementById("qrcode"),
                 share,
             {
                 width: 400,
                 height: 400,
-                colorDark: "#000000",
+                colorDark: isDarkMode ? "#e4d4ff" : "#000000", // Use text color for dark mode
                 colorLight: "#ffffff",
                 correctLevel: QRCode.CorrectLevel.H
             });

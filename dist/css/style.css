@@ -764,13 +764,34 @@ label[for="micro"] {
 }
 
 .code {
+    cursor: pointer;
+    position: absolute;
     top: 76px;
-    padding: 4px 0;
+    left: 8px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: monospace;
     font-weight: bold;
-    height: 20px;
+    font-size: 12px;
+    color: var(--colour-3);
+    background-color: var(--blur-bg);
+    border: 1px solid var(--blur-border);
+    border-radius: var(--border-radius-1);
+    transition: all 0.2s ease;
+    padding: 0;
+    overflow: hidden;
 }
+
 .code:hover {
-    border-color: var(--accent);
+    background-color: var(--accent);
+    color: white;
+}
+
+.code:active {
+    transform: scale(0.95);
 }
 
 @media (pointer:none), (pointer:coarse) {
