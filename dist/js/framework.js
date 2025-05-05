@@ -97,7 +97,8 @@ window.translateAll = async () =>{
             return;
         }
     }
-    const translations = await response.json();
+    const translations = await response.text();
+    translations = JSON.parse(translations.split('\n---\n')[0]);
     if (translations[navigator.language]) {
         translations = translations[navigator.language];
     }
