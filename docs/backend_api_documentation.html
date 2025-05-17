@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G4F - Backend API Documentation</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png">
+    <link rel="manifest" href="/dist/img/site.webmanifest">
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
+    <style>
+        :root {
+            --colour-1: #000000;
+            --colour-2: #ccc;
+            --colour-3: #e4d4ff;
+            --colour-4: #f0f0f0;
+            --colour-5: #181818;
+            --colour-6: #242424;
+            --accent: #8b3dff;
+            --gradient: #1a1a1a;
+            --background: #16101b;
+            --size: 70vw;
+            --top: 50%;
+            --blur: 40px;
+            --opacity: 0.6;
+        }
+
+        /* Body and text color */
+        body {
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .container-lg {
+            margin: 0 auto;
+            padding: 8px;
+        }
+
+        @media only screen and (min-width: 40em) {
+            .container-lg {
+                max-width: 84%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <article class="markdown-body entry-content container-lg" itemprop="text">
+        <div class="markdown-heading">
+            <h1 class="heading-element">G4F - Backend API Documentation</h1>
+            <a id="user-content-g4f-backend-api-documentation" class="anchor" aria-label="Permalink: G4F - Backend API Documentation" href="#g4f-backend-api-documentation">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+
+        <div class="markdown-heading">
+            <h2 class="heading-element">Table of Contents</h2>
+            <a id="user-content-table-of-contents" class="anchor" aria-label="Permalink: Table of Contents" href="#table-of-contents">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#api-endpoints">API Endpoints</a>
+                <ul>
+                    <li><a href="#models-and-providers">Models and Providers</a></li>
+                    <li><a href="#conversation-handling">Conversation Handling</a></li>
+                    <li><a href="#file-management">File Management</a></li>
+                    <li><a href="#chat-sharing">Chat Sharing</a></li>
+                    <li><a href="#memory-management">Memory Management</a></li>
+                    <li><a href="#media-handling">Media Handling</a></li>
+                </ul>
+            </li>
+            <li><a href="#usage-examples">Usage Examples</a></li>
+            <li><a href="#response-formats">Response Formats</a></li>
+            <li><a href="#notes">Notes</a></li>
+        </ul>
+
+        <div class="markdown-heading">
+            <h2 class="heading-element">Overview</h2>
+            <a id="user-content-overview" class="anchor" aria-label="Permalink: Overview" href="#overview">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <p>
+            The <code>backend_api.py</code> module in the GPT4Free project serves as the core backend API handler for the web interface. 
+            It provides endpoints for interacting with language models, managing files, handling conversations, and processing media.
+            This documentation covers the available endpoints, their functionality, and usage examples.
+        </p>
+
+        <div class="markdown-heading">
+            <h2 class="heading-element">API Endpoints</h2>
+            <a id="user-content-api-endpoints" class="anchor" aria-label="Permalink: API Endpoints" href="#api-endpoints">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+
+        <div class="markdown-heading">
+            <h3 class="heading-element">Models and Providers</h3>
+            <a id="user-content-models-and-providers" class="anchor" aria-label="Permalink: Models and Providers" href="#models-and-providers">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Get Available Models</h4>
+            <a id="user-content-get-available-models" class="anchor" aria-label="Permalink: Get Available Models" href="#get-available-models">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>GET /backend-api/v2/models</pre>
+        </div>
+        <p>Returns a list of all available models with their capabilities (image, vision, audio, video) and compatible providers.</p>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Get Provider-Specific Models</h4>
+            <a id="user-content-get-provider-specific-models" class="anchor" aria-label="Permalink: Get Provider-Specific Models" href="#get-provider-specific-models">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>GET /backend-api/v2/models/&lt;provider&gt;</pre>
+        </div>
+        <p>Returns models available for a specific provider.</p>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Get Available Providers</h4>
+            <a id="user-content-get-available-providers" class="anchor" aria-label="Permalink: Get Available Providers" href="#get-available-providers">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>GET /backend-api/v2/providers</pre>
+        </div>
+        <p>Returns a list of all available providers with their capabilities and authentication requirements.</p>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Get Version Information</h4>
+            <a id="user-content-get-version-information" class="anchor" aria-label="Permalink: Get Version Information" href="#get-version-information">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>GET /backend-api/v2/version</pre>
+        </div>
+        <p>Returns current and latest version information.</p>
+
+        <div class="markdown-heading">
+            <h3 class="heading-element">Conversation Handling</h3>
+            <a id="user-content-conversation-handling" class="anchor" aria-label="Permalink: Conversation Handling" href="#conversation-handling">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Create Conversation</h4>
+            <a id="user-content-create-conversation" class="anchor" aria-label="Permalink: Create Conversation" href="#create-conversation">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>POST /backend-api/v2/conversation</pre>
+        </div>
+        <p>Handles conversation requests and streams responses. Supports text, images, and other media.</p>
+        <p><strong>Request Body:</strong></p>
+        <div class="highlight highlight-source-json">
+            <pre>{
+    "model": "gpt-3.5-turbo",
+    "provider": "OpenAI",
+    "messages": [
+        {"role": "user", "content": "Hello, how are you?"}
+    ],
+    "download_media": true
+}</pre>
+        </div>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Quick Create</h4>
+            <a id="user-content-quick-create" class="anchor" aria-label="Permalink: Quick Create" href="#quick-create">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>GET /backend-api/v2/create</pre>
+        </div>
+        <p>Creates a simple conversation with optional web search integration.</p>
+        <p><strong>Query Parameters:</strong></p>
+        <ul>
+            <li><code>model</code>: Model to use</li>
+            <li><code>prompt</code>: User prompt</li>
+            <li><code>provider</code>: Provider to use</li>
+            <li><code>web_search</code>: Enable web search (true/false or search query)</li>
+            <li><code>filter_markdown</code>: Filter markdown in response</li>
+        </ul>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Log Usage</h4>
+            <a id="user-content-log-usage" class="anchor" aria-label="Permalink: Log Usage" href="#log-usage">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>POST /backend-api/v2/usage</pre>
+        </div>
+        <p>Logs usage data for analytics.</p>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Log Events</h4>
+            <a id="user-content-log-events" class="anchor" aria-label="Permalink: Log Events" href="#log-events">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>POST /backend-api/v2/log</pre>
+        </div>
+        <p>Logs client-side events.</p>
+
+        <div class="markdown-heading">
+            <h3 class="heading-element">File Management</h3>
+            <a id="user-content-file-management" class="anchor" aria-label="Permalink: File Management" href="#file-management">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Manage File Buckets</h4>
+            <a id="user-content-manage-file-buckets" class="anchor" aria-label="Permalink: Manage File Buckets" href="#manage-file-buckets">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>GET/DELETE /backend-api/v2/files/&lt;bucket_id&gt;</pre>
+        </div>
+        <p>Retrieves or deletes file buckets.</p>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Upload Files</h4>
+            <a id="user-content-upload-files" class="anchor" aria-label="Permalink: Upload Files" href="#upload-files">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>POST /backend-api/v2/files/&lt;bucket_id&gt;</pre>
+        </div>
+        <p>Uploads files to a bucket. Supports various file types including documents and media.</p>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Get Media Files</h4>
+            <a id="user-content-get-media-files" class="anchor" aria-label="Permalink: Get Media Files" href="#get-media-files">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>GET /files/&lt;bucket_id&gt;/media/&lt;filename&gt;</pre>
+        </div>
+        <p>Retrieves media files from a bucket.</p>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Search Media</h4>
+            <a id="user-content-search-media" class="anchor" aria-label="Permalink: Search Media" href="#search-media">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>GET /search/&lt;search&gt;</pre>
+        </div>
+        <p>Searches for media files based on search terms.</p>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Upload Cookies</h4>
+            <a id="user-content-upload-cookies" class="anchor" aria-label="Permalink: Upload Cookies" href="#upload-cookies">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>POST /backend-api/v2/upload_cookies</pre>
+        </div>
+        <p>Uploads cookie files for authentication with providers.</p>
+
+        <div class="markdown-heading">
+            <h3 class="heading-element">Chat Sharing</h3>
+            <a id="user-content-chat-sharing" class="anchor" aria-label="Permalink: Chat Sharing" href="#chat-sharing">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Get Shared Chat</h4>
+            <a id="user-content-get-shared-chat" class="anchor" aria-label="Permalink: Get Shared Chat" href="#get-shared-chat">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>GET /backend-api/v2/chat/&lt;share_id&gt;</pre>
+        </div>
+        <p>Retrieves a shared chat by ID.</p>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Save/Update Shared Chat</h4>
+            <a id="user-content-save-update-shared-chat" class="anchor" aria-label="Permalink: Save/Update Shared Chat" href="#save-update-shared-chat">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>POST /backend-api/v2/chat/&lt;share_id&gt;</pre>
+        </div>
+        <p>Uploads or updates a shared chat.</p>
+
+        <div class="markdown-heading">
+            <h3 class="heading-element">Memory Management</h3>
+            <a id="user-content-memory-management" class="anchor" aria-label="Permalink: Memory Management" href="#memory-management">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Add Memory Items</h4>
+            <a id="user-content-add-memory-items" class="anchor" aria-label="Permalink: Add Memory Items" href="#add-memory-items">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>POST /backend-api/v2/memory/&lt;user_id&gt;</pre>
+        </div>
+        <p>Adds memory items for a user.</p>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Get Memory Items</h4>
+            <a id="user-content-get-memory-items" class="anchor" aria-label="Permalink: Get Memory Items" href="#get-memory-items">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>GET /backend-api/v2/memory/&lt;user_id&gt;</pre>
+        </div>
+        <p>Retrieves memory items for a user with optional search and filtering.</p>
+
+        <div class="markdown-heading">
+            <h3 class="heading-element">Media Handling</h3>
+            <a id="user-content-media-handling" class="anchor" aria-label="Permalink: Media Handling" href="#media-handling">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Serve Images</h4>
+            <a id="user-content-serve-images" class="anchor" aria-label="Permalink: Serve Images" href="#serve-images">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>GET /images/&lt;path:name&gt;
+GET /media/&lt;path:name&gt;</pre>
+        </div>
+        <p>Serves image and media files.</p>
+
+        <div class="markdown-heading">
+            <h4 class="heading-element">Audio Synthesis</h4>
+            <a id="user-content-audio-synthesis" class="anchor" aria-label="Permalink: Audio Synthesis" href="#audio-synthesis">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-shell">
+            <pre>GET /backend-api/v2/synthesize/&lt;provider&gt;</pre>
+        </div>
+        <p>Handles audio synthesis requests for text-to-speech functionality.</p>
+
+        <div class="markdown-heading">
+            <h2 class="heading-element">Usage Examples</h2>
+            <a id="user-content-usage-examples" class="anchor" aria-label="Permalink: Usage Examples" href="#usage-examples">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+
+        <div class="markdown-heading">
+            <h3 class="heading-element">Basic Conversation</h3>
+            <a id="user-content-basic-conversation" class="anchor" aria-label="Permalink: Basic Conversation" href="#basic-conversation">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-javascript">
+            <pre>// Example using fetch API
+fetch('/backend-api/v2/conversation', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    model: 'gpt-3.5-turbo',
+    provider: 'OpenAI',
+    messages: [
+      {role: 'user', content: 'What is artificial intelligence?'}
+    ]
+  })
+})
+.then(response => {
+  // Handle streaming response
+  const reader = response.body.getReader();
+  // Process chunks...
+})</pre>
+        </div>
+
+        <div class="markdown-heading">
+            <h3 class="heading-element">File Upload</h3>
+            <a id="user-content-file-upload" class="anchor" aria-label="Permalink: File Upload" href="#file-upload">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-javascript">
+            <pre>// Example using FormData
+const formData = new FormData();
+formData.append('files', fileObject);
+
+fetch('/backend-api/v2/files/my-bucket', {
+  method: 'POST',
+  body: formData
+})
+.then(response => response.json())
+.then(data => console.log(data));</pre>
+        </div>
+
+        <div class="markdown-heading">
+            <h3 class="heading-element">Using Web Search</h3>
+            <a id="user-content-using-web-search" class="anchor" aria-label="Permalink: Using Web Search" href="#using-web-search">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <div class="highlight highlight-source-javascript">
+            <pre>fetch('/backend-api/v2/create?model=gpt-3.5-turbo&prompt=Latest news about AI&web_search=true', {
+  method: 'GET'
+})
+.then(response => {
+  // Handle streaming response with web search results
+})</pre>
+        </div>
+
+        <div class="markdown-heading">
+            <h2 class="heading-element">Response Formats</h2>
+            <a id="user-content-response-formats" class="anchor" aria-label="Permalink: Response Formats" href="#response-formats">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <p>The API uses a consistent JSON format for responses with a <code>type</code> field indicating the kind of response:</p>
+        <ul>
+            <li><code>content</code>: Text content from the model</li>
+            <li><code>provider</code>: Information about the selected provider</li>
+            <li><code>conversation</code>: Conversation state</li>
+            <li><code>preview</code>: Preview of content</li>
+            <li><code>error</code>: Error information</li>
+            <li><code>auth</code>: Authentication requirements</li>
+            <li><code>parameters</code>: Model parameters</li>
+            <li><code>finish</code>: Finish reason</li>
+            <li><code>usage</code>: Token usage information</li>
+            <li><code>reasoning</code>: Reasoning process</li>
+            <li><code>suggestions</code>: Suggested follow-up questions</li>
+            <li><code>log</code>: Debug logs</li>
+        </ul>
+
+        <div class="markdown-heading">
+            <h2 class="heading-element">Notes</h2>
+            <a id="user-content-notes" class="anchor" aria-label="Permalink: Notes" href="#notes">
+                <span aria-hidden="true" class="octicon octicon-link"></span>
+            </a>
+        </div>
+        <ul>
+            <li>The API supports streaming responses for real-time interaction</li>
+            <li>File uploads can be automatically converted to markdown if MarkItDown is available</li>
+            <li>Media files are stored in a dedicated directory structure with caching</li>
+            <li>Web search functionality enhances responses with real-world information</li>
+            <li>The system includes caching mechanisms for improved performance</li>
+        </ul>
+
+        <hr>
+        <p><a href="/docs/">Return to Documentation</a></p>
+    </article>
+</body>
+</html>
