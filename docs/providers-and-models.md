@@ -1,6 +1,6 @@
 ## G4F - Providers and Models
 
-**Last updated:** May 17, 2025
+**Last updated:** May 18, 2025
 
 This document provides an overview of various AI providers and models, including text generation, image generation, and vision capabilities. It aims to help users navigate the diverse landscape of AI services and choose the most suitable option for their needs.
 
