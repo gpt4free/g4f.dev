@@ -49,6 +49,7 @@ This document provides an overview of various AI providers and models, including
 |[duckduckgo.com/aichat](https://duckduckgo.com/aichat)|No auth required|`g4f.Provider.DDG`|`gpt-4. gpt-4o, gpt-4o-mini, llama-3.3-70b, claude-3-haiku, o3-mini, mistral-small-24b, mistral-small`|❌|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
 |[duckduckgo.com/aichat](https://duckduckgo.com/aichat)|No auth required|`g4f.Provider.DuckDuckGo`|✔|❌|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
 |[deepinfra.com/chat](https://deepinfra.com/chat)|No auth required|`g4f.Provider.DeepInfraChat`|`deepseek-prover-v2-671b, qwen-3-235b, qwen-3-30b, qwen-3-32b, qwen-3-14b, llama-4-maverick, llama-4-maverick-17b, llama-4-maverick, llama-4-maverick-17b, phi-4-reasoning-plus, qwq-32b, deepseek-v3-0324, gemma-3-27b, gemma-3-12b, phi-4-multimodal, llama-3.1-8b, llama-3.2-90b, llama-3.3-70b, deepseek-v3, mixtral-small-24b, deepseek-r1-turbo, deepseek-r1, deepseek-r1-distill-llama-70b, deepseek-r1-distill-qwen-32b, phi-4, wizardlm-2-8x22b, qwen-2-72b, dolphin-2.6, dolphin-2.9, airoboros-70b, lzlv-70b, wizardlm-2-7b, mixtral-8x22b`|❌|❌|❌|`llama-3.2-90b, minicpm-2.5`|![](https://img.shields.io/badge/Active-brightgreen)|
+|[docsbot.ai](https://docsbot.ai)|No auth required|`gpt-4o`|❌|❌|❌|✔|![](https://img.shields.io/badge/Active-brightgreen)|
 |[dynaspark.onrender.com](https://dynaspark.onrender.com)|No auth required|`g4f.Provider.Dynaspark`|`gemini-1.5-flash, gemini-2.0-flash`|❌|❌|❌|`gemini-1.5-flash, gemini-2.0-flash`|![](https://img.shields.io/badge/Active-brightgreen)|
 |[chat10.free2gpt.xyz](https://chat10.free2gpt.xyz)|No auth required|`g4f.Provider.Free2GPT`|`gemini-1.5-pro, gemini-1.5-flash`|❌|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
 |[freegptsnav.aifree.site](https://freegptsnav.aifree.site)|No auth required|`g4f.Provider.FreeGpt`|`gemini-1.5-pro, gemini-1.5-flash`|❌|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
@@ -155,7 +156,7 @@ This document provides an overview of various AI providers and models, including
 |gpt-3.5-turbo|OpenAI|1+ provider|[platform.openai.com](https://platform.openai.com/docs/engines/gpt-3.5-turbo)|
 |gpt-4|OpenAI|9+ providers|[platform.openai.com](https://platform.openai.com/docs/models/gpt-4-turbo-and-gpt-4)|
 |gpt-4-turbo|OpenAI|2+ providers|[platform.openai.com](https://platform.openai.com/docs/models/gpt-4-turbo-and-gpt-4)|
-|gpt-4o|OpenAI|5+ providers|[platform.openai.com](https://platform.openai.com/docs/models/gpt-4o)|
+|gpt-4o|OpenAI|6+ providers|[platform.openai.com](https://platform.openai.com/docs/models/gpt-4o)|
 |gpt-4o-search|OpenAI|1 provider|[openai.com](https://openai.com/index/introducing-chatgpt-search/)|
 |gpt-4o-mini|OpenAI|8+ providers|[platform.openai.com](https://platform.openai.com/docs/models/gpt-4o-mini)|
 |gpt-4o-mini-search|OpenAI|1 provider|[openai.com](https://openai.com/index/gpt-4o-mini-advancing-cost-efficient-intelligence/)|
