@@ -32,4 +32,4 @@ python -m g4f.gui.webview -debug
 
 ---
 
-[Return to Documentation](../)
+[Return to Documentation](README.md)

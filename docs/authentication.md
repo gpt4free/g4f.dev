@@ -273,6 +273,6 @@ print("Success!" if response.status_code == 200 else f"Failed: {response.status_
 
 **[Providers and Models →](providers-and-models.md)**
 
-**[← Return to Documentation](../)**
+**[← Return to Documentation](README.md)**
 
 **[⬆ Back to Top](#table-of-contents)**

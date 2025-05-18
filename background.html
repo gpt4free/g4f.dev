@@ -135,11 +135,14 @@
             };
             videoFeed.src = window.backendUrl + videoUrl + skipVideo;
             preload.src = window.backendUrl + videoUrl + (skipVideo + 1);
+            skipVideo++;
             function initES() {
                 if (es == null || es.readyState == EventSource.CLOSED) {
                     const eventSource = new EventSource(url);
                     eventSource.onmessage = (event) => {
                         const data = JSON.parse(event.data);
+                        if (data.referrer && !data.referrer.startsWith("https://pollinations.ai"))
+                        console.log(data.referrer);
                         if (data.nsfw || !data.nologo || data.width < 512 || !data.imageURL || data.isChild || data.status != "end_generating") {
                             return;
                         }
@@ -164,6 +167,7 @@
                     }
                 }
             }
+            initES();
             let refreshOnHide = true;
             document.addEventListener("visibilitychange", () => {
                 if (document.hidden) {
@@ -201,12 +205,14 @@
             imageFeed.onload = () => {
                 imageFeed.classList.remove("hidden");
                 gradient.classList.add("hidden");
-                errorImage--;
+                if (errorImage > 0) {
+                    errorImage--;
+                }
             };
             imageFeed.onclick = () => {
                 imageFeed.src = window.backendUrl + "/search/image?random=" + Math.random();
                 if (skipRefresh < 4) {
-                    skipRefresh += 1;
+                    skipRefresh++;
                 }
             };
         })();

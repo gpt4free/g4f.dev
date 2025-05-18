@@ -15,7 +15,7 @@ for root, _, files in os.walk(os.path.dirname(__file__)):
                     print(f"Error reading file {file}: {e}")
             html = requests.post(
                 "https://api.github.com/markdown",
-                json={"text": content.replace(".md)", ".html)").replace("(../)", "(/docs/)")},
+                json={"text": content.replace("(README.md)", "(/docs/)").replace(".md)", ".html)")},
                 headers={"Accept": "application/vnd.github+json", "Authorization": f"Bearer {os.getenv("GITHUB_TOKEN")}"}
             ).text
             with open(os.path.join(os.path.dirname(__file__), "template.html"), 'r') as f:

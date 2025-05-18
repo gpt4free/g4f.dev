@@ -344,4 +344,4 @@ response = client.chat.completions.create(
 
 ---
 
-[Return to Documentation](../)
+[Return to Documentation](README.md)

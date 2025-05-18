@@ -117,7 +117,7 @@ class MyModel(BaseModel):
     city: str
     country: str
 
-nt = Agent(AIModel(
+agent = Agent(AIModel(
     "gpt-4o", # Specify the provider and model
     PollinationsAI # Use a supported provider to handle tool-based response formatting
 ), result_type=MyModel, model_settings=ModelSettings(temperature=0))
@@ -245,4 +245,4 @@ For further customization and advanced use cases, refer to the G4F and PydanticA
 
 ---
 
-[Return to Documentation](../)
+[Return to Documentation](README.md)

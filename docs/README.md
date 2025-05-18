@@ -4,7 +4,7 @@ Welcome to the GPT4Free (G4F) documentation hub! This guide provides everything 
 
 ---
 
-## 📦 Installation
+### 📦 Installation
 
 - [Git Installation Guide](git.md)
 - [Docker Setup](docker.md)
@@ -12,7 +12,7 @@ Welcome to the GPT4Free (G4F) documentation hub! This guide provides everything 
 
 ---
 
-## 🚀 Getting Started
+### 🚀 Getting Started
 
 - [Local Usage Guide](local.md)
 - [Authentication Guide](authentication.md)
@@ -20,7 +20,7 @@ Welcome to the GPT4Free (G4F) documentation hub! This guide provides everything 
 
 ---
 
-## 🤖 G4F Clients
+### 🤖 G4F Clients
 
 - [Python Client](client.md)
 - [AsyncClient API Guide](async_client.md)
@@ -30,14 +30,14 @@ Welcome to the GPT4Free (G4F) documentation hub! This guide provides everything 
 
 ---
 
-## 🧠 Providers & Models
+### 🧠 Providers & Models
 
 - [Available Providers and Models](providers-and-models.md)
 - [Selecting a Provider](selecting_a_provider.md)
 
 ---
 
-## 📂 Files and Media
+### 📂 Files and Media
 
 - [File API Documentation (Files and Documents)](file.md)
 - [Media Documentation (Audio, Image and Video)](media.md)
@@ -45,7 +45,7 @@ Welcome to the GPT4Free (G4F) documentation hub! This guide provides everything 
 
 ---
 
-## 🖥️ Interfaces
+### 🖥️ Interfaces
 
 - [GUI Documentation](gui.md)
 - [Run in a Window on any OS (Webview)](webview.md)
@@ -54,45 +54,35 @@ Welcome to the GPT4Free (G4F) documentation hub! This guide provides everything 
 
 ---
 
-## 🧩 Integrations
+### 🧩 Integrations
 
 - [PydanticAI & LangChain Integration](pydantic_ai.md)
 
 ---
 
-## 📚 API Documentation
+### 📖 Guides
+
+###### Guide: How do I create a new Provider?  
+- **Read:** [Create Provider Guide](https://github.com/gpt4free/gpt4free.github.io/blob/main/docs/guides/create_provider.md)
+
+###### Guide: How can AI help me with writing code?  
+- **Read:** [AI Assistance Guide](https://github.com/gpt4free/gpt4free.github.io/blob/main/docs/guides/help_me.md)
+
+---
+
+### 📚 API Documentation
 
 - Check out the [official API docs](https://gpt4free.github.io/api-docs) for more details.
 
 ---
 
-## 🚀 Powered by
-
-**🌟 Pollinations AI**
+### 🌟 Pollinations AI
 
 <img src="https://image.pollinations.ai/prompt/Create+a+logo+for+Pollinations+AI+featuring+an+abstract+flower+blooming+digital+petals+glowing+center+futuristic+font+Pollinations+AI?width=512&height=256&nologo=true" height="128">
 
 A creative AI content platform that generates images, audios, and other media using advanced generative models. Pollinations AI empowers users and developers to turn text into visuals and multimedia experiences.
 
-> https://github.com/pollinations/pollinations
-
-**🔍DuckDuckGo Search**
-
-<img src="https://image.pollinations.ai/prompt/logo+DuckDuckGo?width=512&height=256&nologo=true" height="128">
-
-A privacy-centric internet search engine delivering unbiased, ad-free results without tracking your personal data. DuckDuckGo prioritizes user confidentiality while providing reliable web search functionality.
-
-**🤖 GitHub**
-
-<img src="https://image.pollinations.ai/prompt/Create+a+logo+for+GitHub+featuring+an+octocat+icon+integrated+with+code+brackets%2C+modern+technical+font+text+GitHub%2C+colors+deep+black%2C+white%2C+subtle+purple?width=512&height=256&nologo=true" height="128">
-
-The world’s leading platform for version control and collaborative software development. GitHub enables seamless code management, issue tracking, pull requests, and collaborative branching across teams of any size.
-
-**🤗 HuggingFace**
-
-<img src="https://image.pollinations.ai/prompt/Create+a+logo+for+HuggingFace+featuring+a+friendly+smiling+face+hugging?width=512&height=256&nologo=true" height="128">
-
-A hub for open-source machine learning models and natural language processing tools. HuggingFace hosts state-of-the-art AI models, enabling easy integration of functions like language understanding, text generation, and more.
+> [pollinations/pollinations on GitHub](https://github.com/pollinations/pollinations)
 
 ---
 

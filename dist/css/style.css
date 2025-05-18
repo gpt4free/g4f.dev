@@ -935,9 +935,6 @@ input.model:hover
 .pswp {
     --pswp-placeholder-bg: #000 !important;
 }
-.pswp img {
-    object-fit: contain;
-}
 .pswp__img--placeholder--blank{
     display: none !important;
 }

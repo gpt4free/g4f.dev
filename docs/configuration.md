@@ -95,4 +95,4 @@ set G4F_PROXY=http://host:port
 
 ---
 
-[Return to Documentation](../)
+[Return to Documentation](README.md)
