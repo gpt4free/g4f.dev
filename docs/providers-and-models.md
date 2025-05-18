@@ -72,6 +72,7 @@ This document provides an overview of various AI providers and models, including
 |[teach-anything.com](https://www.teach-anything.com)|No auth required|`g4f.Provider.TeachAnything`|`gemini-1.5-pro, gemini-1.5-flash`|❌|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
 |[you.com](https://you.com)|[Manual cookies](https://you.com)|`g4f.Provider.You`|✔|✔|❌|❌|✔|![](https://img.shields.io/badge/Active-brightgreen)|
 |[websim.ai](https://websim.ai)|No auth required|`g4f.Provider.Websim`|`gemini-1.5-pro, gemini-1.5-flash`|`flux`|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
+|[chat-gpt.com](https://chat-gpt.com)|No auth required|`g4f.Provider.WeWordle`|`gpt-4`|❌|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
 |[chat9.yqcloud.top](https://chat9.yqcloud.top)|No auth required|`g4f.Provider.Yqcloud`|`gpt-4`|✔|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
 
 ---
@@ -152,7 +153,7 @@ This document provides an overview of various AI providers and models, including
 | Model | Base Provider | Providers | Website |
 |-------|---------------|-----------|---------|
 |gpt-3.5-turbo|OpenAI|1+ provider|[platform.openai.com](https://platform.openai.com/docs/engines/gpt-3.5-turbo)|
-|gpt-4|OpenAI|8+ providers|[platform.openai.com](https://platform.openai.com/docs/models/gpt-4-turbo-and-gpt-4)|
+|gpt-4|OpenAI|9+ providers|[platform.openai.com](https://platform.openai.com/docs/models/gpt-4-turbo-and-gpt-4)|
 |gpt-4-turbo|OpenAI|2+ providers|[platform.openai.com](https://platform.openai.com/docs/models/gpt-4-turbo-and-gpt-4)|
 |gpt-4o|OpenAI|5+ providers|[platform.openai.com](https://platform.openai.com/docs/models/gpt-4o)|
 |gpt-4o-search|OpenAI|1 provider|[openai.com](https://openai.com/index/introducing-chatgpt-search/)|
