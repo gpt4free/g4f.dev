@@ -6,7 +6,7 @@ This document outlines how to use the G4F (Generative Framework) library to gene
 
 ### 1. **Audio Generation and Transcription**
 
-G4F supports audio generation through providers like PollinationsAI and audio transcription using providers like Microsoft_Phi_4_Multimodal.
+G4F supports audio generation through providers like PollinationsAI, OpenAIFM, and others, as well as audio transcription using providers like Microsoft_Phi_4_Multimodal.
 
 #### **Generate Audio with PollinationsAI:**
 
@@ -27,6 +27,133 @@ async def main():
 
 asyncio.run(main())
 ```
+
+#### **Generate Audio with OpenAIFM:**
+
+OpenAIFM provides high-quality text-to-speech with various voice options and customizable voice styles.
+
+```python
+from g4f.client import Client
+import g4f.Provider as Provider
+
+# Initialize client with OpenAIFM provider
+client = Client(provider=Provider.OpenAIFM)
+
+# Generate audio with default settings
+response = client.media.generate(
+    "Hello, this is a test message for text-to-speech conversion.",
+    model="gpt-4o-mini-tts",
+    audio={"voice": "coral"}
+)
+
+# Save the generated audio
+response.data[0].save("openai_fm_audio.mp3")
+```
+
+##### **Available Voices in OpenAIFM:**
+
+OpenAIFM supports multiple voice options:
+- alloy
+- ash
+- ballad
+- coral (default)
+- echo
+- fable
+- onyx
+- nova
+- sage
+- shimmer
+- verse
+
+##### **Using Predefined Voice Styles in OpenAIFM:**
+
+OpenAIFM provides several predefined voice styles that can be accessed as class attributes. These styles define the personality, tone, and delivery characteristics of the generated speech:
+
+```python
+from g4f.client import Client
+import g4f.Provider as Provider
+
+client = Client(provider=Provider.OpenAIFM)
+
+# Available predefined styles as class attributes
+# Provider.OpenAIFM.friendly - Default friendly style
+# Provider.OpenAIFM.patient_teacher - Educational, patient tone
+# Provider.OpenAIFM.noir_detective - Mysterious detective style
+# Provider.OpenAIFM.cowboy - Relaxed western drawl
+# Provider.OpenAIFM.calm - Reassuring, composed tone
+# Provider.OpenAIFM.scientific_style - Formal academic style
+
+# Using the noir_detective style
+response = client.media.generate(
+    "It appears the package was delivered to the wrong address. We need to find it.",
+    model="gpt-4o-mini-tts",
+    audio={
+        "voice": "onyx",
+        "instructions": Provider.OpenAIFM.noir_detective
+    }
+)
+
+response.data[0].save("detective_style.mp3")
+```
+
+Here's a description of each predefined style:
+
+1. **friendly** (default): Cheerful, clear, and reassuring tone that creates a calm atmosphere.
+2. **patient_teacher**: Warm, refined, and gently instructive tone like a friendly art instructor.
+3. **noir_detective**: Cool, detached, mysterious tone with dramatic pauses to build suspense.
+4. **cowboy**: Warm, relaxed, and friendly tone with a steady cowboy drawl.
+5. **calm**: Composed, reassuring tone with quiet authority and confidence.
+6. **scientific_style**: Authoritative and precise academic tone for technical content.
+
+##### **Creating Custom Voice Instructions:**
+
+You can create your own voice style by defining custom instructions as a multi-line string. The instructions should describe the voice characteristics, tone, pacing, emotion, pronunciation, and pauses:
+
+```python
+from g4f.client import Client
+import g4f.Provider as Provider
+
+client = Client(provider=Provider.OpenAIFM)
+
+# Custom voice style
+custom_instructions = """
+Voice: Energetic and enthusiastic, with a youthful quality.
+
+Tone: Upbeat and positive, conveying excitement and passion about the topic.
+
+Pacing: Quick but clear, with dynamic variations to maintain interest.
+
+Emotion: Genuinely excited and enthusiastic, with occasional moments of awe or surprise.
+
+Pronunciation: Crisp and clear, with emphasis on key words to highlight important points.
+
+Pauses: Strategic short pauses before important information, creating anticipation.
+"""
+
+response = client.media.generate(
+    "This is amazing news! We're launching a new product that will change the industry!",
+    model="gpt-4o-mini-tts",
+    audio={
+        "voice": "nova",
+        "instructions": custom_instructions
+    }
+)
+
+response.data[0].save("custom_enthusiastic_style.mp3")
+```
+
+##### **Structure for Custom Voice Instructions:**
+
+When creating custom instructions, consider including these elements:
+
+1. **Voice/Affect**: The overall personality or character of the voice.
+2. **Tone**: The emotional quality and attitude of the speech.
+3. **Pacing**: The speed and rhythm of speech delivery.
+4. **Emotion**: The specific feelings to convey in the speech.
+5. **Pronunciation**: How words should be articulated.
+6. **Pauses**: Where and how long to pause between phrases.
+
+This structure helps the model understand exactly how to style the generated speech.
 
 <details>
 <summary>JavaScript</summary>
@@ -73,8 +200,18 @@ generateSpeech('Hello, this is a speech synthesis test.');
 ```python
 from g4f.client import Client
 
-from g4f.Provider import gTTS, EdgeTTS, Gemini, PollinationsAI
+from g4f.Provider import gTTS, EdgeTTS, Gemini, PollinationsAI, OpenAIFM
 
+# OpenAIFM
+client = Client(provider=OpenAIFM)
+response = client.media.generate(
+    "Hello",
+    model="gpt-4o-mini-tts",
+    audio={"voice": "coral"}
+)
+response.data[0].save("openai_fm.mp3")
+
+# PollinationsAI
 client = Client(provider=PollinationsAI)
 response = client.media.generate("Hello", audio={"voice": "alloy", "format": "mp3"})
 response.data[0].save("openai.mp3")

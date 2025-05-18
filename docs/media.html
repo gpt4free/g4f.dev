@@ -60,7 +60,7 @@
 <hr>
 <div class="markdown-heading"><h3 class="heading-element">1. <strong>Audio Generation and Transcription</strong>
 </h3><a id="user-content-1-audio-generation-and-transcription" class="anchor" aria-label="Permalink: 1. Audio Generation and Transcription" href="#1-audio-generation-and-transcription"><span aria-hidden="true" class="octicon octicon-link"></span></a></div>
-<p>G4F supports audio generation through providers like PollinationsAI and audio transcription using providers like Microsoft_Phi_4_Multimodal.</p>
+<p>G4F supports audio generation through providers like PollinationsAI, OpenAIFM, and others, as well as audio transcription using providers like Microsoft_Phi_4_Multimodal.</p>
 <div class="markdown-heading"><h4 class="heading-element"><strong>Generate Audio with PollinationsAI:</strong></h4><a id="user-content-generate-audio-with-pollinationsai" class="anchor" aria-label="Permalink: Generate Audio with PollinationsAI:" href="#generate-audio-with-pollinationsai"><span aria-hidden="true" class="octicon octicon-link"></span></a></div>
 <div class="highlight highlight-source-python"><pre><span class="pl-k">import</span> <span class="pl-s1">asyncio</span>
 <span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">AsyncClient</span>
@@ -77,6 +77,123 @@
     <span class="pl-s1">response</span>.<span class="pl-c1">choices</span>[<span class="pl-c1">0</span>].<span class="pl-c1">message</span>.<span class="pl-c1">save</span>(<span class="pl-s">"alloy.mp3"</span>)
 
 <span class="pl-s1">asyncio</span>.<span class="pl-c1">run</span>(<span class="pl-en">main</span>())</pre></div>
+
+<div class="markdown-heading"><h4 class="heading-element"><strong>Generate Audio with OpenAIFM:</strong></h4><a id="user-content-generate-audio-with-openaifm" class="anchor" aria-label="Permalink: Generate Audio with OpenAIFM:" href="#generate-audio-with-openaifm"><span aria-hidden="true" class="octicon octicon-link"></span></a></div>
+<p>OpenAIFM provides high-quality text-to-speech with various voice options and customizable voice styles.</p>
+<div class="highlight highlight-source-python"><pre><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
+<span class="pl-k">import</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">as</span> <span class="pl-v">Provider</span>
+
+<span class="pl-c"># Initialize client with OpenAIFM provider</span>
+<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(<span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">Provider</span>.<span class="pl-c1">OpenAIFM</span>)
+
+<span class="pl-c"># Generate audio with default settings</span>
+<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">media</span>.<span class="pl-c1">generate</span>(
+    <span class="pl-s">"Hello, this is a test message for text-to-speech conversion."</span>,
+    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4o-mini-tts"</span>,
+    <span class="pl-s1">audio</span><span class="pl-c1">=</span>{<span class="pl-s">"voice"</span>: <span class="pl-s">"coral"</span>}
+)
+
+<span class="pl-c"># Save the generated audio</span>
+<span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">save</span>(<span class="pl-s">"openai_fm_audio.mp3"</span>)</pre></div>
+
+<div class="markdown-heading"><h5 class="heading-element"><strong>Available Voices in OpenAIFM:</strong></h5><a id="user-content-available-voices-in-openaifm" class="anchor" aria-label="Permalink: Available Voices in OpenAIFM:" href="#available-voices-in-openaifm"><span aria-hidden="true" class="octicon octicon-link"></span></a></div>
+<p>OpenAIFM supports multiple voice options:</p>
+<ul>
+<li>alloy</li>
+<li>ash</li>
+<li>ballad</li>
+<li>coral (default)</li>
+<li>echo</li>
+<li>fable</li>
+<li>onyx</li>
+<li>nova</li>
+<li>sage</li>
+<li>shimmer</li>
+<li>verse</li>
+</ul>
+
+<div class="markdown-heading"><h5 class="heading-element"><strong>Using Predefined Voice Styles in OpenAIFM:</strong></h5><a id="user-content-using-predefined-voice-styles-in-openaifm" class="anchor" aria-label="Permalink: Using Predefined Voice Styles in OpenAIFM:" href="#using-predefined-voice-styles-in-openaifm"><span aria-hidden="true" class="octicon octicon-link"></span></a></div>
+<p>OpenAIFM provides several predefined voice styles that can be accessed as class attributes. These styles define the personality, tone, and delivery characteristics of the generated speech:</p>
+<div class="highlight highlight-source-python"><pre><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
+<span class="pl-k">import</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">as</span> <span class="pl-v">Provider</span>
+
+<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(<span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">Provider</span>.<span class="pl-c1">OpenAIFM</span>)
+
+<span class="pl-c"># Available predefined styles as class attributes</span>
+<span class="pl-c"># Provider.OpenAIFM.friendly - Default friendly style</span>
+<span class="pl-c"># Provider.OpenAIFM.patient_teacher - Educational, patient tone</span>
+<span class="pl-c"># Provider.OpenAIFM.noir_detective - Mysterious detective style</span>
+<span class="pl-c"># Provider.OpenAIFM.cowboy - Relaxed western drawl</span>
+<span class="pl-c"># Provider.OpenAIFM.calm - Reassuring, composed tone</span>
+<span class="pl-c"># Provider.OpenAIFM.scientific_style - Formal academic style</span>
+
+<span class="pl-c"># Using the noir_detective style</span>
+<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">media</span>.<span class="pl-c1">generate</span>(
+    <span class="pl-s">"It appears the package was delivered to the wrong address. We need to find it."</span>,
+    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4o-mini-tts"</span>,
+    <span class="pl-s1">audio</span><span class="pl-c1">=</span>{
+        <span class="pl-s">"voice"</span>: <span class="pl-s">"onyx"</span>,
+        <span class="pl-s">"instructions"</span>: <span class="pl-v">Provider</span>.<span class="pl-c1">OpenAIFM</span>.<span class="pl-c1">noir_detective</span>
+    }
+)
+
+<span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">save</span>(<span class="pl-s">"detective_style.mp3"</span>)</pre></div>
+
+<p>Here's a description of each predefined style:</p>
+<ol>
+<li><strong>friendly</strong> (default): Cheerful, clear, and reassuring tone that creates a calm atmosphere.</li>
+<li><strong>patient_teacher</strong>: Warm, refined, and gently instructive tone like a friendly art instructor.</li>
+<li><strong>noir_detective</strong>: Cool, detached, mysterious tone with dramatic pauses to build suspense.</li>
+<li><strong>cowboy</strong>: Warm, relaxed, and friendly tone with a steady cowboy drawl.</li>
+<li><strong>calm</strong>: Composed, reassuring tone with quiet authority and confidence.</li>
+<li><strong>scientific_style</strong>: Authoritative and precise academic tone for technical content.</li>
+</ol>
+
+<div class="markdown-heading"><h5 class="heading-element"><strong>Creating Custom Voice Instructions:</strong></h5><a id="user-content-creating-custom-voice-instructions" class="anchor" aria-label="Permalink: Creating Custom Voice Instructions:" href="#creating-custom-voice-instructions"><span aria-hidden="true" class="octicon octicon-link"></span></a></div>
+<p>You can create your own voice style by defining custom instructions as a multi-line string. The instructions should describe the voice characteristics, tone, pacing, emotion, pronunciation, and pauses:</p>
+<div class="highlight highlight-source-python"><pre><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
+<span class="pl-k">import</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">as</span> <span class="pl-v">Provider</span>
+
+<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(<span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">Provider</span>.<span class="pl-c1">OpenAIFM</span>)
+
+<span class="pl-c"># Custom voice style</span>
+<span class="pl-s1">custom_instructions</span> <span class="pl-c1">=</span> <span class="pl-s">"""
+Voice: Energetic and enthusiastic, with a youthful quality.
+
+Tone: Upbeat and positive, conveying excitement and passion about the topic.
+
+Pacing: Quick but clear, with dynamic variations to maintain interest.
+
+Emotion: Genuinely excited and enthusiastic, with occasional moments of awe or surprise.
+
+Pronunciation: Crisp and clear, with emphasis on key words to highlight important points.
+
+Pauses: Strategic short pauses before important information, creating anticipation.
+"""</span>
+
+<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">media</span>.<span class="pl-c1">generate</span>(
+    <span class="pl-s">"This is amazing news! We're launching a new product that will change the industry!"</span>,
+    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4o-mini-tts"</span>,
+    <span class="pl-s1">audio</span><span class="pl-c1">=</span>{
+        <span class="pl-s">"voice"</span>: <span class="pl-s">"nova"</span>,
+        <span class="pl-s">"instructions"</span>: <span class="pl-s1">custom_instructions</span>
+    }
+)
+
+<span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">save</span>(<span class="pl-s">"custom_enthusiastic_style.mp3"</span>)</pre></div>
+
+<div class="markdown-heading"><h5 class="heading-element"><strong>Structure for Custom Voice Instructions:</strong></h5><a id="user-content-structure-for-custom-voice-instructions" class="anchor" aria-label="Permalink: Structure for Custom Voice Instructions:" href="#structure-for-custom-voice-instructions"><span aria-hidden="true" class="octicon octicon-link"></span></a></div>
+<p>When creating custom instructions, consider including these elements:</p>
+<ol>
+<li><strong>Voice/Affect</strong>: The overall personality or character of the voice.</li>
+<li><strong>Tone</strong>: The emotional quality and attitude of the speech.</li>
+<li><strong>Pacing</strong>: The speed and rhythm of speech delivery.</li>
+<li><strong>Emotion</strong>: The specific feelings to convey in the speech.</li>
+<li><strong>Pronunciation</strong>: How words should be articulated.</li>
+<li><strong>Pauses</strong>: Where and how long to pause between phrases.</li>
+</ol>
+<p>This structure helps the model understand exactly how to style the generated speech.</p>
+
 <details>
 <summary>JavaScript</summary>
 <div class="highlight highlight-source-js"><pre><span class="pl-k">async</span> <span class="pl-k">function</span> <span class="pl-en">generateSpeech</span><span class="pl-kos">(</span><span class="pl-s1">text</span><span class="pl-kos">)</span> <span class="pl-kos">{</span>
@@ -112,12 +229,23 @@
 <span class="pl-c">// Example usage</span>
 <span class="pl-en">generateSpeech</span><span class="pl-kos">(</span><span class="pl-s">'Hello, this is a speech synthesis test.'</span><span class="pl-kos">)</span><span class="pl-kos">;</span></pre></div>
 </details>
+
 <details>
 <summary>Examples with other providers</summary>
 <div class="highlight highlight-source-python"><pre><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
 
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">import</span> <span class="pl-s1">gTTS</span>, <span class="pl-v">EdgeTTS</span>, <span class="pl-v">Gemini</span>, <span class="pl-v">PollinationsAI</span>
+<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">import</span> <span class="pl-s1">gTTS</span>, <span class="pl-v">EdgeTTS</span>, <span class="pl-v">Gemini</span>, <span class="pl-v">PollinationsAI</span>, <span class="pl-v">OpenAIFM</span>
 
+<span class="pl-c"># OpenAIFM</span>
+<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(<span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">OpenAIFM</span>)
+<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">media</span>.<span class="pl-c1">generate</span>(
+    <span class="pl-s">"Hello"</span>,
+    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4o-mini-tts"</span>,
+    <span class="pl-s1">audio</span><span class="pl-c1">=</span>{<span class="pl-s">"voice"</span>: <span class="pl-s">"coral"</span>}
+)
+<span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">save</span>(<span class="pl-s">"openai_fm.mp3"</span>)
+
+<span class="pl-c"># PollinationsAI</span>
 <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(<span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">PollinationsAI</span>)
 <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">media</span>.<span class="pl-c1">generate</span>(<span class="pl-s">"Hello"</span>, <span class="pl-s1">audio</span><span class="pl-c1">=</span>{<span class="pl-s">"voice"</span>: <span class="pl-s">"alloy"</span>, <span class="pl-s">"format"</span>: <span class="pl-s">"mp3"</span>})
 <span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">save</span>(<span class="pl-s">"openai.mp3"</span>)
@@ -142,6 +270,7 @@
 
 <span class="pl-c"># The gTTS provider also support the audio parameters `tld` and `slow`</span></pre></div>
 </details>
+
 <div class="markdown-heading"><h4 class="heading-element"><strong>Transcribe an Audio File:</strong></h4><a id="user-content-transcribe-an-audio-file" class="anchor" aria-label="Permalink: Transcribe an Audio File:" href="#transcribe-an-audio-file"><span aria-hidden="true" class="octicon octicon-link"></span></a></div>
 <p>Some providers in G4F support audio inputs in chat completions, allowing you to transcribe audio files by instructing the model accordingly. This example demonstrates how to use the <code>AsyncClient</code> to transcribe an audio file asynchronously:</p>
 <div class="highlight highlight-source-python"><pre><span class="pl-k">import</span> <span class="pl-s1">asyncio</span>
@@ -162,6 +291,7 @@
 
 <span class="pl-k">if</span> <span class="pl-s1">__name__</span> <span class="pl-c1">==</span> <span class="pl-s">"__main__"</span>:
     <span class="pl-s1">asyncio</span>.<span class="pl-c1">run</span>(<span class="pl-en">main</span>())</pre></div>
+
 <div class="markdown-heading"><h4 class="heading-element">Explanation</h4><a id="user-content-explanation" class="anchor" aria-label="Permalink: Explanation" href="#explanation"><span aria-hidden="true" class="octicon octicon-link"></span></a></div>
 <ul>
 <li>
@@ -182,6 +312,7 @@
 <li>
 <strong>Response</strong>: The transcription is extracted from <code>response.choices[0].message.content</code> and printed.</li>
 </ul>
+
 <div class="markdown-heading"><h4 class="heading-element">Notes</h4><a id="user-content-notes" class="anchor" aria-label="Permalink: Notes" href="#notes"><span aria-hidden="true" class="octicon octicon-link"></span></a></div>
 <ul>
 <li>
@@ -191,8 +322,11 @@
 <li>
 <strong>Model Selection</strong>: If <code>g4f.models.default</code> does not support audio transcription, you may need to specify a model that does (consult the provider's documentation for supported models).</li>
 </ul>
+
 <p>This example complements the guide by showcasing how to handle audio inputs asynchronously, expanding on the multimodal capabilities of the G4F AsyncClient API.</p>
+
 <div class="markdown-heading"><h4 class="heading-element"><strong>More examples for Transcription:</strong></h4><a id="user-content-more-examples-for-transcription" class="anchor" aria-label="Permalink: More examples for Transcription:" href="#more-examples-for-transcription"><span aria-hidden="true" class="octicon octicon-link"></span></a></div>
+
 <details>
 <summary>JavaScript</summary>
 <div class="highlight highlight-source-js"><pre><span class="pl-k">const</span> <span class="pl-s1">endpoint</span> <span class="pl-c1">=</span> <span class="pl-s">"/v1/audio/transcriptions"</span><span class="pl-kos">;</span>
@@ -216,6 +350,7 @@
     <span class="pl-k">return</span> <span class="pl-c1">null</span><span class="pl-kos">;</span>
 <span class="pl-kos">}</span></pre></div>
 </details>
+
 <details>
 <summary>Python and requests</summary>
 <div class="highlight highlight-source-python"><pre><span class="pl-k">import</span> <span class="pl-s1">requests</span>
@@ -228,6 +363,7 @@
     <span class="pl-k">else</span>:
         <span class="pl-en">print</span>(<span class="pl-s">f"Error: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">response</span>.<span class="pl-c1">status_code</span><span class="pl-kos">}</span></span>, <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">response</span>.<span class="pl-c1">text</span><span class="pl-kos">}</span></span>"</span>)</pre></div>
 </details>
+
 <details>
 <summary>Python and openai</summary>
 <div class="highlight highlight-source-python"><pre><span class="pl-k">from</span> <span class="pl-s1">openai</span> <span class="pl-k">import</span> <span class="pl-v">OpenAI</span>
@@ -242,6 +378,7 @@
     )
 <span class="pl-en">print</span>(<span class="pl-s1">transcript</span>.<span class="pl-c1">text</span>)</pre></div>
 </details>
+
 <hr>
 <div class="markdown-heading"><h3 class="heading-element">2. <strong>Image Generation</strong>
 </h3><a id="user-content-2-image-generation" class="anchor" aria-label="Permalink: 2. Image Generation" href="#2-image-generation"><span aria-hidden="true" class="octicon octicon-link"></span></a></div>
@@ -433,7 +570,7 @@
 <strong>Parameter Usage</strong>: Use parameters like <code>width</code>, <code>height</code>, <code>resolution</code>, <code>aspect_ratio</code>, and <code>n</code> to customize the generated media.</li>
 </ul>
 <hr>
-<p><a href="/docs/">Return to Documentation</a></p>
+<p><a href="README.md">Return to Documentation</a></p>
 </article>
 </body>
 </html>

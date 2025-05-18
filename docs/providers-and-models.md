@@ -64,10 +64,11 @@ This document provides an overview of various AI providers and models, including
 |[oi-vscode-server-2.onrender.com](https://oi-vscode-server-2.onrender.com)|No auth required|`g4f.Provider.OIVSCodeSer2`|`gpt-4o-mini`|❌|❌|❌|✔|![Error](https://img.shields.io/badge/Active-brightgreen)|
 |[oi-vscode-server-2.onrender.com](https://oi-vscode-server-2.onrender.com)|No auth required|`g4f.Provider.OIVSCodeSer5`|`gpt-4.1-mini`|❌|❌|❌|✔|![Error](https://img.shields.io/badge/Active-brightgreen)|
 |[oi-vscode-server-2.onrender.com](https://oi-vscode-server-2.onrender.com)|No auth required|`g4f.Provider.OIVSCodeSer0501`|`gpt-4.1-mini`|❌|❌|❌|✔|![Error](https://img.shields.io/badge/Active-brightgreen)|
+|[openai.fm](https://www.openai.fm)|No auth required|`g4f.Provider.OpenAIFM`|❌|❌|`gpt-4o-mini-tts`|❌|✔|![Error](https://img.shields.io/badge/Active-brightgreen)|
 |[labs.perplexity.ai](https://labs.perplexity.ai)|No auth required|`g4f.Provider.PerplexityLabs`|`sonar, sonar-pro, sonar-reasoning, sonar-reasoning-pro`|❌|❌|❌|❌|![Error](https://img.shields.io/badge/Active-brightgreen)|
 |[pi.ai/talk](https://pi.ai/talk)|[Manual cookies](https://pi.ai/talk)|`g4f.Provider.Pi`|`pi`|❌|❌|❌|❌|![Error](https://img.shields.io/badge/Active-brightgreen)|
 |[pizzagpt.it](https://www.pizzagpt.it)|No auth required|`g4f.Provider.Pizzagpt`|`gpt-4o-mini`|❌|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
-|[pollinations.ai](https://pollinations.ai)|No auth required|`g4f.Provider.PollinationsAI`|`gpt-4o-mini, gpt-4.1-mini, gpt-4.1-nano, gpt-4, gpt-4o, gpt-4.1, o4-mini, command-r-plus-08-2024, gemini-2.5-flash, gemini-2.0-flash-thinking, qwen-2.5-coder-32b, llama-3.3-70b, llama-4-scout, llama-4-scout-17b, mistral-small-3.1-24b, deepseek-r1, deepseek-r1-distill-llama-70b, evil, deepseek-r1-distill-qwen-32b, phi-4, qwq-32b, deepseek-v3, deepseek-v3-0324` _**(4+)**_|`flux, flux-pro, flux-dev, flux-schnell, dall-e-3, sdxl-turbo`|`gpt-4o-audio`|❌|`gpt-4o, gpt-4o-mini, o1-mini, o3-mini, o4-mini`|![](https://img.shields.io/badge/Active-brightgreen)|
+|[pollinations.ai](https://pollinations.ai)|No auth required|`g4f.Provider.PollinationsAI`|`gpt-4o-mini, gpt-4.1-mini, gpt-4.1-nano, gpt-4, gpt-4o, gpt-4.1, o4-mini, command-r-plus-08-2024, gemini-2.5-flash, gemini-2.0-flash-thinking, qwen-2.5-coder-32b, llama-3.3-70b, llama-4-scout, llama-4-scout-17b, mistral-small-3.1-24b, deepseek-r1, deepseek-r1-distill-llama-70b, evil, deepseek-r1-distill-qwen-32b, phi-4, qwq-32b, deepseek-v3, deepseek-v3-0324` _**(4+)**_|`flux, flux-pro, flux-dev, flux-schnell, dall-e-3, sdxl-turbo`|`gpt-4o-mini-audio`|❌|`gpt-4o, gpt-4o-mini, o1-mini, o3-mini, o4-mini`|![](https://img.shields.io/badge/Active-brightgreen)|
 |[pollinations.ai](https://pollinations.ai)|No auth required|`g4f.Provider.PollinationsImage`|❌|`flux, flux-pro, flux-dev, flux-schnell, dall-e-3, sdxl-turbo`|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
 |[docs.puter.com](https://docs.puter.com/playground)|No auth required|`g4f.Provider.PuterJS`|`gpt-4, gpt-4o, gpt-4o-mini, o1, o1-mini, o1-pro, o3, o3-mini, o4-mini, gpt-4.1, gpt-4.1-mini, gpt-4.1-nano, gpt-4.5-preview, claude-3.7-sonnet, claude-3.5-sonnet, claude-3-haiku, ministral-3b, ministral-8b, mistral-7b, mistral-tiny, mixtral-8x7b, mistral-small, mixtral-8x22b, mistral-large, pixtral-large, codestral, pixtral-12b, deepseek-v3, deepseek-v3-0324, deepseek-r1, gemini-1.5-flash, gemini-2.0-flash, llama-2-70b, llama-3-8b, llama-3-70b, llama-3.1-8b, llama-3.1-70b, llama-3.1-405b, llama-3.2-1b, llama-3.2-3b, llama-3.2-11b, llama-3.2-90, llama-3.3-8b, llama-3.3-70b, llama-4-maverick, llama-4-scout, gpt-3.5-turbo, gpt-4-turbo, gpt-4o-search, gpt-4o-mini-search, o3-mini-high, o4-mini-high, gpt-4.5, mistral-medium, mistral-nemo, mistral-saba, phi-3-mini, phi-3-medium, phi-3.5-mini, phi-4, phi-4-multimodal, phi-4-reasoning, phi-4-reasoning-plus, wizardlm-2-8x22b, mai-ds-r1, claude-3.7-sonnet-thinking, claude-3.5-haiku, claude-3-opus, claude-3-sonnet, claude-2.1, claude-2, claude-2.0, reka-flash, command-r7b, command-r-plus, command, command-r, command-a, qwq-32b, qwen-vl-plus, qwen-vl-max, qwen-turbo, qwen-2.5-vl-72b, qwen-plus, qwen-max, qwen-2.5-coder-32b, qwen-2.5-7b, qwen-2.5-72b, qwen-2.5-vl-7b, qwen-2-72b, qwen-3-0.6b, qwen-3-1.7b, qwen-3-4b, qwen-3-30b, qwen-3-8b, qwen-3-14b, qwen-3-32b, qwen-3-235b, qwen-2.5-coder-7b, qwen-2.5-vl-3b, qwen-2.5-vl-32b, deepseek-prover-v2, deepseek-r1-zero, deepseek-r1-distill-llama-8b, deepseek-r1-distill-qwen-1.5b, deepseek-r1-distill-qwen-32b, deepseek-r1-distill-qwen-14b, deepseek-r1-distill-llama-70b, deepseek-chat, deepseek-coder, sonar-reasoning-pro, sonar-pro, sonar-deep-research, r1-1776, sonar-reasoning, sonar, llama-3.1-sonar-small-online, llama-3.1-sonar-large-online, glm-4, glm-4-32b, glm-z1-32b, glm-4-9b, glm-z1-9b, glm-z1-rumination-32b, minimax, dolphin-3.0-r1-24b, dolphin-3.0-24b, dolphin-8x22b, lfm-7b, lfm-3b, lfm-40b`|❌|❌|❌|✔|![](https://img.shields.io/badge/Active-brightgreen)|
 |[teach-anything.com](https://www.teach-anything.com)|No auth required|`g4f.Provider.TeachAnything`|`gemini-1.5-pro, gemini-1.5-flash`|❌|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
@@ -160,7 +161,8 @@ This document provides an overview of various AI providers and models, including
 |gpt-4o-search|OpenAI|1 provider|[openai.com](https://openai.com/index/introducing-chatgpt-search/)|
 |gpt-4o-mini|OpenAI|8+ providers|[platform.openai.com](https://platform.openai.com/docs/models/gpt-4o-mini)|
 |gpt-4o-mini-search|OpenAI|1 provider|[openai.com](https://openai.com/index/gpt-4o-mini-advancing-cost-efficient-intelligence/)|
-|gpt-4o-audio|OpenAI|1 provider|[platform.openai.com](https://platform.openai.com/docs/models/gpt-4o-audio)|
+|gpt-4o-mini-audio|OpenAI|1 provider|[platform.openai.com](https://platform.openai.com/docs/models/gpt-4o-mini-audio-preview)|
+|gpt-4o-mini-tts|OpenAI|1 provider|[platform.openai.com](https://platform.openai.com/docs/models/gpt-4o-mini-tts)|
 |o1|OpenAI|3+ providers|[openai.com](https://openai.com/index/introducing-openai-o1-preview/)|
 |o1-mini|OpenAI|2+ providers|[openai.com](https://openai.com/index/openai-o1-mini-advancing-cost-efficient-reasoning/)|
 |o1-pro|OpenAI|1 provider|[openai.com](https://openai.com/index/introducing-chatgpt-pro/)|
@@ -360,13 +362,6 @@ This document provides an overview of various AI providers and models, including
 |flux-dev|Black Forest Labs|4+ providers|[huggingface.co](https://huggingface.co/black-forest-labs/FLUX.1-dev)|
 |flux-schnell|Black Forest Labs|4 providers|[huggingface.co](https://huggingface.co/black-forest-labs/FLUX.1-schnell)|
 |midjourney|Midjourney|1 provider|[docs.midjourney.com](https://docs.midjourney.com/docs/model-versions)|
-
----
-### Audio generation models
-| Model | Base Provider | Providers | Website |
-|-------|---------------|-----------|---------|
-|gpt-4o-audio|OpenAI|1 provider|[platform.openai.com](https://platform.openai.com/docs/models/gpt-4o-audio)|
-
 
 ## Conclusion and Usage Tips
 This document provides a comprehensive overview of various AI providers and models available for text generation, image generation, and vision tasks. **When choosing a provider or model, consider the following factors:**
