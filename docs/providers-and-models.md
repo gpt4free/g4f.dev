@@ -128,7 +128,7 @@ This document provides an overview of various AI providers and models, including
 |[copilot.microsoft.com](https://copilot.microsoft.com)|[Manual cookies](https://copilot.microsoft.com)|`g4f.Provider.CopilotAccount`|✔ _**(1+)**_|✔ _**(1+)**_|❌|❌|✔ _**(1+)**_|![](https://img.shields.io/badge/Active-brightgreen)|
 |[deepinfra.com](https://deepinfra.com)|[Get API key](https://deepinfra.com/dash/api_keys)|`g4f.Provider.DeepInfra`|✔ _**(17+)**_|✔ _**(6+)**_|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
 |[platform.deepseek.com](https://platform.deepseek.com)|[Get API key](https://platform.deepseek.com/api_keys)|`g4f.Provider.DeepSeek`|✔ _**(1+)**_|❌|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
-|[gemini.google.com](https://gemini.google.com)|[Manual cookies](https://gemini.google.com)|`g4f.Provider.Gemini`|`gemini-2.0`|`gemini-2.0`|❌|❌|`gemini-2.0`|![](https://img.shields.io/badge/Active-brightgreen)|
+|[gemini.google.com](https://gemini.google.com)|[Manual cookies](https://gemini.google.com)|`g4f.Provider.Gemini`|`gemini-2.0, gemini-2.5-flash, gemini-2.5-pro _**(7+)**_`|✔|❌|❌|✔|![](https://img.shields.io/badge/Active-brightgreen)|
 |[ai.google.dev](https://ai.google.dev)|[Get API key](https://aistudio.google.com/u/0/apikey)|`g4f.Provider.GeminiPro`|`gemini-1.5-flash, gemini-1.5-pro, gemini-2.0-flash`|❌|❌|❌|`gemini-1.5-pro`|![](https://img.shields.io/badge/Active-brightgreen)|
 |[developers.sber.ru/gigachat](https://developers.sber.ru/gigachat)|[Manual cookies](https://developers.sber.ru/gigachat)|`g4f.Provider.GigaChat`|✔ _**(6+)**_|❌|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
 |[github.com/copilot](https://github.com/copilot)|[Manual cookies](https://github.com/copilot)|`g4f.Provider.GithubCopilot`|✔ _**(4+)**_|❌|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
@@ -231,9 +231,9 @@ This document provides an overview of various AI providers and models, including
 |gemini-2.0-flash|Google|6+ providers|[deepmind.google](https://deepmind.google/technologies/gemini/flash/)|
 |gemini-2.0-flash-thinking|Google|3+ providers|[ai.google.dev](https://ai.google.dev/gemini-api/docs/thinking-mode)|
 |gemini-2.0-flash-thinking-with-apps|Google|1 provider|[ai.google.dev](https://ai.google.dev/gemini-api/docs/thinking-mode)|
-|gemini-2.5-flash|Google|2+ providers|[deepmind.google](https://deepmind.google/technologies/gemini/)|
+|gemini-2.5-flash|Google|3+ providers|[deepmind.google](https://deepmind.google/technologies/gemini/)|
 |gemini-2.5-flash-thinking|Google|1 provider|[cloud.google.com](https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash)|
-|gemini-2.5-pro|Google|2+ providers|[deepmind.google](https://deepmind.google/technologies/gemini/)|
+|gemini-2.5-pro|Google|3+ providers|[deepmind.google](https://deepmind.google/technologies/gemini/)|
 |gemma-2-9b|Google|2+ providers|[huggingface.co](https://huggingface.co/google/gemma-2-9b)|
 |gemma-2-27b|Google|1 provider|[huggingface.co](https://huggingface.co/google/gemma-2-27b)|
 |gemma-3-1b|Google|2+ providers|[huggingface.co](https://huggingface.co/google/gemma-3-1b-it)|
