@@ -50,6 +50,7 @@ Welcome to the GPT4Free (G4F) documentation hub! This guide provides everything 
 - [GUI Documentation](gui.md)
 - [Run in a Window on any OS (Webview)](webview.md)
 - [Run on Your Smartphone Guide](guides/phone.md)
+- [Backend API Documentation](backend_api_documentation.html)
 
 ---
 
@@ -71,8 +72,7 @@ Welcome to the GPT4Free (G4F) documentation hub! This guide provides everything 
 
 ### 📚 API Documentation
 
-- [FastAPI Documentation](https://gpt4free.github.io/api-docs)
-- [Backend API Documentation](backend_api_documentation.md)
+- Check out the [official API docs](https://gpt4free.github.io/api-docs) for more details.
 
 ---
 
