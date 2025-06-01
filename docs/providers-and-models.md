@@ -62,6 +62,7 @@ This document provides an overview of various AI providers and models, including
 |[pollinations.ai](https://pollinations.ai)|No auth required/[Get API key](https://auth.pollinations.ai)|`g4f.Provider.PollinationsAI`|`gpt-4o-mini, gpt-4.1-nano, gpt-4, gpt-4o, gpt-4.1, o4-mini, gpt-4.1-mini, command-r-plus, gemini-2.5-flash, gemini-2.0-flash-thinking, qwen-2.5-coder-32b, llama-3.3-70b, llama-4-scout, mistral-small-3.1-24b, deepseek-r1, deepseek-r1-distill-llama-70b, deepseek-r1-distill-qwen-32b, phi-4, qwq-32b, deepseek-v3, deepseek-v3-0324, grok-3-mini` _**(4+)**_|`flux, flux-pro, flux-dev, flux-schnell, dall-e-3, sdxl-turbo, gpt-image`|`gpt-4o-mini-audio`|❌|`gpt-4o, gpt-4o-mini, o1-mini, o3-mini, o4-mini`|![](https://img.shields.io/badge/Active-brightgreen)|
 |[pollinations.ai](https://pollinations.ai)|No auth required|`g4f.Provider.PollinationsImage`|❌|`flux, flux-pro, flux-dev, flux-schnell, dall-e-3, sdxl-turbo, gpt-image`|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
 |[teach-anything.com](https://www.teach-anything.com)|No auth required|`g4f.Provider.TeachAnything`|`gemini-1.5-pro, gemini-1.5-flash`|❌|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
+|[together.xyz](https://together.xyz)|No auth required|`g4f.Provider.Together`|`llama-3.2-3b, llama-2-70b, llama-3-70b, llama-3.2-90b, llama-3.3-70b, llama-4-scout, llama-3.1-8b, llama-3.2-11b, llama-3-8b, llama-3.1-70b, llama-3.1-405b, llama-4-maverick, deepseek-r1, deepseek-r1-0528, deepseek-v3-0324, deepseek-r1-distill-llama-70b, deepseek-r1-distill-qwen-1.5b, deepseek-r1-distill-qwen-14b, deepseek-v3, qwen-2.5-vl-72b, qwen-2.5-coder-32b, qwen-2.5-7b, qwen-2-vl-72b, qwq-32b, qwen-2.5-72b, qwen-3-235b, qwen-2-72b, mixtral-8x7b, mistral-small-24b, mistral-7b, gemma-2-27b, nemotron-70b, hermes-2-dpo, r1-1776`|`flux, flux-schnell, flux-pro, flux-redux, flux-depth, flux-canny, flux-kontext-max, flux-dev-lora, flux-dev, flux-kontext-pro`|❌|❌|``|![](https://img.shields.io/badge/Active-brightgreen)|
 |[websim.ai](https://websim.ai)|No auth required|`g4f.Provider.Websim`|`gemini-1.5-pro, gemini-1.5-flash`|`flux`|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
 |[chat-gpt.com](https://chat-gpt.com)|No auth required|`g4f.Provider.WeWordle`|`gpt-4`|❌|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
 |[chat9.yqcloud.top](https://chat9.yqcloud.top)|No auth required|`g4f.Provider.Yqcloud`|`gpt-4`|✔|❌|❌|❌|![](https://img.shields.io/badge/Active-brightgreen)|
@@ -163,32 +164,31 @@ This document provides an overview of various AI providers and models, including
 |codellama-34b|Meta Llama|1 provider|[huggingface.co](https://huggingface.co/codellama/CodeLlama-34b)|
 |llama-2-7b|Meta Llama|2 providers|[huggingface.co](https://huggingface.co/meta-llama/Llama-2-7b)|
 |llama-2-13b|Meta Llama|1 provider|[huggingface.co](https://huggingface.co/meta-llama/Llama-2-13b)|
-|llama-2-70b|Meta Llama|1 provider|[huggingface.co](https://huggingface.co/meta-llama/Llama-2-70b)|
-|llama-3-8b|Meta Llama|2 providers|[ai.meta.com](https://ai.meta.com/blog/meta-llama-3/)|
-|llama-3-70b|Meta Llama|1 provider|[ai.meta.com](https://ai.meta.com/blog/meta-llama-3/)|
-|llama-3.1-8b|Meta Llama|3 providers|[ai.meta.com](https://ai.meta.com/blog/meta-llama-3-1/)|
-|llama-3.1-70b|Meta Llama|2 provider|[ai.meta.com](https://ai.meta.com/blog/meta-llama-3-1/)|
-|llama-3.1-405b|Meta Llama|1 provider|[ai.meta.com](https://ai.meta.com/blog/meta-llama-3-1/)|
+|llama-2-70b|Meta Llama|2 provider|[huggingface.co](https://huggingface.co/meta-llama/Llama-2-70b)|
+|llama-3-8b|Meta Llama|3 providers|[ai.meta.com](https://ai.meta.com/blog/meta-llama-3/)|
+|llama-3-70b|Meta Llama|2 provider|[ai.meta.com](https://ai.meta.com/blog/meta-llama-3/)|
+|llama-3.1-8b|Meta Llama|4 providers|[ai.meta.com](https://ai.meta.com/blog/meta-llama-3-1/)|
+|llama-3.1-70b|Meta Llama|3 provider|[ai.meta.com](https://ai.meta.com/blog/meta-llama-3-1/)|
+|llama-3.1-405b|Meta Llama|2 provider|[ai.meta.com](https://ai.meta.com/blog/meta-llama-3-1/)|
 |llama-3.2-1b|Meta Llama|2 providers|[huggingface.co](https://huggingface.co/meta-llama/Llama-3.2-1B)|
-|llama-3.2-3b|Meta Llama|1 providers|[huggingface.co](https://huggingface.co/meta-llama/Llama-3.2-3B)|
-|llama-3.2-11b|Meta Llama|2 providers|[ai.meta.com](https://ai.meta.com/blog/llama-3-2-connect-2024-vision-edge-mobile-devices/)|
-|llama-3.2-90b|Meta Llama|1 provider|[huggingface.co](https://huggingface.co/meta-llama/Llama-3.2-90B-Vision)|
-|llama-3.3-70b|Meta Llama|6 providers|[ai.meta.com](https://ai.meta.com/blog/llama-3-3/)|
-|llama-4-scout|Meta Llama|3 providers|[llama.com](https://www.llama.com/models/llama-4/)|
-|llama-4-maverick|Meta Llama|2 providers|[llama.com](https://www.llama.com/models/llama-4/)|
-|mistral-7b|Mistral AI|1 providers|[huggingface.co](https://huggingface.co/mistralai/Mistral-7B-v0.1)|
-|mixtral-8x7b|Mistral AI|2 providers|[huggingface.co](https://huggingface.co/mistralai/Mixtral-8x7B)|
+|llama-3.2-3b|Meta Llama|2 providers|[huggingface.co](https://huggingface.co/meta-llama/Llama-3.2-3B)|
+|llama-3.2-11b|Meta Llama|3 providers|[ai.meta.com](https://ai.meta.com/blog/llama-3-2-connect-2024-vision-edge-mobile-devices/)|
+|llama-3.2-90b|Meta Llama|2 provider|[huggingface.co](https://huggingface.co/meta-llama/Llama-3.2-90B-Vision)|
+|llama-3.3-70b|Meta Llama|7 providers|[ai.meta.com](https://ai.meta.com/blog/llama-3-3/)|
+|llama-4-scout|Meta Llama|4 providers|[llama.com](https://www.llama.com/models/llama-4/)|
+|llama-4-maverick|Meta Llama|3 providers|[llama.com](https://www.llama.com/models/llama-4/)|
+|mistral-7b|Mistral AI|2 providers|[huggingface.co](https://huggingface.co/mistralai/Mistral-7B-v0.3)|
+|mixtral-8x7b|Mistral AI|3 providers|[huggingface.co](https://huggingface.co/mistralai/Mixtral-8x7B)|
 |mixtral-8x22b|Mistral AI|2 providers|[huggingface.co](https://huggingface.co/mistralai/Mixtral-8x22B-Instruct-v0.1)|
 |mistral-nemo|Mistral AI|2 providers|[huggingface.co](https://huggingface.co/mistralai/Mistral-Nemo-Instruct-2407)|
-|mistral-small|Mistral AI|1 providers|[huggingface.co](https://huggingface.co/mistralai/Mistral-Small-24B-Instruct-2501)|
-|mistral-small-24b|Mistral AI|2 providers|[huggingface.co](https://huggingface.co/mistralai/Mistral-Small-24B-Instruct-2501)|
+|mistral-small-24b|Mistral AI|3 providers|[huggingface.co](https://huggingface.co/mistralai/Mistral-Small-24B-Instruct-2501)|
 |mistral-small-3.1-24b|Mistral AI|2 providers|[huggingface.co](https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503)|
 |mistral-large|Mistral AI|1 provider|[mistral.ai](https://mistral.ai/news/mistral-large/)|
 |mistral-medium|Mistral AI|1 provider|[mistral.ai](https://mistral.ai/news/mistral-medium/)|
 |mistral-next|Mistral AI|1 provider|[mistral.ai](https://mistral.ai/technology/)|
 |pixtral-large|Mistral AI|1 provider|[mistral.ai](https://mistral.ai/news/pixtral-large/)|
 |codestral|Mistral AI|1 provider|[mistral.ai](https://mistral.ai/news/codestral/)|
-|hermes-2-dpo|NousResearch|1 provider|[huggingface.co](https://huggingface.co/NousResearch/Hermes-2-Pro-Llama-3-8B)|
+|hermes-2-dpo|NousResearch|2 provider|[huggingface.co](https://huggingface.co/NousResearch/Hermes-2-Pro-Llama-3-8B)|
 |hermes-3-405b|NousResearch|1 provider|[huggingface.co](https://huggingface.co/NousResearch/Hermes-3-Llama-3.1-405B-FP8)|
 |phi-3-small|Microsoft|1 provider|[huggingface.co](https://huggingface.co/microsoft/Phi-3-small)|
 |phi-3-mini|Microsoft|1 provider|[huggingface.co](https://huggingface.co/microsoft/Phi-3-mini)|
@@ -210,7 +210,7 @@ This document provides an overview of various AI providers and models, including
 |gemini-2.5-pro|Google|2 providers|[deepmind.google](https://deepmind.google/technologies/gemini/)|
 |gemma-2-2b|Google|1 provider|[huggingface.co](https://huggingface.co/google/gemma-2-2b)|
 |gemma-2-9b|Google|1 providers|[huggingface.co](https://huggingface.co/google/gemma-2-9b)|
-|gemma-2-27b|Google|1 provider|[huggingface.co](https://huggingface.co/google/gemma-2-27b)|
+|gemma-2-27b|Google|2 provider|[huggingface.co](https://huggingface.co/google/gemma-2-27b)|
 |gemma-3-4b|Google|1 providers|[huggingface.co](https://huggingface.co/google/gemma-3-4b-it)|
 |gemma-3-12b|Google|2 providers|[huggingface.co](https://huggingface.co/google/gemma-3-12b-it)|
 |gemma-3-27b|Google|2 providers|[huggingface.co](https://huggingface.co/google/gemma-3-27b-it)|
@@ -238,38 +238,41 @@ This document provides an overview of various AI providers and models, including
 |qwen-1.5-32b|Qwen|1 provider|[huggingface.co](https://huggingface.co/Qwen/Qwen1.5-32B)|
 |qwen-1.5-72b|Qwen|1 provider|[huggingface.co](https://huggingface.co/Qwen/Qwen1.5-72B)|
 |qwen-1.5-110b|Qwen|1 provider|[huggingface.co](https://huggingface.co/Qwen/Qwen1.5-110B)|
-|qwen-2-72b|Qwen|3 providers|[huggingface.co](https://huggingface.co/Qwen/Qwen2-72B)|
+|qwen-2-72b|Qwen|5 providers|[huggingface.co](https://huggingface.co/Qwen/Qwen2-72B)|
 |qwen-2-vl-7b|Qwen|1 provider|[huggingface.co](https://huggingface.co/Qwen/Qwen2-VL-7B)|
+|qwen-2-vl-72b|Qwen|1 provider|[huggingface.co](https://huggingface.co/Qwen/Qwen2-VL-72B-Instruct)|
 |qwen-2.5|Qwen|1 provider|[qwen-ai.com](https://www.qwen-ai.com/2-5/)|
-|qwen-2.5-72b|Qwen|1 providers|[huggingface.co](https://huggingface.co/Qwen/Qwen2.5-72B-Instruct)|
-|qwen-2.5-coder-32b|Qwen|4 providers|[huggingface.co](https://huggingface.co/Qwen/Qwen2.5-Coder-32B)|
+|qwen-2.5-7b|Qwen|1 provider|[huggingface.co](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct)|
+|qwen-2.5-72b|Qwen|2 providers|[huggingface.co](https://huggingface.co/Qwen/Qwen2.5-72B-Instruct)|
+|qwen-2.5-coder-32b|Qwen|5 providers|[huggingface.co](https://huggingface.co/Qwen/Qwen2.5-Coder-32B)|
 |qwen-2.5-1m|Qwen|1 provider|[huggingface.co](https://huggingface.co/Qwen/Qwen2.5-1M-Demo)|
 |qwen-2.5-max|Qwen|2 providers|[qwen-ai.com](https://www.qwen-ai.com/2-5-max/)|
 |qwen-2.5-vl-32b|Qwen|1 providers|[huggingface.co](https://huggingface.co/Qwen/Qwen2.5-VL-32B-Instruct)|
-|qwen-2.5-vl-72b|Qwen|1 providers|[huggingface.co](https://huggingface.co/Qwen/Qwen2.5-VL-72B-Instruct)|
+|qwen-2.5-vl-72b|Qwen|2 providers|[huggingface.co](https://huggingface.co/Qwen/Qwen2.5-VL-72B-Instruct)|
 |qwen-2.5-plus|Qwen|1 provider|[qwen-ai.com](https://www.qwen-ai.com/2-5-plus/)|
-|qwen-3-235b|Qwen|3 providers|[huggingface.co](https://huggingface.co/Qwen/Qwen3-235B-A22B)|
+|qwen-3-235b|Qwen|4 providers|[huggingface.co](https://huggingface.co/Qwen/Qwen3-235B-A22B)|
 |qwen-3-32b|Qwen|3 providers|[huggingface.co](https://huggingface.co/Qwen/Qwen3-32B)|
 |qwen-3-30b|Qwen|3 providers|[huggingface.co](https://huggingface.co/Qwen/Qwen3-30B-A3B)|
 |qwen-3-14b|Qwen|2 providers|[qwenlm.github.io](https://qwenlm.github.io/blog/qwen3/)|
 |qwen-3-4b|Qwen|1 provider|[huggingface.co](https://huggingface.co/Qwen/Qwen3-4B-Base)|
 |qwen-3-1.7b|Qwen|1 provider|[qwenlm.github.io](https://qwenlm.github.io/blog/qwen3/)|
 |qwen-3-0.6b|Qwen|1 provider|[huggingface.co](https://huggingface.co/Qwen/Qwen3-0.6B)|
-|qwq-32b|Qwen|4 providers|[huggingface.co](https://huggingface.co/Qwen/QwQ-32B-Preview)|
-|pi|Inflection|1 provider|[inflection.ai](https://inflection.ai/blog/inflection-2-5)|
+|qwq-32b|Qwen|5 providers|[huggingface.co](https://huggingface.co/Qwen/QwQ-32B-Preview)|
 |deepseek-67b|DeepSeek|1 provider|[huggingface.co](https://huggingface.co/deepseek-ai/deepseek-llm-67b-base)|
-|deepseek-v3|DeepSeek|3 providers|[api-docs.deepseek.com](https://api-docs.deepseek.com/news/news250120)|
-|deepseek-r1|DeepSeek|6 providers|[api-docs.deepseek.com](https://api-docs.deepseek.com/news/news250120)|
+|deepseek-v3|DeepSeek|4 providers|[api-docs.deepseek.com](https://api-docs.deepseek.com/news/news250120)|
+|deepseek-r1|DeepSeek|7 providers|[api-docs.deepseek.com](https://api-docs.deepseek.com/news/news250120)|
 |deepseek-r1-turbo|DeepSeek|1 provider|[huggingface.co](https://huggingface.co/deepseek-ai/DeepSeek-R1)|
-|deepseek-r1-distill-llama-70b|DeepSeek|2 providers|[huggingface.co](https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Llama-70B)|
+|deepseek-r1-distill-llama-70b|DeepSeek|3 providers|[huggingface.co](https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Llama-70B)|
+|deepseek-r1-distill-qwen-1.5b|DeepSeek|2 providers|[huggingface.co](https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B)|
+|deepseek-r1-distill-qwen-14b|DeepSeek|2 providers|[huggingface.co](https://huggingface.co/api/models/deepseek-ai/DeepSeek-R1-Distill-Qwen-14B)|
 |deepseek-r1-distill-qwen-32b|DeepSeek|2 providers|[huggingface.co](https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-32B)|
 |deepseek-v2|DeepSeek|1 provider|[huggingface.co](https://huggingface.co/deepseek-ai/DeepSeek-V2)|
 |deepseek-coder-v2|DeepSeek|1 provider|[huggingface.co](https://huggingface.co/deepseek-ai/DeepSeek-Coder-V2)|
 |deepseek-prover-v2|DeepSeek|1 provider|[github.com/deepseek-ai](https://github.com/deepseek-ai/DeepSeek-Prover-V2)|
 |deepseek-prover-v2-671b|DeepSeek|1 provider|[github.com/deepseek-ai](https://github.com/deepseek-ai/DeepSeek-Prover-V2)|
 |deepseek-v2.5|DeepSeek|1 provider|[huggingface.co](https://huggingface.co/deepseek-ai/DeepSeek-V2.5)|
-|deepseek-v3-0324|DeepSeek|3 providers|[huggingface.co](https://huggingface.co/deepseek-ai/DeepSeek-V3-0324)|
-|deepseek-r1-0528|DeepSeek|1 providers|[huggingface.co](https://huggingface.co/deepseek-ai/DeepSeek-R1-0528)|
+|deepseek-v3-0324|DeepSeek|4 providers|[huggingface.co](https://huggingface.co/deepseek-ai/DeepSeek-V3-0324)|
+|deepseek-r1-0528|DeepSeek|2 providers|[huggingface.co](https://huggingface.co/deepseek-ai/DeepSeek-R1-0528)|
 |janus-pro-7b|DeepSeek|1 provider|[api-docs.deepseek.com](https://api-docs.deepseek.com/docs/janus-pro-7b)|
 |grok-2|x.ai|2 providers|[x.ai](https://x.ai/blog/grok-2)|
 |grok-2-mini|x.ai|1 provider|[x.ai](https://x.ai/blog/grok-2)|
@@ -280,12 +283,12 @@ This document provides an overview of various AI providers and models, including
 |sonar-pro|Perplexity AI|1 provider|[sonar.perplexity.ai](https://sonar.perplexity.ai/)|
 |sonar-reasoning|Perplexity AI|1 provider|[sonar.perplexity.ai](https://sonar.perplexity.ai/)|
 |sonar-reasoning-pro|Perplexity AI|1 provider|[sonar.perplexity.ai](https://sonar.perplexity.ai/)|
-|r1-1776|Perplexity AI|1 provider|[perplexity.ai](https://www.perplexity.ai/hub/blog/open-sourcing-r1-1776)|
+|r1-1776|Perplexity AI|2 provider|[perplexity.ai](https://www.perplexity.ai/hub/blog/open-sourcing-r1-1776)|
 |pplx-7b-online|Perplexity AI|1 provider|[perplexity.ai](https://www.perplexity.ai/)|
 |pplx-70b-online|Perplexity AI|1 provider|[perplexity.ai](https://www.perplexity.ai/)|
 |nemotron-49b|Nvidia|1 providers|[huggingface.co](https://huggingface.co/nvidia/Llama-3_3-Nemotron-Super-49B-v1)|
 |nemotron-51b|Nvidia|1 provider|[huggingface.co](https://huggingface.co/nvidia/Llama-3_1-Nemotron-51B-Instruct)|
-|nemotron-70b|Nvidia|4 providers|[build.nvidia.com](https://build.nvidia.com/nvidia/llama-3_1-nemotron-70b-instruct)|
+|nemotron-70b|Nvidia|5 providers|[build.nvidia.com](https://build.nvidia.com/nvidia/llama-3_1-nemotron-70b-instruct)|
 |nemotron-253b|Nvidia|1 providers|[build.nvidia.com](https://build.nvidia.com/nvidia/llama-3_1-nemotron-ultra-253b-v1/modelcard)|
 |nemotron-4-340b|Nvidia|1 provider|[build.nvidia.com](https://build.nvidia.com/nvidia/nemotron-4-340b-instruct)|
 |glm-4|THUDM|2 providers|[github.com/THUDM](https://github.com/THUDM/GLM-4)|
@@ -300,7 +303,7 @@ This document provides an overview of various AI providers and models, including
 |tulu-3-70b|Allen AI|1 provider|[huggingface.co](https://huggingface.co/allenai/Llama-3.1-Tulu-3-70B)|
 |openhermes-2.5-7b|Allen AI|1 provider|[huggingface.co](https://huggingface.co/teknium/OpenHermes-2.5-Mistral-7B)|
 |dbrx-instruct|Databricks|1 provider|[huggingface.co](https://huggingface.co/databricks/dbrx-instruct)|
-|evil|Evil Mode - Experimental|1 provider|[]()|
+|evil|Evil Mode - Experimental|1 provider|❌|
 
 ### Image generation models
 | Model | Base Provider | Providers | Website |
@@ -311,11 +314,17 @@ This document provides an overview of various AI providers and models, including
 |sdxl-l|Stability AI|1 providers|[huggingface.co](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0)|
 |sdxl-turbo|Stability AI|2 providers|[huggingface.co](https://huggingface.co/stabilityai/sdxl-turbo)|
 |sd-3.5-large|Stability AI|1 provider|[huggingface.co](https://huggingface.co/stabilityai/stable-diffusion-3.5-large)|
-|flux|Black Forest Labs|4 providers|[blackforestlabs.ai](https://blackforestlabs.ai/announcing-flux/)|
-|flux-pro|Black Forest Labs|2 provider|[blackforestlabs.ai](https://blackforestlabs.ai/flux-pro/)|
-|flux-dev|Black Forest Labs|5 providers|[blackforestlabs.ai](https://blackforestlabs.ai/flux-dev/)|
-|flux-schnell|Black Forest Labs|3 providers|[blackforestlabs.ai](https://blackforestlabs.ai/flux-schnell/)|
-|midjourney|Midjourney|1 provider|[midjourney.com](https://www.midjourney.com/)|
+|flux|Black Forest Labs|5 providers|[blackforestlabs.ai](https://blackforestlabs.ai/announcing-flux/)|
+|flux-pro|Black Forest Labs|3 provider|[blackforestlabs.ai](https://blackforestlabs.ai/flux-pro/)|
+|flux-dev|Black Forest Labs|6 providers|[blackforestlabs.ai](https://blackforestlabs.ai/flux-dev/)|
+|flux-schnell|Black Forest Labs|4 providers|[blackforestlabs.ai](https://blackforestlabs.ai/flux-schnell/)|
+|flux-redux|Black Forest Labs|1 providers|[huggingface.co](https://huggingface.co/black-forest-labs/FLUX.1-Redux-dev)|
+|flux-depth|Black Forest Labs|1 providers|[huggingface.co](https://huggingface.co/black-forest-labs/FLUX.1-Depth-dev)|
+|flux-canny|Black Forest Labs|1 providers|[huggingface.co](https://huggingface.co/black-forest-labs/FLUX.1-Canny-dev)|
+|flux-kontext-max|Black Forest Labs|1 providers|❌|
+|flux-dev-lora|Black Forest Labs|1 providers|[huggingface.co](https://huggingface.co/black-forest-labs/FLUX.1-dev)|
+|flux-kontext-pro|Black Forest Labs|1 providers|❌|
+|midjourney|Midjourney|2 provider|[midjourney.com](https://www.midjourney.com/)|
 
 ## Conclusion and Usage Tips
 This document provides a comprehensive overview of various AI providers and models available for text generation, image generation, and vision tasks. **When choosing a provider or model, consider the following factors:**
