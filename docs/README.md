@@ -136,7 +136,7 @@ $ g4f "Explain quantum computing"
 
 ## Community & Links
 
-- **Open Source:** [GitHub: g4f.dev](https://github.com/gpt4free/g4f.dev)
+- **Open Source:** [GitHub: gpt4free/g4f.dev](https://github.com/gpt4free/g4f.dev)
 - **Contribute & Report Bugs:** PRs & issues are welcome!
 - **Project Website:** [https://g4f.dev/](https://g4f.dev/)
 - **Pollinations AI:**  
