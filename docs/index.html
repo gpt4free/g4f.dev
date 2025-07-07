@@ -92,7 +92,7 @@
     <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello"</span>}],
     <span class="pl-s1">web_search</span><span class="pl-c1">=</span><span class="pl-c1">False</span>
 )
-<span class="pl-en">print</span>(<span class="pl-s1">response</span>.<span class="pl-c1">choices</span>[<span class="pl-c1">0</span>].<span class="pl-c1">message</span>.<span class="pl-c1">content</span>)</pre></div>
+<span class="pl-en">print</span>(<span class="pl-s1">response</span>.<span class="pl-c1">choices</span>.<span class="pl-c1">message</span>.<span class="pl-c1">content</span>)</pre></div>
 <p><strong>Output:</strong></p>
 <pre class="notranslate"><code class="notranslate">Hello! How can I assist you today?
 </code></pre>
@@ -107,11 +107,12 @@
     <span class="pl-s1">prompt</span><span class="pl-c1">=</span><span class="pl-s">"a white siamese cat"</span>,
     <span class="pl-s1">response_format</span><span class="pl-c1">=</span><span class="pl-s">"url"</span>
 )
-<span class="pl-en">print</span>(<span class="pl-s">f"Generated image URL: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">url</span><span class="pl-kos">}</span></span>"</span>)</pre></div>
+<span class="pl-en">print</span>(<span class="pl-s">f"Generated image URL: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">response</span>.<span class="pl-c1">data</span>.<span class="pl-c1">url</span><span class="pl-kos">}</span></span>"</span>)</pre></div>
 <p><a href="client.html">More Python client info →</a> <a href="async_client.html">and Async client →</a></p>
 <hr>
 <h3>🧙‍♂️ Using GPT4Free.js</h3>
-<p>Use the <strong>official JS client</strong> right in the browser—no backend needed:</p>
+<p>Use the <strong>official JS client</strong> right in the browser—no backend needed.</p>
+<p>For text generation:</p>
 <div class="highlight highlight-text-html-basic"><pre class="notranslate"><span class="pl-kos">&lt;</span><span class="pl-ent">script</span> <span class="pl-c1">type</span>="<span class="pl-s">module</span>"<span class="pl-kos">&gt;</span>
     <span class="pl-k">import</span> <span class="pl-v">Client</span> <span class="pl-k">from</span> <span class="pl-s">'https://g4f.dev/dist/js/client.js'</span><span class="pl-kos">;</span>
 
@@ -120,11 +121,21 @@
         <span class="pl-c1">model</span>: <span class="pl-s">'gpt-4.1'</span><span class="pl-kos">,</span>  <span class="pl-c">// Or "gpt-4o", "deepseek-v3"</span>
         <span class="pl-c1">messages</span>: <span class="pl-kos">[</span><span class="pl-kos">{</span> <span class="pl-c1">role</span>: <span class="pl-s">'user'</span><span class="pl-kos">,</span> <span class="pl-c1">content</span>: <span class="pl-s">'Explain quantum computing'</span> <span class="pl-kos">}</span><span class="pl-kos">]</span>
     <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">log</span><span class="pl-kos">(</span><span class="pl-s1">result</span><span class="pl-kos">.</span><span class="pl-c1">choices</span><span class="pl-kos">[</span><span class="pl-c1">0</span><span class="pl-kos">]</span><span class="pl-kos">.</span><span class="pl-c1">message</span><span class="pl-kos">.</span><span class="pl-c1">content</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
+    <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">log</span><span class="pl-kos">(</span><span class="pl-s1">result</span><span class="pl-kos">.</span><span class="pl-c1">choices</span><span class="pl-kos">.</span><span class="pl-c1">message</span><span class="pl-kos">.</span><span class="pl-c1">content</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
 <span class="pl-kos">&lt;/</span><span class="pl-ent">script</span><span class="pl-kos">&gt;</span></pre></div>
-<ul>
-<li>You can call <code class="notranslate">.images.generate({ ... })</code> in JS too, just like Python!</li>
-</ul>
+<p>And for image generation:</p>
+<div class="highlight highlight-text-html-basic"><pre class="notranslate"><span class="pl-kos">&lt;</span><span class="pl-ent">script</span> <span class="pl-c1">type</span>="<span class="pl-s">module</span>"<span class="pl-kos">&gt;</span>
+    <span class="pl-k">import</span> <span class="pl-v">Client</span> <span class="pl-k">from</span> <span class="pl-s">'https://g4f.dev/dist/js/client.js'</span><span class="pl-kos">;</span>
+
+    <span class="pl-k">const</span> <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">Client</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
+    <span class="pl-k">const</span> <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span><span class="pl-kos">.</span><span class="pl-c1">images</span><span class="pl-kos">.</span><span class="pl-en">generate</span><span class="pl-kos">(</span><span class="pl-kos">{</span>
+        <span class="pl-c1">model</span>: <span class="pl-s">"flux"</span><span class="pl-kos">,</span> <span class="pl-c">// Or "dalle-3", "gpt-image"</span>
+        <span class="pl-c1">prompt</span>: <span class="pl-s">"a white siamese cat"</span>
+    <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
+    <span class="pl-k">const</span> <span class="pl-s1">imageUrl</span> <span class="pl-c1">=</span> <span class="pl-s1">response</span><span class="pl-kos">.</span><span class="pl-c1">data</span><span class="pl-kos">.</span><span class="pl-c1">url</span><span class="pl-kos">;</span>
+    <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">log</span><span class="pl-kos">(</span><span class="pl-s">`Generated Image URL: <span class="pl-s1"><span class="pl-kos">${</span><span class="pl-s1">imageUrl</span><span class="pl-kos">}</span></span>`</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
+    <span class="pl-c">// Example: document.body.innerHTML += `&lt;img src="${imageUrl}" /&gt;`;</span>
+<span class="pl-kos">&lt;/</span><span class="pl-ent">script</span><span class="pl-kos">&gt;</span></pre></div>
 <p><a href="client_js.html">See more JS client usage →</a></p>
 <h3>💻 Using CLI Client</h3>
 <div class="highlight highlight-source-shell"><pre class="notranslate">$ g4f <span class="pl-s"><span class="pl-pds">"</span>Explain quantum computing<span class="pl-pds">"</span></span></pre></div>
@@ -158,7 +169,7 @@
 </li>
 <li>
 <p><strong>Pollinations AI:</strong><br>
-<a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/42abea0d5c9cece8dde650803d108ad2157cd70ccd83ca7fc2f49718b70f4d15/68747470733a2f2f696d6167652e706f6c6c696e6174696f6e732e61692f70726f6d70742f4372656174652b612b6c6f676f2b666f722b506f6c6c696e6174696f6e732b41492b666561747572696e672b616e2b61627374726163742b666c6f7765722b626c6f6f6d696e672b6469676974616c2b706574616c732b676c6f77696e672b63656e7465722b667574757269737469632b666f6e742b506f6c6c696e6174696f6e732b41493f77696474683d353132266865696768743d323536266e6f6c6f676f3d74727565"><img src="https://camo.githubusercontent.com/42abea0d5c9cece8dde650803d108ad2157cd70ccd83ca7fc2f49718b70f4d15/68747470733a2f2f696d6167652e706f6c6c696e6174696f6e732e61692f70726f6d70742f4372656174652b612b6c6f676f2b666f722b506f6c6c696e6174696f6e732b41492b666561747572696e672b616e2b61627374726163742b666c6f7765722b626c6f6f6d696e672b6469676974616c2b706574616c732b676c6f77696e672b63656e7465722b667574757269737469632b666f6e742b506f6c6c696e6174696f6e732b41493f77696474683d353132266865696768743d323536266e6f6c6f676f3d74727565" height="80" data-canonical-src="https://image.pollinations.ai/prompt/Create+a+logo+for+Pollinations+AI+featuring+an+abstract+flower+blooming+digital+petals+glowing+center+futuristic+font+Pollinations+AI?width=512&amp;height=256&amp;nologo=true" style="max-width: 100%;"></a></p>
+<a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/42abea0d5c9cece8dde650803d108ad2157cd70ccd83ca7fc2f49718b70f4d15/68747470733a2f2f696d6167652e706f6c6c696e6174696f6e732e61692f70726f6d70742f4372656174652b612b6c6f676f2b666f722b506f6c6c696e6174696f6e732b41492b666561747572696e672b616e2b61627374726163742b666c6f7765722b626c6f6f6d696e672b6469676974616c2b706574616c732b676c6f77696e672b63656e7465722b667574757269737469632b666f6e742b506f6c6c696e6174696f6e732b41493f77696474683d353132266865696768743d323536266e6f6c6f676f3d74727565"><img src="https://camo.githubusercontent.com/42abea0d5c9cece8dde650803d108ad2157cd70ccd83ca7fc2f49718b70f4d15/68747470733a2f2f696d6167652e706f6c6c696e6174696f6e732e61692f70726f6d70742f4372656174652b612b6c6f676f2b666f722b506f6c6c696e6174696f6e732b41492b666561747572696e672b616e2b61627374726163742b666c6f7765722b626c6f6f6d696e672b6469676974616c2b706574616c732b676c6f77696e672b63656e7465722b667574757269737469632b666f6e742b506f6c6c696e6174696f6e732b41493f77696474683d353132266865696768743d323536266e6f6c6f676f3d74727565" height="80" data-canonical-src="https://image.pollinations.ai/prompt/Create+a+logo+for+Pollinations+AI+featuring+an+abstract+flower+blooming+digital+petals+glowing+center+futuristic+font+Pollinations+AI?width=512&amp;height=256&amp;nologo=true" style="max-width: 100%; height: auto; max-height: 80px;"></a></p>
 <p><a href="https://github.com/pollinations/pollinations">GitHub: pollinations/pollinations</a></p>
 </li>
 </ul>
