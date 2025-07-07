@@ -43,7 +43,7 @@ response = client.chat.completions.create(
     messages=[{"role": "user", "content": "Hello"}],
     web_search=False
 )
-print(response.choices[0].message.content)
+print(response.choices.message.content)
 ```
 **Output:**
 ```
@@ -65,7 +65,7 @@ response = client.images.generate(
     prompt="a white siamese cat",
     response_format="url"
 )
-print(f"Generated image URL: {response.data[0].url}")
+print(f"Generated image URL: {response.data.url}")
 ```
 
 [More Python client info →](client.md) [and Async client →](async_client.md)
@@ -74,8 +74,9 @@ print(f"Generated image URL: {response.data[0].url}")
 
 ### 🧙‍♂️ Using GPT4Free.js
 
-Use the **official JS client** right in the browser—no backend needed:
+Use the **official JS client** right in the browser—no backend needed.
 
+For text generation:
 ```html
 <script type="module">
     import Client from 'https://g4f.dev/dist/js/client.js';
@@ -85,11 +86,25 @@ Use the **official JS client** right in the browser—no backend needed:
         model: 'gpt-4.1',  // Or "gpt-4o", "deepseek-v3"
         messages: [{ role: 'user', content: 'Explain quantum computing' }]
     });
-    console.log(result.choices[0].message.content);
+    console.log(result.choices.message.content);
 </script>
 ```
 
-- You can call `.images.generate({ ... })` in JS too, just like Python!
+And for image generation:
+```html
+<script type="module">
+    import Client from 'https://g4f.dev/dist/js/client.js';
+
+    const client = new Client();
+    const response = await client.images.generate({
+        model: "flux", // Or "dalle-3", "gpt-image"
+        prompt: "a white siamese cat"
+    });
+    const imageUrl = response.data.url;
+    console.log(`Generated Image URL: ${imageUrl}`);
+    // Example: document.body.innerHTML += `<img src="${imageUrl}" />`;
+</script>
+```
 
 [See more JS client usage →](client_js.md)
 
@@ -121,7 +136,7 @@ $ g4f "Explain quantum computing"
 
 ## Community & Links
 
-- **Open Source:** [GitHub: gpt4free/g4f.dev](https://github.com/gpt4free/g4f.dev)
+- **Open Source:** [GitHub: g4f.dev](https://github.com/gpt4free/g4f.dev)
 - **Contribute & Report Bugs:** PRs & issues are welcome!
 - **Project Website:** [https://g4f.dev/](https://g4f.dev/)
 - **Pollinations AI:**  

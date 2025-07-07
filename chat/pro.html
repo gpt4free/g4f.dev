@@ -41,6 +41,10 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
       max-width: 80%;
     }
+    .assistant img {
+      max-width: 100%;
+      border-radius: 8px;
+    }
     #form {
       display: flex;
       padding: 1rem;
@@ -110,7 +114,9 @@
 </form>
 
 <script type="module">
-  import { Client, DeepInfra, Together, Puter, HuggingFace } from 'https://g4f.dev/dist/js/client.js';
+  import { Client, Pollinations, DeepInfra, Together, Puter, HuggingFace } from 'https://g4f.dev/dist/js/client.js';
+  //import { Client, Pollinations, DeepInfra, Together, Puter, HuggingFace } from '../dist/js/client.js';
+  
   import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
 
   const chat = document.getElementById('chat');
@@ -128,12 +134,11 @@
     const provider = providerSelect.value;
     const apiKey = apiKeyInput.value.trim();
     const options = apiKey ? { apiKey } : {};
-    let ClientClass = Client;
+    let ClientClass;
 
     switch (provider) {
       case 'pollinations':
-        ClientClass = Client;
-        options.defaultModel = 'deepseek';
+        ClientClass = Pollinations;
         break;
       case 'deepinfra':
         ClientClass = DeepInfra;
@@ -169,6 +174,12 @@
         const opt = document.createElement('option');
         opt.value = model.id;
         opt.textContent = model.id;
+        // --- CHANGE START ---
+        // Store the model type (e.g., 'chat' or 'image') in a data attribute.
+        if (model.type) {
+          opt.dataset.type = model.type;
+        }
+        // --- CHANGE END ---
         if (model.id === client.defaultModel) opt.selected = true;
         modelSelect.appendChild(opt);
       });
@@ -186,35 +197,58 @@
     const text = input.value.trim();
     if (!text) return;
 
-    const selectedModel = modelSelect.value || defaultModel;
+    // --- CHANGE START ---
+    // Get the full selected option element to access its data attributes.
+    const selectedOption = modelSelect.options[modelSelect.selectedIndex];
+    const selectedModel = selectedOption.value || defaultModel;
+    const modelType = selectedOption.dataset.type || 'chat'; // Default to 'chat' if type is not specified
+    // --- CHANGE END ---
+
     addMessage('user', text);
     messages.push({ role: 'user', content: text });
     input.value = '';
 
     const assistantEl = document.createElement('div');
     assistantEl.className = 'message assistant';
-    assistantEl.innerHTML = '<em>Typing...</em>';
+    assistantEl.innerHTML = `<em>Generating with ${modelType} model...</em>`;
     chat.appendChild(assistantEl);
     chat.scrollTop = chat.scrollHeight;
 
     try {
-      const stream = await client.chat.completions.create({
-        model: selectedModel,
-        messages,
-        stream: true
-      });
+      // --- CHANGE START ---
+      // Conditionally call the correct client method based on model type.
+      if (modelType === 'image') {
+        // Handle image generation
+        const response = await client.images.generate({
+          model: selectedModel,
+          prompt: text,
+        });
+        
+        const imageUrl = response.data[0].url;
+        assistantEl.innerHTML = `<img src="${imageUrl}" alt="${text}" />`;
+        messages.push({ role: 'assistant', content: `Image generated: ${imageUrl}` });
 
-      let fullResponse = '';
-      for await (const chunk of stream) {
-        const delta = chunk.choices[0]?.delta?.content || chunk.choices[0]?.delta?.reasoning_content || '';
-        fullResponse += delta;
-        assistantEl.innerHTML = marked.parse(fullResponse);
-        chat.scrollTop = chat.scrollHeight;
+      } else {
+        // Handle chat completion (existing logic)
+        const stream = await client.chat.completions.create({
+          model: selectedModel,
+          messages,
+          stream: true
+        });
+
+        let fullResponse = '';
+        for await (const chunk of stream) {
+          const delta = chunk.choices[0]?.delta?.content || chunk.choices[0]?.delta?.reasoning_content || '';
+          fullResponse += delta;
+          assistantEl.innerHTML = marked.parse(fullResponse);
+          chat.scrollTop = chat.scrollHeight;
+        }
+        messages.push({ role: 'assistant', content: fullResponse });
       }
-
-      messages.push({ role: 'assistant', content: fullResponse });
+      // --- CHANGE END ---
     } catch (err) {
       assistantEl.innerHTML = '<strong>Error:</strong> ' + err.message;
+      console.error(err);
     }
   });
 
