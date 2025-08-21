@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G4F - Vision Support in Chat Completion</title>
+    <title>G4F - G4F - Vision Support in Chat Completion</title>
     <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png">
@@ -49,85 +49,12 @@
 
         @media only screen and (min-width: 40em) {
             .container-lg {
-                max-width: 84%;
+                padding: 16px;
             }
         }
     </style>
 </head>
 <body>
-    <article class="markdown-body entry-content container-lg" itemprop="text"><h2>G4F - Vision Support in Chat Completion</h2>
-<p>This documentation provides an overview of how to integrate vision support into chat completions using an API and a client. It includes examples to guide you through the process.</p>
-<h3>Example with the API</h3>
-<p>To use vision support in chat completion with the API, follow the example below:</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">requests</span>
-<span class="pl-k">import</span> <span class="pl-s1">json</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">image</span> <span class="pl-k">import</span> <span class="pl-s1">to_data_uri</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">requests</span>.<span class="pl-s1">raise_for_status</span> <span class="pl-k">import</span> <span class="pl-s1">raise_for_status</span>
-
-<span class="pl-s1">url</span> <span class="pl-c1">=</span> <span class="pl-s">"http://localhost:8080/v1/chat/completions"</span>
-<span class="pl-s1">body</span> <span class="pl-c1">=</span> {
-    <span class="pl-s">"model"</span>: <span class="pl-s">""</span>,
-    <span class="pl-s">"provider"</span>: <span class="pl-s">"Copilot"</span>,
-    <span class="pl-s">"messages"</span>: [
-        {<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"what are on this image?"</span>}
-    ],
-    <span class="pl-s">"images"</span>: [
-        [<span class="pl-s">"data:image/jpeg;base64,..."</span>, <span class="pl-s">"cat.jpeg"</span>]
-    ]
-}
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">requests</span>.<span class="pl-c1">post</span>(<span class="pl-s1">url</span>, <span class="pl-s1">json</span><span class="pl-c1">=</span><span class="pl-s1">body</span>, <span class="pl-s1">headers</span><span class="pl-c1">=</span>{<span class="pl-s">"g4f-api-key"</span>: <span class="pl-s">"secret"</span>})
-<span class="pl-en">raise_for_status</span>(<span class="pl-s1">response</span>)
-<span class="pl-en">print</span>(<span class="pl-s1">response</span>.<span class="pl-c1">json</span>())</pre></div>
-<p>In this example:</p>
-<ul>
-<li><code class="notranslate">url</code> is the endpoint for the chat completion API.</li>
-<li><code class="notranslate">body</code> contains the model, provider, messages, and images.</li>
-<li><code class="notranslate">messages</code> is a list of message objects with roles and content.</li>
-<li><code class="notranslate">images</code> is a list of image data in Data URI format and optional filenames.</li>
-<li><code class="notranslate">response</code> stores the API response.</li>
-</ul>
-<h3>Example with the Client</h3>
-<p>To use vision support in chat completion with the client, follow the example below:</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">g4f</span>
-<span class="pl-k">import</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span>
-
-<span class="pl-k">def</span> <span class="pl-en">chat_completion</span>(<span class="pl-s1">prompt</span>):
-    <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-s1">g4f</span>.<span class="pl-c1">Client</span>(<span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">Blackbox</span>)
-    <span class="pl-s1">images</span> <span class="pl-c1">=</span> [
-        [<span class="pl-en">open</span>(<span class="pl-s">"docs/images/waterfall.jpeg"</span>, <span class="pl-s">"rb"</span>), <span class="pl-s">"waterfall.jpeg"</span>],
-        [<span class="pl-en">open</span>(<span class="pl-s">"docs/images/cat.webp"</span>, <span class="pl-s">"rb"</span>), <span class="pl-s">"cat.webp"</span>]
-    ]
-    <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>([{<span class="pl-s">"content"</span>: <span class="pl-s1">prompt</span>, <span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>}], <span class="pl-s">""</span>, <span class="pl-s1">images</span><span class="pl-c1">=</span><span class="pl-s1">images</span>)
-    <span class="pl-en">print</span>(<span class="pl-s1">response</span>.<span class="pl-c1">choices</span>[<span class="pl-c1">0</span>].<span class="pl-c1">message</span>.<span class="pl-c1">content</span>)
-
-<span class="pl-s1">prompt</span> <span class="pl-c1">=</span> <span class="pl-s">"what are on this images?"</span>
-<span class="pl-en">chat_completion</span>(<span class="pl-s1">prompt</span>)</pre></div>
-<pre class="notranslate"><code class="notranslate">**Image 1**
-
-* A waterfall with a rainbow
-* Lush greenery surrounding the waterfall
-* A stream flowing from the waterfall
-
-**Image 2**
-
-* A white cat with blue eyes
-* A bird perched on a window sill
-* Sunlight streaming through the window
-</code></pre>
-<p>In this example:</p>
-<ul>
-<li><code class="notranslate">client</code> initializes a new client with the specified provider.</li>
-<li><code class="notranslate">images</code> is a list of image data and optional filenames.</li>
-<li><code class="notranslate">response</code> stores the response from the client.</li>
-<li>The <code class="notranslate">chat_completion</code> function prints the chat completion output.</li>
-</ul>
-<h3>Notes</h3>
-<ul>
-<li>Multiple images can be sent. Each image has two data parts: image data (in Data URI format for the API) and an optional filename.</li>
-<li>The client supports bytes, IO objects, and PIL images as input.</li>
-<li>Ensure you use a provider that supports vision and multiple images.</li>
-</ul>
-<hr>
-<p><a href="/docs/">Return to Documentation</a></p></article>
+    <article class="markdown-body entry-content container-lg" itemprop="text">Blocked by DNS monitoring proxy</article>
 </body>
 </html>

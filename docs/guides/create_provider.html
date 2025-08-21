@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Provider with AI Tool</title>
+    <title>G4F - Create Provider with AI Tool</title>
     <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png">
@@ -49,69 +49,12 @@
 
         @media only screen and (min-width: 40em) {
             .container-lg {
-                max-width: 84%;
+                padding: 16px;
             }
         }
     </style>
 </head>
 <body>
-    <article class="markdown-body entry-content container-lg" itemprop="text"><h3>Create Provider with AI Tool</h3>
-<p>Call in your terminal the <code class="notranslate">create_provider</code> script:</p>
-<div class="highlight highlight-source-shell"><pre class="notranslate">python -m etc.tool.create_provider</pre></div>
-<ol>
-<li>Enter your name for the new provider.</li>
-<li>Copy and paste the <code class="notranslate">cURL</code> command from your browser developer tools.</li>
-<li>Let the AI ​​create the provider for you.</li>
-<li>Customize the provider according to your needs.</li>
-</ol>
-<h4>Create Provider</h4>
-<ol>
-<li>Create a new file in <a href="/g4f/Provider">g4f/Provider</a> with the name of the Provider.</li>
-<li>Implement a class that extends <a href="/g4f/providers/base_provider.py">BaseProvider</a>.</li>
-</ol>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> __future__ <span class="pl-k">import</span> <span class="pl-s1">annotations</span>
-
-<span class="pl-k">from</span> ..<span class="pl-s1">typing</span> <span class="pl-k">import</span> <span class="pl-v">AsyncResult</span>, <span class="pl-v">Messages</span>
-<span class="pl-k">from</span> .<span class="pl-s1">base_provider</span> <span class="pl-k">import</span> <span class="pl-v">AsyncGeneratorProvider</span>
-
-<span class="pl-k">class</span> <span class="pl-v">HogeService</span>(<span class="pl-v">AsyncGeneratorProvider</span>):
-    <span class="pl-s1">url</span>                   <span class="pl-c1">=</span> <span class="pl-s">"https://chat-gpt.com"</span>
-    <span class="pl-s1">working</span>               <span class="pl-c1">=</span> <span class="pl-c1">True</span>
-
-    <span class="pl-en">@<span class="pl-s1">classmethod</span></span>
-    <span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">create_async_generator</span>(
-        <span class="pl-s1">cls</span>,
-        <span class="pl-s1">model</span>: <span class="pl-smi">str</span>,
-        <span class="pl-s1">messages</span>: <span class="pl-smi">Messages</span>,
-        <span class="pl-s1">proxy</span>: <span class="pl-smi">str</span> <span class="pl-c1">=</span> <span class="pl-c1">None</span>,
-        <span class="pl-c1">**</span><span class="pl-s1">kwargs</span>
-    ) <span class="pl-c1">-&gt;</span> <span class="pl-smi">AsyncResult</span>:
-        <span class="pl-k">yield</span> <span class="pl-s">""</span></pre></div>
-<ol start="4">
-<li>Here, you can adjust the settings, for example, if the website does support streaming, set <code class="notranslate">supports_stream</code> to <code class="notranslate">True</code>...</li>
-<li>Write code to request the provider in <code class="notranslate">create_async_generator</code> and <code class="notranslate">yield</code> the response, <em>even if</em> it's a one-time response, do not hesitate to look at other providers for inspiration.</li>
-<li>Add the Provider Import in <a href="./g4f/Provider/__init__.py"><code class="notranslate">g4f/Provider/__init__.py</code></a></li>
-</ol>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> .<span class="pl-v">HogeService</span> <span class="pl-k">import</span> <span class="pl-v">HogeService</span>
-
-<span class="pl-s1">__all__</span> <span class="pl-c1">=</span> [
-  <span class="pl-v">HogeService</span>,
-]</pre></div>
-<ol start="7">
-<li>You are done !, test the provider by calling it:</li>
-</ol>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">g4f</span>
-
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">g4f</span>.<span class="pl-c1">ChatCompletion</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">'gpt-4o'</span>,
-    <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">PROVIDERNAME</span>,
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"test"</span>}],
-    <span class="pl-s1">stream</span><span class="pl-c1">=</span><span class="pl-c1">True</span>
-)
-
-<span class="pl-k">for</span> <span class="pl-s1">message</span> <span class="pl-c1">in</span> <span class="pl-s1">response</span>:
-    <span class="pl-en">print</span>(<span class="pl-s1">message</span>, <span class="pl-s1">flush</span><span class="pl-c1">=</span><span class="pl-c1">True</span>, <span class="pl-s1">end</span><span class="pl-c1">=</span><span class="pl-s">''</span>)</pre></div>
-<hr>
-<p><a href="/docs/">Return to Documentation</a></p></article>
+    <article class="markdown-body entry-content container-lg" itemprop="text">Blocked by DNS monitoring proxy</article>
 </body>
 </html>

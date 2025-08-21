@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guide: Running the G4F GUI on Your Smartphone</title>
+    <title>G4F - Guide: Running the G4F GUI on Your Smartphone</title>
     <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png">
@@ -49,80 +49,12 @@
 
         @media only screen and (min-width: 40em) {
             .container-lg {
-                max-width: 84%;
+                padding: 16px;
             }
         }
     </style>
 </head>
 <body>
-    <article class="markdown-body entry-content container-lg" itemprop="text"><h3>Guide: Running the G4F GUI on Your Smartphone</h3>
-<p>Running Python applications on your smartphone is possible with specialized apps like Pydroid. This tutorial will walk you through the process using an Android smartphone with Pydroid. Note that the steps may vary slightly for iPhone users due to differences in app names and ownership.</p>
-<p align="center">
-    On the first screenshot is <strong>Pydroid</strong> and on the second is the <strong>Web UI</strong> in a browser
-</p>
-<p align="center">
-    <a target="_blank" rel="noopener noreferrer" href="/docs/images/phone.png"><img src="/docs/images/phone.png" style="max-width: 100%;"></a>
-    <a target="_blank" rel="noopener noreferrer" href="/docs/images/phone2.jpeg"><img src="/docs/images/phone2.jpeg" style="max-width: 100%;"></a>
-</p>
-<ol>
-<li>
-<p><strong>Install Pydroid from the Google Play Store:</strong></p>
-<ul>
-<li>Navigate to the Google Play Store and search for "Pydroid 3 - IDE for Python 3" or use the following link: <a href="https://play.google.com/store/apps/details?id=ru.iiec.pydroid3" rel="nofollow">Pydroid 3 - IDE for Python 3</a>.</li>
-</ul>
-</li>
-<li>
-<p><strong>Install the Pydroid Repository Plugin:</strong></p>
-<ul>
-<li>To enhance functionality, install the Pydroid repository plugin. Find it on the Google Play Store or use this link: <a href="https://play.google.com/store/apps/details?id=ru.iiec.pydroid3.quickinstallrepo" rel="nofollow">Pydroid Repository Plugin</a>.</li>
-</ul>
-</li>
-<li>
-<p><strong>Adjust App Settings:</strong></p>
-<ul>
-<li>In the app settings for Pydroid, disable power-saving mode and ensure that the option to pause when not in use is also disabled. This ensures uninterrupted operation of your Python scripts.</li>
-</ul>
-</li>
-<li>
-<p><strong>Install Required Packages:</strong></p>
-<ul>
-<li>Open Pip within the Pydroid app and install these necessary packages:
-<pre class="notranslate"><code class="notranslate"> g4f flask pillow beautifulsoup4
-</code></pre>
-</li>
-</ul>
-</li>
-<li>
-<p><strong>Create a New Python Script:</strong></p>
-<ul>
-<li>Within Pydroid, create a new Python script and input the following content:
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span> <span class="pl-k">import</span> <span class="pl-s1">set_cookies</span>
-
-<span class="pl-en">set_cookies</span>(<span class="pl-s">".bing.com"</span>, {
-    <span class="pl-s">"_U"</span>: <span class="pl-s">"cookie value"</span>
-})
-
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">gui</span> <span class="pl-k">import</span> <span class="pl-s1">run_gui</span>
-
-<span class="pl-en">run_gui</span>(<span class="pl-s">"0.0.0.0"</span>, <span class="pl-c1">8080</span>, <span class="pl-s1">debug</span><span class="pl-c1">=</span><span class="pl-c1">True</span>)</pre></div>
-Replace <code class="notranslate">"cookie value"</code> with your actual cookie value from Bing if you intend to create images using Bing.</li>
-</ul>
-</li>
-<li>
-<p><strong>Execute the Script:</strong></p>
-<ul>
-<li>Run the script by clicking on the play button or selecting the option to execute it.</li>
-</ul>
-</li>
-<li>
-<p><strong>Access the GUI:</strong></p>
-<ul>
-<li>Wait for the server to start, and once it's running, open the GUI using the URL provided in the output. <a href="http://localhost:8080/chat/" rel="nofollow">http://localhost:8080/chat/</a></li>
-</ul>
-</li>
-</ol>
-<p>By following these steps, you can successfully run the G4F GUI on your smartphone using Pydroid, allowing you to create and interact with graphical interfaces directly from your device.</p>
-<hr>
-<p><a href="/docs/">Return to Documentation</a></p></article>
+    <article class="markdown-body entry-content container-lg" itemprop="text">Blocked by DNS monitoring proxy</article>
 </body>
 </html>

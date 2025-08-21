@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G4F - Local Usage Guide</title>
+    <title>G4F - G4F - Local Usage Guide</title>
     <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png">
@@ -49,152 +49,12 @@
 
         @media only screen and (min-width: 40em) {
             .container-lg {
-                max-width: 84%;
+                padding: 16px;
             }
         }
     </style>
 </head>
 <body>
-    <article class="markdown-body entry-content container-lg" itemprop="text"><h2>G4F - Local Usage Guide</h2>
-<h3>Table of Contents</h3>
-<ol>
-<li><a href="#introduction">Introduction</a></li>
-<li><a href="#required-dependencies">Required Dependencies</a></li>
-<li><a href="#basic-usage-example">Basic Usage Example</a></li>
-<li><a href="#supported-models">Supported Models</a></li>
-<li><a href="#performance-considerations">Performance Considerations</a></li>
-<li><a href="#troubleshooting">Troubleshooting</a></li>
-</ol>
-<h4>Introduction</h4>
-<p>This guide explains how to use g4f to run language models locally. G4F (GPT4Free) allows you to interact with various language models on your local machine, providing a flexible and private solution for natural language processing tasks.</p>
-<h2>Usage</h2>
-<h4>Local inference</h4>
-<p>How to use g4f to run language models locally</p>
-<h4>Required dependencies</h4>
-<p><strong>Make sure to install the required dependencies by running:</strong></p>
-<div class="highlight highlight-source-shell"><pre class="notranslate">pip install g4f[local]</pre></div>
-<p>or</p>
-<div class="highlight highlight-source-shell"><pre class="notranslate">pip install -U gpt4all</pre></div>
-<h4>Basic usage example</h4>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">local</span> <span class="pl-k">import</span> <span class="pl-v">LocalClient</span>
-
-<span class="pl-s1">client</span>   <span class="pl-c1">=</span> <span class="pl-en">LocalClient</span>()
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span>    <span class="pl-c1">=</span> <span class="pl-s">'orca-mini-3b'</span>,
-    <span class="pl-s1">messages</span> <span class="pl-c1">=</span> [{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"hi"</span>}],
-    <span class="pl-s1">stream</span>   <span class="pl-c1">=</span> <span class="pl-c1">True</span>
-)
-
-<span class="pl-k">for</span> <span class="pl-s1">token</span> <span class="pl-c1">in</span> <span class="pl-s1">response</span>:
-    <span class="pl-en">print</span>(<span class="pl-s1">token</span>.<span class="pl-c1">choices</span>[<span class="pl-c1">0</span>].<span class="pl-c1">delta</span>.<span class="pl-c1">content</span> <span class="pl-c1">or</span> <span class="pl-s">""</span>)</pre></div>
-<p>Upon first use, there will be a prompt asking you if you wish to download the model. If you respond with <code class="notranslate">y</code>, g4f will go ahead and download the model for you.</p>
-<p>You can also manually place supported models into <code class="notranslate">./g4f/local/models/</code></p>
-<p><strong>You can get a list of the current supported models by running:</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">local</span> <span class="pl-k">import</span> <span class="pl-v">LocalClient</span>
-
-<span class="pl-s1">client</span>   <span class="pl-c1">=</span> <span class="pl-en">LocalClient</span>()
-<span class="pl-s1">client</span>.<span class="pl-c1">list_models</span>()</pre></div>
-<div class="highlight highlight-source-json"><pre class="notranslate">{
-    <span class="pl-ent">"mistral-7b"</span>: {
-        <span class="pl-ent">"path"</span>: <span class="pl-s"><span class="pl-pds">"</span>mistral-7b-openorca.gguf2.Q4_0.gguf<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"ram"</span>: <span class="pl-s"><span class="pl-pds">"</span>8<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"prompt"</span>: <span class="pl-s"><span class="pl-pds">"</span>&lt;|im_start|&gt;user<span class="pl-cce">\n</span>%1&lt;|im_end|&gt;<span class="pl-cce">\n</span>&lt;|im_start|&gt;assistant<span class="pl-cce">\n</span><span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"system"</span>: <span class="pl-s"><span class="pl-pds">"</span>&lt;|im_start|&gt;system<span class="pl-cce">\n</span>You are MistralOrca, a large language model trained by Alignment Lab AI. For multi-step problems, write out your reasoning for each step.<span class="pl-cce">\n</span>&lt;|im_end|&gt;<span class="pl-pds">"</span></span>
-    },
-    <span class="pl-ent">"mistral-7b-instruct"</span>: {
-        <span class="pl-ent">"path"</span>: <span class="pl-s"><span class="pl-pds">"</span>mistral-7b-instruct-v0.1.Q4_0.gguf<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"ram"</span>: <span class="pl-s"><span class="pl-pds">"</span>8<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"prompt"</span>: <span class="pl-s"><span class="pl-pds">"</span>[INST] %1 [/INST]<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"system"</span>: <span class="pl-ii">None</span>
-    },
-    <span class="pl-ent">"gpt4all-falcon"</span>: {
-        <span class="pl-ent">"path"</span>: <span class="pl-s"><span class="pl-pds">"</span>gpt4all-falcon-newbpe-q4_0.gguf<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"ram"</span>: <span class="pl-s"><span class="pl-pds">"</span>8<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"prompt"</span>: <span class="pl-s"><span class="pl-pds">"</span>### Instruction:<span class="pl-cce">\n</span>%1<span class="pl-cce">\n</span>### Response:<span class="pl-cce">\n</span><span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"system"</span>: <span class="pl-ii">None</span>
-    },
-    <span class="pl-ent">"orca-2"</span>: {
-        <span class="pl-ent">"path"</span>: <span class="pl-s"><span class="pl-pds">"</span>orca-2-13b.Q4_0.gguf<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"ram"</span>: <span class="pl-s"><span class="pl-pds">"</span>16<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"prompt"</span>: <span class="pl-ii">None,</span>
-        <span class="pl-ent">"system"</span>: <span class="pl-ii">None</span>
-    },
-    <span class="pl-ent">"wizardlm-13b"</span>: {
-        <span class="pl-ent">"path"</span>: <span class="pl-s"><span class="pl-pds">"</span>wizardlm-13b-v1.2.Q4_0.gguf<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"ram"</span>: <span class="pl-s"><span class="pl-pds">"</span>16<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"prompt"</span>: <span class="pl-ii">None,</span>
-        <span class="pl-ent">"system"</span>: <span class="pl-ii">None</span>
-    },
-    <span class="pl-ent">"nous-hermes-llama2"</span>: {
-        <span class="pl-ent">"path"</span>: <span class="pl-s"><span class="pl-pds">"</span>nous-hermes-llama2-13b.Q4_0.gguf<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"ram"</span>: <span class="pl-s"><span class="pl-pds">"</span>16<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"prompt"</span>: <span class="pl-s"><span class="pl-pds">"</span>### Instruction:<span class="pl-cce">\n</span>%1<span class="pl-cce">\n</span>### Response:<span class="pl-cce">\n</span><span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"system"</span>: <span class="pl-ii">None</span>
-    },
-    <span class="pl-ent">"gpt4all-13b-snoozy"</span>: {
-        <span class="pl-ent">"path"</span>: <span class="pl-s"><span class="pl-pds">"</span>gpt4all-13b-snoozy-q4_0.gguf<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"ram"</span>: <span class="pl-s"><span class="pl-pds">"</span>16<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"prompt"</span>: <span class="pl-ii">None,</span>
-        <span class="pl-ent">"system"</span>: <span class="pl-ii">None</span>
-    },
-    <span class="pl-ent">"mpt-7b-chat"</span>: {
-        <span class="pl-ent">"path"</span>: <span class="pl-s"><span class="pl-pds">"</span>mpt-7b-chat-newbpe-q4_0.gguf<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"ram"</span>: <span class="pl-s"><span class="pl-pds">"</span>8<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"prompt"</span>: <span class="pl-s"><span class="pl-pds">"</span>&lt;|im_start|&gt;user<span class="pl-cce">\n</span>%1&lt;|im_end|&gt;<span class="pl-cce">\n</span>&lt;|im_start|&gt;assistant<span class="pl-cce">\n</span><span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"system"</span>: <span class="pl-s"><span class="pl-pds">"</span>&lt;|im_start|&gt;system<span class="pl-cce">\n</span>- You are a helpful assistant chatbot trained by MosaicML.<span class="pl-cce">\n</span>- You answer questions.<span class="pl-cce">\n</span>- You are excited to be able to help the user, but will refuse to do anything that could be considered harmful to the user.<span class="pl-cce">\n</span>- You are more than just an information source, you are also able to write poetry, short stories, and make jokes.&lt;|im_end|&gt;<span class="pl-pds">"</span></span>
-    },
-    <span class="pl-ent">"orca-mini-3b"</span>: {
-        <span class="pl-ent">"path"</span>: <span class="pl-s"><span class="pl-pds">"</span>orca-mini-3b-gguf2-q4_0.gguf<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"ram"</span>: <span class="pl-s"><span class="pl-pds">"</span>4<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"prompt"</span>: <span class="pl-s"><span class="pl-pds">"</span>### User:<span class="pl-cce">\n</span>%1<span class="pl-cce">\n</span>### Response:<span class="pl-cce">\n</span><span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"system"</span>: <span class="pl-s"><span class="pl-pds">"</span>### System:<span class="pl-cce">\n</span>You are an AI assistant that follows instruction extremely well. Help as much as you can.<span class="pl-cce">\n\n</span><span class="pl-pds">"</span></span>
-    },
-    <span class="pl-ent">"replit-code-3b"</span>: {
-        <span class="pl-ent">"path"</span>: <span class="pl-s"><span class="pl-pds">"</span>replit-code-v1_5-3b-newbpe-q4_0.gguf<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"ram"</span>: <span class="pl-s"><span class="pl-pds">"</span>4<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"prompt"</span>: <span class="pl-s"><span class="pl-pds">"</span>%1<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"system"</span>: <span class="pl-ii">None</span>
-    },
-    <span class="pl-ent">"starcoder"</span>: {
-        <span class="pl-ent">"path"</span>: <span class="pl-s"><span class="pl-pds">"</span>starcoder-newbpe-q4_0.gguf<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"ram"</span>: <span class="pl-s"><span class="pl-pds">"</span>4<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"prompt"</span>: <span class="pl-s"><span class="pl-pds">"</span>%1<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"system"</span>: <span class="pl-ii">None</span>
-    },
-    <span class="pl-ent">"rift-coder-7b"</span>: {
-        <span class="pl-ent">"path"</span>: <span class="pl-s"><span class="pl-pds">"</span>rift-coder-v0-7b-q4_0.gguf<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"ram"</span>: <span class="pl-s"><span class="pl-pds">"</span>8<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"prompt"</span>: <span class="pl-s"><span class="pl-pds">"</span>%1<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"system"</span>: <span class="pl-ii">None</span>
-    },
-    <span class="pl-ent">"all-MiniLM-L6-v2"</span>: {
-        <span class="pl-ent">"path"</span>: <span class="pl-s"><span class="pl-pds">"</span>all-MiniLM-L6-v2-f16.gguf<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"ram"</span>: <span class="pl-s"><span class="pl-pds">"</span>1<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"prompt"</span>: <span class="pl-ii">None,</span>
-        <span class="pl-ent">"system"</span>: <span class="pl-ii">None</span>
-    },
-    <span class="pl-ent">"mistral-7b-german"</span>: {
-        <span class="pl-ent">"path"</span>: <span class="pl-s"><span class="pl-pds">"</span>em_german_mistral_v01.Q4_0.gguf<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"ram"</span>: <span class="pl-s"><span class="pl-pds">"</span>8<span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"prompt"</span>: <span class="pl-s"><span class="pl-pds">"</span>USER: %1 ASSISTANT: <span class="pl-pds">"</span></span>,
-        <span class="pl-ent">"system"</span>: <span class="pl-s"><span class="pl-pds">"</span>Du bist ein hilfreicher Assistent. <span class="pl-pds">"</span></span>
-    }
-}</pre></div>
-<h4>Performance Considerations</h4>
-<p><strong>When running language models locally, consider the following:</strong></p>
-<ul>
-<li>RAM requirements vary by model size (see the 'ram' field in the model list).</li>
-<li>CPU/GPU capabilities affect inference speed.</li>
-<li>Disk space is needed to store the model files.</li>
-</ul>
-<h4>Troubleshooting</h4>
-<p><strong>Common issues and solutions:</strong></p>
-<ol>
-<li><strong>Model download fails</strong>: Check your internet connection and try again.</li>
-<li><strong>Out of memory error</strong>: Choose a smaller model or increase your system's RAM.</li>
-<li><strong>Slow inference</strong>: Consider using a GPU or a more powerful CPU.</li>
-</ol>
-<hr>
-<p><a href="/docs/">Return to Documentation</a></p></article>
+    <article class="markdown-body entry-content container-lg" itemprop="text">Blocked by DNS monitoring proxy</article>
 </body>
 </html>

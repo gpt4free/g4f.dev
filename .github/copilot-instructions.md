@@ -1,6 +1,8 @@
 # G4F.dev Documentation and Demo Website
 
-G4F.dev is a Jekyll-based documentation and demonstration website for GPT4Free (g4f). It provides comprehensive documentation, API guides, and browser-based demo applications for the GPT4Free JavaScript client library.
+G4F.dev is a documentation and demonstration website for GPT4Free (g4f). It provides comprehensive documentation, API guides, and browser-based demo applications for the GPT4Free JavaScript client library. 
+
+The site uses md2html from the gpt4free repository to convert markdown documentation to HTML pages.
 
 Always reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.
 
@@ -8,12 +10,11 @@ Always reference these instructions first and fallback to search or bash command
 
 ### Bootstrap and Setup Dependencies
 
-Install required Ruby gems (Jekyll and plugins):
+Clone the gpt4free repository to get access to md2html:
 ```bash
-gem install jekyll bundler jekyll-paginate jekyll-sitemap --user-install
-export PATH="/home/runner/.local/share/gem/ruby/3.2.0/bin:$PATH"
+git clone git@github.com:xtekky/gpt4free.git
 ```
-**Note**: Takes ~30 seconds. Ruby gems install to user directory, requiring PATH adjustment.
+**Note**: Required to access the md2html conversion tool.
 
 Install Node.js dependencies (minimal):
 ```bash
@@ -21,24 +22,19 @@ npm install
 ```
 **Note**: Takes ~1 second. No actual build dependencies.
 
-### Build the Documentation Site
+### Build Documentation Pages
 
-Build the Jekyll static site:
+Convert markdown files to HTML using md2html from gpt4free:
 ```bash
-export PATH="/home/runner/.local/share/gem/ruby/3.2.0/bin:$PATH"
-jekyll build --safe
+python -m etc.tool.md2html filename.md
 ```
-**Time**: ~0.1-0.2 seconds. Builds to `_site/` directory.
+**Time**: Instant per file. Converts individual markdown files to HTML.
 
-### Run Local Development Server
-
-Start Jekyll development server:
+Alternative: Use the local conversion script in docs/:
 ```bash
-export PATH="/home/runner/.local/share/gem/ruby/3.2.0/bin:$PATH"
-jekyll serve --safe --host 0.0.0.0
+cd docs && python3 __main__.py
 ```
-**Serves on**: http://localhost:4000
-**Note**: Use Ctrl+C to stop the server.
+**Time**: ~1-2 seconds. Converts all markdown files in docs/ to HTML using GitHub API.
 
 ### Generate Sitemap
 
@@ -52,12 +48,11 @@ python3 sitemap.py
 
 Always run these validation steps after making changes:
 
-### Build Validation
+### Documentation Build Validation
 ```bash
-export PATH="/home/runner/.local/share/gem/ruby/3.2.0/bin:$PATH"
-jekyll build --safe
+cd docs && python3 __main__.py
 ```
-Verify build completes without errors in ~0.1-0.2 seconds.
+Verify all markdown files convert to HTML without errors.
 
 ### JavaScript Client Validation
 ```bash
@@ -74,16 +69,16 @@ Validates all Python files compile without syntax errors.
 ### Manual Testing Scenarios
 
 1. **Documentation Changes**: After modifying any `.md` files in `docs/`:
-   - Run `jekyll build --safe` to ensure Markdown renders correctly
-   - Start `jekyll serve` and browse to http://localhost:4000/docs/ to visually verify changes
+   - Run `cd docs && python3 __main__.py` to regenerate HTML files
+   - Open the corresponding `.html` file in a browser to visually verify changes
 
 2. **JavaScript Client Changes**: After modifying `dist/js/client.js`:
    - Run the JavaScript validation command above
    - Test integration by opening any HTML file in `apps/` directory that uses the client
 
-3. **Configuration Changes**: After modifying `_config.yml`:
-   - Rebuild the site completely: `jekyll build --safe`
-   - Check that site navigation and structure remain intact
+3. **Template Changes**: After modifying `docs/template.html`:
+   - Run `cd docs && python3 __main__.py` to regenerate all HTML files
+   - Check that all documentation pages render correctly
 
 ## Common Tasks
 
@@ -91,16 +86,20 @@ Validates all Python files compile without syntax errors.
 
 ```
 .
-├── docs/                    # Markdown documentation files
-│   ├── README.md           # Main documentation index
+├── docs/                    # Markdown and HTML documentation files
+│   ├── README.md           # Main documentation index (markdown)
+│   ├── index.html          # Generated HTML from README.md
+│   ├── __main__.py         # Markdown to HTML conversion script
+│   ├── template.html       # HTML template for generated pages
 │   ├── client.md           # Python client documentation  
+│   ├── client.html         # Generated HTML from client.md
 │   ├── client_js.md        # JavaScript client documentation
-│   ├── git.md              # Installation guide
-│   └── ...                 # Additional documentation files
+│   ├── client_js.html      # Generated HTML from client_js.md
+│   └── ...                 # Additional documentation files (.md and .html pairs)
 ├── apps/                   # Demo HTML applications
 │   ├── index.html          # Apps directory listing
 │   ├── calculator.html     # Calculator demo
-│   ├── chat/               # Chat applications
+│   ├── create.py           # Script to generate new apps
 │   └── ...                 # Other demo apps
 ├── dist/                   # Built JavaScript and CSS assets
 │   ├── js/client.js        # Main G4F JavaScript client
@@ -108,7 +107,6 @@ Validates all Python files compile without syntax errors.
 │   ├── css/               # Stylesheets
 │   └── ...                # Other assets
 ├── api-docs/              # OpenAPI documentation
-├── _config.yml            # Jekyll configuration
 ├── package.json           # NPM package configuration
 ├── sitemap.py             # Sitemap generation script
 └── .github/workflows/     # GitHub Actions workflows
@@ -118,7 +116,8 @@ Validates all Python files compile without syntax errors.
 
 - **`dist/js/client.js`**: The main G4F JavaScript client library for browser usage
 - **`docs/README.md`**: Primary documentation entry point with quick examples
-- **`_config.yml`**: Jekyll site configuration with theme and plugin settings
+- **`docs/__main__.py`**: Converts all markdown files to HTML using GitHub API
+- **`docs/template.html`**: HTML template used for generated documentation pages
 - **`sitemap.py`**: Python script that generates SEO sitemap.xml
 - **`.github/workflows/update-openapi.yml`**: Automated workflow to update API documentation
 
@@ -126,8 +125,8 @@ Validates all Python files compile without syntax errors.
 
 1. Create or modify `.md` files in the `docs/` directory
 2. Follow the existing documentation structure and tone
-3. Run `jekyll build --safe` to validate Markdown rendering
-4. Test locally with `jekyll serve` before committing
+3. Run `cd docs && python3 __main__.py` to generate HTML files
+4. Test by opening the generated `.html` file in a browser
 
 ### Working with Demo Applications
 
@@ -135,6 +134,15 @@ The `apps/` directory contains HTML demo applications that use the G4F JavaScrip
 - Each app is self-contained in a single HTML file
 - Apps demonstrate various use cases of the G4F client library
 - Test apps by opening them in a web browser after making changes
+- Use `apps/create.py` to generate new demo applications
+
+### Working with Documentation Conversion
+
+The documentation system uses a Python script to convert markdown to HTML:
+- **`docs/__main__.py`**: Converts all `.md` files to `.html` using GitHub's markdown API
+- Requires `GITHUB_TOKEN` environment variable for API access
+- Uses `docs/template.html` as the HTML template for all generated pages
+- Automatically handles link rewriting (`.md` links become `.html` links)
 
 ### GitHub Workflow Integration
 
@@ -146,25 +154,25 @@ The repository includes an automated workflow (`.github/workflows/update-openapi
 ## Development Environment Notes
 
 ### Dependencies Required
-- **Ruby** (with Jekyll): For building documentation site
+- **Python 3**: For documentation conversion and utility scripts
 - **Node.js**: For minimal JavaScript validation and NPM
-- **Python 3**: For sitemap generation and utility scripts
+- **gpt4free repository**: For md2html tool access (optional, can use local conversion)
 
 ### Build Artifacts
-The following directories are generated during build and should not be committed:
-- `_site/` (Jekyll build output)  
-- `__pycache__/` (Python cache files)
-- `.sass-cache/` (Jekyll Sass cache)
+The following directories contain generated files and should be managed carefully:
+- `docs/*.html` (generated from `.md` files)  
+- `__pycache__/` (Python cache files - excluded by .gitignore)
 
 ### No Complex Backend
 This is a static documentation site with browser-based JavaScript demos. There is no server-side application or database to configure or manage.
 
 ## Troubleshooting
 
-### Jekyll Build Issues
-- Ensure Ruby gems are installed: `gem list | grep jekyll`
-- Check PATH includes gem bin directory: `echo $PATH`
-- Verify Jekyll can find configuration: `jekyll doctor`
+### Documentation Conversion Issues
+- Ensure Python 3 is available: `python3 --version`
+- Check for GITHUB_TOKEN environment variable: `echo $GITHUB_TOKEN`
+- Verify docs/__main__.py syntax: `python3 -m py_compile docs/__main__.py`
+- Test template exists: `ls -la docs/template.html`
 
 ### JavaScript Client Issues
 - Validate syntax with Node.js before committing changes
@@ -178,4 +186,4 @@ This is a static documentation site with browser-based JavaScript demos. There i
 
 ---
 
-This repository provides documentation and demos for GPT4Free. Focus on maintaining clear, accurate documentation and functional demo applications that showcase the capabilities of the G4F JavaScript client library.
+This repository provides documentation and demos for GPT4Free using md2html conversion from the gpt4free repository. Focus on maintaining clear, accurate documentation and functional demo applications that showcase the capabilities of the G4F JavaScript client library.

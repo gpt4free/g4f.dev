@@ -1,43 +1,19 @@
 <!DOCTYPE html>
 <html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>GPT4Free Documentation Hub | Free AI Endpoints & Examples</title>
-    
-    <meta name="description" content="Official GPT4Free documentation hub for free and convenient AI endpoints. Find installation guides, examples for text and image generation, JS and CLI clients, and deep-dive docs." />
-    <meta name="keywords" content="GPT4Free, g4f.dev, AI endpoints, AI documentation, chat completion, text generation, image generation, python client, javascript client, CLI client" />
-    <meta name="author" content="GPT4Free Team" />
-
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="GPT4Free Documentation Hub" />
-    <meta property="og:description" content="Official GPT4Free docs for free AI endpoints, examples, and guides." />
-    <meta property="og:url" content="https://g4f.dev/docs/" />
-    <meta property="og:site_name" content="GPT4Free (g4f.dev)" />
-    <meta property="og:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
-
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="GPT4Free Documentation Hub" />
-    <meta name="twitter:description" content="Free AI endpoints docs: install guides, examples, and deep dives including text & image generation." />
-    <meta name="twitter:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
-
-    <!-- Canonical URL -->
-    <link rel="canonical" href="https://g4f.dev/docs/" />
-
-    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png" />
-    <link rel="manifest" href="/dist/img/site.webmanifest" />
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G4F - GPT4Free Documentation Hub</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png">
+    <link rel="manifest" href="/dist/img/site.webmanifest">
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
-
     <style>
         :root {
             --colour-1: #000000;
@@ -55,11 +31,11 @@
             --opacity: 0.6;
         }
 
+        /* Body and text color */
         body {
             height: 100vh;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
         }
 
         .hidden {
@@ -73,210 +49,12 @@
 
         @media only screen and (min-width: 40em) {
             .container-lg {
-                max-width: 84%;
+                padding: 16px;
             }
         }
     </style>
-
-    <script async src="dist/js/framework.js"></script>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5896143631849307"
-     crossorigin="anonymous"></script>
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@graph": [
-        {
-          "@type": "WebSite",
-          "@id": "https://g4f.dev/docs/index.html#website",
-          "url": "https://g4f.dev/docs/",
-          "name": "GPT4Free Documentation Hub",
-          "publisher": {
-            "@type": "Organization",
-            "name": "GPT4Free"
-          }
-        },
-        {
-          "@type": "TechArticle",
-          "@id": "https://g4f.dev/docs/index.html#techArticle",
-          "headline": "GPT4Free Documentation Hub",
-          "description": "Official GPT4Free documentation hub for free AI endpoints. Includes installation guides, usage examples in Python and JS, and detailed deep dive docs.",
-          "url": "https://g4f.dev/docs/",
-          "author": {
-            "@type": "Organization",
-            "name": "GPT4Free Team"
-          },
-          "publisher": {
-            "@type": "Organization",
-            "name": "GPT4Free",
-            "logo": {
-              "@type": "ImageObject",
-              "url": "https://g4f.dev/dist/img/favicon-32x32.png"
-            }
-          }
-        }
-      ]
-    }
-    </script>
 </head>
 <body>
-    <article class="markdown-body entry-content container-lg" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
-        <h1 itemprop="headline">GPT4Free Documentation Hub</h1>
-        <p itemprop="description">
-            Welcome to the official docs for <strong>GPT4Free</strong> – free and convenient AI endpoints you can use directly in your apps, scripts, and browser. Here you’ll find clear overviews, quick examples, and entry points to deeper docs for every major feature.
-        </p>
-
-        <hr />
-
-        <nav aria-label="Quick Table of Contents">
-            <h2>🏁 Quick Table of Contents</h2>
-            <ul>
-                <li><a href="#installation--setup">Installation &amp; Setup</a></li>
-                <li>
-                    <a href="#getting-started">Getting Started Examples</a>
-                    <ul>
-                        <li><a href="#-text-generation">Text Generation</a></li>
-                        <li><a href="#-image-generation">Image Generation</a></li>
-                        <li><a href="#-using-gpt4freejs">Web JS Usage</a></li>
-                    </ul>
-                </li>
-                <li><a href="#deep-dives">Docs by Topic</a></li>
-                <li><a href="#community--links">Community &amp; Links</a></li>
-            </ul>
-        </nav>
-
-        <hr />
-
-        <section id="installation--setup">
-            <h2>Installation &amp; Setup</h2>
-            <p>For full install guides — choose your method:</p>
-            <ul>
-                <li><a href="git.html">Git Install Guide</a></li>
-                <li><a href="docker.html">Docker Setup Guide</a></li>
-                <li><a href="requirements.html">Requirements Guide</a></li>
-            </ul>
-            <p>For rapid starts, you can use either <strong>Python</strong> or <strong>JavaScript</strong> (web).</p>
-        </section>
-
-        <hr />
-
-        <section id="getting-started">
-            <h2>Getting Started</h2>
-
-            <section id="-text-generation">
-                <h3>📝 Text Generation</h3>
-                <p>Python example for chat completion (with and without web search):</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>()
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4.1"</span>,  <span class="pl-c"># Try "gpt-4o", "deepseek-v3", etc.</span>
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello"</span>}],
-    <span class="pl-s1">web_search</span><span class="pl-c1">=</span><span class="pl-c1">False</span>
-)
-<span class="pl-en">print</span>(<span class="pl-s1">response</span>.<span class="pl-c1">choices</span>.<span class="pl-c1">message</span>.<span class="pl-c1">content</span>)</pre></div>
-                <p><strong>Output:</strong></p>
-<pre class="notranslate"><code class="notranslate">Hello! How can I assist you today?
-</code></pre>
-            </section>
-
-            <section id="-image-generation">
-                <h3>🎨 Image Generation</h3>
-                <p>Generate images with a single call (returns URLs or base64):</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>()
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">images</span>.<span class="pl-c1">generate</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"flux"</span>,  <span class="pl-c"># Other models: 'dalle-3', 'gpt-image', etc.</span>
-    <span class="pl-s1">prompt</span><span class="pl-c1">=</span><span class="pl-s">"a white siamese cat"</span>,
-    <span class="pl-s1">response_format</span><span class="pl-c1">=</span><span class="pl-s">"url"</span>
-)
-<span class="pl-en">print</span>(<span class="pl-s">f"Generated image URL: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">response</span>.<span class="pl-c1">data</span>.<span class="pl-c1">url</span><span class="pl-kos">}</span></span>"</span>)</pre></div>
-<p><a href="client.html">More Python client info →</a> <a href="async_client.html">and Async client →</a></p>
-<hr>
-                <h3>🧙‍♂️ Using GPT4Free.js</h3>
-                <p>Use the <strong>official JS client</strong> right in the browser—no backend needed.</p>
-                <p>For text generation:</p>
-<div class="highlight highlight-text-html-basic"><pre class="notranslate"><span class="pl-kos">&lt;</span><span class="pl-ent">script</span> <span class="pl-c1">type</span>="<span class="pl-s">module</span>"<span class="pl-kos">&gt;</span>
-    <span class="pl-k">import</span> <span class="pl-v">Client</span> <span class="pl-k">from</span> <span class="pl-s">'https://g4f.dev/dist/js/client.js'</span><span class="pl-kos">;</span>
-
-    <span class="pl-k">const</span> <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">Client</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-k">const</span> <span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span><span class="pl-kos">.</span><span class="pl-c1">chat</span><span class="pl-kos">.</span><span class="pl-c1">completions</span><span class="pl-kos">.</span><span class="pl-en">create</span><span class="pl-kos">(</span><span class="pl-kos">{</span>
-        <span class="pl-c1">model</span>: <span class="pl-s">'gpt-4.1'</span><span class="pl-kos">,</span>  <span class="pl-c">// Or "gpt-4o", "deepseek-v3"</span>
-        <span class="pl-c1">messages</span>: <span class="pl-kos">[</span><span class="pl-kos">{</span> <span class="pl-c1">role</span>: <span class="pl-s">'user'</span><span class="pl-kos">,</span> <span class="pl-c1">content</span>: <span class="pl-s">'Explain quantum computing'</span> <span class="pl-kos">}</span><span class="pl-kos">]</span>
-    <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">log</span><span class="pl-kos">(</span><span class="pl-s1">result</span><span class="pl-kos">.</span><span class="pl-c1">choices</span><span class="pl-kos">[</span><span class="pl-c1">0</span><span class="pl-kos">]</span><span class="pl-kos">.</span><span class="pl-c1">message</span><span class="pl-kos">.</span><span class="pl-c1">content</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-<span class="pl-kos">&lt;/</span><span class="pl-ent">script</span><span class="pl-kos">&gt;</span></pre></div>
-                <p>And for image generation:</p>
-<div class="highlight highlight-text-html-basic"><pre class="notranslate"><span class="pl-kos">&lt;</span><span class="pl-ent">script</span> <span class="pl-c1">type</span>="<span class="pl-s">module</span>"<span class="pl-kos">&gt;</span>
-    <span class="pl-k">import</span> <span class="pl-v">Client</span> <span class="pl-k">from</span> <span class="pl-s">'https://g4f.dev/dist/js/client.js'</span><span class="pl-kos">;</span>
-
-    <span class="pl-k">const</span> <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">Client</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-k">const</span> <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span><span class="pl-kos">.</span><span class="pl-c1">images</span><span class="pl-kos">.</span><span class="pl-en">generate</span><span class="pl-kos">(</span><span class="pl-kos">{</span>
-        <span class="pl-c1">model</span>: <span class="pl-s">"flux"</span><span class="pl-kos">,</span> <span class="pl-c">// Or "dalle-3", "gpt-image"</span>
-        <span class="pl-c1">prompt</span>: <span class="pl-s">"a white siamese cat"</span>
-    <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-k">const</span> <span class="pl-s1">imageUrl</span> <span class="pl-c1">=</span> <span class="pl-s1">response</span><span class="pl-kos">.</span><span class="pl-c1">data</span><span class="pl-kos">.</span><span class="pl-c1">url</span><span class="pl-kos">;</span>
-    <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">log</span><span class="pl-kos">(</span><span class="pl-s">`Generated Image URL: <span class="pl-s1"><span class="pl-kos">${</span><span class="pl-s1">imageUrl</span><span class="pl-kos">}</span></span>`</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-c">// Example: document.body.innerHTML += `&lt;img src="${imageUrl}" /&gt;`;</span>
-<span class="pl-kos">&lt;/</span><span class="pl-ent">script</span><span class="pl-kos">&gt;</span></pre></div>
-                <p><a href="client_js.html">See more JS client usage →</a></p>
-            </section>
-
-            <section id="using-cli-client">
-                <h3>💻 Using CLI Client</h3>
-<div class="highlight highlight-source-shell"><pre class="notranslate">$ g4f client <span class="pl-s"><span class="pl-pds">"</span>Explain quantum computing<span class="pl-pds">"</span></span></pre></div>
-                <p><a href="client_cli.html">CLI Client documentation →</a></p>
-            </section>
-        </section>
-
-        <hr />
-
-        <section id="deep-dives">
-            <h2>Deep Dives</h2>
-            <ul>
-                <li><a href="providers-and-models.html">Available Providers &amp; Models</a></li>
-                <li><a href="selecting_a_provider.html">Selecting a Provider</a></li>
-                <li><a href="/api-docs">API docs (full spec)</a></li>
-                <li><a href="file.html">File API Documentation (Files and Documents)</a></li>
-                <li><a href="media.html">Media Documentation (Audio, Image and Video)</a></li>
-                <li><a href="vision.html">Vision Support (Image Upload)</a></li>
-                <li><a href="image_editing.html">Image Editing Variation Documentation</a></li>
-                <li><a href="config.html">Authentication, Configuration Guide (.har and cookies)</a></li>
-                <li><a href="guides/create_provider.html">Advanced: Create your own Provider</a></li>
-                <li><a href="pydantic_ai.html">Integrations: LangChain, PydanticAI</a></li>
-                <li><a href="gui.html">GUI/WebUI</a>, <a href="guides/phone.html">Phone</a>, <a href="backend_api_documentation.html">Backend API</a></li>
-                <li><a href="https://github.com/gpt4free/g4f.dev/issues" rel="noopener noreferrer nofollow" target="_blank">Troubleshooting</a></li>
-            </ul>
-        </section>
-
-        <hr />
-
-        <section id="community--links">
-            <h2>Community &amp; Links</h2>
-            <ul>
-                <li>
-                    <p><strong>Open Source:</strong> <a href="https://github.com/gpt4free/g4f.dev" rel="noopener noreferrer nofollow" target="_blank">GitHub: gpt4free/g4f.dev</a></p>
-                </li>
-                <li>
-                    <p><strong>Contribute &amp; Report Bugs:</strong> PRs &amp; issues are welcome!</p>
-                </li>
-                <li>
-                    <p><strong>Project Website:</strong> <a href="https://g4f.dev/" rel="nofollow">https://g4f.dev/</a></p>
-                </li>
-                <li>
-                    <p><strong>Pollinations AI:</strong><br />
-                    <a href="https://github.com/pollinations/pollinations" rel="noopener noreferrer nofollow" target="_blank">GitHub: pollinations/pollinations</a></p>
-                    <a href="https://camo.githubusercontent.com/42abea0d5c9cece8dde650803d108ad2157cd70ccd83ca7fc2f49718b70f4d15/68747470733a2f2f696d6167652e706f6c6c696e6174696f6e732e61692f70726f6d70742f4372656174652b612b6c6f676f2b666f722b506f6c6c696e6174696f6e732b41492b666561747572696e672b616e2b61627374726163742b666c6f7765722b626c6f6f6d696e672b6469676974616c2b706574616c732b676c6f77696e672b63656e7465722b667574757269737469632b666f6e742b506f6c6c696e6174696f6e732b41493f77696474683d353132266865696768743d323536266e6f6c6f676f3d74727565" target="_blank" rel="noopener noreferrer nofollow">
-                        <img src="https://camo.githubusercontent.com/42abea0d5c9cece8dde650803d108ad2157cd70ccd83ca7fc2f49718b70f4d15/68747470733a2f2f696d6167652e706f6c6c696e6174696f6e732e61692f70726f6d70742f4372656174652b612b6c6f676f2b666f722b506f6c6c696e6174696f6e732b41492b666561747572696e672b616e2b61627374726163742b666c6f7765722b626c6f6f6d696e672b6469676974616c2b706574616c732b676c6f77696e672b63656e7465722b667574757269737469632b666f6e742b506f6c6c696e6174696f6e732b41493f77696474683d353132266865696768743d323536266e6f6c6f676f3d74727565" alt="Pollinations AI logo with abstract flower petals glowing" height="80" style="max-width: 100%; height: auto; max-height: 80px;" />
-                    </a>
-                </li>
-            </ul>
-        </section>
-
-        <hr />
-
-        <p>GPT4Free and g4f.dev are continuously improving. Have fun building, and let the bots do the heavy lifting for you!</p>
-        <p><a href="https://github.com/xtekky/gpt4free" rel="noopener noreferrer nofollow" target="_blank">← Back to GPT4Free GitHub</a></p>
-    </article>
+    <article class="markdown-body entry-content container-lg" itemprop="text">Blocked by DNS monitoring proxy</article>
 </body>
 </html>

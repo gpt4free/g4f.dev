@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G4F - Legacy API</title>
+    <title>G4F - G4F - Legacy API</title>
     <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png">
@@ -49,133 +49,12 @@
 
         @media only screen and (min-width: 40em) {
             .container-lg {
-                max-width: 84%;
+                padding: 16px;
             }
         }
     </style>
 </head>
 <body>
-    <article class="markdown-body entry-content container-lg" itemprop="text"><h2>G4F - Legacy API</h2>
-<h4>ChatCompletion</h4>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">g4f</span>
-
-<span class="pl-s1">g4f</span>.<span class="pl-c1">debug</span>.<span class="pl-c1">logging</span> <span class="pl-c1">=</span> <span class="pl-c1">True</span>  <span class="pl-c"># Enable debug logging</span>
-<span class="pl-s1">g4f</span>.<span class="pl-c1">debug</span>.<span class="pl-c1">version_check</span> <span class="pl-c1">=</span> <span class="pl-c1">False</span>  <span class="pl-c"># Disable automatic version checking</span>
-<span class="pl-en">print</span>(<span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">Gemini</span>.<span class="pl-c1">params</span>)  <span class="pl-c"># Print supported args for Gemini</span>
-
-<span class="pl-c"># Using automatic a provider for the given model</span>
-<span class="pl-c">## Streamed completion</span>
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">g4f</span>.<span class="pl-c1">ChatCompletion</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4o"</span>,
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello"</span>}],
-    <span class="pl-s1">stream</span><span class="pl-c1">=</span><span class="pl-c1">True</span>,
-)
-<span class="pl-k">for</span> <span class="pl-s1">message</span> <span class="pl-c1">in</span> <span class="pl-s1">response</span>:
-    <span class="pl-en">print</span>(<span class="pl-s1">message</span>, <span class="pl-s1">flush</span><span class="pl-c1">=</span><span class="pl-c1">True</span>, <span class="pl-s1">end</span><span class="pl-c1">=</span><span class="pl-s">''</span>)
-
-<span class="pl-c">## Normal response</span>
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">g4f</span>.<span class="pl-c1">ChatCompletion</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">models</span>.<span class="pl-c1">gpt_4</span>,
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello"</span>}],
-)  <span class="pl-c"># Alternative model setting</span>
-
-<span class="pl-en">print</span>(<span class="pl-s1">response</span>)</pre></div>
-<h5>Providers</h5>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">g4f</span>
-
-<span class="pl-c"># Print all available providers</span>
-<span class="pl-en">print</span>([
-    <span class="pl-s1">provider</span>.<span class="pl-c1">__name__</span>
-    <span class="pl-k">for</span> <span class="pl-s1">provider</span> <span class="pl-c1">in</span> <span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">__providers__</span>
-    <span class="pl-k">if</span> <span class="pl-s1">provider</span>.<span class="pl-c1">working</span>
-])
-
-<span class="pl-c"># Execute with a specific provider</span>
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">g4f</span>.<span class="pl-c1">ChatCompletion</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4o"</span>,
-    <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">Copilot</span>,
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello"</span>}],
-    <span class="pl-s1">stream</span><span class="pl-c1">=</span><span class="pl-c1">True</span>,
-)
-<span class="pl-k">for</span> <span class="pl-s1">message</span> <span class="pl-c1">in</span> <span class="pl-s1">response</span>:
-    <span class="pl-en">print</span>(<span class="pl-s1">message</span>)</pre></div>
-<h5>Image Upload &amp; Generation</h5>
-<p>Image upload and generation are supported by three main providers:</p>
-<ul>
-<li><strong>Microsoft Copilot &amp; Other GPT-4 Providers:</strong> Utilizes Microsoft's Image Creator.</li>
-<li><strong>Google Gemini:</strong> Available for free accounts with IP addresses outside Europe.</li>
-<li><strong>OpenaiChat with GPT-4:</strong> Accessible for users with a Plus subscription.</li>
-</ul>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">g4f</span>
-
-<span class="pl-c"># Setting up the request for image creation</span>
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">g4f</span>.<span class="pl-c1">ChatCompletion</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">models</span>.<span class="pl-c1">default</span>, <span class="pl-c"># Using the default model</span>
-    <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">Gemini</span>, <span class="pl-c"># Specifying the provider as Gemini</span>
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Create an image like this"</span>}],
-    <span class="pl-s1">image</span><span class="pl-c1">=</span><span class="pl-en">open</span>(<span class="pl-s">"images/g4f.png"</span>, <span class="pl-s">"rb"</span>), <span class="pl-c"># Image input can be a data URI, bytes, PIL Image, or IO object</span>
-    <span class="pl-s1">image_name</span><span class="pl-c1">=</span><span class="pl-s">"g4f.png"</span> <span class="pl-c"># Optional: specifying the filename</span>
-)
-
-<span class="pl-c"># Displaying the response</span>
-<span class="pl-en">print</span>(<span class="pl-s1">response</span>)
-
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">image</span> <span class="pl-k">import</span> <span class="pl-v">ImageResponse</span>
-
-<span class="pl-c"># Get image links from response</span>
-<span class="pl-k">for</span> <span class="pl-s1">chunk</span> <span class="pl-c1">in</span> <span class="pl-s1">g4f</span>.<span class="pl-c1">ChatCompletion</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">models</span>.<span class="pl-c1">default</span>, <span class="pl-c"># Using the default model</span>
-    <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">OpenaiChat</span>, <span class="pl-c"># Specifying the provider as OpenaiChat</span>
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Create images with dogs"</span>}],
-    <span class="pl-s1">stream</span><span class="pl-c1">=</span><span class="pl-c1">True</span>,
-    <span class="pl-s1">ignore_stream</span><span class="pl-c1">=</span><span class="pl-c1">True</span>
-):
-    <span class="pl-k">if</span> <span class="pl-en">isinstance</span>(<span class="pl-s1">chunk</span>, <span class="pl-v">ImageResponse</span>):
-        <span class="pl-en">print</span>(<span class="pl-s1">chunk</span>.<span class="pl-c1">urls</span>) <span class="pl-c"># Print generated image links</span>
-        <span class="pl-en">print</span>(<span class="pl-s1">chunk</span>.<span class="pl-c1">alt</span>) <span class="pl-c"># Print used prompt for image generation</span></pre></div>
-<h5>Async Support</h5>
-<p>To enhance speed and overall performance, execute providers asynchronously. The total execution time will be determined by the duration of the slowest provider's execution.</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">g4f</span>
-<span class="pl-k">import</span> <span class="pl-s1">asyncio</span>
-
-<span class="pl-s1">_providers</span> <span class="pl-c1">=</span> [
-    <span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">Copilot</span>,
-    <span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">PollinationsAI</span>,
-    <span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">Gemini</span>,
-]
-
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">run_provider</span>(<span class="pl-s1">provider</span>: <span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">BaseProvider</span>):
-    <span class="pl-k">try</span>:
-        <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">g4f</span>.<span class="pl-c1">ChatCompletion</span>.<span class="pl-c1">create_async</span>(
-            <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">models</span>.<span class="pl-c1">default</span>,
-            <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello"</span>}],
-            <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-s1">provider</span>,
-        )
-        <span class="pl-en">print</span>(<span class="pl-s">f"<span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">provider</span>.<span class="pl-c1">__name__</span><span class="pl-kos">}</span></span>:"</span>, <span class="pl-s1">response</span>)
-    <span class="pl-k">except</span> <span class="pl-v">Exception</span> <span class="pl-k">as</span> <span class="pl-s1">e</span>:
-        <span class="pl-en">print</span>(<span class="pl-s">f"<span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">provider</span>.<span class="pl-c1">__name__</span><span class="pl-kos">}</span></span>:"</span>, <span class="pl-s1">e</span>)
-        
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">run_all</span>():
-    <span class="pl-s1">calls</span> <span class="pl-c1">=</span> [
-        <span class="pl-en">run_provider</span>(<span class="pl-s1">provider</span>) <span class="pl-k">for</span> <span class="pl-s1">provider</span> <span class="pl-c1">in</span> <span class="pl-s1">_providers</span>
-    ]
-    <span class="pl-k">await</span> <span class="pl-s1">asyncio</span>.<span class="pl-c1">gather</span>(<span class="pl-c1">*</span><span class="pl-s1">calls</span>)
-
-<span class="pl-s1">asyncio</span>.<span class="pl-c1">run</span>(<span class="pl-en">run_all</span>())</pre></div>
-<h5>Proxy and Timeout Support</h5>
-<p>All providers support specifying a proxy and increasing timeout in the create functions.</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">g4f</span>
-
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">g4f</span>.<span class="pl-c1">ChatCompletion</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">models</span>.<span class="pl-c1">default</span>,
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello"</span>}],
-    <span class="pl-s1">proxy</span><span class="pl-c1">=</span><span class="pl-s">"http://host:port"</span>,
-    <span class="pl-c"># or socks5://user:pass@host:port</span>
-    <span class="pl-s1">timeout</span><span class="pl-c1">=</span><span class="pl-c1">120</span>,  <span class="pl-c"># in secs</span>
-)
-
-<span class="pl-en">print</span>(<span class="pl-s">f"Result:"</span>, <span class="pl-s1">response</span>)</pre></div>
-<hr>
-<p><a href="/docs/">Return to Documentation</a></p></article>
+    <article class="markdown-body entry-content container-lg" itemprop="text">Blocked by DNS monitoring proxy</article>
 </body>
 </html>
