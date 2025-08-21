@@ -1,3 +1,0 @@
-User-agent: *
-Disallow:
-Sitemap: https://g4f.dev/sitemap.xml
