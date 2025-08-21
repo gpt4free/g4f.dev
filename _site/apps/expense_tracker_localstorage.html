@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Expense Tracker</title>
+<style>
+  /* ===============================
+     Expense Tracker - Mobile-first CSS
+     -------------------------------
+     Styles for a clean, modern, responsive design
+  ================================ */
+
+  :root {
+    --color-primary: #4a90e2;
+    --color-primary-dark: #356ac3;
+    --color-error: #e74c3c;
+    --color-bg: #f9f9f9;
+    --color-card-bg: #fff;
+    --color-text-primary: #222;
+    --color-text-secondary: #555;
+    --radius: 8px;
+    --transition: 0.3s ease;
+    --font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-bg);
+    font-family: var(--font-family);
+    color: var(--color-text-primary);
+    line-height: 1.5;
+  }
+
+  header {
+    background-color: var(--color-primary);
+    color: #fff;
+    text-align: center;
+    padding: 1.25rem 1rem;
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: 0.05em;
+  }
+
+  main {
+    max-width: 480px;
+    margin: 1rem auto;
+    padding: 0 1rem 2rem;
+  }
+
+  /* Form */
+  form {
+    background: var(--color-card-bg);
+    padding: 1rem;
+    border-radius: var(--radius);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.1);
+    margin-bottom: 1.25rem;
+  }
+
+  form > div {
+    margin-bottom: 1rem;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="date"] {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem;
+    border: 1.5px solid #ddd;
+    border-radius: var(--radius);
+    transition: border-color var(--transition);
+  }
+
+  input[type="text"]:focus,
+  input[type="number"]:focus,
+  input[type="date"]:focus {
+    border-color: var(--color-primary);
+    outline: none;
+  }
+
+  button[type="submit"] {
+    width: 100%;
+    background-color: var(--color-primary);
+    border: none;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.1rem;
+    padding: 0.75rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background-color var(--transition);
+  }
+
+  button[type="submit"]:hover,
+  button[type="submit"]:focus {
+    background-color: var(--color-primary-dark);
+    outline: none;
+  }
+
+  /* Expense List */
+  section.expense-list {
+    background: var(--color-card-bg);
+    border-radius: var(--radius);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.1);
+    padding: 1rem;
+  }
+
+  section.expense-list h2 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    font-size: 1.25rem;
+    border-bottom: 2px solid var(--color-primary);
+    padding-bottom: 0.25rem;
+  }
+
+  ul#expenses {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  ul#expenses li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.25rem;
+    border-bottom: 1px solid #eee;
+    font-size: 1rem;
+  }
+
+  ul#expenses li:last-child {
+    border-bottom: none;
+  }
+
+  .expense-info {
+    display: flex;
+    flex-direction: column;
+    max-width: 75%;
+  }
+
+  .expense-desc {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .expense-date {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+  }
+
+  .expense-amount {
+    font-weight: 700;
+    color: var(--color-primary);
+    min-width: 70px;
+    text-align: right;
+  }
+
+  button.delete-btn {
+    background: transparent;
+    border: none;
+    color: var(--color-error);
+    cursor: pointer;
+    font-size: 1.25rem;
+    padding: 0 0.5rem;
+    transition: color 0.2s ease;
+  }
+
+  button.delete-btn:hover,
+  button.delete-btn:focus {
+    color: #c0392b;
+    outline: none;
+  }
+
+  /* Summary */
+  section.summary {
+    margin-top: 1.5rem;
+    background: var(--color-card-bg);
+    padding: 1rem;
+    border-radius: var(--radius);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.1);
+    text-align: center;
+  }
+
+  section.summary h3 {
+    margin: 0 0 0.5rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--color-text-secondary);
+  }
+
+  section.summary .total-amount {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-primary-dark);
+  }
+
+  /* Responsive Enhancements (larger screens) */
+  @media (min-width: 480px) {
+    main {
+      padding: 0 1.5rem 3rem;
+    }
+
+    ul#expenses li {
+      font-size: 1.125rem;
+    }
+  }
+</style>
+</head>
+<body>
+<header>Expense Tracker</header>
+<main>
+  <form id="expense-form" aria-label="Add new expense">
+    <div>
+      <label for="desc">Description</label>
+      <input type="text" id="desc" name="desc" placeholder="What did you spend on?" required aria-required="true" />
+    </div>
+    <div>
+      <label for="amount">Amount (USD)</label>
+      <input type="number" id="amount" name="amount" min="0.01" step="0.01" placeholder="e.g. 12.50" required aria-required="true" />
+    </div>
+    <div>
+      <label for="date">Date</label>
+      <input type="date" id="date" name="date" required aria-required="true" max="" />
+    </div>
+    <button type="submit" aria-label="Add expense">Add Expense</button>
+  </form>
+
+  <section class="expense-list" aria-live="polite" aria-label="List of expenses">
+    <h2>Expenses</h2>
+    <ul id="expenses" role="list"></ul>
+  </section>
+
+  <section class="summary" aria-label="Summary of expenses">
+    <h3>Total Spent</h3>
+    <div class="total-amount" id="total">$0.00</div>
+  </section>
+</main>
+
+<script>
+/**
+ * Expense Tracker
+ * -----------------------
+ * - Mobile-first, responsive single HTML file.
+ * - Tracks expenses with description, amount, and date.
+ * - Uses localStorage for persistence.
+ * - Provides add, delete, and total expense summary.
+ * - Accessible and keyboard-friendly.
+ */
+
+(function() {
+  "use strict";
+
+  // DOM elements
+  const form = document.getElementById("expense-form");
+  const descInput = form.desc;
+  const amountInput = form.amount;
+  const dateInput = form.date;
+  const expensesList = document.getElementById("expenses");
+  const totalDisplay = document.getElementById("total");
+
+  // Key for localStorage
+  const STORAGE_KEY = "expense-tracker-expenses";
+
+  // In-memory expenses array
+  let expenses = [];
+
+  // Format a number as USD currency string
+  function formatCurrency(num) {
+    return num.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  }
+
+  // Format date string to readable format (MMM dd, yyyy)
+  function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    if (isNaN(date)) return ""; 
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  }
+
+  // Save expenses array to localStorage
+  function saveExpenses() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(expenses));
+  }
+
+  // Load expenses array from localStorage
+  function loadExpenses() {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (data) {
+      try {
+        expenses = JSON.parse(data);
+        // Sanitize data, ensure array with valid objects
+        if (!Array.isArray(expenses)) expenses = [];
+        else {
+          expenses = expenses.filter(e =>
+            e &&
+            typeof e.id === "string" &&
+            typeof e.desc === "string" &&
+            typeof e.amount === "number" &&
+            typeof e.date === "string"
+          );
+        }
+      } catch {
+        expenses = [];
+      }
+    }
+  }
+
+  // Render all expenses to the list
+  function renderExpenses() {
+    expensesList.innerHTML = "";
+
+    if (expenses.length === 0) {
+      const emptyMsg = document.createElement("li");
+      emptyMsg.textContent = "No expenses added yet.";
+      emptyMsg.style.textAlign = "center";
+      emptyMsg.style.color = "#888";
+      expensesList.appendChild(emptyMsg);
+      updateTotal();
+      return;
+    }
+
+    // Sort expenses by date descending (newest first)
+    const sorted = expenses.slice().sort((a,b) => new Date(b.date) - new Date(a.date));
+
+    sorted.forEach(expense => {
+      const li = document.createElement("li");
+      li.setAttribute("data-id", expense.id);
+
+      // Expense info container
+      const info = document.createElement("div");
+      info.className = "expense-info";
+
+      const desc = document.createElement("div");
+      desc.className = "expense-desc";
+      desc.textContent = expense.desc;
+      desc.title = expense.desc;
+
+      const date = document.createElement("div");
+      date.className = "expense-date";
+      date.textContent = formatDate(expense.date);
+
+      info.appendChild(desc);
+      info.appendChild(date);
+
+      // Amount
+      const amount = document.createElement("div");
+      amount.className = "expense-amount";
+      amount.textContent = formatCurrency(expense.amount);
+
+      // Delete button
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "delete-btn";
+      deleteBtn.setAttribute("aria-label", `Delete expense: ${expense.desc} of ${formatCurrency(expense.amount)}`);
+      deleteBtn.innerHTML = "&#10005;"; // multiplication cross
+      deleteBtn.type = "button";
+
+      deleteBtn.addEventListener("click", () => {
+        deleteExpense(expense.id);
+      });
+
+      li.appendChild(info);
+      li.appendChild(amount);
+      li.appendChild(deleteBtn);
+
+      expensesList.appendChild(li);
+    });
+
+    updateTotal();
+  }
+
+  // Update the total amount display
+  function updateTotal() {
+    const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+    totalDisplay.textContent = formatCurrency(total);
+  }
+
+  // Delete an expense by id
+  function deleteExpense(id) {
+    expenses = expenses.filter(e => e.id !== id);
+    saveExpenses();
+    renderExpenses();
+  }
+
+  // Generate a simple unique ID
+  function generateId() {
+    return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+  }
+
+  // Set max attribute for date input to today
+  function setMaxDate() {
+    const today = new Date().toISOString().split("T")[0];
+    dateInput.max = today;
+    dateInput.value = today;
+  }
+
+  // Validate form fields before adding
+  function validateForm() {
+    // Description: non-empty
+    if (!descInput.value.trim()) {
+      alert("Please enter a description.");
+      descInput.focus();
+      return false;
+    }
+
+    // Amount: positive number
+    const amountVal = parseFloat(amountInput.value);
+    if (isNaN(amountVal) || amountVal <= 0) {
+      alert("Please enter a valid amount greater than zero.");
+      amountInput.focus();
+      return false;
+    }
+
+    // Date: valid date, not in future
+    const dateVal = dateInput.value;
+    if (!dateVal) {
+      alert("Please select a date.");
+      dateInput.focus();
+      return false;
+    }
+    const selectedDate = new Date(dateVal);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    if (selectedDate > today) {
+      alert("Date cannot be in the future.");
+      dateInput.focus();
+      return false;
+    }
+
+    return true;
+  }
+
+  // Add new expense
+  function addExpense(desc, amount, date) {
+    expenses.push({
+      id: generateId(),
+      desc: desc.trim(),
+      amount: parseFloat(amount),
+      date
+    });
+    saveExpenses();
+    renderExpenses();
+  }
+
+  // Initialize app
+  function init() {
+    setMaxDate();
+    loadExpenses();
+    renderExpenses();
+
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+
+      if (!validateForm()) return;
+
+      addExpense(descInput.value, amountInput.value, dateInput.value);
+
+      form.reset();
+
+      // Reset date to today again (since reset clears)
+      setMaxDate();
+
+      descInput.focus();
+    });
+  }
+
+  // Run on page load
+  document.addEventListener("DOMContentLoaded", init);
+})();
+</script>
+</body>
+</html>

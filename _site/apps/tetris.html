@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Modern Responsive Tetris</title>
+<style>
+  /* === Mobile-First Styles === */
+  :root {
+    --bg-color: #121212;
+    --grid-bg: #1e1e1e;
+    --block-colors: 
+      #00f0f0, /* I - Cyan */
+      #0000f0, /* J - Blue */
+      #f0a000, /* L - Orange */
+      #f0f000, /* O - Yellow */
+      #00f000, /* S - Green */
+      #a000f0, /* T - Purple */
+      #f00000; /* Z - Red */
+    --button-bg: #333;
+    --button-hover-bg: #555;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0; padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-color);
+    color: #eee;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    user-select:none;
+  }
+
+  header {
+    padding: 1rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.25rem;
+    letter-spacing: 0.05em;
+  }
+
+  main {
+    width: 100%;
+    max-width: 400px;
+    display: grid;
+    grid-template-columns: auto 120px;
+    gap: 1rem;
+    padding: 0 0.5rem 1rem;
+  }
+
+  /* Tetris grid container */
+  #tetris {
+    position: relative;
+    background: var(--grid-bg);
+    aspect-ratio: 10 / 20;
+    border: 3px solid #444;
+    border-radius: 8px;
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    grid-template-rows: repeat(20, 1fr);
+    box-shadow: inset 0 0 15px #0008;
+  }
+
+  /* Each cell of Tetris grid */
+  .cell {
+    border: 0.5px solid #222;
+    background: #121212;
+    transition: background-color 0.2s;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Filled cells get color based on piece type */
+  .filled-0 { background: #00f0f0; box-shadow: 0 0 5px #00f0f0; } /* I */
+  .filled-1 { background: #0000f0; box-shadow: 0 0 5px #0000f0; } /* J */
+  .filled-2 { background: #f0a000; box-shadow: 0 0 5px #f0a000; } /* L */
+  .filled-3 { background: #f0f000; box-shadow: 0 0 5px #f0f000; } /* O */
+  .filled-4 { background: #00f000; box-shadow: 0 0 5px #00f000; } /* S */
+  .filled-5 { background: #a000f0; box-shadow: 0 0 5px #a000f0; } /* T */
+  .filled-6 { background: #f00000; box-shadow: 0 0 5px #f00000; } /* Z */
+
+  /* Sidebar for score and controls */
+  #sidebar {
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    gap: 1rem;
+  }
+
+  #scoreboard {
+    background: var(--grid-bg);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    user-select:none;
+  }
+  #scoreboard h2 {
+    margin: 0 0 0.5rem 0;
+    font-weight: 700;
+  }
+  #scoreboard p {
+    font-size: 1.25rem;
+    margin: 0.2rem 0;
+  }
+
+  /* Control buttons */
+  #controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+  }
+  button {
+    flex: 1 1 40%;
+    background: var(--button-bg);
+    border: none;
+    border-radius: 6px;
+    color: #eee;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    user-select:none;
+  }
+  button:hover,
+  button:focus {
+    background: var(--button-hover-bg);
+    outline: none;
+  }
+  button:active {
+    background: #222;
+  }
+
+  /* Responsive adjustments for larger screens */
+  @media (min-width: 480px) {
+    main {
+      max-width: 600px;
+      gap: 2rem;
+      grid-template-columns: auto 1fr;
+    }
+    #sidebar {
+      flex-direction: column;
+      max-width: 200px;
+    }
+    button {
+      font-size: 1.1rem;
+      padding: 1rem 1.5rem;
+    }
+  }
+
+  /* Next piece preview */
+  #next-piece {
+    background: var(--grid-bg);
+    border-radius: 8px;
+    margin-top: 1rem;
+    aspect-ratio: 4 / 4;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 1px;
+  }
+  #next-piece .cell {
+    border: none;
+    background: #121212;
+  }
+  #next-piece .filled-0,
+  #next-piece .filled-1,
+  #next-piece .filled-2,
+  #next-piece .filled-3,
+  #next-piece .filled-4,
+  #next-piece .filled-5,
+  #next-piece .filled-6 {
+    box-shadow: none;
+  }
+</style>
+<!--
+  Modern Responsive Tetris
+  -------------------------
+  A mobile-first, single-file Tetris game built with pure HTML, CSS, and JavaScript.
+  
+  Features:
+  - 10x20 grid Tetris gameplay
+  - Classic 7 Tetrominoes with rotation
+  - Soft drop, move, hard drop controls
+  - Score and level tracking
+  - Next piece preview
+  - Mobile and desktop friendly controls (buttons and keyboard)
+  - Clean, commented code with no external dependencies
+
+  Controls:
+  - Mobile buttons for left, right, rotate, drop, pause
+  - Keyboard: Arrow Left/Right to move, Up to rotate, Down to soft drop, Space for hard drop, P to pause
+  
+  Author: ChatGPT
+  Date: 2024
+-->
+</head>
+<body>
+<header>TETRIS</header>
+<main>
+  <div id="tetris" aria-label="Tetris game grid" role="grid" tabindex="0"></div>
+  <section id="sidebar" aria-label="Game information and controls">
+    <div id="scoreboard" aria-live="polite">
+      <h2>Score</h2>
+      <p id="score">0</p>
+      <h2>Level</h2>
+      <p id="level">1</p>
+      <h2>Lines</h2>
+      <p id="lines">0</p>
+      <h2>Next</h2>
+      <div id="next-piece" aria-label="Next piece preview"></div>
+    </div>
+    <div id="controls" role="group" aria-label="Game Controls">
+      <button id="left" aria-label="Move left">←</button>
+      <button id="right" aria-label="Move right">→</button>
+      <button id="rotate" aria-label="Rotate piece">⟳</button>
+      <button id="down" aria-label="Soft drop">↓</button>
+      <button id="drop" aria-label="Hard drop">⬇</button>
+      <button id="pause" aria-pressed="false" aria-label="Pause or resume game">⏸/▶</button>
+      <button id="restart" aria-label="Restart game">⟲</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---- Constants ----
+
+  const ROWS = 20;
+  const COLS = 10;
+  const BLOCK_SIZE = 1; // relative sizing using css grid, no px needed
+
+  // Tetromino shapes and rotations indexed by piece type
+  // Each piece has 4 rotation states (0-3), each state is a 4x4 grid flattened array
+  const TETROMINOES = [
+    // I
+    [
+      [0,0,0,0,
+       1,1,1,1,
+       0,0,0,0,
+       0,0,0,0],
+
+      [0,0,1,0,
+       0,0,1,0,
+       0,0,1,0,
+       0,0,1,0],
+
+      [0,0,0,0,
+       0,0,0,0,
+       1,1,1,1,
+       0,0,0,0],
+
+      [0,1,0,0,
+       0,1,0,0,
+       0,1,0,0,
+       0,1,0,0],
+    ],
+    // J
+    [
+      [2,0,0,0,
+       2,2,2,0,
+       0,0,0,0,
+       0,0,0,0],
+
+      [0,2,2,0,
+       0,2,0,0,
+       0,2,0,0,
+       0,0,0,0],
+
+      [0,0,0,0,
+       2,2,2,0,
+       0,0,2,0,
+       0,0,0,0],
+
+      [0,2,0,0,
+       0,2,0,0,
+       2,2,0,0,
+       0,0,0,0],
+    ],
+    // L
+    [
+      [0,0,3,0,
+       3,3,3,0,
+       0,0,0,0,
+       0,0,0,0],
+
+      [0,3,0,0,
+       0,3,0,0,
+       0,3,3,0,
+       0,0,0,0],
+
+      [0,0,0,0,
+       3,3,3,0,
+       3,0,0,0,
+       0,0,0,0],
+
+      [3,3,0,0,
+       0,3,0,0,
+       0,3,0,0,
+       0,0,0,0],
+    ],
+    // O
+    [
+      [0,4,4,0,
+       0,4,4,0,
+       0,0,0,0,
+       0,0,0,0],
+
+      [0,4,4,0,
+       0,4,4,0,
+       0,0,0,0,
+       0,0,0,0],
+
+      [0,4,4,0,
+       0,4,4,0,
+       0,0,0,0,
+       0,0,0,0],
+
+      [0,4,4,0,
+       0,4,4,0,
+       0,0,0,0,
+       0,0,0,0],
+    ],
+    // S
+    [
+      [0,5,5,0,
+       5,5,0,0,
+       0,0,0,0,
+       0,0,0,0],
+
+      [0,5,0,0,
+       0,5,5,0,
+       0,0,5,0,
+       0,0,0,0],
+
+      [0,0,0,0,
+       0,5,5,0,
+       5,5,0,0,
+       0,0,0,0],
+
+      [5,0,0,0,
+       5,5,0,0,
+       0,5,0,0,
+       0,0,0,0],
+    ],
+    // T
+    [
+      [0,6,0,0,
+       6,6,6,0,
+       0,0,0,0,
+       0,0,0,0],
+
+      [0,6,0,0,
+       0,6,6,0,
+       0,6,0,0,
+       0,0,0,0],
+
+      [0,0,0,0,
+       6,6,6,0,
+       0,6,0,0,
+       0,0,0,0],
+
+      [0,6,0,0,
+       6,6,0,0,
+       0,6,0,0,
+       0,0,0,0],
+    ],
+    // Z
+    [
+      [7,7,0,0,
+       0,7,7,0,
+       0,0,0,0,
+       0,0,0,0],
+
+      [0,0,7,0,
+       0,7,7,0,
+       0,7,0,0,
+       0,0,0,0],
+
+      [0,0,0,0,
+       7,7,0,0,
+       0,7,7,0,
+       0,0,0,0],
+
+      [0,7,0,0,
+       7,7,0,0,
+       7,0,0,0,
+       0,0,0,0],
+    ]
+  ];
+
+  // Score points by lines cleared at once (classic tetris scoring)
+  const SCORE_TABLE = {
+    0: 0,
+    1: 100,
+    2: 300,
+    3: 500,
+    4: 800
+  };
+
+  // Level up after lines cleared multiples of 10
+  const LINES_PER_LEVEL = 10;
+
+  // Game speed: delay in ms for auto drop (will decrease with levels)
+  const BASE_SPEED = 900;
+  const SPEED_DECREMENT = 60; // faster per level
+
+
+  // ---- DOM references ----
+  const gridEl = document.getElementById('tetris');
+  const scoreEl = document.getElementById('score');
+  const levelEl = document.getElementById('level');
+  const linesEl = document.getElementById('lines');
+  const nextEl = document.getElementById('next-piece');
+
+  // Controls buttons
+  const btnLeft = document.getElementById('left');
+  const btnRight = document.getElementById('right');
+  const btnRotate = document.getElementById('rotate');
+  const btnDown = document.getElementById('down');
+  const btnDrop = document.getElementById('drop');
+  const btnPause = document.getElementById('pause');
+  const btnRestart = document.getElementById('restart');
+
+  // ---- State ----
+
+  let grid = createEmptyGrid();
+  let currentPiece = null;
+  let currentX = 3; // starting col - middle of 10 grid - 4 wide piece grid
+  let currentY = 0; // top row
+  let rotation = 0;
+  let nextPieceIndex = randomPieceIndex();
+  let score = 0;
+  let lines = 0;
+  let level = 1;
+  let dropInterval = BASE_SPEED;
+  let dropTimer = null;
+  let isPaused = false;
+  let isGameOver = false;
+
+  // ---- Initialization ----
+
+  // Create grid cells in DOM
+  function initGrid() {
+    gridEl.innerHTML = '';
+    for(let r = 0; r < ROWS; r++) {
+      for(let c = 0; c < COLS; c++) {
+        let cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.setAttribute('role','gridcell');
+        cell.dataset.row = r;
+        cell.dataset.col = c;
+        gridEl.appendChild(cell);
+      }
+    }
+  }
+
+  // Create 4x4 next piece preview grid cells
+  function initNextGrid() {
+    nextEl.innerHTML = '';
+    for(let i=0; i<16; i++) {
+      let cell = document.createElement('div');
+      cell.classList.add('cell');
+      nextEl.appendChild(cell);
+    }
+  }
+
+  // ---- Helpers ----
+
+  // Creates an empty rows x cols matrix filled with 0
+  function createEmptyGrid() {
+    return Array.from({length: ROWS}, () => new Array(COLS).fill(0));
+  }
+
+  // Generate random piece index (0-6)
+  function randomPieceIndex() {
+    return Math.floor(Math.random() * TETROMINOES.length);
+  }
+
+  // Returns the 4x4 shape array of current tetromino in a given rotation
+  function getCurrentShape(pieceIndex, rotationIndex) {
+    return TETROMINOES[pieceIndex][rotationIndex];
+  }
+
+  // Check collision with grid boundaries and filled cells
+  // position x/y is top-left corner of 4x4 shape box
+  function collide(shape, x, y) {
+    for(let i=0; i<16; i++) {
+      if(shape[i] !== 0) {
+        let col = i % 4 + x;
+        let row = Math.floor(i /4) + y;
+        if(col < 0 || col >= COLS || row >= ROWS) return true;
+        if(row >= 0 && grid[row][col] !== 0) return true;
+      }
+    }
+    return false;
+  }
+
+  // Place piece into grid permanently
+  function placePiece() {
+    const shape = getCurrentShape(currentPiece.index, currentPiece.rotation);
+    for(let i=0; i<16; i++) {
+      if(shape[i] !== 0) {
+        let col = (i % 4) + currentPiece.x;
+        let row = Math.floor(i / 4) + currentPiece.y;
+        if(row >= 0) {
+          grid[row][col] = shape[i];
+        }
+      }
+    }
+  }
+
+  // Clear filled lines, return count of cleared lines
+  function clearLines() {
+    let linesCleared = 0;
+    outer: for(let r = ROWS -1; r >= 0; r--) {
+      if(grid[r].every(cell => cell !== 0)) {
+        grid.splice(r,1);
+        grid.unshift(new Array(COLS).fill(0));
+        linesCleared++;
+        r++; // check same row again as rows shifted
+      }
+    }
+    return linesCleared;
+  }
+
+  // Update the HTML grid visualization by reflecting current grid + current piece
+  function updateGrid() {
+    const cells = gridEl.children;
+    // temp grid with current piece projected
+    let tempGrid = grid.map(row => row.slice());
+    const shape = getCurrentShape(currentPiece.index, currentPiece.rotation);
+    for(let i=0; i<16; i++) {
+      if(shape[i] !== 0) {
+        let col = (i % 4) + currentPiece.x;
+        let row = Math.floor(i / 4) + currentPiece.y;
+        if(row >= 0 && row < ROWS && col >= 0 && col < COLS) {
+          tempGrid[row][col] = shape[i];
+        }
+      }
+    }
+
+    for(let r=0; r<ROWS; r++) {
+      for(let c=0; c<COLS; c++) {
+        let idx = r * COLS + c;
+        let cell = cells[idx];
+        let cellVal = tempGrid[r][c];
+        cell.className = 'cell';
+        if(cellVal !== 0) {
+          cell.classList.add('filled-' + (cellVal-1));
+        }
+      }
+    }
+  }
+
+  // Update next piece preview
+  function updateNext() {
+    const cells = nextEl.children;
+    const shape = getCurrentShape(nextPieceIndex, 0);
+    for(let i=0; i<16; i++) {
+      let cell = cells[i];
+      let val = shape[i];
+      cell.className = 'cell';
+      if(val !== 0) {
+        cell.classList.add('filled-' + (val -1));
+      }
+    }
+  }
+
+  // Update score, level, lines display
+  function updateScores() {
+    scoreEl.textContent = score;
+    levelEl.textContent = level;
+    linesEl.textContent = lines;
+  }
+
+  // Spawn new piece at the top
+  function spawnPiece() {
+    currentPiece = {
+      index: nextPieceIndex,
+      x: 3,
+      y: -1,
+      rotation: 0
+    };
+    nextPieceIndex = randomPieceIndex();
+    updateNext();
+
+    // Check immediately if game over due to collision
+    if(collide(getCurrentShape(currentPiece.index, currentPiece.rotation), currentPiece.x, currentPiece.y)) {
+      gameOver();
+    }
+  }
+
+  // Move piece by dx, dy if no collision
+  function move(dx, dy) {
+    if(isPaused || isGameOver) return false;
+
+    let newX = currentPiece.x + dx;
+    let newY = currentPiece.y + dy;
+    let shape = getCurrentShape(currentPiece.index, currentPiece.rotation);
+    if(!collide(shape, newX, newY)){
+      currentPiece.x = newX;
+      currentPiece.y = newY;
+      return true;
+    }
+    return false;
+  }
+
+  // Rotate piece (clockwise)
+  function rotatePiece() {
+    if(isPaused || isGameOver) return;
+    let newRotation = (currentPiece.rotation + 1) % 4;
+    let shape = getCurrentShape(currentPiece.index, newRotation);
+
+    // Wall kicks - try to shift left or right if colliding rotated piece
+    const kicks = [0, -1, 1, -2, 2];
+    for(let kick of kicks) {
+      if(!collide(shape, currentPiece.x + kick, currentPiece.y)) {
+        currentPiece.rotation = newRotation;
+        currentPiece.x += kick;
+        return;
+      }
+    }
+  }
+
+  // Hard drop: move piece down until collision then lock piece
+  function hardDrop() {
+    if(isPaused || isGameOver) return;
+    while(move(0, 1)) {}
+    lockPiece();
+  }
+
+  // Soft drop: move piece down by 1, if not possible lock piece
+  function softDrop() {
+    if(isPaused || isGameOver) return;
+    if(!move(0, 1)){
+      lockPiece();
+    } else {
+      score += 1; // soft drop bonus
+      updateScores();
+    }
+  }
+
+  // Lock current piece and spawn new one
+  function lockPiece() {
+    placePiece();
+    let cleared = clearLines();
+    if(cleared > 0) {
+      lines += cleared;
+      score += SCORE_TABLE[cleared] * level;
+      // level up every LINES_PER_LEVEL lines
+      if(Math.floor(lines / LINES_PER_LEVEL) + 1 > level) {
+        levelUp();
+      }
+      updateScores();
+    }
+    spawnPiece();
+  }
+
+  // Increase level and speed up drop
+  function levelUp() {
+    level++;
+    dropInterval = Math.max(100, BASE_SPEED - SPEED_DECREMENT * (level - 1));
+    resetDropTimer();
+  }
+
+  // Game over logic
+  function gameOver() {
+    isGameOver = true;
+    clearInterval(dropTimer);
+    alert('Game Over!\nYour score: ' + score);
+  }
+
+  // Pause or resume game
+  function togglePause() {
+    if(isGameOver) return;
+    isPaused = !isPaused;
+    btnPause.setAttribute('aria-pressed', isPaused.toString());
+    btnPause.textContent = isPaused ? '▶' : '⏸';
+    if(isPaused) {
+      clearInterval(dropTimer);
+    } else {
+      resetDropTimer();
+    }
+  }
+
+  // Reset drop timer interval
+  function resetDropTimer() {
+    clearInterval(dropTimer);
+    dropTimer = setInterval(() => {
+      if(!move(0, 1)) {
+        lockPiece();
+      }
+      updateGrid();
+    }, dropInterval);
+  }
+
+  // Restart game state/reset
+  function restartGame() {
+    grid = createEmptyGrid();
+    score = 0;
+    lines = 0;
+    level = 1;
+    dropInterval = BASE_SPEED;
+    isPaused = false;
+    isGameOver = false;
+    btnPause.setAttribute('aria-pressed', 'false');
+    btnPause.textContent = '⏸/▶';
+    nextPieceIndex = randomPieceIndex();
+    spawnPiece();
+    updateScores();
+    updateGrid();
+    updateNext();
+    resetDropTimer();
+  }
+
+
+  // ---- Event handlers ----
+
+  // Keyboard controls
+  function keyboardHandler(e) {
+    if(isGameOver) return;
+    if(isPaused && e.key !== 'p' && e.key !== 'P') return;
+
+    switch(e.key) {
+      case 'ArrowLeft':
+        e.preventDefault();
+        move(-1,0);
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        move(1,0);
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        softDrop();
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        rotatePiece();
+        break;
+      case ' ':
+      case 'Spacebar':
+        e.preventDefault();
+        hardDrop();
+        break;
+      case 'p':
+      case 'P':
+        e.preventDefault();
+        togglePause();
+        break;
+    }
+    updateGrid();
+  }
+
+  // Touch/buttons input handlers
+  btnLeft.addEventListener('click', () => { if(!isPaused && !isGameOver){move(-1,0); updateGrid();}});
+  btnRight.addEventListener('click', () => { if(!isPaused && !isGameOver){move(1,0); updateGrid();}});
+  btnRotate.addEventListener('click', () => { if(!isPaused && !isGameOver){rotatePiece(); updateGrid();}});
+  btnDown.addEventListener('click', () => { if(!isPaused && !isGameOver){softDrop(); updateGrid();}});
+  btnDrop.addEventListener('click', () => { if(!isPaused && !isGameOver){hardDrop(); updateGrid();}});
+  btnPause.addEventListener('click', togglePause);
+  btnRestart.addEventListener('click', () => {
+    if(confirm('Restart the game?')) restartGame();
+  });
+
+  // Prevent scrolling on spacebar and arrow keys for better UX
+  window.addEventListener('keydown', e => {
+    if(['ArrowLeft','ArrowRight','ArrowDown','ArrowUp',' ','Spacebar','p','P'].includes(e.key)) {
+      e.preventDefault();
+    }
+  }, {passive: false});
+
+  // ---- Initialize game ----
+
+  initGrid();
+  initNextGrid();
+  restartGame();
+
+  window.addEventListener('keydown', keyboardHandler);
+
+  // Expose restartGame for debug or future use
+  window.tetrisRestart = restartGame;
+
+})();
+</script>
+</body>
+</html>

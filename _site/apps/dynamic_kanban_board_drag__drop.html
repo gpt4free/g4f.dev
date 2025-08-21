@@ -1,0 +1,659 @@
+<!--
+Dynamic Kanban Board
+====================
+
+A modern, responsive, mobile-first Kanban board implemented in a single HTML file.
+Features:
+- Mobile-friendly flexible layout: columns stack vertically on small screens and align horizontally on larger screens.
+- Drag & drop cards between columns and reorder within columns.
+- Add new columns and cards.
+- Edit card text inline.
+- Delete cards.
+- Persistent state via localStorage.
+- Clean, modular, well-commented code.
+- No external libraries or dependencies.
+
+Author: ChatGPT
+Date: 2024-06
+
+Usage:
+Open this file in any modern web browser. Drag cards between columns, reorder them, and add new cards/columns.
+Your changes persist locally on your browser.
+
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dynamic Kanban Board</title>
+<style>
+  /* Reset & base */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0; padding: 0; min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    background: #f4f6f8;
+    display: flex; flex-direction: column;
+    color: #222;
+  }
+  h1 {
+    margin: 1rem;
+    font-weight: 700;
+    text-align: center;
+    font-size: 1.5rem;
+  }
+  /* Board container */
+  #board {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0 1rem 3rem;
+  }
+
+  /* Columns container holds columns horizontally on desktop */
+  #columns-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* Column styling */
+  .column {
+    background: white;
+    border-radius: 8px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    max-height: 80vh;
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.1);
+  }
+
+  .column-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+
+  .column-header h2 {
+    font-size: 1.2rem;
+    margin: 0;
+    word-break: break-word;
+  }
+  .column-header h2[contenteditable]:focus {
+    outline: 2px solid #4a90e2;
+    border-radius: 4px;
+  }
+
+  .delete-column-btn {
+    background: transparent;
+    border: none;
+    color: #d9534f;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1.2rem;
+    line-height: 1;
+    user-select:none;
+    padding: 0 4px;
+    border-radius: 3px;
+  }
+  .delete-column-btn:hover,
+  .delete-column-btn:focus {
+    background: #d9534f;
+    color: white;
+  }
+
+  /* Cards container */
+  .cards {
+    flex-grow: 1;
+    min-height: 100px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  /* Card styling */
+  .card {
+    background: #fff;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.07);
+    cursor: grab;
+    user-select:none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .card[draggable="true"]:active {
+    cursor: grabbing;
+  }
+  .card-content {
+    flex-grow: 1;
+    margin-right: 0.5rem;
+    outline: none;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .card-content[contenteditable]:focus {
+    outline: 2px solid #4a90e2;
+    border-radius: 3px;
+  }
+
+  .delete-card-btn {
+    background: transparent;
+    border: none;
+    color: #d9534f;
+    font-weight: bold;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    user-select:none;
+    padding: 0;
+  }
+  .delete-card-btn:hover,
+  .delete-card-btn:focus {
+    color: white;
+    background: #d9534f;
+    border-radius: 3px;
+  }
+
+  /* Add new card/column */
+  .add-btn {
+    margin-top: 0.5rem;
+    background: #4a90e2;
+    border: none;
+    width: 100%;
+    padding: 0.5rem;
+    color: white;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    user-select:none;
+    transition: background-color 0.2s ease;
+  }
+  .add-btn:hover,
+  .add-btn:focus {
+    background: #357abd;
+    outline: none;
+  }
+
+  /* Input field for new cards/columns */
+  .add-input {
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+    margin-top: 0.5rem;
+    font-family: inherit;
+    resize: vertical;
+  }
+  .add-input:focus {
+    outline: 2px solid #4a90e2;
+    border-color: #4a90e2;
+  }
+
+  /* Drag & drop indicators */
+  .cards.drag-over {
+    border: 3px dashed #4a90e2;
+    border-radius: 8px;
+  }
+
+  .card.dragging {
+    opacity: 0.5;
+  }
+
+  /* Responsive: On larger screens, columns aligned horizontally */
+  @media (min-width: 640px) {
+    #columns-container {
+      flex-direction: row;
+      gap: 1rem;
+      overflow-x: auto;
+      padding-bottom: 1rem;
+    }
+    .column {
+      min-width: 280px;
+      max-width: 280px;
+      max-height: 80vh;
+    }
+  }
+
+
+</style>
+</head>
+<body>
+
+<h1>Dynamic Kanban Board</h1>
+<div id="board">
+  <div id="columns-container" aria-label="Kanban columns container"></div>
+
+  <button id="add-column-btn" class="add-btn" aria-label="Add new column">+ Add Column</button>
+</div>
+
+<script>
+/**
+ * Kanban Board Data Structure:
+ * [
+ *   {
+ *     id: string (unique column id),
+ *     title: string,
+ *     cards: [
+ *       { id: string (unique card id), content: string },
+ *       ...
+ *     ]
+ *   },
+ *   ...
+ * ]
+ */
+
+(() => {
+  const storageKey = 'dynamicKanbanData';
+
+  // Generate unique IDs for columns/cards
+  function generateID() {
+    return 'id-' + Math.random().toString(36).substr(2, 9);
+  }
+
+  /** Load board data from localStorage or default */
+  function loadData() {
+    const data = localStorage.getItem(storageKey);
+    if (data) {
+      try {
+        return JSON.parse(data);
+      } catch {
+        // fail silently and reset to default
+      }
+    }
+    // Default initial board with 3 columns
+    return [
+      { id: generateID(), title: 'To Do', cards: [] },
+      { id: generateID(), title: 'In Progress', cards: [] },
+      { id: generateID(), title: 'Done', cards: [] }
+    ];
+  }
+
+  /** Save board data to localStorage */
+  function saveData(data) {
+    localStorage.setItem(storageKey, JSON.stringify(data));
+  }
+
+  /** Escape HTML - to avoid raw HTML injection */
+  function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.innerText = str;
+    return div.innerHTML;
+  }
+
+  // === Main Kanban board app implementation ===
+
+  const boardElem = document.getElementById('board');
+  const columnsContainer = document.getElementById('columns-container');
+  const addColumnBtn = document.getElementById('add-column-btn');
+
+  // In-memory data
+  let boardData = loadData();
+
+  // State for drag & drop
+  let dragSrc = null;       // The dragged card element
+  let dragSrcColumnId = null; // Column id of dragged card
+  let dragSrcCardId = null;   // Card id of dragged card
+
+  /** Render the entire Kanban board from boardData */
+  function renderBoard() {
+    columnsContainer.innerHTML = '';
+    boardData.forEach(col => {
+      const colElem = createColumnElement(col);
+      columnsContainer.appendChild(colElem);
+    });
+  }
+
+  /**
+   * Create a single column HTMLElement from data
+   * @param {object} col - Column data object
+   * @returns HTMLElement
+   */
+  function createColumnElement(col) {
+    const column = document.createElement('section');
+    column.className = 'column';
+    column.setAttribute('data-column-id', col.id);
+    column.setAttribute('aria-label', `Column: ${col.title}`);
+
+    // HEADER with editable title and delete column button
+    const header = document.createElement('header');
+    header.className = 'column-header';
+
+    const title = document.createElement('h2');
+    title.textContent = col.title;
+    title.setAttribute('contenteditable', 'true');
+    title.setAttribute('aria-label', 'Edit column title');
+    title.spellcheck = false;
+    title.addEventListener('input', e => {
+      // Update title in data on input
+      col.title = title.textContent.trim() || 'Untitled';
+      saveData(boardData);
+    });
+    title.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        title.blur();
+      }
+    });
+    header.appendChild(title);
+
+    // Delete column button
+    const delBtn = document.createElement('button');
+    delBtn.className = 'delete-column-btn';
+    delBtn.setAttribute('aria-label', `Delete column: ${col.title}`);
+    delBtn.title = 'Delete Column';
+    delBtn.textContent = '×';
+    delBtn.addEventListener('click', () => {
+      if (confirm(`Delete column "${col.title}" and all its cards?`)) {
+        // Remove from data and re-render
+        boardData = boardData.filter(c => c.id !== col.id);
+        saveData(boardData);
+        renderBoard();
+      }
+    });
+    header.appendChild(delBtn);
+
+    column.appendChild(header);
+
+    // Cards container
+    const cardsContainer = document.createElement('div');
+    cardsContainer.className = 'cards';
+    cardsContainer.setAttribute('data-column-id', col.id);
+    cardsContainer.setAttribute('aria-label', `Cards in ${col.title}`);
+    // Drag&Drop events for cards container
+    cardsContainer.addEventListener('dragover', onCardDragOver);
+    cardsContainer.addEventListener('dragleave', onCardDragLeave);
+    cardsContainer.addEventListener('drop', onCardDrop);
+
+    // Render cards inside
+    col.cards.forEach(cardData => {
+      const cardElem = createCardElement(cardData, col.id);
+      cardsContainer.appendChild(cardElem);
+    });
+
+    column.appendChild(cardsContainer);
+
+    // Add new card input area
+    const addCardInput = document.createElement('textarea');
+    addCardInput.className = 'add-input';
+    addCardInput.placeholder = 'New card text...';
+    addCardInput.rows = 2;
+    addCardInput.spellcheck = false;
+    addCardInput.setAttribute('aria-label', `Add new card to ${col.title}`);
+
+    column.appendChild(addCardInput);
+
+    const addCardBtn = document.createElement('button');
+    addCardBtn.className = 'add-btn';
+    addCardBtn.textContent = '+ Add Card';
+    addCardBtn.setAttribute('aria-label', `Add new card to ${col.title}`);
+
+    addCardBtn.addEventListener('click', () => {
+      const content = addCardInput.value.trim();
+      if (content) {
+        addCardToColumn(col.id, content);
+        addCardInput.value = '';
+        addCardInput.focus();
+      }
+    });
+
+    // Support pressing Enter+Shift in textarea = newline, Enter alone = add
+    addCardInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        addCardBtn.click();
+      }
+    });
+
+    column.appendChild(addCardBtn);
+
+    return column;
+  }
+
+  /**
+   * Create a single card HTMLElement
+   * @param {object} cardData - Card data object
+   * @param {string} columnId - Parent column id
+   * @returns HTMLElement
+   */
+  function createCardElement(cardData, columnId) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.setAttribute('draggable', 'true');
+    card.setAttribute('data-card-id', cardData.id);
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-label', `Card: ${cardData.content}`);
+
+    // Content editable part
+    const content = document.createElement('div');
+    content.className = 'card-content';
+    content.contentEditable = true;
+    content.spellcheck = false;
+    content.textContent = cardData.content;
+
+    // Save changes on blur or Enter key
+    content.addEventListener('input', e => {
+      updateCardContent(columnId, cardData.id, content.textContent.trim());
+    });
+    content.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        // Remove focus to save content
+        content.blur();
+      }
+    });
+
+    card.appendChild(content);
+
+    // Delete card button
+    const delBtn = document.createElement('button');
+    delBtn.className = 'delete-card-btn';
+    delBtn.setAttribute('aria-label', 'Delete card');
+    delBtn.title = 'Delete Card';
+    delBtn.textContent = '×';
+    delBtn.addEventListener('click', () => {
+      if (confirm('Delete this card?')) {
+        deleteCard(columnId, cardData.id);
+      }
+    });
+
+    card.appendChild(delBtn);
+
+    // Drag & Drop handlers for this card
+    card.addEventListener('dragstart', onCardDragStart);
+    card.addEventListener('dragend', onCardDragEnd);
+
+    return card;
+  }
+
+  /** Add a new card to a column */
+  function addCardToColumn(columnId, content) {
+    const newCard = { id: generateID(), content };
+    const col = boardData.find(c => c.id === columnId);
+    if (col) {
+      col.cards.push(newCard);
+      saveData(boardData);
+      renderBoard();
+    }
+  }
+
+  /** Update content of a card */
+  function updateCardContent(columnId, cardId, newContent) {
+    const col = boardData.find(c => c.id === columnId);
+    if (!col) return;
+    const card = col.cards.find(c => c.id === cardId);
+    if (!card) return;
+    card.content = newContent;
+    saveData(boardData);
+  }
+
+  /** Delete a card */
+  function deleteCard(columnId, cardId) {
+    const col = boardData.find(c => c.id === columnId);
+    if (!col) return;
+    col.cards = col.cards.filter(c => c.id !== cardId);
+    saveData(boardData);
+    renderBoard();
+  }
+
+  /** Add a new empty column */
+  function addColumn(title) {
+    boardData.push({ id: generateID(), title: title || 'New Column', cards: [] });
+    saveData(boardData);
+    renderBoard();
+  }
+
+  // === Drag and Drop Handlers ===
+
+  /** When drag starts on a card */
+  function onCardDragStart(e) {
+    const card = e.currentTarget;
+    dragSrc = card;
+    const columnElem = card.closest('.column');
+    dragSrcColumnId = columnElem ? columnElem.getAttribute('data-column-id') : null;
+    dragSrcCardId = card.getAttribute('data-card-id');
+
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '');
+
+    card.classList.add('dragging');
+  }
+
+  /** When drag ends */
+  function onCardDragEnd(e) {
+    if (dragSrc) {
+      dragSrc.classList.remove('dragging');
+    }
+    dragSrc = null;
+    dragSrcColumnId = null;
+    dragSrcCardId = null;
+
+    // Remove all drag-over highlights
+    document.querySelectorAll('.cards.drag-over').forEach(el => el.classList.remove('drag-over'));
+  }
+
+  /** When dragging over a cards container */
+  function onCardDragOver(e) {
+    e.preventDefault(); // Must prevent default to allow drop
+    const container = e.currentTarget;
+    if (!dragSrc) return;
+
+    // Only show indicator if dragging a card
+    if (!container.classList.contains('cards')) return;
+
+    container.classList.add('drag-over');
+
+    // Determine the position to insert before based on mouse Y
+    const afterElement = getDragAfterElement(container, e.clientY);
+    handleDragInsert(container, afterElement);
+  }
+
+  /** When leaving cards container */
+  function onCardDragLeave(e) {
+    const container = e.currentTarget;
+    container.classList.remove('drag-over');
+  }
+
+  /** When a card is dropped onto a cards container */
+  function onCardDrop(e) {
+    e.preventDefault();
+    const container = e.currentTarget;
+    container.classList.remove('drag-over');
+
+    if (!dragSrc) return;
+
+    const newColumnId = container.getAttribute('data-column-id');
+    if (!newColumnId) return;
+
+    // Find source column and card indexes
+    const srcColumn = boardData.find(c => c.id === dragSrcColumnId);
+    if (!srcColumn) return;
+
+    const cardIndex = srcColumn.cards.findIndex(c => c.id === dragSrcCardId);
+    if (cardIndex === -1) return;
+
+    // Remove card from source column
+    const [draggedCard] = srcColumn.cards.splice(cardIndex, 1);
+
+    // Find target column
+    const targetColumn = boardData.find(c => c.id === newColumnId);
+    if (!targetColumn) return;
+
+    // Find insertion index - detect position relative to existing cards
+    const afterElement = getDragAfterElement(container, e.clientY);
+    if (afterElement == null) {
+      // Append to end
+      targetColumn.cards.push(draggedCard);
+    } else {
+      // Insert before the card with id afterElement
+      const index = targetColumn.cards.findIndex(c => c.id === afterElement.getAttribute('data-card-id'));
+      if (index === -1) {
+        targetColumn.cards.push(draggedCard);
+      } else {
+        targetColumn.cards.splice(index, 0, draggedCard);
+      }
+    }
+
+    // Update dragSrcColumnId so next dragover uses updated state
+    dragSrcColumnId = newColumnId;
+
+    saveData(boardData);
+    renderBoard();
+  }
+
+  /**
+   * Get the card element after which the dragged card should be inserted,
+   * based on vertical mouse position.
+   * @param {HTMLElement} container - cards container
+   * @param {number} y - vertical mouse coordinate
+   * @returns {HTMLElement|null} card element after which to insert or null if at end
+   */
+  function getDragAfterElement(container, y) {
+    const cards = [...container.querySelectorAll('.card:not(.dragging)')];
+    if (!cards.length) return null;
+
+    let closest = null;
+    let closestOffset = Number.NEGATIVE_INFINITY;
+
+    for (const card of cards) {
+      const rect = card.getBoundingClientRect();
+      const offset = y - rect.top - rect.height / 2;
+      // We want the card before which the dragged element should be inserted
+      if (offset < 0 && offset > closestOffset) {
+        closestOffset = offset;
+        closest = card;
+      }
+    }
+    return closest;
+  }
+
+  // Handle visual positioning of the dragged card placeholder
+  // (Optional enhancement) - skipped because we re-render on drop only
+
+  // === Add column button handling ===
+  addColumnBtn.addEventListener('click', () => {
+    let colTitle = prompt('Enter column title:', 'New Column');
+    if (colTitle !== null) {
+      colTitle = colTitle.trim();
+      if (!colTitle) colTitle = 'New Column';
+      addColumn(colTitle);
+    }
+  });
+
+  // Initial render
+  renderBoard();
+
+})();
+</script>
+
+</body>
+</html>

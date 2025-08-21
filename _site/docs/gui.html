@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G4F - GUI Documentation</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png">
+    <link rel="manifest" href="/dist/img/site.webmanifest">
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
+    <style>
+        :root {
+            --colour-1: #000000;
+            --colour-2: #ccc;
+            --colour-3: #e4d4ff;
+            --colour-4: #f0f0f0;
+            --colour-5: #181818;
+            --colour-6: #242424;
+            --accent: #8b3dff;
+            --gradient: #1a1a1a;
+            --background: #16101b;
+            --size: 70vw;
+            --top: 50%;
+            --blur: 40px;
+            --opacity: 0.6;
+        }
+
+        /* Body and text color */
+        body {
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .container-lg {
+            margin: 0 auto;
+            padding: 8px;
+        }
+
+        @media only screen and (min-width: 40em) {
+            .container-lg {
+                max-width: 84%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <article class="markdown-body entry-content container-lg" itemprop="text"><h2>G4F - GUI Documentation</h2>
+<h2>Overview</h2>
+<p>The G4F GUI is a self-contained, user-friendly interface designed for interacting with multiple AI models from various providers. It allows users to generate text, code, and images effortlessly. Advanced features such as speech recognition, file uploads, conversation backup/restore, and more are included. Both the backend and frontend are fully integrated into the GUI, making setup simple and seamless.</p>
+<h2>Features</h2>
+<h3>1. <strong>Multiple Providers and Models</strong></h3>
+<ul>
+<li><strong>Provider/Model Selection via Dropdown</strong><br>
+Use the select box to choose a specific <strong>provider/model combination</strong>.</li>
+<li><strong>Pinning Provider/Model Combinations</strong><br>
+After selecting a provider and model from the dropdown, click the <strong>pin button</strong> to add the combination to the pinned list.</li>
+<li><strong>Remove Pinned Combinations</strong><br>
+Each pinned provider/model combination is displayed as a button. Clicking on the button removes it from the pinned list.</li>
+<li><strong>Send Requests to Multiple Providers</strong><br>
+You can pin multiple provider/model combinations and send requests to all of them simultaneously, enabling fast and comprehensive content generation.</li>
+</ul>
+<h3>2. <strong>Text, Code, and Image Generation</strong></h3>
+<ul>
+<li><strong>Text and Code Generation</strong><br>
+Enter prompts to generate text or code outputs.</li>
+<li><strong>Image Generation</strong><br>
+Provide text prompts to generate images, which are shown as thumbnails. Clicking on a thumbnail opens the image in a lightbox view.</li>
+</ul>
+<h3>3. <strong>Gallery Functionality</strong></h3>
+<ul>
+<li><strong>Image Thumbnails</strong><br>
+Generated images appear as small thumbnails within the conversation.</li>
+<li><strong>Lightbox View</strong><br>
+Clicking a thumbnail opens the image in full size, along with the prompt used to generate it.</li>
+<li><strong>Automatic Image Download</strong><br>
+You can enable automatic downloading of generated images through the settings.</li>
+</ul>
+<h3>4. <strong>Conversation Management</strong></h3>
+<ul>
+<li><strong>Message Reuse</strong><br>
+While messages cannot be edited after sending, you can copy and reuse them.</li>
+<li><strong>Message Deletion</strong><br>
+Individual messages or entire conversations can be deleted for a cleaner workspace.</li>
+<li><strong>Conversation List</strong><br>
+The left sidebar displays a list of active and past conversations for easy navigation.</li>
+<li><strong>Change Conversation Title</strong><br>
+By clicking the three dots next to a conversation title, you can either delete the conversation or change its title.</li>
+<li><strong>Backup and Restore Conversations</strong><br>
+Backup and restore all conversations and messages as a JSON file (accessible via the settings).</li>
+</ul>
+<h3>5. <strong>Speech Recognition and Synthesis</strong></h3>
+<ul>
+<li><strong>Speech Input</strong><br>
+Use speech recognition to input prompts by speaking instead of typing.</li>
+<li><strong>Speech Output (Text-to-Speech)</strong><br>
+The generated text can be read aloud using speech synthesis.</li>
+<li><strong>Custom Language Settings</strong><br>
+Configure the language used for speech recognition to match your preference.</li>
+</ul>
+<h3>6. <strong>File Uploads</strong></h3>
+<ul>
+<li><strong>Image Uploads</strong><br>
+Upload images that will be appended to your message and sent to the AI provider.</li>
+<li><strong>Text File Uploads</strong><br>
+Upload text files; their contents will be added to the message to provide more detailed input to the AI.</li>
+</ul>
+<h3>7. <strong>Web Access and Settings</strong></h3>
+<ul>
+<li><strong>DuckDuckGo Web Access</strong><br>
+Enable web access through DuckDuckGo for privacy-focused browsing.</li>
+<li><strong>Theme Toggle</strong><br>
+Switch between <strong>dark mode</strong> and <strong>light mode</strong> in the settings.</li>
+<li><strong>Provider Visibility</strong><br>
+Hide unused providers in the settings using toggle buttons.</li>
+<li><strong>Log Access</strong><br>
+View application logs, including error messages and debug logs, through the settings.</li>
+</ul>
+<h3>8. <strong>Authentication</strong></h3>
+<ul>
+<li><strong>Basic Authentication</strong><br>
+You can set a password for Basic Authentication using the <code class="notranslate">--g4f-api-key</code> argument when starting the web server.</li>
+</ul>
+<h3>9. <strong>Continue Button</strong></h3>
+<ul>
+<li><strong>Automatic Detection of Truncated Responses</strong><br>
+When using providers, responses may occasionally be cut off or truncated.</li>
+<li><strong>Continue Button</strong><br>
+If the GUI detects that the response ended abruptly, a <strong>Continue</strong> button appears directly below the truncated message. Clicking this button sends a follow-up request to the same provider and model, retrieving the rest of the message.</li>
+<li><strong>Seamless Conversation Flow</strong><br>
+This feature ensures that you can read complete messages without manually re-prompting.</li>
+</ul>
+<hr>
+<h2>Installation</h2>
+<p>You can install the G4F GUI either as a full stack or in a lightweight version:</p>
+<ol>
+<li>
+<p><strong>Full Stack Installation</strong> (includes all packages, including browser support and drivers):</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">pip install -U g4f[all]</pre></div>
+<ul>
+<li>Installs all necessary dependencies, including browser support for web-based interactions.</li>
+</ul>
+</li>
+<li>
+<p><strong>Slim Installation</strong> (does not include browser drivers, suitable for headless environments):</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">pip install -U g4f[slim]</pre></div>
+<ul>
+<li>This version is lighter, with no browser support, ideal for environments where browser interactions are not required.</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2>Setup</h2>
+<h3>1. Setting the Environment Variable</h3>
+<p>It is <strong>recommended</strong> to set a <code class="notranslate">G4F_API_KEY</code> environment variable for authentication. You can do this as follows:</p>
+<ul>
+<li>
+<p><strong>Linux/macOS</strong>:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate"><span class="pl-k">export</span> G4F_API_KEY=<span class="pl-s"><span class="pl-pds">"</span>your-api-key-here<span class="pl-pds">"</span></span></pre></div>
+</li>
+<li>
+<p><strong>Windows</strong>:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate"><span class="pl-c1">set</span> G4F_API_KEY=<span class="pl-s"><span class="pl-pds">"</span>your-api-key-here<span class="pl-pds">"</span></span></pre></div>
+</li>
+</ul>
+<h3>2. Start the GUI and Backend</h3>
+<p>Run the following command to start both the GUI and backend services based on the G4F client:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">python -m g4f --debug --port 8080 --g4f-api-key <span class="pl-smi">$G4F_API_KEY</span></pre></div>
+<p>This starts the GUI at <code class="notranslate">http://localhost:8080</code> with all necessary backend components running seamlessly.</p>
+<h3>3. Access the GUI</h3>
+<p>Once the server is running, open your browser and navigate to:</p>
+<pre class="notranslate"><code class="notranslate">http://localhost:8080/chat/
+</code></pre>
+<hr>
+<h2>Using the Interface</h2>
+<ol>
+<li>
+<p><strong>Select and Manage Providers/Models</strong></p>
+<ul>
+<li>Use the <strong>select box</strong> to view the list of available providers and models.</li>
+<li>Select a <strong>provider/model combination</strong> from the dropdown.</li>
+<li>Click the <strong>pin button</strong> to add the combination to your pinned list.</li>
+<li>To <strong>unpin</strong> a combination, click the corresponding pinned button.</li>
+</ul>
+</li>
+<li>
+<p><strong>Input a Prompt</strong></p>
+<ul>
+<li>Enter your prompt manually or use <strong>speech recognition</strong> to dictate it.</li>
+<li>You can also upload <strong>images</strong> or <strong>text files</strong> to include them in your prompt.</li>
+</ul>
+</li>
+<li>
+<p><strong>Generate Content</strong></p>
+<ul>
+<li>Click the <strong>Generate</strong> button to produce the text, code, or images requested.</li>
+</ul>
+</li>
+<li>
+<p><strong>View and Interact with Results</strong></p>
+<ul>
+<li><strong>Text/Code:</strong> The generated response appears in the conversation window.</li>
+<li><strong>Images:</strong> Generated images are displayed as thumbnails. Click on any thumbnail to view it in full size within the lightbox.</li>
+</ul>
+</li>
+<li>
+<p><strong>Continue Button</strong></p>
+<ul>
+<li>If a response is truncated, a <strong>Continue</strong> button will appear under the last message. Clicking it asks the same provider to continue the response from where it ended.</li>
+</ul>
+</li>
+<li>
+<p><strong>Manage Conversations</strong></p>
+<ul>
+<li><strong>Delete</strong> or <strong>rename</strong> any conversation by clicking the three dots next to its title.</li>
+<li><strong>Backup/Restore</strong> all your conversations as a JSON file in the settings.</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2>Gallery Functionality</h2>
+<ul>
+<li><strong>Image Thumbnails:</strong> All generated images are shown as thumbnails within the conversation window.</li>
+<li><strong>Lightbox View:</strong> Clicking any thumbnail opens the image in a larger view along with the associated prompt.</li>
+<li><strong>Automatic Image Download:</strong> Enable this feature in the settings if you want images to be saved automatically.</li>
+</ul>
+<hr>
+<h2>Settings Configuration</h2>
+<ol>
+<li>
+<p><strong>API Key</strong><br>
+Set your API key when starting the server by defining the <code class="notranslate">G4F_API_KEY</code> environment variable.</p>
+</li>
+<li>
+<p><strong>Provider Visibility</strong><br>
+Hide any providers you don’t plan to use through the settings.</p>
+</li>
+<li>
+<p><strong>Theme</strong><br>
+Toggle between <strong>dark mode</strong> and <strong>light mode</strong>. Disabling dark mode switches to a white theme.</p>
+</li>
+<li>
+<p><strong>DuckDuckGo Access</strong><br>
+Optionally enable DuckDuckGo for privacy-focused web searching.</p>
+</li>
+<li>
+<p><strong>Speech Recognition Language</strong><br>
+Configure your preferred speech recognition language.</p>
+</li>
+<li>
+<p><strong>Log Access</strong><br>
+View logs (including error and debug messages) from the settings menu.</p>
+</li>
+<li>
+<p><strong>Automatic Image Download</strong><br>
+Enable this to have all generated images downloaded immediately upon creation.</p>
+</li>
+</ol>
+<hr>
+<h2>Known Issues</h2>
+<ol>
+<li>
+<p><strong>Gallery Loading</strong><br>
+Large images may take additional time to load depending on your hardware and network.</p>
+</li>
+<li>
+<p><strong>Speech Recognition Accuracy</strong><br>
+Voice recognition may vary with microphone quality, background noise, or speech clarity.</p>
+</li>
+<li>
+<p><strong>Provider Downtime</strong><br>
+Some AI providers may experience temporary downtime or disruptions.</p>
+</li>
+</ol>
+<hr>
+<p><a href="/docs/">Return to Documentation</a></p></article>
+</body>
+</html>

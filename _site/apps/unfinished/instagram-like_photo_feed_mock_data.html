@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Instagram-like Photo Feed</title>
+<style>
+  /* 
+    Instagram-like Photo Feed
+    ---------------------------------
+    - Mobile-first responsive design
+    - Interactive JavaScript (like, comment, save)
+    - Uses mock data for posts
+    - No external dependencies
+  */
+
+  :root {
+    --primary-color: #3897f0;
+    --heart-red: #ed4956;
+    --gray-strong: #262626;
+    --gray-medium: #8e8e8e;
+    --gray-light: #dbdbdb;
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  }
+
+  /* Global resets and base */
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-family);
+    background: #fafafa;
+    color: var(--gray-strong);
+    line-height: 1.4;
+  }
+
+  a {
+    text-decoration: none;
+    color: var(--primary-color);
+  }
+
+  img {
+    max-width: 100%;
+    display: block;
+  }
+
+  main {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 0 12px;
+  }
+
+  /* Header simulating Instagram top bar */
+  header {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    height: 56px;
+    border-bottom: 1px solid var(--gray-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 24px;
+    letter-spacing: 2px;
+    z-index: 10;
+  }
+
+  /* Post container */
+  article.post {
+    background: #fff;
+    margin: 16px 0;
+    border: 1px solid var(--gray-light);
+    border-radius: 3px;
+  }
+
+  /* Post header: user info */
+  .post-header {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+  }
+  .post-header img.avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin-right: 12px;
+    object-fit: cover;
+  }
+  .post-header .username {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--gray-strong);
+    flex-grow: 1;
+  }
+  .post-header button.more-btn {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--gray-medium);
+  }
+
+  /* Post image */
+  .post-image {
+    width: 100%;
+    max-height: 600px;
+    object-fit: cover;
+  }
+
+  /* Post actions: like, comment, share, save */
+  .post-actions {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px 8px 12px;
+    font-size: 24px;
+  }
+  .post-actions-left {
+    display: flex;
+    gap: 16px;
+  }
+  button.action-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--gray-strong);
+    padding: 0;
+    display: flex;
+    align-items: center;
+    transition: color 0.3s ease;
+    user-select: none;
+  }
+  button.action-btn:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+  button.action-btn.liked {
+    color: var(--heart-red);
+  }
+  button.action-btn.saved {
+    color: var(--primary-color);
+  }
+
+  /* Likes count */
+  .likes-count {
+    font-weight: 600;
+    margin: 0 12px;
+    font-size: 14px;
+  }
+
+  /* Post caption */
+  .post-caption {
+    margin: 0 12px 12px 12px;
+    font-size: 14px;
+  }
+  .post-caption .username {
+    font-weight: 600;
+    margin-right: 6px;
+  }
+
+  /* Comment section */
+  .comments {
+    margin: 0 12px;
+    font-size: 13px;
+    color: var(--gray-strong);
+    max-height: 150px;
+    overflow-y: auto;
+  }
+
+  .comment {
+    margin-bottom: 4px;
+  }
+  .comment .username {
+    font-weight: 600;
+    margin-right: 6px;
+  }
+
+  /* Add comment input */
+  form.add-comment {
+    border-top: 1px solid var(--gray-light);
+    padding: 8px 12px;
+    display: flex;
+    gap: 8px;
+  }
+
+  form.add-comment input[type="text"] {
+    flex-grow: 1;
+    border: none;
+    font-size: 14px;
+    padding: 8px 12px;
+    border-radius: 20px;
+    background: #efefef;
+    color: var(--gray-strong);
+  }
+
+  form.add-comment input[type="text"]::placeholder {
+    color: var(--gray-medium);
+  }
+
+  form.add-comment input[type="text"]:focus {
+    outline: 2px solid var(--primary-color);
+    background: #fff;
+  }
+
+  form.add-comment button {
+    background: transparent;
+    border: none;
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    user-select: none;
+    padding: 0 8px;
+    display: flex;
+    align-items: center;
+  }
+
+  form.add-comment button:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+
+  /* Scrollbar for comments */
+  .comments::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .comments::-webkit-scrollbar-track {
+    background: #fafafa;
+  }
+
+  .comments::-webkit-scrollbar-thumb {
+    background-color: var(--gray-light);
+    border-radius: 10px;
+  }
+
+  /* Large screens: center feed, increase padding */
+  @media (min-width: 600px) {
+    main {
+      padding: 0 24px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>PhotoFeed</header>
+
+<main id="feed">
+  <!-- Posts will be injected here -->
+</main>
+
+<script>
+  /*
+    JavaScript to:
+    - Render mock posts from data
+    - Handle likes toggling
+    - Handle saving toggling
+    - Handle adding comments
+    - Accessible buttons and interactions
+  */
+
+  // MOCK DATA for posts
+  const posts = [
+    {
+      id: 1,
+      username: "nature_lover",
+      userAvatar: "https://i.pravatar.cc/150?img=12",
+      imageUrl:
+        "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80",
+      likes: 124,
+      liked: false,
+      saved: false,
+      caption:
+        "Exploring the beautiful forests 🍃 #nature #adventure",
+      comments: [
+        { username: "travel_guy", text: "Amazing shot!" },
+        { username: "green_earth", text: "I love trees 🌲" },
+      ],
+    },
+    {
+      id: 2,
+      username: "foodie_123",
+      userAvatar: "https://i.pravatar.cc/150?img=20",
+      imageUrl:
+        "https://images.unsplash.com/photo-1512058564366-c9e1d40b1e2d?auto=format&fit=crop&w=800&q=80",
+      likes: 89,
+      liked: false,
+      saved: false,
+      caption:
+        "The perfect brunch at my favorite cafe 🥐☕️ #foodporn",
+      comments: [
+        { username: "yummy", text: "Looks delicious!" },
+      ],
+    },
+    {
+      id: 3,
+      username: "city_snapper",
+      userAvatar: "https://i.pravatar.cc/150?img=45",
+      imageUrl:
+        "https://images.unsplash.com/photo-1468071174046-657d9d351a40?auto=format&fit=crop&w=800&q=80",
+      likes: 201,
+      liked: false,
+      saved: false,
+      caption:
+        "City lights at night ✨ #urban #nightphotography",
+      comments: [
+        { username: "night_owl", text: "Great shot!" },
+        { username: "lens_master", text: "What camera did you use?" },
+      ],
+    },
+  ];
+
+  const feed = document.getElementById('feed');
+
+  /**
+   * Create SVG icons for actions
+   */
+  function svgIcon(name, filled = false) {
+    switch (name) {
+      case "heart":
+        if (filled) {
+          return `
+          <svg aria-hidden="true" class="icon icon-heart-filled" fill="#ed4956" height="24" viewBox="0 0 48 48" width="24">
+            <path d="M34.6 3c-4.5 0-8.4 3.1-10.6 7.6C21.8 6.1 17.9 3 13.4 3 6.9 3 2 8.6 2 15.4 2 27.4 24 43.6 24 43.6S46 27.4 46 15.4C46 8.6 41.1 3 34.6 3z"/>
+          </svg>`;
+        } else {
+          return `
+          <svg aria-hidden="true" class="icon icon-heart" fill="none" height="24" stroke="currentColor" stroke-width="3" viewBox="0 0 48 48" width="24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M34.6 3c-4.5 0-8.4 3.1-10.6 7.6C21.8 6.1 17.9 3 13.4 3 6.9 3 2 8.6 2 15.4 2 27.4 24 43.6 24 43.6S46 27.4 46 15.4C46 8.6 41.1 3 34.6 3z" stroke-linejoin="round"/>
+          </svg>`;
+        }
+      case "comment":
+        return `
+        <svg aria-hidden="true" class="icon icon-comment" fill="none" height="24" stroke="currentColor" stroke-width="3" viewBox="0 0 48 48" width="24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 4h40v32H12l-8 8z" stroke-linejoin="round"/>
+        </svg>`;
+      case "share":
+        return `
+        <svg aria-hidden="true" class="icon icon-share" fill="none" height="24" stroke="currentColor" stroke-width="3" viewBox="0 0 48 48" width="24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M34 7l7 7-15 15-7-7zM41 14l-7-7-15 15" stroke-linejoin="round" />
+          <path d="M12 25v8h8" />
+        </svg>`;
+      case "bookmark":
+        if (filled) {
+          return `
+          <svg aria-hidden="true" class="icon icon-bookmark-filled" fill="#3897f0" height="24" viewBox="0 0 48 48" width="24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 6h20a2 2 0 0 1 2 2v34l-12-8-10 8V8a2 2 0 0 1 2-2z"/>
+          </svg>`;
+        } else {
+          return `
+          <svg aria-hidden="true" class="icon icon-bookmark" fill="none" height="24" stroke="currentColor" stroke-width="3" viewBox="0 0 48 48" width="24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 6h20a2 2 0 0 1 2 2v34l-12-8-10 8V8a2 2 0 0 1 2-2z" stroke-linejoin="round" />
+          </svg>`;
+        }
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Create a post element
+   * @param {Object} post 
+   */
+  function createPost(post) {
+    // Create article element
+    const article = document.createElement('article');
+    article.className = 'post';
+    article.dataset.postId = post.id;
+
+    article.innerHTML = `
+      <header class="post-header">
+        <img src="${post.userAvatar}" alt="${post.username} avatar" class="avatar" />
+        <div class="username" tabindex="0">${post.username}</div>
+        <button class="more-btn" aria-label="More options">&#8942;</button>
+      </header>
+
+      <img src="${post.imageUrl}" alt="Post image by ${post.username}" class="post-image" />
+
+      <section class="post-actions" role="group" aria-label="Post actions">
+        <div class="post-actions-left">
+          <button aria-pressed="${post.liked}" class="action-btn like-btn" aria-label="Like post">
+            ${svgIcon('heart', post.liked)}
+          </button>
+          <button class="action-btn comment-btn" aria-label="Comment on post">
+            ${svgIcon('comment')}
+          </button>
+          <button class="action-btn share-btn" aria-label="Share post">
+            ${svgIcon('share')}
+          </button>
+        </div>
+        <div>
+          <button aria-pressed="${post.saved}" class="action-btn save-btn" aria-label="Save post">
+            ${svgIcon('bookmark', post.saved)}
+          </button>
+        </div>
+      </section>
+
+      <p class="likes-count" aria-live="polite">${post.likes} like${post.likes !== 1 ? 's' : ''}</p>
+
+      <p class="post-caption">
+        <span class="username" tabindex="0">${post.username}</span> 
+        <span>${escapeHtml(post.caption)}</span>
+      </p>
+
+      <section class="comments" aria-label="Comments">
+        ${post.comments.map(c => `
+          <p class="comment"><span class="username" tabindex="0">${c.username}</span> ${escapeHtml(c.text)}</p>
+        `).join('')}
+      </section>
+
+      <form class="add-comment" aria-label="Add a comment">
+        <input type="text" placeholder="Add a comment…" aria-label="Add a comment" name="comment" autocomplete="off" />
+        <button type="submit" disabled>Post</button>
+      </form>
+    `;
+
+    // Return the created element
+    return article;
+  }
+
+  /**
+   * Escape HTML special characters to avoid XSS in captions & comments
+   * @param {string} str 
+   */
+  function escapeHtml(str) {
+    return str.replace(/[&<>"']/g, function(m) {
+      switch(m) {
+          case '&': return '&amp;';
+          case '<': return '&lt;';
+          case '>': return '&gt;';
+          case '"': return '&quot;';
+          case "'": return '&#39;';
+          default: return m;
+      }
+    });
+  }
+
+  /**
+   * Render all posts into the feed
+   */
+  function renderFeed() {
+    feed.innerHTML = '';
+    posts.forEach(post => {
+      const postElem = createPost(post);
+      feed.appendChild(postElem);
+    });
+  }
+
+  /**
+   * Handle click on like buttons
+   * @param {MouseEvent} e 
+   */
+  function handleLikeClick(e) {
+    if (!e.target.closest('.like-btn')) return;
+
+    const btn = e.target.closest('.like-btn');
+    const postElem = btn.closest('article.post');
+    const postId = Number(postElem.dataset.postId);
+    const post = posts.find(p => p.id === postId);
+
+    if (!post) return;
+
+    post.liked = !post.liked;
+    post.likes += post.liked ? 1 : -1;
+
+    updatePostUI(postElem, post);
+  }
+
+  /**
+   * Handle click on save buttons
+   * @param {MouseEvent} e 
+   */
+  function handleSaveClick(e) {
+    if (!e.target.closest('.save-btn')) return;
+
+    const btn = e.target.closest('.save-btn');
+    const postElem = btn.closest('article.post');
+    const postId = Number(postElem.dataset.postId);
+    const post = posts.find(p => p.id === postId);
+
+    if (!post) return;
+
+    post.saved = !post.saved;
+
+    updatePostUI(postElem, post);
+  }
+
+  /**
+   * Handle comment input to toggle button disabled state
+   * @param {InputEvent} e 
+   */
+  function handleCommentInput(e) {
+    if (!e.target.closest('form.add-comment input[type="text"]')) return;
+    const input = e.target;
+    const form = input.form;
+    const btn = form.querySelector('button[type="submit"]');
+
+    btn.disabled = input.value.trim() === '';
+  }
+
+  /**
+   * Handle comment form submit
+   * @param {SubmitEvent} e 
+   */
+  function handleCommentSubmit(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const input = form.querySelector('input[name="comment"]');
+    const commentText = input.value.trim();
+    if (commentText === '') return;
+
+    const postElem = form.closest('article.post');
+    const postId = Number(postElem.dataset.postId);
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    // Add new comment to post data (simulated username "you")
+    post.comments.push({ username: "you", text: commentText });
+
+    // Clear input and disable button
+    input.value = '';
+    form.querySelector('button[type="submit"]').disabled = true;
+
+    // Update comments section UI
+    updatePostUI(postElem, post);
+  }
+
+  /**
+   * Update the UI of a single post element to reflect current state
+   * @param {HTMLElement} postElem 
+   * @param {Object} post 
+   */
+  function updatePostUI(postElem, post) {
+    // Update like button
+    const likeBtn = postElem.querySelector('.like-btn');
+    likeBtn.setAttribute('aria-pressed', post.liked);
+    likeBtn.innerHTML = svgIcon('heart', post.liked);
+    if (post.liked) {
+      likeBtn.classList.add('liked');
+    } else {
+      likeBtn.classList.remove('liked');
+    }
+
+    // Update likes count text
+    const likesCount = postElem.querySelector('.likes-count');
+    likesCount.textContent = `${post.likes} like${post.likes !== 1 ? 's' : ''}`;
+
+    // Update save button
+    const saveBtn = postElem.querySelector('.save-btn');
+    saveBtn.setAttribute('aria-pressed', post.saved);
+    saveBtn.innerHTML = svgIcon('bookmark', post.saved);
+    if (post.saved) {
+      saveBtn.classList.add('saved');
+    } else {
+      saveBtn.classList.remove('saved');
+    }
+
+    // Update comments section
+    const commentsSection = postElem.querySelector('.comments');
+    commentsSection.innerHTML = post.comments.map(c => `
+      <p class="comment"><span class="username" tabindex="0">${escapeHtml(c.username)}</span> ${escapeHtml(c.text)}</p>
+    `).join('');
+  }
+
+  /**
+   * Initialize event listeners on the feed for delegation
+   */
+  function initEventListeners() {
+    feed.addEventListener('click', e => {
+      handleLikeClick(e);
+      handleSaveClick(e);
+      // For share and comment, just focus the comment input on "comment" button click
+      if (e.target.closest('.comment-btn')) {
+        const postElem = e.target.closest('article.post');
+        if (!postElem) return;
+        const input = postElem.querySelector('form.add-comment input[name="comment"]');
+        if (input) {
+          input.focus();
+        }
+      }
+      // More options button could be implemented here, currently does nothing
+    });
+
+    // Input event for comment input enabling/disabling post button
+    feed.addEventListener('input', handleCommentInput);
+
+    // Submit event for comment forms
+    feed.addEventListener('submit', e => {
+      if (e.target.classList.contains('add-comment')) {
+        handleCommentSubmit(e);
+      }
+    });
+  }
+
+  // Initialize the app
+  renderFeed();
+  initEventListeners();
+</script>
+
+</body>
+</html>

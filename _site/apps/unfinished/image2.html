@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Image Generator with Upload & Multiple Image Support</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<h1>AI Image Generator with Upload & Multiple Image Support</h1>
+
+<div class="container">
+    <!-- Source Image Selection -->
+    <div class="source-controls">
+        <h2>Select Source Image</h2>
+        <input type="file" id="uploadImage" accept="image/*" />
+        <button id="selectSampleBtn">Select Sample Image</button>
+        <div>
+            <label for="sourceSelect">Or choose from previous images:</label>
+            <select id="sourceSelect">
+                <option value="">--None--</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Prompt and Model Selection -->
+    <div class="controls">
+        <textarea id="prompt" placeholder="Enter your image prompt here..." rows="3"></textarea>
+        <select id="modelSelect">
+            <option value="PollinationsAI">PollinationsAI</option>
+            <option value="Together">Together</option>
+        </select>
+        <button id="generateBtn">Generate Image</button>
+        <button id="downloadBtn" disabled>Download Image</button>
+    </div>
+
+    <!-- Image Generation Parameters -->
+    <div class="generation-params">
+        <label for="widthRange">Width:</label>
+        <input type="range" id="widthRange" min="256" max="1024" value="512" />
+        <span id="widthValue">512</span>
+        <label for="heightRange">Height:</label>
+        <input type="range" id="heightRange" min="256" max="1024" value="512" />
+        <span id="heightValue">512</span>
+        <label>
+            <input type="checkbox" id="transparentCheckbox" />
+            Transparent Background
+        </label>
+        <label for="nImages">Number of Images:</label>
+        <input type="number" id="nImages" min="1" max="10" value="1" />
+    </div>
+
+    <!-- Width and Height Sliders -->
+    <div class="size-controls">
+        <label for="widthRange">Width:</label>
+        <input type="range" id="widthRange" min="256" max="1024" value="512" />
+        <label for="heightRange">Height:</label>
+        <input type="range" id="heightRange" min="256" max="1024" value="512" />
+    </div>
+
+    <!-- Generated Images Gallery / History -->
+    <div class="history-section">
+        <h2>Generated Images</h2>
+        <div id="historyContainer" class="images-grid"></div>
+    </div>
+
+    <!-- Image Display -->
+    <div class="image-section">
+        <canvas id="imageCanvas" width="512" height="512"></canvas>
+        <div class="editing-controls">
+            <button id="rotateLeftBtn">Rotate Left</button>
+            <button id="rotateRightBtn">Rotate Right</button>
+            <button id="brightnessUpBtn">Brightness +</button>
+            <button id="brightnessDownBtn">Brightness -</button>
+            <button id="resetBtn">Reset</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+  // Import necessary modules
+import { PollinationsAI, Together } from 'https://g4f.dev/dist/js/client.js';
+
+// Create clients
+const client = new PollinationsAI();
+const togetherClient = new Together();
+
+// DOM elements
+const promptEl = document.getElementById('prompt');
+const modelSelectEl = document.getElementById('modelSelect');
+const generateBtn = document.getElementById('generateBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+
+const widthRange = document.getElementById('widthRange');
+const heightRange = document.getElementById('heightRange');
+const widthValueSpan = document.getElementById('widthValue');
+const heightValueSpan = document.getElementById('heightValue');
+
+const transparentCheckbox = document.getElementById('transparentCheckbox');
+const nImagesInput = document.getElementById('nImages');
+
+const uploadInput = document.getElementById('uploadImage');
+const selectSampleBtn = document.getElementById('selectSampleBtn');
+const sourceSelect = document.getElementById('sourceSelect');
+
+const canvas = document.getElementById('imageCanvas');
+const ctx = canvas.getContext('2d');
+
+const rotateLeftBtn = document.getElementById('rotateLeftBtn');
+const rotateRightBtn = document.getElementById('rotateRightBtn');
+const brightnessUpBtn = document.getElementById('brightnessUpBtn');
+const brightnessDownBtn = document.getElementById('brightnessDownBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+const historyContainer = document.getElementById('historyContainer');
+
+let originalImage = null;
+let displayedImage = null;
+let imageParams = {
+    rotation: 0,
+    brightness: 1
+};
+
+
+// Load available models on start
+(async () => {
+    let models = await client.models.list();
+    models = models.filter(m => m.type === "image");
+    let togetherModels = await togetherClient.models.list();
+    togetherModels = togetherModels.filter(m => m.type === "image");
+    const optionsHtml = [...models, ...togetherModels]
+        .map(m => `<option value="${m.id}">${m.id}</option>`)
+        .join('');
+    modelSelectEl.innerHTML = optionsHtml;
+})();
+
+// Helper functions for source images management
+let sourceImages = {}; // key: id or filename, value: data URL
+let currentSourceKey = '';
+
+function addImageToHistory(key, dataUrl) {
+    if (!sourceImages[key]) {
+        sourceImages[key] = dataUrl;
+        // add to select dropdown
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = key;
+        sourceSelect.appendChild(option);
+        // add thumbnail to history container
+        const thumb = document.createElement('img');
+        thumb.src = dataUrl;
+        thumb.title = key;
+        thumb.className = 'thumb';
+        thumb.onclick = () => {
+            loadImageToCanvas(dataUrl);
+            currentSourceKey = key;
+        };
+        historyContainer.appendChild(thumb);
+    }
+}
+
+function loadImageToCanvas(url) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = () => {
+            // resize canvas
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+            originalImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            resetImageParams();
+            resolve();
+        };
+        img.onerror = reject;
+        img.src = url;
+    });
+}
+
+// Load a sample image (can be a URL or data URI)
+selectSampleBtn.onclick = () => {
+    const sampleUrl = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'; // Example sample
+    loadImageToCanvas(sampleUrl);
+    const key = 'Sample Image';
+    addImageToHistory(key, sampleUrl);
+    currentSourceKey = key;
+}
+
+// Upload image
+uploadInput.onchange = () => {
+    const file = uploadInput.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            loadImageToCanvas(reader.result);
+            addImageToHistory(file.name, reader.result);
+            currentSourceKey = file.name;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// Generate images with options
+generateBtn.onclick = async () => {
+    const prompt = promptEl.value;
+    const model = modelSelectEl.value;
+    const width = parseInt(widthRange.value);
+    const height = parseInt(heightRange.value);
+    const n = parseInt(nImagesInput.value);
+
+    // prepare parameters
+    const params = {
+        prompt: prompt,
+        width: width,
+        height: height,
+        n: n,
+        transparent: transparentCheckbox.checked
+    };
+
+    generateBtn.disabled = true;
+    generateBtn.textContent = 'Generating...';
+
+    // Use source image if available
+    let sourceImageUrl = null;
+    if (currentSourceKey && sourceImages[currentSourceKey]) {
+        sourceImageUrl = sourceImages[currentSourceKey];
+    }
+
+    try {
+        // Generate multiple images
+        const responses = await (model.includes('/') ? togetherClient : client).images.generate({
+            model: model,
+            prompt: prompt,
+            width: width,
+            height: height,
+            n: n,
+            transparent: transparentCheckbox.checked,
+            image: sourceImageUrl // Assuming API supports this parameter
+        });
+        if (responses.data && responses.data.length > 0) {
+            responses.data.forEach(async (res, index) => {
+                try {
+                    await loadImageToCanvas(res.url);
+                } catch (error) {
+                    const maxAttempts = client.proxyManager.proxies.length;
+                    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                        const proxiedUrl = client.proxyManager.getProxiedUrl(imageUrl);
+                        try {
+                            await loadImageToCanvas(proxiedUrl);
+                        } catch (error) {
+                            console.warn(`CORS proxy attempt ${attempt + 1}/${maxAttempts} failed for ${imageUrl}:`, error.message);
+                            this.proxyManager.rotateProxy();
+                        }
+                    }
+                }
+                const key = `Generated_${Date.now()}_${index}`;
+                addImageToHistory(key, res.url);
+                
+                currentSourceKey = key;
+            });
+            downloadBtn.disabled = false;
+        } else {
+            alert('No images generated.');
+        }
+    } catch (err) {
+        console.error('Error:', err);
+        alert('Failed to generate images.');
+    }
+
+    generateBtn.disabled = false;
+    generateBtn.textContent = 'Generate Image';
+};
+
+// Slider display updates
+widthRange.oninput = () => {
+    widthValueSpan.textContent = widthRange.value;
+};
+heightRange.oninput = () => {
+    heightValueSpan.textContent = heightRange.value;
+};
+
+// Editing buttons
+function resetImageParams() {
+    imageParams.rotation = 0;
+    imageParams.brightness = 1;
+    redrawImage();
+}
+
+function redrawImage() {
+    if (!originalImage) return;
+    ctx.putImageData(originalImage, 0, 0);
+    ctx.filter = `brightness(${imageParams.brightness})`;
+    ctx.save();
+
+    // Rotate around center
+    ctx.translate(canvas.width/2, canvas.height/2);
+    ctx.rotate((imageParams.rotation * Math.PI)/180);
+    ctx.translate(-canvas.width/2, -canvas.height/2);
+    ctx.drawImage(canvas, 0, 0);
+    ctx.restore();
+    ctx.filter = 'none';
+}
+
+// Rotation and brightness controls
+rotateLeftBtn.onclick = () => {
+    imageParams.rotation -= 15;
+    redrawImage();
+};
+rotateRightBtn.onclick = () => {
+    imageParams.rotation += 15;
+    redrawImage();
+};
+brightnessUpBtn.onclick = () => {
+    imageParams.brightness += 0.1;
+    redrawImage();
+};
+brightnessDownBtn.onclick = () => {
+    imageParams.brightness = Math.max(0, imageParams.brightness - 0.1);
+    redrawImage();
+};
+resetBtn.onclick = () => {
+    resetImageParams();
+};
+
+// Download image
+downloadBtn.onclick = () => {
+    const link = document.createElement('a');
+    link.download = 'generated_image.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+};
+
+// Initialize
+downloadBtn.disabled = true;
+
+// Styling
+</script>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f0f0f0;
+}
+h1, h2 {
+    text-align: center;
+}
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.source-controls, .controls, .generation-params, .size-controls, .history-section, .image-section {
+    margin-bottom: 20px;
+}
+.source-controls input[type="file"] {
+    display: block;
+}
+.thumb {
+    width: 100px;
+    height: auto;
+    margin: 5px;
+    cursor: pointer;
+}
+#imageCanvas {
+    border: 2px solid #333;
+}
+button {
+    padding: 10px;
+    font-size: 1em;
+    cursor: pointer;
+}
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.images-grid {
+    display: flex;
+    flex-wrap: wrap;
+}
+</style>
+</body>
+</html>

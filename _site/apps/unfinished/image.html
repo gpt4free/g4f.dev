@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Advanced AI Image Generator & Editor</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<h1>AI Image Generator & Editor</h1>
+
+<div class="container">
+    <!-- Prompt and Model Selection -->
+    <div class="controls">
+        <textarea id="prompt" placeholder="Enter your image prompt here..." rows="3"></textarea>
+        <select id="modelSelect">
+            <option value="PollinationsAI">PollinationsAI</option>
+            <option value="Together">Together</option>
+        </select>
+        <button id="generateBtn">Generate Image</button>
+        <button id="downloadBtn" disabled>Download Image</button>
+    </div>
+
+    <!-- Image Display and Editing Controls -->
+    <div class="image-section">
+        <canvas id="imageCanvas" width="512" height="512"></canvas>
+        <div class="editing-controls">
+            <button id="cropBtn">Crop</button>
+            <button id="rotateLeftBtn">Rotate Left</button>
+            <button id="rotateRightBtn">Rotate Right</button>
+            <button id="brightnessUpBtn">Brightness +</button>
+            <button id="brightnessDownBtn">Brightness -</button>
+            <button id="resetBtn">Reset</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+  // Import necessary modules
+import { PollinationsAI, Together } from 'https://g4f.dev/dist/js/client.js';
+// Create an instance of the client with desired providers
+const client = new PollinationsAI();
+const togetherClient = new Together();
+
+// DOM elements
+const promptEl = document.getElementById('prompt');
+const modelSelectEl = document.getElementById('modelSelect');
+const generateBtn = document.getElementById('generateBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const canvas = document.getElementById('imageCanvas');
+const ctx = canvas.getContext('2d');
+
+const cropBtn = document.getElementById('cropBtn');
+const rotateLeftBtn = document.getElementById('rotateLeftBtn');
+const rotateRightBtn = document.getElementById('rotateRightBtn');
+const brightnessUpBtn = document.getElementById('brightnessUpBtn');
+const brightnessDownBtn = document.getElementById('brightnessDownBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+(async () => {
+    // Load models dynamically based on selected provider
+    let models = await client.models.list();
+    models = models.filter((model)=>model.type=="image")
+    let togetherModels = await togetherClient.models.list();
+    togetherModels = togetherModels.filter((model)=>model.type=="image")
+    modelSelectEl.innerHTML = [...models, ...togetherModels].map(model => `<option value="${model.id}">${model.id}</option>`).join('');
+})();
+
+// Image state
+let originalImage = null;
+let displayedImage = null;
+let imageParams = {
+    rotation: 0,
+    brightness: 1,
+    cropStart: null,
+    cropEnd: null
+};
+
+// Generate Image Function
+async function generateImage() {
+    const prompt = promptEl.value;
+    const model = modelSelectEl.value;
+
+    // Show loading indicator
+    generateBtn.disabled = true;
+    generateBtn.textContent = 'Generating...';
+
+    try {
+        const response = await (model.includes('/') ? togetherClient : client).images.generate({
+            model: model,
+            prompt: prompt
+        });
+
+        if (response.data && response.data.length > 0) {
+            const imageUrl = response.data[0].url;
+            try {
+                await loadImageToCanvas(imageUrl);
+            } catch (error) {
+                const maxAttempts = client.proxyManager.proxies.length;
+                for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                    const proxiedUrl = client.proxyManager.getProxiedUrl(imageUrl);
+                    try {
+                        await loadImageToCanvas(proxiedUrl);
+                    } catch (error) {
+                        console.warn(`CORS proxy attempt ${attempt + 1}/${maxAttempts} failed for ${imageUrl}:`, error.message);
+                        this.proxyManager.rotateProxy();
+                    }
+                }
+            }
+            downloadBtn.disabled = false;
+        } else {
+            alert('No image generated. Try a different prompt or model.');
+        }
+    } catch (err) {
+        console.error('Error generating image:', err);
+        alert('Error generating image.');
+    }
+    generateBtn.disabled = false;
+    generateBtn.textContent = 'Generate Image';
+}
+
+// Load image onto canvas
+function loadImageToCanvas(url) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "Anonymous"; // Enable CORS for image manipulation
+        img.onload = () => {
+            // Resize canvas to image size
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+            originalImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            resetImageParams();
+            resolve();
+        };
+        img.onerror = reject;
+        img.src = url;
+    });
+}
+
+// Reset image parameters
+function resetImageParams() {
+    imageParams.rotation = 0;
+    imageParams.brightness = 1;
+    redrawImage();
+}
+
+// Redraw the image with current parameters
+function redrawImage() {
+    // Reset to original
+    ctx.putImageData(originalImage, 0, 0);
+
+    // Apply brightness
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.filter = `brightness(${imageParams.brightness})`;
+
+    // Save state
+    ctx.save();
+
+    // Apply rotation
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((imageParams.rotation * Math.PI) / 180);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
+    // Redraw
+    ctx.drawImage(canvas, 0, 0);
+
+    ctx.restore();
+
+    // Reset filter
+    ctx.filter = 'none';
+}
+
+// Event Listeners
+generateBtn.addEventListener('click', generateImage);
+
+downloadBtn.addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = 'generated_image.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+});
+
+// Editing Controls
+cropBtn.addEventListener('click', () => {
+    alert('Crop feature is simplified. Select crop area and then press OK.');
+    // Simple crop: crop the center square
+    const size = Math.min(canvas.width, canvas.height);
+    const startX = (canvas.width - size) / 2;
+    const startY = (canvas.height - size) / 2;
+    const imageData = ctx.getImageData(startX, startY, size, size);
+    canvas.width = size;
+    canvas.height = size;
+    ctx.putImageData(imageData, 0, 0);
+    originalImage = ctx.getImageData(0, 0, size, size);
+    resetImageParams();
+});
+
+rotateLeftBtn.addEventListener('click', () => {
+    imageParams.rotation -= 15;
+    redrawImage();
+});
+
+rotateRightBtn.addEventListener('click', () => {
+    imageParams.rotation += 15;
+    redrawImage();
+});
+
+brightnessUpBtn.addEventListener('click', () => {
+    imageParams.brightness += 0.1;
+    redrawImage();
+});
+
+brightnessDownBtn.addEventListener('click', () => {
+    imageParams.brightness = Math.max(0, imageParams.brightness - 0.1);
+    redrawImage();
+});
+
+resetBtn.addEventListener('click', () => {
+    resetImageParams();
+});
+
+// Optional: You can add more advanced editing like free crop, brush, etc., with additional UI.
+
+// Initialize: disable download button initially
+downloadBtn.disabled = true;
+</script>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f0f0f0;
+}
+h1 {
+    text-align: center;
+}
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+#prompt {
+    width: 100%;
+    padding: 10px;
+    font-size: 1em;
+}
+#modelSelect {
+    padding: 10px;
+    font-size: 1em;
+}
+button {
+    padding: 10px;
+    font-size: 1em;
+    cursor: pointer;
+}
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.image-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+#imageCanvas {
+    border: 2px solid #333;
+}
+.editing-controls {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+</style>
+</body>
+</html>

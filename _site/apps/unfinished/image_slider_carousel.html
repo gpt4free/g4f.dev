@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Advanced Image Carousel</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2980b9;
+            --text-color: #333;
+            --bg-color: #f5f5f5;
+            --nav-btn-size: 40px;
+            --transition-speed: 0.5s;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .carousel-container {
+            width: 100%;
+            max-width: 900px;
+            position: relative;
+            margin: 0 auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .carousel {
+            display: flex;
+            transition: transform var(--transition-speed) ease-in-out;
+            height: 500px;
+        }
+
+        .slide {
+            min-width: 100%;
+            position: relative;
+        }
+
+        .slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .slide-content {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            color: white;
+            padding: 30px 20px 20px;
+            transform: translateY(100%);
+            transition: transform var(--transition-speed) ease, opacity var(--transition-speed) ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .slide:hover .slide-content {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .slide-title {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .slide-description {
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(255, 255, 255, 0.7);
+            color: var(--primary-color);
+            border: none;
+            width: var(--nav-btn-size);
+            height: var(--nav-btn-size);
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 10;
+            user-select: none;
+        }
+
+        .nav-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .prev-btn {
+            left: 20px;
+        }
+
+        .next-btn {
+            right: 20px;
+        }
+
+        .indicators {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.5);
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .indicator.active {
+            background-color: var(--primary-color);
+            transform: scale(1.2);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .thumbnail-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            overflow-x: auto;
+            padding: 10px 0;
+            max-width: 100%;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary-color) transparent;
+        }
+
+        .thumbnail-container::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .thumbnail-container::-webkit-scrollbar-thumb {
+            background-color: var(--primary-color);
+            border-radius: 4px;
+        }
+
+        .thumbnail {
+            width: 80px;
+            height: 60px;
+            object-fit: cover;
+            cursor: pointer;
+            border-radius: 5px;
+            opacity: 0.7;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        .thumbnail:hover,
+        .thumbnail.active {
+            opacity: 1;
+            box-shadow: 0 0 0 3px var(--primary-color);
+        }
+
+        .progress-bar {
+            height: 5px;
+            background-color: rgba(255, 255, 255, 0.3);
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 10;
+        }
+
+        .progress {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0%;
+            transition: width linear;
+        }
+
+        @media (max-width: 768px) {
+            .carousel {
+                height: 400px;
+            }
+            
+            .slide-content {
+                padding: 15px 10px 10px;
+            }
+            
+            .slide-title {
+                font-size: 1.2rem;
+            }
+            
+            .slide-description {
+                font-size: 0.8rem;
+            }
+            
+            .nav-btn {
+                width: 30px;
+                height: 30px;
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .carousel {
+                height: 300px;
+            }
+            
+            .slide-content {
+                display: none;
+            }
+            
+            .thumbnail-container {
+                display: none;
+            }
+        }
+    </style>
+    <script src="../dist/js/framework.js">framework.connectToBackend()</script>
+</head>
+<body>
+    <h1>Advanced Image Carousel</h1>
+    
+    <div class="carousel-container">
+        <div class="carousel" aria-live="polite" aria-label="Image carousel">
+            <!-- Slides will be added dynamically -->
+        </div>
+        
+        <button class="nav-btn prev-btn" aria-label="Previous slide">&lt;</button>
+        <button class="nav-btn next-btn" aria-label="Next slide">&gt;</button>
+        
+        <div class="indicators" role="tablist" aria-label="Slide indicators">
+            <!-- Indicators will be added dynamically -->
+        </div>
+        
+        <div class="progress-bar" aria-hidden="true">
+            <div class="progress"></div>
+        </div>
+    </div>
+    
+    <div class="thumbnail-container" aria-label="Slide thumbnails" role="list">
+        <!-- Thumbnails will be added dynamically -->
+    </div>
+    
+    <div class="controls" role="region" aria-label="Carousel controls">
+        <button class="control-btn" id="play-btn" aria-pressed="false">Play</button>
+        <button class="control-btn" id="pause-btn" aria-pressed="false">Pause</button>
+        <button class="control-btn" id="prev-btn">Previous</button>
+        <button class="control-btn" id="next-btn">Next</button>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Number of images to load
+            const numberOfImages = 5;
+
+            // Generate carousel data dynamically with backendUrl + '/search/image+g4f?skip=' + n
+            const carouselData = [];
+            for(let n = 0; n < numberOfImages; n++) {
+                carouselData.push({
+                    imageUrl: `${framework.backendUrl}/search/image+g4f?skip=${n}`,
+                    title: `Image Title ${n + 1}`,
+                    description: `Description for image ${n + 1}. This image is fetched with skip parameter set to ${n}.`
+                });
+            }
+
+            // DOM elements
+            const carousel = document.querySelector('.carousel');
+            const prevBtn = document.querySelector('.prev-btn');
+            const nextBtn = document.querySelector('.next-btn');
+            const indicatorsContainer = document.querySelector('.indicators');
+            const thumbnailsContainer = document.querySelector('.thumbnail-container');
+            const playBtn = document.getElementById('play-btn');
+            const pauseBtn = document.getElementById('pause-btn');
+            const manualPrevBtn = document.getElementById('prev-btn');
+            const manualNextBtn = document.getElementById('next-btn');
+            const progressBar = document.querySelector('.progress');
+
+            // Carousel state
+            let currentIndex = 0;
+            let intervalId = null;
+            let isPlaying = false;
+            const slideCount = carouselData.length;
+            const slideInterval = 5000; // 5 seconds
+
+            // Initialize carousel
+            function initCarousel() {
+                // Clear existing content
+                carousel.innerHTML = '';
+                indicatorsContainer.innerHTML = '';
+                thumbnailsContainer.innerHTML = '';
+
+                // Create slides, indicators and thumbnails
+                carouselData.forEach((slide, index) => {
+                    // Create slide
+                    const slideElement = document.createElement('div');
+                    slideElement.className = 'slide';
+                    slideElement.setAttribute('role', 'tabpanel');
+                    slideElement.setAttribute('aria-hidden', 'true');
+                    slideElement.setAttribute('aria-label', `Slide ${index + 1} of ${slideCount}`);
+
+                    const img = document.createElement('img');
+                    img.src = slide.imageUrl;
+                    img.alt = slide.title;
+                    img.loading = "lazy";
+                    img.decoding = "async";
+                    
+                    const slideContent = document.createElement('div');
+                    slideContent.className = 'slide-content';
+
+                    const title = document.createElement('h3');
+                    title.className = 'slide-title';
+                    title.textContent = slide.title;
+
+                    const description = document.createElement('p');
+                    description.className = 'slide-description';
+                    description.textContent = slide.description;
+
+                    slideContent.appendChild(title);
+                    slideContent.appendChild(description);
+                    slideElement.appendChild(img);
+                    slideElement.appendChild(slideContent);
+                    carousel.appendChild(slideElement);
+
+                    // Create indicator
+                    const indicator = document.createElement('button');
+                    indicator.className = 'indicator';
+                    indicator.dataset.index = index;
+                    indicator.setAttribute('role', 'tab');
+                    indicator.setAttribute('aria-selected', 'false');
+                    indicator.setAttribute('aria-controls', `slide-${index}`);
+                    indicator.id = `indicator-${index}`;
+                    indicatorsContainer.appendChild(indicator);
+
+                    // Create thumbnail
+                    const thumbnail = document.createElement('img');
+                    thumbnail.className = 'thumbnail';
+                    thumbnail.src = slide.imageUrl;
+                    thumbnail.alt = `Thumbnail ${index + 1}`;
+                    thumbnail.dataset.index = index;
+                    thumbnail.setAttribute('role', 'listitem');
+                    thumbnailsContainer.appendChild(thumbnail);
+                });
+
+                // Set initial active state
+                updateActiveState();
+
+                // Start auto-play
+                startAutoPlay();
+            }
+
+            // Update active slide, indicator and thumbnail
+            function updateActiveState() {
+                // Update carousel position
+                carousel.style.transform = `translateX(-${currentIndex * 100}%)`;
+
+                // Update slides' aria-hidden and tab index
+                const slides = document.querySelectorAll('.slide');
+                slides.forEach((slide, index) => {
+                    if(index === currentIndex){
+                        slide.setAttribute('aria-hidden', 'false');
+                        slide.tabIndex = 0;
+                    } else {
+                        slide.setAttribute('aria-hidden', 'true');
+                        slide.tabIndex = -1;
+                    }
+                });
+
+                // Update indicators & aria-selected
+                document.querySelectorAll('.indicator').forEach((indicator, index) => {
+                    indicator.classList.toggle('active', index === currentIndex);
+                    indicator.setAttribute('aria-selected', index === currentIndex ? 'true' : 'false');
+                    if(index === currentIndex){
+                        indicator.focus && indicator.focus();
+                    }
+                });
+
+                // Update thumbnails
+                document.querySelectorAll('.thumbnail').forEach((thumbnail, index) => {
+                    thumbnail.classList.toggle('active', index === currentIndex);
+                });
+
+                // Reset progress bar
+                progressBar.style.width = '0%';
+                progressBar.style.transition = 'none';
+                void progressBar.offsetWidth; // Trigger reflow
+                progressBar.style.transition = `width ${slideInterval}ms linear`;
+                progressBar.style.width = '100%';
+            }
+
+            // Go to specific slide
+            function goToSlide(index) {
+                if(index < 0) {
+                    currentIndex = slideCount - 1;
+                } else if(index >= slideCount) {
+                    currentIndex = 0;
+                } else {
+                    currentIndex = index;
+                }
+                updateActiveState();
+            }
+
+            // Go to next slide
+            function nextSlide() {
+                goToSlide(currentIndex + 1);
+            }
+
+            // Go to previous slide
+            function prevSlide() {
+                goToSlide(currentIndex - 1);
+            }
+
+            // Start auto-play
+            function startAutoPlay() {
+                if(intervalId) clearInterval(intervalId);
+                intervalId = setInterval(nextSlide, slideInterval);
+                isPlaying = true;
+                playBtn.setAttribute('aria-pressed', 'true');
+                pauseBtn.setAttribute('aria-pressed', 'false');
+            }
+
+            // Stop auto-play
+            function stopAutoPlay() {
+                clearInterval(intervalId);
+                isPlaying = false;
+                playBtn.setAttribute('aria-pressed', 'false');
+                pauseBtn.setAttribute('aria-pressed', 'true');
+            }
+
+            // Event listeners
+            prevBtn.addEventListener('click', () => {
+                prevSlide();
+                if(isPlaying) startAutoPlay();
+            });
+
+            nextBtn.addEventListener('click', () => {
+                nextSlide();
+                if(isPlaying) startAutoPlay();
+            });
+
+            manualPrevBtn.addEventListener('click', () => {
+                prevSlide();
+                if(isPlaying) startAutoPlay();
+            });
+
+            manualNextBtn.addEventListener('click', () => {
+                nextSlide();
+                if(isPlaying) startAutoPlay();
+            });
+
+            playBtn.addEventListener('click', () => {
+                if(!isPlaying) startAutoPlay();
+            });
+
+            pauseBtn.addEventListener('click', () => {
+                if(isPlaying) stopAutoPlay();
+            });
+
+            // Indicator click
+            indicatorsContainer.addEventListener('click', (e) => {
+                if(e.target.classList.contains('indicator')){
+                    const index = parseInt(e.target.dataset.index);
+                    goToSlide(index);
+                    if(isPlaying) startAutoPlay();
+                }
+            });
+
+            // Thumbnail click
+            thumbnailsContainer.addEventListener('click', (e) => {
+                if(e.target.classList.contains('thumbnail')){
+                    const index = parseInt(e.target.dataset.index);
+                    goToSlide(index);
+                    if(isPlaying) startAutoPlay();
+                }
+            });
+
+            // Keyboard navigation
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+                if(e.key === 'ArrowLeft'){
+                    prevSlide();
+                    if(isPlaying) startAutoPlay();
+                } else if(e.key === 'ArrowRight'){
+                    nextSlide();
+                    if(isPlaying) startAutoPlay();
+                } else if(e.key === ' ' || e.key === 'Spacebar'){
+                    e.preventDefault();
+                    if(isPlaying){
+                        stopAutoPlay();
+                    } else {
+                        startAutoPlay();
+                    }
+                }
+            });
+
+            // Touch events for mobile
+            let touchStartX = 0;
+            let touchEndX = 0;
+            const swipeThreshold = 50;
+
+            carousel.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+
+            carousel.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            }, { passive: true });
+
+            function handleSwipe() {
+                if(touchEndX < touchStartX - swipeThreshold){
+                    nextSlide();
+                } else if(touchEndX > touchStartX + swipeThreshold){
+                    prevSlide();
+                }
+                if(isPlaying) startAutoPlay();
+            }
+
+            // Initialize the carousel
+            initCarousel();
+        });
+    </script>
+</body>
+</html>

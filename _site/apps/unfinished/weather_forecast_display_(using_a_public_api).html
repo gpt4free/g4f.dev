@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Weather Forecast</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Advanced Weather Forecast</h1>
+            <div class="search-container">
+                <input type="text" id="city-input" placeholder="Enter city name..." autocomplete="off">
+                <button id="search-btn"><i class="fas fa-search"></i></button>
+                <button id="location-btn" title="Use current location"><i class="fas fa-location-arrow"></i></button>
+            </div>
+            <div class="unit-toggle">
+                <button id="celsius-btn" class="active">°C</button>
+                <button id="fahrenheit-btn">°F</button>
+            </div>
+        </header>
+
+        <main>
+            <div class="current-weather">
+                <div class="weather-info">
+                    <h2 id="city-name">--</h2>
+                    <div class="date-time" id="current-date">--</div>
+                    <div class="temp" id="current-temp">--°</div>
+                    <div class="description" id="weather-desc">--</div>
+                </div>
+                <div class="weather-icon">
+                    <img id="weather-icon" src="https://openweathermap.org/img/wn/01d@2x.png" alt="Weather icon">
+                </div>
+                <div class="weather-details">
+                    <div class="detail-item">
+                        <i class="fas fa-temperature-high"></i>
+                        <span>Feels Like</span>
+                        <span id="feels-like">--°</span>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-tint"></i>
+                        <span>Humidity</span>
+                        <span id="humidity">--%</span>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-wind"></i>
+                        <span>Wind</span>
+                        <span id="wind-speed">-- km/h</span>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-compress-alt"></i>
+                        <span>Pressure</span>
+                        <span id="pressure">-- hPa</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hourly-forecast">
+                <h3>Hourly Forecast</h3>
+                <div class="hourly-container" id="hourly-container">
+                    <!-- Hourly items will be inserted here by JavaScript -->
+                </div>
+            </div>
+
+            <div class="daily-forecast">
+                <h3>5-Day Forecast</h3>
+                <div class="daily-container" id="daily-container">
+                    <!-- Daily forecast items will be inserted here by JavaScript -->
+                </div>
+            </div>
+
+            <div class="additional-info">
+                <div class="info-card sunrise">
+                    <i class="fas fa-sun"></i>
+                    <span>Sunrise</span>
+                    <span id="sunrise">--:--</span>
+                </div>
+                <div class="info-card sunset">
+                    <i class="fas fa-moon"></i>
+                    <span>Sunset</span>
+                    <span id="sunset">--:--</span>
+                </div>
+                <div class="info-card visibility">
+                    <i class="fas fa-eye"></i>
+                    <span>Visibility</span>
+                    <span id="visibility">-- km</span>
+                </div>
+                <div class="info-card uv-index">
+                    <i class="fas fa-sun"></i>
+                    <span>UV Index</span>
+                    <span id="uv-index">--</span>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Data provided by <a href="https://openweathermap.org" target="_blank">OpenWeatherMap</a></p>
+            <p id="last-updated">Last updated: --</p>
+        </footer>
+    </div>
+
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loader"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Stopwatch</title>
+    <style>
+        :root {
+            --primary-color: #4a6fa5;
+            --secondary-color: #166088;
+            --background-color: #f8f9fa;
+            --text-color: #333;
+            --button-color: #e9ecef;
+            --button-hover: #d1d5db;
+            --lap-odd: #f1f3f5;
+            --lap-even: #e9ecef;
+        }
+
+        .dark-mode {
+            --primary-color: #6d8cc0;
+            --secondary-color: #4a6fa5;
+            --background-color: #1a1a1a;
+            --text-color: #f0f0f0;
+            --button-color: #2d2d2d;
+            --button-hover: #3d3d3d;
+            --lap-odd: #252525;
+            --lap-even: #2d2d2d;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background-color: var(--background-color);
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-top: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-size: 2rem;
+        }
+
+        .display-format {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .format-btn {
+            padding: 5px 10px;
+            background-color: var(--button-color);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .format-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .stopwatch-display {
+            font-size: 4rem;
+            text-align: center;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.1s, background-color 0.2s;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-start {
+            background-color: #2ecc71;
+            color: white;
+        }
+
+        .btn-pause {
+            background-color: #e74c3c;
+            color: white;
+            display: none;
+        }
+
+        .btn-reset {
+            background-color: var(--button-color);
+            color: var(--text-color);
+        }
+
+        .btn-lap {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-theme {
+            background-color: var(--button-color);
+            color: var(--text-color);
+            padding: 8px 15px;
+            border-radius: 20px;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
+        .laps-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border-radius: 10px;
+            margin-top: 20px;
+            background-color: var(--button-color);
+        }
+
+        .laps-header {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 15px;
+            font-weight: bold;
+            background-color: var(--secondary-color);
+            color: white;
+            border-radius: 10px 10px 0 0;
+        }
+
+        .lap-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 15px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .lap-item:nth-child(odd) {
+            background-color: var(--lap-odd);
+        }
+
+        .lap-item:nth-child(even) {
+            background-color: var(--lap-even);
+        }
+
+        .lap-number {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .no-laps {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-color);
+            opacity: 0.7;
+        }
+
+        @media (max-width: 600px) {
+            .stopwatch-display {
+                font-size: 3rem;
+            }
+
+            .controls {
+                flex-wrap: wrap;
+            }
+
+            .btn {
+                padding: 10px 20px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="btn btn-theme" id="themeToggle">Dark Mode</button>
+    <div class="container">
+        <div class="header">
+            <h1>Stopwatch</h1>
+            <div class="display-format">
+                <button class="format-btn active" data-format="hhmmss">HH:MM:SS</button>
+                <button class="format-btn" data-format="mmss">MM:SS</button>
+                <button class="format-btn" data-format="ss">SS</button>
+            </div>
+        </div>
+
+        <div class="stopwatch-display" id="display">00:00:00.00</div>
+
+        <div class="controls">
+            <button class="btn btn-start" id="startBtn">Start</button>
+            <button class="btn btn-pause" id="pauseBtn">Pause</button>
+            <button class="btn btn-reset" id="resetBtn">Reset</button>
+            <button class="btn btn-lap" id="lapBtn">Lap</button>
+        </div>
+
+        <div class="laps-container" id="lapsContainer">
+            <div class="laps-header">
+                <span>Lap</span>
+                <span>Time</span>
+            </div>
+            <div class="no-laps" id="noLaps">No laps recorded yet</div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const display = document.getElementById('display');
+            const startBtn = document.getElementById('startBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const lapBtn = document.getElementById('lapBtn');
+            const themeToggle = document.getElementById('themeToggle');
+            const formatBtns = document.querySelectorAll('.format-btn');
+            const lapsContainer = document.getElementById('lapsContainer');
+            const noLaps = document.getElementById('noLaps');
+
+            // Stopwatch variables
+            let startTime = 0;
+            let elapsedTime = 0;
+            let timerInterval;
+            let isRunning = false;
+            let currentFormat = 'hhmmss';
+            let lapCount = 0;
+
+            // Theme toggle
+            themeToggle.addEventListener('click', function() {
+                document.body.classList.toggle('dark-mode');
+                if (document.body.classList.contains('dark-mode')) {
+                    themeToggle.textContent = 'Light Mode';
+                } else {
+                    themeToggle.textContent = 'Dark Mode';
+                }
+            });
+
+            // Format buttons
+            formatBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    formatBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentFormat = this.dataset.format;
+                    updateDisplay();
+                });
+            });
+
+            // Start button
+            startBtn.addEventListener('click', function() {
+                if (!isRunning) {
+                    startTime = Date.now() - elapsedTime;
+                    timerInterval = setInterval(updateTime, 10);
+                    isRunning = true;
+                    startBtn.style.display = 'none';
+                    pauseBtn.style.display = 'block';
+                }
+            });
+
+            // Pause button
+            pauseBtn.addEventListener('click', function() {
+                if (isRunning) {
+                    clearInterval(timerInterval);
+                    isRunning = false;
+                    pauseBtn.style.display = 'none';
+                    startBtn.style.display = 'block';
+                }
+            });
+
+            // Reset button
+            resetBtn.addEventListener('click', function() {
+                clearInterval(timerInterval);
+                isRunning = false;
+                elapsedTime = 0;
+                startTime = 0;
+                updateDisplay();
+                startBtn.style.display = 'block';
+                pauseBtn.style.display = 'none';
+                
+                // Clear laps
+                lapsContainer.querySelectorAll('.lap-item').forEach(item => item.remove());
+                lapCount = 0;
+                noLaps.style.display = 'block';
+            });
+
+            // Lap button
+            lapBtn.addEventListener('click', function() {
+                if (isRunning) {
+                    lapCount++;
+                    const lapTime = formatTime(elapsedTime, currentFormat, true);
+                    
+                    const lapItem = document.createElement('div');
+                    lapItem.className = 'lap-item';
+                    lapItem.innerHTML = `
+                        <span class="lap-number">Lap ${lapCount}</span>
+                        <span class="lap-time">${lapTime}</span>
+                    `;
+                    
+                    // Insert after laps header
+                    lapsContainer.insertBefore(lapItem, noLaps);
+                    noLaps.style.display = 'none';
+                    
+                    // Scroll to the new lap
+                    lapItem.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+
+            // Update the time display
+            function updateTime() {
+                elapsedTime = Date.now() - startTime;
+                updateDisplay();
+            }
+
+            // Format time based on current format
+            function formatTime(time, format, includeMs = false) {
+                let date = new Date(time);
+                let hours = date.getUTCHours();
+                let minutes = date.getUTCMinutes();
+                let seconds = date.getUTCSeconds();
+                let milliseconds = date.getUTCMilliseconds();
+
+                let formattedTime = '';
+
+                switch(format) {
+                    case 'hhmmss':
+                        formattedTime = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+                        break;
+                    case 'mmss':
+                        formattedTime = `${pad(hours * 60 + minutes)}:${pad(seconds)}`;
+                        break;
+                    case 'ss':
+                        formattedTime = `${pad(hours * 3600 + minutes * 60 + seconds)}`;
+                        break;
+                }
+
+                if (includeMs) {
+                    formattedTime += `.${pad(Math.floor(milliseconds / 10), 2)}`;
+                }
+
+                return formattedTime;
+            }
+
+            // Update the display
+            function updateDisplay() {
+                display.textContent = formatTime(elapsedTime, currentFormat, true);
+            }
+
+            // Helper function to pad numbers with leading zeros
+            function pad(number, length = 2) {
+                return String(number).padStart(length, '0');
+            }
+
+            // Initialize display
+            updateDisplay();
+        });
+    </script>
+</body>
+</html>

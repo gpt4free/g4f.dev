@@ -1,0 +1,588 @@
+<!--
+Mini Spotify / Audio Player
+Author: ChatGPT
+Date: 2024-06-05
+
+Features:
+- Mobile-first responsive design
+- Play/Pause, Next, Previous controls
+- Progress bar with seeking capability
+- Volume control slider
+- Display of current time and duration
+- Playlist with track titles and artists
+- Visual feedback for active track
+- No external dependencies
+
+Usage:
+Open this single HTML file in any modern browser.
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mini Spotify / Audio Player</title>
+<style>
+  /* Reset and base */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #121212;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 1rem;
+  }
+
+  /* Container */
+  #player {
+    background: #181818;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Album art */
+  #art-container {
+    position: relative;
+    width: 100%;
+    padding-top: 100%; /* square aspect ratio */
+    overflow: hidden;
+    background: #222;
+  }
+  #album-art {
+    position: absolute;
+    top:0; left:0; width: 100%; height: 100%;
+    object-fit: cover;
+  }
+
+  /* Info */
+  #track-info {
+    padding: 1rem;
+    text-align: center;
+  }
+  #track-title {
+    font-weight: 700;
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+  #track-artist {
+    font-weight: 400;
+    font-size: 0.9rem;
+    color: #bbb;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+
+  /* Controls */
+  #controls {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0.5rem 0;
+  }
+  button {
+    background: none;
+    border: none;
+    color: #eee;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+  button:hover, button:focus {
+    color: #1db954;
+    outline: none;
+  }
+
+  /* Play/Pause bigger */
+  #play-pause {
+    font-size: 2rem;
+  }
+
+  /* Progress Bar */
+  #progress-container {
+    position: relative;
+    height: 8px;
+    background: #333;
+    cursor: pointer;
+  }
+  #progress {
+    height: 8px;
+    background: #1db954;
+    width: 0%;
+    transition: width 0.1s linear;
+  }
+  #time-container {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: #999;
+    padding: 0 0.5rem 0.5rem 0.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Volume */
+  #volume-container {
+    display: flex;
+    align-items: center;
+    padding: 0 1rem 1rem;
+  }
+  #volume-icon {
+    font-size: 1.25rem;
+    margin-right: 0.5rem;
+  }
+  #volume-slider {
+    flex-grow: 1;
+    -webkit-appearance: none;
+    background: #444;
+    height: 4px;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  #volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #1db954;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    margin-top: -6px;
+  }
+  #volume-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #1db954;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+  }
+
+  /* Playlist */
+  #playlist {
+    max-height: 150px;
+    overflow-y: auto;
+    border-top: 1px solid #333;
+    background: #111;
+  }
+  #playlist > div {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #222;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+  }
+  #playlist > div:last-child {
+    border-bottom: none;
+  }
+  #playlist > div:hover, #playlist > div.active {
+    background: #1db954;
+    color: #121212;
+  }
+  #playlist-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  #playlist-artist {
+    font-size: 0.8rem;
+    color: inherit;
+    opacity: 0.85;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+
+  /* Scrollbar for playlist */
+  #playlist::-webkit-scrollbar {
+    width: 6px;
+  }
+  #playlist::-webkit-scrollbar-track {
+    background: #111;
+  }
+  #playlist::-webkit-scrollbar-thumb {
+    background-color: #1db954;
+    border-radius: 3px;
+  }
+
+  /* Responsive - tablet and up */
+  @media (min-width: 600px) {
+    #player {
+      max-width: 500px;
+    }
+    #track-info {
+      padding: 1rem 2rem;
+    }
+    #volume-container {
+      padding: 0 2rem 1rem;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="player" role="region" aria-label="Mini Spotify Audio Player">
+  <div id="art-container">
+    <img id="album-art" src="" alt="Album art" />
+  </div>
+
+  <div id="track-info">
+    <div id="track-title" aria-live="polite">Loading...</div>
+    <div id="track-artist"></div>
+  </div>
+
+  <div id="controls">
+    <button id="prev" aria-label="Previous track" title="Previous Track">&#9664;&#9664;</button>
+    <button id="play-pause" aria-label="Play" title="Play">&#9654;</button>
+    <button id="next" aria-label="Next track" title="Next Track">&#9654;&#9654;</button>
+  </div>
+
+  <div id="progress-container" aria-label="Audio progress bar" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
+    <div id="progress"></div>
+  </div>
+  <div id="time-container">
+    <div id="current-time">0:00</div>
+    <div id="duration">0:00</div>
+  </div>
+
+  <div id="volume-container">
+    <div id="volume-icon" aria-hidden="true">&#128266;</div>
+    <input type="range" id="volume-slider" min="0" max="1" step="0.01" aria-label="Volume control" />
+  </div>
+
+  <div id="playlist" role="list" aria-label="Playlist">
+    <!-- Tracks populated by JavaScript -->
+  </div>
+</div>
+
+<script>
+  // Playlist data
+  const tracks = [
+    {
+      title: "Sunny Side",
+      artist: "Silent Partner",
+      src: "https://cdn.pixabay.com/download/audio/2021/11/22/audio_166b15d97a.mp3?filename=sunny-side-accoustic-pop-13455.mp3",
+      artwork: "https://cdn.pixabay.com/photo/2018/01/15/07/51/sun-3082567_1280.jpg",
+    },
+    {
+      title: "Dreams",
+      artist: "Joakim Karud",
+      src: "https://cdn.pixabay.com/download/audio/2022/03/22/audio_94db835c25.mp3?filename=dreams-10714.mp3",
+      artwork: "https://cdn.pixabay.com/photo/2016/11/19/14/00/night-sky-1834416_1280.jpg",
+    },
+    {
+      title: "Acoustic Breeze",
+      artist: "Benjamin Tissot",
+      src: "https://cdn.pixabay.com/download/audio/2022/02/22/audio_2998823db1.mp3?filename=acoustic-breeze-12329.mp3",
+      artwork: "https://cdn.pixabay.com/photo/2016/03/27/07/08/acoustic-1287508_1280.jpg",
+    },
+    {
+      title: "Summer",
+      artist: "Bensound",
+      src: "https://cdn.pixabay.com/download/audio/2021/08/04/audio_55ec571343.mp3?filename=summer-8466.mp3",
+      artwork: "https://cdn.pixabay.com/photo/2015/07/16/00/46/summer-847667_1280.jpg",
+    }
+  ];
+
+  // Cache DOM elements
+  const albumArt = document.getElementById('album-art');
+  const trackTitle = document.getElementById('track-title');
+  const trackArtist = document.getElementById('track-artist');
+  const playPauseBtn = document.getElementById('play-pause');
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const progressContainer = document.getElementById('progress-container');
+  const progress = document.getElementById('progress');
+  const currentTimeEl = document.getElementById('current-time');
+  const durationEl = document.getElementById('duration');
+  const volumeSlider = document.getElementById('volume-slider');
+  const playlistContainer = document.getElementById('playlist');
+
+  // Create audio object
+  const audio = new Audio();
+  audio.preload = 'metadata';
+
+  let currentTrackIndex = 0;
+  let isPlaying = false;
+  let isSeeking = false;
+
+  // Init player
+  function init() {
+    populatePlaylist();
+    loadTrack(currentTrackIndex);
+    // Set default volume
+    audio.volume = 0.6;
+    volumeSlider.value = audio.volume;
+  }
+
+  // Populate playlist UI
+  function populatePlaylist() {
+    playlistContainer.innerHTML = '';
+    tracks.forEach((track, index) => {
+      const trackDiv = document.createElement('div');
+      trackDiv.setAttribute('role', 'listitem');
+      trackDiv.tabIndex = 0;
+      trackDiv.classList.add('playlist-track');
+      if(index === currentTrackIndex) trackDiv.classList.add('active');
+
+      trackDiv.innerHTML = `
+        <div class="playlist-title" aria-label="Track title">${track.title}</div>
+        <div class="playlist-artist" aria-label="Artist name">${track.artist}</div>
+      `;
+
+      // Click to select track
+      trackDiv.addEventListener('click', () => {
+        loadTrack(index);
+        playTrack();
+      });
+      // Keyboard accessibility
+      trackDiv.addEventListener('keydown', e => {
+        if(e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          loadTrack(index);
+          playTrack();
+        }
+      });
+
+      playlistContainer.appendChild(trackDiv);
+    });
+  }
+
+  // Load track data into player
+  function loadTrack(index) {
+    currentTrackIndex = index;
+    const track = tracks[index];
+    audio.src = track.src;
+    audio.load();
+
+    albumArt.src = track.artwork;
+    albumArt.alt = `Album art for ${track.title} by ${track.artist}`;
+    trackTitle.textContent = track.title;
+    trackArtist.textContent = track.artist;
+
+    updateActivePlaylistItem();
+
+    // Reset progress bar and time
+    progress.style.width = '0%';
+    currentTimeEl.textContent = '0:00';
+    durationEl.textContent = '0:00';
+
+    // Update ARIA slider value
+    progressContainer.setAttribute('aria-valuenow', 0);
+    progressContainer.setAttribute('aria-valuetext', '0 percent');
+
+    updatePlayPauseButton(false); // paused by default
+  }
+
+  // Update active playlist highlight
+  function updateActivePlaylistItem() {
+    const items = playlistContainer.querySelectorAll('div.playlist-track');
+    items.forEach((item, i) => {
+      if(i === currentTrackIndex) {
+        item.classList.add('active');
+        item.setAttribute('aria-current', 'true');
+      } else {
+        item.classList.remove('active');
+        item.removeAttribute('aria-current');
+      }
+    });
+  }
+
+  // Format time in seconds to mm:ss
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return m + ':' + (s < 10 ? '0' + s : s);
+  }
+
+  // Play track
+  function playTrack() {
+    audio.play();
+  }
+
+  // Pause track
+  function pauseTrack() {
+    audio.pause();
+  }
+
+  // Toggle play / pause
+  function togglePlayPause() {
+    if(isPlaying) {
+      pauseTrack();
+    } else {
+      playTrack();
+    }
+  }
+
+  // Update play/pause button UI and aria-label/title
+  function updatePlayPauseButton(playing) {
+    isPlaying = playing;
+    if (playing) {
+      playPauseBtn.innerHTML = '&#10074;&#10074;'; // Pause symbol
+      playPauseBtn.setAttribute('aria-label', 'Pause');
+      playPauseBtn.title = 'Pause';
+    } else {
+      playPauseBtn.innerHTML = '&#9654;'; // Play symbol
+      playPauseBtn.setAttribute('aria-label', 'Play');
+      playPauseBtn.title = 'Play';
+    }
+  }
+
+  // Go to previous track
+  function prevTrack() {
+    let newIndex = currentTrackIndex - 1;
+    if(newIndex < 0) newIndex = tracks.length - 1;
+    loadTrack(newIndex);
+    playTrack();
+  }
+
+  // Go to next track
+  function nextTrack() {
+    let newIndex = currentTrackIndex + 1;
+    if(newIndex >= tracks.length) newIndex = 0;
+    loadTrack(newIndex);
+    playTrack();
+  }
+
+  // Update progress bar based on current time
+  function updateProgress() {
+    if (audio.duration && !isSeeking) {
+      const percent = (audio.currentTime / audio.duration) * 100;
+      progress.style.width = percent + '%';
+
+      currentTimeEl.textContent = formatTime(audio.currentTime);
+      durationEl.textContent = formatTime(audio.duration);
+
+      progressContainer.setAttribute('aria-valuenow', Math.floor(percent));
+      progressContainer.setAttribute('aria-valuetext', `Playback ${Math.floor(percent)} percent`);
+    }
+  }
+
+  // Set audio current time based on click or drag position
+  function setProgress(event) {
+    const rect = progressContainer.getBoundingClientRect();
+    let offsetX;
+
+    if(event.touches && event.touches.length) {
+      offsetX = event.touches[0].clientX - rect.left;
+    } else {
+      offsetX = event.clientX - rect.left;
+    }
+
+    let percent = offsetX / rect.width;
+    percent = Math.min(Math.max(percent, 0), 1);
+    audio.currentTime = percent * audio.duration;
+  }
+
+  // Volume control change
+  function changeVolume(e) {
+    audio.volume = e.target.value;
+  }
+
+  // Keyboard control for progress slider
+  function progressKeyDown(e) {
+    if(!audio.duration) return;
+    let step = audio.duration / 20; // 5% increments
+
+    switch(e.key) {
+      case 'ArrowLeft':
+      case 'ArrowDown':
+        e.preventDefault();
+        audio.currentTime = Math.max(0, audio.currentTime - step);
+        break;
+      case 'ArrowRight':
+      case 'ArrowUp':
+        e.preventDefault();
+        audio.currentTime = Math.min(audio.duration, audio.currentTime + step);
+        break;
+      case 'Home':
+        e.preventDefault();
+        audio.currentTime = 0;
+        break;
+      case 'End':
+        e.preventDefault();
+        audio.currentTime = audio.duration;
+        break;
+    }
+  }
+
+  // Event listeners
+  playPauseBtn.addEventListener('click', () => {
+    togglePlayPause();
+  });
+
+  prevBtn.addEventListener('click', prevTrack);
+  nextBtn.addEventListener('click', nextTrack);
+
+  audio.addEventListener('play', () => {
+    updatePlayPauseButton(true);
+  });
+  audio.addEventListener('pause', () => {
+    updatePlayPauseButton(false);
+  });
+  audio.addEventListener('timeupdate', updateProgress);
+  audio.addEventListener('ended', nextTrack);
+
+  // Progress bar interactions
+  progressContainer.addEventListener('click', setProgress);
+
+  // Support dragging on mobile and desktop for seeking
+  let seeking = false;
+
+  progressContainer.addEventListener('mousedown', (e) => {
+    seeking = true;
+    setProgress(e);
+  });
+  document.addEventListener('mousemove', (e) => {
+    if(seeking) {
+      setProgress(e);
+    }
+  });
+  document.addEventListener('mouseup', () => {
+    if(seeking) {
+      seeking = false;
+    }
+  });
+
+  progressContainer.addEventListener('touchstart', (e) => {
+    seeking = true;
+    setProgress(e);
+  }, {passive: true});
+  progressContainer.addEventListener('touchmove', (e) => {
+    if(seeking) {
+      setProgress(e);
+    }
+  }, {passive: true});
+  progressContainer.addEventListener('touchend', () => {
+    seeking = false;
+  });
+
+  // Keyboard navigation for progress bar
+  progressContainer.addEventListener('keydown', progressKeyDown);
+
+  // Volume slider
+  volumeSlider.addEventListener('input', changeVolume);
+
+  // Initialize player on page load
+  window.addEventListener('load', init);
+</script>
+
+</body>
+</html>

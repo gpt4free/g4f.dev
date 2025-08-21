@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Markdown Blog Engine</title>
+<style>
+  /* Modern Responsive Mobile-first Blog CSS */
+  :root {
+    --color-bg: #fff;
+    --color-text: #222;
+    --color-accent: #007acc;
+    --color-accent-hover: #005fa3;
+    --color-border: #ddd;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    --max-width: 720px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    background: var(--color-bg);
+    color: var(--color-text);
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    background: var(--color-accent);
+    color: white;
+    padding: 1rem;
+    text-align: center;
+  }
+
+  header h1 {
+    margin: 0;
+    font-weight: 700;
+    font-size: 1.5rem;
+  }
+
+  #container {
+    display: flex;
+    flex-direction: column;
+    max-width: var(--max-width);
+    margin: 1rem auto;
+    padding: 0 1rem;
+    width: 100%;
+    flex: 1 0 auto;
+  }
+
+  main {
+    flex: 1;
+  }
+
+  /* Post list styles */
+  #posts-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  #posts-list li {
+    border-bottom: 1px solid var(--color-border);
+    padding: 0.75rem 0;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  #posts-list li:hover,
+  #posts-list li:focus {
+    background-color: #f0f8ff;
+    outline: none;
+  }
+
+  #posts-list li h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--color-accent);
+  }
+
+  #posts-list li time {
+    font-size: 0.8rem;
+    color: #777;
+  }
+
+  /* Blog post view */
+  #post-view {
+    display: none;
+    padding: 1rem 0;
+  }
+
+  #post-view.active {
+    display: block;
+  }
+
+  #post-view article {
+    max-width: 100%;
+    overflow-wrap: break-word;
+  }
+
+  #post-view h2 {
+    margin-top: 0;
+    color: var(--color-accent);
+  }
+
+  #post-content {
+    margin-top: 1rem;
+  }
+
+  /* Back button */
+  #back-btn {
+    display: inline-block;
+    margin-bottom: 1rem;
+    background: var(--color-accent);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    user-select: none;
+  }
+  #back-btn:hover,
+  #back-btn:focus {
+    background: var(--color-accent-hover);
+    outline: none;
+  }
+
+  /* Markdown editor */
+  #editor-section {
+    margin-top: 2rem;
+    border-top: 1px solid var(--color-border);
+    padding-top: 1rem;
+  }
+
+  #editor-section h3 {
+    margin-top: 0;
+    font-weight: 600;
+  }
+
+  #markdown-input {
+    width: 100%;
+    min-height: 150px;
+    font-family: monospace;
+    font-size: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    padding: 0.75rem;
+    resize: vertical;
+  }
+
+  #publish-btn {
+    margin-top: 0.75rem;
+    background: var(--color-accent);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    font-size: 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  #publish-btn:hover,
+  #publish-btn:focus {
+    background: var(--color-accent-hover);
+    outline: none;
+  }
+
+  /* Responsive typography */
+  @media (min-width: 600px) {
+    header h1 {
+      font-size: 2rem;
+    }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Markdown Blog Engine</h1>
+</header>
+<div id="container" role="main">
+
+  <!-- Posts list -->
+  <ul id="posts-list" aria-label="List of blog posts"></ul>
+
+  <!-- Single post view -->
+  <section id="post-view" aria-live="polite" tabindex="-1">
+    <button id="back-btn" aria-label="Back to posts list">&larr; Back</button>
+    <article>
+      <h2 id="post-title"></h2>
+      <time id="post-date" datetime=""></time>
+      <div id="post-content"></div>
+    </article>
+  </section>
+
+  <!-- Markdown editor -->
+  <section id="editor-section" aria-label="Create a new blog post">
+    <h3>New Blog Post</h3>
+    <label for="post-title-input">Title</label><br />
+    <input id="post-title-input" type="text" placeholder="Post title" style="width:100%;padding:0.5rem;margin-bottom:0.5rem;font-size:1rem;border:1px solid var(--color-border);border-radius:4px" aria-required="true" />
+    <label for="post-date-input">Date</label><br />
+    <input id="post-date-input" type="date" aria-required="true" style="margin-bottom:0.5rem;padding:0.4rem;border:1px solid var(--color-border);border-radius:4px" /><br />
+    <label for="markdown-input">Content (Markdown)</label><br />
+    <textarea id="markdown-input" placeholder="Write your markdown here..." aria-required="true"></textarea>
+    <br />
+    <button id="publish-btn">Publish Post</button>
+  </section>
+</div>
+
+<script>
+/**
+ * Markdown Blog Engine
+ * 
+ * A modern, responsive, single-page blog engine that uses Markdown for content.
+ * 
+ * Features:
+ * - Responsive mobile-first design with accessible elements.
+ * - Posts are stored in localStorage, allowing persistence between sessions.
+ * - Interactive UI for listing, viewing, and publishing posts without external dependencies.
+ * - A simple Markdown parser (supports headings, bold/italic, lists, inline code, links, blockquotes, code blocks).
+ * 
+ * Usage:
+ * - Create a post by filling the title, date, and markdown content, then click "Publish Post".
+ * - Click on a post title in the list to view its full content.
+ * - Use the back button to return to the posts list.
+ * 
+ * Limitations:
+ * - Data is saved in localStorage (max size limits apply).
+ * - Basic Markdown parsing, no support for images or tables.
+ * 
+ * Author: ChatGPT
+ * License: MIT (free to use and modify)
+ */
+
+(() => {
+  // Elements references
+  const postsListEl = document.getElementById('posts-list');
+  const postViewEl = document.getElementById('post-view');
+  const backBtn = document.getElementById('back-btn');
+  const postTitleEl = document.getElementById('post-title');
+  const postDateEl = document.getElementById('post-date');
+  const postContentEl = document.getElementById('post-content');
+
+  const editorTitleInput = document.getElementById('post-title-input');
+  const editorDateInput = document.getElementById('post-date-input');
+  const markdownInput = document.getElementById('markdown-input');
+  const publishBtn = document.getElementById('publish-btn');
+
+  const STORAGE_KEY = 'markdown_blog_posts';
+
+  // Load posts from localStorage
+  function loadPosts() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  // Save posts to localStorage
+  function savePosts(posts) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
+  }
+
+  // Sanitize HTML (basic)
+  // Because we generate HTML from Markdown, let's restrict to simple allowed tags only
+  // Since content is controlled by the user, this is a lightweight precaution.
+  function sanitizeHTML(str) {
+    // Allow only a safe subset of tags and attributes
+    // We will strip out all tags except the allowed ones using DOMParser
+
+    const allowedTags = ['A','P','BR','STRONG','EM','UL','OL','LI','H1','H2','H3','H4','H5','H6','BLOCKQUOTE','CODE','PRE','INLINECODE','DEL','HR','SPAN'];
+    const allowedAttributes = {
+      'A': ['href','title','target','rel'],
+      'SPAN': ['class']
+    };
+
+    const doc = new DOMParser().parseFromString(`<div>${str}</div>`, 'text/html');
+    function clean(node) {
+      if(node.nodeType === 1) { // ELEMENT
+        if (!allowedTags.includes(node.tagName)) {
+          // Remove this node but keep children
+          const parent = node.parentNode;
+          while(node.firstChild) parent.insertBefore(node.firstChild, node);
+          parent.removeChild(node);
+          return; // node removed, no need to check children of this node
+        }
+        // Remove disallowed attributes
+        [...node.attributes].forEach(attr => {
+          const allowed = allowedAttributes[node.tagName] || [];
+          if (!allowed.includes(attr.name)) {
+            node.removeAttribute(attr.name);
+          }
+          // Extra: restrict href in <a> to safe protocols
+          if (node.tagName === 'A' && attr.name === 'href') {
+            const href = node.getAttribute('href').trim();
+            if (!href.match(/^https?:\/\//i) && !href.match(/^mailto:/i) && !href.startsWith('#')) {
+              node.removeAttribute('href');
+            }
+          }
+        });
+      }
+      // recurse children
+      node.childNodes.forEach(clean);
+    }
+    clean(doc.body || doc);
+    return doc.body.innerHTML || '';
+  }
+
+  // Markdown Parser
+  // Supports: headings (# to ######), bold (**text**), italic (*text* or _text_),
+  // inline code (`code`), code blocks (```), blockquotes (>), unordered lists (-/*/+), ordered lists (1.), links ([text](url))
+  function parseMarkdown(md) {
+    if (!md) return '';
+
+    // Normalize line endings
+    md = md.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+    // Escape HTML special chars (to prevent injection)
+    md = md.replace(/&/g, "&amp;")
+           .replace(/</g, "&lt;")
+           .replace(/>/g, "&gt;");
+
+    // --- Parse code blocks first (```lang\n...\n```)
+    const codeBlocks = [];
+    md = md.replace(/```([\s\S]*?)```/g, (match, code) => {
+      const placeholder = `\x00CODEBLOCK${codeBlocks.length}\x00`;
+      codeBlocks.push(code);
+      return placeholder;
+    });
+
+    // Parse inline code `code`
+    md = md.replace(/`([^`\n]+)`/g, (match, code) => `<code>${code.trim()}</code>`);
+
+    // Parse headers (# through ######)
+    md = md.replace(/^###### (.*)$/gm, '<h6>$1</h6>');
+    md = md.replace(/^##### (.*)$/gm, '<h5>$1</h5>');
+    md = md.replace(/^#### (.*)$/gm, '<h4>$1</h4>');
+    md = md.replace(/^### (.*)$/gm, '<h3>$1</h3>');
+    md = md.replace(/^## (.*)$/gm, '<h2>$1</h2>');
+    md = md.replace(/^# (.*)$/gm, '<h1>$1</h1>');
+
+    // Parse horizontal rules
+    md = md.replace(/^---$/gm, '<hr />');
+
+    // Parse blockquotes
+    md = md.replace(/^> (.*)$/gm, '<blockquote>$1</blockquote>');
+
+    // Parse bold **text**
+    md = md.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+    // Parse italic *text* or _text_
+    md = md.replace(/(\*|_)(.+?)\1/g, '<em>$2</em>');
+
+    // Parse strikethrough ~~text~~
+    md = md.replace(/~~(.+?)~~/g, '<del>$1</del>');
+
+    // Parse links [text](url)
+    md = md.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, text, url) => {
+      const safeUrl = url.trim();
+      // allow only http, https, mailto, or relative links (starting with / or #)
+      if(safeUrl.match(/^(https?:\/\/|mailto:|\/|#)/i)) {
+        return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+      }
+      return text;
+    });
+
+    // Parse unordered lists (-, *, +)
+    md = md.replace(/^(?:[\*\-\+]) (.*)$/gm, '<li>$1</li>');
+    // wrap <li> lines into <ul>
+    md = md.replace(/((^<li>.*<\/li>$\n?)+)/gm, (match) => {
+      if (match.match(/^<li>/m)) {
+        return `<ul>\n${match}</ul>`;
+      }
+      return match;
+    });
+
+    // Parse ordered lists (1. 2. 3.)
+    md = md.replace(/^\d+\. (.*)$/gm, '<li>$1</li>');
+    // wrap <li> lines into <ol>
+    md = md.replace(/((^<li>.*<\/li>$\n?)+)/gm, (match) => {
+      // Only wrap if previous line is not <ul> to avoid double wrap
+      if (match.match(/^<li>/m)) {
+        return `<ol>\n${match}</ol>`;
+      }
+      return match;
+    });
+
+    // Paragraphs: split by double line breaks, wrap as <p> if not heading, blockquote, list, hr, codeblock
+    const lines = md.split(/\n{2,}/);
+    md = lines.map(block => {
+      block = block.trim();
+      // Skip if block starts with these tags
+      if (/^(<\/?(h\d|ul|ol|li|blockquote|pre|code|hr|p|strong|em|del|a|img)[^>]*>)/i.test(block)) {
+        return block;
+      } 
+      return `<p>${block}</p>`;
+    }).join('\n');
+
+    // Restore code blocks
+    md = md.replace(/\x00CODEBLOCK(\d+)\x00/g, (m, idx) => {
+      const code = codeBlocks[+idx];
+      // we wrapped & < > already, so just put it inside <pre><code>
+      return `<pre><code>${code.trim()}</code></pre>`;
+    });
+
+    // Replace double line breaks inside paragraphs with <br>
+    md = md.replace(/<p>([\s\S]*?)<\/p>/g, (m, content) => {
+      return `<p>${content.replace(/\n/g, '<br/>')}</p>`;
+    });
+
+    return sanitizeHTML(md);
+  }
+
+  // Render all posts list
+  function renderPostsList(posts) {
+    if(!posts.length) {
+      postsListEl.innerHTML = '<li><em>No posts published yet.</em></li>';
+      return;
+    }
+    // Sort posts by date descending
+    posts.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+    postsListEl.innerHTML = '';
+    for (const post of posts) {
+      const li = document.createElement('li');
+      li.tabIndex = 0;
+      li.setAttribute('role', 'button');
+      li.setAttribute('aria-label', `Read post titled ${post.title} published on ${post.date}`);
+      li.dataset.id = post.id;
+      const h2 = document.createElement('h2');
+      h2.textContent = post.title;
+      const time = document.createElement('time');
+      time.dateTime = post.date;
+      time.textContent = new Date(post.date).toLocaleDateString(undefined, {
+        year: 'numeric', month: 'short', day: 'numeric'
+      });
+
+      li.appendChild(h2);
+      li.appendChild(time);
+      postsListEl.appendChild(li);
+    }
+  }
+
+  // Show single post
+  function showPost(post) {
+    postTitleEl.textContent = post.title;
+    postDateEl.textContent = new Date(post.date).toLocaleDateString(undefined, {
+      year: 'numeric', month: 'long', day: 'numeric'
+    });
+    postDateEl.dateTime = post.date;
+
+    // Render Markdown content to HTML
+    postContentEl.innerHTML = parseMarkdown(post.content);
+
+    postViewEl.classList.add('active');
+    postsListEl.style.display = 'none';
+    postViewEl.focus();
+  }
+
+  // Hide post view, show list
+  function hidePost() {
+    postViewEl.classList.remove('active');
+    postsListEl.style.display = '';
+    postsListEl.focus();
+  }
+
+  // Generate unique ID for posts
+  function generateId() {
+    return 'post_' + Math.random().toString(36).slice(2,10);
+  }
+
+  // Event: on publish button
+  publishBtn.addEventListener('click', () => {
+    const title = editorTitleInput.value.trim();
+    const date = editorDateInput.value;
+    const content = markdownInput.value.trim();
+
+    if(!title) {
+      alert('Please enter a title for the post.');
+      editorTitleInput.focus();
+      return;
+    }
+    if(!date) {
+      alert('Please select a date for the post.');
+      editorDateInput.focus();
+      return;
+    }
+    if(!content) {
+      alert('Please enter some markdown content for the post.');
+      markdownInput.focus();
+      return;
+    }
+
+    const posts = loadPosts();
+    posts.push({
+      id: generateId(),
+      title,
+      date,
+      content
+    });
+    savePosts(posts);
+    renderPostsList(posts);
+
+    editorTitleInput.value = '';
+    editorDateInput.value = '';
+    markdownInput.value = '';
+
+    alert('Post published successfully!');
+  });
+
+  // Event: click post list item
+  postsListEl.addEventListener('click', (e) => {
+    let li = e.target;
+    while (li && li.tagName !== 'LI') {
+      li = li.parentElement;
+    }
+    if (!li) return;
+
+    const id = li.dataset.id;
+    const posts = loadPosts();
+    const post = posts.find(p => p.id === id);
+    if(post) {
+      showPost(post);
+    }
+  });
+
+  // Accessibility: allow Enter and Space keys to open post on focused list item
+  postsListEl.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.tagName === 'LI') {
+      e.preventDefault();
+      e.target.click();
+    }
+  });
+
+  // Back button click
+  backBtn.addEventListener('click', () => {
+    hidePost();
+  });
+
+  // Initialize app
+  function init() {
+    const posts = loadPosts();
+    renderPostsList(posts);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

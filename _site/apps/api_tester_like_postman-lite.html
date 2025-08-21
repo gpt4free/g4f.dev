@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>API Tester (Postman-lite)</title>
+<style>
+  /* 
+  API Tester (Postman-lite)
+  ----------------------------------
+  A single-file, modern, responsive API testing tool.
+  
+  Features:
+  - Mobile-first responsive design
+  - Supports HTTP methods: GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS
+  - Custom request headers
+  - JSON or raw body input with syntax highlighting (basic)
+  - Pretty formatted JSON response or raw text
+  - Response status, time, and size display
+  - No external dependencies
+  
+  Usage:
+  1. Enter API URL.
+  2. Choose HTTP method.
+  3. Add headers if needed.
+  4. Provide request body for relevant methods.
+  5. Click "Send" to perform request.
+  6. View response below.
+  
+  Author: ChatGPT
+  Date: 2024-06
+  */
+
+  /* MOBILE-FIRST BASE */
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    background: #f7f8fa;
+    color: #222;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  header {
+    background: #2f80ed;
+    color: #fff;
+    padding: 1rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.25rem;
+    letter-spacing: 0.05em;
+  }
+
+  main {
+    flex: 1;
+    padding: 1rem;
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  form {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 2px 7px rgb(0 0 0 /0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* URL and method row */
+  .request-line {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .request-line select,
+  .request-line input[type="url"] {
+    font-size: 1rem;
+    padding: 0.5rem 0.75rem;
+    border: 1.5px solid #ccc;
+    border-radius: 6px;
+    flex: 1;
+    transition: border-color 0.3s;
+  }
+
+  .request-line select {
+    max-width: 6.25rem;
+    background: #f0f4ff;
+    border-color: #2f80ed;
+    color: #2f80ed;
+    font-weight: 600;
+  }
+
+  .request-line select:focus,
+  .request-line input[type="url"]:focus {
+    outline: none;
+    border-color: #2f80ed;
+    box-shadow: 0 0 4px #2f80edaa;
+  }
+
+  /* Headers section */
+  .headers {
+    background: #f9fafb;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .headers label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #555;
+  }
+
+  .headers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+
+  .header-row {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .header-row input[type="text"] {
+    flex: 1;
+    padding: 0.375rem 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: border-color 0.3s;
+  }
+
+  .header-row input[type="text"]:focus {
+    outline: none;
+    border-color: #2f80ed;
+    box-shadow: 0 0 4px #2f80edaa;
+  }
+
+  .header-row button.remove-header {
+    background: transparent;
+    border: none;
+    color: #e74c3c;
+    font-size: 1.25rem;
+    cursor: pointer;
+    user-select: none;
+    padding: 0 4px;
+    line-height: 1;
+  }
+
+  .add-header-btn {
+    align-self: flex-start;
+    margin-top: 0.5rem;
+    background: #2f80ed;
+    border: none;
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background-color 0.3s;
+  }
+
+  .add-header-btn:hover {
+    background: #1c5ed6;
+  }
+
+  /* Body section */
+  .body-section {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .body-section label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+  }
+
+  #bodyInput {
+    font-family: "SFMono-Regular", Consolas, Liberation Mono,
+      Menlo, monospace;
+    font-size: 0.9rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 0.75rem;
+    min-height: 120px;
+    resize: vertical;
+    background: #fefefe;
+    color: #222;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+
+  #bodyInput[disabled] {
+    background: #eee;
+    color: #888;
+  }
+
+  /* Send button */
+  button#sendBtn {
+    background: #27ae60;
+    border: none;
+    color: white;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+
+  button#sendBtn:disabled {
+    background: #99d5a1;
+    cursor: default;
+  }
+
+  button#sendBtn:hover:not(:disabled) {
+    background: #1e8c44;
+  }
+
+  /* Response section */
+  .response-section {
+    margin-top: 1rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgb(0 0 0 /0.1);
+    padding: 1rem;
+  }
+
+  .response-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+    color: #555;
+  }
+
+  .response-info span {
+    user-select: text;
+  }
+
+  .response-status {
+    font-weight: 700;
+  }
+
+  .response-status.ok {
+    color: #27ae60;
+  }
+
+  .response-status.error {
+    color: #e74c3c;
+  }
+
+  pre#responseOutput {
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: "SFMono-Regular", Consolas, Liberation Mono,
+      Menlo, monospace;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    padding: 1rem;
+    max-height: 400px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* Scrollbar styling */
+  pre#responseOutput::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+
+  pre#responseOutput::-webkit-scrollbar-thumb {
+    background: #444c56;
+    border-radius: 4px;
+  }
+
+  /* Media queries for bigger screens */
+  @media(min-width: 600px) {
+    .request-line {
+      gap: 1rem;
+    }
+
+    main {
+      padding: 2rem;
+    }
+
+    #bodyInput {
+      min-height: 180px;
+    }
+  }
+
+</style>
+</head>
+<body>
+
+<header>API Tester (Postman-lite)</header>
+
+<main>
+  <form id="apiForm" autocomplete="off" novalidate>
+    <div class="request-line">
+      <select id="method" name="method" aria-label="HTTP method" title="HTTP Method">
+        <option value="GET" selected>GET</option>
+        <option value="POST">POST</option>
+        <option value="PUT">PUT</option>
+        <option value="DELETE">DELETE</option>
+        <option value="PATCH">PATCH</option>
+        <option value="HEAD">HEAD</option>
+        <option value="OPTIONS">OPTIONS</option>
+      </select>
+      <input
+        type="url"
+        id="url"
+        name="url"
+        placeholder="https://example.com/api"
+        required
+        aria-label="Request URL"
+        title="Request URL"
+        spellcheck="false"
+      />
+    </div>
+
+    <section class="headers" aria-label="Request Headers">
+      <label for="headersList">Headers</label>
+      <div class="headers-list" id="headersList" role="list">
+        <!-- Dynamic header rows inserted here -->
+      </div>
+      <button type="button" class="add-header-btn" id="addHeaderBtn" aria-label="Add Header">
+        + Add Header
+      </button>
+    </section>
+
+    <section class="body-section" aria-label="Request Body">
+      <label for="bodyInput">Body (JSON or raw)</label>
+      <textarea id="bodyInput" name="bodyInput" placeholder="Request body..." disabled aria-disabled="true" spellcheck="false"></textarea>
+    </section>
+
+    <button type="submit" id="sendBtn" aria-live="polite" aria-busy="false">Send</button>
+  </form>
+
+  <section class="response-section" aria-live="polite" aria-atomic="true" aria-label="Response Output" hidden>
+    <div class="response-info" id="responseInfo">
+      <!-- Status, time, size -->
+    </div>
+    <pre id="responseOutput" tabindex="0" aria-label="Response Body"></pre>
+  </section>
+</main>
+
+<script>
+/* API Tester JS */
+// Immediately Invoked Function Expression to avoid global pollution
+(() => {
+  const form = document.getElementById('apiForm');
+  const methodSelect = document.getElementById('method');
+  const urlInput = document.getElementById('url');
+  const headersList = document.getElementById('headersList');
+  const addHeaderBtn = document.getElementById('addHeaderBtn');
+  const bodyInput = document.getElementById('bodyInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const responseSection = document.querySelector('.response-section');
+  const responseInfo = document.getElementById('responseInfo');
+  const responseOutput = document.getElementById('responseOutput');
+
+  // HTTP methods that allow body
+  const METHODS_WITH_BODY = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+  // Initialize with one empty header row
+  function createHeaderRow(key = '', value = '') {
+    const row = document.createElement('div');
+    row.className = 'header-row';
+    row.setAttribute('role', 'listitem');
+
+    // Key input
+    const keyInput = document.createElement('input');
+    keyInput.type = 'text';
+    keyInput.placeholder = 'Header name';
+    keyInput.value = key;
+    keyInput.autocapitalize = 'none';
+    keyInput.spellcheck = false;
+    keyInput.name = 'headerKey';
+    keyInput.ariaLabel = 'Header name';
+    keyInput.title = 'Header Name';
+    row.appendChild(keyInput);
+
+    // Value input
+    const valueInput = document.createElement('input');
+    valueInput.type = 'text';
+    valueInput.placeholder = 'Header value';
+    valueInput.value = value;
+    valueInput.autocapitalize = 'none';
+    valueInput.spellcheck = false;
+    valueInput.name = 'headerValue';
+    valueInput.ariaLabel = 'Header value';
+    valueInput.title = 'Header Value';
+    row.appendChild(valueInput);
+
+    // Remove button
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'remove-header';
+    removeBtn.setAttribute('aria-label', 'Remove header');
+    removeBtn.title = 'Remove Header';
+    removeBtn.textContent = '×';
+    removeBtn.addEventListener('click', () => {
+      headersList.removeChild(row);
+      // Ensure at least one empty header line
+      if (!headersList.hasChildNodes()) {
+        headersList.appendChild(createHeaderRow());
+      }
+    });
+    row.appendChild(removeBtn);
+
+    return row;
+  }
+
+  // Add initial header row on load
+  headersList.appendChild(createHeaderRow());
+
+  // Add header row on button click
+  addHeaderBtn.addEventListener('click', () => {
+    headersList.appendChild(createHeaderRow());
+  });
+
+  // Enable/disable body input based on method
+  function updateBodyInputState() {
+    const method = methodSelect.value.toUpperCase();
+    if (METHODS_WITH_BODY.has(method)) {
+      bodyInput.disabled = false;
+      bodyInput.setAttribute('aria-disabled', 'false');
+    } else {
+      bodyInput.disabled = true;
+      bodyInput.setAttribute('aria-disabled', 'true');
+      bodyInput.value = '';
+    }
+  }
+
+  // Format JSON if valid, otherwise leave as is
+  function tryFormatJSON(text) {
+    if (!text.trim()) return '';
+    try {
+      return JSON.stringify(JSON.parse(text), null, 2);
+    } catch {
+      return text;
+    }
+  }
+
+  // Syntax highlight — very basic for JSON only
+  function syntaxHighlight(json) {
+    // Escape html
+    json = json
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    // Colors:
+    return json.replace(
+      /("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|\b-?\d+\.?\d*(e[+\-]?\d+)?\b)/g,
+      match => {
+        let cls = 'number';
+        if (/^"/.test(match)) {
+          if (/:$/.test(match)) {
+            cls = 'key'; // key
+          } else {
+            cls = 'string'; // string
+          }
+        } else if (/true|false/.test(match)) {
+          cls = 'boolean';
+        } else if (/null/.test(match)) {
+          cls = 'null';
+        }
+        return `<span class="${cls}">${match}</span>`;
+      }
+    );
+  }
+
+  // Add minimal CSS for response highlighting dynamically
+  function addResponseHighlightingCSS() {
+    if (document.getElementById('responseHighlightingStyles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'responseHighlightingStyles';
+    style.textContent = `
+      #responseOutput .key { color: #d19a66; }
+      #responseOutput .string { color: #98c379; }
+      #responseOutput .number { color: #61afef; }
+      #responseOutput .boolean { color: #56b6c2; }
+      #responseOutput .null { color: #c678dd; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  addResponseHighlightingCSS();
+
+  // Converts Headers object to plain object for display/debugging
+  function headersToObject(headers) {
+    const obj = {};
+    for (const [key, value] of headers.entries()) {
+      obj[key] = value;
+    }
+    return obj;
+  }
+
+  // Format response size in human friendly way
+  function formatSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  // Show response info (status, time, size)
+  function showResponseInfo(status, statusText, timeMs, sizeBytes) {
+    const ok = status >= 200 && status < 300;
+    responseInfo.innerHTML = `
+      <span class="response-status ${ok ? 'ok' : 'error'}">Status: ${status} ${statusText}</span>
+      <span>Time: ${timeMs} ms</span>
+      <span>Size: ${formatSize(sizeBytes)}</span>
+    `;
+  }
+
+  // Perform fetch with given parameters
+  async function performRequest(url, method, headersObj, body) {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    // Prepare options
+    const options = {
+      method,
+      headers: headersObj,
+      signal,
+    };
+    if (METHODS_WITH_BODY.has(method) && body !== '') {
+      options.body = body;
+    }
+
+    // Start timer
+    const start = performance.now();
+
+    try {
+      const response = await fetch(url, options);
+      const end = performance.now();
+      const timeMs = Math.round(end - start);
+
+      // Determine size (sum of response headers + body size approximation)
+      const contentLength = response.headers.get('content-length');
+      let sizeBytes = contentLength ? parseInt(contentLength, 10) : 0;
+
+      // Get response text (can't call response.json() directly as body might not be JSON)
+      const text = await response.text();
+
+      // If no content-length header, estimate size from text length
+      if (!sizeBytes) {
+        sizeBytes = new TextEncoder().encode(text).length;
+      }
+
+      return {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        headers: headersToObject(response.headers),
+        bodyText: text,
+        timeMs,
+        sizeBytes,
+      };
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  // Extract headers from DOM inputs into Headers object
+  function getHeadersObject() {
+    const headers = new Headers();
+    const rows = headersList.querySelectorAll('.header-row');
+    rows.forEach(row => {
+      const [keyInput, valueInput] = row.querySelectorAll('input[type="text"]');
+      const k = keyInput.value.trim();
+      if (k !== '') {
+        headers.append(k, valueInput.value);
+      }
+    });
+    return headers;
+  }
+
+  // Validate URL input (basic)
+  function isValidURL(string) {
+    try {
+      new URL(string);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Handle form submit
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+
+    // Disable send button & set aria-busy
+    sendBtn.disabled = true;
+    sendBtn.setAttribute('aria-busy', 'true');
+    responseOutput.textContent = '';
+    responseInfo.textContent = '';
+    responseSection.hidden = true;
+
+    let url = urlInput.value.trim();
+    const method = methodSelect.value.toUpperCase();
+    const headers = getHeadersObject();
+    let body = bodyInput.value;
+
+    // Very basic URL validation
+    if (!url) {
+      alert('Please enter a valid URL.');
+      sendBtn.disabled = false;
+      sendBtn.setAttribute('aria-busy', 'false');
+      return;
+    }
+    if (!isValidURL(url)) {
+      alert('Invalid URL format.');
+      sendBtn.disabled = false;
+      sendBtn.setAttribute('aria-busy', 'false');
+      return;
+    }
+
+    // If content-type is JSON and body is provided, validate & stringify
+    let contentType = headers.get('Content-Type') || headers.get('content-type');
+    if (contentType && contentType.toLowerCase().includes('application/json') && body) {
+      try {
+        // Try parsing and re-stringifying to ensure valid JSON, and beautify input as well
+        body = JSON.stringify(JSON.parse(body));
+      } catch(e) {
+        if (!confirm('The request body is not valid JSON. Send anyway?')) {
+          sendBtn.disabled = false;
+          sendBtn.setAttribute('aria-busy', 'false');
+          return;
+        }
+      }
+    }
+
+    // Make the request
+    try {
+      const res = await performRequest(url, method, headers, body);
+
+      // Show response info
+      showResponseInfo(res.status, res.statusText, res.timeMs, res.sizeBytes);
+
+      // Display response body
+      if (res.bodyText) {
+        // Attempt JSON pretty print and syntax highlight
+        let pretty;
+        try {
+          const parsed = JSON.parse(res.bodyText);
+          pretty = JSON.stringify(parsed, null, 2);
+          // Highlight JSON
+          responseOutput.innerHTML = syntaxHighlight(pretty);
+        } catch {
+          // Not JSON, raw text output escaped
+          responseOutput.textContent = res.bodyText;
+        }
+      } else {
+        responseOutput.textContent = '[No content]';
+      }
+
+      responseSection.hidden = false;
+      responseOutput.focus();
+    } catch (err) {
+      responseInfo.innerHTML = `<span class="response-status error">Error: ${err.message}</span>`;
+      responseOutput.textContent = '';
+      responseSection.hidden = false;
+      responseOutput.focus();
+    } finally {
+      sendBtn.disabled = false;
+      sendBtn.setAttribute('aria-busy', 'false');
+    }
+  });
+
+  // Update body input state on method change
+  methodSelect.addEventListener('change', updateBodyInputState);
+
+  // Initialize body input state on load
+  updateBodyInputState();
+})();
+</script>
+
+</body>
+</html>

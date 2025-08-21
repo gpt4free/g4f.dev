@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>File-drop Image Compressor</title>
+<style>
+  /* 
+   Mobile-first Image Compressor Styles
+   - Responsive layout
+   - Clean minimal UI
+   - Visual feedback on drag-drop
+  */
+  :root {
+    --primary-color: #3f51b5;
+    --accent-color: #ff4081;
+    --bg-color: #fafafa;
+    --text-color: #212121;
+    --border-color: #ddd;
+    --border-radius: 8px;
+    --transition-time: 0.3s;
+    --max-width: 480px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background: var(--bg-color);
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    padding: 1rem;
+    min-height: 100vh;
+  }
+
+  main {
+    background: #fff;
+    max-width: var(--max-width);
+    width: 100%;
+    border-radius: var(--border-radius);
+    padding: 1rem 1rem 2rem;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  h1 {
+    margin-top: 0;
+    font-weight: 600;
+    font-size: 1.5rem;
+    text-align: center;
+  }
+
+  #drop-area {
+    margin: 1rem 0;
+    padding: 2rem 1rem;
+    width: 100%;
+    border: 3px dashed var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: #f9f9f9;
+    text-align: center;
+    color: var(--text-color);
+    transition: background-color var(--transition-time), border-color var(--transition-time);
+    user-select: none;
+  }
+
+  #drop-area.dragover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+  }
+
+  #drop-area p {
+    margin: 0;
+    font-size: 1.125rem;
+  }
+
+  input[type="file"] {
+    display: none;
+  }
+
+  label[for="fileElem"] {
+    margin-top: 0.75rem;
+    display: inline-block;
+    cursor: pointer;
+    background-color: var(--primary-color);
+    color: #fff;
+    padding: 0.5rem 1.25rem;
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    user-select: none;
+    transition: background-color var(--transition-time);
+  }
+  label[for="fileElem"]:hover {
+    background-color: var(--accent-color);
+  }
+
+  #output {
+    margin-top: 1rem;
+    width: 100%;
+    max-height: 400px;
+    overflow-y: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+  }
+
+  .image-card {
+    background: #f4f4f4;
+    border-radius: var(--border-radius);
+    padding: 0.5rem;
+    width: 140px;
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .image-card img {
+    max-width: 100%;
+    border-radius: var(--border-radius);
+    margin-bottom: 0.5rem;
+  }
+
+  .info {
+    font-size: 0.875rem;
+    color: var(--text-color);
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  button.download-btn {
+    margin-top: 0.25rem;
+    background-color: var(--primary-color);
+    border: none;
+    color: white;
+    font-size: 0.85rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color var(--transition-time);
+  }
+  button.download-btn:hover {
+    background-color: var(--accent-color);
+  }
+
+  /* Loader spinner */
+  #loader {
+    border: 4px solid #f3f3f3; /* Light grey */
+    border-top: 4px solid var(--primary-color); /* Blue */
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+    display: none;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Responsive typography */
+  @media(min-width: 600px) {
+    h1 {
+      font-size: 2rem;
+    }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Image Compressor</h1>
+  <div id="drop-area" tabindex="0" aria-label="Drag and drop images here or click to select">
+    <p>Drag & Drop images here</p>
+    <p>or</p>
+    <label for="fileElem" role="button" tabindex="0">Choose Files</label>
+    <input type="file" id="fileElem" multiple accept="image/*" aria-hidden="true" />
+  </div>
+  <div id="loader" aria-live="polite" aria-busy="true" title="Loading"></div>
+  <div id="output" aria-live="polite"></div>
+</main>
+
+<script>
+/**
+ * Image Compressor
+ * 
+ * Loads images dropped or selected by user,
+ * compresses them using canvas at 70% quality,
+ * and provides preview with download links.
+ * 
+ * Features:
+ * - Drag and Drop or File Input selection
+ * - Mobile-first responsive UI
+ * - Handles multiple images simultaneously
+ * - Shows file size before and after compression
+ * - Enables downloading compressed images
+ * 
+ * No external dependencies.
+ */
+
+(() => {
+  'use strict';
+
+  const dropArea = document.getElementById('drop-area');
+  const fileInput = document.getElementById('fileElem');
+  const output = document.getElementById('output');
+  const loader = document.getElementById('loader');
+
+  /**
+   * Utility: Format bytes to human-readable string
+   * @param {number} bytes 
+   * @returns {string}
+   */
+  function formatBytes(bytes) {
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let i = 0;
+    while(bytes >= 1024 && i < units.length - 1) {
+      bytes /= 1024;
+      i++;
+    }
+    return `${bytes.toFixed(1)} ${units[i]}`;
+  }
+
+  /**
+   * Creates an Image element loaded from a file object
+   * @param {File} file 
+   * @returns {Promise<HTMLImageElement>}
+   */
+  function loadImage(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.onload = () => resolve(img);
+      // Use a FileReader to convert file to DataURL
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.onload = e => {
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /**
+   * Compresses an image with canvas to JPEG/PNG at given quality
+   * @param {HTMLImageElement} img 
+   * @param {number} quality (0 to 1)
+   * @returns {Promise<Blob>}
+   */
+  function compressImage(img, quality = 0.7) {
+    return new Promise((resolve) => {
+      // Determine max width/height for compression (optional)
+      // For this example, we keep original size but could resize to reduce file size further.
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      // Try JPEG first if image has no transparency, else fallback to PNG
+      // Check if original image has transparency by examining pixels (could be expensive).
+      // We'll just compress all as JPEG for simplicity unless original MIME type says png/gif.
+      // We'll assume JPEG output here.
+
+      canvas.toBlob(
+        (blob) => {
+          resolve(blob);
+        },
+        'image/jpeg',
+        quality
+      );
+    });
+  }
+
+  /**
+   * Clear previous output and reset UI
+   */
+  function resetOutput() {
+    output.innerHTML = '';
+  }
+
+  /**
+   * Show loader
+   */
+  function showLoader() {
+    loader.style.display = 'block';
+  }
+
+  /**
+   * Hide loader
+   */
+  function hideLoader() {
+    loader.style.display = 'none';
+  }
+
+  /**
+   * Create image card with preview, info, and download button
+   * @param {Blob} blobCompressed 
+   * @param {Blob} blobOriginal
+   * @param {string} fileName
+   */
+  function createImageCard(blobCompressed, blobOriginal, fileName) {
+    const urlCompressed = URL.createObjectURL(blobCompressed);
+    const urlOriginal = URL.createObjectURL(blobOriginal);
+
+    const card = document.createElement('div');
+    card.className = 'image-card';
+
+    const img = document.createElement('img');
+    img.src = urlCompressed;
+    img.alt = `Compressed preview of ${fileName}`;
+    img.loading = 'lazy';
+
+    const info = document.createElement('div');
+    info.className = 'info';
+    info.innerHTML =
+      `Original: ${formatBytes(blobOriginal.size)}<br />
+       Compressed: ${formatBytes(blobCompressed.size)}`;
+
+    const downloadBtn = document.createElement('button');
+    downloadBtn.className = 'download-btn';
+    downloadBtn.type = 'button';
+    downloadBtn.textContent = 'Download';
+    downloadBtn.title = `Download compressed image: ${fileName}`;
+    downloadBtn.onclick = () => {
+      const link = document.createElement('a');
+      link.href = urlCompressed;
+      // Rename file: original basename + '-compressed.jpg'
+      const baseName = fileName.replace(/\.[^/.]+$/, '');
+      link.download = baseName + '-compressed.jpg';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
+    card.appendChild(img);
+    card.appendChild(info);
+    card.appendChild(downloadBtn);
+
+    output.appendChild(card);
+  }
+
+  /**
+   * Process array of files: compress images and show output
+   * @param {FileList|File[]} files 
+   */
+  async function processFiles(files) {
+    if (!files.length) return;
+
+    showLoader();
+
+    resetOutput();
+
+    const supportedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+    for (const file of files) {
+      if (!supportedTypes.includes(file.type)) {
+        // Skip unsupported files silently
+        continue;
+      }
+
+      try {
+        const img = await loadImage(file);
+        const compressedBlob = await compressImage(img);
+        createImageCard(compressedBlob, file, file.name);
+      } catch (err) {
+        // Show error card in output
+        const errDiv = document.createElement('div');
+        errDiv.className = 'image-card';
+        errDiv.style.color = 'red';
+        errDiv.textContent = `Error processing ${file.name}: ${err.message}`;
+        output.appendChild(errDiv);
+      }
+    }
+
+    hideLoader();
+  }
+
+  /**
+   * Prevent default for drag events to allow drop
+   */
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  /**
+   * Highlight drop area when dragging files over
+   */
+  function highlight() {
+    dropArea.classList.add('dragover');
+  }
+
+  /**
+   * Remove highlight
+   */
+  function unhighlight() {
+    dropArea.classList.remove('dragover');
+  }
+
+  /**
+   * Handle files dropped on drop area
+   * @param {DragEvent} e 
+   */
+  function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    if (files && files.length) {
+      processFiles(files);
+    }
+  }
+
+  /**
+   * Handle files selected from file input
+   * @param {Event} e 
+   */
+  function handleFilesSelected(e) {
+    const files = e.target.files;
+    if (files && files.length) {
+      processFiles(files);
+      // Reset the input to allow selection of same file again if desired
+      e.target.value = null;
+    }
+  }
+
+  /**
+   * Accessibility: allow drop area to be keyboard selectable and trigger file input on Enter or Space
+   */
+  dropArea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      fileInput.click();
+    }
+  });
+
+  // Event listeners for drag and drop
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropArea.addEventListener(eventName, (e) => {
+      preventDefaults(e);
+      highlight();
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropArea.addEventListener(eventName, (e) => {
+      preventDefaults(e);
+      unhighlight();
+    });
+  });
+
+  dropArea.addEventListener('drop', handleDrop);
+  fileInput.addEventListener('change', handleFilesSelected);
+
+})();
+</script>
+</body>
+</html>

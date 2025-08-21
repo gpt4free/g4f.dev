@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>G4F – Complete Configuration Guide | GPT4Free Documentation</title>
+
+    <meta name="description" content="Complete configuration guide for GPT4Free (G4F): Environment variables, API keys, cookie setup, HAR files, debug mode, proxies, and GUI Authentication." />
+    <meta name="keywords" content="GPT4Free configuration, G4F API key, environment variables, cookie setup, HAR files, proxy setup, debug mode, GUI authentication, AI configuration" />
+    <meta name="author" content="GPT4Free Team" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="G4F – Complete Configuration Guide | GPT4Free Documentation" />
+    <meta property="og:description" content="Complete configuration guide for GPT4Free with step-by-step instructions on API keys, cookies, HAR files, proxies, and GUI Authentication." />
+    <meta property="og:url" content="https://g4f.dev/docs/config.html" />
+    <meta property="og:site_name" content="GPT4Free Documentation" />
+    <meta property="og:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="G4F – Complete Configuration Guide | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Complete configuration guide for GPT4Free including API keys, cookies, HAR files, proxies, debug mode, and more." />
+    <meta name="twitter:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://g4f.dev/docs/config.html" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png" />
+    <link rel="manifest" href="/dist/img/site.webmanifest" />
+
+    <!-- GitHub Primer CSS & styles -->
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
+
+    <style>
+        :root {
+            --accent: #8b3dff;
+            --background: #16101b;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--background);
+            color: #ddd;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            line-height: 1.6;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        a:hover,
+        a:focus {
+            color: #a67eff;
+            outline: none;
+            text-decoration: underline;
+        }
+
+        .container {
+            display: flex;
+            width: auto;
+            margin: 0;
+            gap: 4rem;
+        }
+
+        main {
+            flex: 1 1 auto;
+            background: #1e152e;
+            border-radius: 12px;
+            padding: 2rem 2.5rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            overflow-wrap: break-word;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        h2 {
+            margin-top: 3rem;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.25rem;
+        }
+
+        h3 {
+            margin-top: 2rem;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #333;
+            margin: 2rem 0;
+        }
+
+        .markdown-body pre {
+            background: #2c2247 !important;
+            border-radius: 8px;
+            padding: 1rem !important;
+            font-size: 0.9rem !important;
+            overflow-x: auto;
+            max-height: 400px;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.5);
+            color: #fff;
+        }
+
+        code {
+            font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+        }
+
+        /* Sticky table of contents */
+        nav#toc {
+            flex: 0 0 260px;
+            position: sticky;
+            top: 1.5rem;
+            background: #1e152e;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            max-height: calc(100vh - 3rem);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        nav#toc h2 {
+            font-size: 1.25rem;
+            margin-top: 0;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.25rem;
+        }
+
+        nav#toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+        nav#toc li {
+            margin-bottom: 0.75rem;
+        }
+        nav#toc a {
+            color: #9b7dff;
+            text-decoration: none;
+        }
+        nav#toc a:hover, nav#toc a:focus {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .container {
+                max-width: 100%;
+            }
+
+            nav#toc {
+                position: relative;
+                max-height: none;
+                margin-bottom: 2rem;
+                width: 100%;
+            }
+        }
+    </style>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "G4F – Complete Configuration Guide",
+      "description": "Complete configuration guide for GPT4Free: Environment variables, API keys, cookie setup, HAR files, debug mode, proxy configuration, and GUI Authentication.",
+      "author": {
+        "@type": "Organization",
+        "name": "GPT4Free"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "GPT4Free",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://g4f.dev/dist/img/favicon-32x32.png"
+        }
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://g4f.dev/docs/config.html"
+      }
+    }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="toc" aria-label="Table of contents">
+            <h2>Contents</h2>
+            <ul>
+                <li><a href="#environment-variables">1. Environment Variable &amp; API Key Configuration</a></li>
+                <li><a href="#api-key-setup">2. API Key Setup</a></li>
+                <li><a href="#cookie-configuration">3. Cookie Configuration</a></li>
+                <li><a href="#har-file-setup">4. .HAR File Setup</a></li>
+                <li><a href="#debug-mode">5. Debug Mode</a></li>
+                <li><a href="#proxy-configuration">6. Proxy Configuration</a></li>
+                <li><a href="#gui-authentication">7. GUI Authentication</a></li>
+                <li><a href="#best-practices">8. Best Practices</a></li>
+                <li><a href="/docs/">Return to Documentation</a></li>
+            </ul>
+        </nav>
+
+        <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
+            <h1 itemprop="headline">G4F – Complete Configuration Guide</h1>
+            <p>This is the <strong>all-in-one reference</strong> for configuring <strong>GPT4Free</strong>:<br />
+            Authentication, API Keys, Cookies, <code class="notranslate">.har</code> files, Debug Mode, Proxy Setup, and GUI Authentication.</p>
+
+            <hr />
+
+            <section id="environment-variables" aria-labelledby="environment-variables-heading">
+                <h2 id="environment-variables-heading">1. Environment Variable &amp; API Key Configuration</h2>
+                <p>Create a <code class="notranslate">.env</code> file in your cookies/config directory:</p>
+                <pre><code class="notranslate">HUUGINGFACE_API_KEY=
+POLLINATIONS_API_KEY=
+GEMINI_API_KEY=
+TOGETHER_API_KEY=
+DEEPINFRA_API_KEY=
+OPENAI_API_KEY=
+GROQ_API_KEY=
+OPENROUTER_API_KEY=</code></pre>
+            </section>
+
+            <hr />
+
+            <section id="api-key-setup" aria-labelledby="api-key-setup-heading">
+                <h2 id="api-key-setup-heading">2. API Key Setup</h2>
+                <p>Set your API keys as <strong>environment variables</strong>:</p>
+                <pre><code class="notranslate"># macOS / Linux
+export OPENAI_API_KEY="your_key"
+export GEMINI_API_KEY="your_key"
+
+# Windows CMD
+set OPENAI_API_KEY=your_key
+
+# Windows PowerShell
+$env:OPENAI_API_KEY = "your_key"</code></pre>
+                <p><strong>Example in Python:</strong></p>
+                <pre><code class="notranslate">import os
+from g4f.client import Client
+from g4f.Provider import OpenaiAPI
+
+client = Client(provider=OpenaiAPI, api_key=os.getenv("OPENAI_API_KEY"))</code></pre>
+            </section>
+
+            <hr />
+
+            <section id="cookie-configuration" aria-labelledby="cookie-configuration-heading">
+                <h2 id="cookie-configuration-heading">3. Cookie Configuration</h2>
+                <p>Some providers (Bing, Meta AI, Google Gemini, Microsoft Designer) require cookies.</p>
+                <p><strong>Required Cookies:</strong></p>
+                <ul>
+                    <li><strong>Bing</strong> → <code class="notranslate">_U</code></li>
+                    <li><strong>Google</strong> → all cookies starting with <code class="notranslate">__Secure-1PSID</code></li>
+                </ul>
+                <p><strong>Set Cookies in Code:</strong></p>
+                <pre><code class="notranslate">from g4f.cookies import set_cookies
+set_cookies(".bing.com", {"_U": "cookie_value"})
+set_cookies(".google.com", {"__Secure-1PSID": "cookie_value"})</code></pre>
+                <p><strong>From JSON/HAR Files:</strong></p>
+                <ul>
+                    <li>Place <code class="notranslate">.json</code> or <code class="notranslate">.har</code> files in your config/cookies directory.</li>
+                    <li>Use the <a href="https://chrome.google.com/webstore/detail/editthiscookie/fngmhnnpilhplaeedifhccceomclgfbg" rel="nofollow noopener noreferrer" target="_blank">EditThisCookie extension</a> to export cookies.</li>
+                </ul>
+                <p><strong>Load Cookies in Python:</strong></p>
+                <pre><code class="notranslate">import os
+from g4f.cookies import set_cookies_dir, read_cookie_files
+
+cookies_dir = os.path.join(os.path.dirname(__file__), "har_and_cookies")
+set_cookies_dir(cookies_dir)
+read_cookie_files()</code></pre>
+                <p><strong>Check Current Cookies Directory Path:</strong></p>
+                <pre><code class="notranslate">from g4f.cookies import get_cookies_dir
+print(get_cookies_dir())</code></pre>
+                <p><strong>💡 One-liner (CLI):</strong></p>
+                <pre><code class="notranslate">python -c "from g4f.cookies import get_cookies_dir; print(get_cookies_dir())"</code></pre>
+            </section>
+
+            <hr />
+
+            <section id="har-file-setup" aria-labelledby="har-file-setup-heading">
+                <h2 id="har-file-setup-heading">4. <code class="notranslate">.HAR</code> File Setup</h2>
+                <h3>What is a <code class="notranslate">.HAR</code> File?</h3>
+                <p>A <code class="notranslate">.HAR</code> (HTTP Archive) file captures all network requests and cookies from a session.<br />
+                Some providers like <strong><code class="notranslate">OpenaiChat</code></strong> require a <code class="notranslate">.HAR</code> file to authenticate without an API key.</p>
+                <h3>Creating a <code class="notranslate">.HAR</code> File:</h3>
+                <ol>
+                    <li>Login to the provider (e.g., <a href="https://chatgpt.com/" rel="nofollow noopener noreferrer" target="_blank">chatgpt.com</a>).</li>
+                    <li>Open Developer Tools (Right-click → Inspect or <code class="notranslate">F12</code>).</li>
+                    <li>Go to the Network tab.</li>
+                    <li>Reload the page to capture activity.</li>
+                    <li>Perform at least one chat action/message.</li>
+                    <li>Right-click inside Network requests → <strong>Save all as HAR with content</strong>.</li>
+                    <li>Save it as <code class="notranslate">provider_name.har</code> inside <code class="notranslate">./har_and_cookies/</code>.</li>
+                </ol>
+                <p>🔒 <strong>Security Note:</strong> <code class="notranslate">.HAR</code> files contain sensitive cookies — never share them.</p>
+                <p><strong>Example Auto-Loading HAR in Python:</strong></p>
+                <pre><code class="notranslate">from g4f.cookies import read_cookie_files
+read_cookie_files()  # Auto-loads all .har and .json cookie files in the cookies dir</code></pre>
+            </section>
+
+            <hr />
+
+            <section id="debug-mode" aria-labelledby="debug-mode-heading">
+                <h2 id="debug-mode-heading">5. Debug Mode</h2>
+                <p>Enable debug output:</p>
+                <pre><code class="notranslate">import g4f.debug
+g4f.debug.logging = True</code></pre>
+                <p>Example debug log output:</p>
+                <pre><code>Read .har file: ./har_and_cookies/you.com.har
+Cookies added: 10 from .you.com
+Read cookie file: ./har_and_cookies/google.json
+Cookies added: 16 from .google.com</code></pre>
+            </section>
+
+            <hr />
+
+            <section id="proxy-configuration" aria-labelledby="proxy-configuration-heading">
+                <h2 id="proxy-configuration-heading">6. Proxy Configuration</h2>
+                <p>Set a global proxy to hide/change your IP:</p>
+                <p><strong>macOS / Linux:</strong></p>
+                <pre><code class="notranslate">export G4F_PROXY="http://host:port"</code></pre>
+                <p><strong>Windows CMD:</strong></p>
+                <pre><code class="notranslate">set G4F_PROXY=http://host:port</code></pre>
+            </section>
+
+            <hr />
+
+            <section id="gui-authentication" aria-labelledby="gui-authentication-heading">
+                <h2 id="gui-authentication-heading">7. GUI Authentication</h2>
+                <p>Set a password:</p>
+                <pre><code class="notranslate">export G4F_API_KEY="mypassword"</code></pre>
+                <p>Run the server:</p>
+                <pre><code class="notranslate">python -m g4f --debug --port 8080 --g4f-api-key $G4F_API_KEY</code></pre>
+                <p>Access web UI:</p>
+                <ul>
+                    <li>Go to: <code class="notranslate">http://localhost:8080/chat/</code></li>
+                    <li>Username: <strong>anything</strong> (e.g., <code class="notranslate">admin</code>)</li>
+                    <li>Password: <strong>your G4F_API_KEY</strong></li>
+                </ul>
+            </section>
+
+            <hr />
+
+            <section id="best-practices" aria-labelledby="best-practices-heading">
+                <h2 id="best-practices-heading">8. Best Practices</h2>
+                <ul>
+                  <li>🔒 Never hardcode credentials — use <code class="notranslate">.env</code> or environment variables</li>
+                  <li>🔄 Rotate keys every 90 days</li>
+                  <li>🛡 Secure <code class="notranslate">.har</code> and <code class="notranslate">.json</code> cookie files</li>
+                  <li>📊 Use rate limiting in production</li>
+                </ul>
+            </section>
+
+            <hr />
+
+            <p><a href="/docs/">← Return to Documentation</a></p>
+        </main>
+    </div>
+</body>
+</html>

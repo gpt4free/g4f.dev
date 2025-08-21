@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Responsive Snake Game</title>
+<style>
+  /* 
+  Responsive Snake Game
+  ---------------------
+  Mobile-first, clean and minimal design with smooth interaction.
+  Controls:
+    - Arrow keys or WASD to move the snake
+    - On mobile devices, tap directional buttons
+  Features:
+    - Responsive canvas size based on viewport
+    - Restart button
+    - Score display
+  Author: ChatGPT
+  Date: 2024
+  */
+
+  /* Reset default margins and paddings */
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    background: #121212;
+    color: #eee;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
+    justify-content: center;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1 {
+    font-weight: 700;
+    font-size: 1.5rem;
+    margin-bottom: 0.25em;
+    text-align: center;
+  }
+
+  #game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 90vw;
+    max-width: 400px;
+  }
+
+  canvas {
+    background-color: #222;
+    border-radius: 12px;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1; /* Keep square on all devices */
+    display: block;
+    touch-action: none; /* Disable default gestures */
+  }
+
+  #score {
+    margin-top: 0.75em;
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+
+  #controls {
+    margin-top: 1em;
+    display: flex;
+    justify-content: center;
+    gap: 1.5em;
+  }
+
+  /* Directional buttons container for mobile */
+  #directional-buttons {
+    display: grid;
+    grid-template-columns: 3rem 3rem 3rem;
+    grid-template-rows: 3rem 3rem 3rem;
+    gap: 0.5rem;
+    user-select: none;
+  }
+
+  #directional-buttons button {
+    background-color: #333;
+    border: none;
+    border-radius: 8px;
+    color: #eee;
+    font-size: 1.25rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background-color 0.15s ease;
+    touch-action: manipulation;
+  }
+
+  #directional-buttons button:active,
+  #directional-buttons button:focus {
+    background-color: #66bb6a;
+    outline: none;
+  }
+
+  /* Position arrows */
+  #btn-up { grid-area: 1 / 2 / 2 / 3; }
+  #btn-left { grid-area: 2 / 1 / 3 / 2; }
+  #btn-down { grid-area: 2 / 2 / 3 / 3; }
+  #btn-right { grid-area: 2 / 3 / 3 / 4; }
+
+  #restart-btn {
+    margin-top: 1em;
+    background-color: #4caf50;
+    border: none;
+    border-radius: 12px;
+    padding: 0.8em 1.5em;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #121212;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s ease;
+  }
+
+  #restart-btn:hover,
+  #restart-btn:focus {
+    background-color: #66bb6a;
+    outline: none;
+  }
+
+  /* Larger buttons on small devices */
+  @media (min-width: 480px) {
+    #directional-buttons {
+      gap: 1rem;
+      grid-template-columns: 4rem 4rem 4rem;
+      grid-template-rows: 4rem 4rem 4rem;
+    }
+    #directional-buttons button {
+      font-size: 1.5rem;
+      border-radius: 12px;
+    }
+  }
+
+</style>
+</head>
+<body>
+  <h1>Snake Game</h1>
+  <div id="game-container" role="main" aria-label="Snake game container">
+    <canvas id="game" width="400" height="400" aria-label="Snake game board"></canvas>
+    <div id="score" aria-live="polite" aria-atomic="true">Score: 0</div>
+
+    <div id="controls" aria-label="Game controls">
+      <div id="directional-buttons" role="group" aria-label="Movement controls">
+        <button id="btn-up" aria-label="Move up" title="Move Up" tabindex="0">&#9650;</button>
+        <button id="btn-left" aria-label="Move left" title="Move Left" tabindex="0">&#9664;</button>
+        <button id="btn-down" aria-label="Move down" title="Move Down" tabindex="0">&#9660;</button>
+        <button id="btn-right" aria-label="Move right" title="Move Right" tabindex="0">&#9654;</button>
+      </div>
+    </div>
+    <button id="restart-btn" aria-label="Restart game">Restart</button>
+  </div>
+
+<script>
+  /*
+   * Modern responsive Snake game implementation
+   * Author: ChatGPT
+   * Date: 2024
+   */
+
+  (function() {
+    'use strict';
+
+    // Canvas and drawing context
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    // Score display
+    const scoreEl = document.getElementById('score');
+
+    // Direction buttons
+    const btnUp = document.getElementById('btn-up');
+    const btnDown = document.getElementById('btn-down');
+    const btnLeft = document.getElementById('btn-left');
+    const btnRight = document.getElementById('btn-right');
+
+    // Restart button
+    const restartBtn = document.getElementById('restart-btn');
+
+    // Game variables
+    let snake = [];
+    let direction = { x: 1, y: 0 }; // Moving right initially
+    let nextDirection = { x: 1, y: 0 };
+    let food = null;
+    let gridSize = 20; // number of cells per row/column (square grid)
+    let tileSize = 20; // pixel size of each tile (adjusted on resize)
+    let speed = 7; // game speed (frames per second)
+    let score = 0;
+    let gameLoopId = null;
+    let isGameOver = false;
+
+    /**
+     * Initialize or restart the game state
+     */
+    function init() {
+      // Reset variables
+      direction = { x: 1, y: 0 };
+      nextDirection = { x: 1, y: 0 };
+      score = 0;
+      isGameOver = false;
+
+      // Create initial snake (length 5) centered horizontally and vertically
+      snake = [];
+      const startX = Math.floor(gridSize / 2) - 2;
+      const startY = Math.floor(gridSize / 2);
+      for (let i = 0; i < 5; i++) {
+        snake.push({ x: startX + i, y: startY });
+      }
+
+      placeFood();
+      updateScore();
+      startGameLoop();
+    }
+
+    /**
+     * Resize canvas and tileSize based on viewport width (responsive)
+     */
+    function resizeCanvas() {
+      // Calculate canvas size as smaller of viewport width or height capped to 90vw max 400px
+      let size = Math.min(window.innerWidth * 0.9, 400);
+      canvas.style.width = size + 'px';
+      canvas.style.height = size + 'px';
+
+      // Set tileSize accordingly to fit gridSize tiles
+      tileSize = size / gridSize;
+
+      // Match canvas internal resolution for sharp rendering on HiDPI screens
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = size * dpr;
+      canvas.height = size * dpr;
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset any transforms
+      ctx.scale(dpr, dpr);
+    }
+
+    /**
+     * Place food at a random location not occupied by the snake
+     */
+    function placeFood() {
+      let newFood;
+      while (true) {
+        newFood = {
+          x: Math.floor(Math.random() * gridSize),
+          y: Math.floor(Math.random() * gridSize)
+        };
+        // Check if food is not on the snake
+        if (!snake.some(segment => segment.x === newFood.x && segment.y === newFood.y)) {
+          break;
+        }
+      }
+      food = newFood;
+    }
+
+    /**
+     * Draw the game frame: snake, food, and background
+     */
+    function draw() {
+      // Clear canvas
+      ctx.fillStyle = '#222';
+      ctx.fillRect(0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1));
+
+      // Draw food - bright green circle
+      ctx.fillStyle = '#66bb6a';
+      drawCircle(food.x, food.y);
+
+      // Draw snake - gradient green rectangles with rounded corners
+      for (let i = 0; i < snake.length; i++) {
+        const segment = snake[i];
+        const gradient = ctx.createLinearGradient(
+          segment.x * tileSize,
+          segment.y * tileSize,
+          (segment.x + 1) * tileSize,
+          (segment.y + 1) * tileSize
+        );
+
+        if (i === 0) {
+          // Head brighter
+          gradient.addColorStop(0, '#a5d6a7');
+          gradient.addColorStop(1, '#81c784');
+        } else {
+          gradient.addColorStop(0, '#4caf50');
+          gradient.addColorStop(1, '#388e3c');
+        }
+        ctx.fillStyle = gradient;
+        drawRoundedRect(segment.x * tileSize, segment.y * tileSize, tileSize, tileSize, tileSize * 0.3);
+      }
+    }
+
+    /**
+     * Draw a rounded rectangle for snake segments
+     * @param {number} x - x position in pixels
+     * @param {number} y - y position in pixels
+     * @param {number} w - width
+     * @param {number} h - height
+     * @param {number} r - corner radius
+     */
+    function drawRoundedRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    /**
+     * Draw a circle centered in a tile (for food)
+     * @param {number} gridX - x coordinate on grid
+     * @param {number} gridY - y coordinate on grid
+     */
+    function drawCircle(gridX, gridY) {
+      const centerX = gridX * tileSize + tileSize / 2;
+      const centerY = gridY * tileSize + tileSize / 2;
+      const radius = tileSize * 0.4;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+
+    /**
+     * Update snake position and state, check collisions, and update score
+     */
+    function update() {
+      if (isGameOver) return;
+
+      // Update direction from queued input, ignoring reverse moves
+      if (
+        (nextDirection.x !== -direction.x || nextDirection.y !== -direction.y) &&
+        (nextDirection.x !== direction.x || nextDirection.y !== direction.y)
+      ) {
+        direction = nextDirection;
+      }
+
+      // Calculate next head position
+      const head = snake[snake.length - 1];
+      let newHead = {
+        x: head.x + direction.x,
+        y: head.y + direction.y
+      };
+
+      // Wrap around edges (optional: comment this block to enable wall collision)
+      if (newHead.x < 0) newHead.x = gridSize - 1;
+      if (newHead.x >= gridSize) newHead.x = 0;
+      if (newHead.y < 0) newHead.y = gridSize - 1;
+      if (newHead.y >= gridSize) newHead.y = 0;
+
+      // Check collision with self
+      if (snake.some(segment => segment.x === newHead.x && segment.y === newHead.y)) {
+        endGame();
+        return;
+      }
+
+      // Add new head position
+      snake.push(newHead);
+
+      // Check if food eaten
+      if (newHead.x === food.x && newHead.y === food.y) {
+        score++;
+        updateScore();
+        placeFood();
+      } else {
+        // Remove tail (move)
+        snake.shift();
+      }
+    }
+
+    /**
+     * Update score display
+     */
+    function updateScore() {
+      scoreEl.textContent = `Score: ${score}`;
+    }
+
+    /**
+     * Handle keydown events for controlling the snake
+     * @param {KeyboardEvent} e 
+     */
+    function handleKeydown(e) {
+      // Prevent arrow keys from scrolling the page
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D'].includes(e.key)) {
+        e.preventDefault();
+      }
+
+      switch (e.key) {
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+          queueDirection(0, -1);
+          break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+          queueDirection(0, 1);
+          break;
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+          queueDirection(-1, 0);
+          break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+          queueDirection(1, 0);
+          break;
+      }
+    }
+
+    /**
+     * Queue a direction change to be applied on next update
+     * @param {number} x 
+     * @param {number} y 
+     */
+    function queueDirection(x, y) {
+      nextDirection = { x, y };
+    }
+
+    /**
+     * Start the game loop with consistent frame rate
+     */
+    function startGameLoop() {
+      let lastTime = 0;
+      const interval = 1000 / speed;
+
+      function loop(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        const elapsed = timestamp - lastTime;
+
+        if (elapsed > interval) {
+          lastTime = timestamp - (elapsed % interval);
+          update();
+          draw();
+        }
+
+        if (!isGameOver) {
+          gameLoopId = requestAnimationFrame(loop);
+        }
+      }
+
+      if (gameLoopId) cancelAnimationFrame(gameLoopId);
+      gameLoopId = requestAnimationFrame(loop);
+    }
+
+    /**
+     * End the game and show game over alert
+     */
+    function endGame() {
+      isGameOver = true;
+      updateScore();
+      setTimeout(() => {
+        alert(`Game Over! Your score was ${score}.`);
+      }, 50);
+    }
+
+    /**
+     * Attach event listeners to buttons and keyboard
+     */
+    function attachEventListeners() {
+      // Keyboard controls
+      window.addEventListener('keydown', handleKeydown);
+
+      // Mobile directional buttons
+      btnUp.addEventListener('click', () => queueDirection(0, -1));
+      btnDown.addEventListener('click', () => queueDirection(0, 1));
+      btnLeft.addEventListener('click', () => queueDirection(-1, 0));
+      btnRight.addEventListener('click', () => queueDirection(1, 0));
+
+      // Touch support: prevent double-tap zoom and highlight on mobile
+      ['touchstart', 'touchend'].forEach(ev =>
+        [btnUp, btnDown, btnLeft, btnRight].forEach(btn =>
+          btn.addEventListener(ev, e => e.preventDefault())
+        )
+      );
+
+      // Restart button
+      restartBtn.addEventListener('click', () => init());
+
+      // Resize canvas on window resize/orientation change
+      window.addEventListener('resize', () => {
+        resizeCanvas();
+        draw();
+      });
+      window.addEventListener('orientationchange', () => {
+        resizeCanvas();
+        draw();
+      });
+    }
+
+    // Initialize everything on page load
+    resizeCanvas();
+    attachEventListeners();
+    init();
+
+  })();
+</script>
+</body>
+</html>

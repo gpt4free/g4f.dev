@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Personal Expense Tracker</title>
+<style>
+  /* 
+    Personal Expense Tracker - Responsive Mobile-First Design
+    - Simple and clean UI
+    - Responsive layout with a focus on mobile usability
+    - No external dependencies
+    - Includes an interactive expense chart
+  */
+
+  /* CSS Reset */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    margin: 0;
+    background: #f9fafb;
+    color: #333;
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    background: #4f46e5;
+    color: white;
+    padding: 1rem;
+    text-align: center;
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.1);
+  }
+
+  main {
+    flex-grow: 1;
+    max-width: 900px;
+    margin: 1rem auto;
+    padding: 0 1rem 2rem;
+  }
+
+  h1 {
+    margin: 0;
+    font-weight: 700;
+    font-size: 1.5rem;
+  }
+
+  /* Expense Input Form */
+  form {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.1);
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  form > * {
+    font-size: 1rem;
+  }
+
+  label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    transition: border-color 0.2s ease-in-out;
+  }
+  input[type="text"]:focus,
+  input[type="number"]:focus,
+  input[type="date"]:focus,
+  select:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 4px #c7d2fe;
+  }
+
+  button {
+    background: #4f46e5;
+    color: white;
+    font-weight: 700;
+    border: none;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  button:hover,
+  button:focus {
+    background: #4338ca;
+    outline: none;
+  }
+
+  /* Expense List */
+  section#expenses {
+    margin-top: 2rem;
+  }
+
+  #expenses h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.1);
+  }
+
+  thead {
+    background: #4f46e5;
+    color: white;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  tbody tr:hover {
+    background: #f3f4f6;
+  }
+
+  .amount {
+    text-align: right;
+  }
+
+  .category {
+    text-transform: capitalize;
+    font-weight: 600;
+  }
+
+  .remove-btn {
+    background: transparent;
+    color: #ef4444;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+  }
+  .remove-btn:hover {
+    color: #b91c1c;
+  }
+
+  /* Totals and Chart Section */
+  #summary {
+    margin-top: 2rem;
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.1);
+  }
+
+  #summary h2 {
+    margin-top: 0;
+  }
+
+  #total-expense {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  /* Chart Container */
+  #chart-container {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    height: 300px;
+  }
+
+  /* Responsive */
+  @media (min-width: 600px) {
+    form {
+      grid-template-columns: 2fr 1.2fr 1fr 1fr auto;
+      align-items: end;
+    }
+
+    label {
+      margin-bottom: 0;
+    }
+
+    button {
+      padding: 0.75rem;
+    }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Personal Expense Tracker</h1>
+  </header>
+  <main>
+    <!-- Expense Input Form -->
+    <form id="expense-form" aria-label="Add new expense form">
+      <div>
+        <label for="description">Description</label>
+        <input type="text" id="description" placeholder="e.g. Grocery" required />
+      </div>
+
+      <div>
+        <label for="category">Category</label>
+        <select id="category" required>
+          <option value="" disabled selected>Select category</option>
+          <option value="food">Food</option>
+          <option value="transport">Transport</option>
+          <option value="housing">Housing</option>
+          <option value="entertainment">Entertainment</option>
+          <option value="health">Health</option>
+          <option value="utilities">Utilities</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="amount">Amount ($)</label>
+        <input type="number" id="amount" min="0.01" step="0.01" placeholder="0.00" required />
+      </div>
+
+      <div>
+        <label for="date">Date</label>
+        <input type="date" id="date" required />
+      </div>
+
+      <button type="submit" aria-label="Add Expense">Add</button>
+    </form>
+
+    <!-- Expense List -->
+    <section id="expenses" aria-live="polite">
+      <h2>Expenses</h2>
+      <table aria-describedby="expenses-description" aria-label="List of expenses">
+        <thead>
+          <tr>
+            <th scope="col">Date</th>
+            <th scope="col">Description</th>
+            <th scope="col">Category</th>
+            <th scope="col" class="amount">Amount</th>
+            <th scope="col" aria-label="Remove expense">Remove</th>
+          </tr>
+        </thead>
+        <tbody id="expense-list">
+          <!-- Expenses get appended here -->
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Summary & Chart -->
+    <section id="summary" aria-label="Expense summary and chart">
+      <h2>Summary</h2>
+      <p id="total-expense" aria-live="polite">Total: $0.00</p>
+      <div id="chart-container" role="img" aria-label="Expense distribution chart by category">
+        <canvas id="expense-chart" width="600" height="300" style="width:100%; height:300px;"></canvas>
+      </div>
+    </section>
+  </main>
+
+<script>
+/*
+ * Personal Expense Tracker Script
+ * - Handles adding, removing expenses
+ * - Updates summary and draws category distribution chart on a canvas
+ * - Stores data in localStorage for persistence
+ * - Clean, modular, commented code
+ */
+
+(() => {
+  // Select elements
+  const form = document.getElementById('expense-form');
+  const descriptionInput = document.getElementById('description');
+  const categoryInput = document.getElementById('category');
+  const amountInput = document.getElementById('amount');
+  const dateInput = document.getElementById('date');
+  const expenseList = document.getElementById('expense-list');
+  const totalExpenseElem = document.getElementById('total-expense');
+  const canvas = document.getElementById('expense-chart');
+  const ctx = canvas.getContext('2d');
+
+  // Constants
+  const STORAGE_KEY = 'personal-expense-tracker-expenses';
+
+  // State: expenses array
+  /** 
+   * Expense object structure:
+   * { id: string, description: string, category: string, amount: number, date: string }
+   */
+  let expenses = [];
+
+  // Initialize date input - default to today
+  function setDefaultDate() {
+    const today = new Date().toISOString().substr(0, 10);
+    dateInput.value = today;
+  }
+
+  // Load from localStorage
+  function loadExpenses() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY);
+      if (data) expenses = JSON.parse(data);
+    } catch {
+      expenses = [];
+    }
+  }
+
+  // Save to localStorage
+  function saveExpenses() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(expenses));
+  }
+
+  // Create a unique ID for each expense
+  function generateId() {
+    return '_' + Math.random().toString(36).substr(2, 9);
+  }
+
+  // Format date like 'MMM DD, YYYY'
+  function formatDate(dateStr) {
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return new Date(dateStr).toLocaleDateString(undefined, options);
+  }
+
+  // Format amount as currency
+  function formatAmount(amount) {
+    return `$${amount.toFixed(2)}`;
+  }
+
+  // Render expense rows in the table
+  function renderExpenses() {
+    expenseList.innerHTML = '';
+    if (expenses.length === 0) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.setAttribute('colspan', '5');
+      td.style.textAlign = 'center';
+      td.textContent = 'No expenses yet.';
+      tr.appendChild(td);
+      expenseList.appendChild(tr);
+      return;
+    }
+
+    expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    for (const exp of expenses) {
+      const tr = document.createElement('tr');
+
+      // Date
+      const dateTd = document.createElement('td');
+      dateTd.textContent = formatDate(exp.date);
+      tr.appendChild(dateTd);
+
+      // Description
+      const descTd = document.createElement('td');
+      descTd.textContent = exp.description;
+      tr.appendChild(descTd);
+
+      // Category
+      const catTd = document.createElement('td');
+      catTd.textContent = exp.category;
+      catTd.className = 'category';
+      tr.appendChild(catTd);
+
+      // Amount
+      const amtTd = document.createElement('td');
+      amtTd.textContent = formatAmount(exp.amount);
+      amtTd.className = 'amount';
+      tr.appendChild(amtTd);
+
+      // Remove button
+      const removeTd = document.createElement('td');
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-btn';
+      removeBtn.setAttribute('aria-label', `Remove expense ${exp.description} on ${formatDate(exp.date)}`);
+      removeBtn.textContent = '✕';
+      removeBtn.addEventListener('click', () => removeExpense(exp.id));
+      removeTd.appendChild(removeBtn);
+      tr.appendChild(removeTd);
+
+      expenseList.appendChild(tr);
+    }
+  }
+
+  // Remove expense by ID
+  function removeExpense(id) {
+    expenses = expenses.filter(exp => exp.id !== id);
+    saveExpenses();
+    updateUI();
+  }
+
+  // Calculate total expense
+  function calculateTotal() {
+    return expenses.reduce((acc, cur) => acc + cur.amount, 0);
+  }
+
+  // Calculate expense sums by category
+  function calculateByCategory() {
+    const sums = {};
+    for (const exp of expenses) {
+      sums[exp.category] = (sums[exp.category] || 0) + exp.amount;
+    }
+    return sums;
+  }
+
+  // Update total expense text
+  function updateTotal() {
+    const total = calculateTotal();
+    totalExpenseElem.textContent = 'Total: ' + formatAmount(total);
+  }
+
+  // Clear form inputs
+  function clearForm() {
+    descriptionInput.value = '';
+    categoryInput.selectedIndex = 0;
+    amountInput.value = '';
+    setDefaultDate();
+    descriptionInput.focus();
+  }
+
+  // Draw expense distribution pie chart on canvas
+  function drawChart() {
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (expenses.length === 0) {
+      // Draw empty state text
+      ctx.fillStyle = '#555';
+      ctx.font = '16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('No data to display.', canvas.width / 2, canvas.height / 2);
+      return;
+    }
+
+    const sums = calculateByCategory();
+    const categories = Object.keys(sums);
+    const amounts = Object.values(sums);
+    const total = amounts.reduce((a,b) => a + b, 0);
+
+    // Colors by category (deterministic)
+    const COLORS = {
+      food: '#ef4444',
+      transport: '#3b82f6',
+      housing: '#10b981',
+      entertainment: '#8b5cf6',
+      health: '#f59e0b',
+      utilities: '#6b7280',
+      other: '#f472b6'
+    };
+
+    // Prepare data and colors arrays
+    const pieColors = categories.map(cat => COLORS[cat] || '#9ca3af');
+    
+    // Pie chart parameters
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const radius = Math.min(cx, cy) * 0.8;
+
+    // Draw pie slices
+    let startAngle = -0.5 * Math.PI; // start at top
+
+    for (let i = 0; i < categories.length; i++) {
+      const sliceAngle = (amounts[i] / total) * 2 * Math.PI;
+      const endAngle = startAngle + sliceAngle;
+
+      // Draw slice
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, radius, startAngle, endAngle);
+      ctx.closePath();
+      ctx.fillStyle = pieColors[i];
+      ctx.fill();
+
+      // Draw slice border
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Draw label lines and text
+      const midAngle = (startAngle + endAngle) / 2;
+      const labelRadius = radius * 1.1;
+      const lx = cx + Math.cos(midAngle) * labelRadius;
+      const ly = cy + Math.sin(midAngle) * labelRadius;
+
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(midAngle) * radius, cy + Math.sin(midAngle) * radius);
+      ctx.lineTo(lx, ly);
+      ctx.strokeStyle = '#444';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Label text
+      ctx.fillStyle = '#222';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = lx < cx ? 'right' : 'left';
+      ctx.textBaseline = 'middle';
+
+      const percent = ((amounts[i] / total) * 100).toFixed(1);
+      const labelText = categories[i] + ` (${percent}%)`;
+      ctx.fillText(labelText, lx + (lx < cx ? -5 : 5), ly);
+
+      startAngle = endAngle;
+    }
+  }
+
+  // Update all UI parts: list, total, chart
+  function updateUI() {
+    renderExpenses();
+    updateTotal();
+    drawChart();
+  }
+
+  // Handle form submission: add new expense
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+
+    const description = descriptionInput.value.trim();
+    const category = categoryInput.value;
+    const amount = parseFloat(amountInput.value);
+    const date = dateInput.value;
+
+    // Basic validation
+    if (!description) {
+      alert('Please enter a description.');
+      descriptionInput.focus();
+      return;
+    }
+    if (!category) {
+      alert('Please select a category.');
+      categoryInput.focus();
+      return;
+    }
+    if (isNaN(amount) || amount <= 0) {
+      alert('Please enter a valid amount greater than zero.');
+      amountInput.focus();
+      return;
+    }
+    if (!date) {
+      alert('Please select a date.');
+      dateInput.focus();
+      return;
+    }
+
+    // Create new expense object
+    const expense = {
+      id: generateId(),
+      description,
+      category,
+      amount,
+      date
+    };
+
+    expenses.push(expense);
+    saveExpenses();
+    updateUI();
+    clearForm();
+  });
+
+  // Initial setup
+  function init() {
+    loadExpenses();
+    setDefaultDate();
+    updateUI();
+  }
+
+  // Listen for window resize to handle high-DPI canvas scaling
+  function setupCanvasScaling() {
+    function scaleCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+      drawChart();
+    }
+    scaleCanvas();
+    window.addEventListener('resize', () => {
+      // Reset scale and apply new scaling on resize to keep crispness
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      scaleCanvas();
+    });
+  }
+
+  // Run on page load
+  window.addEventListener('DOMContentLoaded', () => {
+    init();
+    setupCanvasScaling();
+  });
+})();
+</script>
+</body>
+</html>

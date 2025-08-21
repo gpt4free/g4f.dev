@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sudoku Solver</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  h1 {
+    margin-bottom: 10px;
+  }
+  #sudoku-container {
+    display: grid;
+    grid-template-columns: repeat(9, 40px);
+    grid-template-rows: repeat(9, 40px);
+    gap: 2px;
+  }
+  input {
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    font-size: 1.2em;
+    border: 1px solid #999;
+    border-radius: 4px;
+  }
+  /* Thicker borders for block separation */
+  input:nth-child(3n) {
+    border-right: 3px solid #000;
+  }
+  input:nth-child(n + 19):nth-child(-n+27),
+  input:nth-child(n + 46):nth-child(-n+54),
+  input:nth-child(n + 73):nth-child(-n+81) {
+    border-bottom: 3px solid #000;
+  }
+  input:nth-child(9n+1),
+  input:nth-child(9n+1):nth-child(-n+9),
+  input:nth-child(9n+2),
+  input:nth-child(9n+2):nth-child(-n+9),
+  input:nth-child(9n+3),
+  input:nth-child(9n+3):nth-child(-n+9),
+  input:nth-child(9n+4),
+  input:nth-child(9n+4):nth-child(-n+9),
+  input:nth-child(9n+5),
+  input:nth-child(9n+5):nth-child(-n+9),
+  input:nth-child(9n+6),
+  input:nth-child(9n+6):nth-child(-n+9),
+  input:nth-child(9n+7),
+  input:nth-child(9n+7):nth-child(-n+9),
+  input:nth-child(9n+8),
+  input:nth-child(9n+8):nth-child(-n+9),
+  input:nth-child(9n+9),
+  input:nth-child(9n+9):nth-child(-n+9) {
+    border-bottom: 1px solid #999;
+  }
+  button {
+    margin-top: 15px;
+    padding: 10px 20px;
+    font-size: 1em;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  button:hover {
+    background-color: #0056b3;
+  }
+  #message {
+    margin-top: 10px;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+
+<h1>Sudoku Solver</h1>
+<div id="sudoku-container"></div>
+<button id="solveBtn">Solve</button>
+<button id="clearBtn">Clear</button>
+<div id="message"></div>
+
+<script>
+  const container = document.getElementById('sudoku-container');
+  const messageDiv = document.getElementById('message');
+
+  // Create the 9x9 grid
+  for (let i = 0; i < 81; i++) {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 1;
+    input.pattern = "[1-9]";
+    input.inputMode = 'numeric';
+    input.addEventListener('input', () => {
+      const val = input.value;
+      if (!/^[1-9]$/.test(val)) {
+        input.value = '';
+      }
+    });
+    container.appendChild(input);
+  }
+
+  const cells = Array.from(container.children);
+
+  // Function to get the grid as a 2D array
+  function getGrid() {
+    const grid = [];
+    for (let row = 0; row < 9; row++) {
+      const rowVals = [];
+      for (let col = 0; col < 9; col++) {
+        const val = cells[row * 9 + col].value;
+        rowVals.push(val === '' ? 0 : parseInt(val));
+      }
+      grid.push(rowVals);
+    }
+    return grid;
+  }
+
+  // Function to set grid values from a 2D array
+  function setGrid(grid) {
+    for (let row = 0; row < 9; row++) {
+      for (let col=0; col<9; col++) {
+        const val = grid[row][col];
+        cells[row*9 + col].value = val === 0 ? '' : val;
+      }
+    }
+  }
+
+  // Check if placing num at grid[row][col] is valid
+  function isValid(grid, row, col, num) {
+    // Check row
+    for (let x=0; x<9; x++) {
+      if (grid[row][x] === num) return false;
+    }
+    // Check column
+    for (let x=0; x<9; x++) {
+      if (grid[x][col] === num) return false;
+    }
+    // Check 3x3 box
+    const startRow = Math.floor(row/3)*3;
+    const startCol = Math.floor(col/3)*3;
+    for (let r=startRow; r<startRow+3; r++) {
+      for (let c=startCol; c<startCol+3; c++) {
+        if (grid[r][c] === num) return false;
+      }
+    }
+    return true;
+  }
+
+  // Backtracking solver
+  function solveSudoku(grid) {
+    for (let row=0; row<9; row++) {
+      for (let col=0; col<9; col++) {
+        if (grid[row][col] === 0) {
+          for (let num=1; num<=9; num++) {
+            if (isValid(grid, row, col, num)) {
+              grid[row][col] = num;
+              if (solveSudoku(grid)) {
+                return true;
+              }
+              grid[row][col] = 0;
+            }
+          }
+          return false; // no number fits here, backtrack
+        }
+      }
+    }
+    return true; // Solved
+  }
+
+  document.getElementById('solveBtn').addEventListener('click', () => {
+    messageDiv.textContent = '';
+    const grid = getGrid();
+    if (solveSudoku(grid)) {
+      setGrid(grid);
+      messageDiv.textContent = 'Puzzle solved!';
+      messageDiv.style.color = 'green';
+    } else {
+      messageDiv.textContent = 'No solution exists!';
+      messageDiv.style.color = 'red';
+    }
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    for (let cell of cells) {
+      cell.value = '';
+    }
+    messageDiv.textContent = '';
+  });
+</script>
+</body>
+</html>

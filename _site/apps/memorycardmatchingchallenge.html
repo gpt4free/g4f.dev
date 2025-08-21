@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Memory Card Matching Challenge</title>
+<style>
+  /* Reset & base */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #74ebd5, #acb6e5);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+    color: #222;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  h1 {
+    margin: 0 0 0.25rem;
+    font-weight: 700;
+    font-size: 1.8rem;
+  }
+
+  #stats {
+    font-size: 0.9rem;
+    color: #444;
+  }
+
+  main {
+    width: 100%;
+    max-width: 480px;
+  }
+
+  /* Grid container */
+  #game-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-gap: 0.5rem;
+  }
+
+  /* Cards */
+  .card {
+    position: relative;
+    width: 100%;
+    padding-top: 125%; /* 4:5 ratio */
+    cursor: pointer;
+    perspective: 1000px;
+  }
+
+  .card-inner {
+    position: absolute;
+    inset: 0;
+    transition: transform 0.5s;
+    transform-style: preserve-3d;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+  }
+
+  /* Flipped and matched states */
+  .card.flipped .card-inner {
+    transform: rotateY(180deg);
+    cursor: default;
+  }
+  .card.matched {
+    cursor: default;
+    box-shadow:
+      0 0 8px 2px #4caf50cc,
+      0 0 16px 4px #4caf50aa;
+  }
+
+  /* Front and Back faces */
+  .card-front,
+  .card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 0.5rem;
+    backface-visibility: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2rem;
+    user-select: none;
+  }
+
+  /* Card front: hidden when flipped */
+  .card-front {
+    background: #e0e0e0;
+    box-shadow: inset 0 0 10px #bbb;
+  }
+
+  /* Card back: visible when flipped */
+  .card-back {
+    background: #4a90e2;
+    color: white;
+    transform: rotateY(180deg);
+    box-shadow: 0 4px 8px #2a5cabaa;
+  }
+
+  /* Buttons and controls */
+  #controls {
+    margin: 1rem 0;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  button {
+    border: none;
+    background: #4a90e2;
+    color: white;
+    font-size: 1rem;
+    padding: 0.5rem 1.25rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  button:hover,
+  button:focus {
+    background: #357ABD;
+    outline: none;
+  }
+  button:disabled {
+    background: #9ec3eb;
+    cursor: default;
+  }
+
+  /* Responsive tweaks */
+  @media(min-width: 600px){
+    #game-board {
+      grid-template-columns: repeat(6, 1fr);
+      grid-gap: 0.75rem;
+    }
+    .card {
+      padding-top: 100%;
+    }
+  }
+</style>
+</head>
+<body>
+  <!--
+  Memory Card Matching Challenge
+  ==============================
+  A mobile-first, responsive memory matching game.
+  
+  Features:
+  - 8 pairs of cards (total 16)
+  - Flip cards to match pairs
+  - Move counter and timer
+  - 'Restart' button to reset the game
+  - Interactive animations and accessible design
+  - No external dependencies; single HTML file
+  
+  Author: ChatGPT (OpenAI)
+  Date: 2024-06
+  -->
+  <header>
+    <h1>Memory Match Challenge</h1>
+    <div id="stats" aria-live="polite">
+      Moves: 0 | Time: 0s
+    </div>
+  </header>
+
+  <main>
+    <section id="game-board" role="grid" aria-label="Memory card matching board"></section>
+
+    <div id="controls">
+      <button id="restart">Restart Game</button>
+    </div>
+  </main>
+
+<script>
+(() => {
+  // Card symbols - can be emojis for simplicity & visuals
+  const symbols = ['🐶', '🐱', '🐭', '🐹', '🦊', '🐻', '🐼', '🐨'];
+
+  let cards = [];
+  let flippedCards = [];
+  let matchedCount = 0;
+  let moves = 0;
+  let timerInterval = null;
+  let timeElapsed = 0;
+
+  // DOM elements
+  const gameBoard = document.getElementById('game-board');
+  const stats = document.getElementById('stats');
+  const restartBtn = document.getElementById('restart');
+
+  // Initialize game
+  function init() {
+    clearInterval(timerInterval);
+    timeElapsed = 0;
+    moves = 0;
+    matchedCount = 0;
+    flippedCards = [];
+    stats.textContent = `Moves: 0 | Time: 0s`;
+    gameBoard.innerHTML = '';
+
+    // Create pairs & shuffle
+    cards = shuffle([...symbols, ...symbols]);
+
+    // Render cards
+    for(let i = 0; i < cards.length; i++) {
+      const card = createCard(cards[i], i);
+      gameBoard.appendChild(card);
+    }
+
+    // Start timer on first interaction
+    gameBoard.addEventListener('click', startTimerOnce, { once: true });
+  }
+
+  // Fisher-Yates shuffle
+  function shuffle(array) {
+    let arr = array.slice();
+    for(let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i+1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  // Create card element
+  function createCard(symbol, index) {
+    const card = document.createElement('button'); // Using button for accessibility
+    card.classList.add('card');
+    card.setAttribute('type', 'button');
+    card.setAttribute('aria-label', 'Memory card, face down');
+    card.setAttribute('data-symbol', symbol);
+    card.setAttribute('data-index', index);
+    card.setAttribute('role', 'gridcell');
+    card.setAttribute('tabindex', '0');
+
+    // Inner wrapper for flip animation
+    const cardInner = document.createElement('div');
+    cardInner.classList.add('card-inner');
+
+    // Front face (hidden symbol)
+    const cardFront = document.createElement('div');
+    cardFront.classList.add('card-front');
+    cardFront.textContent = '🃏'; // back of card symbol
+
+    // Back face (revealed symbol)
+    const cardBack = document.createElement('div');
+    cardBack.classList.add('card-back');
+    cardBack.textContent = symbol;
+
+    cardInner.appendChild(cardFront);
+    cardInner.appendChild(cardBack);
+    card.appendChild(cardInner);
+
+    card.addEventListener('click', onCardClick);
+
+    return card;
+  }
+
+  // Card click handler
+  function onCardClick(e) {
+    const card = e.currentTarget;
+
+    // Ignore if already flipped or matched or disabled
+    if (
+      card.classList.contains('flipped') ||
+      card.classList.contains('matched') ||
+      flippedCards.length === 2
+    ) return;
+
+    flipCard(card);
+
+    flippedCards.push(card);
+
+    if (flippedCards.length === 2) {
+      moves++;
+      updateStats();
+
+      const [card1, card2] = flippedCards;
+      const symbol1 = card1.getAttribute('data-symbol');
+      const symbol2 = card2.getAttribute('data-symbol');
+
+      if (symbol1 === symbol2) {
+        // Match found
+        card1.classList.add('matched');
+        card2.classList.add('matched');
+        flippedCards = [];
+        matchedCount++;
+
+        if (matchedCount === symbols.length) {
+          // Game won
+          endGame();
+        }
+      } else {
+        // Not a match - flip back after delay
+        disableBoard(true);
+        setTimeout(() => {
+          unflipCard(card1);
+          unflipCard(card2);
+          flippedCards = [];
+          disableBoard(false);
+        }, 1000);
+      }
+    }
+  }
+
+  // Flip card to show symbol
+  function flipCard(card) {
+    card.classList.add('flipped');
+    card.setAttribute('aria-label', `Memory card, face up: ${card.getAttribute('data-symbol')}`);
+  }
+
+  // Flip back card to hide symbol
+  function unflipCard(card) {
+    card.classList.remove('flipped');
+    card.setAttribute('aria-label', 'Memory card, face down');
+  }
+
+  // Update moves and time stats
+  function updateStats() {
+    stats.textContent = `Moves: ${moves} | Time: ${timeElapsed}s`;
+  }
+
+  // Disable all cards temporarily
+  function disableBoard(bool) {
+    gameBoard.style.pointerEvents = bool ? 'none' : 'auto';
+  }
+
+  // Timer start (once)
+  function startTimerOnce() {
+    timerInterval = setInterval(() => {
+      timeElapsed++;
+      updateStats();
+    }, 1000);
+  }
+
+  // End game
+  function endGame() {
+    clearInterval(timerInterval);
+    stats.textContent = `Congrats! Completed in ${moves} moves over ${timeElapsed} seconds.`;
+  }
+
+  // Restart button click
+  restartBtn.addEventListener('click', () => {
+    init();
+  });
+
+  // Initialize when DOM ready
+  document.addEventListener('DOMContentLoaded', () => {
+    init();
+  });
+})();
+</script>
+</body>
+</html>

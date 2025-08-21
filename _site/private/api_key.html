@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>API Key Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsencrypt/bin/jsencrypt.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            max-width: 600px;
+        }
+        label {
+            display: block;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        input[type="number"], input[type="text"], textarea {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        #result {
+            margin-top: 30px;
+            word-break: break-all;
+            background: #f4f4f4;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>API Key Generator</h1>
+    <form id="apiForm" onsubmit="return false;">
+        <label for="user">User:</label>
+        <input type="text" id="user" placeholder="Enter username" required />
+
+        <label for="publicKey">Public Key:</label>
+        <textarea id="publicKey" rows="5" placeholder="Paste your public key here" required></textarea>
+
+        <label for="expiresIn">Expires in:</label>
+        <input type="number" id="expiresIn" min="1" placeholder="Number" required />
+
+        <div>
+            <label for="timeUnit">Time Unit:</label>
+            <select id="timeUnit" required>
+                <option value="minutes">Minutes</option>
+                <option value="hours">Hours</option>
+                <option value="days">Days</option>
+                <option value="weeks">Weeks</option>
+            </select>
+        </div>
+        
+        <button type="button" onclick="generateApiKey()">Generate API Key</button>
+    </form>
+
+    <div id="result"></div>
+
+    <script>
+        async function generateApiKey() {
+            // Get input values
+            const user = document.getElementById('user').value.trim();
+            const publicKey = document.getElementById('publicKey').value.trim();
+            const expiresIn = parseInt(document.getElementById('expiresIn').value);
+            const timeUnit = document.getElementById('timeUnit').value;
+
+            if (!user || !publicKey || isNaN(expiresIn) || expiresIn <= 0) {
+                alert('Please fill in all fields with valid values.');
+                return;
+            }
+
+            // Calculate expiration timestamp
+            const now = Math.floor(Date.now() / 1000); // current Unix timestamp in seconds
+            let secondsToAdd = 0;
+            switch (timeUnit) {
+                case 'minutes':
+                    secondsToAdd = expiresIn * 60;
+                    break;
+                case 'hours':
+                    secondsToAdd = expiresIn * 3600;
+                    break;
+                case 'days':
+                    secondsToAdd = expiresIn * 86400;
+                    break;
+                case 'weeks':
+                    secondsToAdd = expiresIn * 604800;
+                    break;
+            }
+            const expiresTimestamp = now + secondsToAdd;
+
+            // Compose payload: "expires-timestamp:user"
+            const payload = `${expiresTimestamp}:${user}`;
+
+            // Initialize JSEncrypt
+            const encrypt = new JSEncrypt();
+
+            try {
+                // Set public key
+                encrypt.setPublicKey(publicKey);
+                // Encrypt the payload
+                const encrypted = encrypt.encrypt(payload);
+                if (!encrypted) {
+                    throw new Error("Encryption failed");
+                }
+                // Display the result
+                document.getElementById('result').innerHTML = `
+                    <h3>Encrypted API Key:</h3>
+                    <input value="${encrypted}" readonly style="width: 100%;" />
+                `;
+            } catch (error) {
+                alert('Error during encryption: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

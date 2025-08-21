@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Paint Clone</title>
+<style>
+  /* 
+    Paint Clone - Single HTML File
+    ---------------------------------
+    Author: Your Name
+    Description: A modern, responsive Paint clone with a mobile-first design.
+                 Features:
+                 - Drawing with touch/mouse
+                 - Color and brush size selection
+                 - Brush/eraser toggle
+                 - Undo/Redo functionality
+                 - Clear canvas
+                 - Save drawing as image
+    No external dependencies.
+  */
+
+  /* Mobile-first base styles */
+  body, html {
+    margin: 0; padding: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    background: #f0f0f0;
+    color: #222;
+  }
+
+  header {
+    padding: 0.5em 1em;
+    background: #222;
+    color: white;
+    text-align: center;
+    font-weight: 600;
+    font-size: 1.2rem;
+    user-select: none;
+  }
+
+  #toolbar {
+    display: flex;
+    gap: 0.5em;
+    padding: 0.5em 0.75em;
+    background: #fff;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  #toolbar > * {
+    flex-shrink: 0;
+  }
+
+  button, input[type=range], input[type=color] {
+    border: none;
+    background: #e1e1e1;
+    border-radius: 3px;
+    padding: 0.4em 0.6em;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    user-select: none;
+  }
+
+  button:hover, button:focus,
+  input[type=range]:focus,
+  input[type=color]:focus {
+    outline: none;
+    background: #ccc;
+  }
+
+  button.selected {
+    background-color: #4285f4;
+    color: white;
+  }
+
+  /* Range input style */
+  input[type=range] {
+    width: 100px;
+    height: 1.5em;
+  }
+
+  /* Canvas container flex-grow to fill space */
+  #canvas-container {
+    flex-grow: 1;
+    position: relative;
+  }
+
+  canvas {
+    background: white;
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none; /* Disable default touch gestures on canvas */
+    cursor: crosshair;
+  }
+
+  /* Responsive layout for larger screens */
+  @media (min-width: 600px) {
+    #toolbar {
+      justify-content: flex-start;
+      padding: 0.5em 1.5em;
+      gap: 1em;
+    }
+    input[type=range] {
+      width: 120px;
+    }
+  }
+
+</style>
+</head>
+<body>
+<header>
+  Paint Clone
+</header>
+
+<div id="toolbar" role="toolbar" aria-label="Paint Tools">
+  <input type="color" id="colorPicker" title="Select Color" aria-label="Select Drawing Color" value="#000000" />
+  <input type="range" id="brushSize" min="1" max="50" value="5" title="Brush Size" aria-valuemin="1" aria-valuemax="50" aria-valuenow="5" aria-label="Brush Size" />
+  <button id="brushBtn" class="selected" aria-pressed="true" title="Brush Tool" aria-label="Select Brush Tool">Brush</button>
+  <button id="eraserBtn" aria-pressed="false" title="Eraser Tool" aria-label="Select Eraser Tool">Eraser</button>
+  <button id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo Last Action" disabled>Undo</button>
+  <button id="redoBtn" title="Redo (Ctrl+Y)" aria-label="Redo Last Action" disabled>Redo</button>
+  <button id="clearBtn" title="Clear Canvas" aria-label="Clear Canvas">Clear</button>
+  <button id="saveBtn" title="Save Image" aria-label="Save Drawing as Image">Save</button>
+</div>
+
+<div id="canvas-container">
+  <canvas id="paintCanvas" tabindex="0" role="img" aria-label="Drawing Canvas"></canvas>
+</div>
+
+<script>
+  /**
+   * Paint Clone JavaScript
+   * 
+   * Features:
+   * - Drawing with mouse or touch
+   * - Color and brush size adjustment
+   * - Brush and eraser modes
+   * - Undo/Redo support using image stack
+   * - Clear canvas
+   * - Save drawing as PNG image
+   */
+
+  (function() {
+    'use strict';
+
+    // Grab DOM elements
+    const canvas = document.getElementById('paintCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const colorPicker = document.getElementById('colorPicker');
+    const brushSizeInput = document.getElementById('brushSize');
+
+    const brushBtn = document.getElementById('brushBtn');
+    const eraserBtn = document.getElementById('eraserBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const saveBtn = document.getElementById('saveBtn');
+
+    // Drawing state
+    let drawing = false;
+    let currentTool = 'brush'; // 'brush' or 'eraser'
+    let brushColor = colorPicker.value;
+    let brushSize = parseInt(brushSizeInput.value, 10);
+
+    // Undo/Redo stacks hold ImageData
+    const undoStack = [];
+    const redoStack = [];
+    const MAX_STACK_SIZE = 50;
+
+    // Keep track of last position for drawing smooth lines
+    let lastX = 0;
+    let lastY = 0;
+
+    // Setup canvas size & scaling for high-DPI screens
+    function resizeCanvas() {
+      // Get container size
+      const container = document.getElementById('canvas-container');
+      const rect = container.getBoundingClientRect();
+
+      // Adjust for device pixel ratio
+      const dpr = window.devicePixelRatio || 1;
+
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = rect.height + 'px';
+
+      // Scale drawing context to handle high DPI
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // reset
+      ctx.scale(dpr, dpr);
+
+      // Redraw the last saved content if any
+      if (undoStack.length) {
+        const lastImage = undoStack[undoStack.length - 1];
+        ctx.putImageData(lastImage, 0, 0);
+      } else {
+        clearCanvas(false);
+      }
+    }
+
+    // Save current canvas state to undo stack
+    function saveState() {
+      if (undoStack.length >= MAX_STACK_SIZE) {
+        undoStack.shift(); // Remove oldest
+      }
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      undoStack.push(imageData);
+
+      // Clear redo stack on new action
+      redoStack.length = 0;
+
+      updateUndoRedoButtons();
+    }
+
+    // Update Undo/Redo button disabled state
+    function updateUndoRedoButtons() {
+      undoBtn.disabled = undoStack.length <= 1; // We keep initial blank state
+      redoBtn.disabled = redoStack.length === 0;
+    }
+
+    // Clear canvas with optional state saving
+    function clearCanvas(save = true) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Fill white background
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (save) {
+        saveState();
+      }
+    }
+
+    // Start drawing
+    function startDraw(x, y) {
+      drawing = true;
+      lastX = x;
+      lastY = y;
+
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = brushSize;
+
+      if (currentTool === 'eraser') {
+        ctx.globalCompositeOperation = 'destination-out';
+      } else {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = brushColor;
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+    }
+
+    // Draw line to x,y
+    function drawLine(x, y) {
+      if (!drawing) return;
+
+      ctx.lineTo(x, y);
+      ctx.stroke();
+
+      lastX = x;
+      lastY = y;
+    }
+
+    // Stop drawing
+    function stopDraw() {
+      if (!drawing) return;
+      drawing = false;
+      ctx.closePath();
+
+      // Save canvas state to undo stack after finishing
+      saveState();
+    }
+
+    // Get pointer (mouse/touch) position relative to canvas, adjusted for scaling
+    function getPointerPos(e) {
+      const rect = canvas.getBoundingClientRect();
+
+      let clientX, clientY;
+
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+
+      // Calculate position inside canvas element (style size)
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+
+      return { x, y };
+    }
+
+    // Undo last action
+    function undo() {
+      if (undoStack.length <= 1) return; // Nothing to undo
+
+      // Pop the current state
+      const current = undoStack.pop();
+      redoStack.push(current);
+
+      // Restore previous state
+      const previousImage = undoStack[undoStack.length - 1];
+      ctx.putImageData(previousImage, 0, 0);
+
+      updateUndoRedoButtons();
+    }
+
+    // Redo action
+    function redo() {
+      if (redoStack.length === 0) return;
+
+      const imageData = redoStack.pop();
+      undoStack.push(imageData);
+
+      ctx.putImageData(imageData, 0, 0);
+
+      updateUndoRedoButtons();
+    }
+
+    // Save canvas image as PNG file
+    function saveImage() {
+      // Create a temporary link to trigger download
+      const link = document.createElement('a');
+      link.download = `paint-clone-${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    // Tool selection handlers
+    function selectBrush() {
+      currentTool = 'brush';
+      brushBtn.classList.add('selected');
+      brushBtn.setAttribute('aria-pressed', 'true');
+      eraserBtn.classList.remove('selected');
+      eraserBtn.setAttribute('aria-pressed', 'false');
+      canvas.style.cursor = 'crosshair';
+    }
+
+    function selectEraser() {
+      currentTool = 'eraser';
+      eraserBtn.classList.add('selected');
+      eraserBtn.setAttribute('aria-pressed', 'true');
+      brushBtn.classList.remove('selected');
+      brushBtn.setAttribute('aria-pressed', 'false');
+      canvas.style.cursor = 'crosshair';
+    }
+
+    // Event Listeners
+
+    // Resize canvas on window resize and initial load
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('load', () => {
+      resizeCanvas();
+      saveState(); // Save initial blank canvas
+    });
+
+    // Color change
+    colorPicker.addEventListener('input', e => {
+      brushColor = e.target.value;
+    });
+
+    // Brush size change
+    brushSizeInput.addEventListener('input', e => {
+      brushSize = parseInt(e.target.value, 10);
+      brushSizeInput.setAttribute('aria-valuenow', brushSize);
+    });
+
+    // Tool buttons
+    brushBtn.addEventListener('click', selectBrush);
+    eraserBtn.addEventListener('click', selectEraser);
+
+    // Undo/Redo buttons
+    undoBtn.addEventListener('click', undo);
+    redoBtn.addEventListener('click', redo);
+
+    clearBtn.addEventListener('click', () => {
+      if (confirm('Clear the canvas? This action cannot be undone.')) {
+        clearCanvas();
+      }
+    });
+
+    saveBtn.addEventListener('click', saveImage);
+
+    // Drawing events - mouse and touch handling
+    // Mouse
+    canvas.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const pos = getPointerPos(e);
+      startDraw(pos.x, pos.y);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!drawing) return;
+      e.preventDefault();
+      const pos = getPointerPos(e);
+      drawLine(pos.x, pos.y);
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+      if (drawing) {
+        e.preventDefault();
+        stopDraw();
+      }
+    });
+
+    canvas.addEventListener('mouseleave', (e) => {
+      if (drawing) {
+        e.preventDefault();
+        stopDraw();
+      }
+    });
+
+    // Touch
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const pos = getPointerPos(e);
+      startDraw(pos.x, pos.y);
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (!drawing) return;
+      e.preventDefault();
+      const pos = getPointerPos(e);
+      drawLine(pos.x, pos.y);
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+      if (drawing) {
+        e.preventDefault();
+        stopDraw();
+      }
+    });
+
+    canvas.addEventListener('touchcancel', (e) => {
+      if (drawing) {
+        e.preventDefault();
+        stopDraw();
+      }
+    });
+
+    // Keyboard shortcuts for Undo (Ctrl+Z) & Redo (Ctrl+Y)
+    window.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        undo();
+      } else if (((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z')))) {
+        e.preventDefault();
+        redo();
+      }
+    });
+
+  })();
+</script>
+
+</body>
+</html>

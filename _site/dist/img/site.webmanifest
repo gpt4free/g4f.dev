@@ -1,0 +1,28 @@
+{
+    "name": "GPT4Free",
+    "short_name": "G4F",
+    "icons": [
+        {
+            "src": "/dist/img/android-chrome-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/dist/img/android-chrome-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "theme_color": "#ffffff",
+    "background_color": "#ffffff",
+    "display": "standalone",
+    "scope": "/",
+    "share_target": {
+        "action": "/chat/",
+        "method": "GET",
+        "enctype": "application/x-www-form-urlencoded",
+        "params": {
+            "text": "prompt"
+        }
+    }
+}

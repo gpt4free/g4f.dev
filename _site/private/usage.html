@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Usage Statistics Dashboard</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../dist/js/framework.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; background: #f8f8fb; }
+        h1 { text-align: center; color: #444; }
+        #dashboard { max-width: 900px; margin: 30px auto; padding: 24px; background: #fff; border-radius: 10px; box-shadow: 0 2px 12px #bbb3; }
+        .statrow { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .stat { background: #f3f5ff; border-radius: 6px; padding: 10px 18px; margin: 8px; flex: 1; text-align: center; }
+        .picked-range { margin-bottom: 20px; }
+        label { font-weight: bold;}
+        #chart { background: #fff; }
+        #status { color: #666; text-align: center; font-size: 13px; margin-bottom: 15px;}
+        #users-table { width:100%; border-collapse:collapse; margin: 27px 0 0 0; }
+        #users-table th, #users-table td { border:1px solid #e3e3e3; padding:7px 12px; text-align:center; }
+        #users-table th { background: #f3f6fc; cursor: pointer;}
+        #users-table tr:nth-child(even) { background: #fafbff;}
+        #users-table tr:hover {background:#eaf4ff;}
+        #users-table .num { font-family: monospace;}
+        @media (max-width:600px) { #dashboard {padding:10px;} .statrow{flex-direction:column;} .stat{margin-bottom:7px;}
+        #users-table td, #users-table th { font-size:12px; padding:4px 5px;} }
+        .table-title { margin-top:30px;font-size:19px; color:#377;}
+    </style>
+</head>
+<body>
+<div id="dashboard">
+    <h1>Usage Statistics</h1>
+    <div id="status"></div>
+    <div class="picked-range">
+        <label>Date or Range: </label>
+        <input type="date" id="fromDate">
+        to
+        <input type="date" id="toDate">
+        <button onclick="fetchAndDisplay()">Load Data</button>
+    </div>
+    <div class="statrow">
+        <div class="stat">
+            <div style="font-size:23px;font-weight:bold" id="userCount">0</div>
+            <div>Unique Users</div>
+        </div>
+        <div class="stat">
+            <div style="font-size:23px;font-weight:bold" id="totalCompletions">0</div>
+            <div>Total Completions</div>
+        </div>
+        <div class="stat">
+            <div style="font-size:23px;font-weight:bold" id="totalTokens">0</div>
+            <div>Total Tokens</div>
+        </div>
+    </div>
+
+    <canvas id="chart" height="110"></canvas>
+    <div style="text-align:center; color:#888; font-size:12px; margin-top:10px;">
+      Source: <span id="urlLabel"></span>
+    </div>
+
+    <div class="table-title">User Usage Table</div>
+    <table id="users-table">
+        <thead>
+            <tr>
+                <th onclick="sortTable(0)">User</th>
+                <th onclick="sortTable(1)">Completions</th>
+                <th onclick="sortTable(2)">Total Tokens</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="3"><i>No data</i></td></tr>
+        </tbody>
+    </table>
+</div>
+<script>
+let chart;
+let lastUserTable = [];
+
+function formatDate(d) {
+    let m = '' + (d.getMonth() + 1);
+    let day = '' + d.getDate();
+    let y = d.getFullYear();
+    if (m.length < 2) m = '0' + m;
+    if (day.length < 2) day = '0' + day;
+    return [y, m, day].join('-');
+}
+function listDates(from, to) {
+    let arr = [];
+    let cur = new Date(from);
+    let t = new Date(to);
+    while (cur <= t) {
+        arr.push(formatDate(cur));
+        cur.setDate(cur.getDate() + 1);
+    }
+    return arr;
+}
+async function fetchUsageForDate(date) {
+    let url = `${framework.backendUrl}/backend-api/v2/usage/${date}`;
+    try {
+        const resp = await fetch(url, { cache: "no-store" });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        let text = await resp.text();
+        let lines = text.trim().split("\n");
+        let arr = [];
+        for (let l of lines) {
+            try {
+                if (!l.trim() || l.startsWith("Url:")) continue;
+                let row = JSON.parse(l);
+                row.date = date;
+                arr.push(row);
+            } catch (e) { }
+        }
+        return { data: arr, url };
+    } catch (e) {
+        return { data: [], url };
+    }
+}
+function get_total_tokens(row) {
+    console.log(row);
+    if (row.model && row.model.includes("flux")) {
+        return row.completion_tokens || 0;
+    }
+    return (row.total_tokens || 0)
+}
+function userSummary(data) {
+    // user => { completions, tokens }
+    let summary = new Map();
+    for (let row of data) {
+        let user = (row.user && row.user.trim()) ? row.user : "<none>";
+        if (!summary.has(user))
+            summary.set(user, { user, completions: 0, tokens: 0 });
+        let s = summary.get(user);
+        s.completions += 1;
+        s.tokens += get_total_tokens(row);
+    }
+    return Array.from(summary.values());
+}
+function renderUserTable(userArr) {
+    let tbody = document.querySelector('#users-table tbody');
+    tbody.innerHTML = "";
+    if (!userArr.length) {
+        tbody.innerHTML = "<tr><td colspan='3'><i>No data</i></td></tr>";
+        return;
+    }
+    for (let u of userArr) {
+        let uname = u.user === "<none>" ? "<span style='color:#aaa;'>&lt;none&gt;</span>" : u.user;
+        tbody.innerHTML += "<tr>" +
+            `<td>${uname}</td>` +
+            `<td class="num">${u.completions}</td>` +
+            `<td class="num">${u.tokens.toLocaleString()}</td></tr>`;
+    }
+    lastUserTable = userArr;
+}
+function sortTable(col) {
+    // Simple sorting for table, col: 0=user, 1=completions, 2=tokens
+    let arr = [...lastUserTable];
+    // Track sorting order (asc/desc) per column in window.tableSort
+    if (!window.tableSort) window.tableSort = [1,1,1]; // 1=asc, -1=desc
+    // Flip direction
+    window.tableSort[col] = -(window.tableSort[col]||1);
+
+    if (col==0) arr.sort((a,b)=>a.user.localeCompare(b.user)*window.tableSort[0]);
+    if (col==1) arr.sort((a,b)=>(a.completions-b.completions)*window.tableSort[1]);
+    if (col==2) arr.sort((a,b)=>(a.tokens-b.tokens)*window.tableSort[2]);
+    renderUserTable(arr);
+}
+async function fetchAndDisplay() {
+    let from = document.getElementById("fromDate").value;
+    let to = document.getElementById("toDate").value;
+    let status = document.getElementById("status");
+    if (!from && !to) {
+        status.innerText = "Please pick a date or date range.";
+        renderUserTable([]); return;
+    }
+    let dateArr = [];
+    if (from && to) {
+        if (from > to) [from, to] = [to, from];
+        dateArr = listDates(new Date(from), new Date(to));
+    } else {
+        let d = from || to;
+        dateArr = [d]; from = to = d;
+    }
+    status.innerText = "Fetching data...";
+    document.getElementById("urlLabel").innerHTML =
+        dateArr.length === 1
+            ? `<a href="https://home.g4f.dev/backend-api/v2/usage/${dateArr[0]}" target="_blank">https://home.g4f.dev/backend-api/v2/usage/${dateArr[0]}</a>`
+            : `https://home.g4f.dev/backend-api/v2/usage/{${from} &rarr; ${to}}`;
+
+    let allData = [];
+    for (let date of dateArr) {
+        let result = await fetchUsageForDate(date);
+        allData = allData.concat(result.data);
+    }
+    if (allData.length == 0) {
+        status.innerText = "No usage data found for given date(s).";
+        document.getElementById("userCount").innerText = "0";
+        document.getElementById("totalCompletions").innerText = "0";
+        document.getElementById("totalTokens").innerText = "0";
+        if (chart) chart.destroy();
+        let ctx = document.getElementById("chart").getContext("2d");
+        chart = new Chart(ctx, {type:'bar',data:{labels:[],datasets:[]},options:{}});
+        renderUserTable([]);
+        return;
+    } else {
+        status.innerText = "";
+    }
+    // Unique users (excluding null user id)
+    let users = new Set(allData.map(r => (r.user && r.user.trim())).filter(Boolean));
+    document.getElementById("userCount").innerText = users.size;
+    document.getElementById("totalCompletions").innerText = allData.length;
+    let totalTokens = allData.reduce((s, r) => s + get_total_tokens(r), 0);
+    document.getElementById("totalTokens").innerText = totalTokens.toLocaleString();
+    // Per day for chart
+    let perDay = {};
+    allData.forEach(r => {
+        let d = r.date;
+        if (!perDay[d]) perDay[d] = { count: 0, tokens: 0 };
+        perDay[d].count += 1;
+        perDay[d].tokens += get_total_tokens(r);
+    });
+    let days = Object.keys(perDay).sort();
+    let values = days.map(d => perDay[d].count);
+    let tokenvals = days.map(d => perDay[d].tokens);
+    if (chart) chart.destroy();
+    let ctx = document.getElementById("chart").getContext("2d");
+    chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: days,
+            datasets: [
+                { label: 'Completions', data: values, backgroundColor: '#5787F0' },
+                { label: 'Total Tokens', data: tokenvals, type: 'line', borderColor: '#FF8048', backgroundColor: 'rgba(255,128,72,0.2)', fill: true, yAxisID: 'y1' }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { title: { display: true, text: 'Completions' }, beginAtZero: true },
+                y1: { title: { display: true, text: 'Tokens' }, position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } }
+            },
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: { enabled: true }
+            }
+        }
+    });
+    // -- User Table --
+    let usersArr = userSummary(allData);
+    renderUserTable(usersArr);
+}
+
+// Set today's date as default, and optionally last week
+window.onload = function () {
+    const today = new Date();
+    const todayS = today.toISOString().slice(0, 10);
+    const weekAgoS = new Date(today - 6 * 86400000).toISOString().slice(0, 10);
+    document.getElementById("fromDate").value = weekAgoS;
+    document.getElementById("toDate").value = todayS;
+    fetchAndDisplay();
+};
+
+</script>
+</body>
+</html>

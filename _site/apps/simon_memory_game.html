@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Simon Memory Game</title>
+<style>
+  /* 
+    Simon Memory Game - Mobile First Responsive Design
+    ---------------------------------------------
+    - Four color buttons: green, red, yellow, blue
+    - Display current round (level) and user messages
+    - Animations and highlights on sequence playback & user clicks
+    - Adaptive layout for mobile and larger screens
+  */
+
+  :root {
+    --green: #2ecc71;
+    --green-light: #58d68d;
+    --red: #e74c3c;
+    --red-light: #ec7063;
+    --yellow: #f1c40f;
+    --yellow-light: #f4d03f;
+    --blue: #3498db;
+    --blue-light: #5dade2;
+    --dark-bg: #121212;
+    --light-bg: #f5f5f5;
+    --font-color: #222;
+    --font-color-light: #eee;
+    --transition-speed: 0.15s;
+  }
+
+  /* Mobile First Base */
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+      Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    background: var(--light-bg);
+    color: var(--font-color);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    min-height: 100vh;
+    padding: 1rem 0 3rem;
+    user-select: none;
+  }
+
+  h1 {
+    margin: 0 0 1rem;
+    font-weight: 700;
+    color: var(--blue);
+    text-align: center;
+  }
+
+  #game-container {
+    width: 90vw;
+    max-width: 480px;
+  }
+
+  #display {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  #round {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+  }
+
+  #message {
+    font-size: 1rem;
+    min-height: 1.5rem;
+    color: var(--blue);
+  }
+
+  #board {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    width: 100%;
+    padding-bottom: 2rem;
+  }
+
+  .btn {
+    aspect-ratio: 1 / 1;
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    touch-action: manipulation;
+    cursor: pointer;
+    transition:
+      background-color var(--transition-speed) ease,
+      box-shadow var(--transition-speed) ease;
+    user-select: none;
+  }
+
+  /* Colored Buttons */
+  .green {
+    background-color: var(--green);
+    box-shadow: 0 6px var(--green-dark, #27ae60);
+  }
+  .green.active {
+    background-color: var(--green-light);
+    box-shadow: 0 2px #27ae60;
+  }
+
+  .red {
+    background-color: var(--red);
+    box-shadow: 0 6px #c0392b;
+  }
+  .red.active {
+    background-color: var(--red-light);
+    box-shadow: 0 2px #c0392b;
+  }
+
+  .yellow {
+    background-color: var(--yellow);
+    box-shadow: 0 6px #b7950b;
+  }
+  .yellow.active {
+    background-color: var(--yellow-light);
+    box-shadow: 0 2px #b7950b;
+  }
+
+  .blue {
+    background-color: var(--blue);
+    box-shadow: 0 6px #2874a6;
+  }
+  .blue.active {
+    background-color: var(--blue-light);
+    box-shadow: 0 2px #2874a6;
+  }
+
+
+  /* Start Button */
+  #start-btn {
+    display: block;
+    margin: 0 auto;
+    padding: 0.75rem 1.75rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    background-color: var(--blue);
+    border: none;
+    border-radius: 0.8rem;
+    color: var(--font-color-light);
+    cursor: pointer;
+    box-shadow: 0 4px #2874a6;
+    transition: background-color 0.2s ease;
+    user-select: none;
+  }
+  #start-btn:active {
+    box-shadow: 0 2px #2874a6;
+    transform: translateY(2px);
+  }
+  #start-btn:disabled {
+    background-color: #7fb3d5;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+
+  /* Responsive enhancements */
+  @media (min-width: 600px) {
+    body {
+      padding-top: 3rem;
+      background: var(--dark-bg);
+      color: var(--font-color-light);
+    }
+    #game-container {
+      max-width: 520px;
+    }
+    #start-btn {
+      background-color: var(--green);
+      box-shadow: 0 4px #27ae60;
+    }
+    #start-btn:disabled {
+      background-color: #82e0aa;
+    }
+  }
+
+</style>
+</head>
+<body>
+  <h1>Simon Memory Game</h1>
+  <div id="game-container" aria-live="polite" aria-atomic="true">
+    <div id="display" role="status" aria-live="polite">
+      <div id="round" aria-label="Current Round">Round: 0</div>
+      <div id="message">Press Start to play</div>
+    </div>
+    <div id="board" role="grid" aria-label="Simon game buttons" aria-disabled="true">
+      <button class="btn green" id="green" role="gridcell" aria-pressed="false" aria-label="Green button" tabindex="0"></button>
+      <button class="btn red" id="red" role="gridcell" aria-pressed="false" aria-label="Red button" tabindex="0"></button>
+      <button class="btn yellow" id="yellow" role="gridcell" aria-pressed="false" aria-label="Yellow button" tabindex="0"></button>
+      <button class="btn blue" id="blue" role="gridcell" aria-pressed="false" aria-label="Blue button" tabindex="0"></button>
+    </div>
+    <button id="start-btn" aria-pressed="false" aria-label="Start game">Start</button>
+  </div>
+
+<script>
+/*
+  Simon Memory Game - Vanilla JavaScript
+  --------------------------------------
+  Features:
+  - Random sequence generation, grows each round
+  - Visual and audio feedback on sequence playback and user clicks
+  - User input validation with immediate feedback
+  - Mobile & keyboard accessibility
+  - Clean, modular and commented code
+*/
+
+// Color buttons and their order in game sequence
+const COLORS = ['green', 'red', 'yellow', 'blue'];
+
+// Elements references
+const buttons = COLORS.reduce((acc, color) => {
+  acc[color] = document.getElementById(color);
+  return acc;
+}, {});
+
+const startBtn = document.getElementById('start-btn');
+const roundDisplay = document.getElementById('round');
+const messageDisplay = document.getElementById('message');
+const board = document.getElementById('board');
+
+let sequence = [];
+let userSequence = [];
+let round = 0;
+let acceptingInput = false; // Flag to prevent input when not user turn
+let playbackSpeed = 700; // milliseconds between color flashes
+let timeoutIds = [];
+
+// Simple tones for colors (Web Audio API)
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const frequencies = {
+  green: 329.63, // E4
+  red: 261.63,   // C4
+  yellow: 220.00, // A3
+  blue: 164.81   // E3
+};
+
+function playTone(color, duration = 400) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+
+  osc.frequency.value = frequencies[color];
+  osc.type = 'sine';
+
+  osc.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+
+  gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+  osc.start();
+
+  setTimeout(() => {
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.05);
+    osc.stop(audioCtx.currentTime + 0.05);
+  }, duration);
+}
+
+// Activate color button visually and play sound
+function activateButton(color) {
+  return new Promise(resolve => {
+    const btn = buttons[color];
+    btn.classList.add('active');
+    btn.setAttribute('aria-pressed', 'true');
+    playTone(color);
+    // Duration of highlight
+    setTimeout(() => {
+      btn.classList.remove('active');
+      btn.setAttribute('aria-pressed', 'false');
+      setTimeout(resolve, 200); // small pause before next
+    }, 500);
+  });
+}
+
+// Disable or enable user interaction on buttons
+function setBoardEnabled(enabled) {
+  acceptingInput = enabled;
+  if (enabled) {
+    board.removeAttribute('aria-disabled');
+    Object.values(buttons).forEach(btn => {
+      btn.tabIndex = 0;
+      btn.style.cursor = 'pointer';
+    });
+  } else {
+    board.setAttribute('aria-disabled', 'true');
+    Object.values(buttons).forEach(btn => {
+      btn.tabIndex = -1;
+      btn.style.cursor = 'default';
+    });
+  }
+}
+
+// Update display of round and message
+function updateDisplay(roundNumber, msg) {
+  roundDisplay.textContent = `Round: ${roundNumber}`;
+  messageDisplay.textContent = msg;
+}
+
+// Generate next color in the sequence (random)
+function addNextColor() {
+  const nextColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+  sequence.push(nextColor);
+}
+
+// Play the full sequence to the user, one by one
+async function playSequence() {
+  setBoardEnabled(false);
+  updateDisplay(round, 'Watch the sequence!');
+  for (let color of sequence) {
+    await activateButton(color);
+  }
+  updateDisplay(round, 'Your turn!');
+  setBoardEnabled(true);
+  userSequence = [];
+}
+
+// Start new game
+function startGame() {
+  sequence = [];
+  userSequence = [];
+  round = 0;
+  playbackSpeed = 700;
+  startBtn.disabled = true;
+  startBtn.setAttribute('aria-pressed', 'true');
+  updateDisplay(round, 'Get ready...');
+  nextRound();
+}
+
+// Handle user's press on color buttons
+async function handleUserInput(e) {
+  if (!acceptingInput) return;
+  // Get color from target or dataset
+  const color = e.target.id;
+  if (!COLORS.includes(color)) return;
+  // Visual & sound feedback
+  await activateButton(color);
+
+  userSequence.push(color);
+
+  // Check correctness so far
+  const currentIndex = userSequence.length - 1;
+  if (userSequence[currentIndex] !== sequence[currentIndex]) {
+    // Wrong input — game over
+    endGame(false);
+    return;
+  }
+
+  if (userSequence.length === sequence.length) {
+    // Round complete - increase round and sequence
+    setBoardEnabled(false);
+    updateDisplay(round, 'Good job! Preparing next round...');
+    // Slow down playback a bit every few rounds to make it challenging
+    if (round % 5 === 0 && round > 0) {
+      playbackSpeed = Math.max(300, playbackSpeed - 50);
+    }
+    // Add slight pause before next round
+    setTimeout(nextRound, 1200);
+  }
+}
+
+// Proceed to next round - add next color and play sequence
+function nextRound() {
+  round++;
+  addNextColor();
+  playSequence();
+}
+
+// End the game, success = false means failure mode
+function endGame(success) {
+  setBoardEnabled(false);
+  startBtn.disabled = false;
+  startBtn.setAttribute('aria-pressed', 'false');
+
+  if (success) {
+    updateDisplay(round, 'Congratulations! You completed all rounds!');
+  } else {
+    updateDisplay(round, `Wrong move! Game Over at round ${round}. Press Start to try again.`);
+    // Play error sound
+    playErrorSound();
+  }
+  sequence = [];
+  userSequence = [];
+}
+
+// Play error buzzer sound
+function playErrorSound() {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+
+  osc.frequency.value = 110; // Low A
+  osc.type = 'square';
+
+  osc.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+
+  gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+  osc.start();
+
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.4);
+  osc.stop(audioCtx.currentTime + 0.4);
+}
+
+// Event Listeners
+startBtn.addEventListener('click', () => {
+  // Resume AudioContext on user gesture if suspended (required by some browsers)
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  startGame();
+});
+
+Object.values(buttons).forEach(btn => {
+  btn.addEventListener('click', handleUserInput);
+});
+
+// Keyboard accessibility: activate buttons on Enter/Space
+board.addEventListener('keydown', e => {
+  if (!acceptingInput) return;
+  if (e.target.classList.contains('btn')) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.target.click();
+    }
+  }
+});
+
+// Prevent space on scroll for start btn
+startBtn.addEventListener('keydown', e => {
+  if (e.key === ' ') {
+    e.preventDefault();
+    startBtn.click();
+  }
+});
+
+</script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>G4F Dev Apps Showcase</title>
+  <style>
+    body, html {
+      margin: 0; padding: 0; height: 100vh; overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+    }
+    #app-selector {
+      background: #222;
+      color: white;
+      padding: 10px;
+      flex: 0 0 auto;
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    #app-selector button {
+      background: #444;
+      border: none;
+      color: white;
+      padding: 8px 12px;
+      font-size: 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.3s;
+    }
+    #app-selector button:hover, #app-selector button.active {
+      background: #08f;
+    }
+    #iframe-container {
+      position: relative;
+      flex: 1 1 auto;
+      height: calc(100vh - 48px); /* selector height + padding approx */
+      width: 100%;
+      overflow: hidden;
+    }
+    iframe {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      z-index: 1000; /* iframe always on top */
+    }
+  </style>
+</head>
+<body>
+  <div id="app-selector" aria-label="Select app">
+    <!-- buttons inserted by JS -->
+  </div>
+  <div id="iframe-container">
+    <iframe id="app-frame" src="" scrolling="yes" title="G4F Dev App"></iframe>
+  </div>
+
+  <script>
+    const apps = [
+    { name: "2048 Game", url: "2048_game.html" },
+    { name: "API Tester Like Postman Lite", url: "api_tester_like_postman-lite.html" },
+    { name: "Calculator", url: "calculator.html" },
+    { name: "Color Picker", url: "color_picker.html" },
+    { name: "Countdown Timer", url: "countdown_timer.html" },
+    { name: "Currency Converter", url: "currency_converter.html" },
+    { name: "Daily Motivational Quote Generator", url: "dailymotivationalquotegenerator.html" },
+    { name: "Digital Clock", url: "digital_clock.html" },
+    { name: "Dynamic Kanban Board Drag & Drop", url: "dynamic_kanban_board_drag__drop.html" },
+    { name: "Expense Tracker LocalStorage", url: "expense_tracker_localstorage.html" },
+    { name: "File Drop Image Compressor", url: "file-drop_image_compressor.html" },
+    { name: "Flappy Bird Clone", url: "flappy_bird_clone.html" },
+    { name: "Flashcard Learning App", url: "flashcard_learning_app.html" },
+    { name: "Hangman Game", url: "hangman_game.html" },
+    { name: "Interactive Quiz Platform", url: "interactivequizplatform.html" },
+    { name: "Interactive To-do List with Drag and Drop", url: "interactiveto-dolistwithdrag-and-drop.html" },
+    { name: "Markdown Previewer", url: "markdown_previewer.html" },
+    { name: "Maze Generator & Solver", url: "maze_generator__solver.html" },
+    { name: "Memory Card Matching Challenge", url: "memorycardmatchingchallenge.html" },
+    { name: "Notepad Notes App", url: "notepad_notes_app.html" },
+    { name: "Pac-Man Game Canvas", url: "pac-man_game_canvas.html" },
+    { name: "Paint Clone", url: "paint_clone.html" },
+    { name: "Personal Expense Tracker with Charts", url: "personalexpensetrackerwithcharts.html" },
+    { name: "Quote Generator", url: "quote_generator.html" },
+    { name: "Random Password Generator", url: "random_password_generator.html" },
+    { name: "Recipe Finder by Ingredients", url: "recipefinderbyingredients.html" },
+    { name: "Simon Memory Game", url: "simon_memory_game.html" },
+    { name: "Simple BMI Calculator", url: "simple_bmi_calculator.html" },
+    { name: "Simple Poll Voting App", url: "simple_poll_voting_app.html" },
+    { name: "Snake Game", url: "snake_game.html" },
+    { name: "Stopwatch", url: "stopwatch.html" },
+    { name: "Sudoku Solver (Basic)", url: "sudoku_solver_(basic).html" },
+    { name: "Tetris", url: "tetris.html" },
+    { name: "Tip Calculator", url: "tip_calculator.html" },
+    { name: "To-Do List App", url: "to-do_list_app.html" },
+    { name: "Typing Speed Test", url: "typing_speed_test.html" },
+    { name: "Unit Converter (Length, Weight, Temperature)", url: "unit_converter_(length,_weight,_temperature).html" },
+    { name: "Voice Controlled Stopwatch", url: "voice-controlledstopwatch.html" },
+    { name: "Workout Planner with Timer", url: "workoutplannerwithtimer.html" }
+  ];
+
+
+    const selector = document.getElementById('app-selector');
+    const iframe = document.getElementById('app-frame');
+
+    function setActiveButton(activeBtn) {
+      [...selector.children].forEach(btn => btn.classList.remove('active'));
+      activeBtn.classList.add('active');
+    }
+
+    function loadApp(url, btn) {
+      iframe.src = url;
+      setActiveButton(btn);
+    }
+
+    // Build buttons
+    apps.forEach(({name, url}, idx) => {
+      const btn = document.createElement('button');
+      btn.textContent = name;
+      btn.type = 'button';
+      btn.title = name;
+      btn.addEventListener('click', () => loadApp(url, btn));
+      selector.appendChild(btn);
+      // Load first app by default
+      if (idx === 0) {
+        loadApp(url, btn);
+      }
+    });
+  </script>
+</body>
+</html>

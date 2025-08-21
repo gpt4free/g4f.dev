@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Modern URL Shortener (Frontend Only)</title>
+  <style>
+    /* 
+      Mobile-first CSS design for a clean, modern URL shortener.
+      Responsive layout, smooth interactions, and accessible form elements.
+    */
+    :root {
+      --color-primary: #4f46e5; /* Indigo-600 */
+      --color-primary-hover: #4338ca; /* Indigo-700 */
+      --color-error: #dc2626; /* Red-600 */
+      --color-success: #16a34a; /* Green-600 */
+      --color-bg: #f9fafb; /* Gray-50 */
+      --color-card-bg: #ffffff; /* White */
+      --color-text: #1f2937; /* Gray-800 */
+      --color-muted: #6b7280; /* Gray-500 */
+      --radius: 8px;
+      --transition: 0.3s ease;
+      font-size: 16px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--color-bg);
+      color: var(--color-text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      padding: 1rem;
+    }
+
+    header {
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    header h1 {
+      font-weight: 700;
+      font-size: 1.75rem;
+      margin: 0.25rem 0 0;
+      color: var(--color-primary);
+    }
+
+    header p {
+      margin: 0.25rem 0 0;
+      color: var(--color-muted);
+      font-size: 1rem;
+    }
+
+    main {
+      width: 100%;
+      max-width: 480px;
+      background: var(--color-card-bg);
+      padding: 1.5rem 1rem 2rem;
+      border-radius: var(--radius);
+      box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.12),
+        0 1px 2px rgba(0, 0, 0, 0.24);
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    label {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      font-size: 0.9rem;
+    }
+
+    input[type="url"] {
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      border: 2px solid #d1d5db; /* Gray-300 */
+      border-radius: var(--radius);
+      transition: border-color var(--transition);
+      outline-offset: 2px;
+    }
+
+    input[type="url"]:focus {
+      border-color: var(--color-primary);
+      outline: none;
+    }
+
+    .error {
+      color: var(--color-error);
+      font-size: 0.85rem;
+      height: 1.25rem;
+    }
+
+    button[type="submit"] {
+      background-color: var(--color-primary);
+      color: white;
+      padding: 0.75rem;
+      border: none;
+      border-radius: var(--radius);
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color var(--transition);
+    }
+
+    button[type="submit"]:hover,
+    button[type="submit"]:focus {
+      background-color: var(--color-primary-hover);
+      outline: none;
+    }
+
+    section#result {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background-color: #e0e7ff; /* Indigo-100 */
+      border-radius: var(--radius);
+      display: none;
+      flex-direction: column;
+      word-break: break-all;
+    }
+
+    section#result.visible {
+      display: flex;
+    }
+
+    section#result p {
+      margin: 0 0 0.75rem 0;
+      font-size: 1rem;
+      color: var(--color-text);
+    }
+
+    .short-url {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      background: white;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius);
+      border: 1px solid #c7d2fe; /* Indigo-200 */
+      user-select: all;
+    }
+
+    .btn-copy {
+      background-color: var(--color-primary);
+      color: white;
+      border: none;
+      padding: 0.4rem 0.8rem;
+      border-radius: var(--radius);
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background-color var(--transition);
+    }
+
+    .btn-copy:hover,
+    .btn-copy:focus {
+      background-color: var(--color-primary-hover);
+      outline: none;
+    }
+
+    /* Responsive Utilities */
+    @media (min-width: 480px) {
+      main {
+        padding: 2rem 2rem 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!--
+  Modern URL Shortener (Frontend Only)
+  -----------------------------------
+  A responsive, mobile-first single-page URL shortener frontend.
+  - Input: Enter any URL.
+  - Output: Generates a short code (simulated).
+  - Features: Validation, copy-to-clipboard, user feedback.
+  - No external dependencies; uses vanilla JS and CSS.
+  -->
+
+  <header>
+    <h1>URL Shortener</h1>
+    <p>Enter a URL to get a shortened link (frontend-only simulation)</p>
+  </header>
+
+  <main>
+    <form id="shorten-form" novalidate autocomplete="off" aria-describedby="error-msg">
+      <label for="url-input">Paste your URL here:</label>
+      <input
+        type="url"
+        id="url-input"
+        name="url"
+        placeholder="e.g. https://example.com/some/long/path"
+        required
+        aria-invalid="false"
+        aria-describedby="error-msg"
+        spellcheck="false"
+      />
+      <div id="error-msg" class="error" aria-live="polite" role="alert"></div>
+      <button type="submit" aria-label="Shorten URL">Shorten URL</button>
+    </form>
+
+    <section id="result" aria-live="polite" role="region" aria-label="Shortened URL output">
+      <p>Your shortened URL:</p>
+      <div class="short-url" tabindex="0" aria-label="Shortened URL, click the copy button to copy">
+        <a href="#" target="_blank" rel="noopener noreferrer" id="short-url-link"></a>
+        <button class="btn-copy" type="button" id="copy-btn" aria-label="Copy shortened URL to clipboard">Copy</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /*
+     * URL Shortener Frontend JS
+     * -------------------------
+     * Validates input URL, simulates creating a shortened URL.
+     * Provides interaction and accessible feedback.
+     */
+
+    (function () {
+      const form = document.getElementById('shorten-form');
+      const urlInput = document.getElementById('url-input');
+      const errorMsg = document.getElementById('error-msg');
+      const resultSection = document.getElementById('result');
+      const shortUrlLink = document.getElementById('short-url-link');
+      const copyBtn = document.getElementById('copy-btn');
+
+      /**
+       * Simple URL validation using the URL constructor.
+       * @param {string} url 
+       * @returns {boolean}
+       */
+      function isValidUrl(url) {
+        try {
+          const parsed = new URL(url);
+          // Optional: restrict to http(s) protocols only
+          return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+        } catch {
+          return false;
+        }
+      }
+
+      /**
+       * Generate a random 6-character alphanumeric short code.
+       * @returns {string}
+       */
+      function generateShortCode() {
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 6; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+      }
+
+      /**
+       * Shows error message and marks input as invalid.
+       * @param {string} message 
+       */
+      function showError(message) {
+        errorMsg.textContent = message;
+        urlInput.setAttribute('aria-invalid', 'true');
+        resultSection.classList.remove('visible');
+      }
+
+      /**
+       * Clears error message and input invalid state.
+       */
+      function clearError() {
+        errorMsg.textContent = '';
+        urlInput.setAttribute('aria-invalid', 'false');
+      }
+
+      /**
+       * Updates the result section with the shortened URL and displays it.
+       * @param {string} originalUrl 
+       * @param {string} shortCode 
+       */
+      function displayResult(originalUrl, shortCode) {
+        const baseUrl = window.location.origin || 'https://short.ly'; // Fallback example domain
+        const shortUrl = `${baseUrl}/${shortCode}`;
+        shortUrlLink.href = originalUrl; // link points to original URL
+        shortUrlLink.textContent = shortUrl;
+        resultSection.classList.add('visible');
+        copyBtn.textContent = 'Copy';
+        copyBtn.disabled = false;
+      }
+
+      /**
+       * Copies the shortened URL text to clipboard.
+       */
+      function copyToClipboard() {
+        const textToCopy = shortUrlLink.textContent;
+        if (!navigator.clipboard) {
+          // fallback for older browsers
+          const textarea = document.createElement('textarea');
+          textarea.value = textToCopy;
+          textarea.style.position = 'fixed'; // prevent scrolling to bottom
+          document.body.appendChild(textarea);
+          textarea.focus();
+          textarea.select();
+          try {
+            const successful = document.execCommand('copy');
+            if (successful) showCopySuccess();
+            else showCopyFail();
+          } catch {
+            showCopyFail();
+          }
+          document.body.removeChild(textarea);
+          return;
+        }
+        navigator.clipboard.writeText(textToCopy).then(showCopySuccess, showCopyFail);
+      }
+
+      /**
+       * Updates the copy button on success.
+       */
+      function showCopySuccess() {
+        copyBtn.textContent = 'Copied!';
+        copyBtn.disabled = true;
+        setTimeout(() => {
+          copyBtn.textContent = 'Copy';
+          copyBtn.disabled = false;
+        }, 2000);
+      }
+
+      /**
+       * Updates the copy button on failure.
+       */
+      function showCopyFail() {
+        copyBtn.textContent = 'Failed';
+        copyBtn.disabled = true;
+        setTimeout(() => {
+          copyBtn.textContent = 'Copy';
+          copyBtn.disabled = false;
+        }, 2000);
+      }
+
+      // Event listeners
+
+      // Validate on input and clear errors as user types
+      urlInput.addEventListener('input', () => {
+        clearError();
+      });
+
+      // Form submission
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const inputUrl = urlInput.value.trim();
+
+        if (!inputUrl) {
+          showError('Please enter a URL.');
+          urlInput.focus();
+          return;
+        }
+
+        if (!isValidUrl(inputUrl)) {
+          showError('Please enter a valid URL (must start with http:// or https://).');
+          urlInput.focus();
+          return;
+        }
+
+        clearError();
+
+        // Simulate shortening link creation
+        const shortCode = generateShortCode();
+
+        displayResult(inputUrl, shortCode);
+      });
+
+      // Copy button
+      copyBtn.addEventListener('click', () => {
+        copyToClipboard();
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Usage Statistics - User, Model, Provider, Tokens</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      background: #f8f8fb;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #444;
+    }
+    #dashboard {
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 24px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px #bbb3;
+    }
+    .picked-range {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    label {
+      font-weight: bold;
+      margin-right: 5px;
+    }
+    input[type="date"] {
+      padding: 4px 8px;
+      font-size: 14px;
+    }
+    button {
+      padding: 6px 14px;
+      font-size: 14px;
+      margin-left: 10px;
+      cursor: pointer;
+    }
+    #status {
+      color: #666;
+      text-align: center;
+      font-size: 13px;
+      margin-bottom: 15px;
+      min-height: 18px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      table-layout: fixed;
+      word-wrap: break-word;
+    }
+    th,
+    td {
+      border: 1px solid #e3e3e3;
+      padding: 8px 12px;
+      text-align: center;
+      user-select: none;
+    }
+    th {
+      background: #f3f6fc;
+      cursor: pointer;
+    }
+    tr:nth-child(even) {
+      background: #fafbff;
+    }
+    tr:hover {
+      background: #eaf4ff;
+    }
+    .num {
+      font-family: monospace;
+    }
+    .table-title {
+      margin-top: 40px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #377;
+      text-align: center;
+      user-select: none;
+    }
+    @media (max-width: 600px) {
+      #dashboard {
+        padding: 10px;
+      }
+      table,
+      th,
+      td {
+        font-size: 12px;
+        padding: 5px 6px;
+      }
+      .picked-range {
+        font-size: 14px;
+      }
+      th,
+      td {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+  </style>
+  <!-- Assuming this framework.js defines `framework.backendUrl` -->
+  <script src="../dist/js/framework.js"></script>
+</head>
+<body>
+  <div id="dashboard">
+    <h1>Usage Statistics</h1>
+    <div id="status">Loading...</div>
+
+    <div class="picked-range">
+      <label for="fromDate">From:</label>
+      <input type="date" id="fromDate" />
+      <label for="toDate" style="margin-left: 20px;">To:</label>
+      <input type="date" id="toDate" />
+      <button onclick="fetchAndDisplay()">Load Data</button>
+    </div>
+
+    <!-- User Usage Table -->
+    <div class="table-title">User Usage Table</div>
+    <table id="user-usage-table" aria-label="User usage data">
+      <thead>
+        <tr>
+          <th onclick="sortTable('user', 0)">User</th>
+          <th onclick="sortTable('user', 1)">Model</th>
+          <th onclick="sortTable('user', 2)">Provider</th>
+          <th onclick="sortTable('user', 3)">Count</th>
+          <th onclick="sortTable('user', 4)">Prompt Tokens</th>
+          <th onclick="sortTable('user', 5)">Completion Tokens</th>
+          <th onclick="sortTable('user', 6)">Total Tokens</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="7"><i>No data</i></td></tr>
+      </tbody>
+    </table>
+
+    <!-- Model Usage Table -->
+    <div class="table-title">Model Usage Table</div>
+    <table id="model-usage-table" aria-label="Model usage data">
+      <thead>
+        <tr>
+          <th onclick="sortTable('model', 0)">Model</th>
+          <th onclick="sortTable('model', 1)">Count</th>
+          <th onclick="sortTable('model', 2)">Prompt Tokens</th>
+          <th onclick="sortTable('model', 3)">Completion Tokens</th>
+          <th onclick="sortTable('model', 4)">Total Tokens</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="5"><i>No data</i></td></tr>
+      </tbody>
+    </table>
+
+    <!-- Provider Usage Table -->
+    <div class="table-title">Provider Usage Table</div>
+    <table id="provider-usage-table" aria-label="Provider usage data">
+      <thead>
+        <tr>
+          <th onclick="sortTable('provider', 0)">Provider</th>
+          <th onclick="sortTable('provider', 1)">Count</th>
+          <th onclick="sortTable('provider', 2)">Prompt Tokens</th>
+          <th onclick="sortTable('provider', 3)">Completion Tokens</th>
+          <th onclick="sortTable('provider', 4)">Total Tokens</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="5"><i>No data</i></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+<script>
+  // Store last fetched and summarized data per table for sorting
+  const lastData = {
+    user: [],
+    model: [],
+    provider: []
+  };
+
+  // Sort directions per table & each column
+  const sortDirections = {
+    user: [1, 1, 1, 1, 1, 1, 1],
+    model: [1, 1, 1, 1, 1],
+    provider: [1, 1, 1, 1, 1]
+  };
+
+  function formatDate(d) {
+    let m = '' + (d.getMonth() + 1);
+    let day = '' + d.getDate();
+    let y = d.getFullYear();
+    if (m.length < 2) m = '0' + m;
+    if (day.length < 2) day = '0' + day;
+    return [y, m, day].join('-');
+  }
+
+  function listDates(from, to) {
+    let arr = [];
+    let cur = new Date(from);
+    let t = new Date(to);
+    while (cur <= t) {
+      arr.push(formatDate(cur));
+      cur.setDate(cur.getDate() + 1);
+    }
+    return arr;
+  }
+
+function get_total_tokens(row) {
+    if (row.model && row.model.toLowerCase().includes("flux")) {
+        return row.completion_tokens || 0;
+    }
+    return (row.total_tokens || 0)
+}
+
+  async function fetchUsageForDate(date) {
+    let url = `${framework.backendUrl}/backend-api/v2/usage/${date}`;
+    try {
+      const resp = await fetch(url, { cache: "no-store" });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      let text = await resp.text();
+      let lines = text.trim().split("\n");
+      let arr = [];
+      for (let l of lines) {
+        try {
+          if (!l.trim() || l.startsWith("Url:")) continue;
+          let row = JSON.parse(l);
+
+          // Normalize tokens to numbers with fallback zero
+          row.prompt_tokens = Number(row.prompt_tokens) || 0;
+          row.completion_tokens = Number(row.completion_tokens) || 0;
+          row.total_tokens = get_total_tokens(row);
+
+          row.date = date;
+          arr.push(row);
+        } catch (e) {
+          /* ignore parse errors */
+        }
+      }
+      return { data: arr, url };
+    } catch (e) {
+      return { data: [], url };
+    }
+  }
+
+  // Summarize usage by user-model-provider keys with token sums and counts
+  function summarizeUsageByUserModelProvider(data) {
+    // key = `${user}|${model}|${provider}`
+    const summary = new Map();
+    for (let row of data) {
+      let user = row.user && row.user.trim() ? row.user : "<none>";
+      let model = row.model || "<none>";
+      let provider = row.provider || "<none>";
+      let key = `${user}|${model}|${provider}`;
+
+      if (!summary.has(key))
+        summary.set(key, {
+          user,
+          model,
+          provider,
+          count: 0,
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          total_tokens: 0
+        });
+      let rec = summary.get(key);
+      rec.count++;
+      rec.prompt_tokens += row.prompt_tokens;
+      rec.completion_tokens += row.completion_tokens;
+      rec.total_tokens += get_total_tokens(row);
+    }
+    return Array.from(summary.values());
+  }
+
+  // Summarize usage by model 
+  function summarizeUsageByModel(data) {
+    // key = model
+    const summary = new Map();
+    for (let row of data) {
+      let model = row.model || "<none>";
+      if (!summary.has(model))
+        summary.set(model, {
+          model,
+          count: 0,
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          total_tokens: 0
+        });
+      let rec = summary.get(model);
+      rec.count++;
+      rec.prompt_tokens += row.prompt_tokens;
+      rec.completion_tokens += row.completion_tokens;
+      rec.total_tokens += get_total_tokens(row);
+    }
+    return Array.from(summary.values());
+  }
+
+  // Summarize usage by provider
+  function summarizeUsageByProvider(data) {
+    // key = provider
+    const summary = new Map();
+    for (let row of data) {
+      let provider = row.provider || "<none>";
+      if (!summary.has(provider))
+        summary.set(provider, {
+          provider,
+          count: 0,
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          total_tokens: 0
+        });
+      let rec = summary.get(provider);
+      rec.count++;
+      rec.prompt_tokens += row.prompt_tokens;
+      rec.completion_tokens += row.completion_tokens;
+      rec.total_tokens += get_total_tokens(row);
+    }
+    return Array.from(summary.values());
+  }
+
+  // Render helpers
+
+  function renderUserTable(data) {
+    const tbody = document.querySelector("#user-usage-table tbody");
+    tbody.innerHTML = "";
+    if (!data.length) {
+      tbody.innerHTML = "<tr><td colspan='7'><i>No data</i></td></tr>";
+      return;
+    }
+    for (const rec of data) {
+      let uname = rec.user === "<none>" ? "<span style='color:#aaa;'>&lt;none&gt;</span>" : rec.user;
+      let modelName = rec.model === "<none>" ? "<span style='color:#aaa;'>&lt;none&gt;</span>" : rec.model;
+      let providerName = rec.provider === "<none>" ? "<span style='color:#aaa;'>&lt;none&gt;</span>" : rec.provider;
+
+      tbody.innerHTML += `<tr>
+        <td title="${uname.replace(/"/g,'&quot;')}">${uname}</td>
+        <td title="${modelName.replace(/"/g,'&quot;')}">${modelName}</td>
+        <td title="${providerName.replace(/"/g,'&quot;')}">${providerName}</td>
+        <td class="num">${rec.count.toLocaleString()}</td>
+        <td class="num">${rec.prompt_tokens.toLocaleString()}</td>
+        <td class="num">${rec.completion_tokens.toLocaleString()}</td>
+        <td class="num">${rec.total_tokens.toLocaleString()}</td>
+      </tr>`;
+    }
+  }
+
+  function renderModelTable(data) {
+    const tbody = document.querySelector("#model-usage-table tbody");
+    tbody.innerHTML = "";
+    if (!data.length) {
+      tbody.innerHTML = "<tr><td colspan='5'><i>No data</i></td></tr>";
+      return;
+    }
+    for (const rec of data) {
+      let modelName = rec.model === "<none>" ? "<span style='color:#aaa;'>&lt;none&gt;</span>" : rec.model;
+      tbody.innerHTML += `<tr>
+        <td title="${modelName.replace(/"/g,'&quot;')}">${modelName}</td>
+        <td class="num">${rec.count.toLocaleString()}</td>
+        <td class="num">${rec.prompt_tokens.toLocaleString()}</td>
+        <td class="num">${rec.completion_tokens.toLocaleString()}</td>
+        <td class="num">${get_total_tokens(rec).toLocaleString()}</td>
+      </tr>`;
+    }
+  }
+
+  function renderProviderTable(data) {
+    const tbody = document.querySelector("#provider-usage-table tbody");
+    tbody.innerHTML = "";
+    if (!data.length) {
+      tbody.innerHTML = "<tr><td colspan='5'><i>No data</i></td></tr>";
+      return;
+    }
+    for (const rec of data) {
+      let providerName = rec.provider === "<none>" ? "<span style='color:#aaa;'>&lt;none&gt;</span>" : rec.provider;
+      tbody.innerHTML += `<tr>
+        <td title="${providerName.replace(/"/g,'&quot;')}">${providerName}</td>
+        <td class="num">${rec.count.toLocaleString()}</td>
+        <td class="num">${rec.prompt_tokens.toLocaleString()}</td>
+        <td class="num">${rec.completion_tokens.toLocaleString()}</td>
+        <td class="num">${get_total_tokens(rec).toLocaleString()}</td>
+      </tr>`;
+    }
+  }
+
+  // Sort tables by col - generic for each table type
+  function sortTable(tableType, col) {
+    if (!lastData[tableType] || !lastData[tableType].length) return;
+    sortDirections[tableType][col] = -sortDirections[tableType][col]; // toggle
+
+    let sorted = [...lastData[tableType]];
+    const dir = sortDirections[tableType][col];
+
+    switch (tableType) {
+      case "user":
+        switch (col) {
+          case 0: // User
+            sorted.sort((a, b) => a.user.localeCompare(b.user) * dir);
+            break;
+          case 1: // Model
+            sorted.sort((a, b) => a.model.localeCompare(b.model) * dir);
+            break;
+          case 2: // Provider
+            sorted.sort((a, b) => a.provider.localeCompare(b.provider) * dir);
+            break;
+          case 3: // Count
+            sorted.sort((a, b) => (a.count - b.count) * dir);
+            break;
+          case 4: // Prompt tokens
+            sorted.sort((a, b) => (a.prompt_tokens - b.prompt_tokens) * dir);
+            break;
+          case 5: // Completion tokens
+            sorted.sort((a, b) => (a.completion_tokens - b.completion_tokens) * dir);
+            break;
+          case 6: // Total tokens
+            sorted.sort((a, b) => (a.total_tokens - b.total_tokens) * dir);
+            break;
+        }
+        renderUserTable(sorted);
+        lastData.user = sorted;
+        break;
+
+      case "model":
+        switch (col) {
+          case 0: // Model
+            sorted.sort((a, b) => a.model.localeCompare(b.model) * dir);
+            break;
+          case 1: // Count
+            sorted.sort((a, b) => (a.count - b.count) * dir);
+            break;
+          case 2: // Prompt tokens
+            sorted.sort((a, b) => (a.prompt_tokens - b.prompt_tokens) * dir);
+            break;
+          case 3: // Completion tokens
+            sorted.sort((a, b) => (a.completion_tokens - b.completion_tokens) * dir);
+            break;
+          case 4: // Total tokens
+            sorted.sort((a, b) => (a.total_tokens - b.total_tokens) * dir);
+            break;
+        }
+        renderModelTable(sorted);
+        lastData.model = sorted;
+        break;
+
+      case "provider":
+        switch (col) {
+          case 0: // Provider
+            sorted.sort((a, b) => a.provider.localeCompare(b.provider) * dir);
+            break;
+          case 1: // Count
+            sorted.sort((a, b) => (a.count - b.count) * dir);
+            break;
+          case 2: // Prompt tokens
+            sorted.sort((a, b) => (a.prompt_tokens - b.prompt_tokens) * dir);
+            break;
+          case 3: // Completion tokens
+            sorted.sort((a, b) => (a.completion_tokens - b.completion_tokens) * dir);
+            break;
+          case 4: // Total tokens
+            sorted.sort((a, b) => (a.total_tokens - b.total_tokens) * dir);
+            break;
+        }
+        renderProviderTable(sorted);
+        lastData.provider = sorted;
+        break;
+    }
+  }
+
+  async function fetchAndDisplay() {
+    const status = document.getElementById("status");
+    let from = document.getElementById("fromDate").value;
+    let to = document.getElementById("toDate").value;
+
+    if (!from && !to) {
+      status.innerText = "Please select a date or date range.";
+      clearAllTables();
+      return;
+    }
+    if (from && to && from > to) [from, to] = [to, from];
+
+    let dates = from && to ? listDates(from, to) : [from || to];
+
+    status.innerText = "Fetching data...";
+
+    let allData = [];
+    for (let date of dates) {
+      let { data } = await fetchUsageForDate(date);
+      allData = allData.concat(data);
+    }
+
+    if (!allData.length) {
+      status.innerText = "No usage data found for the selected date(s).";
+      clearAllTables();
+      return;
+    }
+
+    status.innerText = "";
+
+    // Summarize all data for each table
+    lastData.user = summarizeUsageByUserModelProvider(allData);
+    lastData.model = summarizeUsageByModel(allData);
+    lastData.provider = summarizeUsageByProvider(allData);
+
+    // Render all tables (default sort order)
+    renderUserTable(lastData.user);
+    renderModelTable(lastData.model);
+    renderProviderTable(lastData.provider);
+  }
+
+  function clearAllTables() {
+    renderUserTable([]);
+    renderModelTable([]);
+    renderProviderTable([]);
+  }
+
+  // Default dates: last 7 days inclusive
+  window.onload = function () {
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+    const weekAgo = new Date(today.getTime() - 6 * 86400000);
+    const weekAgoStr = weekAgo.toISOString().slice(0, 10);
+    document.getElementById("fromDate").value = weekAgoStr;
+    document.getElementById("toDate").value = todayStr;
+    fetchAndDisplay();
+  };
+
+</script>
+</body>
+</html>

@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Interactive Quiz Platform</title>
+<style>
+  /*
+  Interactive Quiz Platform
+  -------------------------
+  A modern, responsive, mobile-first quiz application.
+  Features:
+  - Mobile-friendly layout and typography
+  - Responsive design for tablets and desktops
+  - Interactive quiz with multiple choice questions
+  - Real-time feedback with score summary at the end
+  - No external dependencies
+
+  Author: OpenAI ChatGPT
+  Date: 2024-06
+  */
+
+  /* Base/reset */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f9fafb;
+    color: #111;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 1rem;
+  }
+
+  #quiz-container {
+    background: #fff;
+    max-width: 480px;
+    width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 6px 15px -5px rgba(0,0,0,0.15);
+    padding: 1.5rem 1.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+  header h1 {
+    font-size: 1.8rem;
+    margin: 0 0 0.2rem;
+  }
+  header p {
+    color: #555;
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  /* Question */
+  #question-number {
+    font-weight: 600;
+    color: #6b7280;
+    margin-bottom: 0.3rem;
+    font-size: 0.9rem;
+  }
+  #question-text {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+
+  /* Options */
+  #options {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.5rem;
+  }
+  #options li {
+    margin-bottom: 0.75rem;
+  }
+  .option-btn {
+    width: 100%;
+    text-align: left;
+    background: #f3f4f6;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    padding: 0.85rem 1rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.25s, border-color 0.25s;
+  }
+  .option-btn:hover,
+  .option-btn:focus {
+    background-color: #e0e7ff;
+    border-color: #6366f1;
+    outline: none;
+  }
+  .option-btn[aria-pressed="true"] {
+    background-color: #c7d2fe;
+    border-color: #4f46e5;
+  }
+  .option-btn.correct {
+    background-color: #d1fae5;
+    border-color: #10b981;
+    color: #065f46;
+    font-weight: 600;
+  }
+  .option-btn.incorrect {
+    background-color: #fee2e2;
+    border-color: #ef4444;
+    color: #991b1b;
+    font-weight: 600;
+  }
+
+  /* Navigation buttons */
+  #navigation {
+    display: flex;
+    justify-content: space-between;
+  }
+  button.nav-btn {
+    background-color: #4f46e5;
+    border: none;
+    color: white;
+    padding: 0.75rem 1.2rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  button.nav-btn:disabled {
+    background-color: #a5b4fc;
+    cursor: not-allowed;
+  }
+  button.nav-btn:hover:not(:disabled),
+  button.nav-btn:focus:not(:disabled) {
+    background-color: #4338ca;
+    outline: none;
+  }
+
+  /* Results summary */
+  #result {
+    text-align: center;
+  }
+  #result h2 {
+    font-size: 1.6rem;
+    margin-bottom: 0.5rem;
+  }
+  #result p {
+    font-size: 1.1rem;
+    color: #374151;
+    margin-bottom: 1rem;
+  }
+  #result button {
+    background-color: #10b981;
+  }
+  #result button:hover,
+  #result button:focus {
+    background-color: #059669;
+  }
+
+  /* Responsive typography for larger screens */
+  @media (min-width: 640px) {
+    body {
+      padding: 2rem;
+    }
+    header h1 {
+      font-size: 2rem;
+    }
+    #question-text {
+      font-size: 1.5rem;
+    }
+    .option-btn {
+      font-size: 1.1rem;
+      padding: 1rem 1.2rem;
+    }
+    button.nav-btn {
+      font-size: 1.1rem;
+      padding: 1rem 1.5rem;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="quiz-container" role="main" aria-labelledby="quiz-title">
+  <header>
+    <h1 id="quiz-title">Interactive Quiz Platform</h1>
+    <p>Test your knowledge and see how you score!</p>
+  </header>
+  <section id="quiz" aria-live="polite">
+
+    <div id="question-meta">
+      <div id="question-number" aria-label="Question number"></div>
+      <div id="question-text"></div>
+    </div>
+
+    <ul id="options" role="list" tabindex="0"></ul>
+
+    <nav id="navigation" aria-label="Quiz navigation">
+      <button id="prev-btn" class="nav-btn" type="button" aria-disabled="true" disabled>Previous</button>
+      <button id="next-btn" class="nav-btn" type="button" aria-disabled="true" disabled>Next</button>
+      <button id="submit-btn" class="nav-btn" type="button" hidden>Submit</button>
+    </nav>
+  </section>
+
+  <section id="result" hidden>
+    <h2>Results</h2>
+    <p id="score-text"></p>
+    <button id="restart-btn" type="button">Restart Quiz</button>
+  </section>
+</div>
+
+<script>
+  /*
+   * Quiz Platform JavaScript - Handles quiz logic and interaction.
+   * No external libraries used.
+   */
+
+  (function() {
+    'use strict';
+
+    // Quiz Data: Add/edit questions here
+    const quizData = [
+      {
+        question: "What is the capital city of France?",
+        options: ["Berlin", "Madrid", "Paris", "Rome"],
+        answer: 2, // index of correct option
+      },
+      {
+        question: "Which language runs in a web browser?",
+        options: ["Java", "C", "Python", "JavaScript"],
+        answer: 3,
+      },
+      {
+        question: "What does CSS stand for?",
+        options: [
+          "Central Style Sheets",
+          "Cascading Style Sheets",
+          "Cascading Simple Sheets",
+          "Control Style Sheets",
+        ],
+        answer: 1,
+      },
+      {
+        question: "Which HTML element do we put the JavaScript in?",
+        options: ["<script>", "<js>", "<javascript>", "<code>"],
+        answer: 0,
+      },
+      {
+        question: "Which company developed the React library?",
+        options: ["Google", "Facebook", "Microsoft", "Apple"],
+        answer: 1,
+      },
+    ];
+
+    // State variables
+    let currentQuestionIndex = 0;
+    const userAnswers = new Array(quizData.length).fill(null);
+
+    // Elements references
+    const questionNumberEl = document.getElementById('question-number');
+    const questionTextEl = document.getElementById('question-text');
+    const optionsListEl = document.getElementById('options');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const submitBtn = document.getElementById('submit-btn');
+    const quizSection = document.getElementById('quiz');
+    const resultSection = document.getElementById('result');
+    const scoreTextEl = document.getElementById('score-text');
+    const restartBtn = document.getElementById('restart-btn');
+
+    /**
+     * Renders the current question and options.
+     */
+    function renderQuestion() {
+      const currentQuestion = quizData[currentQuestionIndex];
+      questionNumberEl.textContent = `Question ${currentQuestionIndex + 1} of ${quizData.length}`;
+      questionTextEl.textContent = currentQuestion.question;
+
+      // Clear previous options
+      optionsListEl.innerHTML = '';
+
+      currentQuestion.options.forEach((option, index) => {
+        const li = document.createElement('li');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'option-btn';
+        button.textContent = option;
+        button.setAttribute('aria-pressed', userAnswers[currentQuestionIndex] === index);
+        button.dataset.optionIndex = index;
+
+        // Indicate selection
+        if (userAnswers[currentQuestionIndex] === index) {
+          button.classList.add('selected');
+          button.setAttribute('aria-pressed', 'true');
+        }
+
+        button.addEventListener('click', () => {
+          selectOption(index);
+        });
+
+        li.appendChild(button);
+        optionsListEl.appendChild(li);
+      });
+
+      // Update buttons state
+      prevBtn.disabled = currentQuestionIndex === 0;
+      prevBtn.setAttribute('aria-disabled', prevBtn.disabled);
+
+      const answered = userAnswers[currentQuestionIndex] !== null;
+      nextBtn.disabled = !answered || currentQuestionIndex === quizData.length - 1;
+      nextBtn.setAttribute('aria-disabled', nextBtn.disabled);
+
+      submitBtn.hidden = currentQuestionIndex !== quizData.length - 1;
+      submitBtn.disabled = !answered;
+      submitBtn.setAttribute('aria-disabled', submitBtn.disabled);
+    }
+
+    /**
+     * Handles user selecting an option.
+     * @param {number} optionIndex - index of selected option
+     */
+    function selectOption(optionIndex) {
+      userAnswers[currentQuestionIndex] = optionIndex;
+      // Rerender question to update UI selection states
+      renderQuestion();
+    }
+
+    /**
+     * Shows the results screen with score and details.
+     */
+    function showResults() {
+      quizSection.hidden = true;
+      resultSection.hidden = false;
+      // Calculate score
+      let correctCount = 0;
+      for (let i = 0; i < quizData.length; i++) {
+        if (userAnswers[i] === quizData[i].answer) correctCount++;
+      }
+      scoreTextEl.textContent = `You scored ${correctCount} out of ${quizData.length} (${((correctCount/quizData.length)*100).toFixed(1)}%)`;
+
+      // Optionally: display detailed results (not shown here for brevity)
+    }
+
+    /**
+     * Resets the quiz to initial state.
+     */
+    function restartQuiz() {
+      currentQuestionIndex = 0;
+      for (let i = 0; i < userAnswers.length; i++) {
+        userAnswers[i] = null;
+      }
+      resultSection.hidden = true;
+      quizSection.hidden = false;
+      renderQuestion();
+      // Focus question text for accessibility
+      questionTextEl.focus?.();
+    }
+
+    /**
+     * Set up event listeners for navigation and submission.
+     */
+    function setupEventListeners() {
+      prevBtn.addEventListener('click', () => {
+        if (currentQuestionIndex > 0) {
+          currentQuestionIndex--;
+          renderQuestion();
+          // Move focus back to question text for accessibility
+          questionTextEl.focus?.();
+        }
+      });
+      nextBtn.addEventListener('click', () => {
+        if (currentQuestionIndex < quizData.length - 1 && userAnswers[currentQuestionIndex] !== null) {
+          currentQuestionIndex++;
+          renderQuestion();
+          questionTextEl.focus?.();
+        }
+      });
+      submitBtn.addEventListener('click', () => {
+        if (userAnswers[currentQuestionIndex] !== null) {
+          showResults();
+          restartBtn.focus();
+        }
+      });
+      restartBtn.addEventListener('click', restartQuiz);
+
+      // Keyboard navigation: allow options selection via keyboard
+      optionsListEl.addEventListener('keydown', (e) => {
+        const btns = Array.from(optionsListEl.querySelectorAll('.option-btn'));
+        const currentBtn = document.activeElement;
+        const currentIndex = btns.indexOf(currentBtn);
+
+        switch(e.key) {
+          case 'ArrowDown':
+          case 'ArrowRight':
+            e.preventDefault();
+            const nextIndex = (currentIndex + 1) % btns.length;
+            btns[nextIndex].focus();
+            break;
+          case 'ArrowUp':
+          case 'ArrowLeft':
+            e.preventDefault();
+            const prevIndex = (currentIndex - 1 + btns.length) % btns.length;
+            btns[prevIndex].focus();
+            break;
+          case 'Enter':
+          case ' ':
+            e.preventDefault();
+            if (currentBtn) currentBtn.click();
+            break;
+          default:
+            break;
+        }
+      });
+    }
+
+    // Initialize quiz on page load
+    setupEventListeners();
+    renderQuestion();
+
+  })();
+</script>
+</body>
+</html>

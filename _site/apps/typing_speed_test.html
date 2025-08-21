@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Typing Speed Test</title>
+<style>
+  /* 
+  Typing Speed Test
+  Author: ChatGPT
+  Description:
+    A modern, responsive typing speed test application as a single HTML file.
+    Features:
+    - Mobile-first responsive design
+    - Displays a random test phrase to type
+    - Real-time input validation with color cues
+    - Timer starts on first keystroke
+    - Shows WPM (words per minute), characters typed, and accuracy
+    - Reset button to restart test
+  */
+
+  /* Reset and base styles */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    background: #f6f8fa;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 1.5rem 1rem;
+  }
+
+  h1 {
+    text-align: center;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+  }
+
+  main {
+    flex: 1;
+    max-width: 600px;
+    margin: 0 auto;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Phrase container */
+  #phrase {
+    background: #fff;
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgb(0 0 0 / 0.1);
+    font-size: 1.2rem;
+    line-height: 1.6;
+    user-select: none;
+    letter-spacing: 0.03em;
+  }
+  /* Highlight current character to type */
+  #phrase .current {
+    text-decoration: underline #3498db 2px;
+  }
+  /* Correctly typed characters */
+  #phrase .correct {
+    color: #2ecc71;
+  }
+  /* Incorrectly typed characters */
+  #phrase .incorrect {
+    color: #e74c3c;
+  }
+
+  /* Textarea input */
+  #input-area {
+    width: 100%;
+    min-height: 4rem;
+    font-size: 1.2rem;
+    padding: 0.5rem 0.75rem;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    resize: none;
+    font-family: inherit;
+    transition: border-color 0.3s;
+  }
+  #input-area:focus {
+    border-color: #3498db;
+    outline: none;
+  }
+
+  /* Stats section */
+  #stats {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+  #stats > div {
+    background: #fff;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.08);
+    min-width: 90px;
+    text-align: center;
+    user-select: none;
+  }
+  #stats > div span {
+    display: block;
+    font-size: 1.5rem;
+    color: #2980b9;
+  }
+
+  /* Reset button */
+  #reset-btn {
+    background: #3498db;
+    color: #fff;
+    border: none;
+    padding: 0.75rem;
+    font-size: 1.1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    box-shadow: 0 4px 6px rgb(52 152 219 / 0.5);
+    transition: background-color 0.3s;
+    user-select: none;
+  }
+  #reset-btn:active {
+    background: #2c80b4;
+  }
+  #reset-btn:focus {
+    outline: 3px solid #2980b9;
+    outline-offset: 2px;
+  }
+
+  /* Responsive typography */
+  @media (min-width: 480px) {
+    #phrase {
+      font-size: 1.4rem;
+    }
+    #input-area {
+      font-size: 1.4rem;
+    }
+    #stats {
+      font-size: 1.2rem;
+    }
+    #stats > div span {
+      font-size: 1.8rem;
+    }
+  }
+</style>
+</head>
+<body>
+  <h1>Typing Speed Test</h1>
+  <main>
+    <section id="phrase" aria-label="Text to type" tabindex="0"></section>
+    <textarea
+      id="input-area"
+      rows="3"
+      placeholder="Start typing here..."
+      aria-label="Typing input area"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      spellcheck="false"
+    ></textarea>
+    <div id="stats" aria-live="polite" aria-atomic="true">
+      <div>
+        WPM<br /><span id="wpm">0</span>
+      </div>
+      <div>
+        Characters<br /><span id="chars">0</span>
+      </div>
+      <div>
+        Accuracy<br /><span id="accuracy">100%</span>
+      </div>
+      <div>
+        Time<br /><span id="time">0s</span>
+      </div>
+    </div>
+    <button id="reset-btn" type="button" aria-label="Reset test">Reset Test</button>
+  </main>
+
+<script>
+  /*
+   Typing Speed Test JS
+   - Displays a random phrase to type
+   - Tracks keystrokes and timer
+   - Calculates WPM, accuracy, characters typed, and elapsed time
+   - Provides real-time feedback by coloring characters green/red
+   */
+
+  (function () {
+    "use strict";
+
+    // Array of sample phrases
+    const phrases = [
+      "The quick brown fox jumps over the lazy dog.",
+      "Typing tests are a great way to improve your speed.",
+      "Practice makes perfect, so keep typing every day.",
+      "JavaScript is versatile and commonly used in web development.",
+      "Responsive design adapts well to multiple screen sizes.",
+      "Accessibility is important when creating web applications.",
+      "Challenge yourself and track your progress over time.",
+      "Consistency and patience lead to better results.",
+      "Focus on accuracy first, then increase your speed.",
+      "Code comments improve readability and maintenance."
+    ];
+
+    // DOM Elements
+    const phraseElement = document.getElementById("phrase");
+    const inputElement = document.getElementById("input-area");
+    const wpmElement = document.getElementById("wpm");
+    const charsElement = document.getElementById("chars");
+    const accuracyElement = document.getElementById("accuracy");
+    const timeElement = document.getElementById("time");
+    const resetBtn = document.getElementById("reset-btn");
+
+    // Variables to track test state
+    let currentPhrase = "";
+    let timer = null;
+    let startTime = null;
+    let elapsedTime = 0; // in seconds
+    let finished = false;
+
+    /**
+     * Pick a random phrase from the list
+     * @returns {string}
+     */
+    function getRandomPhrase() {
+      const idx = Math.floor(Math.random() * phrases.length);
+      return phrases[idx];
+    }
+
+    /**
+     * Render the phrase with span-wrapped characters for coloring
+     * Also marks the current character to type with class "current"
+     */
+    function renderPhrase() {
+      phraseElement.innerHTML = "";
+      for (let i = 0; i < currentPhrase.length; i++) {
+        const span = document.createElement("span");
+        span.textContent = currentPhrase[i];
+        // Highlight the first character at the start
+        if (i === 0) span.classList.add("current");
+        phraseElement.appendChild(span);
+      }
+    }
+
+    /**
+     * Start the test timer
+     */
+    function startTimer() {
+      if (!startTime) {
+        startTime = Date.now();
+        timer = setInterval(() => {
+          elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+          updateTime();
+          if (finished) {
+            clearInterval(timer);
+          }
+        }, 1000);
+      }
+    }
+
+    /**
+     * Update timer display
+     */
+    function updateTime() {
+      timeElement.textContent = `${elapsedTime}s`;
+    }
+
+    /**
+     * Calculate and update statistics: WPM, characters typed, accuracy
+     * WPM formula: (correct characters / 5) / (minutes elapsed)
+     */
+    function updateStats(correctChars, totalTyped) {
+      const minutes = elapsedTime / 60 || 1 / 60; // avoid div by zero
+      const wpm = Math.round((correctChars / 5) / minutes);
+      wpmElement.textContent = finished ? wpm : Math.max(0, wpm);
+
+      charsElement.textContent = totalTyped;
+
+      const accuracy = totalTyped === 0 ? 100 : Math.round((correctChars / totalTyped) * 100);
+      accuracyElement.textContent = `${accuracy}%`;
+    }
+
+    /**
+     * Update the phrase coloring based on user input
+     * @param {string} input
+     */
+    function updatePhraseDisplay(input) {
+      const spans = phraseElement.querySelectorAll("span");
+      let correctChars = 0;
+      let totalTyped = input.length;
+
+      spans.forEach((span, i) => {
+        if (i < input.length) {
+          if (input[i] === currentPhrase[i]) {
+            span.classList.add("correct");
+            span.classList.remove("incorrect");
+            correctChars++;
+          } else {
+            span.classList.add("incorrect");
+            span.classList.remove("correct");
+          }
+          span.classList.remove("current");
+        } else {
+          span.classList.remove("correct", "incorrect", "current");
+        }
+      });
+
+      // Highlight next character to type if not finished
+      if (!finished) {
+        if (input.length < spans.length) {
+          spans[input.length].classList.add("current");
+        }
+      }
+
+      updateStats(correctChars, totalTyped);
+
+      // Check for completion
+      if (input === currentPhrase) {
+        finished = true;
+        clearInterval(timer);
+        inputElement.blur();
+      }
+    }
+
+    /**
+     * Resets the test state and UI
+     */
+    function resetTest() {
+      clearInterval(timer);
+      finished = false;
+      elapsedTime = 0;
+      startTime = null;
+
+      currentPhrase = getRandomPhrase();
+      renderPhrase();
+
+      inputElement.value = "";
+      inputElement.disabled = false;
+      inputElement.focus();
+
+      wpmElement.textContent = "0";
+      charsElement.textContent = "0";
+      accuracyElement.textContent = "100%";
+      timeElement.textContent = "0s";
+    }
+
+    /* Event Listeners */
+
+    inputElement.addEventListener("input", (e) => {
+      if (finished) return;
+
+      const inputValue = e.target.value;
+      if (inputValue.length === 1 && !startTime) {
+        startTimer();
+      }
+
+      updatePhraseDisplay(inputValue);
+    });
+
+    resetBtn.addEventListener("click", resetTest);
+
+    /* Initialization */
+    resetTest();
+
+  })();
+</script>
+</body>
+</html>

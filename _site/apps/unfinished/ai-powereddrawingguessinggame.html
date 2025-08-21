@@ -1,0 +1,475 @@
+<!--
+AI-Powered Drawing Guessing Game
+--------------------------------
+Author: Your Name
+Date: 2024-06-08
+Description:
+A modern, responsive web-based drawing guessing game that lets the AI try to guess
+what the user is drawing. The user draws on the canvas, then submits the drawing.
+The AI uses a simple image classification model built with basic shape detection heuristics 
+(due to no external dependencies) to guess among predefined categories.
+
+Features:
+- Mobile-first responsive design
+- Touch and mouse drawing support
+- Clear and intuitive UI
+- Simple AI guessing using canvas pixel data processing (no ML models)
+- No external dependencies (all in one HTML file)
+- Clean and commented code
+
+How to Play:
+1. Draw an object on the canvas.
+2. Tap the "Guess" button.
+3. The AI will analyze the drawing and show a guess from a predefined list.
+4. Press "Clear" to start over.
+
+Predefined guess categories (for demo):
+- Circle
+- Square
+- Triangle
+- Line
+- Scribble
+
+Limitations:
+- The AI guesser is a simple heuristic demo (no real ML).
+- Best effort guess based on drawn shapes and strokes.
+
+Enjoy!
+
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI-Powered Drawing Guessing Game</title>
+  <style>
+    /* Mobile-first responsive design */
+
+    :root {
+      --primary-color: #4a90e2;
+      --secondary-color: #f5f7fa;
+      --text-color: #333;
+      --btn-bg: #4a90e2;
+      --btn-hover-bg: #3a79c2;
+      --btn-text: #fff;
+      --canvas-border: #ccc;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: var(--secondary-color);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+        Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 1rem;
+      min-height: 100vh;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      text-align: center;
+      color: var(--primary-color);
+      user-select: none;
+    }
+
+    #game-container {
+      max-width: 480px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      background: white;
+      padding: 1rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    #canvas-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1/1;
+      border: 2px solid var(--canvas-border);
+      border-radius: 12px;
+      touch-action: none; /* Prevent scrolling when drawing on mobile */
+      background: #fff;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 12px;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    #controls {
+      display: flex;
+      gap: 1rem;
+      width: 100%;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      flex: 1 1 40%;
+      min-width: 120px;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      background: var(--btn-bg);
+      border: none;
+      border-radius: 8px;
+      color: var(--btn-text);
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      user-select: none;
+      box-shadow: 0 2px 6px rgba(74, 144, 226, 0.4);
+    }
+
+    button:hover,
+    button:focus {
+      background: var(--btn-hover-bg);
+      outline: none;
+    }
+
+    button:disabled {
+      background: #999;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    #guess-result {
+      font-size: 1.25rem;
+      font-weight: 600;
+      min-height: 2rem;
+      text-align: center;
+      color: var(--primary-color);
+      user-select: none;
+      min-height: 2.4rem;
+    }
+
+    #footer {
+      margin-top: auto;
+      font-size: 0.8rem;
+      color: #666;
+      text-align: center;
+      user-select: none;
+    }
+
+    /* Larger screens adjustments */
+    @media (min-width: 600px) {
+      h1 {
+        font-size: 2rem;
+      }
+
+      button {
+        font-size: 1.15rem;
+        min-width: 140px;
+      }
+
+      #guess-result {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>AI-Powered Drawing Guessing Game</h1>
+
+  <section id="game-container" aria-label="Drawing guessing game">
+    <div id="canvas-wrapper">
+      <canvas id="drawing-canvas" width="400" height="400" aria-label="Drawing canvas" tabindex="0"></canvas>
+    </div>
+
+    <div id="controls">
+      <button id="guess-btn" type="button" aria-live="polite" aria-pressed="false">Guess</button>
+      <button id="clear-btn" type="button">Clear</button>
+    </div>
+
+    <div id="guess-result" aria-live="polite" aria-atomic="true"></div>
+  </section>
+
+  <footer id="footer">
+    Draw a simple shape like circle, square, triangle, or a line and let AI guess!
+  </footer>
+
+  <script>
+  /**
+   * Drawing Guessing Game Script
+   * ---------------------------
+   * Handles drawing input, button controls, and guessing logic.
+   * Uses heuristics to guess shapes from user drawings.
+   */
+
+  (() => {
+    // Get references to DOM elements
+    const canvas = document.getElementById('drawing-canvas');
+    const ctx = canvas.getContext('2d');
+    const guessBtn = document.getElementById('guess-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const guessResult = document.getElementById('guess-result');
+
+    // Drawing state
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    // Store points for heuristics
+    const points = [];
+
+    // Configure drawing style
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = '#333';
+
+    // Helper: Get relative coordinates for drawing (mouse or touch)
+    function getPos(evt) {
+      const rect = canvas.getBoundingClientRect();
+      if (evt.touches && evt.touches.length > 0) {
+        return {
+          x: evt.touches[0].clientX - rect.left,
+          y: evt.touches[0].clientY - rect.top,
+        };
+      } else {
+        return {
+          x: evt.clientX - rect.left,
+          y: evt.clientY - rect.top,
+        };
+      }
+    }
+
+    // Start drawing
+    function startDraw(evt) {
+      evt.preventDefault();
+      isDrawing = true;
+      const { x, y } = getPos(evt);
+      lastX = x;
+      lastY = y;
+      points.length = 0;
+      points.push({ x, y });
+    }
+
+    // Draw line to current position
+    function draw(evt) {
+      if (!isDrawing) return;
+      evt.preventDefault();
+      const { x, y } = getPos(evt);
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      lastX = x;
+      lastY = y;
+      points.push({ x, y });
+    }
+
+    // Stop drawing
+    function stopDraw(evt) {
+      if (!isDrawing) return;
+      evt.preventDefault();
+      isDrawing = false;
+    }
+
+    // Clear canvas and reset points & guess
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      points.length = 0;
+      guessResult.textContent = '';
+      guessBtn.disabled = false;
+      guessBtn.setAttribute('aria-pressed', 'false');
+    }
+
+    // Utility: Calculate distance between points
+    function distance(p1, p2) {
+      return Math.hypot(p1.x - p2.x, p1.y - p2.y);
+    }
+
+    // Utility: Calculate bounding box of points
+    function boundingBox(pts) {
+      const xs = pts.map((p) => p.x);
+      const ys = pts.map((p) => p.y);
+      return {
+        minX: Math.min(...xs),
+        maxX: Math.max(...xs),
+        minY: Math.min(...ys),
+        maxY: Math.max(...ys),
+        width: Math.max(...xs) - Math.min(...xs),
+        height: Math.max(...ys) - Math.min(...ys),
+      };
+    }
+
+    // Utility: Calculate total length of drawn path
+    function pathLength(pts) {
+      let len = 0;
+      for (let i = 1; i < pts.length; i++) {
+        len += distance(pts[i - 1], pts[i]);
+      }
+      return len;
+    }
+
+    // Utility: Approximate if path is closed (start and end points near)
+    function isPathClosed(pts, threshold = 40) {
+      if (pts.length < 2) return false;
+      return distance(pts[0], pts[pts.length - 1]) < threshold;
+    }
+
+    // Utility: Calculate straightness ratio (distance between ends vs total path length)
+    function straightness(pts) {
+      if (pts.length < 2) return 0;
+      const endDist = distance(pts[0], pts[pts.length - 1]);
+      const len = pathLength(pts);
+      return endDist / len;
+    }
+
+    // Utility: Count direction changes (to detect scribble)
+    function countDirectionChanges(pts) {
+      if (pts.length < 3) return 0;
+      let changes = 0;
+      let prevAngle = null;
+      for (let i = 2; i < pts.length; i++) {
+        const dx1 = pts[i - 1].x - pts[i - 2].x;
+        const dy1 = pts[i - 1].y - pts[i - 2].y;
+        const dx2 = pts[i].x - pts[i - 1].x;
+        const dy2 = pts[i].y - pts[i - 1].y;
+        const angle1 = Math.atan2(dy1, dx1);
+        const angle2 = Math.atan2(dy2, dx2);
+        const diff = Math.abs(angle2 - angle1);
+        if (prevAngle !== null && diff > 1) changes++;
+        prevAngle = angle2;
+      }
+      return changes;
+    }
+
+    // Heuristic AI guesser for demonstration
+    function guessShape(pts) {
+      if (pts.length < 10) return 'Draw more for a better guess!';
+
+      const box = boundingBox(pts);
+      const closed = isPathClosed(pts);
+      const straightRatio = straightness(pts);
+      const directionChanges = countDirectionChanges(pts);
+      const aspectRatio = box.width / box.height;
+
+      // Detect line: mostly straight, ends far apart, few points
+      if (
+        straightRatio > 0.85 &&
+        directionChanges < 2 &&
+        box.width > 30 &&
+        box.height > 30
+      ) {
+        return 'Line';
+      }
+
+      // Detect circle: closed path, aspect ratio ~1, medium-high direction changes
+      if (closed && Math.abs(aspectRatio - 1) < 0.3 && directionChanges > 5) {
+        return 'Circle';
+      }
+
+      // Detect square: closed path, aspect ratio ~1, less direction changes (4 corners)
+      if (closed && Math.abs(aspectRatio - 1) < 0.4 && directionChanges >= 3 && directionChanges <= 6) {
+        // Additional check: points cluster at corners
+        // Approximate corner clustering by counting points near corners
+
+        // Define 4 corners of bounding box
+        const corners = [
+          { x: box.minX, y: box.minY },
+          { x: box.maxX, y: box.minY },
+          { x: box.maxX, y: box.maxY },
+          { x: box.minX, y: box.maxY },
+        ];
+
+        let cornerPointsCount = 0;
+        const cornerThreshold = 30;
+        for (const corner of corners) {
+          const nearPoints = pts.filter(p => distance(p, corner) < cornerThreshold);
+          if (nearPoints.length > 10) cornerPointsCount++;
+        }
+
+        if (cornerPointsCount >= 3) {
+          return 'Square';
+        }
+      }
+
+      // Detect triangle: closed path, aspect ratio varied, direction changes ~3
+      if (closed && directionChanges >= 2 && directionChanges <= 4) {
+        return 'Triangle';
+      }
+
+      // Detect scribble: many direction changes, no closed path, chaotic
+      if (!closed && directionChanges > 10) {
+        return 'Scribble';
+      }
+
+      return "I can't guess. Try drawing a clearer shape!";
+    }
+
+    // Handle guess button click
+    function handleGuess() {
+      guessBtn.disabled = true;
+      guessBtn.setAttribute('aria-pressed', 'true');
+      if (points.length < 10) {
+        guessResult.textContent = 'Please draw something first!';
+        guessBtn.disabled = false;
+        guessBtn.setAttribute('aria-pressed', 'false');
+        return;
+      }
+
+      // Run heuristic guesser
+      const guess = guessShape(points);
+      guessResult.textContent = `AI Guess: ${guess}`;
+    }
+
+    // Event listeners for drawing
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('touchmove', draw, { passive: false });
+
+    canvas.addEventListener('mouseup', stopDraw);
+    canvas.addEventListener('touchend', stopDraw);
+    canvas.addEventListener('touchcancel', stopDraw);
+
+    // Clear button
+    clearBtn.addEventListener('click', () => {
+      clearCanvas();
+      canvas.focus();
+    });
+
+    // Guess button
+    guessBtn.addEventListener('click', handleGuess);
+
+    // Keyboard accessibility: Allow drawing with keyboard arrows (optional)
+    canvas.addEventListener('keydown', (evt) => {
+      // Optional: ignore events here; focus is on drawing with mouse/touch
+    });
+
+    // Initialize canvas with white background for better visibility
+    function initCanvas() {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // On page load
+    window.onload = () => {
+      initCanvas();
+      guessResult.textContent = '';
+    };
+  })();
+  </script>
+</body>
+</html>

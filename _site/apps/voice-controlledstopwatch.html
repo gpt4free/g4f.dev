@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Voice-Controlled Stopwatch</title>
+  <style>
+    /* 
+      Voice-Controlled Stopwatch
+      - Mobile-first responsive design
+      - Modern aesthetic with clean typography and spacing
+      - Button states for accessibility and clarity
+    */
+
+    :root {
+      --primary-color: #1976d2;
+      --primary-dark: #115293;
+      --background: #f9f9f9;
+      --text-color: #222;
+      --accent-color: #ff5252;
+      --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--background);
+      color: var(--text-color);
+      font-family: var(--font-family);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    h1 {
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      font-size: 1.8rem;
+    }
+
+    #time {
+      font-size: 3rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.5rem;
+      user-select: none;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1rem;
+      max-width: 320px;
+      width: 100%;
+    }
+
+    button {
+      flex: 1 1 45%;
+      padding: 1rem 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      background-color: var(--primary-color);
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      user-select: none;
+      min-width: 120px;
+      box-shadow: 0 2px 6px rgba(25, 118, 210, 0.4);
+    }
+
+    button:disabled {
+      background-color: #90caf9;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    button:active:not(:disabled),
+    button:hover:not(:disabled) {
+      background-color: var(--primary-dark);
+      box-shadow: 0 4px 10px rgba(17, 82, 147, 0.7);
+    }
+    
+    button.accent {
+      background-color: var(--accent-color);
+      box-shadow: 0 2px 6px rgba(255, 82, 82, 0.5);
+    }
+    button.accent:active,
+    button.accent:hover {
+      background-color: #cc3b3b;
+      box-shadow: 0 4px 10px rgba(204, 59, 59, 0.7);
+    }
+
+    #status {
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      color: #555;
+      min-height: 1.5em;
+      font-style: italic;
+      user-select: none;
+    }
+
+    /* Larger screen adjustments */
+    @media (min-width: 480px) {
+      body {
+        padding: 2rem;
+      }
+      h1 {
+        font-size: 2.4rem;
+      }
+      #time {
+        font-size: 4.5rem;
+        margin-bottom: 2rem;
+      }
+      button {
+        font-size: 1.3rem;
+        min-width: 140px;
+        padding: 1.25rem 0;
+      }
+      .buttons {
+        max-width: 400px;
+        gap: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Voice-Controlled Stopwatch</h1>
+  <div id="time" aria-live="polite" aria-atomic="true">00:00.00</div>
+
+  <div class="buttons" role="group" aria-label="Stopwatch controls">
+    <button id="startBtn" type="button" aria-pressed="false">Start</button>
+    <button id="stopBtn" type="button" disabled>Stop</button>
+    <button id="resetBtn" type="button" disabled>Reset</button>
+    <button id="voiceBtn" type="button" aria-pressed="false" aria-label="Toggle voice control">🎤 Voice</button>
+  </div>
+
+  <div id="status" aria-live="polite"></div>
+
+  <script>
+    /*
+      Voice-Controlled Stopwatch
+      Features:
+        - Start, Stop, and Reset buttons
+        - Voice commands: "start", "stop", "reset"
+        - Responsive and accessible UI
+        - Graceful handling of unsupported browsers
+    */
+
+    (function () {
+      // UI Elements
+      const timeDisplay = document.getElementById('time');
+      const startBtn = document.getElementById('startBtn');
+      const stopBtn = document.getElementById('stopBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const voiceBtn = document.getElementById('voiceBtn');
+      const status = document.getElementById('status');
+
+      // Stopwatch state
+      let startTime = 0;
+      let elapsedTime = 0; // in milliseconds
+      let timerInterval = null;
+      let running = false;
+
+      // Voice recognition
+      let recognition = null;
+      let recognizing = false;
+
+      // Format milliseconds to MM:SS.cs (centiseconds)
+      function formatTime(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+        const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+        const centiseconds = Math.floor((ms % 1000) / 10).toString().padStart(2, '0');
+        return `${minutes}:${seconds}.${centiseconds}`;
+      }
+
+      // Update the time display from elapsedTime variable
+      function updateTimeDisplay() {
+        timeDisplay.textContent = formatTime(elapsedTime);
+      }
+
+      // Start stopwatch
+      function start() {
+        if (running) return;
+        running = true;
+        startTime = performance.now() - elapsedTime;
+        timerInterval = requestAnimationFrame(update);
+        updateButtons();
+        status.textContent = 'Running';
+      }
+
+      // Stop stopwatch
+      function stop() {
+        if (!running) return;
+        running = false;
+        elapsedTime = performance.now() - startTime;
+        cancelAnimationFrame(timerInterval);
+        updateTimeDisplay();
+        updateButtons();
+        status.textContent = 'Stopped';
+      }
+
+      // Reset stopwatch
+      function reset() {
+        running = false;
+        elapsedTime = 0;
+        cancelAnimationFrame(timerInterval);
+        updateTimeDisplay();
+        updateButtons();
+        status.textContent = 'Reset';
+      }
+
+      // Update buttons enabled/disabled states
+      function updateButtons() {
+        startBtn.disabled = running;
+        stopBtn.disabled = !running;
+        resetBtn.disabled = running || elapsedTime === 0;
+        startBtn.setAttribute('aria-pressed', running ? 'true' : 'false');
+        stopBtn.setAttribute('aria-pressed', !running ? 'true' : 'false');
+        resetBtn.setAttribute('aria-pressed', 'false');
+      }
+
+      // Animation frame update loop
+      function update() {
+        if (!running) return;
+        elapsedTime = performance.now() - startTime;
+        updateTimeDisplay();
+        timerInterval = requestAnimationFrame(update);
+      }
+
+      // Event listeners for buttons
+      startBtn.addEventListener('click', start);
+      stopBtn.addEventListener('click', stop);
+      resetBtn.addEventListener('click', reset);
+
+      // Voice Recognition Setup
+      function initializeVoiceRecognition() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+          status.textContent = 'Voice recognition not supported in this browser.';
+          voiceBtn.disabled = true;
+          return null;
+        }
+
+        const recognitionInstance = new SpeechRecognition();
+        recognitionInstance.lang = 'en-US';
+        recognitionInstance.interimResults = false;
+        recognitionInstance.maxAlternatives = 1;
+        recognitionInstance.continuous = true; // Keep listening until toggled off
+
+        recognitionInstance.onstart = () => {
+          recognizing = true;
+          voiceBtn.classList.add('accent');
+          voiceBtn.setAttribute('aria-pressed', 'true');
+          status.textContent = 'Voice recognition activated. Say "start", "stop", or "reset".';
+        };
+
+        recognitionInstance.onend = () => {
+          recognizing = false;
+          voiceBtn.classList.remove('accent');
+          voiceBtn.setAttribute('aria-pressed', 'false');
+          status.textContent = 'Voice recognition stopped.';
+        };
+
+        recognitionInstance.onerror = (event) => {
+          status.textContent = `Voice recognition error: ${event.error}`;
+          stopRecognition();
+        };
+
+        recognitionInstance.onresult = (event) => {
+          // Process the recognized speech
+          const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+          status.textContent = `Heard: "${transcript}"`;
+
+          // Command handling
+          if (transcript.includes('start')) {
+            start();
+          } else if (transcript.includes('stop')) {
+            stop();
+          } else if (transcript.includes('reset')) {
+            reset();
+          } 
+          // else ignore unrecognized commands
+        };
+
+        return recognitionInstance;
+      }
+
+      // Start voice recognition
+      function startRecognition() {
+        if (!recognition) return;
+        try {
+          recognition.start();
+        } catch (e) {
+          // Ignoring exception if recognition already started
+        }
+      }
+
+      // Stop voice recognition
+      function stopRecognition() {
+        if (!recognition) return;
+        recognition.stop();
+      }
+
+      // Voice toggle button handler
+      voiceBtn.addEventListener('click', () => {
+        if (!recognition) return;
+        if (recognizing) {
+          stopRecognition();
+        } else {
+          startRecognition();
+        }
+      });
+
+      // Initialize app
+      function init() {
+        updateTimeDisplay();
+        updateButtons();
+        recognition = initializeVoiceRecognition();
+      }
+
+      init();
+
+      // Accessibility: keyboard support for voice button toggle (Space/Enter)
+      voiceBtn.addEventListener('keydown', (e) => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          voiceBtn.click();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

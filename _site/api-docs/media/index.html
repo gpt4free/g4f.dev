@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>List All Images on Server</title>
+  <style>
+    #images a   { margin:10px; display:inline-block; }
+    #images img { border:1px solid #aaa; max-width:300px; max-height:300px; }
+    #loading    { font-weight:bold; margin-bottom:1em; }
+  </style>
+</head>
+<body>
+  <h1>All Images from Server</h1>
+  <div id="loading">Loading images...</div>
+  <div id="images"></div>
+  <script>
+    (async function() {
+      let n = 0;
+      const imagesDiv = document.getElementById('images');
+      const loadingDiv = document.getElementById('loading');
+      const baseURL = 'https://host.g4f.dev/search/image?skip=';
+      let foundAny = false;
+
+      while (true) {
+        const url = baseURL + n;
+        try {
+          const resp = await fetch(url);
+          if (!resp.ok) break;
+          const ctype = resp.headers.get('Content-Type') || '';
+          if (!ctype.startsWith('image/')) break;
+
+          if (["een", "oob", "irl"].some(r => resp.url.includes(r))) {
+            n++;
+            continue;
+          }
+
+          // Use response.url for thumbnail link
+          const thumbUrl = resp.url.replace("/media/", "/thumbnail/");
+
+          const link = document.createElement('a');
+          link.href = resp.url;              // link to full image
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.title = resp.url;
+
+          const img = document.createElement('img');
+          img.src = thumbUrl;                // show thumbnail
+          img.alt = `Image ${n}`;
+
+          link.appendChild(img);
+          imagesDiv.appendChild(link);
+
+          foundAny = true;
+        } catch (e) {
+          break;
+        }
+        n++;
+      }
+
+      loadingDiv.textContent = foundAny
+        ? `Done! Loaded ${n} images.`
+        : "No images found.";
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G4F - Webview GUI</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png">
+    <link rel="manifest" href="/dist/img/site.webmanifest">
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
+    <style>
+        :root {
+            --colour-1: #000000;
+            --colour-2: #ccc;
+            --colour-3: #e4d4ff;
+            --colour-4: #f0f0f0;
+            --colour-5: #181818;
+            --colour-6: #242424;
+            --accent: #8b3dff;
+            --gradient: #1a1a1a;
+            --background: #16101b;
+            --size: 70vw;
+            --top: 50%;
+            --blur: 40px;
+            --opacity: 0.6;
+        }
+
+        /* Body and text color */
+        body {
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .container-lg {
+            margin: 0 auto;
+            padding: 8px;
+        }
+
+        @media only screen and (min-width: 40em) {
+            .container-lg {
+                max-width: 84%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <article class="markdown-body entry-content container-lg" itemprop="text"><h2>G4F - Webview GUI</h2>
+<p>Open the GUI in a window of your OS. Runs on a local/static/ssl server and use a JavaScript API.<br>
+Supports login into the OpenAI Chat (.har files), Image Upload and streamed Text Generation.</p>
+<p>Supports all platforms, but only Linux/Windows tested.</p>
+<ol>
+<li>Install all python requirements with:</li>
+</ol>
+<div class="highlight highlight-source-shell"><pre class="notranslate">pip install g4f[webview]</pre></div>
+<ol start="2">
+<li>
+<p><em>a)</em> Follow the <strong>OS specific</strong> steps here:<br>
+<a href="https://pywebview.flowrl.com/guide/installation.html#dependencies" rel="nofollow">pywebview installation</a></p>
+</li>
+<li>
+<p><em>b)</em> <strong>WebView2</strong> on <strong>Windows</strong>: Our application requires the <em>WebView2 Runtime</em> to be installed on your system. If you do not have it installed, please download and install it from the <a href="https://developer.microsoft.com/en-us/microsoft-edge/webview2/" rel="nofollow">Microsoft Developer Website</a>. If you already have <em>WebView2 Runtime</em> installed but are encountering issues, navigate to <em>Installed Windows Apps</em>, select <em>WebView2</em>, and opt for the repair option.</p>
+</li>
+<li>
+<p>Run the app with:</p>
+</li>
+</ol>
+<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">gui</span>.<span class="pl-s1">webview</span> <span class="pl-k">import</span> <span class="pl-s1">run_webview</span>
+
+<span class="pl-en">run_webview</span>(<span class="pl-s1">debug</span><span class="pl-c1">=</span><span class="pl-c1">True</span>)</pre></div>
+<p>or execute the following command:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">python -m g4f.gui.webview -debug</pre></div>
+<hr>
+<p><a href="/docs/">Return to Documentation</a></p></article>
+</body>
+</html>

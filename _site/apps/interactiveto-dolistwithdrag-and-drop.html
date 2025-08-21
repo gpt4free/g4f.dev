@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Interactive To-Do List with Drag-and-Drop</title>
+<style>
+  /* === Mobile-first Responsive CSS === */
+  :root {
+    --color-primary: #4a90e2;
+    --color-primary-dark: #357ABD;
+    --color-bg: #f7f9fc;
+    --color-text: #222;
+    --color-accent: #e94e77;
+    --color-accent-dark: #b53853;
+    --color-dragging: #d0e6ff;
+    --border-radius: 8px;
+    --box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    --transition: 0.3s ease;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  
+  body {
+    margin: 0; padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 1rem;
+  }
+
+  #app {
+    width: 100%;
+    max-width: 480px;
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  header {
+    background: var(--color-primary);
+    color: white;
+    padding: 1rem 1.25rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-align: center;
+  }
+  
+  form {
+    display: flex;
+    padding: 1rem 1.25rem;
+    gap: 0.5rem;
+    border-bottom: 1px solid #ddd;
+  }
+
+  form input[type="text"] {
+    flex-grow: 1;
+    font-size: 1rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: var(--border-radius);
+    transition: border-color var(--transition);
+  }
+  form input[type="text"]:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 6px var(--color-primary);
+  }
+
+  form button {
+    background: var(--color-primary);
+    border: none;
+    color: white;
+    padding: 0 1rem;
+    font-size: 1rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: background-color var(--transition);
+    user-select: none;
+  }
+  form button:disabled {
+    background: #a0c4ff;
+    cursor: not-allowed;
+  }
+  form button:hover:not(:disabled) {
+    background: var(--color-primary-dark);
+  }
+
+  #todo-list {
+    list-style: none;
+    margin: 0; padding: 0.25rem 0;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  #todo-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    border-bottom: 1px solid #eee;
+    padding: 0.625rem 1rem;
+    cursor: grab;
+    user-select: none;
+    transition: background-color var(--transition);
+  }
+  #todo-list li:last-child {
+    border-bottom: none;
+  }
+  #todo-list li.dragging {
+    background: var(--color-dragging);
+    cursor: grabbing;
+    opacity: 0.8;
+  }
+
+  #todo-list li .content {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+    gap: 0.75rem;
+  }
+  
+  #todo-list li input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: pointer;
+  }
+
+  #todo-list li label {
+    flex-grow: 1;
+    cursor: pointer;
+    font-size: 1rem;
+    word-break: break-word;
+  }
+
+  #todo-list li.completed label {
+    text-decoration: line-through;
+    color: #888;
+  }
+
+  #todo-list li button.delete-btn {
+    background: none;
+    border: none;
+    color: var(--color-accent);
+    font-weight: 700;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0 0.25rem;
+    line-height: 1;
+    user-select: none;
+    transition: color var(--transition);
+  }
+  #todo-list li button.delete-btn:hover {
+    color: var(--color-accent-dark);
+  }
+  
+  /* Scrollbar Styling for Webkit */
+  #todo-list::-webkit-scrollbar {
+    width: 6px;
+  }
+  #todo-list::-webkit-scrollbar-thumb {
+    background: var(--color-primary);
+    border-radius: 3px;
+  }
+  #todo-list::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* Large screens - center and add padding */
+  @media(min-width: 600px) {
+    body {
+      padding: 2rem;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="app" role="application" aria-label="Interactive To-Do List">
+  <header>To-Do List</header>
+  <form id="todo-form" aria-label="Add new to-do item">
+    <input
+      type="text"
+      id="todo-input"
+      name="todo-input"
+      placeholder="What needs to be done?"
+      autocomplete="off"
+      aria-required="true"
+      aria-label="New to-do item"
+    />
+    <button type="submit" id="add-btn" disabled aria-disabled="true" aria-label="Add to-do item">Add</button>
+  </form>
+  <ul id="todo-list" aria-live="polite" aria-relevant="additions removals" tabindex="0">
+    <!-- List items injected here -->
+  </ul>
+</div>
+
+<script>
+/**
+ * Interactive To-Do List with Drag-and-Drop
+ * -----------------------------------------
+ * Features:
+ * - Add, mark complete, delete to-dos
+ * - Drag-and-drop reorder with keyboard & mouse support
+ * - Mobile-first responsive design
+ * - Accessible with ARIA roles and labels
+ * - No external dependencies
+ * Author: OpenAI ChatGPT
+ */
+
+(() => {
+  const form = document.getElementById('todo-form');
+  const input = document.getElementById('todo-input');
+  const addBtn = document.getElementById('add-btn');
+  const list = document.getElementById('todo-list');
+
+  // Holds all todos as objects: { id:string, text:string, completed:boolean }
+  let todos = [];
+
+  // Generate unique ID for each to-do
+  function uid() {
+    return Math.random().toString(36).slice(2, 10);
+  }
+
+  // Save todos to localStorage
+  function saveTodos() {
+    localStorage.setItem('todos-dragdrop', JSON.stringify(todos));
+  }
+
+  // Load todos from localStorage
+  function loadTodos() {
+    const stored = localStorage.getItem('todos-dragdrop');
+    if (stored) {
+      try {
+        todos = JSON.parse(stored);
+      } catch {
+        todos = [];
+      }
+    }
+  }
+
+  // Render the entire todo list
+  function render() {
+    list.innerHTML = '';
+    todos.forEach(todo => {
+      list.appendChild(createTodoElement(todo));
+    });
+  }
+
+  // Create DOM element for a todo item
+  function createTodoElement(todo) {
+    const li = document.createElement('li');
+    li.setAttribute('draggable', 'true');
+    li.dataset.id = todo.id;
+    li.classList.toggle('completed', todo.completed);
+    li.tabIndex = 0;
+    li.setAttribute('aria-label', (todo.completed ? 'Completed: ' : '') + todo.text);
+    li.setAttribute('role', 'listitem');
+
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'content';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = todo.completed;
+    checkbox.id = `chk-${todo.id}`;
+    checkbox.setAttribute('aria-label', 'Mark task as completed');
+
+    const label = document.createElement('label');
+    label.htmlFor = checkbox.id;
+    label.textContent = todo.text;
+
+    contentDiv.appendChild(checkbox);
+    contentDiv.appendChild(label);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'delete-btn';
+    delBtn.type = 'button';
+    delBtn.setAttribute('aria-label', `Delete task: ${todo.text}`);
+    delBtn.textContent = '✕';
+
+    li.appendChild(contentDiv);
+    li.appendChild(delBtn);
+
+    // Event listeners
+    checkbox.addEventListener('change', () => {
+      todo.completed = checkbox.checked;
+      li.classList.toggle('completed', todo.completed);
+      saveTodos();
+    });
+
+    delBtn.addEventListener('click', () => {
+      todos = todos.filter(t => t.id !== todo.id);
+      saveTodos();
+      render();
+      input.focus();
+    });
+
+    // Drag event handlers
+    li.addEventListener('dragstart', dragStart);
+    li.addEventListener('dragover', dragOver);
+    li.addEventListener('dragenter', dragEnter);
+    li.addEventListener('dragleave', dragLeave);
+    li.addEventListener('drop', drop);
+    li.addEventListener('dragend', dragEnd);
+
+    // Keyboard drag support: SPACE / ENTER to pick/drop, ARROW keys to move
+    li.addEventListener('keydown', keyboardDrag);
+
+    return li;
+  }
+
+  // Enable/disable Add button based on input content
+  input.addEventListener('input', () => {
+    const trimmed = input.value.trim();
+    addBtn.disabled = trimmed.length === 0;
+    addBtn.setAttribute('aria-disabled', trimmed.length === 0);
+  });
+
+  // Add new todo item
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+
+    const newTodo = { id: uid(), text, completed: false };
+    todos.push(newTodo);
+    saveTodos();
+    render();
+
+    input.value = '';
+    addBtn.disabled = true;
+    addBtn.setAttribute('aria-disabled', 'true');
+    input.focus();
+  });
+
+  // === Drag and Drop Logic ===
+  let dragSrcEl = null;
+
+  function dragStart(e) {
+    dragSrcEl = this;
+    e.dataTransfer.effectAllowed = 'move';
+    // Needed for Firefox
+    e.dataTransfer.setData('text/plain', this.dataset.id);
+    this.classList.add('dragging');
+  }
+
+  function dragOver(e) {
+    if (e.preventDefault) e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+  }
+
+  function dragEnter(e) {
+    if (this !== dragSrcEl) {
+      this.classList.add('drag-over');
+    }
+  }
+
+  function dragLeave(e) {
+    this.classList.remove('drag-over');
+  }
+
+  function drop(e) {
+    e.stopPropagation(); // Stops some browsers from redirecting.
+
+    if (dragSrcEl === this) return false;
+
+    // Get dragged and target indices
+    const draggedId = dragSrcEl.dataset.id;
+    const targetId = this.dataset.id;
+
+    const draggedIndex = todos.findIndex(t => t.id === draggedId);
+    const targetIndex = todos.findIndex(t => t.id === targetId);
+
+    if (draggedIndex < 0 || targetIndex < 0) return false;
+
+    // Remove dragged item and re-insert it before the target
+    const draggedItem = todos.splice(draggedIndex, 1)[0];
+    todos.splice(targetIndex, 0, draggedItem);
+
+    saveTodos();
+    render();
+
+    return false;
+  }
+
+  function dragEnd(e) {
+    this.classList.remove('dragging');
+    [...list.children].forEach(li => li.classList.remove('drag-over'));
+  }
+
+  // === Keyboard drag & reorder support ===
+  // Concepts:
+  //  - Press Space or Enter to "pick up" item for moving
+  //  - While "picked up", Arrow Up / Arrow Down move the item
+  //  - Press Space or Enter again to "drop" item.
+  //  - Escape cancels moving.
+
+  let keyboardDragState = {
+    draggingEl: null,
+    originalIndex: null,
+  };
+
+  function keyboardDrag(e) {
+    const li = e.currentTarget;
+    const idx = [...list.children].indexOf(li);
+
+    if (keyboardDragState.draggingEl === li) {
+      // We are currently dragging this item
+      switch(e.key) {
+        case 'ArrowUp':
+          e.preventDefault();
+          if (idx > 0) {
+            reorderByIndex(idx, idx - 1);
+            li.focus();
+          }
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          if (idx < todos.length -1) {
+            reorderByIndex(idx, idx + 1);
+            li.focus();
+          }
+          break;
+        case ' ':
+        case 'Enter':
+          e.preventDefault();
+          // Drop item (stop dragging)
+          keyboardDragState.draggingEl.classList.remove('dragging');
+          keyboardDragState.draggingEl.setAttribute('aria-grabbed', 'false');
+          keyboardDragState = {draggingEl: null, originalIndex: null};
+          li.focus();
+          break;
+        case 'Escape':
+          e.preventDefault();
+          // Cancel drag (restore original order)
+          if (keyboardDragState.originalIndex !== null) {
+            const curIndex = [...list.children].indexOf(li);
+            reorderByIndex(curIndex, keyboardDragState.originalIndex);
+          }
+          keyboardDragState.draggingEl.classList.remove('dragging');
+          keyboardDragState.draggingEl.setAttribute('aria-grabbed', 'false');
+          keyboardDragState = {draggingEl: null, originalIndex: null};
+          li.focus();
+          break;
+        default:
+          break;
+      }
+    } else {
+      // Not dragging, watch for key to start drag
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        keyboardDragState.draggingEl = li;
+        keyboardDragState.originalIndex = idx;
+        li.classList.add('dragging');
+        li.setAttribute('aria-grabbed', 'true');
+      }
+    }
+  }
+
+  function reorderByIndex(fromIndex, toIndex) {
+    if (fromIndex === toIndex) return;
+    const item = todos.splice(fromIndex, 1)[0];
+    todos.splice(toIndex, 0, item);
+    saveTodos();
+    render();
+  }
+
+  // Initialize
+  loadTodos();
+  render();
+})();
+
+</script>
+</body>
+</html>

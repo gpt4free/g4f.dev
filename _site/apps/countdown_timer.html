@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Advanced Countdown Timer</title>
+  <style>
+    /* Reset and base */
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 0;
+      color: #222;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 30px 15px;
+    }
+    .container {
+      width: 100%;
+      max-width: 900px;
+      background: white;
+      box-shadow: 0 4px 20px rgb(0 0 0 / 0.1);
+      border-radius: 8px;
+      padding: 20px 25px 40px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 25px;
+      user-select: none;
+    }
+    header h1 {
+      margin: 0 0 12px;
+      font-weight: 700;
+      font-size: 2.1rem;
+      color: #333;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      align-items: center;
+    }
+
+    .btn {
+      cursor: pointer;
+      font-weight: 600;
+      background: #0052cc;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 1rem;
+      transition: background-color 0.25s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+    }
+    .btn:hover,
+    .btn:focus {
+      background: #003d99;
+      outline: none;
+    }
+    .btn:active {
+      background: #002766;
+    }
+    .btn:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+
+    .preset-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .btn.preset {
+      background: #e6e6e6;
+      color: #333;
+      font-weight: 600;
+      transition: background-color 0.25s ease;
+    }
+    .btn.preset:hover,
+    .btn.preset:focus {
+      background: #c0c8d9;
+      outline: none;
+    }
+    .btn.preset:active {
+      background: #a0a9ba;
+    }
+
+    /* Timers container */
+    .timer-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 15px;
+    }
+
+    /* Single timer card */
+    .timer-card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 3px 10px rgb(0 0 0 / 0.1);
+      padding: 18px 25px 22px;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+      position: relative;
+    }
+
+    .timer-name {
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: #222;
+      margin-bottom: 8px;
+      min-height: 1.3em;
+      text-align: center;
+      word-break: break-word;
+    }
+
+    .time-display {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 2.25rem;
+      color: #0070f3;
+      text-align: center;
+      margin-bottom: 14px;
+      letter-spacing: 0.05em;
+      user-select: text;
+    }
+
+    /* Progress bar */
+    .progress-bar {
+      height: 8px;
+      background: #e6e6e6;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 15px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: #0070f3;
+      width: 0%;
+      transition: width 0.3s linear;
+    }
+
+    /* Timer buttons */
+    .timer-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: nowrap;
+    }
+    .timer-buttons button {
+      background: #0052cc;
+      border: none;
+      color: white;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+      transition: background-color 0.25s ease;
+    }
+    .timer-buttons button:disabled {
+      background: #888;
+      cursor: not-allowed;
+    }
+    .timer-buttons button:hover:not(:disabled),
+    .timer-buttons button:focus:not(:disabled) {
+      background: #003d99;
+      outline: none;
+    }
+
+    /* Close/delete button */
+    .delete-btn {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      background: transparent;
+      border: none;
+      color: #888;
+      font-size: 1.3rem;
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.25s ease;
+      padding: 2px;
+      line-height: 1;
+    }
+    .delete-btn:hover,
+    .delete-btn:focus {
+      color: #e03e2f;
+      outline: none;
+    }
+
+    /* Modal Background */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.45);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1100;
+      padding: 15px;
+    }
+    .modal.show {
+      display: flex;
+    }
+
+    /* Modal Content */
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 8px 24px rgb(0 0 0 / 0.2);
+      padding: 25px 30px 30px;
+      position: relative;
+      user-select: none;
+    }
+    .modal-content h2 {
+      margin-top: 0;
+      margin-bottom: 18px;
+      font-size: 1.6rem;
+      color: #222;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 14px;
+      right: 18px;
+      font-size: 1.65rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: #666;
+      user-select: none;
+      transition: color 0.2s ease;
+      border: none;
+      background: transparent;
+      line-height: 1;
+    }
+    .close-btn:hover,
+    .close-btn:focus {
+      color: #e03e2f;
+      outline: none;
+    }
+
+    .time-input {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-bottom: 15px;
+      flex-wrap: nowrap;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      width: 80px;
+    }
+    .input-group label {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 6px;
+      color: #333;
+      user-select: text;
+    }
+    .input-group input[type="number"],
+    .input-group input[type="text"] {
+      font-size: 1rem;
+      padding: 8px 9px;
+      border: 2px solid #ccc;
+      border-radius: 6px;
+      transition: border-color 0.25s ease;
+      outline-offset: 1px;
+    }
+    .input-group input[type="number"]:focus,
+    .input-group input[type="text"]:focus {
+      border-color: #0052cc;
+      outline: none;
+    }
+    .input-group input[type="number"]::-webkit-inner-spin-button, 
+    .input-group input[type="number"]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+
+    #timer-name {
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    #create-timer-btn {
+      width: 100%;
+      padding: 12px 0;
+    }
+
+    /* Responsive tweaks */
+    @media (max-width: 460px) {
+      .time-input {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .input-group {
+        width: 60px;
+      }
+    }
+  </style>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    integrity="sha512-pVn1nYp5Qv/f0OdlawNPqzjIFqVzDfYDSPYkiP6kQwd/xNkSvsCX6PDrkLZoKWupknOGNI3t8vgdR1dfiYIFSw=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Advanced Countdown Timer</h1>
+      <div class="controls">
+        <button id="add-timer-btn" class="btn" aria-label="Add new timer">
+          <i class="fas fa-plus" aria-hidden="true"></i> Add Timer
+        </button>
+        <div class="preset-buttons" role="group" aria-label="Preset timers">
+          <button class="btn preset" data-minutes="5">5 Min</button>
+          <button class="btn preset" data-minutes="10">10 Min</button>
+          <button class="btn preset" data-minutes="15">15 Min</button>
+          <button class="btn preset" data-minutes="30">30 Min</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="timer-container" id="timers-container" aria-live="polite" aria-relevant="additions removals">
+      <!-- Timers will be added here dynamically -->
+    </div>
+
+    <!-- Add Timer Modal -->
+    <div class="modal" id="add-timer-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-desc">
+      <div class="modal-content">
+        <button class="close-btn" aria-label="Close modal">&times;</button>
+        <h2 id="modal-title">Add New Timer</h2>
+        <div id="modal-desc" class="sr-only">
+          Form to specify hours, minutes, seconds and optional timer name
+        </div>
+        <form id="add-timer-form" novalidate>
+          <div class="time-input" role="group" aria-label="Select time for timer">
+            <div class="input-group">
+              <label for="hours">Hours</label>
+              <input
+                type="number"
+                id="hours"
+                name="hours"
+                min="0"
+                max="99"
+                value="0"
+                aria-describedby="hours-desc"
+                autocomplete="off"
+              />
+              <span id="hours-desc" class="sr-only">0 to 99 hours</span>
+            </div>
+            <div class="input-group">
+              <label for="minutes">Minutes</label>
+              <input
+                type="number"
+                id="minutes"
+                name="minutes"
+                min="0"
+                max="59"
+                value="10"
+                aria-describedby="minutes-desc"
+                autocomplete="off"
+              />
+              <span id="minutes-desc" class="sr-only">0 to 59 minutes</span>
+            </div>
+            <div class="input-group">
+              <label for="seconds">Seconds</label>
+              <input
+                type="number"
+                id="seconds"
+                name="seconds"
+                min="0"
+                max="59"
+                value="0"
+                aria-describedby="seconds-desc"
+                autocomplete="off"
+              />
+              <span id="seconds-desc" class="sr-only">0 to 59 seconds</span>
+            </div>
+          </div>
+          <div class="input-group">
+            <label for="timer-name">Timer Name (optional)</label>
+            <input
+              type="text"
+              id="timer-name"
+              name="timerName"
+              placeholder="e.g. Tea Brewing"
+              maxlength="50"
+              autocomplete="off"
+            />
+          </div>
+          <button type="submit" id="create-timer-btn" class="btn" aria-label="Create a new timer">Create Timer</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Notification Sound -->
+    <audio id="alarm-sound" src="countdown_timer.wav" preload="auto" loop></audio>
+  </div>
+
+  <script>
+    (() => {
+      const timersContainer = document.getElementById("timers-container");
+      const addTimerBtn = document.getElementById("add-timer-btn");
+      const addTimerModal = document.getElementById("add-timer-modal");
+      const closeModalBtn = addTimerModal.querySelector(".close-btn");
+      const createTimerBtn = document.getElementById("create-timer-btn");
+      const addTimerForm = document.getElementById("add-timer-form");
+      const alarmSound = document.getElementById("alarm-sound");
+      const presetButtons = document.querySelectorAll(".btn.preset");
+
+      // Store timers by unique id
+      const timers = new Map();
+
+      let timerIdCounter = 0;
+
+      /**
+       * Format seconds as HH:MM:SS or MM:SS if hours=0
+       * @param {number} seconds 
+       */
+      function formatTime(seconds) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        if (h > 0) {
+          return `${h.toString().padStart(2, "0")}:${m
+            .toString()
+            .padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+        }
+        return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+      }
+
+      /**
+       * Create DOM elements for a timer card
+       * @param {object} timerObj
+       */
+      function createTimerCard(timerObj) {
+        const { id, totalSeconds, name } = timerObj;
+
+        // Create the card container
+        const card = document.createElement("article");
+        card.className = "timer-card";
+        card.setAttribute("role", "region");
+        card.setAttribute("aria-live", "polite");
+        card.setAttribute("aria-label", name || "Countdown timer");
+
+        // Delete button
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "delete-btn";
+        deleteBtn.title = "Delete timer";
+        deleteBtn.setAttribute("aria-label", `Delete timer${name ? ": " + name : ""}`);
+        deleteBtn.innerHTML = '<i class="fas fa-trash" aria-hidden="true"></i>';
+        deleteBtn.type = "button";
+
+        deleteBtn.addEventListener("click", () => {
+          clearInterval(timerObj.interval);
+          timers.delete(id);
+          card.remove();
+        });
+
+        card.appendChild(deleteBtn);
+
+        // Timer name
+        const timerNameEl = document.createElement("div");
+        timerNameEl.className = "timer-name";
+        timerNameEl.textContent = name || "";
+        card.appendChild(timerNameEl);
+
+        // Time display
+        const timeDisplay = document.createElement("output");
+        timeDisplay.className = "time-display";
+        timeDisplay.textContent = formatTime(totalSeconds);
+        timeDisplay.setAttribute("aria-live", "off");
+        timeDisplay.setAttribute("aria-atomic", "true");
+        card.appendChild(timeDisplay);
+
+        // Progress bar
+        const progressBar = document.createElement("div");
+        progressBar.className = "progress-bar";
+        const progressBarFill = document.createElement("div");
+        progressBarFill.className = "progress-bar-fill";
+        progressBar.appendChild(progressBarFill);
+        card.appendChild(progressBar);
+
+        // Timer buttons container
+        const buttonsDiv = document.createElement("div");
+        buttonsDiv.className = "timer-buttons";
+
+        // Play/Pause button
+        const playPauseBtn = document.createElement("button");
+        playPauseBtn.type = "button";
+        playPauseBtn.className = "btn";
+        playPauseBtn.title = "Start timer";
+        playPauseBtn.setAttribute("aria-label", "Start timer");
+        playPauseBtn.innerHTML = '<i class="fas fa-play" aria-hidden="true"></i> Start';
+
+        // Reset button
+        const resetBtn = document.createElement("button");
+        resetBtn.type = "button";
+        resetBtn.className = "btn";
+        resetBtn.title = "Reset timer";
+        resetBtn.setAttribute("aria-label", "Reset timer");
+        resetBtn.innerHTML = '<i class="fas fa-rotate-left" aria-hidden="true"></i> Reset';
+
+        buttonsDiv.appendChild(playPauseBtn);
+        buttonsDiv.appendChild(resetBtn);
+        card.appendChild(buttonsDiv);
+
+        // Append to container
+        timersContainer.prepend(card);
+
+        // Attach DOM references to timerObj
+        timerObj.dom = {
+          card,
+          timeDisplay,
+          progressBarFill,
+          playPauseBtn,
+          resetBtn,
+          timerNameEl,
+        };
+
+        // Update UI with paused state
+        updateTimerUI(timerObj);
+
+        // Button event handlers
+        playPauseBtn.addEventListener("click", () => {
+          if (timerObj.isRunning) {
+            pauseTimer(timerObj);
+          } else {
+            startTimer(timerObj);
+          }
+        });
+
+        resetBtn.addEventListener("click", () => {
+          resetTimer(timerObj);
+        });
+
+        return timerObj;
+      }
+
+      /**
+       * Update timer UI elements accordingly
+       * @param {object} timerObj 
+       */
+      function updateTimerUI(timerObj) {
+        const { remainingSeconds, totalSeconds, dom, isRunning } = timerObj;
+        dom.timeDisplay.textContent = formatTime(remainingSeconds);
+
+        const percent =
+          totalSeconds > 0
+            ? ((totalSeconds - remainingSeconds) / totalSeconds) * 100
+            : 0;
+        dom.progressBarFill.style.width = percent + "%";
+
+        if (isRunning) {
+          dom.playPauseBtn.innerHTML =
+            '<i class="fas fa-pause" aria-hidden="true"></i> Pause';
+          dom.playPauseBtn.title = "Pause timer";
+          dom.playPauseBtn.setAttribute("aria-label", "Pause timer");
+        } else {
+          dom.playPauseBtn.innerHTML =
+            '<i class="fas fa-play" aria-hidden="true"></i> Start';
+          dom.playPauseBtn.title = "Start timer";
+          dom.playPauseBtn.setAttribute("aria-label", "Start timer");
+        }
+      }
+
+      /**
+       * Start or resume a timer
+       * @param {object} timerObj 
+       */
+      function startTimer(timerObj) {
+        if (timerObj.remainingSeconds <= 0) return;
+
+        timerObj.isRunning = true;
+        const startTime = Date.now();
+        timerObj.lastTick = startTime;
+
+        if (timerObj.interval) clearInterval(timerObj.interval);
+
+        timerObj.interval = setInterval(() => {
+          const now = Date.now();
+          const delta = Math.floor((now - timerObj.lastTick) / 1000);
+          if (delta >= 1) {
+            timerObj.remainingSeconds -= delta;
+            timerObj.lastTick = now;
+
+            if (timerObj.remainingSeconds <= 0) {
+              timerObj.remainingSeconds = 0;
+              pauseTimer(timerObj);
+              notifyTimerEnd(timerObj);
+            }
+
+            updateTimerUI(timerObj);
+          }
+        }, 250);
+
+        updateTimerUI(timerObj);
+      }
+
+      /**
+       * Pause a running timer
+       * @param {object} timerObj 
+       */
+      function pauseTimer(timerObj) {
+        timerObj.isRunning = false;
+        if (timerObj.interval) {
+          clearInterval(timerObj.interval);
+          timerObj.interval = null;
+        }
+        updateTimerUI(timerObj);
+      }
+
+      /**
+       * Reset timer to initial totalSeconds
+       * @param {object} timerObj 
+       */
+      function resetTimer(timerObj) {
+        pauseTimer(timerObj);
+        timerObj.remainingSeconds = timerObj.totalSeconds;
+        updateTimerUI(timerObj);
+      }
+
+      /**
+       * Notify user timer finished
+       * @param {object} timerObj 
+       */
+      function notifyTimerEnd(timerObj) {
+        alarmSound.currentTime = 0;
+        alarmSound.play().catch(() => { /* ignore play errors */ });
+        setTimeout(() => {
+          alarmSound.pause();
+          alarmSound.currentTime = 0;
+        }, 5000);
+
+        // Highlight the card briefly
+        const { card } = timerObj.dom;
+        card.style.boxShadow = "0 0 15px 3px #e03e2f";
+        setTimeout(() => {
+          card.style.boxShadow = "0 3px 10px rgb(0 0 0 / 0.1)";
+        }, 2500);
+
+        // Announce for screen readers
+        const liveRegion = document.createElement("div");
+        liveRegion.setAttribute("aria-live", "assertive");
+        liveRegion.className = "sr-only";
+        liveRegion.textContent =
+          (timerObj.name ? `${timerObj.name} - ` : "") + "Timer finished.";
+        document.body.appendChild(liveRegion);
+        setTimeout(() => {
+          liveRegion.remove();
+        }, 3000);
+      }
+
+      /**
+       * Validate and sanitize form input values
+       * @returns {object|null} - returns sanitized values or null if invalid
+       */
+      function getFormValues() {
+        const h = parseInt(addTimerForm.hours.value, 10);
+        const m = parseInt(addTimerForm.minutes.value, 10);
+        const s = parseInt(addTimerForm.seconds.value, 10);
+        const nameRaw = addTimerForm.timerName.value.trim();
+
+        if (
+          Number.isNaN(h) ||
+          h < 0 ||
+          h > 99 ||
+          Number.isNaN(m) ||
+          m < 0 ||
+          m > 59 ||
+          Number.isNaN(s) ||
+          s < 0 ||
+          s > 59
+        ) {
+          alert("Please enter valid hours (0-99), minutes (0-59), and seconds (0-59).");
+          return null;
+        }
+
+        const totalSeconds = h * 3600 + m * 60 + s;
+        if (totalSeconds <= 0) {
+          alert("Please enter a time greater than zero.");
+          return null;
+        }
+
+        // Limit name length to 50 characters max (already max in input)
+        const name = nameRaw.length ? nameRaw : "";
+
+        return { hours: h, minutes: m, seconds: s, totalSeconds, name };
+      }
+
+      /**
+       * Open the add timer modal and focus first input
+       */
+      function openModal() {
+        addTimerModal.classList.add("show");
+        // Reset form to default values
+        addTimerForm.hours.value = "0";
+        addTimerForm.minutes.value = "10";
+        addTimerForm.seconds.value = "0";
+        addTimerForm.timerName.value = "";
+        createTimerBtn.disabled = false;
+        setTimeout(() => {
+          addTimerForm.hours.focus();
+        }, 150);
+        trapFocus(addTimerModal);
+      }
+
+      /**
+       * Close the add timer modal
+       */
+      function closeModal() {
+        addTimerModal.classList.remove("show");
+        releaseFocusTrap();
+        addTimerBtn.focus();
+      }
+
+      // Focus trap variables
+      let lastFocusedElement = null;
+      let focusTrapElement = null;
+
+      /**
+       * Trap focus inside a container (modal)
+       * @param {HTMLElement} container 
+       */
+      function trapFocus(container) {
+        lastFocusedElement = document.activeElement;
+        focusTrapElement = container;
+
+        const focusableSelectors = [
+          'a[href]',
+          'area[href]',
+          'input:not([disabled])',
+          'select:not([disabled])',
+          'textarea:not([disabled])',
+          'button:not([disabled])',
+          'iframe',
+          'object',
+          'embed',
+          '[tabindex]:not([tabindex="-1"])',
+          '[contenteditable]',
+        ];
+        const focusableElements = container.querySelectorAll(focusableSelectors.join(","));
+        if (focusableElements.length === 0) return;
+
+        function handleFocus(e) {
+          const firstElem = focusableElements[0];
+          const lastElem = focusableElements[focusableElements.length - 1];
+
+          if (!container.contains(e.target)) {
+            e.preventDefault();
+            firstElem.focus();
+            return;
+          }
+
+          if (e.shiftKey) {
+            if (document.activeElement === firstElem) {
+              e.preventDefault();
+              lastElem.focus();
+            }
+          } else {
+            if (document.activeElement === lastElem) {
+              e.preventDefault();
+              firstElem.focus();
+            }
+          }
+        }
+
+        container.addEventListener("keydown", trapKeyboard);
+        function trapKeyboard(e) {
+          if (e.key === "Tab") {
+            handleFocus(e);
+          }
+          else if (e.key === "Escape" || e.key === "Esc") {
+            closeModal();
+          }
+        }
+        container._trapKeyboard = trapKeyboard;
+      }
+
+      /**
+       * Release focus trap
+       */
+      function releaseFocusTrap() {
+        if (focusTrapElement && focusTrapElement._trapKeyboard) {
+          focusTrapElement.removeEventListener("keydown", focusTrapElement._trapKeyboard);
+          focusTrapElement._trapKeyboard = null;
+          focusTrapElement = null;
+        }
+        if (lastFocusedElement) {
+          lastFocusedElement.focus();
+          lastFocusedElement = null;
+        }
+      }
+
+      /**
+       * Add a new timer and start it
+       * @param {number} totalSeconds 
+       * @param {string} name 
+       */
+      function addNewTimer(totalSeconds, name) {
+        timerIdCounter++;
+        const id = timerIdCounter.toString();
+
+        const timerObj = {
+          id,
+          totalSeconds,
+          remainingSeconds: totalSeconds,
+          name,
+          isRunning: false,
+          interval: null,
+          lastTick: null,
+          dom: null,
+        };
+
+        createTimerCard(timerObj);
+        timers.set(id, timerObj);
+        startTimer(timerObj);
+      }
+
+      /* Event Listeners */
+
+      // Open modal on Add Timer btn
+      addTimerBtn.addEventListener("click", () => {
+        openModal();
+      });
+
+      // Close modal on close button
+      closeModalBtn.addEventListener("click", () => {
+        closeModal();
+      });
+
+      // Close modal on outside click
+      addTimerModal.addEventListener("click", (e) => {
+        if (e.target === addTimerModal) {
+          closeModal();
+        }
+      });
+
+      // Handle form submit to create new timer
+      addTimerForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const values = getFormValues();
+        if (!values) return;
+
+        addNewTimer(values.totalSeconds, values.name);
+        closeModal();
+      });
+
+      // Preset buttons (add timer with preset time)
+      presetButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const minutes = parseInt(btn.getAttribute("data-minutes"), 10);
+          if (!Number.isInteger(minutes) || minutes <= 0) return;
+
+          addNewTimer(minutes * 60, `${minutes} Minute Timer`);
+        });
+      });
+    })();
+  </script>
+
+  <style>
+    /* Screen reader only */
+    .sr-only {
+      border: 0 !important;
+      clip: rect(1px, 1px, 1px, 1px) !important;
+      -webkit-clip-path: inset(50%) !important;
+      clip-path: inset(50%) !important;
+      height: 1px !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      padding: 0 !important;
+      position: absolute !important;
+      width: 1px !important;
+      white-space: nowrap !important;
+    }
+  </style>
+</body>
+</html>

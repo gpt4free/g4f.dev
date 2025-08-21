@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Workout Planner with Timer</title>
+<style>
+  /* ======================
+     Mobile-first Workout Planner CSS
+  ====================== */
+  :root {
+    --primary-color: #2e86de;
+    --secondary-color: #f1f2f6;
+    --accent-color: #ff6b6b;
+    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-family);
+    background: var(--secondary-color);
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--primary-color);
+    color: white;
+    padding: 1rem;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+  }
+
+  main {
+    flex-grow: 1;
+    padding: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  h1 {
+    margin: 0;
+    font-weight: 700;
+  }
+
+  /* Form and planner layout */
+
+  form {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgb(0 0 0 / 0.1);
+    margin-bottom: 1.5rem;
+  }
+
+  form > * + * {
+    margin-top: 1rem;
+  }
+
+  label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1.5px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+  }
+  input[type="text"]:focus,
+  input[type="number"]:focus,
+  select:focus {
+    border-color: var(--primary-color);
+    outline: none;
+  }
+
+  button {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  button:disabled {
+    background: #a5b1c2;
+    cursor: not-allowed;
+  }
+  button:hover:not(:disabled) {
+    background: #1b4f9c;
+  }
+
+  /* Workout list */
+
+  #workout-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2rem 0;
+  }
+
+  .workout-item {
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 0 5px rgb(0 0 0 / 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .workout-info {
+    flex-grow: 1;
+  }
+
+  .workout-name {
+    font-weight: 700;
+    margin: 0 0 0.25rem 0;
+    word-break: break-word;
+  }
+
+  .workout-details {
+    font-size: 0.9rem;
+    color: #666;
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .btn-small {
+    background: var(--accent-color);
+    border-radius: 5px;
+    padding: 0.3rem 0.6rem;
+    border: none;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.3s;
+  }
+
+  .btn-small:hover {
+    background: #e04848;
+  }
+
+  /* Timer display */
+
+  #timer-container {
+    background: white;
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
+    text-align: center;
+    box-shadow: 0 0 12px rgb(0 0 0 / 0.15);
+    user-select: none;
+  }
+
+  #timer-title {
+    font-weight: 700;
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+    min-height: 1.4em;
+  }
+
+  #timer-display {
+    font-size: 3rem;
+    font-weight: 900;
+    margin: 0.25rem 0 1rem 0;
+    letter-spacing: 0.05em;
+  }
+  
+  #timer-controls {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  #timer-controls button {
+    background: var(--primary-color);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s;
+  }
+
+  #timer-controls button:hover:not(:disabled) {
+    background: #1b4f9c;
+  }
+
+  #timer-controls button:disabled {
+    background: #a5b1c2;
+    cursor: not-allowed;
+  }
+
+  /* Responsive tweaks */
+
+  @media(min-width: 480px){
+    form,
+    #timer-container {
+      padding: 1.5rem 2rem;
+    }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Workout Planner with Timer</h1>
+</header>
+
+<main>
+
+  <form id="add-workout-form" aria-label="Add a new workout exercise">
+    <label for="workout-name">Exercise Name</label>
+    <input type="text" id="workout-name" name="workoutName" placeholder="e.g. Push-ups" required autocomplete="off" />
+
+    <label for="workout-duration">Duration (seconds)</label>
+    <input type="number" id="workout-duration" name="workoutDuration" placeholder="e.g. 30" min="5" max="3600" required />
+
+    <button type="submit" aria-label="Add exercise to workout plan">Add Exercise</button>
+  </form>
+
+  <ul id="workout-list" aria-live="polite" aria-label="List of workout exercises"></ul>
+
+  <section id="timer-container" aria-live="polite" aria-atomic="true" aria-label="Workout timer">
+    <div id="timer-title" aria-live="polite" aria-atomic="true">No exercise selected</div>
+    <div id="timer-display" aria-live="polite" aria-atomic="true">00:00</div>
+    <div id="timer-controls">
+      <button id="start-pause-btn" aria-label="Start timer" title="Start" disabled>▶</button>
+      <button id="reset-btn" aria-label="Reset timer" title="Reset" disabled>⟲</button>
+      <button id="next-btn" aria-label="Next exercise" title="Next" disabled>⏭</button>
+    </div>
+  </section>
+  
+</main>
+
+<script>
+/**
+ * Workout Planner with Timer
+ * ---------------------------------
+ * This is a single-file responsive workout planner app designed mobile-first.
+ * 
+ * Features:
+ * - Add customizable exercises with duration in seconds.
+ * - List and manage workout exercises (delete).
+ * - Sequential timer that counts down per exercise.
+ * - Controls: Start/Pause, Reset timer, skip to Next exercise.
+ * - Responsive and accessible (ARIA live regions, labels).
+ * 
+ * No external dependencies.
+ * 
+ * Author: ChatGPT OpenAI
+ * Date: 2024
+ */
+
+(() => {
+  // DOM Elements
+  const form = document.getElementById('add-workout-form');
+  const workoutNameInput = document.getElementById('workout-name');
+  const workoutDurationInput = document.getElementById('workout-duration');
+  const workoutList = document.getElementById('workout-list');
+  const timerTitle = document.getElementById('timer-title');
+  const timerDisplay = document.getElementById('timer-display');
+  const startPauseBtn = document.getElementById('start-pause-btn');
+  const resetBtn = document.getElementById('reset-btn');
+  const nextBtn = document.getElementById('next-btn');
+
+  // State
+  let workouts = [];
+  let currentIndex = -1;
+  let timer = null;
+  let remainingSeconds = 0;
+  let isRunning = false;
+
+  // Helpers
+  function formatTime(seconds) {
+    const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+    const s = String(seconds % 60).padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  // Render workout list
+  function renderWorkoutList() {
+    workoutList.innerHTML = '';
+
+    if (workouts.length === 0) {
+      const li = document.createElement('li');
+      li.textContent = 'No exercises added yet.';
+      li.style.textAlign = 'center';
+      li.style.color = '#888';
+      workoutList.appendChild(li);
+      updateTimerUI(); // refresh timer UI when list empty
+      return;
+    }
+
+    workouts.forEach((workout, idx) => {
+      const li = document.createElement('li');
+      li.className = 'workout-item';
+      li.setAttribute('data-index', idx);
+
+      const info = document.createElement('div');
+      info.className = 'workout-info';
+
+      const name = document.createElement('p');
+      name.className = 'workout-name';
+      name.textContent = workout.name;
+
+      const details = document.createElement('p');
+      details.className = 'workout-details';
+      details.textContent = `Duration: ${workout.duration} sec`;
+
+      info.appendChild(name);
+      info.appendChild(details);
+
+      const btnGroup = document.createElement('div');
+      btnGroup.className = 'btn-group';
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'btn-small';
+      deleteBtn.type = 'button';
+      deleteBtn.title = `Delete ${workout.name}`;
+      deleteBtn.setAttribute('aria-label', `Delete exercise ${workout.name}`);
+      deleteBtn.textContent = '✕';
+      deleteBtn.addEventListener('click', () => {
+        deleteWorkout(idx);
+      });
+
+      const selectBtn = document.createElement('button');
+      selectBtn.className = 'btn-small';
+      selectBtn.type = 'button';
+      selectBtn.title = `Select ${workout.name}`;
+      selectBtn.setAttribute('aria-label', `Select exercise ${workout.name} to start timer`);
+      selectBtn.textContent = '▶';
+      selectBtn.disabled = (currentIndex === idx);
+      selectBtn.addEventListener('click', () => {
+        selectWorkout(idx);
+      });
+
+      btnGroup.appendChild(selectBtn);
+      btnGroup.appendChild(deleteBtn);
+
+      li.appendChild(info);
+      li.appendChild(btnGroup);
+
+      workoutList.appendChild(li);
+    });
+  }
+
+  // Add new workout
+  function addWorkout(name, duration) {
+    workouts.push({ name, duration });
+    renderWorkoutList();
+    if (currentIndex === -1) {
+      selectWorkout(0);
+    }
+  }
+
+  // Delete workout
+  function deleteWorkout(index) {
+    if (index < 0 || index >= workouts.length) return;
+    workouts.splice(index, 1);
+
+    if (index === currentIndex) {
+      // If current workout deleted, reset timer
+      stopTimer();
+      if (workouts.length === 0) {
+        currentIndex = -1;
+      } else if (index >= workouts.length) {
+        currentIndex = workouts.length - 1;
+      }
+      updateTimerUI();
+    } else if (index < currentIndex) {
+      // Adjust current index if needed
+      currentIndex--;
+    }
+
+    renderWorkoutList();
+  }
+
+  // Select workout
+  function selectWorkout(index) {
+    if (index < 0 || index >= workouts.length) return;
+    stopTimer();
+    currentIndex = index;
+    remainingSeconds = workouts[currentIndex].duration;
+    updateTimerUI();
+    renderWorkoutList();
+  }
+
+  // Update timer UI
+  function updateTimerUI() {
+    if (currentIndex === -1 || workouts.length === 0) {
+      timerTitle.textContent = 'No exercise selected';
+      timerDisplay.textContent = '00:00';
+      startPauseBtn.disabled = true;
+      resetBtn.disabled = true;
+      nextBtn.disabled = true;
+      startPauseBtn.textContent = '▶';
+      startPauseBtn.setAttribute('aria-label', 'Start timer');
+      return;
+    }
+
+    timerTitle.textContent = workouts[currentIndex].name;
+    timerDisplay.textContent = formatTime(remainingSeconds);
+
+    startPauseBtn.disabled = false;
+    resetBtn.disabled = false;
+    nextBtn.disabled = workouts.length <= 1;
+
+    if (isRunning) {
+      startPauseBtn.textContent = '⏸';
+      startPauseBtn.setAttribute('aria-label', 'Pause timer');
+    } else {
+      startPauseBtn.textContent = '▶';
+      startPauseBtn.setAttribute('aria-label', 'Start timer');
+    }
+
+    // Highlight selected workout's select button disabled state handled in renderWorkoutList
+  }
+
+  // Timer tick handler
+  function timerTick() {
+    if (remainingSeconds > 0) {
+      remainingSeconds--;
+      timerDisplay.textContent = formatTime(remainingSeconds);
+    } else {
+      clearInterval(timer);
+      timer = null;
+      isRunning = false;
+      startPauseBtn.textContent = '▶';
+      startPauseBtn.setAttribute('aria-label', 'Start timer');
+      alert(`Time's up for "${workouts[currentIndex].name}"!`);
+      moveToNextExercise();
+    }
+  }
+
+  // Start timer
+  function startTimer() {
+    if (timer || currentIndex === -1 || remainingSeconds <= 0) return;
+    isRunning = true;
+    updateTimerUI();
+    timer = setInterval(timerTick, 1000);
+  }
+
+  // Pause timer
+  function pauseTimer() {
+    if (!timer) return;
+    clearInterval(timer);
+    timer = null;
+    isRunning = false;
+    updateTimerUI();
+  }
+
+  // Stop timer and reset remaining seconds to current exercise duration
+  function stopTimer() {
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+    isRunning = false;
+    if (currentIndex !== -1 && workouts[currentIndex]) {
+      remainingSeconds = workouts[currentIndex].duration;
+    } else {
+      remainingSeconds = 0;
+    }
+    updateTimerUI();
+  }
+
+  // Reset timer manually to full duration of current exercise
+  function resetTimer() {
+    stopTimer();
+  }
+
+  // Move to next exercise
+  function moveToNextExercise() {
+    if (workouts.length === 0) return;
+
+    const nextIndex = (currentIndex + 1) % workouts.length;
+
+    selectWorkout(nextIndex);
+    startTimer();
+  }
+
+  // Event Handlers
+
+  // Handle form submission for adding new workouts
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+
+    const name = workoutNameInput.value.trim();
+    const durationStr = workoutDurationInput.value.trim();
+
+    if (!name) {
+      alert('Please enter a valid exercise name.');
+      return;
+    }
+
+    let duration = parseInt(durationStr, 10);
+    if (isNaN(duration) || duration < 5 || duration > 3600) {
+      alert('Please enter a valid duration between 5 and 3600 seconds.');
+      return;
+    }
+
+    addWorkout(name, duration);
+
+    // Clear inputs for next entry
+    workoutNameInput.value = '';
+    workoutDurationInput.value = '';
+    workoutNameInput.focus();
+  });
+
+  // Timer start/pause toggle
+  startPauseBtn.addEventListener('click', () => {
+    if (isRunning) {
+      pauseTimer();
+    } else {
+      startTimer();
+    }
+  });
+
+  // Reset timer
+  resetBtn.addEventListener('click', () => {
+    resetTimer();
+  });
+
+  // Next exercise
+  nextBtn.addEventListener('click', () => {
+    moveToNextExercise();
+  });
+
+  // Keyboard accessibility: space and enter on buttons
+  [startPauseBtn, resetBtn, nextBtn].forEach(btn => {
+    btn.addEventListener('keydown', e => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        btn.click();
+      }
+    });
+  });
+
+  // Initialization: render empty list and timer UI
+  renderWorkoutList();
+  updateTimerUI();
+
+})();
+</script>
+
+</body>
+</html>

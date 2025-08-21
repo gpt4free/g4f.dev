@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Recipe Finder by Ingredients</title>
+<style>
+  /* 
+  Recipe Finder by Ingredients
+  --------------------------------
+  - Mobile-first responsive design
+  - Modern, clean UI
+  - Interactive ingredient input & filtering
+  - No external dependencies
+  */
+
+  :root {
+    --color-primary: #4CAF50;
+    --color-secondary: #f8f8f8;
+    --color-accent: #388E3C;
+    --color-text: #333;
+    --color-muted: #666;
+    --max-width: 720px;
+    --spacing: 1rem;
+    --border-radius: 6px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    margin: 0;
+    background: var(--color-secondary);
+    color: var(--color-text);
+    line-height: 1.5;
+    padding: var(--spacing);
+  }
+
+  header {
+    max-width: var(--max-width);
+    margin: 0 auto var(--spacing);
+    text-align: center;
+  }
+
+  header h1 {
+    margin: 0;
+    font-weight: 700;
+    font-size: 1.8rem;
+    color: var(--color-primary);
+  }
+
+  main {
+    max-width: var(--max-width);
+    margin: 0 auto;
+  }
+
+  .input-area {
+    display: flex;
+    gap: var(--spacing);
+    margin-bottom: var(--spacing);
+  }
+
+  .input-area input {
+    flex-grow: 1;
+    padding: 0.6rem 1rem;
+    font-size: 1rem;
+    border: 2px solid var(--color-primary);
+    border-radius: var(--border-radius) 0 0 var(--border-radius);
+    outline-offset: 2px;
+    transition: border-color 0.3s ease;
+  }
+
+  .input-area input::placeholder {
+    color: var(--color-muted);
+  }
+
+  .input-area input:focus {
+    border-color: var(--color-accent);
+  }
+
+  .input-area button {
+    background: var(--color-primary);
+    border: none;
+    color: white;
+    font-size: 1.1rem;
+    padding: 0 1rem;
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .input-area button:hover,
+  .input-area button:focus {
+    background: var(--color-accent);
+  }
+
+  /* Display entered ingredients as tags */
+  .ingredients-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: var(--spacing);
+  }
+
+  .ingredient-tag {
+    background: var(--color-primary);
+    color: white;
+    padding: 0.3rem 0.75rem;
+    border-radius: var(--border-radius);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .ingredient-tag button {
+    background: transparent;
+    border: none;
+    color: white;
+    font-weight: 700;
+    margin-left: 0.5rem;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
+  }
+
+  .ingredient-tag button:hover,
+  .ingredient-tag button:focus {
+    color: #ffdddd;
+  }
+
+  /* Recipes list */
+  .recipes {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .recipes li {
+    background: white;
+    margin-bottom: var(--spacing);
+    padding: var(--spacing);
+    border-radius: var(--border-radius);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.1);
+  }
+
+  .recipe-title {
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    color: var(--color-primary);
+  }
+
+  .recipe-ingredients {
+    font-size: 0.9rem;
+    color: var(--color-muted);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .recipe-desc {
+    font-size: 0.95rem;
+    color: var(--color-text);
+  }
+
+  /* No results message */
+  .no-results {
+    text-align: center;
+    color: var(--color-muted);
+    font-style: italic;
+  }
+
+  /* Accessibility focus outline */
+  button:focus,
+  input:focus {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Larger screens */
+  @media (min-width: 600px) {
+    .input-area {
+      gap: 1.5rem;
+    }
+    .input-area input {
+      font-size: 1.125rem;
+      padding: 0.75rem 1.25rem;
+    }
+    .input-area button {
+      font-size: 1.25rem;
+      padding: 0 1.5rem;
+    }
+    .recipes li {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Recipe Finder by Ingredients</h1>
+  <p>Enter ingredients you have, find matching recipes!</p>
+</header>
+
+<main role="main">
+  <form id="ingredient-form" aria-label="Add ingredient">
+    <div class="input-area">
+      <input
+        type="text"
+        id="ingredient-input"
+        name="ingredient"
+        placeholder="Add an ingredient..."
+        autocomplete="off"
+        aria-describedby="ingredient-help"
+        aria-required="true"
+        required
+      />
+      <button type="submit" aria-label="Add ingredient">+</button>
+    </div>
+  </form>
+  <p id="ingredient-help" class="sr-only">Type an ingredient and press Add or Enter</p>
+
+  <div class="ingredients-list" aria-live="polite" aria-label="Selected ingredients"></div>
+
+  <section aria-label="Matching recipes">
+    <ul class="recipes" tabindex="0"></ul>
+  </section>
+</main>
+
+<script>
+/*
+  Recipe Finder by Ingredients
+  ---------------------------
+  - Allows user to input available ingredients
+  - Filters recipes that contain all entered ingredients
+  - Displays matching recipes with ingredients & description
+  - Interactive with keyboard accessibility
+*/
+
+// Sample recipe data
+const recipes = [
+  {
+    title: "Classic Tomato Pasta",
+    ingredients: ["tomato", "pasta", "garlic", "olive oil", "basil", "parmesan"],
+    description: "A quick and fresh tomato pasta with garlic and basil.",
+  },
+  {
+    title: "Chicken Stir Fry",
+    ingredients: ["chicken", "soy sauce", "garlic", "ginger", "bell pepper", "onion", "rice"],
+    description: "Sautéed chicken with veggies and a savory soy-ginger sauce.",
+  },
+  {
+    title: "Vegetable Omelette",
+    ingredients: ["egg", "onion", "tomato", "bell pepper", "spinach", "cheese"],
+    description: "Fluffy omelette loaded with fresh vegetables and melted cheese.",
+  },
+  {
+    title: "Avocado Toast",
+    ingredients: ["bread", "avocado", "lemon", "salt", "pepper", "olive oil"],
+    description: "Simple and delicious avocado spread on toasted bread.",
+  },
+  {
+    title: "Pancakes",
+    ingredients: ["flour", "egg", "milk", "sugar", "baking powder", "butter"],
+    description: "Fluffy homemade pancakes perfect for breakfast.",
+  },
+  {
+    title: "Guacamole",
+    ingredients: ["avocado", "lime", "onion", "cilantro", "tomato", "salt"],
+    description: "Creamy guacamole dip with fresh herbs and lime juice.",
+  },
+  {
+    title: "Beef Tacos",
+    ingredients: ["beef", "taco shells", "onion", "lettuce", "cheese", "tomato", "sour cream"],
+    description: "Spiced beef in crispy taco shells with fresh toppings.",
+  },
+  {
+    title: "Caprese Salad",
+    ingredients: ["tomato", "mozzarella", "basil", "olive oil", "balsamic vinegar", "salt"],
+    description: "Simple Italian salad with ripe tomatoes and mozzarella cheese.",
+  }
+];
+
+// DOM references
+const ingredientForm = document.getElementById("ingredient-form");
+const ingredientInput = document.getElementById("ingredient-input");
+const ingredientsList = document.querySelector(".ingredients-list");
+const recipesList = document.querySelector(".recipes");
+
+// State: holds entered ingredients in lowercase (unique)
+let selectedIngredients = [];
+
+/**
+ * Normalize input string:
+ * trim, to lowercase
+ * @param {string} str 
+ * @returns {string}
+ */
+function normalizeIngredient(str) {
+  return str.trim().toLowerCase();
+}
+
+/**
+ * Render entered ingredients as tags with remove buttons
+ */
+function renderIngredients() {
+  ingredientsList.innerHTML = "";
+  if (selectedIngredients.length === 0) {
+    ingredientsList.setAttribute("aria-hidden", "true");
+    return;
+  }
+  ingredientsList.removeAttribute("aria-hidden");
+  selectedIngredients.forEach((ingredient) => {
+    const tag = document.createElement("div");
+    tag.className = "ingredient-tag";
+    tag.textContent = ingredient;
+
+    const btn = document.createElement("button");
+    btn.setAttribute("type", "button");
+    btn.setAttribute("aria-label", `Remove ingredient ${ingredient}`);
+    btn.innerHTML = "&times;";
+    btn.addEventListener("click", () => {
+      removeIngredient(ingredient);
+    });
+
+    tag.appendChild(btn);
+    ingredientsList.appendChild(tag);
+  });
+}
+
+/**
+ * Remove ingredient from selectedIngredients and update UI & recipes
+ * @param {string} ingredient 
+ */
+function removeIngredient(ingredient) {
+  selectedIngredients = selectedIngredients.filter((ing) => ing !== ingredient);
+  renderIngredients();
+  filterAndRenderRecipes();
+}
+
+/**
+ * Filter recipes by ingredients, only show those that contain all selected ingredients
+ */
+function filterRecipes() {
+  if (selectedIngredients.length === 0) {
+    // No filter, show all recipes
+    return recipes;
+  }
+  return recipes.filter((recipe) => {
+    // Check if all selectedIngredients are in recipe.ingredients (case-insensitive)
+    const ingredientsLower = recipe.ingredients.map((i) => i.toLowerCase());
+    return selectedIngredients.every((selIng) =>
+      ingredientsLower.includes(selIng)
+    );
+  });
+}
+
+/**
+ * Render the filtered recipes in the page
+ */
+function filterAndRenderRecipes() {
+  const filtered = filterRecipes();
+  recipesList.innerHTML = "";
+
+  if (filtered.length === 0) {
+    const noResultEl = document.createElement("li");
+    noResultEl.className = "no-results";
+    noResultEl.textContent = "No matching recipes found.";
+    recipesList.appendChild(noResultEl);
+    return;
+  }
+
+  filtered.forEach(({ title, ingredients, description }) => {
+    const li = document.createElement("li");
+
+    const h2 = document.createElement("h2");
+    h2.className = "recipe-title";
+    h2.textContent = title;
+
+    const ingrText = ingredients.join(", ");
+
+    const ingrP = document.createElement("p");
+    ingrP.className = "recipe-ingredients";
+    ingrP.textContent = `Ingredients: ${ingrText}`;
+
+    const descP = document.createElement("p");
+    descP.className = "recipe-desc";
+    descP.textContent = description;
+
+    li.appendChild(h2);
+    li.appendChild(ingrP);
+    li.appendChild(descP);
+
+    recipesList.appendChild(li);
+  });
+}
+
+/**
+ * Add ingredient to selectedIngredients if valid and not duplicate
+ * @param {string} ingredient 
+ */
+function addIngredient(ingredient) {
+  const normalized = normalizeIngredient(ingredient);
+  if (
+    normalized === "" ||
+    selectedIngredients.includes(normalized) ||
+    normalized.length > 30
+  ) {
+    // Ignore empty, duplicates, or too long input
+    return false;
+  }
+  selectedIngredients.push(normalized);
+  renderIngredients();
+  filterAndRenderRecipes();
+  return true;
+}
+
+// Event: form submit to add ingredient
+ingredientForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const val = ingredientInput.value;
+  const added = addIngredient(val);
+  if (added) {
+    ingredientInput.value = "";
+    ingredientInput.focus();
+  } else {
+    // if invalid or duplicate, shake input or notify
+    ingredientInput.select();
+  }
+});
+
+// Allow removing last ingredient with Backspace when input is empty
+ingredientInput.addEventListener("keydown", (e) => {
+  if (e.key === "Backspace" && ingredientInput.value === "") {
+    if (selectedIngredients.length > 0) {
+      removeIngredient(selectedIngredients[selectedIngredients.length - 1]);
+    }
+  }
+});
+
+// Accessibility helper: visually hide an element but keep for screen readers
+(function addSrOnlyStyle() {
+  const style = document.createElement("style");
+  style.textContent = `
+    .sr-only {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0 0 0 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
+// Initial render show all recipes
+filterAndRenderRecipes();
+</script>
+
+</body>
+</html>

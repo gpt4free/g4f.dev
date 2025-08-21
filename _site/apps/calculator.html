@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Advanced Calculator</title>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+  />
+  <style>
+    /* Reset and base */
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #1e1e1e;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      color: #eee;
+      user-select: none;
+    }
+
+    .calculator {
+      background: #2d2d2d;
+      border-radius: 10px;
+      padding: 20px 15px 30px;
+      width: 360px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+    }
+
+    .display {
+      background: #000;
+      color: #2ecc71;
+      border-radius: 8px;
+      padding: 12px 20px;
+      margin-bottom: 20px;
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      overflow-wrap: break-word;
+    }
+
+    .history {
+      font-size: 14px;
+      color: #555;
+      min-height: 18px;
+      text-align: right;
+      opacity: 0.75;
+      user-select: text;
+    }
+
+    .current-input {
+      font-size: 32px;
+      font-weight: 700;
+      text-align: right;
+      user-select: text;
+    }
+
+    .buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+    }
+
+    button.btn {
+      flex: 1;
+      background: #3a3a3a;
+      border: none;
+      border-radius: 6px;
+      color: #eee;
+      font-size: 18px;
+      font-weight: 600;
+      padding: 14px 0;
+      cursor: pointer;
+      transition: background 0.25s ease, color 0.25s ease;
+      box-shadow: 0 3px #222;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      user-select: none;
+    }
+
+    button.btn:active {
+      box-shadow: none;
+      transform: translateY(3px);
+    }
+
+    button.btn:hover {
+      background: #4caf50;
+    }
+
+    button.btn.operator {
+      background: #ff9500;
+      color: #fff;
+      font-weight: 700;
+      box-shadow: 0 3px #b26900;
+    }
+
+    button.btn.operator:hover {
+      background: #ffa733;
+    }
+
+    button.btn.operator:active {
+      box-shadow: none;
+      transform: translateY(3px);
+    }
+
+    button.btn.function {
+      background: #757575;
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 3px #4a4a4a;
+    }
+
+    button.btn.function:hover {
+      background: #909090;
+    }
+
+    button.btn.memory {
+      background: #535353;
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 3px #2e2e2e;
+    }
+
+    button.btn.memory:hover {
+      background: #666666;
+    }
+
+    button.btn.equals {
+      background: #28a745;
+      color: #fff;
+      font-weight: 700;
+      box-shadow: 0 3px #1e7e34;
+    }
+
+    button.btn.equals:hover {
+      background: #3ecf4e;
+    }
+
+    button.btn.equals:active {
+      box-shadow: none;
+      transform: translateY(3px);
+    }
+
+    button.btn.scientific {
+      background: #444;
+      color: #ddd;
+      font-weight: 600;
+      box-shadow: 0 3px #222;
+      font-size: 14px;
+      padding: 12px 0;
+      user-select: none;
+    }
+
+    button.btn.scientific:hover {
+      background: #5cdb7e;
+      color: #111;
+      font-weight: 700;
+    }
+
+    .scientific-row {
+      margin-top: 8px;
+    }
+
+    i.fas.fa-backspace {
+      font-size: 18px;
+    }
+
+    /* Responsive */
+    @media (max-width: 400px) {
+      .calculator {
+        width: 95vw;
+      }
+      .buttons {
+        gap: 8px;
+      }
+      button.btn {
+        font-size: 16px;
+        padding: 12px 0;
+      }
+      .current-input {
+        font-size: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="calculator">
+    <div class="display">
+      <div class="history" id="history"></div>
+      <div class="current-input" id="result">0</div>
+    </div>
+
+    <div class="buttons">
+      <div class="row">
+        <button class="btn function" onclick="clearAll()">AC</button>
+        <button class="btn function" onclick="backspace()"><i class="fas fa-backspace"></i></button>
+        <button class="btn function" onclick="percentage()">%</button>
+        <button class="btn operator" onclick="appendOperator('/')">/</button>
+      </div>
+
+      <div class="row">
+        <button class="btn memory" onclick="memoryRecall()">MR</button>
+        <button class="btn memory" onclick="memoryClear()">MC</button>
+        <button class="btn memory" onclick="memoryAdd()">M+</button>
+        <button class="btn operator" onclick="appendOperator('*')">×</button>
+      </div>
+
+      <div class="row">
+        <button class="btn" onclick="appendNumber('7')">7</button>
+        <button class="btn" onclick="appendNumber('8')">8</button>
+        <button class="btn" onclick="appendNumber('9')">9</button>
+        <button class="btn operator" onclick="appendOperator('-')">-</button>
+      </div>
+
+      <div class="row">
+        <button class="btn" onclick="appendNumber('4')">4</button>
+        <button class="btn" onclick="appendNumber('5')">5</button>
+        <button class="btn" onclick="appendNumber('6')">6</button>
+        <button class="btn operator" onclick="appendOperator('+')">+</button>
+      </div>
+
+      <div class="row">
+        <button class="btn" onclick="appendNumber('1')">1</button>
+        <button class="btn" onclick="appendNumber('2')">2</button>
+        <button class="btn" onclick="appendNumber('3')">3</button>
+        <button class="btn equals" onclick="calculate()">=</button>
+      </div>
+
+      <div class="row">
+        <button class="btn" onclick="toggleSign()">±</button>
+        <button class="btn" onclick="appendNumber('0')">0</button>
+        <button class="btn" onclick="appendDecimal()">.</button>
+        <button class="btn scientific" onclick="calculateSquare()">x²</button>
+      </div>
+
+      <div class="row scientific-row">
+        <button class="btn scientific" onclick="calculateSquareRoot()">√</button>
+        <button class="btn scientific" onclick="calculatePower()">x^y</button>
+        <button class="btn scientific" onclick="calculateSin()">sin</button>
+        <button class="btn scientific" onclick="calculateCos()">cos</button>
+        <button class="btn scientific" onclick="calculateTan()">tan</button>
+      </div>
+
+      <div class="row scientific-row">
+        <button class="btn scientific" onclick="calculateLog()">log</button>
+        <button class="btn scientific" onclick="calculateLn()">ln</button>
+        <button class="btn scientific" onclick="calculateFactorial()">x!</button>
+        <button class="btn scientific" onclick="calculatePi()">π</button>
+        <button class="btn scientific" onclick="calculateE()">e</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      // Elements
+      const result = document.getElementById('result');
+      const history = document.getElementById('history');
+
+      // Current state
+      let expression = '';
+      let memory = 0;
+      let powerMode = false; // Indicates if next input is power exponent
+
+      // Helper functions
+      function updateDisplay() {
+        if (expression === '') {
+          result.textContent = '0';
+        } else {
+          result.textContent = expression;
+        }
+      }
+
+      function addToHistory(expr, res) {
+        history.textContent = `${expr} = ${res}`;
+      }
+
+      function isOperator(char) {
+        return ['+', '-', '*', '/', '^'].includes(char);
+      }
+
+      function safeEval(expr) {
+        // Replace '^' with '**' for exponentiation
+        const sanitized = expr.replace(/\^/g, '**');
+        // For safety, only allow digits, operators, decimal, parentheses, Math constants/functions not accessible by eval here
+        // But since we will only eval internal generated expressions, acceptable.
+        try {
+          /* eslint-disable no-eval */
+          let val = eval(sanitized);
+          if (typeof val === 'number' && !isNaN(val) && isFinite(val)) {
+            return val;
+          }
+          throw new Error('Result is invalid');
+        } catch (e) {
+          return 'Error';
+        }
+      }
+
+      function appendNumber(num) {
+        if (powerMode) {
+          expression += '^' + num;
+          powerMode = false;
+          updateDisplay();
+          return;
+        }
+
+        if (
+          expression === '0' && num === '0'
+        ) {
+          // Prevent multiple leading zeros
+          return;
+        }
+
+        if (expression === '0') {
+          expression = num;
+        } else {
+          expression += num;
+        }
+        updateDisplay();
+      }
+
+      function appendOperator(op) {
+        powerMode = false;
+        if (expression === '') {
+          // Start with 0 if user taps operator first except '-'
+          if (op === '-') {
+            expression = '-';
+            updateDisplay();
+            return;
+          } else {
+            return;
+          }
+        }
+        // Avoid two operators consecutively, replace the last operator instead
+        if (isOperator(expression.slice(-1))) {
+          expression = expression.slice(0, -1) + op;
+        } else {
+          expression += op;
+        }
+        updateDisplay();
+      }
+
+      function appendDecimal() {
+        powerMode = false;
+        // Avoid multiple decimals in a number segment
+        let parts = expression.split(/[\+\-\*\/\^]/);
+        let lastPart = parts[parts.length - 1];
+        if (lastPart.includes('.')) return;
+        if (lastPart === '') {
+          expression += '0.';
+        } else {
+          expression += '.';
+        }
+        updateDisplay();
+      }
+
+      function calculate() {
+        powerMode = false;
+        if (expression === '') return;
+        // Prevent expression that ends with an operator
+        if (isOperator(expression.slice(-1))) {
+          expression = expression.slice(0, -1);
+        }
+
+        const res = safeEval(expression);
+        if (res === 'Error') {
+          result.textContent = 'Error';
+        } else {
+          addToHistory(expression, res);
+          expression = '' + res;
+          result.textContent = expression;
+        }
+      }
+
+      function clearAll() {
+        expression = '';
+        updateDisplay();
+        history.textContent = '';
+        powerMode = false;
+      }
+
+      function backspace() {
+        powerMode = false;
+        if (expression.length === 0) return;
+        expression = expression.slice(0, -1);
+        updateDisplay();
+      }
+
+      function toggleSign() {
+        powerMode = false;
+        // Toggle sign of the last number entered
+        if (expression === '') return;
+
+        // Find last number boundaries
+        let lastOperatorIndex = expression.lastIndexOf('+');
+        const minusIndex = expression.lastIndexOf('-');
+        if (minusIndex > lastOperatorIndex) lastOperatorIndex = minusIndex;
+        const mulIndex = expression.lastIndexOf('*');
+        if (mulIndex > lastOperatorIndex) lastOperatorIndex = mulIndex;
+        const divIndex = expression.lastIndexOf('/');
+        if (divIndex > lastOperatorIndex) lastOperatorIndex = divIndex;
+        const expIndex = expression.lastIndexOf('^');
+        if (expIndex > lastOperatorIndex) lastOperatorIndex = expIndex;
+
+        let lastNumber = expression.slice(lastOperatorIndex + 1);
+
+        if (lastNumber === '') return;
+
+        // If last number starts with '-', remove it, else add it.
+        if (lastNumber.startsWith('-')) {
+          lastNumber = lastNumber.slice(1);
+        } else {
+          lastNumber = '-' + lastNumber;
+        }
+
+        expression = expression.slice(0, lastOperatorIndex + 1) + lastNumber;
+        updateDisplay();
+      }
+
+      function percentage() {
+        powerMode = false;
+        if (expression === '') return;
+        try {
+          // Calculate percentage of last number in expression
+          // Find last number segment.
+          let lastOperatorIndex = expression.lastIndexOf('+');
+          const minusIndex = expression.lastIndexOf('-');
+          if (minusIndex > lastOperatorIndex) lastOperatorIndex = minusIndex;
+          const mulIndex = expression.lastIndexOf('*');
+          if (mulIndex > lastOperatorIndex) lastOperatorIndex = mulIndex;
+          const divIndex = expression.lastIndexOf('/');
+          if (divIndex > lastOperatorIndex) lastOperatorIndex = divIndex;
+          const expIndex = expression.lastIndexOf('^');
+          if (expIndex > lastOperatorIndex) lastOperatorIndex = expIndex;
+
+          let lastNumber = expression.slice(lastOperatorIndex + 1);
+          if (lastNumber === '') return;
+
+          let num = parseFloat(lastNumber);
+          if (isNaN(num)) return;
+
+          num = num / 100;
+          expression = expression.slice(0, lastOperatorIndex + 1) + num;
+          updateDisplay();
+        } catch {
+          result.textContent = 'Error';
+        }
+      }
+
+      // Memory functions
+      function memoryRecall() {
+        if (powerMode) {
+          expression += '^' + memory;
+          powerMode = false;
+          updateDisplay();
+          return;
+        }
+        if (expression === '0' || expression === '') {
+          expression = '' + memory;
+        } else {
+          expression += memory;
+        }
+        updateDisplay();
+      }
+
+      function memoryClear() {
+        memory = 0;
+      }
+
+      function memoryAdd() {
+        if (expression === '') return;
+        const val = safeEval(expression);
+        if (val !== 'Error') {
+          memory += val;
+        }
+      }
+
+      // Scientific calculations
+      function calculateSquare() {
+        powerMode = false;
+        if (expression === '') return;
+        let val = safeEval(expression);
+        if (val === 'Error') {
+          result.textContent = 'Error';
+          return;
+        }
+        const res = val ** 2;
+        addToHistory(expression + '²', res);
+        expression = res.toString();
+        updateDisplay();
+      }
+
+      function calculateSquareRoot() {
+        powerMode = false;
+        if (expression === '') return;
+        let val = safeEval(expression);
+        if (val === 'Error' || val < 0) {
+          result.textContent = 'Error';
+          return;
+        }
+        const res = Math.sqrt(val);
+        addToHistory('√(' + expression + ')', res);
+        expression = res.toString();
+        updateDisplay();
+      }
+
+      function calculatePower() {
+        if (expression === '') return;
+        // Set powerMode - after next number input, will append ^exponent
+        powerMode = true;
+      }
+
+      function calculateSin() {
+        powerMode = false;
+        if (expression === '') return;
+        let val = safeEval(expression);
+        if (val === 'Error') {
+          result.textContent = 'Error';
+          return;
+        }
+        // Convert degrees to radians
+        const res = Math.sin(toRadians(val));
+        addToHistory('sin(' + val + '°)', res);
+        expression = res.toString();
+        updateDisplay();
+      }
+
+      function calculateCos() {
+        powerMode = false;
+        if (expression === '') return;
+        let val = safeEval(expression);
+        if (val === 'Error') {
+          result.textContent = 'Error';
+          return;
+        }
+        const res = Math.cos(toRadians(val));
+        addToHistory('cos(' + val + '°)', res);
+        expression = res.toString();
+        updateDisplay();
+      }
+
+      function calculateTan() {
+        powerMode = false;
+        if (expression === '') return;
+        let val = safeEval(expression);
+        if (val === 'Error') {
+          result.textContent = 'Error';
+          return;
+        }
+        const angle = toRadians(val);
+
+        // Handle tan(90 + k*180) undefined
+        if (Math.abs(Math.cos(angle)) < 1e-15) {
+          result.textContent = 'Error';
+          return;
+        }
+
+        const res = Math.tan(angle);
+        addToHistory('tan(' + val + '°)', res);
+        expression = res.toString();
+        updateDisplay();
+      }
+
+      function calculateLog() {
+        powerMode = false;
+        if (expression === '') return;
+        let val = safeEval(expression);
+        if (val <= 0 || val === 'Error') {
+          result.textContent = 'Error';
+          return;
+        }
+        const res = Math.log10(val);
+        addToHistory('log(' + val + ')', res);
+        expression = res.toString();
+        updateDisplay();
+      }
+
+      function calculateLn() {
+        powerMode = false;
+        if (expression === '') return;
+        let val = safeEval(expression);
+        if (val <= 0 || val === 'Error') {
+          result.textContent = 'Error';
+          return;
+        }
+        const res = Math.log(val);
+        addToHistory('ln(' + val + ')', res);
+        expression = res.toString();
+        updateDisplay();
+      }
+
+      function calculateFactorial() {
+        powerMode = false;
+        if (expression === '') return;
+        let val = safeEval(expression);
+        if (val === 'Error' || val < 0 || !Number.isInteger(val)) {
+          result.textContent = 'Error';
+          return;
+        }
+
+        const res = factorial(val);
+        addToHistory(val + '!', res);
+        expression = res.toString();
+        updateDisplay();
+      }
+
+      function calculatePi() {
+        powerMode = false;
+        if (powerMode) {
+          expression += '^' + Math.PI.toFixed(6);
+          powerMode = false;
+          updateDisplay();
+          return;
+        }
+        if (expression === '' || expression === '0') {
+          expression = Math.PI.toFixed(6);
+        } else {
+          expression += Math.PI.toFixed(6);
+        }
+        updateDisplay();
+      }
+
+      function calculateE() {
+        powerMode = false;
+        if (powerMode) {
+          expression += '^' + Math.E.toFixed(6);
+          powerMode = false;
+          updateDisplay();
+          return;
+        }
+        if (expression === '' || expression === '0') {
+          expression = Math.E.toFixed(6);
+        } else {
+          expression += Math.E.toFixed(6);
+        }
+        updateDisplay();
+      }
+
+      // Helpers for math
+      function factorial(n) {
+        if (n === 0 || n === 1) return 1;
+        let f = 1;
+        for (let i = 2; i <= n; i++) f *= i;
+        return f;
+      }
+
+      function toRadians(deg) {
+        return (deg * Math.PI) / 180;
+      }
+
+      // Expose functions globally (for inline onclick handlers)
+      window.appendNumber = appendNumber;
+      window.appendOperator = appendOperator;
+      window.appendDecimal = appendDecimal;
+      window.calculate = calculate;
+      window.clearAll = clearAll;
+      window.backspace = backspace;
+      window.toggleSign = toggleSign;
+      window.percentage = percentage;
+      window.memoryRecall = memoryRecall;
+      window.memoryClear = memoryClear;
+      window.memoryAdd = memoryAdd;
+
+      window.calculateSquare = calculateSquare;
+      window.calculateSquareRoot = calculateSquareRoot;
+      window.calculatePower = calculatePower;
+      window.calculateSin = calculateSin;
+      window.calculateCos = calculateCos;
+      window.calculateTan = calculateTan;
+      window.calculateLog = calculateLog;
+      window.calculateLn = calculateLn;
+      window.calculateFactorial = calculateFactorial;
+      window.calculatePi = calculatePi;
+      window.calculateE = calculateE;
+
+      // Initialize display
+      updateDisplay();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Maze Generator & Solver</title>
+<style>
+  /* 
+  Maze Generator & Solver
+  Author: ChatGPT
+  Description:
+    A responsive, mobile-first interactive maze generator and solver.
+    - Generates a perfect maze using Recursive Backtracking algorithm.
+    - Solves maze using BFS shortest path.
+    - Responsive design adapts to screen size, with touch-friendly controls.
+  Usage:
+    - Adjust maze size via inputs (rows & cols).
+    - Click "Generate Maze" to create a new maze.
+    - Click "Solve Maze" to find and display shortest path.
+    - Tap or click on maze for interactivity (hover effect on desktop, tap highlight on mobile).
+  No external dependencies.
+  */
+
+  :root {
+    --cell-size: 24px;
+    --wall-color: #222;
+    --path-color: #4caf50;
+    --visited-color: #a5d6a7;
+    --background-color: #fafafa;
+    --button-bg: #4caf50;
+    --button-fg: #fff;
+    --button-hover-bg: #388e3c;
+  }
+
+  /* Mobile-first base styles */
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0; padding: 1rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    background: var(--background-color);
+    color: #111;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  h1 {
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    text-align: center;
+  }
+  
+  form {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    max-width: 400px;
+  }
+
+  label {
+    flex-grow: 1;
+    min-width: 40%;
+    font-size: 1rem;
+  }
+
+  input[type=number] {
+    width: 100%;
+    padding: 0.3em 0.5em;
+    font-size: 1rem;
+  }
+
+  button {
+    background: var(--button-bg);
+    color: var(--button-fg);
+    border: none;
+    padding: 0.6em 1.2em;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    flex-grow: 1;
+    min-width: 40%;
+    transition: background 0.3s ease;
+  }
+  button:hover,
+  button:focus {
+    background: var(--button-hover-bg);
+    outline: none;
+  }
+
+  main {
+    width: 100%;
+    max-width: 720px;
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  canvas {
+    background: white;
+    border: 2px solid var(--wall-color);
+    touch-action: manipulation;
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.1);
+  }
+
+  /* Larger screen adjustments */
+  @media (min-width: 600px) {
+    :root {
+      --cell-size: 30px;
+    }
+    form {
+      max-width: 480px;
+    }
+  }
+
+</style>
+</head>
+<body>
+
+<h1>Maze Generator & Solver</h1>
+
+<form id="controls" aria-label="Maze controls">
+  <label for="rows">Rows:
+    <input type="number" id="rows" name="rows" min="5" max="50" value="20" required />
+  </label>
+  <label for="cols">Columns:
+    <input type="number" id="cols" name="cols" min="5" max="50" value="20" required />
+  </label>
+  <button type="button" id="generateBtn" aria-label="Generate Maze">Generate Maze</button>
+  <button type="button" id="solveBtn" aria-label="Solve Maze" disabled>Solve Maze</button>
+</form>
+
+<main>
+  <canvas id="mazeCanvas" role="img" aria-label="Maze grid"></canvas>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  // Constants for directions (bit mask for walls)
+  const TOP = 1;    // 0001
+  const RIGHT = 2;  // 0010
+  const BOTTOM = 4; // 0100
+  const LEFT = 8;   // 1000
+
+  // Opposite walls for easy removal
+  const OPPOSITE = {
+    [TOP]: BOTTOM,
+    [RIGHT]: LEFT,
+    [BOTTOM]: TOP,
+    [LEFT]: RIGHT,
+  };
+
+  // Delta row,col for directions
+  const DIRS = {
+    [TOP]: [-1, 0],
+    [RIGHT]: [0, 1],
+    [BOTTOM]: [1, 0],
+    [LEFT]: [0, -1],
+  };
+
+  const canvas = document.getElementById("mazeCanvas");
+  const ctx = canvas.getContext("2d");
+
+  const rowsInput = document.getElementById("rows");
+  const colsInput = document.getElementById("cols");
+  const generateBtn = document.getElementById("generateBtn");
+  const solveBtn = document.getElementById("solveBtn");
+
+  let maze = [];
+  let rows, cols;
+  let cellSize;
+  let mazeWidth, mazeHeight;
+  let solvedPath = null;
+
+  // Initialize and generate maze properties
+  function initMaze(r, c) {
+    rows = r;
+    cols = c;
+    maze = new Array(rows);
+
+    for (let i = 0; i < rows; i++) {
+      maze[i] = new Array(cols);
+      for (let j = 0; j < cols; j++) {
+        // Each cell starts with all walls intact (15)
+        maze[i][j] = 15;
+      }
+    }
+    solvedPath = null;
+  }
+
+  // Shuffle function helper for randomized DFS
+  function shuffle(array) {
+    for (let i = array.length -1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i+1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  // Recursive backtracking maze generator
+  function generateMaze(r = 0, c = 0, visited = null) {
+    if (!visited) visited = Array.from({length: rows}, () => Array(cols).fill(false));
+
+    visited[r][c] = true;
+    let directions = shuffle(Object.keys(DIRS).map(Number));
+
+    for (let dir of directions) {
+      const [dr, dc] = DIRS[dir];
+      const nr = r + dr;
+      const nc = c + dc;
+
+      if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !visited[nr][nc]) {
+        // Remove walls between current and neighbor
+        maze[r][c] &= ~dir;
+        maze[nr][nc] &= ~OPPOSITE[dir];
+
+        generateMaze(nr, nc, visited);
+      }
+    }
+  }
+
+  // Resize canvas and set cellSize based on container and device pixel ratio
+  function resizeCanvas() {
+    // Use --cell-size from CSS (computed style)
+    const cs = getComputedStyle(document.documentElement).getPropertyValue('--cell-size').trim();
+    cellSize = parseInt(cs, 10) || 24;
+
+    // Fit canvas inside max width/height with padding
+    const maxWidth = Math.min(window.innerWidth, 720) - 32; // some padding
+    const maxHeight = window.innerHeight - document.querySelector('form').offsetHeight - 100;
+
+    // Calculate maze pixel size required
+    mazeWidth = cellSize * cols;
+    mazeHeight = cellSize * rows;
+
+    // Scale down cell size if too big to fit screen
+    let scale = Math.min(1, maxWidth / mazeWidth, maxHeight / mazeHeight);
+    cellSize = Math.floor(cellSize * scale);
+
+    mazeWidth = cellSize * cols;
+    mazeHeight = cellSize * rows;
+
+    // Set canvas size using device pixel ratio for crispness
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = mazeWidth * dpr;
+    canvas.height = mazeHeight * dpr;
+    canvas.style.width = mazeWidth + "px";
+    canvas.style.height = mazeHeight + "px";
+    ctx.setTransform(1,0,0,1,0,0); // reset transform
+    ctx.scale(dpr, dpr);
+  }
+
+  // Draw maze grid, walls and optionally the solution path
+  function drawMaze() {
+    ctx.clearRect(0, 0, mazeWidth, mazeHeight);
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--wall-color').trim();
+    ctx.lineCap = "round";
+
+    // Draw walls for each cell
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = c * cellSize;
+        const y = r * cellSize;
+        const cell = maze[r][c];
+
+        ctx.beginPath();
+        // Top wall
+        if (cell & TOP) {
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + cellSize, y);
+        }
+        // Right wall
+        if (cell & RIGHT) {
+          ctx.moveTo(x + cellSize, y);
+          ctx.lineTo(x + cellSize, y + cellSize);
+        }
+        // Bottom wall
+        if (cell & BOTTOM) {
+          ctx.moveTo(x + cellSize, y + cellSize);
+          ctx.lineTo(x, y + cellSize);
+        }
+        // Left wall
+        if (cell & LEFT) {
+          ctx.moveTo(x, y + cellSize);
+          ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+    }
+
+    // Mark entry (top-left) and exit (bottom-right) with filled rect
+    ctx.fillStyle = "#2196f3";
+    ctx.fillRect(2, 2, cellSize - 4, cellSize - 4);
+    ctx.fillRect(
+      (cols -1)*cellSize + 2,
+      (rows -1)*cellSize + 2,
+      cellSize - 4,
+      cellSize - 4
+    );
+
+    if (solvedPath) {
+      drawPath(solvedPath);
+    }
+  }
+
+  // Solve the maze with BFS - finds shortest path from (0,0) to (rows-1,cols-1)
+  function solveMaze() {
+    const queue = [];
+    const visited = Array.from({length: rows}, () => Array(cols).fill(false));
+    const parent = Array.from({length: rows}, () => Array(cols).fill(null));
+    queue.push([0, 0]);
+    visited[0][0] = true;
+
+    while (queue.length > 0) {
+      const [r, c] = queue.shift();
+
+      if (r === rows - 1 && c === cols - 1) {
+        // Reached exit - reconstruct path
+        const path = [];
+        let cur = [r, c];
+        while (cur) {
+          path.push(cur);
+          cur = parent[cur[0]][cur[1]];
+        }
+        return path.reverse();
+      }
+
+      const cellWalls = maze[r][c];
+      // Check each direction without wall
+      for (const dir of [TOP, RIGHT, BOTTOM, LEFT]) {
+        if (!(cellWalls & dir)) {
+          const [dr, dc] = DIRS[dir];
+          const nr = r + dr;
+          const nc = c + dc;
+          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !visited[nr][nc]) {
+            visited[nr][nc] = true;
+            parent[nr][nc] = [r, c];
+            queue.push([nr, nc]);
+          }
+        }
+      }
+    }
+
+    // No path found
+    return null;
+  }
+
+  // Draw the solved path on maze
+  function drawPath(path) {
+    if (!path || path.length === 0) return;
+
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--path-color').trim();
+    ctx.lineWidth = cellSize * 0.4;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+
+    ctx.beginPath();
+    for (let i = 0; i < path.length; i++) {
+      const [r, c] = path[i];
+      const cx = c * cellSize + cellSize / 2;
+      const cy = r * cellSize + cellSize / 2;
+      if (i === 0) ctx.moveTo(cx, cy);
+      else ctx.lineTo(cx, cy);
+    }
+    ctx.stroke();
+  }
+
+  // Handle Generate button click
+  function onGenerate() {
+    let r = parseInt(rowsInput.value, 10);
+    let c = parseInt(colsInput.value, 10);
+    if (isNaN(r) || isNaN(c)) {
+      alert("Please enter valid numbers for rows and columns.");
+      return;
+    }
+    r = Math.min(Math.max(5, r), 50);
+    c = Math.min(Math.max(5, c), 50);
+
+    initMaze(r, c);
+    generateMaze();
+    resizeCanvas();
+    drawMaze();
+
+    solveBtn.disabled = false;
+  }
+
+  // Handle Solve button click
+  function onSolve() {
+    if (!maze.length) return;
+
+    solvedPath = solveMaze();
+    if (!solvedPath) {
+      alert("No path found!");
+      return;
+    }
+    drawMaze();
+  }
+
+  // Interaction: highlight cell on mouseover/touch
+  // For mobile, tap toggles highlight
+  let highlightedCell = null;
+
+  function getCellFromCoords(x, y) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = x - rect.left;
+    const cy = y - rect.top;
+    if (cx < 0 || cy < 0 || cx > mazeWidth || cy > mazeHeight) return null;
+    const c = Math.floor(cx / cellSize);
+    const r = Math.floor(cy / cellSize);
+    if (r >= rows || c >= cols) return null;
+    return [r, c];
+  }
+
+  function drawHighlight(r, c) {
+    drawMaze();
+    if (r === null || c === null) return;
+
+    ctx.fillStyle = "rgba(255, 193, 7, 0.4)"; // amber translucent
+    ctx.fillRect(c * cellSize + 1, r * cellSize +1, cellSize -2, cellSize -2);
+  }
+
+  canvas.addEventListener("mousemove", e => {
+    // Only for devices with mouse
+    if ("ontouchstart" in window) return;
+    const cell = getCellFromCoords(e.clientX, e.clientY);
+    if (!cell) {
+      if (highlightedCell) {
+        highlightedCell = null;
+        drawMaze();
+      }
+      return;
+    }
+    const [r, c] = cell;
+    if (!highlightedCell || highlightedCell[0] !== r || highlightedCell[1] !== c) {
+      highlightedCell = [r, c];
+      drawHighlight(r, c);
+    }
+  });
+
+  canvas.addEventListener("mouseleave", () => {
+    if (highlightedCell) {
+      highlightedCell = null;
+      drawMaze();
+    }
+  });
+
+  // For touch devices use tap to toggle highlight
+  canvas.addEventListener("touchstart", e => {
+    const touch = e.touches[0];
+    const cell = getCellFromCoords(touch.clientX, touch.clientY);
+    if (!cell) return;
+    const [r, c] = cell;
+
+    if (highlightedCell && highlightedCell[0] === r && highlightedCell[1] === c) {
+      // Unhighlight
+      highlightedCell = null;
+      drawMaze();
+    } else {
+      highlightedCell = [r, c];
+      drawHighlight(r, c);
+    }
+  }, {passive: true});
+
+  // Initialize default maze
+  function init() {
+    const defaultRows = parseInt(rowsInput.value, 10);
+    const defaultCols = parseInt(colsInput.value, 10);
+
+    initMaze(defaultRows, defaultCols);
+    generateMaze();
+    resizeCanvas();
+    drawMaze();
+
+    solveBtn.disabled = false;
+  }
+
+  // Event listeners
+  generateBtn.addEventListener("click", onGenerate);
+  solveBtn.addEventListener("click", onSolve);
+  window.addEventListener("resize", () => {
+    if (!rows || !cols) return;
+    resizeCanvas();
+    drawMaze();
+  });
+
+  // Start on load
+  init();
+})();
+</script>
+
+</body>
+</html>

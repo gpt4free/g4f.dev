@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pomodoro Timer with Productivity Stats</title>
+<style>
+  /* 
+    Pomodoro Timer - Mobile-First Responsive Design
+    - Simple, clean UI with focus on usability on small screens
+    - Scales up gracefully for larger screens
+  */
+  :root {
+    --color-primary: #d95550;
+    --color-primary-dark: #b6443f;
+    --color-bg: #f4f4f4;
+    --color-text: #222;
+    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --transition-speed: 0.3s;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    font-family: var(--font-family);
+    color: var(--color-text);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    align-items: center;
+    padding: 1rem 1.5rem;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  header h1 {
+    margin: 0;
+    font-weight: 700;
+    font-size: 1.8rem;
+    color: var(--color-primary);
+  }
+
+  main {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.5rem 1.25rem 2rem;
+    max-width: 320px;
+    width: 100%;
+    box-shadow: 0 4px 20px rgb(0 0 0 / 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Timer Circle Container */
+  #timer-circle {
+    position: relative;
+    width: 250px;
+    height: 250px;
+    margin: 0 auto 1.25rem;
+  }
+
+  svg {
+    transform: rotate(-90deg);
+    width: 100%;
+    height: 100%;
+  }
+
+  circle {
+    fill: none;
+    stroke-width: 15;
+    stroke-linecap: round;
+  }
+
+  #progress-bg {
+    stroke: #e6e6e6;
+  }
+
+  #progress-bar {
+    stroke: var(--color-primary);
+    stroke-dasharray: 785; /* Circumference ~ 2πr (r=125-7.5) */
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1s linear;
+  }
+
+  #time-display {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3rem;
+    font-weight: 700;
+    user-select: none;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  button {
+    flex: 1;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    padding: 0.75rem 0;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--transition-speed);
+    user-select: none;
+  }
+  button:disabled {
+    background: #ccc;
+    cursor: default;
+  }
+  button:hover:not(:disabled),
+  button:focus-visible:not(:disabled) {
+    background-color: var(--color-primary-dark);
+    outline: none;
+  }
+
+  /* Session Type Selector */
+  .session-settings {
+    margin-bottom: 1.5rem;
+    width: 100%;
+  }
+
+  .session-settings label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-weight: 600;
+  }
+
+  .session-settings input[type="number"] {
+    width: 100%;
+    padding: 0.5rem;
+    font-size: 1rem;
+    border: 1.5px solid #ccc;
+    border-radius: 6px;
+    outline-offset: 2px;
+  }
+
+  /* Productivity Stats */
+  #stats {
+    width: 100%;
+    background: #fafafa;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    padding: 1rem 1.25rem;
+    text-align: center;
+  }
+
+  #stats h2 {
+    margin-top: 0;
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+
+  #stats p {
+    margin: 0.4rem 0;
+    font-size: 1rem;
+  }
+
+  /* Responsive scaling */
+  @media (min-width: 400px) {
+    main {
+      max-width: 400px;
+    }
+    #timer-circle {
+      width: 300px;
+      height: 300px;
+    }
+    #time-display {
+      font-size: 3.8rem;
+    }
+  }
+
+  @media (min-width: 700px) {
+    body {
+      padding: 2rem 3rem;
+      align-items: flex-start;
+    }
+    header, main {
+      max-width: 500px;
+      margin: auto;
+    }
+    #timer-circle {
+      width: 350px;
+      height: 350px;
+    }
+    #time-display {
+      font-size: 4.5rem;
+    }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Pomodoro Timer</h1>
+</header>
+<main>
+  <!-- Circular SVG Timer -->
+  <div id="timer-circle" role="timer" aria-live="polite" aria-atomic="true" aria-label="Pomodoro Timer">
+    <svg>
+      <circle id="progress-bg" cx="125" cy="125" r="125" />
+      <circle id="progress-bar" cx="125" cy="125" r="125" />
+    </svg>
+    <div id="time-display" aria-live="off">25:00</div>
+  </div>
+
+  <!-- Session Duration Settings -->
+  <div class="session-settings" aria-label="Session Durations Settings">
+    <label for="work-duration">Work duration (minutes)</label>
+    <input id="work-duration" type="number" min="1" max="60" value="25" aria-describedby="work-desc" />
+    <small id="work-desc">Set the length of a focused work session.</small>
+
+    <label for="break-duration" style="margin-top:1rem;">Break duration (minutes)</label>
+    <input id="break-duration" type="number" min="1" max="30" value="5" aria-describedby="break-desc" />
+    <small id="break-desc">Set the length of a break session.</small>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button id="start-btn" aria-label="Start timer">Start</button>
+    <button id="pause-btn" aria-label="Pause timer" disabled>Pause</button>
+    <button id="reset-btn" aria-label="Reset timer" disabled>Reset</button>
+  </div>
+
+  <!-- Productivity Stats -->
+  <section id="stats" aria-live="polite" aria-atomic="true" aria-label="Productivity Statistics">
+    <h2>Productivity Stats</h2>
+    <p>Completed Work Sessions: <span id="work-sessions">0</span></p>
+    <p>Total Focus Time: <span id="total-focus">0m</span></p>
+    <p>Total Break Time: <span id="total-break">0m</span></p>
+  </section>
+</main>
+
+<script>
+/*
+  Pomodoro Timer Script
+  - Implements timer countdown with accurate timing
+  - Handles work and break sessions toggling
+  - Updates circular progress bar and time display
+  - Tracks productivity stats (sessions completed and total times)
+  - Accessible with ARIA attributes
+  - Clean, modular code with comments
+*/
+
+(() => {
+  // Elements
+  const startBtn = document.getElementById('start-btn');
+  const pauseBtn = document.getElementById('pause-btn');
+  const resetBtn = document.getElementById('reset-btn');
+  const timeDisplay = document.getElementById('time-display');
+  const progressBar = document.getElementById('progress-bar');
+  const workInput = document.getElementById('work-duration');
+  const breakInput = document.getElementById('break-duration');
+  const workSessionsEl = document.getElementById('work-sessions');
+  const totalFocusEl = document.getElementById('total-focus');
+  const totalBreakEl = document.getElementById('total-break');
+
+  // Constants
+  const FULL_DASH_ARRAY = 785; // Circumference of circle r=125 (stroke width halved)
+  
+  // State variables
+  let timerDuration = 25 * 60; // seconds, initialized to 25 min
+  let breakDuration = 5 * 60; // seconds
+  let timeLeft = timerDuration;
+  let timerInterval = null;
+  let sessionType = 'work'; // "work" or "break"
+  let isRunning = false;
+
+  // Stats
+  let workSessionsCompleted = 0;
+  let totalFocusSeconds = 0;
+  let totalBreakSeconds = 0;
+
+  // Timestamp management for accuracy
+  let startTimestamp = null;
+  let pausedTimestamp = null;
+
+  // Initialize timer UI
+  function init() {
+    updateDurationsFromInput();
+    resetTimer();
+    updateStatsUI();
+  }
+
+  // Update durations from user inputs (in minutes)
+  function updateDurationsFromInput() {
+    const workMins = parseInt(workInput.value, 10);
+    const breakMins = parseInt(breakInput.value, 10);
+    timerDuration = (isNaN(workMins) || workMins < 1) ? 25 * 60 : workMins * 60;
+    breakDuration = (isNaN(breakMins) || breakMins < 1) ? 5 * 60 : breakMins * 60;
+  }
+
+  // Reset timer to initial state
+  function resetTimer() {
+    isRunning = false;
+    clearInterval(timerInterval);
+    startTimestamp = null;
+    pausedTimestamp = null;
+
+    timeLeft = sessionType === 'work' ? timerDuration : breakDuration;
+    updateTimeDisplay(timeLeft);
+    updateProgress(0);
+
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    resetBtn.disabled = true;
+  }
+
+  // Format seconds to MM:SS string
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  // Update the time display text
+  function updateTimeDisplay(seconds) {
+    timeDisplay.textContent = formatTime(seconds);
+  }
+
+  // Update progress circle based on elapsed time percentage
+  // progress: value between 0 (start) and 1 (complete)
+  function updateProgress(progress) {
+    const offset = FULL_DASH_ARRAY * (1 - progress);
+    progressBar.style.strokeDashoffset = offset;
+  }
+
+  // Timer tick function, updates every second approximately
+  function onTick() {
+    if (!startTimestamp) {
+      startTimestamp = Date.now();
+    }
+
+    const now = Date.now();
+    const elapsedMs = now - startTimestamp;
+    const elapsedSeconds = Math.floor(elapsedMs / 1000);
+
+    let totalDuration = sessionType === 'work' ? timerDuration : breakDuration;
+    timeLeft = totalDuration - elapsedSeconds;
+
+    if (timeLeft <= 0) {
+      timeLeft = 0;
+      updateTimeDisplay(timeLeft);
+      updateProgress(1);
+
+      // Handle end of session and switch
+      clearInterval(timerInterval);
+      timerInterval = null;
+      isRunning = false;
+      sessionEnded();
+      return;
+    }
+
+    updateTimeDisplay(timeLeft);
+    updateProgress(elapsedSeconds / totalDuration);
+  }
+
+  // Called at the end of a session (work or break)
+  function sessionEnded() {
+    // Update stats for work session only when work completes
+    if (sessionType === 'work') {
+      workSessionsCompleted += 1;
+      totalFocusSeconds += timerDuration;
+    } else if (sessionType === 'break') {
+      totalBreakSeconds += breakDuration;
+    }
+
+    updateStatsUI();
+
+    // Switch session type
+    sessionType = sessionType === 'work' ? 'break' : 'work';
+    // Reset timeLeft for new session
+    timeLeft = sessionType === 'work' ? timerDuration : breakDuration;
+    updateTimeDisplay(timeLeft);
+    updateProgress(0);
+
+    // Update inputs disabled status
+    updateInputsAndLabels();
+
+    // Auto-start next session
+    startTimer();
+  }
+
+  // Update Productivity Stats UI
+  function updateStatsUI() {
+    workSessionsEl.textContent = workSessionsCompleted;
+    totalFocusEl.textContent = formatMinutes(totalFocusSeconds);
+    totalBreakEl.textContent = formatMinutes(totalBreakSeconds);
+  }
+
+  // Format seconds to human readable minutes for stats (e.g. "30m", "1h 20m")
+  function formatMinutes(seconds) {
+    if (seconds < 60) return "less than 1m";
+    const totalMin = Math.floor(seconds / 60);
+    const hours = Math.floor(totalMin / 60);
+    const mins = totalMin % 60;
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
+  }
+
+  // Start Timer
+  function startTimer() {
+    if (isRunning) return;
+
+    if (!startTimestamp) {
+      startTimestamp = Date.now();
+    } else if (pausedTimestamp) {
+      // Adjust startTimestamp to account for pause duration
+      const pauseDuration = Date.now() - pausedTimestamp;
+      startTimestamp += pauseDuration;
+      pausedTimestamp = null;
+    }
+
+    isRunning = true;
+    timerInterval = setInterval(onTick, 250); // update more frequently for progress smoothness
+
+    // Button states
+    startBtn.disabled = true;
+    pauseBtn.disabled = false;
+    resetBtn.disabled = false;
+
+    // Disable inputs during active timer
+    updateInputsAndLabels();
+  }
+
+  // Pause Timer
+  function pauseTimer() {
+    if (!isRunning) return;
+
+    isRunning = false;
+    clearInterval(timerInterval);
+    timerInterval = null;
+    pausedTimestamp = Date.now();
+
+    // Button states
+    startBtn.disabled = false;
+    pauseBtn.disabled = true;
+    resetBtn.disabled = false;
+  }
+
+  // Reset Timer and Stats
+  function resetAll() {
+    workSessionsCompleted = 0;
+    totalFocusSeconds = 0;
+    totalBreakSeconds = 0;
+    sessionType = 'work';
+    updateDurationsFromInput();
+    resetTimer();
+    updateStatsUI();
+    // Enable inputs after reset
+    updateInputsAndLabels();
+  }
+
+  // When user changes input durations while timer stopped, update timer accordingly
+  function onDurationsChange() {
+    if (isRunning) return; // ignore changes when running
+
+    updateDurationsFromInput();
+    timeLeft = sessionType === 'work' ? timerDuration : breakDuration;
+    updateTimeDisplay(timeLeft);
+    updateProgress(0);
+  }
+
+  // Enable/disable inputs based on whether timer is active
+  function updateInputsAndLabels() {
+    const disable = isRunning;
+    workInput.disabled = disable;
+    breakInput.disabled = disable;
+
+    // Visually indicate disabled state on inputs
+    workInput.style.backgroundColor = disable ? '#eee' : 'white';
+    breakInput.style.backgroundColor = disable ? '#eee' : 'white';
+
+    // Also update session type label color for clarity
+    if (sessionType === 'work') {
+      workInput.previousElementSibling.style.color = disable ? '#999' : '#000';
+      breakInput.previousElementSibling.style.color = '#555';
+    } else {
+      breakInput.previousElementSibling.style.color = disable ? '#999' : '#000';
+      workInput.previousElementSibling.style.color = '#555';
+    }
+  }
+
+  // Event Listeners
+  startBtn.addEventListener('click', () => {
+    updateDurationsFromInput();
+    startTimer();
+  });
+
+  pauseBtn.addEventListener('click', pauseTimer);
+
+  resetBtn.addEventListener('click', resetAll);
+
+  workInput.addEventListener('input', () => {
+    // Clamp value
+    if (workInput.value === "" || isNaN(workInput.value)) return;
+    let val = Math.min(Math.max(parseInt(workInput.value, 10), 1), 60);
+    workInput.value = val;
+    onDurationsChange();
+  });
+
+  breakInput.addEventListener('input', () => {
+    if (breakInput.value === "" || isNaN(breakInput.value)) return;
+    let val = Math.min(Math.max(parseInt(breakInput.value, 10), 1), 30);
+    breakInput.value = val;
+    onDurationsChange();
+  });
+
+  // Initialize strokeDasharray and offset for progress circle
+  progressBar.style.strokeDasharray = FULL_DASH_ARRAY;
+  progressBar.style.strokeDashoffset = FULL_DASH_ARRAY;
+
+  // Initialize everything on page load
+  init();
+})();
+</script>
+</body>
+</html>

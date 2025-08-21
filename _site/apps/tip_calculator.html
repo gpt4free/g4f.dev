@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Tip Calculator</title>
+    <style>
+        :root {
+            --primary-color: #4a6fa5;
+            --secondary-color: #166088;
+            --accent-color: #4fc3f7;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: var(--dark-color);
+            line-height: 1.6;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .calculator-section {
+            padding: 30px;
+        }
+
+        .results-section {
+            padding: 30px;
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: var(--secondary-color);
+        }
+
+        h2 {
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            transition: var(--transition);
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.2);
+        }
+
+        .tip-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .tip-option {
+            background: var(--light-color);
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .tip-option:hover {
+            background: #e9ecef;
+        }
+
+        .tip-option.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .custom-tip {
+            grid-column: span 3;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        button:hover {
+            background: var(--secondary-color);
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .result-label {
+            font-weight: 500;
+        }
+
+        .result-value {
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .total-per-person {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .total-per-person .result-value {
+            font-size: 24px;
+            color: var(--accent-color);
+        }
+
+        .error-message {
+            color: var(--danger-color);
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .split-controls {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .split-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--light-color);
+            color: var(--dark-color);
+            border: none;
+            font-size: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .split-btn:hover {
+            background: #e9ecef;
+        }
+
+        .split-value {
+            margin: 0 15px;
+            font-size: 18px;
+            font-weight: 600;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .results-section {
+                order: -1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="calculator-section">
+            <h1>Tip Calculator</h1>
+            
+            <div class="form-group">
+                <label for="bill-amount">Bill Amount</label>
+                <input type="number" id="bill-amount" placeholder="0.00" min="0" step="0.01">
+                <div class="error-message" id="bill-error">Please enter a valid bill amount</div>
+            </div>
+            
+            <div class="form-group">
+                <label>Select Tip Percentage</label>
+                <div class="tip-options">
+                    <div class="tip-option" data-percent="5">5%</div>
+                    <div class="tip-option" data-percent="10">10%</div>
+                    <div class="tip-option" data-percent="15">15%</div>
+                    <div class="tip-option" data-percent="20">20%</div>
+                    <div class="tip-option" data-percent="25">25%</div>
+                    <div class="tip-option custom-tip">
+                        <input type="number" id="custom-tip" placeholder="Custom %" min="0" step="0.1">
+                    </div>
+                </div>
+                <div class="error-message" id="tip-error">Please select a tip percentage</div>
+            </div>
+            
+            <div class="form-group">
+                <label>Number of People</label>
+                <div class="split-controls">
+                    <button class="split-btn" id="decrease-people">-</button>
+                    <div class="split-value" id="people-count">1</div>
+                    <button class="split-btn" id="increase-people">+</button>
+                </div>
+                <div class="error-message" id="people-error">Must be at least 1 person</div>
+            </div>
+            
+            <div class="form-group">
+                <button id="calculate-btn">Calculate</button>
+            </div>
+        </div>
+        
+        <div class="results-section">
+            <h2>Results</h2>
+            
+            <div class="result-item">
+                <div class="result-label">Bill Amount</div>
+                <div class="result-value" id="result-bill">$0.00</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">Tip Percentage</div>
+                <div class="result-value" id="result-tip-percent">0%</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">Tip Amount</div>
+                <div class="result-value" id="result-tip-amount">$0.00</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">Total Amount</div>
+                <div class="result-value" id="result-total">$0.00</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">Number of People</div>
+                <div class="result-value" id="result-people">1</div>
+            </div>
+            
+            <div class="result-item total-per-person">
+                <div class="result-label">Total Per Person</div>
+                <div class="result-value" id="result-per-person">$0.00</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const billAmountInput = document.getElementById('bill-amount');
+            const tipOptions = document.querySelectorAll('.tip-option');
+            const customTipInput = document.getElementById('custom-tip');
+            const decreasePeopleBtn = document.getElementById('decrease-people');
+            const increasePeopleBtn = document.getElementById('increase-people');
+            const peopleCount = document.getElementById('people-count');
+            const calculateBtn = document.getElementById('calculate-btn');
+            
+            // Error message elements
+            const billError = document.getElementById('bill-error');
+            const tipError = document.getElementById('tip-error');
+            const peopleError = document.getElementById('people-error');
+            
+            // Result elements
+            const resultBill = document.getElementById('result-bill');
+            const resultTipPercent = document.getElementById('result-tip-percent');
+            const resultTipAmount = document.getElementById('result-tip-amount');
+            const resultTotal = document.getElementById('result-total');
+            const resultPeople = document.getElementById('result-people');
+            const resultPerPerson = document.getElementById('result-per-person');
+            
+            // Variables
+            let selectedTipPercent = 0;
+            let numberOfPeople = 1;
+            
+            // Event Listeners
+            billAmountInput.addEventListener('input', validateBillAmount);
+            
+            tipOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    // Remove active class from all options
+                    tipOptions.forEach(opt => opt.classList.remove('active'));
+                    
+                    // Add active class to clicked option
+                    this.classList.add('active');
+                    
+                    // If it's not the custom tip option, set the selected tip
+                    if (!this.classList.contains('custom-tip')) {
+                        selectedTipPercent = parseFloat(this.dataset.percent);
+                        customTipInput.value = '';
+                        tipError.style.display = 'none';
+                    }
+                });
+            });
+            
+            customTipInput.addEventListener('input', function() {
+                // When custom tip is entered, remove active class from other options
+                tipOptions.forEach(opt => {
+                    if (!opt.classList.contains('custom-tip')) {
+                        opt.classList.remove('active');
+                    }
+                });
+                
+                selectedTipPercent = parseFloat(this.value) || 0;
+                
+                if (selectedTipPercent > 0) {
+                    tipError.style.display = 'none';
+                }
+            });
+            
+            decreasePeopleBtn.addEventListener('click', function() {
+                if (numberOfPeople > 1) {
+                    numberOfPeople--;
+                    peopleCount.textContent = numberOfPeople;
+                    peopleError.style.display = 'none';
+                }
+            });
+            
+            increasePeopleBtn.addEventListener('click', function() {
+                numberOfPeople++;
+                peopleCount.textContent = numberOfPeople;
+                peopleError.style.display = 'none';
+            });
+            
+            calculateBtn.addEventListener('click', calculateTip);
+            
+            // Functions
+            function validateBillAmount() {
+                const billAmount = parseFloat(billAmountInput.value);
+                
+                if (isNaN(billAmount) || billAmount <= 0) {
+                    billError.style.display = 'block';
+                    return false;
+                } else {
+                    billError.style.display = 'none';
+                    return true;
+                }
+            }
+            
+            function validateTipSelection() {
+                if (selectedTipPercent <= 0) {
+                    tipError.style.display = 'block';
+                    return false;
+                } else {
+                    tipError.style.display = 'none';
+                    return true;
+                }
+            }
+            
+            function validateNumberOfPeople() {
+                if (numberOfPeople < 1) {
+                    peopleError.style.display = 'block';
+                    return false;
+                } else {
+                    peopleError.style.display = 'none';
+                    return true;
+                }
+            }
+            
+            function calculateTip() {
+                // Validate inputs
+                const isBillValid = validateBillAmount();
+                const isTipValid = validateTipSelection();
+                const isPeopleValid = validateNumberOfPeople();
+                
+                if (!isBillValid || !isTipValid || !isPeopleValid) {
+                    return;
+                }
+                
+                // Get values
+                const billAmount = parseFloat(billAmountInput.value);
+                const tipAmount = billAmount * (selectedTipPercent / 100);
+                const totalAmount = billAmount + tipAmount;
+                const amountPerPerson = totalAmount / numberOfPeople;
+                
+                // Update results
+                resultBill.textContent = `$${billAmount.toFixed(2)}`;
+                resultTipPercent.textContent = `${selectedTipPercent}%`;
+                resultTipAmount.textContent = `$${tipAmount.toFixed(2)}`;
+                resultTotal.textContent = `$${totalAmount.toFixed(2)}`;
+                resultPeople.textContent = numberOfPeople;
+                resultPerPerson.textContent = `$${amountPerPerson.toFixed(2)}`;
+            }
+            
+            // Initialize with default values
+            calculateTip();
+        });
+    </script>
+</body>
+</html>

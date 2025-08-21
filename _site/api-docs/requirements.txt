@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+python-multipart
+requests
+aiohttp
+brotli
+pycryptodome
+nest_asyncio

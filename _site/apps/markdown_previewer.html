@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Advanced Markdown Previewer</title>
+<!-- Include Highlight.js for syntax highlighting -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" />
+<style>
+  /* Reset and base styles */
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Fira Code', monospace, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: #1e1e2f;
+    color: #f8f8f2;
+  }
+
+  header {
+    padding: 10px 20px;
+    background-color: #292832;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  h1 {
+    font-size: 1.2em;
+  }
+
+  button {
+    padding: 8px 16px;
+    background-color: #6272a4;
+    color: #f8f8f2;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+  }
+  button:hover {
+    background-color: #7081d8;
+  }
+
+  main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  #editorContainer, #previewContainer {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  label {
+    padding: 8px 12px;
+    background-color: #44475a;
+    font-weight: bold;
+    color: #f8f8f2;
+  }
+
+  textarea {
+    flex: 1;
+    padding: 12px;
+    font-family: 'Fira Code', monospace;
+    font-size: 1em;
+    border: none;
+    outline: none;
+    resize: none;
+    background-color: #282c34;
+    color: #f8f8f2;
+    overflow-y: auto;
+  }
+
+  #preview {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
+    background-color: #282c34;
+  }
+
+  /* Style for links in preview */
+  #preview a {
+    color: #61dafb;
+    text-decoration: underline;
+  }
+
+  /* Additional styles for task lists checkboxes */
+  /* Note: Markdown parser will generate checkboxes for task lists */
+  /* No special styling needed here unless for custom appearance */
+
+  /* Responsive for small screens */
+  @media (max-width: 768px) {
+    main {
+      flex-direction: column;
+    }
+    #editorContainer, #previewContainer {
+      flex: none;
+      height: 50%;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Advanced Markdown Previewer</h1>
+  <button id="togglePreview">Toggle Preview</button>
+</header>
+
+<main>
+  <div id="editorContainer">
+    <label for="editor">Markdown Editor</label>
+    <textarea id="editor" placeholder="Type your Markdown here..."></textarea>
+  </div>
+  <div id="previewContainer">
+    <label for="preview">Preview</label>
+    <div id="preview"></div>
+  </div>
+</main>
+
+<!-- Include marked.js for Markdown parsing -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<!-- Include highlight.js for syntax highlighting -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+<script>
+  // Initialize variables
+  const editor = document.getElementById('editor');
+  const preview = document.getElementById('preview');
+  const toggleBtn = document.getElementById('togglePreview');
+  const previewContainer = document.getElementById('previewContainer');
+
+  // Default Markdown content
+  const defaultMarkdown = `# Welcome to the Advanced Markdown Previewer!
+
+Write some **Markdown** in the editor on the left, and see the preview on the right.
+
+## Features
+- Real-time preview
+- Syntax highlighting for code blocks
+- Emoji support :smile:
+- Tables
+- Task lists
+- Footnotes[^1]
+- Custom styling
+
+## Code Block Example
+\`\`\`javascript
+function helloWorld() {
+  console.log("Hello, world!");
+}
+\`\`\`
+
+## Table Example
+
+| Header 1 | Header 2 | Header 3 |
+| -------- | -------- | -------- |
+| Cell 1   | Cell 2   | Cell 3   |
+| Cell 4   | Cell 5   | Cell 6   |
+
+## Task List
+
+- [x] Write documentation
+- [ ] Add more features
+- [ ] Fix bugs
+
+[^1]: This is a footnote.
+
+---
+
+Enjoy!
+`;
+
+  // Set default content
+  editor.value = defaultMarkdown;
+
+  // Configure marked.js options for advanced features
+  marked.setOptions({
+    breaks: true, // line breaks
+    gfm: true,
+    headerIds: true,
+    langPrefix: 'hljs language-', // for syntax highlighting
+    highlight: function (code, language) {
+      const validLanguage = hljs.getLanguage(language) ? language : 'plaintext';
+      return hljs.highlight(code, { language: validLanguage }).value;
+    }
+  });
+
+  // Function to convert markdown to HTML and render
+  function renderMarkdown() {
+    const markdownText = editor.value;
+    const html = marked.parse(markdownText);
+    preview.innerHTML = html;
+
+    // Automatically highlight code blocks after rendering
+    document.querySelectorAll('pre code').forEach((block) => {
+      hljs.highlightElement(block);
+    });
+  }
+
+  // Initial render
+  renderMarkdown();
+
+  // Add event listener for live updating
+  editor.addEventListener('input', renderMarkdown);
+
+  // Toggle preview visibility
+  toggleBtn.addEventListener('click', () => {
+    if (previewContainer.style.display === 'none') {
+      previewContainer.style.display = 'flex';
+    } else {
+      previewContainer.style.display = 'none';
+    }
+  });
+
+  // Optional: Persist editor content using localStorage
+  // Load from localStorage if exists
+  const savedContent = localStorage.getItem('markdownContent');
+  if (savedContent) {
+    editor.value = savedContent;
+    renderMarkdown();
+  }
+
+  // Save to localStorage on change
+  editor.addEventListener('input', () => {
+    localStorage.setItem('markdownContent', editor.value);
+  });
+</script>
+</body>
+</html>

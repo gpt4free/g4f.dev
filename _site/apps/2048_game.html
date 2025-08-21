@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>2048 Game</title>
+<style>
+  /* 2048 Game - Mobile First Responsive Design
+   * Author: ChatGPT
+   * Description: Modern, responsive 2048 game implemented as a single HTML file.
+   * Features:
+   *  - Mobile-first CSS with responsive grid and large touch areas
+   *  - Interactive keyboard/touch controls with smooth animations
+   *  - Clean, commented code, no external dependencies
+   */
+
+  :root {
+    --bg-color: #faf8ef;
+    --board-bg: #bbada0;
+    --empty-tile: #cdc1b4;
+    --tile-colors: {
+      2: #eee4da;
+      4: #ede0c8;
+      8: #f2b179;
+      16: #f59563;
+      32: #f67c5f;
+      64: #f65e3b;
+      128: #edcf72;
+      256: #edcc61;
+      512: #edc850;
+      1024: #edc53f;
+      2048: #edc22e;
+    }
+  }
+
+  /* Reset and basics */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg-color);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 1rem;
+  }
+
+  .game-container {
+    width: 100%;
+    max-width: 420px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+  header h1 {
+    font-weight: 700;
+    font-size: 2rem;
+    margin: 0;
+    color: #776e65;
+  }
+  header .score-container {
+    margin-top: 0.5rem;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+  }
+  .score, .best {
+    background: #bbada0;
+    color: #fff;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    min-width: 60px;
+    text-align: center;
+    user-select: none;
+    font-size: 1rem;
+  }
+  .score .label,
+  .best .label {
+    font-weight: 500;
+    font-size: 0.75rem;
+    display: block;
+    color: #eee4da;
+  }
+  .score .value,
+  .best .value {
+    font-size: 1.2rem;
+  }
+
+  .game-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 90%;
+    max-width: 320px;
+    padding: 1.5rem 1rem;
+    background: rgba(238, 228, 218, 0.9);
+    color: #776e65;
+    font-size: 1.5rem;
+    font-weight: 700;
+    border-radius: 6px;
+    text-align: center;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+  }
+  .game-message p {
+    margin: 0 0 1rem;
+  }
+  .game-message button {
+    background: #8f7a66;
+    border: none;
+    border-radius: 4px;
+    color: #f9f6f2;
+    padding: 0.5rem 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+    font-size: 1rem;
+  }
+  .game-message.hidden {
+    display: none;
+  }
+
+  /* Board styles */
+  .game-board {
+    position: relative;
+    background: var(--board-bg);
+    border-radius: 6px;
+    padding: 8px;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 8px;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .grid-cell {
+    background: var(--empty-tile);
+    border-radius: 3px;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Tiles container positioned absolute for animations */
+  .tiles-container {
+    position: absolute;
+    inset: 8px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 8px;
+    pointer-events: none;
+  }
+  .tile {
+    position: relative;
+    border-radius: 3px;
+    font-weight: 700;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    user-select: none;
+    font-size: 1.6rem;
+    color: #776e65;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    will-change: transform;
+  }
+  /* The color and background depend on tile value */
+  .tile.tile-2    { background: #eee4da; color: #776e65; }
+  .tile.tile-4    { background: #ede0c8; color: #776e65; }
+  .tile.tile-8    { background: #f2b179; color: #f9f6f2; }
+  .tile.tile-16   { background: #f59563; color: #f9f6f2; }
+  .tile.tile-32   { background: #f67c5f; color: #f9f6f2; }
+  .tile.tile-64   { background: #f65e3b; color: #f9f6f2; }
+  .tile.tile-128  { background: #edcf72; color: #f9f6f2; font-size: 1.3rem; }
+  .tile.tile-256  { background: #edcc61; color: #f9f6f2; font-size: 1.3rem; }
+  .tile.tile-512  { background: #edc850; color: #f9f6f2; font-size: 1.3rem; }
+  .tile.tile-1024 { background: #edc53f; color: #f9f6f2; font-size: 1rem; }
+  .tile.tile-2048 { background: #edc22e; color: #f9f6f2; font-size: 1rem; }
+
+  /* Tile scaling animation on new tile or merged tile */
+  .tile.new-tile {
+    animation: popin 0.15s ease forwards;
+  }
+  .tile.merged-tile {
+    animation: popin 0.15s ease forwards;
+  }
+  @keyframes popin {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Responsive font sizes */
+  @media (min-width: 400px) {
+    .tile {
+      font-size: 2rem;
+    }
+  }
+  @media (min-width: 600px) {
+    .tile {
+      font-size: 2.5rem;
+    }
+  }
+
+  /* Controls section */
+  .controls {
+    margin-top: 1rem;
+    text-align: center;
+  }
+  .restart-button {
+    background: #8f7a66;
+    border: none;
+    border-radius: 4px;
+    color: #f9f6f2;
+    padding: 0.6rem 1.2rem;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 3px 0 #6f5f4f;
+    transition: background 0.2s ease;
+  }
+  .restart-button:active {
+    background: #6f5f4f;
+    box-shadow: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="game-container" aria-label="2048 Game" role="main">
+  <header>
+    <h1>2048</h1>
+    <div class="score-container" aria-live="polite" aria-atomic="true">
+      <div class="score" tabindex="0">
+        <span class="label">SCORE</span>
+        <span class="value" id="score">0</span>
+      </div>
+      <div class="best" tabindex="0">
+        <span class="label">BEST</span>
+        <span class="value" id="best-score">0</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="game-board" id="game-board" aria-label="Game Board" tabindex="0" role="grid" aria-readonly="true" aria-describedby="game-status">
+    <!-- Grid background cells -->
+    <div class="grid-cell" aria-hidden="true"></div>
+    <div class="grid-cell" aria-hidden="true"></div>
+    <div class="grid-cell" aria-hidden="true"></div>
+    <div class="grid-cell" aria-hidden="true"></div>
+    <div class="grid-cell" aria-hidden="true"></div>
+    <div class="grid-cell" aria-hidden="true"></div>
+    <div class="grid-cell" aria-hidden="true"></div>
+    <div class="grid-cell" aria-hidden="true"></div>
+    <div class="grid-cell" aria-hidden="true"></div>
+    <div class="grid-cell" aria-hidden="true"></div>
+    <div class="grid-cell" aria-hidden="true"></div>
+    <div class="grid-cell" aria-hidden="true"></div>
+    <div class="grid-cell" aria-hidden="true"></div>
+    <div class="grid-cell" aria-hidden="true"></div>
+    <div class="grid-cell" aria-hidden="true"></div>
+    <div class="grid-cell" aria-hidden="true"></div>
+
+    <!-- Tiles container -->
+    <div class="tiles-container" id="tiles-container" aria-live="polite" aria-atomic="true"></div>
+  </div>
+
+  <div class="controls">
+    <button class="restart-button" id="restart-button" aria-label="Restart game">New Game</button>
+  </div>
+
+  <div class="game-message hidden" id="game-message" role="alert" aria-live="assertive">
+    <p id="game-status"></p>
+    <button id="try-again">Try Again</button>
+  </div>
+</div>
+
+<script>
+  /*
+   * 2048 Game JavaScript
+   * Implements standard 2048 gameplay mechanics with:
+   * - Keyboard and touch swipe controls
+   * - Tile merging and animations
+   * - Score tracking and persistence of best score
+   * - Responsive design support
+   */
+
+  (function () {
+    'use strict';
+
+    // Constants
+    const SIZE = 4;
+    const NEW_TILE_VALUES = [2, 4]; // Randomly picks from
+
+    // DOM elements
+    const tilesContainer = document.getElementById('tiles-container');
+    const scoreElement = document.getElementById('score');
+    const bestScoreElement = document.getElementById('best-score');
+    const gameMessage = document.getElementById('game-message');
+    const gameStatus = document.getElementById('game-status');
+    const tryAgainButton = document.getElementById('try-again');
+    const restartButton = document.getElementById('restart-button');
+    const gameBoard = document.getElementById('game-board');
+
+    // Game state
+    let board; // 2D array SIZExSIZE holding integers (0 for empty)
+    let hasMerged; // 2D array tracking merges per move
+    let score = 0;
+    let bestScore = 0;
+    let gameOver = false;
+    let gameWon = false;
+
+    /**
+     * Initialize the game state and UI
+     */
+    function init() {
+      board = createEmptyBoard();
+      hasMerged = createEmptyBoard();
+      score = 0;
+      gameOver = false;
+      gameWon = false;
+      scoreElement.textContent = score;
+      bestScore = loadBestScore();
+      bestScoreElement.textContent = bestScore;
+      hideGameMessage();
+      addRandomTile();
+      addRandomTile();
+      updateUI();
+    }
+
+    /**
+     * Create an empty 2D board
+     */
+    function createEmptyBoard() {
+      const arr = [];
+      for (let i = 0; i < SIZE; i++) {
+        arr.push(new Array(SIZE).fill(0));
+      }
+      return arr;
+    }
+
+    /**
+     * Load best score from localStorage
+     */
+    function loadBestScore() {
+      const saved = localStorage.getItem('bestScore2048');
+      return saved ? parseInt(saved, 10) : 0;
+    }
+    /**
+     * Save best score to localStorage
+     */
+    function saveBestScore(score) {
+      localStorage.setItem('bestScore2048', score);
+    }
+
+    /**
+     * Randomly add a new tile (2 or 4) to an empty position
+     */
+    function addRandomTile() {
+      const emptyPositions = [];
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          if (board[r][c] === 0) emptyPositions.push({ r, c });
+        }
+      }
+      if (emptyPositions.length === 0) return false;
+      const pos = emptyPositions[Math.floor(Math.random() * emptyPositions.length)];
+      const value = NEW_TILE_VALUES[Math.random() < 0.9 ? 0 : 1]; // 90% 2, 10% 4
+      board[pos.r][pos.c] = value;
+      return true;
+    }
+
+    /**
+     * Update the UI tiles rendering based on board state
+     */
+    function updateUI() {
+      tilesContainer.innerHTML = '';
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          const val = board[r][c];
+          if (val !== 0) {
+            const tile = document.createElement('div');
+            tile.classList.add('tile', `tile-${val}`);
+            tile.style.gridRowStart = r + 1;
+            tile.style.gridColumnStart = c + 1;
+            tile.textContent = val;
+            tile.setAttribute('aria-label', `Tile ${val} at row ${r + 1} column ${c + 1}`);
+            // Add animation classes for new tiles or merged tiles
+            if (newTiles.has(`${r},${c}`)) tile.classList.add('new-tile');
+            if (mergedTiles.has(`${r},${c}`)) tile.classList.add('merged-tile');
+            tilesContainer.appendChild(tile);
+          }
+        }
+      }
+      scoreElement.textContent = score;
+      // Update best score if necessary
+      if (score > bestScore) {
+        bestScore = score;
+        bestScoreElement.textContent = bestScore;
+        saveBestScore(bestScore);
+      }
+    }
+
+    // Track newly added tiles and merged tiles for animation purposes
+    let newTiles = new Set();
+    let mergedTiles = new Set();
+
+    /**
+     * Attempt to move tiles in the specified direction
+     * @param {string} direction 'up', 'down', 'left', 'right'
+     * @returns {boolean} true if moved or merged, false otherwise
+     */
+    function move(direction) {
+      if (gameOver || gameWon) return false;
+      newTiles.clear();
+      mergedTiles.clear();
+
+      resetMerged();
+      let moved = false;
+
+      /*
+       * Movement logic:
+       * For each row/column depending on direction,
+       * slide tiles towards that direction.
+       * Merge tiles if same value and not merged before.
+       */
+
+      function traverseIndexes() {
+        // Returns array of indices in the order needed to iterate depending on direction
+        const indexes = [];
+        for (let i = 0; i < SIZE; i++) indexes.push(i);
+        if (direction === 'right' || direction === 'down') indexes.reverse();
+        return indexes;
+      }
+
+      const rowIndexes = direction === 'up' || direction === 'down' ? traverseIndexes() : [...Array(SIZE).keys()];
+      const colIndexes = direction === 'left' || direction === 'right' ? traverseIndexes() : [...Array(SIZE).keys()];
+
+      function canMerge(pos1, pos2) {
+        return (
+          board[pos1.r][pos1.c] !== 0 &&
+          board[pos1.r][pos1.c] === board[pos2.r][pos2.c] &&
+          !hasMerged[pos2.r][pos2.c] &&
+          !hasMerged[pos1.r][pos1.c]
+        );
+      }
+
+      // Helper function to get next coordinate according to direction
+      const nextCoord = (r, c, step = 1) => {
+        switch (direction) {
+          case 'up': return { r: r - step, c };
+          case 'down': return { r: r + step, c };
+          case 'left': return { r, c: c - step };
+          case 'right': return { r, c: c + step };
+        }
+      };
+
+      // Helper to check if coordinate within board
+      const inBounds = (r, c) => r >= 0 && r < SIZE && c >= 0 && c < SIZE;
+
+      // Core move algorithm per direction
+      // We process each line independent
+      // The algorithm slides non-zero tiles towards the direction
+      for (const r of rowIndexes) {
+        for (const c of colIndexes) {
+          let currVal = board[r][c];
+          if (currVal === 0) continue;
+          // Move tile as far as possible
+          let posR = r;
+          let posC = c;
+
+          // Try sliding step by step
+          while (true) {
+            let next = nextCoord(posR, posC);
+            if (!inBounds(next.r, next.c)) break;
+
+            if (board[next.r][next.c] === 0) {
+              // Slide over empty space
+              board[next.r][next.c] = board[posR][posC];
+              board[posR][posC] = 0;
+              posR = next.r;
+              posC = next.c;
+              moved = true;
+              continue;
+            } else if (
+              board[next.r][next.c] === board[posR][posC] &&
+              !hasMerged[next.r][next.c] &&
+              !hasMerged[posR][posC]
+            ) {
+              // Merge
+              board[next.r][next.c] *= 2;
+              board[posR][posC] = 0;
+              hasMerged[next.r][next.c] = true;
+              score += board[next.r][next.c];
+              mergedTiles.add(`${next.r},${next.c}`);
+              moved = true;
+              // Check if player has won
+              if (board[next.r][next.c] === 2048) {
+                gameWon = true;
+                showGameMessage('You win! 🎉');
+              }
+              break;
+            } else {
+              break;
+            }
+          }
+        }
+      }
+
+      if (moved) {
+        addRandomTile();
+        updateUI();
+        if (!canMove()) {
+          gameOver = true;
+          showGameMessage('Game over! 😞');
+        }
+      }
+      return moved;
+    }
+
+    /**
+     * Reset merge flags for tiles
+     */
+    function resetMerged() {
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          hasMerged[r][c] = false;
+        }
+      }
+    }
+
+    /**
+     * Check if moves are possible (empty space or merge available)
+     */
+    function canMove() {
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          if (board[r][c] === 0) return true;
+          let val = board[r][c];
+          const neighbors = [
+            { r: r + 1, c },
+            { r: r - 1, c },
+            { r, c: c + 1 },
+            { r, c: c - 1 },
+          ];
+          for (const n of neighbors) {
+            if (n.r >= 0 && n.r < SIZE && n.c >= 0 && n.c < SIZE) {
+              if (board[n.r][n.c] === val) return true;
+            }
+          }
+        }
+      }
+      return false;
+    }
+
+    /**
+     * Show a message overlay
+     */
+    function showGameMessage(message) {
+      gameStatus.textContent = message;
+      gameMessage.classList.remove('hidden');
+      tryAgainButton.focus();
+    }
+
+    /**
+     * Hide the message overlay
+     */
+    function hideGameMessage() {
+      gameMessage.classList.add('hidden');
+      gameStatus.textContent = '';
+    }
+
+    /**
+     * Handle keyboard input for moves
+     */
+    function handleKey(e) {
+      if (gameOver || gameWon) return;
+      switch (e.key) {
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+          e.preventDefault();
+          move('up');
+          break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+          e.preventDefault();
+          move('down');
+          break;
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+          e.preventDefault();
+          move('left');
+          break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+          e.preventDefault();
+          move('right');
+          break;
+      }
+    }
+
+    // Touch handling variables
+    let touchStartX = null;
+    let touchStartY = null;
+    const minSwipeDistance = 30;
+
+    /**
+     * Handle touch start event
+     */
+    function handleTouchStart(e) {
+      if (e.touches.length !== 1) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }
+    /**
+     * Handle touch move event
+     */
+    function handleTouchMove(e) {
+      // Prevent scrolling when game board is touched
+      if (!touchStartX || !touchStartY) return;
+      e.preventDefault();
+    }
+    /**
+     * Handle touch end event - detect swipe direction and move
+     */
+    function handleTouchEnd(e) {
+      if (!touchStartX || !touchStartY) return;
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const dx = touchEndX - touchStartX;
+      const dy = touchEndY - touchStartY;
+
+      if (Math.abs(dx) < minSwipeDistance && Math.abs(dy) < minSwipeDistance) {
+        touchStartX = null;
+        touchStartY = null;
+        return;
+      }
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 0) move('right');
+        else move('left');
+      } else {
+        if (dy > 0) move('down');
+        else move('up');
+      }
+      touchStartX = null;
+      touchStartY = null;
+    }
+
+    /**
+     * Restart game handler
+     */
+    function restartGame() {
+      init();
+      gameBoard.focus();
+    }
+
+    /** 
+     * Set up event listeners 
+     */
+    function setupListeners() {
+      window.addEventListener('keydown', handleKey);
+      gameBoard.addEventListener('touchstart', handleTouchStart, { passive: false });
+      gameBoard.addEventListener('touchmove', handleTouchMove, { passive: false });
+      gameBoard.addEventListener('touchend', handleTouchEnd, { passive: true });
+      tryAgainButton.addEventListener('click', () => {
+        hideGameMessage();
+        restartGame();
+      });
+      restartButton.addEventListener('click', restartGame);
+    }
+
+    // Initialize game on page load
+    setupListeners();
+    init();
+
+  })();
+</script>
+
+</body>
+</html>

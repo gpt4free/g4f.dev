@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G4F CLI Client</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png">
+    <link rel="manifest" href="/dist/img/site.webmanifest">
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
+    <style>
+        :root {
+            --colour-1: #000000;
+            --colour-2: #ccc;
+            --colour-3: #e4d4ff;
+            --colour-4: #f0f0f0;
+            --colour-5: #181818;
+            --colour-6: #242424;
+            --accent: #8b3dff;
+            --gradient: #1a1a1a;
+            --background: #16101b;
+            --size: 70vw;
+            --top: 50%;
+            --blur: 40px;
+            --opacity: 0.6;
+        }
+
+        /* Body and text color */
+        body {
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .container-lg {
+            margin: 0 auto;
+            padding: 8px;
+        }
+
+        @media only screen and (min-width: 40em) {
+            .container-lg {
+                max-width: 84%;
+            }
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5896143631849307"
+     crossorigin="anonymous"></script>
+</head>
+<body>
+    <article class="markdown-body entry-content container-lg" itemprop="text"><h1>G4F CLI Client</h1>
+<p>A command-line interface for interacting with various AI providers and models, supporting text and image generation with conversation history.</p>
+<h2>Installation</h2>
+<div class="highlight highlight-source-shell"><pre class="notranslate">pip install g4f[all]</pre></div>
+<p>Call it in your terminal:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">g4f client <span class="pl-s"><span class="pl-pds">"</span>Explain generative AI<span class="pl-pds">"</span></span></pre></div>
+<p>Or with:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">python -m g4f.cli.client <span class="pl-s"><span class="pl-pds">"</span>Explain quantum computing<span class="pl-pds">"</span></span></pre></div>
+<h2>Usage</h2>
+<pre lang="text" class="notranslate"><code class="notranslate">usage: g4f [-h] [--debug] [-p PROVIDER] [-m MODEL] [-O [FILE]] [-i INSTRUCTIONS] [-c COOKIES_DIR]
+           [--conversation-file CONVERSATION_FILE] [-C]
+           [input ...]
+</code></pre>
+<h3>Basic Examples</h3>
+<ol>
+<li>
+<p><strong>Text generation</strong>:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">g4f <span class="pl-s"><span class="pl-pds">"</span>Explain quantum computing in simple terms<span class="pl-pds">"</span></span></pre></div>
+</li>
+<li>
+<p><strong>Image description</strong>:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">g4f image.jpg <span class="pl-s"><span class="pl-pds">"</span>Describe this image<span class="pl-pds">"</span></span></pre></div>
+</li>
+<li>
+<p><strong>Image generation</strong> (with supported models):</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">g4f -m flux -O output.jpg <span class="pl-s"><span class="pl-pds">"</span>A futuristic cityscape<span class="pl-pds">"</span></span></pre></div>
+</li>
+<li>
+<p><strong>Continue conversation</strong>:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">g4f <span class="pl-s"><span class="pl-pds">"</span>Now explain it like I'm five<span class="pl-pds">"</span></span></pre></div>
+</li>
+</ol>
+<h3>Options</h3>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>Option</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code class="notranslate">-h</code>, <code class="notranslate">--help</code></td>
+<td>Show help message</td>
+</tr>
+<tr>
+<td><code class="notranslate">--debug</code>, <code class="notranslate">-d</code></td>
+<td>Enable verbose logging</td>
+</tr>
+<tr>
+<td><code class="notranslate">-p PROVIDER</code>, <code class="notranslate">--provider PROVIDER</code></td>
+<td>Specify provider (e.g., <code class="notranslate">OpenaiChat</code>, <code class="notranslate">Gemini</code>, <code class="notranslate">Grok</code>)</td>
+</tr>
+<tr>
+<td><code class="notranslate">-m MODEL</code>, <code class="notranslate">--model MODEL</code></td>
+<td>Specify model (provider-specific)</td>
+</tr>
+<tr>
+<td><code class="notranslate">-O [FILE]</code>, <code class="notranslate">--output [FILE]</code></td>
+<td>Save response to file (for text or image generation)</td>
+</tr>
+<tr>
+<td><code class="notranslate">-i INSTRUCTIONS</code>, <code class="notranslate">--instructions INSTRUCTIONS</code></td>
+<td>Add custom system instructions</td>
+</tr>
+<tr>
+<td><code class="notranslate">-c COOKIES_DIR</code>, <code class="notranslate">--cookies-dir COOKIES_DIR</code></td>
+<td>Directory for authenticated providers</td>
+</tr>
+<tr>
+<td><code class="notranslate">--conversation-file FILE</code></td>
+<td>Custom conversation state file</td>
+</tr>
+<tr>
+<td><code class="notranslate">-C</code>, <code class="notranslate">--clear-history</code></td>
+<td>Clear conversation history before starting</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<h3>Features</h3>
+<ul>
+<li><strong>Multi-modal support</strong>: Process both text and images</li>
+<li><strong>Conversation history</strong>: Maintains context between queries</li>
+<li><strong>Multiple providers</strong>: Supports 50+ AI providers</li>
+<li><strong>Image generation</strong>: With supported models (e.g., <code class="notranslate">flux</code>)</li>
+<li><strong>Persistent settings</strong>: Saves selected model in conversation file</li>
+</ul>
+<h3>Advanced Usage</h3>
+<ol>
+<li>
+<p><strong>Custom provider with instructions</strong>:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">g4f -p PollinationsAI -i <span class="pl-s"><span class="pl-pds">"</span>You are a helpful science tutor<span class="pl-pds">"</span></span> <span class="pl-s"><span class="pl-pds">"</span>Explain photosynthesis<span class="pl-pds">"</span></span></pre></div>
+</li>
+<li>
+<p><strong>Debug mode</strong>:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">g4f --debug <span class="pl-s"><span class="pl-pds">"</span>What's the weather today?<span class="pl-pds">"</span></span></pre></div>
+</li>
+<li>
+<p><strong>Clear history and start fresh</strong>:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">g4f -C <span class="pl-s"><span class="pl-pds">"</span>New conversation<span class="pl-pds">"</span></span></pre></div>
+</li>
+<li>
+<p><strong>Save response to file</strong>:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">g4f -O response.txt <span class="pl-s"><span class="pl-pds">"</span>Write a poem about the ocean<span class="pl-pds">"</span></span></pre></div>
+</li>
+</ol>
+<h2>Configuration</h2>
+<ul>
+<li>Default conversation file: <code class="notranslate">~/.config/g4f-cli/conversation.json</code></li>
+<li>Default cookies directory: <code class="notranslate">~/.config/g4f-cli/cookies/</code></li>
+</ul>
+<h2>Supported Providers</h2>
+<p>The CLI supports numerous providers including:</p>
+<ul>
+<li>Anthropic, BingCreateImages, Blackbox, Copilot, DeepSeek, Gemini, Grok, HuggingChat, MetaAI, OpenaiChat, PerplexityLabs, and many more.</li>
+</ul>
+<p>Run <code class="notranslate">g4f --help</code> to see the complete list.</p>
+<h2>Notes</h2>
+<ul>
+<li>For image generation, ensure you select a model that supports it (e.g., <code class="notranslate">flux</code>)</li>
+<li>Some providers may require authentication via cookies</li>
+<li>The selected model is automatically saved in the conversation file</li>
+</ul></article>
+</body>
+</html>

@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Advanced Flashcard Learning App</title>
+<style>
+  /* Reset & base */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0; padding: 0;
+    background: #121212;
+    color: #eee;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100vh;
+  }
+  h1 {
+    margin-top: 1rem;
+    font-weight: 900;
+    text-align: center;
+  }
+  main {
+    max-width: 640px;
+    width: 100%;
+    margin: 1rem;
+    background: #1e1e1e;
+    border-radius: 8px;
+    box-shadow: 0 8px 16px rgb(0 0 0 / 0.7);
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    user-select:none;
+  }
+  footer {
+    margin: 0.5rem 0 1rem 0;
+    font-size: 0.8rem;
+    color: #444;
+  }
+
+  /* Flashcard container */
+  .flashcard-container {
+    perspective: 1200px;
+    width: 100%;
+    position: relative;
+    height: 260px;
+  }
+  .flashcard {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #292929, #181818);
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgb(0 0 0 / 0.6);
+    cursor: pointer;
+    position: absolute;
+    top: 0; left: 0;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4,0,0.2,1);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 2rem;
+    color: #eee;
+    font-size: 1.3rem;
+  }
+  .flashcard.flipped {
+    transform: rotateY(180deg);
+  }
+  .flashcard-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    text-align: center;
+  }
+  .flashcard-front {
+    font-weight: 600;
+    font-size: 1.5rem;
+  }
+  .flashcard-back {
+    transform: rotateY(180deg);
+    color: #adec74;
+    font-weight: 700;
+    font-size: 1.25rem;
+    white-space: pre-wrap;
+  }
+
+  /* Controls */
+  .controls {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  button, select, input[type="text"] {
+    background: #292929;
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    color: #eee;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-size: 1rem;
+  }
+  button:disabled {
+    background: #44444477;
+    cursor: not-allowed;
+  }
+  button:hover:not(:disabled), select:hover, input[type="text"]:focus {
+    background: #444;
+    outline: none;
+  }
+  select {
+    min-width: 140px;
+  }
+
+  /* Add flashcard form */
+  #add-form {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  #add-form input, #add-form textarea {
+    font-size: 1rem;
+    padding: 0.5rem;
+    border-radius: 6px;
+    border: none;
+    flex: 1 1 48%;
+    background: #292929;
+    color: #eee;
+    resize: none;
+  }
+  #add-form textarea {
+    flex: 1 1 100%;
+    min-height: 80px;
+  }
+  #add-form button {
+    flex: 1 1 100%;
+    margin-top: 0.5rem;
+  }
+  .error-msg {
+    color: #ff5555;
+    font-size: 0.9rem;
+    margin-top: 0.3rem;
+  }
+
+  /* Stats & progress */
+  .stats {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: #888;
+    text-align: center;
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .flashcard {
+      font-size: 1.1rem;
+      padding: 1.5rem;
+    }
+    #add-form input, #add-form textarea {
+      flex-basis: 100%;
+    }
+    button, select {
+      font-size: 0.9rem;
+      padding: 0.5rem 0.7rem;
+    }
+  }
+</style>
+</head>
+<body>
+  <h1>Advanced Flashcard Learning App</h1>
+  <main>
+    <div class="flashcard-container" aria-live="polite" aria-atomic="true" aria-relevant="additions removals">
+      <div class="flashcard" id="flashcard" tabindex="0" role="button" aria-pressed="false" aria-label="Flashcard. Press Enter or Space to flip.">
+        <div class="flashcard-face flashcard-front" id="card-front"></div>
+        <div class="flashcard-face flashcard-back" id="card-back"></div>
+      </div>
+    </div>
+
+    <div class="controls" role="group" aria-label="Flashcard controls">
+      <button id="prev-btn" aria-label="Previous flashcard">⬅ Previous</button>
+      <button id="flip-btn" aria-label="Flip flashcard">Flip 🔄</button>
+      <button id="next-btn" aria-label="Next flashcard">Next ➡</button>
+      <select id="mode-select" aria-label="Select study mode">
+        <option value="all">Study All</option>
+        <option value="flagged">Only Flagged</option>
+        <option value="unlearned">Not Mastered</option>
+        <option value="learned">Mastered</option>
+      </select>
+      <button id="flag-btn" aria-label="Flag or unflag this flashcard">🚩 Flag</button>
+    </div>
+
+    <div class="stats" id="stats" aria-live="polite"></div>
+
+    <section id="add-section" aria-label="Add new flashcard">
+      <h2>Add New Flashcard</h2>
+      <form id="add-form" novalidate>
+        <input type="text" id="new-front" name="front" placeholder="Front (Question)" aria-required="true" required />
+        <input type="text" id="new-back" name="back" placeholder="Back (Answer)" aria-required="true" required />
+        <button type="submit" aria-label="Add flashcard">Add Flashcard</button>
+        <div class="error-msg" id="add-error" role="alert" aria-live="assertive"></div>
+      </form>
+    </section>
+  </main>
+
+<script>
+(() => {
+  "use strict";
+
+  // DOM Elements
+  const flashcardEl = document.getElementById('flashcard');
+  const frontEl = document.getElementById('card-front');
+  const backEl = document.getElementById('card-back');
+  const prevBtn = document.getElementById('prev-btn');
+  const nextBtn = document.getElementById('next-btn');
+  const flipBtn = document.getElementById('flip-btn');
+  const flagBtn = document.getElementById('flag-btn');
+  const modeSelect = document.getElementById('mode-select');
+  const statsEl = document.getElementById('stats');
+
+  const addForm = document.getElementById('add-form');
+  const newFrontInput = document.getElementById('new-front');
+  const newBackInput = document.getElementById('new-back');
+  const addErrorEl = document.getElementById('add-error');
+
+  // Flashcard data store (to be saved in localStorage)
+  // Structure: Array of objects:
+  // { id: string, front: string, back: string, flagged: bool, stats: { seen: number, correct: number, mastery: number } }
+  // mastery here from 0 to 1, example = correct answers / seen answers (simple)
+
+  const STORAGE_KEY = 'advanced-flashcards';
+  const STORAGE_SETTINGS_KEY = 'advanced-flashcards-settings';
+
+  // Internal variables
+  let flashcards = [];
+  let filteredIds = [];
+  let currentIndex = 0;
+  let flipped = false;
+
+  // Settings
+  let studyMode = 'all';  // options: all, flagged, unlearned, learned
+  // Mastery threshold to consider "learned":
+  const masteryThreshold = 0.75;
+
+  // Util Functions
+  const saveFlashcards = () => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(flashcards));
+    } catch(e) {
+      console.warn('LocalStorage save error:', e);
+    }
+  };
+
+  const loadFlashcards = () => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          flashcards = parsed;
+          return;
+        }
+      }
+    } catch(e) {
+      console.warn('LocalStorage load error:', e);
+    }
+    flashcards = [];
+  };
+
+  const saveSettings = () => {
+    try {
+      localStorage.setItem(STORAGE_SETTINGS_KEY, JSON.stringify({ studyMode }));
+    } catch {}
+  };
+
+  const loadSettings = () => {
+    try {
+      const saved = localStorage.getItem(STORAGE_SETTINGS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.studyMode) {
+          studyMode = parsed.studyMode;
+          modeSelect.value = studyMode;
+        }
+      }
+    } catch {}
+  };
+
+  // Generate a unique ID for flashcards
+  const generateId = () => {
+    return 'id-' + Math.random().toString(36).substr(2, 9);
+  };
+
+  // Filter flashcards based on studyMode and return filtered array of indices
+  const filterFlashcards = () => {
+    switch (studyMode) {
+      case 'flagged':
+        return flashcards.map((f, i) => ({f, i}))
+          .filter(({f}) => f.flagged)
+          .map(({i}) => i);
+      case 'unlearned':
+        return flashcards.map((f, i) => ({f, i}))
+          .filter(({f}) => {
+            const mastery = (f.stats.correct / Math.max(f.stats.seen, 1));
+            return mastery < masteryThreshold;
+          })
+          .map(({i}) => i);
+      case 'learned':
+        return flashcards.map((f, i) => ({f, i}))
+          .filter(({f}) => {
+            const mastery = (f.stats.correct / Math.max(f.stats.seen, 1));
+            return mastery >= masteryThreshold;
+          })
+          .map(({i}) => i);
+      case 'all':
+      default:
+        return flashcards.map((_, i) => i);
+    }
+  };
+
+  // Render current flashcard
+  function renderFlashcard() {
+    if (filteredIds.length === 0) {
+      frontEl.textContent = "No flashcards available for this mode.";
+      backEl.textContent = "";
+      flashcardEl.classList.remove('flipped');
+      flashcardEl.setAttribute('aria-pressed', 'false');
+      flagBtn.disabled = true;
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+      flipBtn.disabled = true;
+      statsEl.textContent = '';
+      return;
+    }
+
+    const cardIndex = filteredIds[currentIndex];
+    const card = flashcards[cardIndex];
+
+    frontEl.textContent = card.front;
+    backEl.textContent = card.back;
+
+    // Reset flipped state
+    flipped = false;
+    flashcardEl.classList.remove('flipped');
+    flashcardEl.setAttribute('aria-pressed', 'false');
+
+    flagBtn.disabled = false;
+    prevBtn.disabled = (currentIndex === 0);
+    nextBtn.disabled = (currentIndex === filteredIds.length - 1);
+    flipBtn.disabled = false;
+
+    updateFlagButton(card.flagged);
+    updateStats(card);
+
+    flashcardEl.focus();
+  }
+
+  // Update flag button UI
+  function updateFlagButton(flagged) {
+    flagBtn.textContent = flagged ? '🚩 Unflag' : '🚩 Flag';
+    flagBtn.setAttribute('aria-label', flagged ? 'Unflag this flashcard' : 'Flag this flashcard');
+  }
+
+  // Update stats display below flashcard
+  function updateStats(card) {
+    const seen = card.stats.seen;
+    const correct = card.stats.correct;
+    const mastery = seen ? (correct / seen) : 0;
+    const perText = (mastery * 100).toFixed(1);
+    statsEl.textContent = `Seen: ${seen}, Correct: ${correct}, Mastery: ${perText}%`;
+  }
+
+  // Flip current flashcard
+  function flipCard() {
+    if (filteredIds.length === 0) return;
+
+    flipped = !flipped;
+    if (flipped) {
+      flashcardEl.classList.add('flipped');
+      flashcardEl.setAttribute('aria-pressed', 'true');
+    } else {
+      flashcardEl.classList.remove('flipped');
+      flashcardEl.setAttribute('aria-pressed', 'false');
+    }
+  }
+
+  // Navigate to next flashcard
+  function nextCard() {
+    if (filteredIds.length === 0) return;
+    if (currentIndex < filteredIds.length -1) {
+      currentIndex++;
+      renderFlashcard();
+    }
+  }
+
+  // Navigate to previous flashcard
+  function prevCard() {
+    if (filteredIds.length === 0) return;
+    if (currentIndex > 0) {
+      currentIndex--;
+      renderFlashcard();
+    }
+  }
+
+  // Toggle flagged state
+  function toggleFlag() {
+    if (filteredIds.length === 0) return;
+    const cardIndex = filteredIds[currentIndex];
+    flashcards[cardIndex].flagged = !flashcards[cardIndex].flagged;
+    updateFlagButton(flashcards[cardIndex].flagged);
+    saveFlashcards();
+  }
+
+  // Study interaction - user marks if they answered correctly or not
+  // After flipping and self-assessment, update stats to improve mastery
+  // We'll show prompt buttons "I knew this" / "I didn't know" after flip
+  // For better UX we'll add a small prompt below the card after flipping
+
+  // Create feedback buttons container
+  const feedbackContainer = document.createElement('div');
+  feedbackContainer.style.marginTop = '1rem';
+  feedbackContainer.style.display = 'flex';
+  feedbackContainer.style.justifyContent = 'center';
+  feedbackContainer.style.gap = '1rem';
+  feedbackContainer.style.visibility = 'hidden';
+  feedbackContainer.setAttribute('aria-live', 'polite');
+  feedbackContainer.setAttribute('aria-atomic', 'true');
+
+  const knewBtn = document.createElement('button');
+  knewBtn.textContent = "I knew this ✔️";
+  knewBtn.style.backgroundColor = '#4caf50';
+  knewBtn.style.color = '#fff';
+  knewBtn.style.flex = '1';
+  knewBtn.disabled = false;
+  knewBtn.setAttribute('aria-label', 'Mark answer as correct');
+
+  const didntKnowBtn = document.createElement('button');
+  didntKnowBtn.textContent = "I didn't know ❌";
+  didntKnowBtn.style.backgroundColor = '#f44336';
+  didntKnowBtn.style.color = '#fff';
+  didntKnowBtn.style.flex = '1';
+  didntKnowBtn.disabled = false;
+  didntKnowBtn.setAttribute('aria-label', 'Mark answer as incorrect');
+
+  feedbackContainer.appendChild(knewBtn);
+  feedbackContainer.appendChild(didntKnowBtn);
+
+  // Insert after flashcard container
+  flashcardEl.parentElement.parentElement.insertBefore(feedbackContainer, flashcardEl.parentElement.nextSibling);
+
+  // Show/hide feedback buttons
+  function showFeedbackButtons(show = true){
+    feedbackContainer.style.visibility = show ? 'visible' : 'hidden';
+    knewBtn.disabled = !show;
+    didntKnowBtn.disabled = !show;
+  }
+
+  // When flip is done, show feedback buttons
+  flashcardEl.addEventListener('transitionend', () => {
+    if (flipped) {
+      showFeedbackButtons(true);
+    } else {
+      showFeedbackButtons(false);
+    }
+  });
+
+  // Handle user response to studying this card
+  function handleFeedback(correct) {
+    if (filteredIds.length === 0) return;
+
+    const cardIndex = filteredIds[currentIndex];
+    const card = flashcards[cardIndex];
+
+    card.stats.seen++;
+    if (correct) {
+      card.stats.correct++;
+    }
+    // Save progress
+    saveFlashcards();
+    updateStats(card);
+
+    // Auto-advance only if there is a next card
+    const canAdvance = (currentIndex < filteredIds.length - 1);
+
+    // Hide feedback buttons and flip card back
+    showFeedbackButtons(false);
+    if (flipped) {
+      flipCard();
+    }
+
+    // Autoadvance after small delay for UX
+    if (canAdvance) {
+      setTimeout(() => {
+        nextCard();
+      }, 500);
+    }
+  }
+
+  // Add event listeners
+  flipBtn.addEventListener('click', () => {
+    if (filteredIds.length === 0) return;
+    flipCard();
+  });
+
+  nextBtn.addEventListener('click', () => {
+    nextCard();
+  });
+
+  prevBtn.addEventListener('click', () => {
+    prevCard();
+  });
+
+  flagBtn.addEventListener('click', () => {
+    toggleFlag();
+  });
+
+  // Keyboard support for flashcard flipping and navigation
+  flashcardEl.addEventListener('keydown', e => {
+    if (filteredIds.length === 0) return;
+
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      flipCard();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      prevCard();
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      nextCard();
+    }
+  });
+
+  // Study mode change
+  modeSelect.addEventListener('change', () => {
+    studyMode = modeSelect.value;
+    saveSettings();
+
+    filteredIds = filterFlashcards();
+    currentIndex = 0;
+    renderFlashcard();
+  });
+
+  // Feedback buttons
+  knewBtn.addEventListener('click', () => handleFeedback(true));
+  didntKnowBtn.addEventListener('click', () => handleFeedback(false));
+
+  // Add new flashcard form
+  addForm.addEventListener('submit', e => {
+    e.preventDefault();
+
+    const front = newFrontInput.value.trim();
+    const back = newBackInput.value.trim();
+    addErrorEl.textContent = '';
+
+    if (!front || !back) {
+      addErrorEl.textContent = "Both front and back fields are required.";
+      return;
+    }
+
+    // Add new flashcard
+    const newCard = {
+      id: generateId(),
+      front,
+      back,
+      flagged: false,
+      stats: { seen: 0, correct: 0 }
+    };
+    flashcards.push(newCard);
+    saveFlashcards();
+
+    // Reset form
+    newFrontInput.value = '';
+    newBackInput.value = '';
+
+    // Refresh filtered list and show this new card if mode allows
+    filteredIds = filterFlashcards();
+
+    // Set currentIndex to newly added card if in "all" mode (or mode that includes new card)
+    const newCardFilteredIndex = filteredIds.indexOf(flashcards.length - 1);
+    if (newCardFilteredIndex !== -1) {
+      currentIndex = newCardFilteredIndex;
+    } else {
+      currentIndex = 0;
+    }
+    renderFlashcard();
+  });
+
+  // Initialization: Load flashcards
+  function init() {
+    loadFlashcards();
+    loadSettings();
+
+    // Add some sample flashcards if none exist
+    if (flashcards.length === 0) {
+      flashcards = [
+        {
+          id: generateId(),
+          front: 'What is the powerhouse of the cell?',
+          back: 'The mitochondria',
+          flagged: false,
+          stats: { seen: 0, correct: 0 }
+        },
+        {
+          id: generateId(),
+          front: 'What is the capital of France?',
+          back: 'Paris',
+          flagged: false,
+          stats: { seen: 0, correct: 0 }
+        },
+        {
+          id: generateId(),
+          front: 'What does CSS stand for?',
+          back: 'Cascading Style Sheets',
+          flagged: false,
+          stats: { seen: 0, correct: 0 }
+        }
+      ];
+      saveFlashcards();
+    }
+
+    filteredIds = filterFlashcards();
+    currentIndex = 0;
+    renderFlashcard();
+  }
+
+  init();
+
+  // Accessibility: Announce when no flashcards available
+  if (filteredIds.length === 0) {
+    flashcardEl.setAttribute('aria-disabled', 'true');
+  } else {
+    flashcardEl.removeAttribute('aria-disabled');
+  }
+})();
+</script>
+</body>
+</html>

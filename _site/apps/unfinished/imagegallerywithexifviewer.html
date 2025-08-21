@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Responsive Image Gallery with EXIF Viewer</title>
+
+<style>
+  /* 
+    Responsive Image Gallery with EXIF Viewer
+    -----------------------------------------
+    - Mobile-first responsive design
+    - Grid layout for gallery images
+    - Modal popup to display full image & EXIF data
+    - EXIF data extracted from images using embedded EXIF tags (if available)
+    - No external dependencies
+    - Clean and commented code
+
+    Author: ChatGPT
+    Date: 2024-06
+  */
+
+  :root {
+    --bg-color: #fafafa;
+    --primary-color: #007BFF;
+    --text-color: #333;
+    --shadow-color: rgba(0, 0, 0, 0.15);
+  }
+
+  /* Reset and base */
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    line-height: 1.5;
+  }
+
+  h1 {
+    text-align: center;
+    padding: 1rem 0 0.5rem 0;
+  }
+
+  /* Gallery container */
+  main.gallery {
+    padding: 0 0.5rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(140px,1fr));
+    gap: 0.5rem;
+  }
+
+  /* Each image figure */
+  figure.thumb {
+    margin: 0;
+    cursor: pointer;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px var(--shadow-color);
+    background-color: #fff;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  figure.thumb:hover,
+  figure.thumb:focus {
+    outline: none;
+    transform: scale(1.04);
+    box-shadow: 0 6px 12px var(--shadow-color);
+  }
+
+  /* Thumbnail images */
+  figure.thumb img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Modal styles */
+  #modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 1rem;
+    z-index: 9999;
+  }
+
+  #modal[aria-hidden="false"] {
+    display: flex;
+  }
+
+  #modal .modal-content {
+    background: #fff;
+    border-radius: 6px;
+    max-width: 100%;
+    max-height: 90vh;
+    width: 90vw;
+    box-shadow: 0 8px 24px var(--shadow-color);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Close button */
+  #modal button.close-btn {
+    align-self: flex-end;
+    background: transparent;
+    border: none;
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--text-color);
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+  }
+
+  #modal button.close-btn:hover,
+  #modal button.close-btn:focus {
+    color: var(--primary-color);
+    outline: none;
+  }
+
+  /* Image inside modal */
+  #modal img {
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+    background: #000;
+  }
+
+  /* EXIF data container */
+  #exif-data {
+    padding: 1rem;
+    font-size: 0.9rem;
+    overflow-y: auto;
+    max-height: 150px;
+    border-top: 1px solid #ddd;
+    background-color: #f9f9f9;
+  }
+
+  #exif-data h2 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    color: var(--primary-color);
+  }
+
+  #exif-data dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.2rem 1rem;
+  }
+
+  #exif-data dt {
+    font-weight: 600;
+  }
+
+  #exif-data dd {
+    margin: 0;
+    word-break: break-word;
+  }
+
+  /* Responsive: increasing number of columns on wider screens */
+  @media (min-width: 600px) {
+    main.gallery {
+      grid-template-columns: repeat(auto-fill,minmax(180px,1fr));
+      gap: 1rem;
+    }
+  }
+
+  @media (min-width: 900px) {
+    main.gallery {
+      grid-template-columns: repeat(auto-fill,minmax(220px,1fr));
+    }
+  }
+</style>
+</head>
+<body>
+
+<h1>Responsive Image Gallery with EXIF Viewer</h1>
+
+<main class="gallery" aria-label="Image Gallery">
+  <!-- Sample images embedded with data URLs -->
+
+  <!-- Image 1 -->
+  <figure class="thumb" tabindex="0" role="button" aria-label="View image: Mountain Sunrise">
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD... (shortened base64 thumbnail here)" alt="Mountain Sunrise" data-fullsrc="https://picsum.photos/id/1018/800/600" />
+  </figure>
+
+  <!-- Image 2 -->
+  <figure class="thumb" tabindex="0" role="button" aria-label="View image: Forest Path">
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD... (shortened base64 thumbnail here)" alt="Forest Path" data-fullsrc="https://picsum.photos/id/1015/800/600" />
+  </figure>
+
+  <!-- Image 3 -->
+  <figure class="thumb" tabindex="0" role="button" aria-label="View image: City Skyline">
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD... (shortened base64 thumbnail here)" alt="City Skyline" data-fullsrc="https://picsum.photos/id/1020/800/600" />
+  </figure>
+
+  <!-- Image 4 -->
+  <figure class="thumb" tabindex="0" role="button" aria-label="View image: Beach Sunset">
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD... (shortened base64 thumbnail here)" alt="Beach Sunset" data-fullsrc="https://picsum.photos/id/1003/800/600" />
+  </figure>
+
+  <!-- Image 5 -->
+  <figure class="thumb" tabindex="0" role="button" aria-label="View image: Snowy Mountain">
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD... (shortened base64 thumbnail here)" alt="Snowy Mountain" data-fullsrc="https://picsum.photos/id/1056/800/600" />
+  </figure>
+</main>
+
+<!-- Modal for showing full image and EXIF data -->
+<div id="modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="modal-title">
+  <div class="modal-content">
+    <button class="close-btn" aria-label="Close modal">&times;</button>
+    <img alt="" />
+    <section id="exif-data" tabindex="0" aria-live="polite" aria-atomic="true">
+      <h2 id="modal-title">EXIF Data</h2>
+      <p>Loading EXIF data...</p>
+    </section>
+  </div>
+</div>
+
+<script>
+/**
+ * Responsive Image Gallery with EXIF Viewer
+ * ----------------------------------------
+ * A single HTML file that provides an image gallery with:
+ * - Mobile-first responsive CSS grid layout
+ * - Modal to view larger image along with EXIF data
+ * - EXIF parsing from the image binary (JPEG only)
+ * - No external dependencies
+ *
+ * Author: ChatGPT
+ * Date: 2024-06
+ */
+
+(() => {
+  "use strict";
+
+  // Select gallery and modal elements
+  const gallery = document.querySelector("main.gallery");
+  const modal = document.getElementById("modal");
+  const modalImg = modal.querySelector("img");
+  const exifSection = modal.querySelector("#exif-data");
+  const closeBtn = modal.querySelector(".close-btn");
+
+  // Keep track of last focused element to restore focus when modal closes
+  let lastFocusedElement = null;
+
+  /**
+   * Show modal with the selected image
+   * @param {string} src - Image src URL
+   * @param {string} alt - Image alt text
+   * @param {HTMLImageElement} thumbImg - thumbnail image element to fetch EXIF data from
+   */
+  function openModal(src, alt, thumbImg) {
+    lastFocusedElement = document.activeElement;
+
+    modalImg.src = '';
+    modalImg.alt = alt;
+    exifSection.innerHTML = '<h2 id="modal-title">EXIF Data</h2><p>Loading EXIF data...</p>';
+
+    modal.setAttribute("aria-hidden", "false");
+    modal.style.display = "flex";
+
+    // Load full sized image
+    modalImg.src = src;
+    modalImg.alt = alt;
+
+    // Trap focus inside modal
+    trapFocus(modal);
+
+    // Fetch EXIF from the real image URL
+    // Since we can't access EXIF from cross-origin images directly,
+    // we fetch the image as ArrayBuffer from the data-fullsrc or thumb's src if data-fullsrc unavailable.
+    fetchImageAndParseEXIF(src)
+      .then((exif) => displayEXIFData(exif))
+      .catch((err) => {
+        exifSection.innerHTML = "<p>Unable to load or parse EXIF data.</p>";
+        console.warn(err);
+      });
+  }
+
+  /**
+   * Close the modal and restore focus
+   */
+  function closeModal() {
+    modal.setAttribute("aria-hidden", "true");
+    modal.style.display = "none";
+    modalImg.src = "";
+    exifSection.innerHTML = '<h2 id="modal-title">EXIF Data</h2><p>Loading EXIF data...</p>';
+    releaseFocusTrap();
+
+    if (lastFocusedElement) {
+      lastFocusedElement.focus();
+      lastFocusedElement = null;
+    }
+  }
+
+  /**
+   * Fetch image binary as ArrayBuffer to parse EXIF
+   * @param {string} url
+   * @returns {Promise<Object>} parsed EXIF data as key-value pairs
+   */
+  async function fetchImageAndParseEXIF(url) {
+    // Use CORS + keep-origin policy - might fail for some hosts
+    // To handle this fully would require server-side proxy or EXIF embedded in thumbnails.
+    const response = await fetch(url, { mode: "cors" });
+    if (!response.ok) throw new Error('Network response was not ok.');
+
+    const buffer = await response.arrayBuffer();
+
+    return parseEXIF(buffer);
+  }
+
+  /**
+   * Parse EXIF data from an ArrayBuffer (JPEG binary)
+   * Returns an object of useful EXIF tags
+   *
+   * Uses minimal implementation to extract basic EXIF tags from JPEG APP1 segment.
+   * Inspired by EXIF specs, and simplified.
+   *
+   * @param {ArrayBuffer} buffer
+   * @returns {Object}
+   */
+  function parseEXIF(buffer) {
+    const dataView = new DataView(buffer);
+    let offset = 2; // Skip SOI marker
+
+    if (dataView.getUint16(0) !== 0xFFD8) throw new Error("Not a valid JPEG");
+
+    while (offset < dataView.byteLength) {
+      if (dataView.getUint8(offset) !== 0xFF) break; // Not marker
+
+      const marker = dataView.getUint8(offset + 1);
+      if (marker === 0xE1) { // APP1 - EXIF
+        const length = dataView.getUint16(offset + 2);
+        const exifStart = offset + 4;
+
+        // Check "Exif" header
+        if (
+          dataView.getUint8(exifStart) === 0x45 &&
+          dataView.getUint8(exifStart + 1) === 0x78 &&
+          dataView.getUint8(exifStart + 2) === 0x69 &&
+          dataView.getUint8(exifStart + 3) === 0x66 &&
+          dataView.getUint8(exifStart + 4) === 0x00 &&
+          dataView.getUint8(exifStart + 5) === 0x00
+        ) {
+          return readTIFF(dataView, exifStart + 6, length - 8);
+        }
+      }
+
+      offset += 2 + dataView.getUint16(offset + 2);
+    }
+
+    return {}; // No EXIF found
+  }
+
+  /**
+   * Reads TIFF data in EXIF and extracts tags
+   * @param {DataView} dataView
+   * @param {number} start - start offset of TIFF
+   * @param {number} length - length of TIFF data
+   * @returns {Object} parsed EXIF tags
+   */
+  function readTIFF(dataView, start, length) {
+    const littleEndian =
+      dataView.getUint16(start) === 0x4949; // 'II' = little endian, 'MM' = big endian
+
+    const getUint16 = (off) =>
+      dataView.getUint16(off, littleEndian);
+    const getUint32 = (off) =>
+      dataView.getUint32(off, littleEndian);
+
+    // Check TIFF 42 marker
+    if (getUint16(start + 2) !== 0x002A) {
+      throw new Error("Invalid TIFF header");
+    }
+
+    const firstIFDOffset = getUint32(start + 4);
+    if (firstIFDOffset < 8 || firstIFDOffset > length) {
+      throw new Error("Invalid IFD offset");
+    }
+
+    // Read IFD entries
+    return readIFD(dataView, start + firstIFDOffset, start, littleEndian);
+  }
+
+  /**
+   * Parses an IFD (Image File Directory)
+   * @param {DataView} dataView
+   * @param {number} offset - Offset where IFD starts
+   * @param {number} tiffStart - start of TIFF for relative offsets
+   * @param {boolean} littleEndian
+   * @returns {Object} key-value pairs of EXIF tags
+   */
+  function readIFD(dataView, offset, tiffStart, littleEndian) {
+    const entries = dataView.getUint16(offset, littleEndian);
+    let tags = {};
+
+    // EXIF tag names for common tags
+    const TAGS = {
+      0x010F: "Make",
+      0x0110: "Model",
+      0x0132: "DateTime",
+      0x829A: "ExposureTime",
+      0x829D: "FNumber",
+      0x8827: "ISOSpeedRatings",
+      0x9003: "DateTimeOriginal",
+      0x9201: "ShutterSpeedValue",
+      0x9202: "ApertureValue",
+      0x9209: "Flash",
+      0xA002: "PixelXDimension",
+      0xA003: "PixelYDimension",
+      0x8825: "GPSInfoIFDPointer",
+    };
+
+    // Data type lengths in bytes
+    const TYPE_SIZES = [0,1,1,2,4,8,1,1,2,4,8];
+
+    for (let i = 0; i < entries; i++) {
+      const entryOffset = offset + 2 + i * 12;
+      const tag = dataView.getUint16(entryOffset, littleEndian);
+      const type = dataView.getUint16(entryOffset +2, littleEndian);
+      const count = dataView.getUint32(entryOffset +4, littleEndian);
+      let valueOffset = entryOffset + 8;
+
+      // If value fits in 4 bytes, it's stored here; else it's an offset
+      let val;
+      const typeSize = TYPE_SIZES[type] || 1;
+      const valByteLength = count * typeSize;
+
+      if (valByteLength > 4) {
+        const actualOffset = dataView.getUint32(valueOffset, littleEndian) + tiffStart;
+        valueOffset = actualOffset;
+      }
+
+      // Parse the tag value(s)
+      switch(type) {
+        case 1: // BYTE
+        case 7: // UNDEFINED
+          if (count === 1) {
+            val = dataView.getUint8(valueOffset);
+          } else {
+            val = [];
+            for (let c = 0; c < count; c++) {
+              val.push(dataView.getUint8(valueOffset + c));
+            }
+          }
+          break;
+
+        case 2: // ASCII
+          {
+            const chars = [];
+            for(let c=0; c<count; c++) {
+              const charCode = dataView.getUint8(valueOffset + c);
+              if(charCode === 0) break; // Null terminated
+              chars.push(String.fromCharCode(charCode));
+            }
+            val = chars.join("");
+          }
+          break;
+
+        case 3: // SHORT (2 bytes)
+          if (count === 1) {
+            val = dataView.getUint16(valueOffset, littleEndian);
+          } else {
+            val = [];
+            for(let c=0; c<count; c++) {
+              val.push(dataView.getUint16(valueOffset + 2*c, littleEndian));
+            }
+          }
+          break;
+
+        case 4: // LONG (4 bytes)
+          if (count === 1) {
+            val = dataView.getUint32(valueOffset, littleEndian);
+          } else {
+            val = [];
+            for(let c=0; c<count; c++) {
+              val.push(dataView.getUint32(valueOffset + 4*c, littleEndian));
+            }
+          }
+          break;
+
+        case 5: // RATIONAL (two LONGs: numerator/denominator)
+          if (count === 1) {
+            const num = dataView.getUint32(valueOffset, littleEndian);
+            const den = dataView.getUint32(valueOffset + 4, littleEndian);
+            val = num/den;
+          } else {
+            val = [];
+            for(let c=0; c<count; c++) {
+              const num = dataView.getUint32(valueOffset + c*8, littleEndian);
+              const den = dataView.getUint32(valueOffset + c*8 +4, littleEndian);
+              val.push(num/den);
+            }
+          }
+          break;
+        default:
+          val = null;
+      }
+
+      if(TAGS[tag]){
+        tags[TAGS[tag]]=val;
+      }
+    }
+
+    // Handle GPS Info if available
+    if(tags.GPSInfoIFDPointer){
+      const gpsData = readIFD(dataView, tiffStart + tags.GPSInfoIFDPointer, tiffStart, littleEndian);
+      tags.GPSInfo = gpsData;
+    }
+
+    return tags;
+  }
+
+  /**
+   * Format EXIF data nicely to HTML
+   * @param {Object} exif
+   */
+  function displayEXIFData(exif) {
+    if (!exif || Object.keys(exif).length === 0) {
+      exifSection.innerHTML = "<p>No EXIF data found.</p>";
+      return;
+    }
+
+    // Friendly keys we want to show
+    const showKeys = [
+      "Make",
+      "Model",
+      "DateTimeOriginal",
+      "ExposureTime",
+      "FNumber",
+      "ISOSpeedRatings",
+      "Flash",
+      "PixelXDimension",
+      "PixelYDimension",
+    ];
+
+    const formatExposureTime = (val) => typeof val === "number" ? val + " s" : val;
+    const formatFNumber = (val) => val ? `f/${val}` : val;
+    const formatISO = (val) => val;
+    const formatFlash = (val) => {
+      if (typeof val !== "number") return val;
+      return (val & 1) ? "Flash fired" : "Flash did not fire";
+    };
+
+    const dt = exif.DateTimeOriginal || exif.DateTime || "";
+
+    let html = "<dl>";
+    for(const key of showKeys) {
+      if(exif[key] !== undefined) {
+        let val = exif[key];
+
+        if(key === "ExposureTime") val = formatExposureTime(val);
+        if(key === "FNumber") val = formatFNumber(val);
+        if(key === "ISOSpeedRatings") val = formatISO(val);
+        if(key === "Flash") val = formatFlash(val);
+
+        html += `<dt>${key.replace(/([A-Z])/g, " $1").trim()}</dt><dd>${val}</dd>`;
+      }
+    }
+
+    // GPS (if any)
+    if(exif.GPSInfo){
+      const gps = exif.GPSInfo;
+      if(gps.GPSLatitude && gps.GPSLatitudeRef && gps.GPSLongitude && gps.GPSLongitudeRef){
+        const lat = gpsDecimal(gps.GPSLatitude, gps.GPSLatitudeRef);
+        const lon = gpsDecimal(gps.GPSLongitude, gps.GPSLongitudeRef);
+        html += `<dt>GPS Coordinates</dt><dd>${lat.toFixed(6)}, ${lon.toFixed(6)}</dd>`;
+      }
+    }
+    html += "</dl>";
+
+    exifSection.innerHTML = html;
+  }
+
+  /**
+   * Converts GPS DMS array and ref to decimal degrees
+   * @param {Array} dms - [degrees, minutes, seconds]
+   * @param {string} ref - 'N', 'S', 'E', or 'W'
+   * @returns {number}
+   */
+  function gpsDecimal(dms, ref) {
+    let dec = dms[0] + dms[1]/60 + dms[2]/3600;
+    if(ref === "S" || ref === "W") dec = -dec;
+    return dec;
+  }
+
+  /**
+   * Trap keyboard focus inside an element
+   * @param {HTMLElement} element
+   */
+  function trapFocus(element) {
+    const focusableSelectors = [
+      'a[href]',
+      'area[href]',
+      'input:not([disabled]):not([type=hidden])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      'button:not([disabled])',
+      'iframe',
+      'object',
+      'embed',
+      '[tabindex]:not([tabindex="-1"])',
+      '[contenteditable]'
+    ];
+
+    const focusableElements = Array.from(element.querySelectorAll(focusableSelectors.join(',')))
+      .filter(el => el.offsetWidth > 0 || el.offsetHeight > 0 || el === document.activeElement);
+
+    if(focusableElements.length === 0) {
+      // Focus modal itself if no focusable elements
+      element.setAttribute('tabindex','0');
+      element.focus();
+    } else {
+      focusableElements[0].focus();
+    }
+
+    function handleFocus(e){
+      if(!element.contains(e.target)){
+        e.stopPropagation();
+        focusableElements[0].focus();
+      }
+    }
+
+    document.addEventListener('focus', handleFocus, true);
+
+    element._focusHandler = handleFocus;
+  }
+
+  /**
+   * Remove focus trap listener
+   */
+  function releaseFocusTrap() {
+    if(modal._focusHandler){
+      document.removeEventListener('focus', modal._focusHandler, true);
+      delete modal._focusHandler;
+    }
+
+    modal.removeAttribute('tabindex');
+  }
+
+  /**
+   * Handle keyboard events for the modal and gallery
+   * @param {KeyboardEvent} e
+   */
+  function onKeyDown(e) {
+    if(modal.getAttribute("aria-hidden") === "false"){
+      // Modal open
+      if(e.key === "Escape" || e.key === "Esc") {
+        e.preventDefault();
+        closeModal();
+      } else if(e.key === "Tab"){
+        // Trap tab inside modal's focusable elements
+        const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if(focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length -1];
+
+        if(e.shiftKey){
+          if(document.activeElement === first){
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if(document.activeElement === last){
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Initialize gallery event listeners
+   */
+  function init() {
+    // Add click & keyboard event to figure thumbnails
+    gallery.querySelectorAll("figure.thumb").forEach(thumb => {
+      const img = thumb.querySelector("img");
+      const fullSrc = img.dataset.fullsrc || img.src;
+      thumb.addEventListener("click", () => openModal(fullSrc, img.alt, img));
+      thumb.addEventListener("keydown", (e) => {
+        if(e.key === "Enter" || e.key === " "){
+          e.preventDefault();
+          openModal(fullSrc, img.alt, img);
+        }
+      });
+    });
+
+    closeBtn.addEventListener("click", closeModal);
+    document.addEventListener("keydown", onKeyDown);
+
+    // Clicking outside modal-content closes modal
+    modal.addEventListener("click", (e) => {
+      if(e.target === modal) closeModal();
+    });
+  }
+
+  // Run initialization after DOM loaded
+  document.addEventListener("DOMContentLoaded", init);
+})();
+</script>
+
+</body>
+</html>

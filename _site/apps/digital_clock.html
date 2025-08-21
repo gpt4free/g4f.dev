@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Advanced Digital Clock</title>
+<style>
+  body {
+    margin: 0;
+    height: 100vh;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    background-size: 600% 600%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Helvetica Neue', sans-serif;
+    color: #fff;
+  }
+
+  .clock-container {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .time-display {
+    font-size: 4em;
+    font-weight: bold;
+    letter-spacing: 2px;
+    display: flex;
+    align-items: center;
+  }
+
+  .segment {
+    position: relative;
+    width: 50px;
+    height: 80px;
+    margin: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Digital digits styling */
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  #date {
+    margin-top: 20px;
+    font-size: 1.2em;
+    letter-spacing: 1px;
+  }
+
+  /* Additional styling for seconds and other info if needed */
+  /* Optional: add date display and timezone info */
+
+</style>
+</head>
+<body>
+
+<div class="clock-container">
+  <div class="time-display" id="digital-clock">
+    <!-- Will be filled by JS -->
+  </div>
+  <div id="date"></div>
+</div>
+
+<script>
+  // Function to format numbers with leading zero
+  function pad(number) {
+    return number < 10 ? '0' + number : number;
+  }
+
+  // Function to get current time and format it
+  function updateClock() {
+    const now = new Date();
+
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const seconds = now.getSeconds();
+
+    // For 12-hour format, uncomment below
+    // const ampm = hours >= 12 ? 'PM' : 'AM';
+    // const displayHours = hours % 12 || 12;
+
+    // 24-hour format
+    const displayHours = hours;
+
+    const timeString =
+      `<span class="digit">${pad(displayHours)}</span>:` +
+      `<span class="digit">${pad(minutes)}</span>:` +
+      `<span class="digit">${pad(seconds)}</span>`;
+
+    document.getElementById('digital-clock').innerHTML = timeString;
+
+    // Update date info
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('date').textContent = now.toLocaleDateString(undefined, options);
+  }
+
+  // Optional: add blinking colon effect
+  function blinkingColon() {
+    const clockDiv = document.getElementById('digital-clock');
+    setInterval(() => {
+      const colons = clockDiv.querySelectorAll(':');
+      // Not needed since colons are static, but can animate if desired
+    }, 500);
+  }
+
+  // Initialize clock
+  setInterval(updateClock, 1000);
+  updateClock(); // initial call
+</script>
+
+</body>
+</html>

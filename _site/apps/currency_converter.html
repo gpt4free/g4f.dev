@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Currency Converter</title>
+    <style>
+        :root {
+            --primary-color: #4a6bff;
+            --secondary-color: #f5f7ff;
+            --text-color: #333;
+            --bg-color: #ffffff;
+            --card-bg: #f8f9fa;
+            --border-color: #e0e0e0;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --error-color: #ff4d4f;
+            --success-color: #52c41a;
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #6b8cff;
+            --secondary-color: #1a1a2e;
+            --text-color: #f0f0f0;
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --border-color: #333;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --error-color: #ff6b6b;
+            --success-color: #6dd400;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: var(--primary-color);
+        }
+
+        .theme-toggle {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        .theme-toggle:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .app-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .app-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px var(--shadow-color);
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .converter-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        input, select {
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-size: 1rem;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(74, 107, 255, 0.2);
+        }
+
+        .currency-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .amount-input {
+            flex: 2;
+        }
+
+        .currency-select {
+            flex: 1;
+        }
+
+        .swap-btn {
+            align-self: center;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin: 5px 0;
+        }
+
+        .swap-btn:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: var(--secondary-color);
+            border-radius: 6px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .result span {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn-secondary {
+            background: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        .favorites {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .favorite-item {
+            background: var(--secondary-color);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        .favorite-item:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .remove-favorite {
+            background: none;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .chart-container {
+            height: 300px;
+            margin-top: 20px;
+            position: relative;
+        }
+
+        .error-message {
+            color: var(--error-color);
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .success-message {
+            color: var(--success-color);
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 15px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            border-bottom: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .rate-history {
+            margin-top: 20px;
+        }
+
+        .rate-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px dashed var(--border-color);
+        }
+
+        .rate-item:last-child {
+            border-bottom: none;
+        }
+
+        .last-updated {
+            font-size: 0.8rem;
+            color: var(--text-color);
+            opacity: 0.7;
+            text-align: right;
+            margin-top: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Advanced Currency Converter</h1>
+            <button class="theme-toggle" id="themeToggle">
+                <span id="themeIcon">🌙</span> <span id="themeText">Dark Mode</span>
+            </button>
+        </header>
+
+        <div class="app-grid">
+            <div class="card">
+                <h2 class="card-title">Currency Converter</h2>
+                <div class="converter-form">
+                    <div class="input-group">
+                        <label for="amount">Amount</label>
+                        <input type="number" id="amount" class="amount-input" placeholder="Enter amount" value="1" min="0">
+                    </div>
+
+                    <div class="input-group">
+                        <label for="fromCurrency">From</label>
+                        <div class="currency-row">
+                            <input type="number" id="fromAmount" class="amount-input" placeholder="Amount" value="1" min="0" readonly>
+                            <select id="fromCurrency" class="currency-select">
+                                <option value="USD">USD - US Dollar</option>
+                                <option value="EUR">EUR - Euro</option>
+                                <option value="GBP">GBP - British Pound</option>
+                                <option value="JPY">JPY - Japanese Yen</option>
+                                <option value="AUD">AUD - Australian Dollar</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button class="swap-btn" id="swapCurrencies">⇅</button>
+
+                    <div class="input-group">
+                        <label for="toCurrency">To</label>
+                        <div class="currency-row">
+                            <input type="number" id="toAmount" class="amount-input" placeholder="Result" readonly>
+                            <select id="toCurrency" class="currency-select">
+                                <option value="EUR">EUR - Euro</option>
+                                <option value="USD">USD - US Dollar</option>
+                                <option value="GBP">GBP - British Pound</option>
+                                <option value="JPY">JPY - Japanese Yen</option>
+                                <option value="AUD">AUD - Australian Dollar</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button class="btn" id="convertBtn">Convert</button>
+                    <button class="btn btn-secondary" id="addFavorite">Add to Favorites</button>
+
+                    <div id="errorMessage" class="error-message hidden"></div>
+                    <div id="successMessage" class="success-message hidden"></div>
+
+                    <div class="result hidden" id="result">
+                        1 <span class="from-currency">USD</span> = <span class="rate">0.85</span> <span class="to-currency">EUR</span>
+                    </div>
+
+                    <div class="favorites" id="favoritesContainer">
+                        <h3>Favorites</h3>
+                        <!-- Favorites will be added here dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Exchange Rate History</h2>
+                
+                <div class="tabs">
+                    <div class="tab active" data-tab="chart">Chart</div>
+                    <div class="tab" data-tab="rates">Rates</div>
+                </div>
+                
+                <div class="tab-content active" id="chartTab">
+                    <div class="chart-container">
+                        <canvas id="rateChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="ratesTab">
+                    <div class="rate-history" id="rateHistory">
+                        <!-- Rate history will be added here dynamically -->
+                    </div>
+                </div>
+
+                <div class="last-updated" id="lastUpdated">
+                    Last updated: <span id="updateTime">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = document.getElementById('themeIcon');
+            const themeText = document.getElementById('themeText');
+            const amountInput = document.getElementById('amount');
+            const fromAmountInput = document.getElementById('fromAmount');
+            const fromCurrencySelect = document.getElementById('fromCurrency');
+            const toAmountInput = document.getElementById('toAmount');
+            const toCurrencySelect = document.getElementById('toCurrency');
+            const swapBtn = document.getElementById('swapCurrencies');
+            const convertBtn = document.getElementById('convertBtn');
+            const addFavoriteBtn = document.getElementById('addFavorite');
+            const resultDiv = document.getElementById('result');
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            const favoritesContainer = document.getElementById('favoritesContainer');
+            const rateHistoryContainer = document.getElementById('rateHistory');
+            const updateTimeSpan = document.getElementById('updateTime');
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            // Chart variables
+            let rateChart;
+            let exchangeRates = {};
+            let historicalData = {};
+            let favorites = JSON.parse(localStorage.getItem('currencyFavorites')) || [];
+            
+            // Theme management
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            updateThemeButton(currentTheme);
+            
+            themeToggle.addEventListener('click', () => {
+                const newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateThemeButton(newTheme);
+            });
+            
+            function updateThemeButton(theme) {
+                if (theme === 'dark') {
+                    themeIcon.textContent = '☀️';
+                    themeText.textContent = 'Light Mode';
+                } else {
+                    themeIcon.textContent = '🌙';
+                    themeText.textContent = 'Dark Mode';
+                }
+            }
+            
+            // Tab switching
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    
+                    tab.classList.add('active');
+                    const tabId = tab.getAttribute('data-tab') + 'Tab';
+                    document.getElementById(tabId).classList.add('active');
+                    
+                    if (tab.getAttribute('data-tab') === 'chart' && rateChart) {
+                        rateChart.update();
+                    }
+                });
+            });
+            
+            // Currency conversion
+            amountInput.addEventListener('input', () => {
+                fromAmountInput.value = amountInput.value;
+            });
+            
+            fromAmountInput.addEventListener('input', () => {
+                amountInput.value = fromAmountInput.value;
+            });
+            
+            swapBtn.addEventListener('click', () => {
+                const tempCurrency = fromCurrencySelect.value;
+                fromCurrencySelect.value = toCurrencySelect.value;
+                toCurrencySelect.value = tempCurrency;
+                convertCurrency();
+            });
+            
+            convertBtn.addEventListener('click', convertCurrency);
+            
+            fromCurrencySelect.addEventListener('change', convertCurrency);
+            toCurrencySelect.addEventListener('change', convertCurrency);
+            amountInput.addEventListener('change', convertCurrency);
+            
+            // Add to favorites
+            addFavoriteBtn.addEventListener('click', () => {
+                const fromCurrency = fromCurrencySelect.value;
+                const toCurrency = toCurrencySelect.value;
+                const pair = `${fromCurrency}_${toCurrency}`;
+                
+                if (!favorites.includes(pair)) {
+                    favorites.push(pair);
+                    localStorage.setItem('currencyFavorites', JSON.stringify(favorites));
+                    renderFavorites();
+                    showSuccess('Added to favorites!');
+                } else {
+                    showError('This pair is already in favorites');
+                }
+            });
+            
+            // Initialize the app
+            function initApp() {
+                fetchExchangeRates();
+                renderFavorites();
+                
+                // Set up default chart
+                setupChart();
+                
+                // Convert on initial load
+                setTimeout(convertCurrency, 500);
+            }
+            
+            // Fetch exchange rates from API
+            async function fetchExchangeRates() {
+                try {
+                    convertBtn.disabled = true;
+                    convertBtn.innerHTML = '<span class="loading"></span> Loading...';
+                    
+                    // Using ExchangeRate-API (free tier)
+                    const baseCurrency = fromCurrencySelect.value;
+                    const response = await fetch(`https://open.er-api.com/v6/latest/${baseCurrency}`);
+                    const data = await response.json();
+                    
+                    if (data && data.rates) {
+                        exchangeRates = data.rates;
+                        updateTimeSpan.textContent = new Date(data.time_next_update_unix * 1000).toLocaleString();
+                        convertCurrency();
+                        fetchHistoricalData(baseCurrency, toCurrencySelect.value);
+                    }
+                } catch (error) {
+                    console.error('Error fetching exchange rates:', error);
+                    showError('Failed to fetch exchange rates. Using default rates.');
+                    // Fallback rates if API fails
+                    exchangeRates = {
+                        USD: 1,
+                        EUR: 0.85,
+                        GBP: 0.73,
+                        JPY: 110.15,
+                        AUD: 1.35
+                    };
+                } finally {
+                    convertBtn.disabled = false;
+                    convertBtn.textContent = 'Convert';
+                }
+            }
+            
+            // Fetch historical data for chart
+            async function fetchHistoricalData(fromCurrency, toCurrency) {
+                try {
+                    // Using ExchangeRate-API historical endpoint (simplified for demo)
+                    // Note: In a real app, you'd use a proper historical API
+                    const today = new Date();
+                    const dates = [];
+                    const rates = [];
+                    
+                    // Generate mock data for the past 30 days
+                    for (let i = 30; i >= 0; i--) {
+                        const date = new Date();
+                        date.setDate(today.getDate() - i);
+                        dates.push(date.toLocaleDateString());
+                        
+                        // Simulate slight rate fluctuations
+                        const baseRate = exchangeRates[toCurrency] || 1;
+                        const randomFactor = 0.95 + Math.random() * 0.1;
+                        rates.push((baseRate * randomFactor).toFixed(4));
+                    }
+                    
+                    historicalData = {
+                        labels: dates,
+                        rates: rates
+                    };
+                    
+                    updateChart();
+                    updateRateHistory();
+                } catch (error) {
+                    console.error('Error fetching historical data:', error);
+                }
+            }
+            
+            // Convert currency
+            function convertCurrency() {
+                const amount = parseFloat(amountInput.value);
+                if (isNaN(amount)) {
+                    showError('Please enter a valid amount');
+                    return;
+                }
+                
+                const fromCurrency = fromCurrencySelect.value;
+                const toCurrency = toCurrencySelect.value;
+                
+                if (fromCurrency === toCurrency) {
+                    toAmountInput.value = amount;
+                    showError('Currencies are the same');
+                    resultDiv.classList.add('hidden');
+                    return;
+                }
+                
+                if (!exchangeRates[toCurrency]) {
+                    showError('Exchange rate not available for selected currency');
+                    return;
+                }
+                
+                const rate = exchangeRates[toCurrency];
+                const convertedAmount = (amount * rate).toFixed(2);
+                
+                toAmountInput.value = convertedAmount;
+                
+                // Update result display
+                resultDiv.querySelector('.from-currency').textContent = fromCurrency;
+                resultDiv.querySelector('.to-currency').textContent = toCurrency;
+                resultDiv.querySelector('.rate').textContent = rate.toFixed(6);
+                resultDiv.classList.remove('hidden');
+                
+                // Clear any errors
+                errorMessage.classList.add('hidden');
+                
+                // Update chart if needed
+                if (rateChart) {
+                    fetchHistoricalData(fromCurrency, toCurrency);
+                }
+            }
+            
+            // Show error message
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.classList.remove('hidden');
+                successMessage.classList.add('hidden');
+            }
+            
+            // Show success message
+            function showSuccess(message) {
+                successMessage.textContent = message;
+                successMessage.classList.remove('hidden');
+                errorMessage.classList.add('hidden');
+                
+                setTimeout(() => {
+                    successMessage.classList.add('hidden');
+                }, 3000);
+            }
+            
+            // Render favorites
+            function renderFavorites() {
+                favoritesContainer.innerHTML = '<h3>Favorites</h3>';
+                
+                if (favorites.length === 0) {
+                    favoritesContainer.innerHTML += '<p>No favorites yet. Add some using the button above.</p>';
+                    return;
+                }
+                
+                favorites.forEach(pair => {
+                    const [from, to] = pair.split('_');
+                    const favoriteItem = document.createElement('div');
+                    favoriteItem.className = 'favorite-item';
+                    favoriteItem.innerHTML = `
+                        ${from} → ${to}
+                        <button class="remove-favorite" data-pair="${pair}">×</button>
+                    `;
+                    
+                    favoriteItem.addEventListener('click', () => {
+                        fromCurrencySelect.value = from;
+                        toCurrencySelect.value = to;
+                        convertCurrency();
+                    });
+                    
+                    favoritesContainer.appendChild(favoriteItem);
+                });
+                
+                // Add event listeners to remove buttons
+                document.querySelectorAll('.remove-favorite').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const pair = btn.getAttribute('data-pair');
+                        favorites = favorites.filter(p => p !== pair);
+                        localStorage.setItem('currencyFavorites', JSON.stringify(favorites));
+                        renderFavorites();
+                    });
+                });
+            }
+            
+            // Set up chart
+            function setupChart() {
+                const ctx = document.getElementById('rateChart').getContext('2d');
+                
+                rateChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Exchange Rate',
+                            data: [],
+                            borderColor: 'var(--primary-color)',
+                            backgroundColor: 'rgba(74, 107, 255, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    color: 'var(--border-color)'
+                                },
+                                ticks: {
+                                    color: 'var(--text-color)'
+                                }
+                            },
+                            y: {
+                                grid: {
+                                    color: 'var(--border-color)'
+                                },
+                                ticks: {
+                                    color: 'var(--text-color)'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Update chart with new data
+            function updateChart() {
+                if (!rateChart || !historicalData) return;
+                
+                rateChart.data.labels = historicalData.labels;
+                rateChart.data.datasets[0].data = historicalData.rates;
+                rateChart.data.datasets[0].label = `${fromCurrencySelect.value} to ${toCurrencySelect.value} Rate`;
+                rateChart.update();
+            }
+            
+            // Update rate history list
+            function updateRateHistory() {
+                if (!historicalData) return;
+                
+                rateHistoryContainer.innerHTML = '';
+                
+                for (let i = 0; i < historicalData.labels.length; i++) {
+                    const rateItem = document.createElement('div');
+                    rateItem.className = 'rate-item';
+                    rateItem.innerHTML = `
+                        <span>${historicalData.labels[i]}</span>
+                        <span>1 ${fromCurrencySelect.value} = ${historicalData.rates[i]} ${toCurrencySelect.value}</span>
+                    `;
+                    rateHistoryContainer.appendChild(rateItem);
+                }
+            }
+            
+            // Initialize the application
+            initApp();
+        });
+    </script>
+</body>
+</html>

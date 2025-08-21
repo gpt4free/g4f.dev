@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Daily Motivational Quote Generator</title>
+<style>
+  /* 
+  Daily Motivational Quote Generator
+  -----------------------------------
+  - Mobile-first responsive design
+  - Interactive JavaScript-powered quote refresh
+  - No external dependencies
+  - Clean, commented code
+  
+  Author: ChatGPT
+  Date: 2024-06
+  */
+
+  /* Reset some default styles */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+    text-align: center;
+  }
+
+  main {
+    background: rgba(255 255 255 / 0.1);
+    border-radius: 12px;
+    padding: 2rem 1.5rem;
+    max-width: 400px;
+    width: 90vw;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    user-select: none;
+  }
+
+  h1 {
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    font-size: 1.8rem;
+  }
+
+  blockquote {
+    font-size: 1.25rem;
+    font-style: italic;
+    margin: 1.5rem 0 1rem;
+    position: relative;
+    line-height: 1.4;
+  }
+  blockquote::before {
+    content: "“";
+    font-size: 3rem;
+    position: absolute;
+    left: -0.5rem;
+    top: -1rem;
+    color: rgba(255 255 255 / 0.3);
+    font-weight: 900;
+  }
+  blockquote::after {
+    content: "”";
+    font-size: 3rem;
+    position: absolute;
+    right: -0.5rem;
+    bottom: -1rem;
+    color: rgba(255 255 255 / 0.3);
+    font-weight: 900;
+  }
+
+  footer {
+    margin-top: 0.5rem;
+    font-weight: 600;
+    font-size: 1rem;
+    color: #ddd;
+  }
+
+  button {
+    margin-top: 2rem;
+    background-color: #764ba2;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 1rem;
+    padding: 0.75rem 1.25rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    box-shadow: 0 4px 12px rgb(118 75 162 / 0.6);
+  }
+  button:hover,
+  button:focus {
+    background-color: #5a3680;
+    outline: none;
+  }
+  button:active {
+    background-color: #855aac;
+  }
+
+  /* Larger screens */
+  @media (min-width: 600px) {
+    main {
+      max-width: 480px;
+    }
+    h1 {
+      font-size: 2.4rem;
+    }
+    blockquote {
+      font-size: 1.5rem;
+    }
+    footer {
+      font-size: 1.125rem;
+    }
+  }
+</style>
+</head>
+<body>
+<main role="main" aria-live="polite" aria-atomic="true">
+  <h1>Daily Motivational Quote</h1>
+  <blockquote id="quote">Loading inspirational words...</blockquote>
+  <footer id="author"></footer>
+  <button id="newQuoteBtn" aria-label="Get a new motivational quote">New Quote</button>
+</main>
+
+<script>
+/**
+ * Daily Motivational Quote Generator
+ * -----------------------------------
+ * Provides a new motivational quote on page load and when user clicks "New Quote" button.
+ * Quotes are stored locally, no external calls.
+ */
+
+// Array of motivational quotes with authors
+const quotes = [
+  {
+    text: "The only way to do great work is to love what you do.",
+    author: "Steve Jobs"
+  },
+  {
+    text: "Believe you can and you're halfway there.",
+    author: "Theodore Roosevelt"
+  },
+  {
+    text: "It does not matter how slowly you go as long as you do not stop.",
+    author: "Confucius"
+  },
+  {
+    text: "Everything you’ve ever wanted is on the other side of fear.",
+    author: "George Addair"
+  },
+  {
+    text: "Success is not final, failure is not fatal: It is the courage to continue that counts.",
+    author: "Winston Churchill"
+  },
+  {
+    text: "Hardships often prepare ordinary people for an extraordinary destiny.",
+    author: "C.S. Lewis"
+  },
+  {
+    text: "Don’t watch the clock; do what it does. Keep going.",
+    author: "Sam Levenson"
+  },
+  {
+    text: "You are never too old to set another goal or to dream a new dream.",
+    author: "C.S. Lewis"
+  },
+  {
+    text: "Start where you are. Use what you have. Do what you can.",
+    author: "Arthur Ashe"
+  },
+  {
+    text: "Your passion is waiting for your courage to catch up.",
+    author: "Isabelle Lafleche"
+  }
+];
+
+// Get references to UI elements
+const quoteElem = document.getElementById('quote');
+const authorElem = document.getElementById('author');
+const btnNewQuote = document.getElementById('newQuoteBtn');
+
+/**
+ * Returns a random index different from the current one, or an initial random index if none.
+ * @param {number|null} currentIndex - The current quote index.
+ * @returns {number} New random index different from currentIndex.
+ */
+function getRandomQuoteIndex(currentIndex) {
+  let newIndex;
+  do {
+    newIndex = Math.floor(Math.random() * quotes.length);
+  } while (newIndex === currentIndex && quotes.length > 1);
+  return newIndex;
+}
+
+let currentQuoteIndex = null;
+
+/**
+ * Displays a quote and author on the page
+ * @param {number} index - Index of quote in quotes array
+ */
+function displayQuote(index) {
+  const { text, author } = quotes[index];
+  quoteElem.textContent = text;
+  authorElem.textContent = author ? `— ${author}` : '';
+  currentQuoteIndex = index;
+}
+
+/**
+ * Load a new random quote different from the current one
+ */
+function loadNewQuote() {
+  const newIndex = getRandomQuoteIndex(currentQuoteIndex);
+  displayQuote(newIndex);
+}
+
+// Initialize on page load
+window.addEventListener('DOMContentLoaded', () => {
+  loadNewQuote();
+});
+
+// Button event listener
+btnNewQuote.addEventListener('click', () => {
+  loadNewQuote();
+  btnNewQuote.focus();
+});
+
+</script>
+</body>
+</html>
