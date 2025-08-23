@@ -1,482 +1,547 @@
 <!DOCTYPE html>
 <html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G4F - Client API Guide</title>
-    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png">
-    <link rel="manifest" href="/dist/img/site.webmanifest">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>G4F - Client API Guide | GPT4Free Documentation</title>
+
+    <meta name="description" content="GPT4Free documentation for G4F - Client API Guide. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
+    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, G4F - Client API Guide" />
+    <meta name="author" content="GPT4Free Team" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="G4F - Client API Guide | GPT4Free Documentation" />
+    <meta property="og:description" content="GPT4Free documentation for G4F - Client API Guide. Free AI endpoints, examples, and comprehensive guides." />
+    <meta property="og:url" content="https://g4f.dev/docs/client.html" />
+    <meta property="og:site_name" content="GPT4Free Documentation" />
+    <meta property="og:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="G4F - Client API Guide | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for G4F - Client API Guide." />
+    <meta name="twitter:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://g4f.dev/docs/client.html" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png" />
+    <link rel="manifest" href="/dist/img/site.webmanifest" />
+
+    <!-- GitHub Primer CSS & styles -->
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
+
+    <!-- Highlight.js for enhanced JavaScript syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    
     <style>
         :root {
-            --colour-1: #000000;
-            --colour-2: #ccc;
-            --colour-3: #e4d4ff;
-            --colour-4: #f0f0f0;
-            --colour-5: #181818;
-            --colour-6: #242424;
             --accent: #8b3dff;
-            --gradient: #1a1a1a;
             --background: #16101b;
-            --size: 70vw;
-            --top: 50%;
-            --blur: 40px;
-            --opacity: 0.6;
+            --text-primary: #ddd;
+            --text-secondary: #9b7dff;
+            --card-bg: #1e152e;
+            --border-color: #333;
+            --hover-color: #a67eff;
         }
 
-        /* Body and text color */
         body {
-            height: 100vh;
             margin: 0;
             padding: 0;
+            background: var(--background);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            line-height: 1.6;
+            min-height: 100vh;
         }
 
-        .hidden {
-            display: none;
-        }
-
-        .container-lg {
+        .container {
+            display: flex;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 8px;
+            padding: 2rem;
+            gap: 3rem;
+            min-height: calc(100vh - 4rem);
         }
 
-        @media only screen and (min-width: 40em) {
-            .container-lg {
-                max-width: 84%;
+        /* Enhanced main content styling */
+        main {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            overflow-wrap: break-word;
+            position: relative;
+        }
+
+        /* Typography improvements */
+        .markdown-body h1 {
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 0.5rem;
+        }
+
+        .markdown-body h2 {
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body h3 {
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body p {
+            margin-bottom: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        /* Enhanced link styling */
+        .markdown-body a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .markdown-body a:hover,
+        .markdown-body a:focus {
+            color: var(--hover-color);
+            outline: none;
+            text-decoration: underline;
+            text-shadow: 0 0 8px rgba(139, 61, 255, 0.3);
+        }
+
+        /* Enhanced code block styling */
+        .markdown-body pre {
+            background: #2c2247 !important;
+            border-radius: 12px;
+            padding: 1.5rem !important;
+            font-size: 0.95rem !important;
+            overflow-x: auto;
+            max-height: 500px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.4);
+            color: #fff;
+            border: 1px solid #3d2a5c;
+            position: relative;
+        }
+
+        .markdown-body pre:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--hover-color));
+            border-radius: 12px 12px 0 0;
+        }
+
+        .markdown-body code {
+            font-family: 'SF Mono', 'Cascadia Code', 'Roboto Mono', Consolas, Liberation Mono, Menlo, monospace;
+            background: rgba(139, 61, 255, 0.1);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            color: #e6ccff;
+            font-size: 0.9em;
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        /* Table styling */
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 2rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .markdown-body table th,
+        .markdown-body table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .markdown-body table th {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .markdown-body table tr:nth-child(even) {
+            background: rgba(139, 61, 255, 0.05);
+        }
+
+        /* List styling */
+        .markdown-body ul, 
+        .markdown-body ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        .markdown-body li {
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        /* Blockquote styling */
+        .markdown-body blockquote {
+            border-left: 4px solid var(--accent);
+            background: rgba(139, 61, 255, 0.1);
+            margin: 2rem 0;
+            padding: 1rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* HR styling */
+        .markdown-body hr {
+            border: none;
+            border-top: 2px solid var(--accent);
+            margin: 3rem 0;
+            opacity: 0.6;
+        }
+
+        /* Sticky table of contents */
+        nav#toc {
+            flex: 0 0 280px;
+            position: sticky;
+            top: 2rem;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid rgba(139, 61, 255, 0.2);
+        }
+
+        nav#toc h2 {
+            font-size: 1.4rem;
+            margin: 0 0 1.5rem 0;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        nav#toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        nav#toc li {
+            margin-bottom: 0.8rem;
+        }
+
+        nav#toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: block;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        nav#toc a:hover, 
+        nav#toc a:focus {
+            background: rgba(139, 61, 255, 0.1);
+            color: var(--hover-color);
+            text-decoration: none;
+            transform: translateX(4px);
+        }
+
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 2rem;
             }
+
+            nav#toc {
+                position: relative;
+                max-height: none;
+                order: -1;
+                flex: none;
+            }
+
+            .markdown-body h1 {
+                font-size: 2.2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            main {
+                padding: 1.5rem;
+            }
+
+            .markdown-body h1 {
+                font-size: 1.8rem;
+            }
+
+            .markdown-body pre {
+                padding: 1rem !important;
+                font-size: 0.85rem !important;
+            }
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Focus indicators */
+        *:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* Print styles */
+        @media print {
+            .container {
+                display: block;
+            }
+            
+            nav#toc {
+                display: none;
+            }
+            
+            main {
+                box-shadow: none;
+                background: white;
+                color: black;
+            }
+        }
+
+        /* Loading animation for syntax highlighting */
+        .highlight-loading {
+            position: relative;
+            opacity: 0.7;
+        }
+
+        .highlight-loading::after {
+            content: 'Loading syntax highlighting...';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
         }
     </style>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5896143631849307"
-     crossorigin="anonymous"></script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "G4F - Client API Guide",
+      "description": "GPT4Free documentation for G4F - Client API Guide. Complete guides, examples, and API reference for free AI endpoints.",
+      "author": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization",
+        "name": "GPT4Free",
+        "url": "https://g4f.dev",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://g4f.dev/dist/img/apple-touch-icon.png"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://g4f.dev/docs/client.html"
+      },
+      "datePublished": "2024-01-01T00:00:00Z",
+      "dateModified": "2024-01-01T00:00:00Z",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "keywords": "GPT4Free, AI documentation, free AI API, code generation",
+      "articleSection": "Documentation"
+    }
+    </script>
 </head>
 <body>
-    <article class="markdown-body entry-content container-lg" itemprop="text"><h2>G4F - Client API Guide</h2>
-<h2>Table of Contents</h2>
-<ul>
-<li><a href="#introduction">Introduction</a></li>
-<li><a href="#getting-started">Getting Started</a></li>
-<li><a href="#switching-to-g4f-client">Switching to G4F Client</a></li>
-<li><a href="#initializing-the-client">Initializing the Client</a></li>
-<li><a href="#creating-chat-completions">Creating Chat Completions</a></li>
-<li><a href="#configuration">Configuration</a></li>
-<li><a href="#explanation-of-parameters">Explanation of Parameters</a></li>
-<li><a href="#usage-examples">Usage Examples</a></li>
-<li><a href="#text-completions">Text Completions</a></li>
-<li><a href="#streaming-completions">Streaming Completions</a></li>
-<li><a href="#using-a-vision-model">Using a Vision Model</a></li>
-<li><a href="#image-generation">Image Generation</a></li>
-<li><a href="#creating-image-variations">Creating Image Variations</a></li>
-<li><a href="#advanced-usage">Advanced Usage</a></li>
-<li><a href="#conversation-memory">Conversation Memory</a></li>
-<li><a href="#search-tool-support">Search Tool Support</a></li>
-<li><a href="#using-a-list-of-providers-with-retryprovider">Using a List of Providers with RetryProvider</a></li>
-<li><a href="#using-a-vision-model">Using a Vision Model</a></li>
-<li><a href="#command-line-chat-program">Command-line Chat Program</a></li>
-</ul>
-<h2>Introduction</h2>
-<p>Welcome to the G4F Client API, a cutting-edge tool for seamlessly integrating advanced AI capabilities into your Python applications. This guide is designed to facilitate your transition from using the OpenAI client to the G4F Client, offering enhanced features while maintaining compatibility with the existing OpenAI API.</p>
-<hr>
-<h2>Getting Started</h2>
-<h3>Switching to G4F Client</h3>
-<p><strong>To begin using the G4F Client, simply update your import statement in your Python code:</strong></p>
-<p><strong>Old Import:</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">openai</span> <span class="pl-k">import</span> <span class="pl-v">OpenAI</span></pre></div>
-<p><strong>New Import:</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span> <span class="pl-k">as</span> <span class="pl-v">OpenAI</span></pre></div>
-<p>The G4F Client preserves the same familiar API interface as OpenAI, ensuring a smooth transition process.</p>
-<hr>
-<h2>Initializing the Client</h2>
-<p>To utilize the G4F Client, create a new instance. <strong>Below is an example showcasing custom providers:</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">import</span> <span class="pl-v">BingCreateImages</span>, <span class="pl-v">OpenaiChat</span>, <span class="pl-v">Gemini</span>
+    <div class="container">
+        <nav id="toc" aria-label="Table of contents" role="navigation">
+            <h2>Contents</h2>
+            <ul id="toc-list">
+                <!-- Table of contents will be generated here -->
+            </ul>
+            <hr style="margin: 1.5rem 0; opacity: 0.3;">
+            <ul>
+                <li><a href="/docs/" aria-label="Return to documentation home">📚 Documentation Hub</a></li>
+                <li><a href="/" aria-label="Return to main site">🏠 G4F Home</a></li>
+            </ul>
+        </nav>
 
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(
-    <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">OpenaiChat</span>,
-    <span class="pl-s1">image_provider</span><span class="pl-c1">=</span><span class="pl-v">Gemini</span>,
-    <span class="pl-c"># Add any other necessary parameters</span>
-)</pre></div>
-<hr>
-<h2>Creating Chat Completions</h2>
-<p><strong>Here’s an improved example of creating chat completions:</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4o-mini"</span>,
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[
-        {
-            <span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>,
-            <span class="pl-s">"content"</span>: <span class="pl-s">"Say this is a test"</span>
-        }
-    ]
-    <span class="pl-c"># Add any other necessary parameters</span>
-)</pre></div>
-<p><strong>This example:</strong></p>
-<ul>
-<li>Asks a specific question <code class="notranslate">Say this is a test</code></li>
-<li>Configures various parameters like temperature and max_tokens for more control over the output</li>
-<li>Disables streaming for a complete response</li>
-</ul>
-<p>You can adjust these parameters based on your specific needs.</p>
-<h2>Configuration</h2>
-<p><strong>You can set an <code class="notranslate">api_key</code> for your provider in the client and define a proxy for all outgoing requests:</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
+        <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
+            Blocked by DNS monitoring proxy
+        </main>
+    </div>
 
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(
-    <span class="pl-s1">api_key</span><span class="pl-c1">=</span><span class="pl-s">"your_api_key_here"</span>,
-    <span class="pl-s1">proxies</span><span class="pl-c1">=</span><span class="pl-s">"http://user:pass@host"</span>,
-    <span class="pl-c"># Add any other necessary parameters</span>
-)</pre></div>
-<hr>
-<h2>Explanation of Parameters</h2>
-<p><strong>When using the G4F to create chat completions or perform related tasks, you can configure the following parameters:</strong></p>
-<ul>
-<li>
-<p><strong><code class="notranslate">model</code></strong>:<br>
-Specifies the AI model to be used for the task. Examples include <code class="notranslate">"gpt-4o"</code> for GPT-4 Optimized or <code class="notranslate">"gpt-4o-mini"</code> for a lightweight version. The choice of model determines the quality and speed of the response. Always ensure the selected model is supported by the provider.</p>
-</li>
-<li>
-<p><strong><code class="notranslate">messages</code></strong>:<br>
-<strong>A list of dictionaries representing the conversation context. Each dictionary contains two keys:</strong><br>
-- <code class="notranslate">role</code>: Defines the role of the message sender, such as <code class="notranslate">"user"</code> (input from the user) or <code class="notranslate">"system"</code> (instructions to the AI).<br>
-- <code class="notranslate">content</code>: The actual text of the message.<br>
-<strong>Example:</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate">[
-    {<span class="pl-s">"role"</span>: <span class="pl-s">"system"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"You are a helpful assistant."</span>},
-    {<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"What day is it today?"</span>}
-]</pre></div>
-</li>
-<li>
-<p><strong><code class="notranslate">provider</code></strong>:<br>
-<em>(Optional)</em> Specifies the backend provider for the API. Examples include <code class="notranslate">g4f.Provider.Blackbox</code> or <code class="notranslate">g4f.Provider.OpenaiChat</code>. Each provider may support a different subset of models and features, so select one that matches your requirements.</p>
-</li>
-<li>
-<p><strong><code class="notranslate">web_search</code></strong> (Optional):<br>
-Boolean flag indicating whether to enable internet-based search capabilities. This is useful for obtaining real-time or specific details not included in the model’s training data.</p>
-</li>
-</ul>
-<hr>
-<h2>Usage Examples</h2>
-<h3>Text Completions</h3>
-<p><strong>Generate text completions using the <code class="notranslate">ChatCompletions</code> endpoint:</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
+    <script>
+        // Enhanced syntax highlighting with error handling
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // Initialize highlight.js
+                hljs.configure({
+                    languages: ['javascript', 'python', 'bash', 'json', 'typescript', 'html', 'css'],
+                    ignoreUnescapedHTML: true
+                });
 
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>()
+                // Add loading class to pre elements
+                document.querySelectorAll('pre code').forEach(function(block) {
+                    block.closest('pre').classList.add('highlight-loading');
+                });
 
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4o-mini"</span>,
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[
-        {
-            <span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>,
-            <span class="pl-s">"content"</span>: <span class="pl-s">"Say this is a test"</span>
-        }
-    ]
-)
+                // Highlight all code blocks
+                hljs.highlightAll();
 
-<span class="pl-en">print</span>(<span class="pl-s1">response</span>.<span class="pl-c1">choices</span>[<span class="pl-c1">0</span>].<span class="pl-c1">message</span>.<span class="pl-c1">content</span>)</pre></div>
-<h3>Streaming Completions</h3>
-<p><strong>Process responses incrementally as they are generated:</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
+                // Remove loading class after highlighting
+                setTimeout(function() {
+                    document.querySelectorAll('.highlight-loading').forEach(function(pre) {
+                        pre.classList.remove('highlight-loading');
+                    });
+                }, 100);
 
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>()
-
-<span class="pl-s1">stream</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4"</span>,
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[
-        {
-            <span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>,
-            <span class="pl-s">"content"</span>: <span class="pl-s">"Say this is a test"</span>
-        }
-    ],
-    <span class="pl-s1">stream</span><span class="pl-c1">=</span><span class="pl-c1">True</span>
-)
-
-<span class="pl-k">for</span> <span class="pl-s1">chunk</span> <span class="pl-c1">in</span> <span class="pl-s1">stream</span>:
-    <span class="pl-k">if</span> <span class="pl-s1">chunk</span>.<span class="pl-c1">choices</span>[<span class="pl-c1">0</span>].<span class="pl-c1">delta</span>.<span class="pl-c1">content</span>:
-        <span class="pl-en">print</span>(<span class="pl-s1">chunk</span>.<span class="pl-c1">choices</span>[<span class="pl-c1">0</span>].<span class="pl-c1">delta</span>.<span class="pl-c1">content</span> <span class="pl-c1">or</span> <span class="pl-s">""</span>, <span class="pl-s1">end</span><span class="pl-c1">=</span><span class="pl-s">""</span>)</pre></div>
-<hr>
-<h3>Using a Vision Model</h3>
-<p><strong>Analyze an image and generate a description:</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">g4f</span>
-<span class="pl-k">import</span> <span class="pl-s1">requests</span>
-
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span>.<span class="pl-v">GeminiPro</span> <span class="pl-k">import</span> <span class="pl-v">GeminiPro</span>
-
-<span class="pl-c"># Initialize the GPT client with the desired provider and api key</span>
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(
-    <span class="pl-s1">api_key</span><span class="pl-c1">=</span><span class="pl-s">"your_api_key_here"</span>,
-    <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">GeminiPro</span>
-)
-
-<span class="pl-s1">image</span> <span class="pl-c1">=</span> <span class="pl-s1">requests</span>.<span class="pl-c1">get</span>(<span class="pl-s">"https://raw.githubusercontent.com/xtekky/gpt4free/refs/heads/main/docs/images/cat.jpeg"</span>, <span class="pl-s1">stream</span><span class="pl-c1">=</span><span class="pl-c1">True</span>).<span class="pl-c1">raw</span>
-<span class="pl-c"># Or: image = open("docs/images/cat.jpeg", "rb")</span>
-
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">models</span>.<span class="pl-c1">default</span>,
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[
-        {
-            <span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>,
-            <span class="pl-s">"content"</span>: <span class="pl-s">"What's in this image?"</span>
-        }
-    ],
-    <span class="pl-s1">image</span><span class="pl-c1">=</span><span class="pl-s1">image</span>
-    <span class="pl-c"># Add any other necessary parameters</span>
-)
-
-<span class="pl-en">print</span>(<span class="pl-s1">response</span>.<span class="pl-c1">choices</span>[<span class="pl-c1">0</span>].<span class="pl-c1">message</span>.<span class="pl-c1">content</span>)</pre></div>
-<hr>
-<h3>Image Generation</h3>
-<p><strong>The <code class="notranslate">response_format</code> parameter is optional and can have the following values:</strong></p>
-<ul>
-<li><strong>If not specified (default):</strong> The image will be saved locally, and a local path will be returned (e.g., "/images/1733331238_cf9d6aa9-f606-4fea-ba4b-f06576cba309.jpg").</li>
-<li><strong>"url":</strong> Returns a URL to the generated image.</li>
-<li><strong>"b64_json":</strong> Returns the image as a base64-encoded JSON string.</li>
-</ul>
-<p><strong>Generate images using a specified prompt:</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>()
-
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">images</span>.<span class="pl-c1">generate</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"flux"</span>,
-    <span class="pl-s1">prompt</span><span class="pl-c1">=</span><span class="pl-s">"a white siamese cat"</span>,
-    <span class="pl-s1">response_format</span><span class="pl-c1">=</span><span class="pl-s">"url"</span>
-    <span class="pl-c"># Add any other necessary parameters</span>
-)
-
-<span class="pl-s1">image_url</span> <span class="pl-c1">=</span> <span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">url</span>
-
-<span class="pl-en">print</span>(<span class="pl-s">f"Generated image URL: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">image_url</span><span class="pl-kos">}</span></span>"</span>)</pre></div>
-<h4>Base64 Response Format</h4>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>()
-
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">images</span>.<span class="pl-c1">generate</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"flux"</span>,
-    <span class="pl-s1">prompt</span><span class="pl-c1">=</span><span class="pl-s">"a white siamese cat"</span>,
-    <span class="pl-s1">response_format</span><span class="pl-c1">=</span><span class="pl-s">"b64_json"</span>
-    <span class="pl-c"># Add any other necessary parameters</span>
-)
-
-<span class="pl-s1">base64_text</span> <span class="pl-c1">=</span> <span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">b64_json</span>
-<span class="pl-en">print</span>(<span class="pl-s1">base64_text</span>)</pre></div>
-<h3>Creating Image Variations</h3>
-<p><strong>Create variations of an existing image:</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">import</span> <span class="pl-v">OpenaiChat</span>
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(
-    <span class="pl-s1">image_provider</span><span class="pl-c1">=</span><span class="pl-v">OpenaiChat</span>
-)
-
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">images</span>.<span class="pl-c1">create_variation</span>(
-    <span class="pl-s1">image</span><span class="pl-c1">=</span><span class="pl-en">open</span>(<span class="pl-s">"docs/images/cat.jpg"</span>, <span class="pl-s">"rb"</span>),
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"dall-e-3"</span>,
-    <span class="pl-c"># Add any other necessary parameters</span>
-)
-
-<span class="pl-s1">image_url</span> <span class="pl-c1">=</span> <span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">url</span>
-
-<span class="pl-en">print</span>(<span class="pl-s">f"Generated image URL: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">image_url</span><span class="pl-kos">}</span></span>"</span>)</pre></div>
-<hr>
-<h2>Advanced Usage</h2>
-<h3>Conversation Memory</h3>
-<p>To maintain a coherent conversation, it's important to store the context or history of the dialogue. This can be achieved by appending both the user's inputs and the bot's responses to a messages list. This allows the model to reference past exchanges when generating responses.</p>
-<p><strong>The conversation history consists of messages with different roles:</strong></p>
-<ul>
-<li><code class="notranslate">system</code>: Initial instructions that define the AI's behavior</li>
-<li><code class="notranslate">user</code>: Messages from the user</li>
-<li><code class="notranslate">assistant</code>: Responses from the AI</li>
-</ul>
-<p><strong>The following example demonstrates how to implement conversation memory with the G4F:</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
-
-<span class="pl-k">class</span> <span class="pl-v">Conversation</span>:
-    <span class="pl-k">def</span> <span class="pl-en">__init__</span>(<span class="pl-s1">self</span>):
-        <span class="pl-s1">self</span>.<span class="pl-c1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>()
-        <span class="pl-s1">self</span>.<span class="pl-c1">history</span> <span class="pl-c1">=</span> [
-            {
-                <span class="pl-s">"role"</span>: <span class="pl-s">"system"</span>,
-                <span class="pl-s">"content"</span>: <span class="pl-s">"You are a helpful assistant."</span>
+                // Generate table of contents
+                generateTableOfContents();
+                
+            } catch (error) {
+                console.warn('Syntax highlighting failed:', error);
+                // Remove loading indicators on error
+                document.querySelectorAll('.highlight-loading').forEach(function(pre) {
+                    pre.classList.remove('highlight-loading');
+                });
             }
-        ]
-    
-    <span class="pl-k">def</span> <span class="pl-en">add_message</span>(<span class="pl-s1">self</span>, <span class="pl-s1">role</span>, <span class="pl-s1">content</span>):
-        <span class="pl-s1">self</span>.<span class="pl-c1">history</span>.<span class="pl-c1">append</span>({
-            <span class="pl-s">"role"</span>: <span class="pl-s1">role</span>,
-            <span class="pl-s">"content"</span>: <span class="pl-s1">content</span>
-        })
-    
-    <span class="pl-k">def</span> <span class="pl-en">get_response</span>(<span class="pl-s1">self</span>, <span class="pl-s1">user_message</span>):
-        <span class="pl-c"># Add user message to history</span>
-        <span class="pl-s1">self</span>.<span class="pl-c1">add_message</span>(<span class="pl-s">"user"</span>, <span class="pl-s1">user_message</span>)
-        
-        <span class="pl-c"># Get response from AI</span>
-        <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">self</span>.<span class="pl-c1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>(
-            <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4o-mini"</span>,
-            <span class="pl-s1">messages</span><span class="pl-c1">=</span><span class="pl-s1">self</span>.<span class="pl-c1">history</span>,
-            <span class="pl-s1">web_search</span><span class="pl-c1">=</span><span class="pl-c1">False</span>
-        )
-        
-        <span class="pl-c"># Add AI response to history</span>
-        <span class="pl-s1">assistant_response</span> <span class="pl-c1">=</span> <span class="pl-s1">response</span>.<span class="pl-c1">choices</span>[<span class="pl-c1">0</span>].<span class="pl-c1">message</span>.<span class="pl-c1">content</span>
-        <span class="pl-s1">self</span>.<span class="pl-c1">add_message</span>(<span class="pl-s">"assistant"</span>, <span class="pl-s1">assistant_response</span>)
-        
-        <span class="pl-k">return</span> <span class="pl-s1">assistant_response</span>
+        });
 
-<span class="pl-k">def</span> <span class="pl-en">main</span>():
-    <span class="pl-s1">conversation</span> <span class="pl-c1">=</span> <span class="pl-en">Conversation</span>()
-    
-    <span class="pl-en">print</span>(<span class="pl-s">"="</span> <span class="pl-c1">*</span> <span class="pl-c1">50</span>)
-    <span class="pl-en">print</span>(<span class="pl-s">"G4F Chat started (type 'exit' to end)"</span>.<span class="pl-c1">center</span>(<span class="pl-c1">50</span>))
-    <span class="pl-en">print</span>(<span class="pl-s">"="</span> <span class="pl-c1">*</span> <span class="pl-c1">50</span>)
-    <span class="pl-en">print</span>(<span class="pl-s">"<span class="pl-cce">\n</span>AI: Hello! How can I assist you today?"</span>)
-    
-    <span class="pl-k">while</span> <span class="pl-c1">True</span>:
-        <span class="pl-s1">user_input</span> <span class="pl-c1">=</span> <span class="pl-en">input</span>(<span class="pl-s">"<span class="pl-cce">\n</span>You: "</span>)
-        
-        <span class="pl-k">if</span> <span class="pl-s1">user_input</span>.<span class="pl-c1">lower</span>() <span class="pl-c1">==</span> <span class="pl-s">'exit'</span>:
-            <span class="pl-en">print</span>(<span class="pl-s">"<span class="pl-cce">\n</span>Goodbye!"</span>)
-            <span class="pl-k">break</span>
+        function generateTableOfContents() {
+            const headings = document.querySelectorAll('main h2, main h3');
+            const tocList = document.getElementById('toc-list');
             
-        <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">conversation</span>.<span class="pl-c1">get_response</span>(<span class="pl-s1">user_input</span>)
-        <span class="pl-en">print</span>(<span class="pl-s">"<span class="pl-cce">\n</span>AI:"</span>, <span class="pl-s1">response</span>)
-
-<span class="pl-k">if</span> <span class="pl-s1">__name__</span> <span class="pl-c1">==</span> <span class="pl-s">"__main__"</span>:
-    <span class="pl-en">main</span>()</pre></div>
-<p><strong>Key Features:</strong></p>
-<ul>
-<li>Maintains conversation context through a message history</li>
-<li>Includes system instructions for AI behavior</li>
-<li>Automatically stores both user inputs and AI responses</li>
-<li>Simple and clean implementation using a class-based approach</li>
-</ul>
-<p><strong>Usage Example:</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-s1">conversation</span> <span class="pl-c1">=</span> <span class="pl-en">Conversation</span>()
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">conversation</span>.<span class="pl-c1">get_response</span>(<span class="pl-s">"Hello, how are you?"</span>)
-<span class="pl-en">print</span>(<span class="pl-s1">response</span>)</pre></div>
-<p><strong>Note:</strong><br>
-The conversation history grows with each interaction. For long conversations, you might want to implement a method to limit the history size or clear old messages to manage token usage.</p>
-<hr>
-<h2>Search Tool Support</h2>
-<p>The <strong>Search Tool Support</strong> feature enables triggering a web search during chat completions. This is useful for retrieving real-time or specific data, offering a more flexible solution than <code class="notranslate">web_search</code>.</p>
-<p><strong>Example Usage</strong>:</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>()
-
-<span class="pl-s1">tool_calls</span> <span class="pl-c1">=</span> [
-    {
-        <span class="pl-s">"function"</span>: {
-            <span class="pl-s">"arguments"</span>: {
-                <span class="pl-s">"query"</span>: <span class="pl-s">"Latest advancements in AI"</span>,
-                <span class="pl-s">"max_results"</span>: <span class="pl-c1">5</span>,
-                <span class="pl-s">"max_words"</span>: <span class="pl-c1">2500</span>,
-                <span class="pl-s">"backend"</span>: <span class="pl-s">"auto"</span>,
-                <span class="pl-s">"add_text"</span>: <span class="pl-c1">True</span>,
-                <span class="pl-s">"timeout"</span>: <span class="pl-c1">5</span>
-            },
-            <span class="pl-s">"name"</span>: <span class="pl-s">"search_tool"</span>
-        },
-        <span class="pl-s">"type"</span>: <span class="pl-s">"function"</span>
-    }
-]
-
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4"</span>,
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[
-        {<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Tell me about recent advancements in AI."</span>}
-    ],
-    <span class="pl-s1">tool_calls</span><span class="pl-c1">=</span><span class="pl-s1">tool_calls</span>
-)
-
-<span class="pl-en">print</span>(<span class="pl-s1">response</span>.<span class="pl-c1">choices</span>[<span class="pl-c1">0</span>].<span class="pl-c1">message</span>.<span class="pl-c1">content</span>)</pre></div>
-<p><strong>Parameters for <code class="notranslate">search_tool</code>:</strong></p>
-<ul>
-<li><strong><code class="notranslate">query</code></strong>: The search query string.</li>
-<li><strong><code class="notranslate">max_results</code></strong>: Number of search results to retrieve.</li>
-<li><strong><code class="notranslate">max_words</code></strong>: Maximum number of words in the response.</li>
-<li><strong><code class="notranslate">backend</code></strong>: The backend used for search (e.g., <code class="notranslate">"api"</code>).</li>
-<li><strong><code class="notranslate">add_text</code></strong>: Whether to include text snippets in the response.</li>
-<li><strong><code class="notranslate">timeout</code></strong>: Maximum time (in seconds) for the search operation.</li>
-</ul>
-<p><strong>Advantages of Search Tool Support:</strong></p>
-<ul>
-<li>Works with any provider, irrespective of <code class="notranslate">web_search</code> support.</li>
-<li>Offers more customization and control over the search process.</li>
-<li>Bypasses provider-specific limitations.</li>
-</ul>
-<hr>
-<h3>Using a List of Providers with RetryProvider</h3>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">import</span> <span class="pl-v">RetryProvider</span>, <span class="pl-v">Phind</span>, <span class="pl-v">FreeChatgpt</span>, <span class="pl-v">Liaobots</span>
-<span class="pl-k">import</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">debug</span>
-
-<span class="pl-s1">g4f</span>.<span class="pl-c1">debug</span>.<span class="pl-c1">logging</span> <span class="pl-c1">=</span> <span class="pl-c1">True</span>
-<span class="pl-s1">g4f</span>.<span class="pl-c1">debug</span>.<span class="pl-c1">version_check</span> <span class="pl-c1">=</span> <span class="pl-c1">False</span>
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(
-    <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-en">RetryProvider</span>([<span class="pl-v">Phind</span>, <span class="pl-v">FreeChatgpt</span>, <span class="pl-v">Liaobots</span>], <span class="pl-s1">shuffle</span><span class="pl-c1">=</span><span class="pl-c1">False</span>)
-)
-
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">""</span>,
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[
-        {
-            <span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>,
-            <span class="pl-s">"content"</span>: <span class="pl-s">"Hello"</span>
+            if (!tocList || headings.length === 0) return;
+            
+            tocList.innerHTML = '';
+            
+            headings.forEach(function(heading, index) {
+                const id = heading.id || `heading-${index}`;
+                if (!heading.id) {
+                    heading.id = id;
+                }
+                
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `#${id}`;
+                a.textContent = heading.textContent;
+                a.setAttribute('aria-label', `Jump to ${heading.textContent}`);
+                
+                if (heading.tagName === 'H3') {
+                    li.style.marginLeft = '1rem';
+                    li.style.fontSize = '0.9em';
+                }
+                
+                li.appendChild(a);
+                tocList.appendChild(li);
+            });
         }
-    ]
-)
 
-<span class="pl-en">print</span>(<span class="pl-s1">response</span>.<span class="pl-c1">choices</span>[<span class="pl-c1">0</span>].<span class="pl-c1">message</span>.<span class="pl-c1">content</span>)</pre></div>
-<h2>Command-line Chat Program</h2>
-<p><strong>Here's an example of a simple command-line chat program using the G4F Client:</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">g4f</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
+        // Smooth scrolling for anchor links
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
+                e.preventDefault();
+                const target = document.querySelector(e.target.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }
+        });
 
-<span class="pl-c"># Initialize the GPT client with the desired provider</span>
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>()
-
-<span class="pl-c"># Initialize an empty conversation history</span>
-<span class="pl-s1">messages</span> <span class="pl-c1">=</span> []
-
-<span class="pl-k">while</span> <span class="pl-c1">True</span>:
-    <span class="pl-c"># Get user input</span>
-    <span class="pl-s1">user_input</span> <span class="pl-c1">=</span> <span class="pl-en">input</span>(<span class="pl-s">"You: "</span>)
-
-    <span class="pl-c"># Check if the user wants to exit the chat</span>
-    <span class="pl-k">if</span> <span class="pl-s1">user_input</span>.<span class="pl-c1">lower</span>() <span class="pl-c1">==</span> <span class="pl-s">"exit"</span>:
-        <span class="pl-en">print</span>(<span class="pl-s">"Exiting chat..."</span>)
-        <span class="pl-k">break</span>  <span class="pl-c"># Exit the loop to end the conversation</span>
-
-    <span class="pl-c"># Update the conversation history with the user's message</span>
-    <span class="pl-s1">messages</span>.<span class="pl-c1">append</span>({<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s1">user_input</span>})
-
-    <span class="pl-k">try</span>:
-        <span class="pl-c"># Get GPT's response</span>
-        <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>(
-            <span class="pl-s1">messages</span><span class="pl-c1">=</span><span class="pl-s1">messages</span>,
-            <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">models</span>.<span class="pl-c1">default</span>,
-        )
-
-        <span class="pl-c"># Extract the GPT response and print it</span>
-        <span class="pl-s1">gpt_response</span> <span class="pl-c1">=</span> <span class="pl-s1">response</span>.<span class="pl-c1">choices</span>[<span class="pl-c1">0</span>].<span class="pl-c1">message</span>.<span class="pl-c1">content</span>
-        <span class="pl-en">print</span>(<span class="pl-s">f"Bot: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">gpt_response</span><span class="pl-kos">}</span></span>"</span>)
-
-        <span class="pl-c"># Update the conversation history with GPT's response</span>
-        <span class="pl-s1">messages</span>.<span class="pl-c1">append</span>({<span class="pl-s">"role"</span>: <span class="pl-s">"assistant"</span>, <span class="pl-s">"content"</span>: <span class="pl-s1">gpt_response</span>})
-
-    <span class="pl-k">except</span> <span class="pl-v">Exception</span> <span class="pl-k">as</span> <span class="pl-s1">e</span>:
-        <span class="pl-en">print</span>(<span class="pl-s">f"An error occurred: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">e</span><span class="pl-kos">}</span></span>"</span>)</pre></div>
-<p>This guide provides a comprehensive overview of the G4F Client API, demonstrating its versatility in handling various AI tasks, from text generation to image analysis and creation. By leveraging these features, you can build powerful and responsive applications that harness the capabilities of advanced AI models.</p>
-<hr>
-<p><a href="/docs/">Return to Documentation</a></p></article>
+        // Add copy button to code blocks
+        document.querySelectorAll('pre code').forEach(function(block) {
+            const button = document.createElement('button');
+            button.textContent = 'Copy';
+            button.className = 'copy-button';
+            button.style.cssText = `
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background: rgba(139, 61, 255, 0.8);
+                color: white;
+                border: none;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.8rem;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            const pre = block.closest('pre');
+            pre.style.position = 'relative';
+            pre.appendChild(button);
+            
+            pre.addEventListener('mouseenter', function() {
+                button.style.opacity = '1';
+            });
+            
+            pre.addEventListener('mouseleave', function() {
+                button.style.opacity = '0';
+            });
+            
+            button.addEventListener('click', function() {
+                navigator.clipboard.writeText(block.textContent).then(function() {
+                    button.textContent = 'Copied!';
+                    setTimeout(function() {
+                        button.textContent = 'Copy';
+                    }, 2000);
+                });
+            });
+        });
+    </script>
 </body>
 </html>

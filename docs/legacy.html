@@ -1,181 +1,547 @@
 <!DOCTYPE html>
 <html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G4F - Legacy API</title>
-    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png">
-    <link rel="manifest" href="/dist/img/site.webmanifest">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>G4F - Legacy API | GPT4Free Documentation</title>
+
+    <meta name="description" content="GPT4Free documentation for G4F - Legacy API. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
+    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, G4F - Legacy API" />
+    <meta name="author" content="GPT4Free Team" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="G4F - Legacy API | GPT4Free Documentation" />
+    <meta property="og:description" content="GPT4Free documentation for G4F - Legacy API. Free AI endpoints, examples, and comprehensive guides." />
+    <meta property="og:url" content="https://g4f.dev/docs/legacy.html" />
+    <meta property="og:site_name" content="GPT4Free Documentation" />
+    <meta property="og:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="G4F - Legacy API | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for G4F - Legacy API." />
+    <meta name="twitter:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://g4f.dev/docs/legacy.html" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png" />
+    <link rel="manifest" href="/dist/img/site.webmanifest" />
+
+    <!-- GitHub Primer CSS & styles -->
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
+
+    <!-- Highlight.js for enhanced JavaScript syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    
     <style>
         :root {
-            --colour-1: #000000;
-            --colour-2: #ccc;
-            --colour-3: #e4d4ff;
-            --colour-4: #f0f0f0;
-            --colour-5: #181818;
-            --colour-6: #242424;
             --accent: #8b3dff;
-            --gradient: #1a1a1a;
             --background: #16101b;
-            --size: 70vw;
-            --top: 50%;
-            --blur: 40px;
-            --opacity: 0.6;
+            --text-primary: #ddd;
+            --text-secondary: #9b7dff;
+            --card-bg: #1e152e;
+            --border-color: #333;
+            --hover-color: #a67eff;
         }
 
-        /* Body and text color */
         body {
-            height: 100vh;
             margin: 0;
             padding: 0;
+            background: var(--background);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            line-height: 1.6;
+            min-height: 100vh;
         }
 
-        .hidden {
-            display: none;
-        }
-
-        .container-lg {
+        .container {
+            display: flex;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 8px;
+            padding: 2rem;
+            gap: 3rem;
+            min-height: calc(100vh - 4rem);
         }
 
-        @media only screen and (min-width: 40em) {
-            .container-lg {
-                max-width: 84%;
+        /* Enhanced main content styling */
+        main {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            overflow-wrap: break-word;
+            position: relative;
+        }
+
+        /* Typography improvements */
+        .markdown-body h1 {
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 0.5rem;
+        }
+
+        .markdown-body h2 {
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body h3 {
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body p {
+            margin-bottom: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        /* Enhanced link styling */
+        .markdown-body a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .markdown-body a:hover,
+        .markdown-body a:focus {
+            color: var(--hover-color);
+            outline: none;
+            text-decoration: underline;
+            text-shadow: 0 0 8px rgba(139, 61, 255, 0.3);
+        }
+
+        /* Enhanced code block styling */
+        .markdown-body pre {
+            background: #2c2247 !important;
+            border-radius: 12px;
+            padding: 1.5rem !important;
+            font-size: 0.95rem !important;
+            overflow-x: auto;
+            max-height: 500px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.4);
+            color: #fff;
+            border: 1px solid #3d2a5c;
+            position: relative;
+        }
+
+        .markdown-body pre:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--hover-color));
+            border-radius: 12px 12px 0 0;
+        }
+
+        .markdown-body code {
+            font-family: 'SF Mono', 'Cascadia Code', 'Roboto Mono', Consolas, Liberation Mono, Menlo, monospace;
+            background: rgba(139, 61, 255, 0.1);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            color: #e6ccff;
+            font-size: 0.9em;
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        /* Table styling */
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 2rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .markdown-body table th,
+        .markdown-body table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .markdown-body table th {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .markdown-body table tr:nth-child(even) {
+            background: rgba(139, 61, 255, 0.05);
+        }
+
+        /* List styling */
+        .markdown-body ul, 
+        .markdown-body ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        .markdown-body li {
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        /* Blockquote styling */
+        .markdown-body blockquote {
+            border-left: 4px solid var(--accent);
+            background: rgba(139, 61, 255, 0.1);
+            margin: 2rem 0;
+            padding: 1rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* HR styling */
+        .markdown-body hr {
+            border: none;
+            border-top: 2px solid var(--accent);
+            margin: 3rem 0;
+            opacity: 0.6;
+        }
+
+        /* Sticky table of contents */
+        nav#toc {
+            flex: 0 0 280px;
+            position: sticky;
+            top: 2rem;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid rgba(139, 61, 255, 0.2);
+        }
+
+        nav#toc h2 {
+            font-size: 1.4rem;
+            margin: 0 0 1.5rem 0;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        nav#toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        nav#toc li {
+            margin-bottom: 0.8rem;
+        }
+
+        nav#toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: block;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        nav#toc a:hover, 
+        nav#toc a:focus {
+            background: rgba(139, 61, 255, 0.1);
+            color: var(--hover-color);
+            text-decoration: none;
+            transform: translateX(4px);
+        }
+
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 2rem;
+            }
+
+            nav#toc {
+                position: relative;
+                max-height: none;
+                order: -1;
+                flex: none;
+            }
+
+            .markdown-body h1 {
+                font-size: 2.2rem;
             }
         }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            main {
+                padding: 1.5rem;
+            }
+
+            .markdown-body h1 {
+                font-size: 1.8rem;
+            }
+
+            .markdown-body pre {
+                padding: 1rem !important;
+                font-size: 0.85rem !important;
+            }
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Focus indicators */
+        *:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* Print styles */
+        @media print {
+            .container {
+                display: block;
+            }
+            
+            nav#toc {
+                display: none;
+            }
+            
+            main {
+                box-shadow: none;
+                background: white;
+                color: black;
+            }
+        }
+
+        /* Loading animation for syntax highlighting */
+        .highlight-loading {
+            position: relative;
+            opacity: 0.7;
+        }
+
+        .highlight-loading::after {
+            content: 'Loading syntax highlighting...';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
     </style>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "G4F - Legacy API",
+      "description": "GPT4Free documentation for G4F - Legacy API. Complete guides, examples, and API reference for free AI endpoints.",
+      "author": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization",
+        "name": "GPT4Free",
+        "url": "https://g4f.dev",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://g4f.dev/dist/img/apple-touch-icon.png"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://g4f.dev/docs/legacy.html"
+      },
+      "datePublished": "2024-01-01T00:00:00Z",
+      "dateModified": "2024-01-01T00:00:00Z",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "keywords": "GPT4Free, AI documentation, free AI API, code generation",
+      "articleSection": "Documentation"
+    }
+    </script>
 </head>
 <body>
-    <article class="markdown-body entry-content container-lg" itemprop="text"><h2>G4F - Legacy API</h2>
-<h4>ChatCompletion</h4>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">g4f</span>
+    <div class="container">
+        <nav id="toc" aria-label="Table of contents" role="navigation">
+            <h2>Contents</h2>
+            <ul id="toc-list">
+                <!-- Table of contents will be generated here -->
+            </ul>
+            <hr style="margin: 1.5rem 0; opacity: 0.3;">
+            <ul>
+                <li><a href="/docs/" aria-label="Return to documentation home">📚 Documentation Hub</a></li>
+                <li><a href="/" aria-label="Return to main site">🏠 G4F Home</a></li>
+            </ul>
+        </nav>
 
-<span class="pl-s1">g4f</span>.<span class="pl-c1">debug</span>.<span class="pl-c1">logging</span> <span class="pl-c1">=</span> <span class="pl-c1">True</span>  <span class="pl-c"># Enable debug logging</span>
-<span class="pl-s1">g4f</span>.<span class="pl-c1">debug</span>.<span class="pl-c1">version_check</span> <span class="pl-c1">=</span> <span class="pl-c1">False</span>  <span class="pl-c"># Disable automatic version checking</span>
-<span class="pl-en">print</span>(<span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">Gemini</span>.<span class="pl-c1">params</span>)  <span class="pl-c"># Print supported args for Gemini</span>
+        <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
+            Blocked by DNS monitoring proxy
+        </main>
+    </div>
 
-<span class="pl-c"># Using automatic a provider for the given model</span>
-<span class="pl-c">## Streamed completion</span>
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">g4f</span>.<span class="pl-c1">ChatCompletion</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4o"</span>,
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello"</span>}],
-    <span class="pl-s1">stream</span><span class="pl-c1">=</span><span class="pl-c1">True</span>,
-)
-<span class="pl-k">for</span> <span class="pl-s1">message</span> <span class="pl-c1">in</span> <span class="pl-s1">response</span>:
-    <span class="pl-en">print</span>(<span class="pl-s1">message</span>, <span class="pl-s1">flush</span><span class="pl-c1">=</span><span class="pl-c1">True</span>, <span class="pl-s1">end</span><span class="pl-c1">=</span><span class="pl-s">''</span>)
+    <script>
+        // Enhanced syntax highlighting with error handling
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // Initialize highlight.js
+                hljs.configure({
+                    languages: ['javascript', 'python', 'bash', 'json', 'typescript', 'html', 'css'],
+                    ignoreUnescapedHTML: true
+                });
 
-<span class="pl-c">## Normal response</span>
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">g4f</span>.<span class="pl-c1">ChatCompletion</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">models</span>.<span class="pl-c1">gpt_4</span>,
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello"</span>}],
-)  <span class="pl-c"># Alternative model setting</span>
+                // Add loading class to pre elements
+                document.querySelectorAll('pre code').forEach(function(block) {
+                    block.closest('pre').classList.add('highlight-loading');
+                });
 
-<span class="pl-en">print</span>(<span class="pl-s1">response</span>)</pre></div>
-<h5>Providers</h5>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">g4f</span>
+                // Highlight all code blocks
+                hljs.highlightAll();
 
-<span class="pl-c"># Print all available providers</span>
-<span class="pl-en">print</span>([
-    <span class="pl-s1">provider</span>.<span class="pl-c1">__name__</span>
-    <span class="pl-k">for</span> <span class="pl-s1">provider</span> <span class="pl-c1">in</span> <span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">__providers__</span>
-    <span class="pl-k">if</span> <span class="pl-s1">provider</span>.<span class="pl-c1">working</span>
-])
+                // Remove loading class after highlighting
+                setTimeout(function() {
+                    document.querySelectorAll('.highlight-loading').forEach(function(pre) {
+                        pre.classList.remove('highlight-loading');
+                    });
+                }, 100);
 
-<span class="pl-c"># Execute with a specific provider</span>
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">g4f</span>.<span class="pl-c1">ChatCompletion</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4o"</span>,
-    <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">Copilot</span>,
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello"</span>}],
-    <span class="pl-s1">stream</span><span class="pl-c1">=</span><span class="pl-c1">True</span>,
-)
-<span class="pl-k">for</span> <span class="pl-s1">message</span> <span class="pl-c1">in</span> <span class="pl-s1">response</span>:
-    <span class="pl-en">print</span>(<span class="pl-s1">message</span>)</pre></div>
-<h5>Image Upload &amp; Generation</h5>
-<p>Image upload and generation are supported by three main providers:</p>
-<ul>
-<li><strong>Microsoft Copilot &amp; Other GPT-4 Providers:</strong> Utilizes Microsoft's Image Creator.</li>
-<li><strong>Google Gemini:</strong> Available for free accounts with IP addresses outside Europe.</li>
-<li><strong>OpenaiChat with GPT-4:</strong> Accessible for users with a Plus subscription.</li>
-</ul>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">g4f</span>
+                // Generate table of contents
+                generateTableOfContents();
+                
+            } catch (error) {
+                console.warn('Syntax highlighting failed:', error);
+                // Remove loading indicators on error
+                document.querySelectorAll('.highlight-loading').forEach(function(pre) {
+                    pre.classList.remove('highlight-loading');
+                });
+            }
+        });
 
-<span class="pl-c"># Setting up the request for image creation</span>
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">g4f</span>.<span class="pl-c1">ChatCompletion</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">models</span>.<span class="pl-c1">default</span>, <span class="pl-c"># Using the default model</span>
-    <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">Gemini</span>, <span class="pl-c"># Specifying the provider as Gemini</span>
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Create an image like this"</span>}],
-    <span class="pl-s1">image</span><span class="pl-c1">=</span><span class="pl-en">open</span>(<span class="pl-s">"images/g4f.png"</span>, <span class="pl-s">"rb"</span>), <span class="pl-c"># Image input can be a data URI, bytes, PIL Image, or IO object</span>
-    <span class="pl-s1">image_name</span><span class="pl-c1">=</span><span class="pl-s">"g4f.png"</span> <span class="pl-c"># Optional: specifying the filename</span>
-)
+        function generateTableOfContents() {
+            const headings = document.querySelectorAll('main h2, main h3');
+            const tocList = document.getElementById('toc-list');
+            
+            if (!tocList || headings.length === 0) return;
+            
+            tocList.innerHTML = '';
+            
+            headings.forEach(function(heading, index) {
+                const id = heading.id || `heading-${index}`;
+                if (!heading.id) {
+                    heading.id = id;
+                }
+                
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `#${id}`;
+                a.textContent = heading.textContent;
+                a.setAttribute('aria-label', `Jump to ${heading.textContent}`);
+                
+                if (heading.tagName === 'H3') {
+                    li.style.marginLeft = '1rem';
+                    li.style.fontSize = '0.9em';
+                }
+                
+                li.appendChild(a);
+                tocList.appendChild(li);
+            });
+        }
 
-<span class="pl-c"># Displaying the response</span>
-<span class="pl-en">print</span>(<span class="pl-s1">response</span>)
+        // Smooth scrolling for anchor links
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
+                e.preventDefault();
+                const target = document.querySelector(e.target.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }
+        });
 
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">image</span> <span class="pl-k">import</span> <span class="pl-v">ImageResponse</span>
-
-<span class="pl-c"># Get image links from response</span>
-<span class="pl-k">for</span> <span class="pl-s1">chunk</span> <span class="pl-c1">in</span> <span class="pl-s1">g4f</span>.<span class="pl-c1">ChatCompletion</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">models</span>.<span class="pl-c1">default</span>, <span class="pl-c"># Using the default model</span>
-    <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">OpenaiChat</span>, <span class="pl-c"># Specifying the provider as OpenaiChat</span>
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Create images with dogs"</span>}],
-    <span class="pl-s1">stream</span><span class="pl-c1">=</span><span class="pl-c1">True</span>,
-    <span class="pl-s1">ignore_stream</span><span class="pl-c1">=</span><span class="pl-c1">True</span>
-):
-    <span class="pl-k">if</span> <span class="pl-en">isinstance</span>(<span class="pl-s1">chunk</span>, <span class="pl-v">ImageResponse</span>):
-        <span class="pl-en">print</span>(<span class="pl-s1">chunk</span>.<span class="pl-c1">urls</span>) <span class="pl-c"># Print generated image links</span>
-        <span class="pl-en">print</span>(<span class="pl-s1">chunk</span>.<span class="pl-c1">alt</span>) <span class="pl-c"># Print used prompt for image generation</span></pre></div>
-<h5>Async Support</h5>
-<p>To enhance speed and overall performance, execute providers asynchronously. The total execution time will be determined by the duration of the slowest provider's execution.</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">g4f</span>
-<span class="pl-k">import</span> <span class="pl-s1">asyncio</span>
-
-<span class="pl-s1">_providers</span> <span class="pl-c1">=</span> [
-    <span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">Copilot</span>,
-    <span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">PollinationsAI</span>,
-    <span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">Gemini</span>,
-]
-
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">run_provider</span>(<span class="pl-s1">provider</span>: <span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">BaseProvider</span>):
-    <span class="pl-k">try</span>:
-        <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">g4f</span>.<span class="pl-c1">ChatCompletion</span>.<span class="pl-c1">create_async</span>(
-            <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">models</span>.<span class="pl-c1">default</span>,
-            <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello"</span>}],
-            <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-s1">provider</span>,
-        )
-        <span class="pl-en">print</span>(<span class="pl-s">f"<span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">provider</span>.<span class="pl-c1">__name__</span><span class="pl-kos">}</span></span>:"</span>, <span class="pl-s1">response</span>)
-    <span class="pl-k">except</span> <span class="pl-v">Exception</span> <span class="pl-k">as</span> <span class="pl-s1">e</span>:
-        <span class="pl-en">print</span>(<span class="pl-s">f"<span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">provider</span>.<span class="pl-c1">__name__</span><span class="pl-kos">}</span></span>:"</span>, <span class="pl-s1">e</span>)
-        
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">run_all</span>():
-    <span class="pl-s1">calls</span> <span class="pl-c1">=</span> [
-        <span class="pl-en">run_provider</span>(<span class="pl-s1">provider</span>) <span class="pl-k">for</span> <span class="pl-s1">provider</span> <span class="pl-c1">in</span> <span class="pl-s1">_providers</span>
-    ]
-    <span class="pl-k">await</span> <span class="pl-s1">asyncio</span>.<span class="pl-c1">gather</span>(<span class="pl-c1">*</span><span class="pl-s1">calls</span>)
-
-<span class="pl-s1">asyncio</span>.<span class="pl-c1">run</span>(<span class="pl-en">run_all</span>())</pre></div>
-<h5>Proxy and Timeout Support</h5>
-<p>All providers support specifying a proxy and increasing timeout in the create functions.</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">g4f</span>
-
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">g4f</span>.<span class="pl-c1">ChatCompletion</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">models</span>.<span class="pl-c1">default</span>,
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello"</span>}],
-    <span class="pl-s1">proxy</span><span class="pl-c1">=</span><span class="pl-s">"http://host:port"</span>,
-    <span class="pl-c"># or socks5://user:pass@host:port</span>
-    <span class="pl-s1">timeout</span><span class="pl-c1">=</span><span class="pl-c1">120</span>,  <span class="pl-c"># in secs</span>
-)
-
-<span class="pl-en">print</span>(<span class="pl-s">f"Result:"</span>, <span class="pl-s1">response</span>)</pre></div>
-<hr>
-<p><a href="/docs/">Return to Documentation</a></p></article>
+        // Add copy button to code blocks
+        document.querySelectorAll('pre code').forEach(function(block) {
+            const button = document.createElement('button');
+            button.textContent = 'Copy';
+            button.className = 'copy-button';
+            button.style.cssText = `
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background: rgba(139, 61, 255, 0.8);
+                color: white;
+                border: none;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.8rem;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            const pre = block.closest('pre');
+            pre.style.position = 'relative';
+            pre.appendChild(button);
+            
+            pre.addEventListener('mouseenter', function() {
+                button.style.opacity = '1';
+            });
+            
+            pre.addEventListener('mouseleave', function() {
+                button.style.opacity = '0';
+            });
+            
+            button.addEventListener('click', function() {
+                navigator.clipboard.writeText(block.textContent).then(function() {
+                    button.textContent = 'Copied!';
+                    setTimeout(function() {
+                        button.textContent = 'Copy';
+                    }, 2000);
+                });
+            });
+        });
+    </script>
 </body>
 </html>

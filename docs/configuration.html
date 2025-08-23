@@ -1,134 +1,547 @@
 <!DOCTYPE html>
 <html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G4F - Configuration</title>
-    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png">
-    <link rel="manifest" href="/dist/img/site.webmanifest">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>G4F - Configuration | GPT4Free Documentation</title>
+
+    <meta name="description" content="GPT4Free documentation for G4F - Configuration. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
+    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, G4F - Configuration" />
+    <meta name="author" content="GPT4Free Team" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="G4F - Configuration | GPT4Free Documentation" />
+    <meta property="og:description" content="GPT4Free documentation for G4F - Configuration. Free AI endpoints, examples, and comprehensive guides." />
+    <meta property="og:url" content="https://g4f.dev/docs/configuration.html" />
+    <meta property="og:site_name" content="GPT4Free Documentation" />
+    <meta property="og:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="G4F - Configuration | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for G4F - Configuration." />
+    <meta name="twitter:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://g4f.dev/docs/configuration.html" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png" />
+    <link rel="manifest" href="/dist/img/site.webmanifest" />
+
+    <!-- GitHub Primer CSS & styles -->
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
+
+    <!-- Highlight.js for enhanced JavaScript syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    
     <style>
         :root {
-            --colour-1: #000000;
-            --colour-2: #ccc;
-            --colour-3: #e4d4ff;
-            --colour-4: #f0f0f0;
-            --colour-5: #181818;
-            --colour-6: #242424;
             --accent: #8b3dff;
-            --gradient: #1a1a1a;
             --background: #16101b;
-            --size: 70vw;
-            --top: 50%;
-            --blur: 40px;
-            --opacity: 0.6;
+            --text-primary: #ddd;
+            --text-secondary: #9b7dff;
+            --card-bg: #1e152e;
+            --border-color: #333;
+            --hover-color: #a67eff;
         }
 
-        /* Body and text color */
         body {
-            height: 100vh;
             margin: 0;
             padding: 0;
+            background: var(--background);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            line-height: 1.6;
+            min-height: 100vh;
         }
 
-        .hidden {
-            display: none;
-        }
-
-        .container-lg {
+        .container {
+            display: flex;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 8px;
+            padding: 2rem;
+            gap: 3rem;
+            min-height: calc(100vh - 4rem);
         }
 
-        @media only screen and (min-width: 40em) {
-            .container-lg {
-                max-width: 84%;
+        /* Enhanced main content styling */
+        main {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            overflow-wrap: break-word;
+            position: relative;
+        }
+
+        /* Typography improvements */
+        .markdown-body h1 {
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 0.5rem;
+        }
+
+        .markdown-body h2 {
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body h3 {
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body p {
+            margin-bottom: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        /* Enhanced link styling */
+        .markdown-body a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .markdown-body a:hover,
+        .markdown-body a:focus {
+            color: var(--hover-color);
+            outline: none;
+            text-decoration: underline;
+            text-shadow: 0 0 8px rgba(139, 61, 255, 0.3);
+        }
+
+        /* Enhanced code block styling */
+        .markdown-body pre {
+            background: #2c2247 !important;
+            border-radius: 12px;
+            padding: 1.5rem !important;
+            font-size: 0.95rem !important;
+            overflow-x: auto;
+            max-height: 500px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.4);
+            color: #fff;
+            border: 1px solid #3d2a5c;
+            position: relative;
+        }
+
+        .markdown-body pre:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--hover-color));
+            border-radius: 12px 12px 0 0;
+        }
+
+        .markdown-body code {
+            font-family: 'SF Mono', 'Cascadia Code', 'Roboto Mono', Consolas, Liberation Mono, Menlo, monospace;
+            background: rgba(139, 61, 255, 0.1);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            color: #e6ccff;
+            font-size: 0.9em;
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        /* Table styling */
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 2rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .markdown-body table th,
+        .markdown-body table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .markdown-body table th {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .markdown-body table tr:nth-child(even) {
+            background: rgba(139, 61, 255, 0.05);
+        }
+
+        /* List styling */
+        .markdown-body ul, 
+        .markdown-body ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        .markdown-body li {
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        /* Blockquote styling */
+        .markdown-body blockquote {
+            border-left: 4px solid var(--accent);
+            background: rgba(139, 61, 255, 0.1);
+            margin: 2rem 0;
+            padding: 1rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* HR styling */
+        .markdown-body hr {
+            border: none;
+            border-top: 2px solid var(--accent);
+            margin: 3rem 0;
+            opacity: 0.6;
+        }
+
+        /* Sticky table of contents */
+        nav#toc {
+            flex: 0 0 280px;
+            position: sticky;
+            top: 2rem;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid rgba(139, 61, 255, 0.2);
+        }
+
+        nav#toc h2 {
+            font-size: 1.4rem;
+            margin: 0 0 1.5rem 0;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        nav#toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        nav#toc li {
+            margin-bottom: 0.8rem;
+        }
+
+        nav#toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: block;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        nav#toc a:hover, 
+        nav#toc a:focus {
+            background: rgba(139, 61, 255, 0.1);
+            color: var(--hover-color);
+            text-decoration: none;
+            transform: translateX(4px);
+        }
+
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 2rem;
+            }
+
+            nav#toc {
+                position: relative;
+                max-height: none;
+                order: -1;
+                flex: none;
+            }
+
+            .markdown-body h1 {
+                font-size: 2.2rem;
             }
         }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            main {
+                padding: 1.5rem;
+            }
+
+            .markdown-body h1 {
+                font-size: 1.8rem;
+            }
+
+            .markdown-body pre {
+                padding: 1rem !important;
+                font-size: 0.85rem !important;
+            }
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Focus indicators */
+        *:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* Print styles */
+        @media print {
+            .container {
+                display: block;
+            }
+            
+            nav#toc {
+                display: none;
+            }
+            
+            main {
+                box-shadow: none;
+                background: white;
+                color: black;
+            }
+        }
+
+        /* Loading animation for syntax highlighting */
+        .highlight-loading {
+            position: relative;
+            opacity: 0.7;
+        }
+
+        .highlight-loading::after {
+            content: 'Loading syntax highlighting...';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
     </style>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "G4F - Configuration",
+      "description": "GPT4Free documentation for G4F - Configuration. Complete guides, examples, and API reference for free AI endpoints.",
+      "author": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization",
+        "name": "GPT4Free",
+        "url": "https://g4f.dev",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://g4f.dev/dist/img/apple-touch-icon.png"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://g4f.dev/docs/configuration.html"
+      },
+      "datePublished": "2024-01-01T00:00:00Z",
+      "dateModified": "2024-01-01T00:00:00Z",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "keywords": "GPT4Free, AI documentation, free AI API, code generation",
+      "articleSection": "Documentation"
+    }
+    </script>
 </head>
 <body>
-    <article class="markdown-body entry-content container-lg" itemprop="text"><h2>G4F - Configuration</h2>
-<h2>Table of Contents</h2>
-<ul>
-<li><a href="#authentication">Authentication</a></li>
-<li><a href="#cookies-configuration">Cookies Configuration</a></li>
-<li><a href="#har-and-cookie-files">HAR and Cookie Files</a></li>
-<li><a href="#debug-mode">Debug Mode</a></li>
-<li><a href="#proxy-configuration">Proxy Configuration</a></li>
-</ul>
-<h4>Authentication</h4>
-<p>Refer to the <a href="authentication.html">G4F Authentication Setup Guide</a> for detailed instructions on setting up authentication.</p>
-<h3>Cookies Configuration</h3>
-<p>Cookies are essential for using Meta AI and Microsoft Designer to create images.<br>
-Additionally, cookies are required for the Google Gemini and WhiteRabbitNeo Provider.<br>
-From Bing, ensure you have the "_U" cookie, and from Google, all cookies starting with "__Secure-1PSID" are needed.</p>
-<p><strong>You can pass these cookies directly to the create function or set them using the <code class="notranslate">set_cookies</code> method before running G4F:</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">cookies</span> <span class="pl-k">import</span> <span class="pl-s1">set_cookies</span>
+    <div class="container">
+        <nav id="toc" aria-label="Table of contents" role="navigation">
+            <h2>Contents</h2>
+            <ul id="toc-list">
+                <!-- Table of contents will be generated here -->
+            </ul>
+            <hr style="margin: 1.5rem 0; opacity: 0.3;">
+            <ul>
+                <li><a href="/docs/" aria-label="Return to documentation home">📚 Documentation Hub</a></li>
+                <li><a href="/" aria-label="Return to main site">🏠 G4F Home</a></li>
+            </ul>
+        </nav>
 
-<span class="pl-en">set_cookies</span>(<span class="pl-s">".bing.com"</span>, {
-  <span class="pl-s">"_U"</span>: <span class="pl-s">"cookie value"</span>
-})
+        <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
+            Blocked by DNS monitoring proxy
+        </main>
+    </div>
 
-<span class="pl-en">set_cookies</span>(<span class="pl-s">".google.com"</span>, {
-  <span class="pl-s">"__Secure-1PSID"</span>: <span class="pl-s">"cookie value"</span>
-})</pre></div>
-<hr>
-<h3>HAR and Cookie Files</h3>
-<p><strong>Using .har and Cookie Files</strong><br>
-You can place <code class="notranslate">.har</code> and cookie files <code class="notranslate">.json</code> in the default <code class="notranslate">./har_and_cookies</code> directory. To export a cookie file, use the <a href="https://chromewebstore.google.com/detail/editthiscookie-v3/ojfebgpkimhlhcblbalbfjblapadhbol" rel="nofollow">EditThisCookie Extension</a> available on the Chrome Web Store.</p>
-<p><strong>Creating .har Files to Capture Cookies</strong><br>
-To capture cookies, you can also create <code class="notranslate">.har</code> files. For more details, refer to the next section.</p>
-<h3>Changing the Cookies Directory and Loading Cookie Files in Python</h3>
-<p><strong>You can change the cookies directory and load cookie files in your Python environment. To set the cookies directory relative to your Python file, use the following code:</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">os</span>.<span class="pl-s1">path</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">cookies</span> <span class="pl-k">import</span> <span class="pl-s1">set_cookies_dir</span>, <span class="pl-s1">read_cookie_files</span>
+    <script>
+        // Enhanced syntax highlighting with error handling
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // Initialize highlight.js
+                hljs.configure({
+                    languages: ['javascript', 'python', 'bash', 'json', 'typescript', 'html', 'css'],
+                    ignoreUnescapedHTML: true
+                });
 
-<span class="pl-k">import</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">debug</span>
-<span class="pl-s1">g4f</span>.<span class="pl-c1">debug</span>.<span class="pl-c1">logging</span> <span class="pl-c1">=</span> <span class="pl-c1">True</span>
+                // Add loading class to pre elements
+                document.querySelectorAll('pre code').forEach(function(block) {
+                    block.closest('pre').classList.add('highlight-loading');
+                });
 
-<span class="pl-s1">cookies_dir</span> <span class="pl-c1">=</span> <span class="pl-s1">os</span>.<span class="pl-c1">path</span>.<span class="pl-c1">join</span>(<span class="pl-s1">os</span>.<span class="pl-c1">path</span>.<span class="pl-c1">dirname</span>(<span class="pl-s1">__file__</span>), <span class="pl-s">"har_and_cookies"</span>)
-<span class="pl-en">set_cookies_dir</span>(<span class="pl-s1">cookies_dir</span>)
-<span class="pl-en">read_cookie_files</span>(<span class="pl-s1">cookies_dir</span>)</pre></div>
-<h3>Debug Mode</h3>
-<p><strong>If you enable debug mode, you will see logs similar to the following:</strong></p>
-<pre class="notranslate"><code class="notranslate">Read .har file: ./har_and_cookies/you.com.har
-Cookies added: 10 from .you.com
-Read cookie file: ./har_and_cookies/google.json
-Cookies added: 16 from .google.com
-</code></pre>
-<h4>.HAR File for OpenaiChat Provider</h4>
-<h5>Generating a .HAR File</h5>
-<p><strong>To utilize the OpenaiChat provider, a .har file is required from <a href="https://chatgpt.com/" rel="nofollow">https://chatgpt.com/</a>. Follow the steps below to create a valid .har file:</strong></p>
-<ol>
-<li>Navigate to <a href="https://chatgpt.com/" rel="nofollow">https://chatgpt.com/</a> using your preferred web browser and log in with your credentials.</li>
-<li>Access the Developer Tools in your browser. This can typically be done by right-clicking the page and selecting "Inspect," or by pressing F12 or Ctrl+Shift+I (Cmd+Option+I on a Mac).</li>
-<li>With the Developer Tools open, switch to the "Network" tab.</li>
-<li>Reload the website to capture the loading process within the Network tab.</li>
-<li>Initiate an action in the chat which can be captured in the .har file.</li>
-<li>Right-click any of the network activities listed and select "Save all as HAR with content" to export the .har file.</li>
-</ol>
-<h5>Storing the .HAR File</h5>
-<ul>
-<li>Place the exported .har file in the <code class="notranslate">./har_and_cookies</code> directory if you are using Docker. Alternatively, if you are using Python from a terminal, you can store it in a <code class="notranslate">./har_and_cookies</code> directory within your current working directory.</li>
-</ul>
-<blockquote>
-<p><strong>Note:</strong> Ensure that your .har file is stored securely, as it may contain sensitive information.</p>
-</blockquote>
-<h3>Proxy Configuration</h3>
-<p><strong>If you want to hide or change your IP address for the providers, you can set a proxy globally via an environment variable:</strong></p>
-<p><strong>- On macOS and Linux:</strong></p>
-<div class="highlight highlight-source-shell"><pre class="notranslate"><span class="pl-k">export</span> G4F_PROXY=<span class="pl-s"><span class="pl-pds">"</span>http://host:port<span class="pl-pds">"</span></span></pre></div>
-<p><strong>- On Windows:</strong></p>
-<div class="highlight highlight-source-shell"><pre class="notranslate"><span class="pl-c1">set</span> G4F_PROXY=http://host:port</pre></div>
-<hr>
-<p><a href="/docs/">Return to Documentation</a></p></article>
+                // Highlight all code blocks
+                hljs.highlightAll();
+
+                // Remove loading class after highlighting
+                setTimeout(function() {
+                    document.querySelectorAll('.highlight-loading').forEach(function(pre) {
+                        pre.classList.remove('highlight-loading');
+                    });
+                }, 100);
+
+                // Generate table of contents
+                generateTableOfContents();
+                
+            } catch (error) {
+                console.warn('Syntax highlighting failed:', error);
+                // Remove loading indicators on error
+                document.querySelectorAll('.highlight-loading').forEach(function(pre) {
+                    pre.classList.remove('highlight-loading');
+                });
+            }
+        });
+
+        function generateTableOfContents() {
+            const headings = document.querySelectorAll('main h2, main h3');
+            const tocList = document.getElementById('toc-list');
+            
+            if (!tocList || headings.length === 0) return;
+            
+            tocList.innerHTML = '';
+            
+            headings.forEach(function(heading, index) {
+                const id = heading.id || `heading-${index}`;
+                if (!heading.id) {
+                    heading.id = id;
+                }
+                
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `#${id}`;
+                a.textContent = heading.textContent;
+                a.setAttribute('aria-label', `Jump to ${heading.textContent}`);
+                
+                if (heading.tagName === 'H3') {
+                    li.style.marginLeft = '1rem';
+                    li.style.fontSize = '0.9em';
+                }
+                
+                li.appendChild(a);
+                tocList.appendChild(li);
+            });
+        }
+
+        // Smooth scrolling for anchor links
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
+                e.preventDefault();
+                const target = document.querySelector(e.target.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }
+        });
+
+        // Add copy button to code blocks
+        document.querySelectorAll('pre code').forEach(function(block) {
+            const button = document.createElement('button');
+            button.textContent = 'Copy';
+            button.className = 'copy-button';
+            button.style.cssText = `
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background: rgba(139, 61, 255, 0.8);
+                color: white;
+                border: none;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.8rem;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            const pre = block.closest('pre');
+            pre.style.position = 'relative';
+            pre.appendChild(button);
+            
+            pre.addEventListener('mouseenter', function() {
+                button.style.opacity = '1';
+            });
+            
+            pre.addEventListener('mouseleave', function() {
+                button.style.opacity = '0';
+            });
+            
+            button.addEventListener('click', function() {
+                navigator.clipboard.writeText(block.textContent).then(function() {
+                    button.textContent = 'Copied!';
+                    setTimeout(function() {
+                        button.textContent = 'Copy';
+                    }, 2000);
+                });
+            });
+        });
+    </script>
 </body>
 </html>

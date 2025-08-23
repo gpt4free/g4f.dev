@@ -1,447 +1,547 @@
 <!DOCTYPE html>
 <html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G4F - Requests API Guide</title>
-    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png">
-    <link rel="manifest" href="/dist/img/site.webmanifest">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>G4F - Requests API Guide | GPT4Free Documentation</title>
+
+    <meta name="description" content="GPT4Free documentation for G4F - Requests API Guide. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
+    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, G4F - Requests API Guide" />
+    <meta name="author" content="GPT4Free Team" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="G4F - Requests API Guide | GPT4Free Documentation" />
+    <meta property="og:description" content="GPT4Free documentation for G4F - Requests API Guide. Free AI endpoints, examples, and comprehensive guides." />
+    <meta property="og:url" content="https://g4f.dev/docs/requests.html" />
+    <meta property="og:site_name" content="GPT4Free Documentation" />
+    <meta property="og:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="G4F - Requests API Guide | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for G4F - Requests API Guide." />
+    <meta name="twitter:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://g4f.dev/docs/requests.html" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png" />
+    <link rel="manifest" href="/dist/img/site.webmanifest" />
+
+    <!-- GitHub Primer CSS & styles -->
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
+
+    <!-- Highlight.js for enhanced JavaScript syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    
     <style>
         :root {
-            --colour-1: #000000;
-            --colour-2: #ccc;
-            --colour-3: #e4d4ff;
-            --colour-4: #f0f0f0;
-            --colour-5: #181818;
-            --colour-6: #242424;
             --accent: #8b3dff;
-            --gradient: #1a1a1a;
             --background: #16101b;
-            --size: 70vw;
-            --top: 50%;
-            --blur: 40px;
-            --opacity: 0.6;
+            --text-primary: #ddd;
+            --text-secondary: #9b7dff;
+            --card-bg: #1e152e;
+            --border-color: #333;
+            --hover-color: #a67eff;
         }
 
-        /* Body and text color */
         body {
-            height: 100vh;
             margin: 0;
             padding: 0;
+            background: var(--background);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            line-height: 1.6;
+            min-height: 100vh;
         }
 
-        .hidden {
-            display: none;
-        }
-
-        .container-lg {
+        .container {
+            display: flex;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 8px;
+            padding: 2rem;
+            gap: 3rem;
+            min-height: calc(100vh - 4rem);
         }
 
-        @media only screen and (min-width: 40em) {
-            .container-lg {
-                max-width: 84%;
+        /* Enhanced main content styling */
+        main {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            overflow-wrap: break-word;
+            position: relative;
+        }
+
+        /* Typography improvements */
+        .markdown-body h1 {
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 0.5rem;
+        }
+
+        .markdown-body h2 {
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body h3 {
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body p {
+            margin-bottom: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        /* Enhanced link styling */
+        .markdown-body a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .markdown-body a:hover,
+        .markdown-body a:focus {
+            color: var(--hover-color);
+            outline: none;
+            text-decoration: underline;
+            text-shadow: 0 0 8px rgba(139, 61, 255, 0.3);
+        }
+
+        /* Enhanced code block styling */
+        .markdown-body pre {
+            background: #2c2247 !important;
+            border-radius: 12px;
+            padding: 1.5rem !important;
+            font-size: 0.95rem !important;
+            overflow-x: auto;
+            max-height: 500px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.4);
+            color: #fff;
+            border: 1px solid #3d2a5c;
+            position: relative;
+        }
+
+        .markdown-body pre:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--hover-color));
+            border-radius: 12px 12px 0 0;
+        }
+
+        .markdown-body code {
+            font-family: 'SF Mono', 'Cascadia Code', 'Roboto Mono', Consolas, Liberation Mono, Menlo, monospace;
+            background: rgba(139, 61, 255, 0.1);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            color: #e6ccff;
+            font-size: 0.9em;
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        /* Table styling */
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 2rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .markdown-body table th,
+        .markdown-body table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .markdown-body table th {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .markdown-body table tr:nth-child(even) {
+            background: rgba(139, 61, 255, 0.05);
+        }
+
+        /* List styling */
+        .markdown-body ul, 
+        .markdown-body ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        .markdown-body li {
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        /* Blockquote styling */
+        .markdown-body blockquote {
+            border-left: 4px solid var(--accent);
+            background: rgba(139, 61, 255, 0.1);
+            margin: 2rem 0;
+            padding: 1rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* HR styling */
+        .markdown-body hr {
+            border: none;
+            border-top: 2px solid var(--accent);
+            margin: 3rem 0;
+            opacity: 0.6;
+        }
+
+        /* Sticky table of contents */
+        nav#toc {
+            flex: 0 0 280px;
+            position: sticky;
+            top: 2rem;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid rgba(139, 61, 255, 0.2);
+        }
+
+        nav#toc h2 {
+            font-size: 1.4rem;
+            margin: 0 0 1.5rem 0;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        nav#toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        nav#toc li {
+            margin-bottom: 0.8rem;
+        }
+
+        nav#toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: block;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        nav#toc a:hover, 
+        nav#toc a:focus {
+            background: rgba(139, 61, 255, 0.1);
+            color: var(--hover-color);
+            text-decoration: none;
+            transform: translateX(4px);
+        }
+
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 2rem;
+            }
+
+            nav#toc {
+                position: relative;
+                max-height: none;
+                order: -1;
+                flex: none;
+            }
+
+            .markdown-body h1 {
+                font-size: 2.2rem;
             }
         }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            main {
+                padding: 1.5rem;
+            }
+
+            .markdown-body h1 {
+                font-size: 1.8rem;
+            }
+
+            .markdown-body pre {
+                padding: 1rem !important;
+                font-size: 0.85rem !important;
+            }
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Focus indicators */
+        *:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* Print styles */
+        @media print {
+            .container {
+                display: block;
+            }
+            
+            nav#toc {
+                display: none;
+            }
+            
+            main {
+                box-shadow: none;
+                background: white;
+                color: black;
+            }
+        }
+
+        /* Loading animation for syntax highlighting */
+        .highlight-loading {
+            position: relative;
+            opacity: 0.7;
+        }
+
+        .highlight-loading::after {
+            content: 'Loading syntax highlighting...';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
     </style>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "G4F - Requests API Guide",
+      "description": "GPT4Free documentation for G4F - Requests API Guide. Complete guides, examples, and API reference for free AI endpoints.",
+      "author": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization",
+        "name": "GPT4Free",
+        "url": "https://g4f.dev",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://g4f.dev/dist/img/apple-touch-icon.png"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://g4f.dev/docs/requests.html"
+      },
+      "datePublished": "2024-01-01T00:00:00Z",
+      "dateModified": "2024-01-01T00:00:00Z",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "keywords": "GPT4Free, AI documentation, free AI API, code generation",
+      "articleSection": "Documentation"
+    }
+    </script>
 </head>
 <body>
-    <article class="markdown-body entry-content container-lg" itemprop="text"><h2>G4F - Requests API Guide</h2>
-<h2>Table of Contents</h2>
-<ul>
-<li><a href="#introduction">Introduction</a></li>
-<li><a href="#getting-started">Getting Started</a>
-<ul>
-<li><a href="#installing-dependencies">Installing Dependencies</a></li>
-</ul>
-</li>
-<li><a href="#making-api-requests">Making API Requests</a></li>
-<li><a href="#text-generation">Text Generation</a>
-<ul>
-<li><a href="#using-the-chat-completions-endpoint">Using the Chat Completions Endpoint</a></li>
-<li><a href="#streaming-text-generation">Streaming Text Generation</a></li>
-</ul>
-</li>
-<li><a href="#model-retrieval">Model Retrieval</a>
-<ul>
-<li><a href="#fetching-available-models">Fetching Available Models</a></li>
-</ul>
-</li>
-<li><a href="#image-generation">Image Generation</a>
-<ul>
-<li><a href="#creating-images-with-ai">Creating Images with AI</a></li>
-</ul>
-</li>
-<li><a href="#advanced-usage">Advanced Usage</a></li>
-</ul>
-<h2>Introduction</h2>
-<p>Welcome to the G4F Requests API Guide, a powerful tool for leveraging AI capabilities directly from your Python applications using HTTP requests. This guide will take you through the steps of setting up requests to interact with AI models for a variety of tasks, from text generation to image creation.</p>
-<h2>Getting Started</h2>
-<h3>Installing Dependencies</h3>
-<p>Ensure you have the <code class="notranslate">requests</code> library installed in your environment. You can install it via <code class="notranslate">pip</code> if needed:</p>
-<div class="highlight highlight-source-shell"><pre class="notranslate">pip install requests</pre></div>
-<p>This guide provides examples on how to make API requests using Python's <code class="notranslate">requests</code> library, focusing on tasks such as text and image generation, as well as retrieving available models.</p>
-<h2>Making API Requests</h2>
-<p>Before diving into specific functionalities, it's essential to understand how to structure your API requests. All endpoints assume that your server is running locally at <code class="notranslate">http://localhost</code>. If your server is running on a different port, adjust the URLs accordingly (e.g., <code class="notranslate">http://localhost:8000</code>).</p>
-<h2>Text Generation</h2>
-<h3>Using the Chat Completions Endpoint</h3>
-<p>To generate text responses using the chat completions endpoint, follow this example:</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">requests</span>
+    <div class="container">
+        <nav id="toc" aria-label="Table of contents" role="navigation">
+            <h2>Contents</h2>
+            <ul id="toc-list">
+                <!-- Table of contents will be generated here -->
+            </ul>
+            <hr style="margin: 1.5rem 0; opacity: 0.3;">
+            <ul>
+                <li><a href="/docs/" aria-label="Return to documentation home">📚 Documentation Hub</a></li>
+                <li><a href="/" aria-label="Return to main site">🏠 G4F Home</a></li>
+            </ul>
+        </nav>
 
-<span class="pl-c"># Define the payload</span>
-<span class="pl-s1">payload</span> <span class="pl-c1">=</span> {
-    <span class="pl-s">"model"</span>: <span class="pl-s">"gpt-4o"</span>,
-    <span class="pl-s">"temperature"</span>: <span class="pl-c1">0.9</span>,
-    <span class="pl-s">"messages"</span>: [{<span class="pl-s">"role"</span>: <span class="pl-s">"system"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello, how are you?"</span>}]
-}
+        <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
+            Blocked by DNS monitoring proxy
+        </main>
+    </div>
 
-<span class="pl-c"># Send the POST request to the chat completions endpoint</span>
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">requests</span>.<span class="pl-c1">post</span>(<span class="pl-s">"http://localhost/v1/chat/completions"</span>, <span class="pl-s1">json</span><span class="pl-c1">=</span><span class="pl-s1">payload</span>)
+    <script>
+        // Enhanced syntax highlighting with error handling
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // Initialize highlight.js
+                hljs.configure({
+                    languages: ['javascript', 'python', 'bash', 'json', 'typescript', 'html', 'css'],
+                    ignoreUnescapedHTML: true
+                });
 
-<span class="pl-c"># Check if the request was successful</span>
-<span class="pl-k">if</span> <span class="pl-s1">response</span>.<span class="pl-c1">status_code</span> <span class="pl-c1">==</span> <span class="pl-c1">200</span>:
-    <span class="pl-c"># Print the response text</span>
-    <span class="pl-en">print</span>(<span class="pl-s1">response</span>.<span class="pl-c1">text</span>)
-<span class="pl-k">else</span>:
-    <span class="pl-en">print</span>(<span class="pl-s">f"Request failed with status code <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">response</span>.<span class="pl-c1">status_code</span><span class="pl-kos">}</span></span>"</span>)
-    <span class="pl-en">print</span>(<span class="pl-s">"Response:"</span>, <span class="pl-s1">response</span>.<span class="pl-c1">text</span>)</pre></div>
-<p><strong>Explanation:</strong></p>
-<ul>
-<li>This request sends a conversation context to the model, which in turn generates and returns a response.</li>
-<li>The <code class="notranslate">temperature</code> parameter controls the randomness of the output.</li>
-</ul>
-<h3>Streaming Text Generation</h3>
-<p>For scenarios where you want to receive partial responses or stream data as it's generated, you can utilize the streaming capabilities of the API. Here's how you can implement streaming text generation using Python's <code class="notranslate">requests</code> library:</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">requests</span>
-<span class="pl-k">import</span> <span class="pl-s1">json</span>
+                // Add loading class to pre elements
+                document.querySelectorAll('pre code').forEach(function(block) {
+                    block.closest('pre').classList.add('highlight-loading');
+                });
 
-<span class="pl-k">def</span> <span class="pl-en">fetch_response</span>(<span class="pl-s1">url</span>, <span class="pl-s1">model</span>, <span class="pl-s1">messages</span>):
-    <span class="pl-s">"""</span>
-<span class="pl-s">    Sends a POST request to the streaming chat completions endpoint.</span>
-<span class="pl-s"></span>
-<span class="pl-s">    Args:</span>
-<span class="pl-s">        url (str): The API endpoint URL.</span>
-<span class="pl-s">        model (str): The model to use for text generation.</span>
-<span class="pl-s">        messages (list): A list of message dictionaries.</span>
-<span class="pl-s"></span>
-<span class="pl-s">    Returns:</span>
-<span class="pl-s">        requests.Response: The streamed response object.</span>
-<span class="pl-s">    """</span>
-    <span class="pl-s1">payload</span> <span class="pl-c1">=</span> {<span class="pl-s">"model"</span>: <span class="pl-s1">model</span>, <span class="pl-s">"messages"</span>: <span class="pl-s1">messages</span>, <span class="pl-s">"stream"</span>: <span class="pl-c1">True</span>}
-    <span class="pl-s1">headers</span> <span class="pl-c1">=</span> {
-        <span class="pl-s">"Content-Type"</span>: <span class="pl-s">"application/json"</span>,
-        <span class="pl-s">"Accept"</span>: <span class="pl-s">"text/event-stream"</span>,
-    }
-    <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">requests</span>.<span class="pl-c1">post</span>(<span class="pl-s1">url</span>, <span class="pl-s1">headers</span><span class="pl-c1">=</span><span class="pl-s1">headers</span>, <span class="pl-s1">json</span><span class="pl-c1">=</span><span class="pl-s1">payload</span>, <span class="pl-s1">stream</span><span class="pl-c1">=</span><span class="pl-c1">True</span>)
-    <span class="pl-k">if</span> <span class="pl-s1">response</span>.<span class="pl-c1">status_code</span> <span class="pl-c1">!=</span> <span class="pl-c1">200</span>:
-        <span class="pl-k">raise</span> <span class="pl-en">Exception</span>(
-            <span class="pl-s">f"Failed to send message: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">response</span>.<span class="pl-c1">status_code</span><span class="pl-kos">}</span></span> <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">response</span>.<span class="pl-c1">text</span><span class="pl-kos">}</span></span>"</span>
-        )
-    <span class="pl-k">return</span> <span class="pl-s1">response</span>
+                // Highlight all code blocks
+                hljs.highlightAll();
 
-<span class="pl-k">def</span> <span class="pl-en">process_stream</span>(<span class="pl-s1">response</span>):
-    <span class="pl-s">"""</span>
-<span class="pl-s">    Processes the streamed response and extracts messages.</span>
-<span class="pl-s"></span>
-<span class="pl-s">    Args:</span>
-<span class="pl-s">        response (requests.Response): The streamed response object.</span>
-<span class="pl-s">        output_queue (Queue): A queue to store the extracted messages.</span>
-<span class="pl-s">    """</span>
-    <span class="pl-k">for</span> <span class="pl-s1">line</span> <span class="pl-c1">in</span> <span class="pl-s1">response</span>.<span class="pl-c1">iter_lines</span>():
-        <span class="pl-k">if</span> <span class="pl-s1">line</span>:
-            <span class="pl-s1">line</span> <span class="pl-c1">=</span> <span class="pl-s1">line</span>.<span class="pl-c1">decode</span>(<span class="pl-s">"utf-8"</span>)
-            <span class="pl-k">if</span> <span class="pl-s1">line</span> <span class="pl-c1">==</span> <span class="pl-s">"data: [DONE]"</span>:
-                <span class="pl-en">print</span>(<span class="pl-s">"<span class="pl-cce">\n</span><span class="pl-cce">\n</span>Conversation completed."</span>)
-                <span class="pl-k">break</span>
-            <span class="pl-k">if</span> <span class="pl-s1">line</span>.<span class="pl-c1">startswith</span>(<span class="pl-s">"data: "</span>):
-                <span class="pl-k">try</span>:
-                    <span class="pl-s1">data</span> <span class="pl-c1">=</span> <span class="pl-s1">json</span>.<span class="pl-c1">loads</span>(<span class="pl-s1">line</span>[<span class="pl-c1">6</span>:])
-                    <span class="pl-s1">message</span> <span class="pl-c1">=</span> <span class="pl-s1">data</span>.<span class="pl-c1">get</span>(<span class="pl-s">"choices"</span>, [{}])[<span class="pl-c1">0</span>].<span class="pl-c1">get</span>(<span class="pl-s">"delta"</span>, {}).<span class="pl-c1">get</span>(<span class="pl-s">"content"</span>)
-                    <span class="pl-k">if</span> <span class="pl-s1">message</span>:
-                        <span class="pl-en">print</span>(<span class="pl-s1">message</span>, <span class="pl-s1">end</span><span class="pl-c1">=</span><span class="pl-s">""</span>, <span class="pl-s1">flush</span><span class="pl-c1">=</span><span class="pl-c1">True</span>)
-                <span class="pl-k">except</span> <span class="pl-s1">json</span>.<span class="pl-c1">JSONDecodeError</span> <span class="pl-k">as</span> <span class="pl-s1">e</span>:
-                    <span class="pl-en">print</span>(<span class="pl-s">f"Error decoding JSON: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">e</span><span class="pl-kos">}</span></span>"</span>)
-                    <span class="pl-k">continue</span>
+                // Remove loading class after highlighting
+                setTimeout(function() {
+                    document.querySelectorAll('.highlight-loading').forEach(function(pre) {
+                        pre.classList.remove('highlight-loading');
+                    });
+                }, 100);
 
-<span class="pl-c"># Define the API endpoint</span>
-<span class="pl-s1">chat_url</span> <span class="pl-c1">=</span> <span class="pl-s">"http://localhost:8080/v1/chat/completions"</span>
+                // Generate table of contents
+                generateTableOfContents();
+                
+            } catch (error) {
+                console.warn('Syntax highlighting failed:', error);
+                // Remove loading indicators on error
+                document.querySelectorAll('.highlight-loading').forEach(function(pre) {
+                    pre.classList.remove('highlight-loading');
+                });
+            }
+        });
 
-<span class="pl-c"># Define the payload</span>
-<span class="pl-s1">model</span> <span class="pl-c1">=</span> <span class="pl-s">""</span>
-<span class="pl-s1">messages</span> <span class="pl-c1">=</span> [{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello, how are you?"</span>}]
-
-<span class="pl-k">try</span>:
-    <span class="pl-c"># Fetch the streamed response</span>
-    <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-en">fetch_response</span>(<span class="pl-s1">chat_url</span>, <span class="pl-s1">model</span>, <span class="pl-s1">messages</span>)
-    
-    <span class="pl-c"># Process the streamed response</span>
-    <span class="pl-en">process_stream</span>(<span class="pl-s1">response</span>)
-
-<span class="pl-k">except</span> <span class="pl-v">Exception</span> <span class="pl-k">as</span> <span class="pl-s1">e</span>:
-    <span class="pl-en">print</span>(<span class="pl-s">f"An error occurred: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">e</span><span class="pl-kos">}</span></span>"</span>)</pre></div>
-<p><strong>Explanation:</strong></p>
-<ul>
-<li>
-<p><strong><code class="notranslate">fetch_response</code> Function:</strong></p>
-<ul>
-<li>Sends a POST request to the streaming chat completions endpoint with the specified model and messages.</li>
-<li>Sets <code class="notranslate">stream</code> parameter to <code class="notranslate">true</code> to enable streaming.</li>
-<li>Raises an exception if the request fails.</li>
-</ul>
-</li>
-<li>
-<p><strong><code class="notranslate">process_stream</code> Function:</strong></p>
-<ul>
-<li>Iterates over each line in the streamed response.</li>
-<li>Decodes the line and checks for the termination signal <code class="notranslate">"data: [DONE]"</code>.</li>
-<li>Parses lines that start with <code class="notranslate">"data: "</code> to extract the message content.</li>
-</ul>
-</li>
-<li>
-<p><strong>Main Execution:</strong></p>
-<ul>
-<li>Defines the API endpoint, model, and messages.</li>
-<li>Fetches and processes the streamed response.</li>
-<li>Retrieves and prints messages.</li>
-</ul>
-</li>
-</ul>
-<p><strong>Usage Tips:</strong></p>
-<ul>
-<li>Ensure your local server supports streaming.</li>
-<li>Adjust the <code class="notranslate">chat_url</code> if your local server runs on a different port or path.</li>
-<li>Use threading or asynchronous programming for handling streams in real-time applications.</li>
-</ul>
-<h2>Model Retrieval</h2>
-<h3>Fetching Available Models</h3>
-<p>To retrieve a list of available models, you can use the following function:</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">requests</span>
-
-<span class="pl-k">def</span> <span class="pl-en">fetch_models</span>():
-    <span class="pl-s">"""</span>
-<span class="pl-s">    Retrieves the list of available models from the API.</span>
-<span class="pl-s"></span>
-<span class="pl-s">    Returns:</span>
-<span class="pl-s">        dict: A dictionary containing available models or an error message.</span>
-<span class="pl-s">    """</span>
-    <span class="pl-s1">url</span> <span class="pl-c1">=</span> <span class="pl-s">"http://localhost/v1/models/"</span>
-    <span class="pl-k">try</span>:
-        <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">requests</span>.<span class="pl-c1">get</span>(<span class="pl-s1">url</span>)
-        <span class="pl-s1">response</span>.<span class="pl-c1">raise_for_status</span>()  <span class="pl-c"># Raise an error for HTTP issues</span>
-        <span class="pl-k">return</span> <span class="pl-s1">response</span>.<span class="pl-c1">json</span>()  <span class="pl-c"># Parse and return the JSON response</span>
-    <span class="pl-k">except</span> <span class="pl-v">Exception</span> <span class="pl-k">as</span> <span class="pl-s1">e</span>:
-        <span class="pl-k">return</span> {<span class="pl-s">"error"</span>: <span class="pl-en">str</span>(<span class="pl-s1">e</span>)}  <span class="pl-c"># Return an error message if something goes wrong</span>
-
-<span class="pl-s1">models</span> <span class="pl-c1">=</span> <span class="pl-en">fetch_models</span>()
-
-<span class="pl-en">print</span>(<span class="pl-s1">models</span>)</pre></div>
-<p><strong>Explanation:</strong></p>
-<ul>
-<li>The <code class="notranslate">fetch_models</code> function makes a GET request to the models endpoint.</li>
-<li>It handles HTTP errors and returns a parsed JSON response containing available models or an error message.</li>
-</ul>
-<h2>Image Generation</h2>
-<h3>Creating Images with AI</h3>
-<p>The following function demonstrates how to generate images using a specified model:</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">requests</span>
-
-<span class="pl-k">def</span> <span class="pl-en">generate_image</span>(<span class="pl-s1">prompt</span>: <span class="pl-smi">str</span>, <span class="pl-s1">model</span>: <span class="pl-smi">str</span> <span class="pl-c1">=</span> <span class="pl-s">"flux-4o"</span>):
-    <span class="pl-s">"""</span>
-<span class="pl-s">    Generates an image based on the provided text prompt.</span>
-<span class="pl-s"></span>
-<span class="pl-s">    Args:</span>
-<span class="pl-s">        prompt (str): The text prompt for image generation.</span>
-<span class="pl-s">        model (str, optional): The model to use for image generation. Defaults to "flux-4o".</span>
-<span class="pl-s"></span>
-<span class="pl-s">    Returns:</span>
-<span class="pl-s">        tuple: A tuple containing the image URL, caption, and the full response.</span>
-<span class="pl-s">    """</span>
-    <span class="pl-s1">payload</span> <span class="pl-c1">=</span> {
-        <span class="pl-s">"model"</span>: <span class="pl-s1">model</span>,
-        <span class="pl-s">"temperature"</span>: <span class="pl-c1">0.9</span>,
-        <span class="pl-s">"prompt"</span>: <span class="pl-s1">prompt</span>.<span class="pl-c1">replace</span>(<span class="pl-s">" "</span>, <span class="pl-s">"+"</span>),
-    }
-
-    <span class="pl-k">try</span>:
-        <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">requests</span>.<span class="pl-c1">post</span>(<span class="pl-s">"http://localhost/v1/images/generate"</span>, <span class="pl-s1">json</span><span class="pl-c1">=</span><span class="pl-s1">payload</span>)
-        <span class="pl-s1">response</span>.<span class="pl-c1">raise_for_status</span>()
-        <span class="pl-s1">res</span> <span class="pl-c1">=</span> <span class="pl-s1">response</span>.<span class="pl-c1">json</span>()
-
-        <span class="pl-s1">data</span> <span class="pl-c1">=</span> <span class="pl-s1">res</span>.<span class="pl-c1">get</span>(<span class="pl-s">"data"</span>)
-        <span class="pl-k">if</span> <span class="pl-c1">not</span> <span class="pl-s1">data</span> <span class="pl-c1">or</span> <span class="pl-c1">not</span> <span class="pl-en">isinstance</span>(<span class="pl-s1">data</span>, <span class="pl-s1">list</span>):
-            <span class="pl-k">raise</span> <span class="pl-en">ValueError</span>(<span class="pl-s">"Invalid 'data' in response"</span>)
-
-        <span class="pl-s1">image_url</span> <span class="pl-c1">=</span> <span class="pl-s1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">get</span>(<span class="pl-s">"url"</span>)
-        <span class="pl-k">if</span> <span class="pl-c1">not</span> <span class="pl-s1">image_url</span>:
-            <span class="pl-k">raise</span> <span class="pl-en">ValueError</span>(<span class="pl-s">"No 'url' found in response data"</span>)
-
-        <span class="pl-s1">timestamp</span> <span class="pl-c1">=</span> <span class="pl-s1">res</span>.<span class="pl-c1">get</span>(<span class="pl-s">"created"</span>)
-        <span class="pl-s1">caption</span> <span class="pl-c1">=</span> <span class="pl-s">f"Prompt: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">prompt</span><span class="pl-kos">}</span></span><span class="pl-cce">\n</span>Created: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">timestamp</span><span class="pl-kos">}</span></span><span class="pl-cce">\n</span>Model: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">model</span><span class="pl-kos">}</span></span>"</span>
-        <span class="pl-k">return</span> <span class="pl-s1">image_url</span>, <span class="pl-s1">caption</span>, <span class="pl-s1">res</span>
-
-    <span class="pl-k">except</span> <span class="pl-v">Exception</span> <span class="pl-k">as</span> <span class="pl-s1">e</span>:
-        <span class="pl-k">return</span> <span class="pl-c1">None</span>, <span class="pl-s">f"Error: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">e</span><span class="pl-kos">}</span></span>"</span>, <span class="pl-c1">None</span>
-
-<span class="pl-s1">prompt</span> <span class="pl-c1">=</span> <span class="pl-s">"A tiger in a forest"</span>
-
-<span class="pl-s1">image_url</span>, <span class="pl-s1">caption</span>, <span class="pl-s1">res</span> <span class="pl-c1">=</span> <span class="pl-en">generate_image</span>(<span class="pl-s1">prompt</span>)
-
-<span class="pl-en">print</span>(<span class="pl-s">"API Response:"</span>, <span class="pl-s1">res</span>)
-<span class="pl-en">print</span>(<span class="pl-s">"Image URL:"</span>, <span class="pl-s1">image_url</span>)
-<span class="pl-en">print</span>(<span class="pl-s">"Caption:"</span>, <span class="pl-s1">caption</span>)</pre></div>
-<p><strong>Explanation:</strong></p>
-<ul>
-<li>The <code class="notranslate">generate_image</code> function constructs a request to create an image based on a text prompt.</li>
-<li>It handles responses and possible errors, ensuring a URL and caption are returned if successful.</li>
-</ul>
-<h2>Advanced Usage</h2>
-<p>This guide has demonstrated basic usage scenarios for the G4F Requests API. The API provides robust capabilities for integrating advanced AI into your applications. You can expand upon these examples to fit more complex workflows and tasks, ensuring your applications are built with cutting-edge AI features.</p>
-<h3>Handling Concurrency and Asynchronous Requests</h3>
-<p>For applications requiring high performance and non-blocking operations, consider using asynchronous programming libraries such as <code class="notranslate">aiohttp</code> or <code class="notranslate">httpx</code>. Here's an example using <code class="notranslate">aiohttp</code>:</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">aiohttp</span>
-<span class="pl-k">import</span> <span class="pl-s1">asyncio</span>
-<span class="pl-k">import</span> <span class="pl-s1">json</span>
-<span class="pl-k">from</span> <span class="pl-s1">queue</span> <span class="pl-k">import</span> <span class="pl-v">Queue</span>
-
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">fetch_response_async</span>(<span class="pl-s1">url</span>, <span class="pl-s1">model</span>, <span class="pl-s1">messages</span>, <span class="pl-s1">output_queue</span>):
-    <span class="pl-s">"""</span>
-<span class="pl-s">    Asynchronously sends a POST request to the streaming chat completions endpoint and processes the stream.</span>
-<span class="pl-s"></span>
-<span class="pl-s">    Args:</span>
-<span class="pl-s">        url (str): The API endpoint URL.</span>
-<span class="pl-s">        model (str): The model to use for text generation.</span>
-<span class="pl-s">        messages (list): A list of message dictionaries.</span>
-<span class="pl-s">        output_queue (Queue): A queue to store the extracted messages.</span>
-<span class="pl-s">    """</span>
-    <span class="pl-s1">payload</span> <span class="pl-c1">=</span> {<span class="pl-s">"model"</span>: <span class="pl-s1">model</span>, <span class="pl-s">"messages"</span>: <span class="pl-s1">messages</span>, <span class="pl-s">"stream"</span>: <span class="pl-c1">True</span>}
-    <span class="pl-s1">headers</span> <span class="pl-c1">=</span> {
-        <span class="pl-s">"Content-Type"</span>: <span class="pl-s">"application/json"</span>,
-        <span class="pl-s">"Accept"</span>: <span class="pl-s">"text/event-stream"</span>,
-    }
-
-    <span class="pl-k">async</span> <span class="pl-k">with</span> <span class="pl-s1">aiohttp</span>.<span class="pl-c1">ClientSession</span>() <span class="pl-k">as</span> <span class="pl-s1">session</span>:
-        <span class="pl-k">async</span> <span class="pl-k">with</span> <span class="pl-s1">session</span>.<span class="pl-c1">post</span>(<span class="pl-s1">url</span>, <span class="pl-s1">headers</span><span class="pl-c1">=</span><span class="pl-s1">headers</span>, <span class="pl-s1">json</span><span class="pl-c1">=</span><span class="pl-s1">payload</span>) <span class="pl-k">as</span> <span class="pl-s1">resp</span>:
-            <span class="pl-k">if</span> <span class="pl-s1">resp</span>.<span class="pl-c1">status</span> <span class="pl-c1">!=</span> <span class="pl-c1">200</span>:
-                <span class="pl-s1">text</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">resp</span>.<span class="pl-c1">text</span>()
-                <span class="pl-k">raise</span> <span class="pl-en">Exception</span>(<span class="pl-s">f"Failed to send message: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">resp</span>.<span class="pl-c1">status</span><span class="pl-kos">}</span></span> <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">text</span><span class="pl-kos">}</span></span>"</span>)
+        function generateTableOfContents() {
+            const headings = document.querySelectorAll('main h2, main h3');
+            const tocList = document.getElementById('toc-list');
             
-            <span class="pl-k">async</span> <span class="pl-k">for</span> <span class="pl-s1">line</span> <span class="pl-c1">in</span> <span class="pl-s1">resp</span>.<span class="pl-c1">content</span>:
-                <span class="pl-s1">decoded_line</span> <span class="pl-c1">=</span> <span class="pl-s1">line</span>.<span class="pl-c1">decode</span>(<span class="pl-s">'utf-8'</span>).<span class="pl-c1">strip</span>()
-                <span class="pl-k">if</span> <span class="pl-s1">decoded_line</span> <span class="pl-c1">==</span> <span class="pl-s">"data: [DONE]"</span>:
-                    <span class="pl-k">break</span>
-                <span class="pl-k">if</span> <span class="pl-s1">decoded_line</span>.<span class="pl-c1">startswith</span>(<span class="pl-s">"data: "</span>):
-                    <span class="pl-k">try</span>:
-                        <span class="pl-s1">data</span> <span class="pl-c1">=</span> <span class="pl-s1">json</span>.<span class="pl-c1">loads</span>(<span class="pl-s1">decoded_line</span>[<span class="pl-c1">6</span>:])
-                        <span class="pl-s1">message</span> <span class="pl-c1">=</span> <span class="pl-s1">data</span>.<span class="pl-c1">get</span>(<span class="pl-s">"choices"</span>, [{}])[<span class="pl-c1">0</span>].<span class="pl-c1">get</span>(<span class="pl-s">"delta"</span>, {}).<span class="pl-c1">get</span>(<span class="pl-s">"content"</span>)
-                        <span class="pl-k">if</span> <span class="pl-s1">message</span>:
-                            <span class="pl-s1">output_queue</span>.<span class="pl-c1">put</span>(<span class="pl-s1">message</span>)
-                    <span class="pl-k">except</span> <span class="pl-s1">json</span>.<span class="pl-c1">JSONDecodeError</span>:
-                        <span class="pl-k">continue</span>
+            if (!tocList || headings.length === 0) return;
+            
+            tocList.innerHTML = '';
+            
+            headings.forEach(function(heading, index) {
+                const id = heading.id || `heading-${index}`;
+                if (!heading.id) {
+                    heading.id = id;
+                }
+                
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `#${id}`;
+                a.textContent = heading.textContent;
+                a.setAttribute('aria-label', `Jump to ${heading.textContent}`);
+                
+                if (heading.tagName === 'H3') {
+                    li.style.marginLeft = '1rem';
+                    li.style.fontSize = '0.9em';
+                }
+                
+                li.appendChild(a);
+                tocList.appendChild(li);
+            });
+        }
 
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">main</span>():
-    <span class="pl-s1">chat_url</span> <span class="pl-c1">=</span> <span class="pl-s">"http://localhost/v1/chat/completions"</span>
-    <span class="pl-s1">model</span> <span class="pl-c1">=</span> <span class="pl-s">"gpt-4o"</span>
-    <span class="pl-s1">messages</span> <span class="pl-c1">=</span> [{<span class="pl-s">"role"</span>: <span class="pl-s">"system"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello, how are you?"</span>}]
-    <span class="pl-s1">output_queue</span> <span class="pl-c1">=</span> <span class="pl-en">Queue</span>()
+        // Smooth scrolling for anchor links
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
+                e.preventDefault();
+                const target = document.querySelector(e.target.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }
+        });
 
-    <span class="pl-k">try</span>:
-        <span class="pl-k">await</span> <span class="pl-en">fetch_response_async</span>(<span class="pl-s1">chat_url</span>, <span class="pl-s1">model</span>, <span class="pl-s1">messages</span>, <span class="pl-s1">output_queue</span>)
-        
-        <span class="pl-k">while</span> <span class="pl-c1">not</span> <span class="pl-s1">output_queue</span>.<span class="pl-c1">empty</span>():
-            <span class="pl-s1">msg</span> <span class="pl-c1">=</span> <span class="pl-s1">output_queue</span>.<span class="pl-c1">get</span>()
-            <span class="pl-en">print</span>(<span class="pl-s1">msg</span>)
-
-    <span class="pl-k">except</span> <span class="pl-v">Exception</span> <span class="pl-k">as</span> <span class="pl-s1">e</span>:
-        <span class="pl-en">print</span>(<span class="pl-s">f"An error occurred: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">e</span><span class="pl-kos">}</span></span>"</span>)
-
-<span class="pl-c"># Run the asynchronous main function</span>
-<span class="pl-s1">asyncio</span>.<span class="pl-c1">run</span>(<span class="pl-en">main</span>())</pre></div>
-<p><strong>Explanation:</strong></p>
-<ul>
-<li><strong><code class="notranslate">aiohttp</code> Library:</strong> Facilitates asynchronous HTTP requests, allowing your application to handle multiple requests concurrently without blocking.</li>
-<li><strong><code class="notranslate">fetch_response_async</code> Function:</strong>
-<ul>
-<li>Sends an asynchronous POST request to the streaming chat completions endpoint.</li>
-<li>Processes the streamed response line by line.</li>
-<li>Extracts messages and enqueues them into <code class="notranslate">output_queue</code>.</li>
-</ul>
-</li>
-<li><strong><code class="notranslate">main</code> Function:</strong>
-<ul>
-<li>Defines the API endpoint, model, and messages.</li>
-<li>Initializes a <code class="notranslate">Queue</code> to store incoming messages.</li>
-<li>Invokes the asynchronous fetch function and processes the messages.</li>
-</ul>
-</li>
-</ul>
-<p><strong>Benefits:</strong></p>
-<ul>
-<li><strong>Performance:</strong> Handles multiple requests efficiently, reducing latency in high-throughput applications.</li>
-<li><strong>Scalability:</strong> Easily scales with increasing demand, making it suitable for production environments.</li>
-</ul>
-<p><strong>Note:</strong> Ensure you have <code class="notranslate">aiohttp</code> installed:</p>
-<div class="highlight highlight-source-shell"><pre class="notranslate">pip install aiohttp</pre></div>
-<h2>Conclusion</h2>
-<p>By following this guide, you can effectively integrate the G4F Requests API into your Python applications, enabling powerful AI-driven functionalities such as text and image generation, model retrieval, and handling streaming data. Whether you're building simple scripts or complex, high-performance applications, the examples provided offer a solid foundation to harness the full potential of AI in your projects.</p>
-<p>Feel free to customize and expand upon these examples to suit your specific needs. If you encounter any issues or have further questions, don't hesitate to seek assistance or refer to additional resources.</p>
-<hr>
-<h1>Additional Notes</h1>
-<ol>
-<li>
-<p><strong>Adjusting the Base URL:</strong></p>
-<ul>
-<li>The guide assumes your API server is accessible at <code class="notranslate">http://localhost</code>. If your server runs on a different port (e.g., <code class="notranslate">8000</code>), update the URLs accordingly:
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-c"># Example for port 8000</span>
-<span class="pl-s1">chat_url</span> <span class="pl-c1">=</span> <span class="pl-s">"http://localhost:8000/v1/chat/completions"</span></pre></div>
-</li>
-</ul>
-</li>
-<li>
-<p><strong>Environment Variables (Optional):</strong></p>
-<ul>
-<li>For better flexibility and security, consider using environment variables to store your base URL and other sensitive information.
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">os</span>
-
-<span class="pl-c1">BASE_URL</span> <span class="pl-c1">=</span> <span class="pl-s1">os</span>.<span class="pl-c1">getenv</span>(<span class="pl-s">"API_BASE_URL"</span>, <span class="pl-s">"http://localhost"</span>)
-<span class="pl-s1">chat_url</span> <span class="pl-c1">=</span> <span class="pl-s">f"<span class="pl-s1"><span class="pl-kos">{</span><span class="pl-c1">BASE_URL</span><span class="pl-kos">}</span></span>/v1/chat/completions"</span></pre></div>
-</li>
-</ul>
-</li>
-<li>
-<p><strong>Error Handling:</strong></p>
-<ul>
-<li>Always implement robust error handling to gracefully manage unexpected scenarios, such as network failures or invalid responses.</li>
-</ul>
-</li>
-<li>
-<p><strong>Security Considerations:</strong></p>
-<ul>
-<li>Ensure that your local API server is secured, especially if accessible over a network. Implement authentication mechanisms if necessary.</li>
-</ul>
-</li>
-<li>
-<p><strong>Testing:</strong></p>
-<ul>
-<li>Utilize tools like <a href="https://www.postman.com/" rel="nofollow">Postman</a> or <a href="https://insomnia.rest/" rel="nofollow">Insomnia</a> for testing your API endpoints before integrating them into your code.</li>
-</ul>
-</li>
-<li>
-<p><strong>Logging:</strong></p>
-<ul>
-<li>Implement logging to monitor the behavior of your applications, which is crucial for debugging and maintaining your systems.</li>
-</ul>
-</li>
-</ol>
-<hr>
-<p><a href="/docs/">Return to Documentation</a></p></article>
+        // Add copy button to code blocks
+        document.querySelectorAll('pre code').forEach(function(block) {
+            const button = document.createElement('button');
+            button.textContent = 'Copy';
+            button.className = 'copy-button';
+            button.style.cssText = `
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background: rgba(139, 61, 255, 0.8);
+                color: white;
+                border: none;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.8rem;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            const pre = block.closest('pre');
+            pre.style.position = 'relative';
+            pre.appendChild(button);
+            
+            pre.addEventListener('mouseenter', function() {
+                button.style.opacity = '1';
+            });
+            
+            pre.addEventListener('mouseleave', function() {
+                button.style.opacity = '0';
+            });
+            
+            button.addEventListener('click', function() {
+                navigator.clipboard.writeText(block.textContent).then(function() {
+                    button.textContent = 'Copied!';
+                    setTimeout(function() {
+                        button.textContent = 'Copy';
+                    }, 2000);
+                });
+            });
+        });
+    </script>
 </body>
 </html>

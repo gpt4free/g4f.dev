@@ -13,15 +13,25 @@ for root, _, files in os.walk(os.path.dirname(__file__)):
                     print("Title:", title)
                 except Exception as e:
                     print(f"Error reading file {file}: {e}")
-            html = requests.post(
-                "https://api.github.com/markdown",
-                json={"text": content.replace(
-                    "(README.md)", "(/docs/)").replace(
-                    "(../README.md)", "(/docs/)").replace(
-                    ".md)", ".html)")},
-                headers={"Accept": "application/vnd.github+json", "Authorization": f"Bearer {os.getenv("GITHUB_TOKEN")}"}
-            ).text
-            with open(os.path.join(os.path.dirname(__file__), "template.html"), 'r') as f:
+                    continue
+            
+            try:
+                html = requests.post(
+                    "https://api.github.com/markdown",
+                    json={"text": content.replace(
+                        "(README.md)", "(/docs/)").replace(
+                        "(../README.md)", "(/docs/)").replace(
+                        ".md)", ".html)")},
+                    headers={"Accept": "application/vnd.github+json", "Authorization": f"Bearer {os.getenv('GITHUB_TOKEN')}"}
+                ).text
+            except Exception as e:
+                print(f"Error converting markdown for {file}: {e}")
+                continue
+                
+            with open(os.path.join(os.path.dirname(__file__), "template.html"), 'r', encoding='utf-8') as f:
                 template = f.read()
-            with open(os.path.join(root, filename), 'w') as f:
-                f.write(template.replace("{{ article }}", html).replace("{{ title }}", title))
+            
+            with open(os.path.join(root, filename), 'w', encoding='utf-8') as f:
+                f.write(template.replace("{{ article }}", html)
+                              .replace("{{ title }}", title)
+                              .replace("{{ filename }}", filename))

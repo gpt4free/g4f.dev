@@ -1,36 +1,37 @@
 <!DOCTYPE html>
 <html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GPT4Free Image Editing Variation Documentation</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GPT4Free Image Editing Variation Documentation | GPT4Free Documentation</title>
 
-    <meta name="description" content="Learn how to use GPT4Free's Image Editing Variation feature to generate image variations using multiple AI providers. Includes code examples, file upload usage, troubleshooting, and example outputs." />
-    <meta name="keywords" content="GPT4Free, image editing, AI image variation, AI providers, PollinationsAI, Together, HuggingSpace, Azure, OpenAI, Copilot, image upload, AI image generation" />
-    <meta name="author" content="GPT4Free Team"/>
+    <meta name="description" content="GPT4Free documentation for GPT4Free Image Editing Variation Documentation. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
+    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, GPT4Free Image Editing Variation Documentation" />
+    <meta name="author" content="GPT4Free Team" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="article" />
-    <meta property="og:title" content="GPT4Free Image Editing Variation Documentation" />
-    <meta property="og:description" content="Guide on GPT4Free Image Editing Variation with multiple providers, example images, and usage examples." />
+    <meta property="og:title" content="GPT4Free Image Editing Variation Documentation | GPT4Free Documentation" />
+    <meta property="og:description" content="GPT4Free documentation for GPT4Free Image Editing Variation Documentation. Free AI endpoints, examples, and comprehensive guides." />
     <meta property="og:url" content="https://g4f.dev/docs/image_editing.html" />
-    <meta property="og:site_name" content="GPT4Free (g4f.dev)" />
-    <meta property="og:image" content="https://g4f.dev/docs/images/strawberry.jpg" />
+    <meta property="og:site_name" content="GPT4Free Documentation" />
+    <meta property="og:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="GPT4Free Image Editing Variation Documentation" />
-    <meta name="twitter:description" content="Guide to GPT4Free's Image Editing Variation feature with provider info, code samples, and example results." />
-    <meta name="twitter:image" content="https://g4f.dev/docs/images/strawberry.jpg" />
+    <meta name="twitter:title" content="GPT4Free Image Editing Variation Documentation | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for GPT4Free Image Editing Variation Documentation." />
+    <meta name="twitter:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
 
     <!-- Canonical -->
     <link rel="canonical" href="https://g4f.dev/docs/image_editing.html" />
 
-    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png">
-    <link rel="manifest" href="/dist/img/site.webmanifest">
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png" />
+    <link rel="manifest" href="/dist/img/site.webmanifest" />
 
+    <!-- GitHub Primer CSS & styles -->
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
@@ -38,42 +39,332 @@
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
 
+    <!-- Highlight.js for enhanced JavaScript syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    
     <style>
         :root {
-            --colour-1: #000000;
-            --colour-2: #ccc;
-            --colour-3: #e4d4ff;
-            --colour-4: #f0f0f0;
-            --colour-5: #181818;
-            --colour-6: #242424;
             --accent: #8b3dff;
-            --gradient: #1a1a1a;
             --background: #16101b;
-            --size: 70vw;
-            --top: 50%;
-            --blur: 40px;
-            --opacity: 0.6;
+            --text-primary: #ddd;
+            --text-secondary: #9b7dff;
+            --card-bg: #1e152e;
+            --border-color: #333;
+            --hover-color: #a67eff;
         }
 
         body {
-            height: 100vh;
             margin: 0;
             padding: 0;
+            background: var(--background);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            line-height: 1.6;
+            min-height: 100vh;
         }
 
-        .hidden {
-            display: none;
-        }
-
-        .container-lg {
+        .container {
+            display: flex;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 8px;
+            padding: 2rem;
+            gap: 3rem;
+            min-height: calc(100vh - 4rem);
         }
 
-        @media only screen and (min-width: 40em) {
-            .container-lg {
-                max-width: 84%;
+        /* Enhanced main content styling */
+        main {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            overflow-wrap: break-word;
+            position: relative;
+        }
+
+        /* Typography improvements */
+        .markdown-body h1 {
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 0.5rem;
+        }
+
+        .markdown-body h2 {
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body h3 {
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body p {
+            margin-bottom: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        /* Enhanced link styling */
+        .markdown-body a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .markdown-body a:hover,
+        .markdown-body a:focus {
+            color: var(--hover-color);
+            outline: none;
+            text-decoration: underline;
+            text-shadow: 0 0 8px rgba(139, 61, 255, 0.3);
+        }
+
+        /* Enhanced code block styling */
+        .markdown-body pre {
+            background: #2c2247 !important;
+            border-radius: 12px;
+            padding: 1.5rem !important;
+            font-size: 0.95rem !important;
+            overflow-x: auto;
+            max-height: 500px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.4);
+            color: #fff;
+            border: 1px solid #3d2a5c;
+            position: relative;
+        }
+
+        .markdown-body pre:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--hover-color));
+            border-radius: 12px 12px 0 0;
+        }
+
+        .markdown-body code {
+            font-family: 'SF Mono', 'Cascadia Code', 'Roboto Mono', Consolas, Liberation Mono, Menlo, monospace;
+            background: rgba(139, 61, 255, 0.1);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            color: #e6ccff;
+            font-size: 0.9em;
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        /* Table styling */
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 2rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .markdown-body table th,
+        .markdown-body table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .markdown-body table th {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .markdown-body table tr:nth-child(even) {
+            background: rgba(139, 61, 255, 0.05);
+        }
+
+        /* List styling */
+        .markdown-body ul, 
+        .markdown-body ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        .markdown-body li {
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        /* Blockquote styling */
+        .markdown-body blockquote {
+            border-left: 4px solid var(--accent);
+            background: rgba(139, 61, 255, 0.1);
+            margin: 2rem 0;
+            padding: 1rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* HR styling */
+        .markdown-body hr {
+            border: none;
+            border-top: 2px solid var(--accent);
+            margin: 3rem 0;
+            opacity: 0.6;
+        }
+
+        /* Sticky table of contents */
+        nav#toc {
+            flex: 0 0 280px;
+            position: sticky;
+            top: 2rem;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid rgba(139, 61, 255, 0.2);
+        }
+
+        nav#toc h2 {
+            font-size: 1.4rem;
+            margin: 0 0 1.5rem 0;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        nav#toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        nav#toc li {
+            margin-bottom: 0.8rem;
+        }
+
+        nav#toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: block;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        nav#toc a:hover, 
+        nav#toc a:focus {
+            background: rgba(139, 61, 255, 0.1);
+            color: var(--hover-color);
+            text-decoration: none;
+            transform: translateX(4px);
+        }
+
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 2rem;
             }
+
+            nav#toc {
+                position: relative;
+                max-height: none;
+                order: -1;
+                flex: none;
+            }
+
+            .markdown-body h1 {
+                font-size: 2.2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            main {
+                padding: 1.5rem;
+            }
+
+            .markdown-body h1 {
+                font-size: 1.8rem;
+            }
+
+            .markdown-body pre {
+                padding: 1rem !important;
+                font-size: 0.85rem !important;
+            }
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Focus indicators */
+        *:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* Print styles */
+        @media print {
+            .container {
+                display: block;
+            }
+            
+            nav#toc {
+                display: none;
+            }
+            
+            main {
+                box-shadow: none;
+                background: white;
+                color: black;
+            }
+        }
+
+        /* Loading animation for syntax highlighting */
+        .highlight-loading {
+            position: relative;
+            opacity: 0.7;
+        }
+
+        .highlight-loading::after {
+            content: 'Loading syntax highlighting...';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
         }
     </style>
 
@@ -82,359 +373,175 @@
       "@context": "https://schema.org",
       "@type": "TechArticle",
       "headline": "GPT4Free Image Editing Variation Documentation",
-      "description": "Learn how to use GPT4Free's Image Editing Variation feature to generate image variations using multiple AI providers, with code examples and image results.",
-      "image": "https://g4f.dev/docs/images/strawberry.jpg",
+      "description": "GPT4Free documentation for GPT4Free Image Editing Variation Documentation. Complete guides, examples, and API reference for free AI endpoints.",
       "author": {
         "@type": "Organization",
-        "name": "GPT4Free"
+        "@id": "https://g4f.dev/#organization",
+        "name": "GPT4Free",
+        "url": "https://g4f.dev",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://g4f.dev/dist/img/apple-touch-icon.png"
+        }
       },
       "publisher": {
         "@type": "Organization",
-        "name": "GPT4Free",
-        "logo": {
-          "@type": "ImageObject",
-          "url": "https://g4f.dev/dist/img/favicon-32x32.png"
-        }
+        "@id": "https://g4f.dev/#organization"
       },
       "mainEntityOfPage": {
         "@type": "WebPage",
         "@id": "https://g4f.dev/docs/image_editing.html"
-      }
+      },
+      "datePublished": "2024-01-01T00:00:00Z",
+      "dateModified": "2024-01-01T00:00:00Z",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "keywords": "GPT4Free, AI documentation, free AI API, code generation",
+      "articleSection": "Documentation"
     }
     </script>
 </head>
 <body>
-    <article class="markdown-body entry-content container-lg" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
-
-        <h1 itemprop="headline">GPT4Free Image Editing Variation Documentation</h1>
-        <p itemprop="description">This guide explains how to use the image editing variation feature in <strong>GPT4Free (g4f.dev)</strong>. It covers generating variations of images using different providers, handling local file uploads, and showcasing example results.</p>
-
-        <hr />
-
-        <nav aria-label="Table of Contents">
-            <h2>Table of Contents</h2>
-            <ol>
-                <li><a href="#overview">Overview</a></li>
-                <li><a href="#providers-and-models">Providers and Models</a></li>
-                <li><a href="#using-local-file-uploads">Using Local File Uploads</a></li>
-                <li><a href="#example-results">Example Results</a></li>
-                <li><a href="#code-examples">Code Examples</a></li>
-                <li><a href="#troubleshooting">Troubleshooting</a></li>
-                <li><a href="#conclusion">Conclusion</a></li>
-            </ol>
+    <div class="container">
+        <nav id="toc" aria-label="Table of contents" role="navigation">
+            <h2>Contents</h2>
+            <ul id="toc-list">
+                <!-- Table of contents will be generated here -->
+            </ul>
+            <hr style="margin: 1.5rem 0; opacity: 0.3;">
+            <ul>
+                <li><a href="/docs/" aria-label="Return to documentation home">📚 Documentation Hub</a></li>
+                <li><a href="/" aria-label="Return to main site">🏠 G4F Home</a></li>
+            </ul>
         </nav>
 
-        <hr />
+        <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
+            Blocked by DNS monitoring proxy
+        </main>
+    </div>
 
-        <section id="overview" aria-labelledby="overview-heading">
-            <h2 id="overview-heading">Overview</h2>
-            <p>The <code class="notranslate" itemprop="softwareVersion">g4f</code> library allows you to generate variations of an input image based on a textual prompt. You can use any of these input types:</p>
-            <ul>
-                <li>A URL to a remote image</li>
-                <li>A local file path</li>
-                <li>Uploaded files from your local server</li>
-            </ul>
-            <p>The library supports multiple providers, including those that require local file access.</p>
-        </section>
+    <script>
+        // Enhanced syntax highlighting with error handling
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // Initialize highlight.js
+                hljs.configure({
+                    languages: ['javascript', 'python', 'bash', 'json', 'typescript', 'html', 'css'],
+                    ignoreUnescapedHTML: true
+                });
 
-        <hr />
+                // Add loading class to pre elements
+                document.querySelectorAll('pre code').forEach(function(block) {
+                    block.closest('pre').classList.add('highlight-loading');
+                });
 
-        <section id="providers-and-models" aria-labelledby="providers-models-heading">
-            <h2 id="providers-models-heading">Providers and Models</h2>
-            <table role="table" aria-describedby="providers-models-desc">
-                <caption id="providers-models-desc" class="sr-only">Supported providers, input types, and notes</caption>
-                <thead>
-                    <tr>
-                        <th scope="col">Provider</th>
-                        <th scope="col">Input Type</th>
-                        <th scope="col">Notes</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><strong>PollinationsAI</strong></td>
-                        <td>URL</td>
-                        <td>Uses <code class="notranslate">flux-kontext</code> model</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Together</strong></td>
-                        <td>URL</td>
-                        <td>Uses <code class="notranslate">flux-kontext-pro</code> model</td>
-                    </tr>
-                    <tr>
-                        <td><strong>HuggingSpace</strong></td>
-                        <td>Local file</td>
-                        <td>Uses <code class="notranslate">flux-kontext-dev</code> model</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Azure</strong></td>
-                        <td>Local file</td>
-                        <td>Requires authentication</td>
-                    </tr>
-                    <tr>
-                        <td><strong>OpenaiAccount</strong></td>
-                        <td>Local file</td>
-                        <td>Requires authentication</td>
-                    </tr>
-                    <tr>
-                        <td><strong>CopilotAccount</strong></td>
-                        <td>Local file</td>
-                        <td>Requires authentication</td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
+                // Highlight all code blocks
+                hljs.highlightAll();
 
-        <hr />
+                // Remove loading class after highlighting
+                setTimeout(function() {
+                    document.querySelectorAll('.highlight-loading').forEach(function(pre) {
+                        pre.classList.remove('highlight-loading');
+                    });
+                }, 100);
 
-        <section id="using-local-file-uploads" aria-labelledby="local-file-upload-heading">
-            <h2 id="local-file-upload-heading">Using Local File Uploads</h2>
-            <p>GPT4Free allows you to upload image files to your local server. These uploaded files can be used with all providers, including those that normally require local files.</p>
-<h3>JavaScript Upload Example:</h3>
-<div class="highlight highlight-source-js"><pre class="notranslate"><span class="pl-k">async</span> <span class="pl-k">function</span> <span class="pl-en">upload_files</span><span class="pl-kos">(</span><span class="pl-s1">fileInput</span><span class="pl-kos">)</span> <span class="pl-kos">{</span>
-    <span class="pl-k">const</span> <span class="pl-s1">bucket_id</span> <span class="pl-c1">=</span> <span class="pl-en">generateUUID</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    
-    <span class="pl-k">const</span> <span class="pl-s1">formData</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">FormData</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-v">Array</span><span class="pl-kos">.</span><span class="pl-en">from</span><span class="pl-kos">(</span><span class="pl-s1">fileInput</span><span class="pl-kos">.</span><span class="pl-c1">files</span><span class="pl-kos">)</span><span class="pl-kos">.</span><span class="pl-en">forEach</span><span class="pl-kos">(</span><span class="pl-s1">file</span> <span class="pl-c1">=&gt;</span> <span class="pl-kos">{</span>
-        <span class="pl-s1">formData</span><span class="pl-kos">.</span><span class="pl-en">append</span><span class="pl-kos">(</span><span class="pl-s">'files'</span><span class="pl-kos">,</span> <span class="pl-s1">file</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    
-    <span class="pl-k">const</span> <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-en">fetch</span><span class="pl-kos">(</span>
-        <span class="pl-s">`<span class="pl-s1"><span class="pl-kos">${</span><span class="pl-s1">framework</span><span class="pl-kos">.</span><span class="pl-c1">backendUrl</span><span class="pl-kos">}</span></span>/backend-api/v2/files/<span class="pl-s1"><span class="pl-kos">${</span><span class="pl-s1">bucket_id</span><span class="pl-kos">}</span></span>`</span><span class="pl-kos">,</span> 
-        <span class="pl-kos">{</span>
-            <span class="pl-c1">method</span>: <span class="pl-s">'POST'</span><span class="pl-kos">,</span>
-            <span class="pl-c1">body</span>: <span class="pl-s1">formData</span>
-        <span class="pl-kos">}</span>
-    <span class="pl-kos">)</span><span class="pl-kos">;</span>
-    
-    <span class="pl-k">const</span> <span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">response</span><span class="pl-kos">.</span><span class="pl-en">json</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-k">if</span> <span class="pl-kos">(</span><span class="pl-s1">result</span><span class="pl-kos">.</span><span class="pl-c1">media</span><span class="pl-kos">)</span> <span class="pl-kos">{</span>
-        <span class="pl-s1">result</span><span class="pl-kos">.</span><span class="pl-c1">media</span><span class="pl-kos">.</span><span class="pl-en">forEach</span><span class="pl-kos">(</span><span class="pl-kos">(</span><span class="pl-s1">part</span><span class="pl-kos">)</span> <span class="pl-c1">=&gt;</span> <span class="pl-kos">{</span>
-            <span class="pl-s1">part</span> <span class="pl-c1">=</span> <span class="pl-s1">part</span><span class="pl-kos">.</span><span class="pl-c1">name</span> ? <span class="pl-s1">part</span> : <span class="pl-kos">{</span><span class="pl-c1">name</span>: <span class="pl-s1">part</span><span class="pl-kos">}</span><span class="pl-kos">;</span>
-            <span class="pl-k">const</span> <span class="pl-s1">url</span> <span class="pl-c1">=</span> <span class="pl-s">`<span class="pl-s1"><span class="pl-kos">${</span><span class="pl-s1">framework</span><span class="pl-kos">.</span><span class="pl-c1">backendUrl</span><span class="pl-kos">}</span></span>/files/<span class="pl-s1"><span class="pl-kos">${</span><span class="pl-s1">bucket_id</span><span class="pl-kos">}</span></span>/media/<span class="pl-s1"><span class="pl-kos">${</span><span class="pl-s1">part</span><span class="pl-kos">.</span><span class="pl-c1">name</span><span class="pl-kos">}</span></span>`</span><span class="pl-kos">;</span>
-            <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">log</span><span class="pl-kos">(</span><span class="pl-s">"Uploaded media:"</span><span class="pl-kos">,</span> <span class="pl-s1">url</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-        <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-kos">}</span>
-<span class="pl-kos">}</span></pre></div>
-<hr>
-<h2>Example Results</h2>
-<markdown-accessiblity-table><table role="table">
-<thead>
-<tr>
-<th>Original Image</th>
-</tr>
-</thead>
-                <tbody>
-                    <tr>
-                        <td>
-                            <a target="_blank" rel="noopener noreferrer" href="images/strawberry.jpg">
-                                <img src="images/strawberry.jpg" alt="Original strawberry image" height="160" style="max-width: 100%; height: auto; max-height: 160px;" />
-                            </a>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+                // Generate table of contents
+                generateTableOfContents();
+                
+            } catch (error) {
+                console.warn('Syntax highlighting failed:', error);
+                // Remove loading indicators on error
+                document.querySelectorAll('.highlight-loading').forEach(function(pre) {
+                    pre.classList.remove('highlight-loading');
+                });
+            }
+        });
 
-            <table role="table" aria-describedby="variant-images-desc" class="markdown-accessiblity-table">
-                <caption id="variant-images-desc" class="sr-only">Image Variants generated by OpenAI and Together providers</caption>
-                <thead>
-                    <tr>
-                        <th>OpenAI Variant</th>
-                        <th>Together Variant</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>
-                            <a target="_blank" rel="noopener noreferrer" href="images/strawberry_openai.png">
-                                <img src="images/strawberry_openai.png" alt="OpenAI generated strawberry variant" height="160" style="max-width: 100%; height: auto; max-height: 160px;" />
-                            </a>
-                        </td>
-                        <td>
-                            <a target="_blank" rel="noopener noreferrer" href="images/strawberry_copilot.png">
-                                <img src="images/strawberry_copilot.png" alt="Together provider strawberry variant" height="160" style="max-width: 100%; height: auto; max-height: 160px;" />
-                            </a>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><em>Prompt: "Change to green"</em></td>
-                        <td><em>Prompt: "Generate a variant"</em></td>
-                    </tr>
-                </tbody>
-            </table>
+        function generateTableOfContents() {
+            const headings = document.querySelectorAll('main h2, main h3');
+            const tocList = document.getElementById('toc-list');
+            
+            if (!tocList || headings.length === 0) return;
+            
+            tocList.innerHTML = '';
+            
+            headings.forEach(function(heading, index) {
+                const id = heading.id || `heading-${index}`;
+                if (!heading.id) {
+                    heading.id = id;
+                }
+                
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `#${id}`;
+                a.textContent = heading.textContent;
+                a.setAttribute('aria-label', `Jump to ${heading.textContent}`);
+                
+                if (heading.tagName === 'H3') {
+                    li.style.marginLeft = '1rem';
+                    li.style.fontSize = '0.9em';
+                }
+                
+                li.appendChild(a);
+                tocList.appendChild(li);
+            });
+        }
 
-            <table role="table" aria-describedby="pollinations-copilot-desc" class="markdown-accessiblity-table">
-                <caption id="pollinations-copilot-desc" class="sr-only">Image Variants generated by Pollinations.AI and Microsoft Copilot providers</caption>
-                <thead>
-                    <tr>
-                        <th>Pollinations.AI Variant</th>
-                        <th>Microsoft Copilot Variant</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>
-                            <a target="_blank" rel="noopener noreferrer" href="images/strawberry_pollinations.png">
-                                <img src="images/strawberry_pollinations.png" alt="Pollinations.AI strawberry variant" height="160" style="max-width: 100%; height: auto; max-height: 160px;" />
-                            </a>
-                        </td>
-                        <td>
-                            <a target="_blank" rel="noopener noreferrer" href="images/strawberry_together.jpg">
-                                <img src="images/strawberry_together.jpg" alt="Microsoft Copilot strawberry variant" height="160" style="max-width: 100%; height: auto; max-height: 160px;" />
-                            </a>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><em>Prompt: "Remove background"</em></td>
-                        <td><em>Prompt: "Add nature background"</em></td>
-                    </tr>
-                </tbody>
-            </table>
+        // Smooth scrolling for anchor links
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
+                e.preventDefault();
+                const target = document.querySelector(e.target.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }
+        });
 
-            <table role="table" aria-describedby="azure-huggingspace-desc" class="markdown-accessiblity-table">
-                <caption id="azure-huggingspace-desc" class="sr-only">Image Variants generated by Azure and HuggingSpace providers</caption>
-                <thead>
-                    <tr>
-                        <th>Azure Variant</th>
-                        <th>HuggingSpace Variant</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>
-                            <a target="_blank" rel="noopener noreferrer" href="images/strawberry_azure.png">
-                                <img src="images/strawberry_azure.png" alt="Azure strawberry variant with added text" height="160" style="max-width: 100%; height: auto; max-height: 160px;" />
-                            </a>
-                        </td>
-                        <td>
-                            <a target="_blank" rel="noopener noreferrer" href="images/strawberry_hugging_space.webp">
-                                <img src="images/strawberry_hugging_space.webp" alt="HuggingSpace strawberry variant in black and white" height="160" style="max-width: 100%; height: auto; max-height: 160px;" />
-                            </a>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><em>Prompt: "Add text 'Hello World'"</em></td>
-                        <td><em>Prompt: "Change to black &amp; white"</em></td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
-
-        <hr />
-
-        <section id="code-examples" aria-labelledby="code-examples-heading">
-            <h2 id="code-examples-heading">Code Examples</h2>
-
-            <h3>Basic Usage with Local File</h3>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">asyncio</span>
-<span class="pl-k">from</span> <span class="pl-s1">pathlib</span> <span class="pl-k">import</span> <span class="pl-v">Path</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">AsyncClient</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">import</span> <span class="pl-v">OpenaiAccount</span>, <span class="pl-v">CopilotAccount</span>
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">AsyncClient</span>()
-
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">main_with_openai</span>():
-    <span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span>.<span class="pl-c1">images</span>.<span class="pl-c1">create_variation</span>(
-        <span class="pl-s1">image</span><span class="pl-c1">=</span><span class="pl-en">Path</span>(<span class="pl-s">"g4f.dev/docs/images/strawberry.jpg"</span>),
-        <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">OpenaiAccount</span>,
-        <span class="pl-s1">prompt</span><span class="pl-c1">=</span><span class="pl-s">"Change food color to green"</span>,
-        <span class="pl-s1">response_format</span><span class="pl-c1">=</span><span class="pl-s">"url"</span>
-    )
-    <span class="pl-en">print</span>(<span class="pl-s1">result</span>)
-
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">main_with_copilot</span>():
-    <span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span>.<span class="pl-c1">images</span>.<span class="pl-c1">create_variation</span>(
-        <span class="pl-s1">image</span><span class="pl-c1">=</span><span class="pl-en">Path</span>(<span class="pl-s">"g4f.dev/docs/images/strawberry.jpg"</span>),
-        <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">CopilotAccount</span>,
-        <span class="pl-s1">prompt</span><span class="pl-c1">=</span><span class="pl-s">"Generate a variant of this image"</span>,
-        <span class="pl-s1">response_format</span><span class="pl-c1">=</span><span class="pl-s">"url"</span>
-    )
-    <span class="pl-en">print</span>(<span class="pl-s1">result</span>)
-
-<span class="pl-s1">asyncio</span>.<span class="pl-c1">run</span>(<span class="pl-en">main_with_openai</span>())</pre></div>
-<h3>Exmaples with Azure and HuggingSpace provider</h3>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">asyncio</span>
-<span class="pl-k">from</span> <span class="pl-s1">pathlib</span> <span class="pl-k">import</span> <span class="pl-v">Path</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">AsyncClient</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">import</span> <span class="pl-v">HuggingSpace</span>, <span class="pl-v">Azure</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">cookies</span> <span class="pl-k">import</span> <span class="pl-s1">read_cookie_files</span>
-
-<span class="pl-c"># Read cookies and environment variables</span>
-<span class="pl-en">read_cookie_files</span>()
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">AsyncClient</span>()
-
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">main_with_hugging_space</span>():
-    <span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span>.<span class="pl-c1">images</span>.<span class="pl-c1">create_variation</span>(
-        <span class="pl-s1">image</span><span class="pl-c1">=</span><span class="pl-en">Path</span>(<span class="pl-s">"g4f.dev/docs/images/strawberry.jpg"</span>),
-        <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">HuggingSpace</span>,
-        <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"flux-kontext-dev"</span>,
-        <span class="pl-s1">prompt</span><span class="pl-c1">=</span><span class="pl-s">"Change color to black and white"</span>,
-        <span class="pl-s1">response_format</span><span class="pl-c1">=</span><span class="pl-s">"url"</span>
-    )
-    <span class="pl-en">print</span>(<span class="pl-s1">result</span>)
-
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">main_with_azure</span>():
-    <span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span>.<span class="pl-c1">images</span>.<span class="pl-c1">create_variation</span>(
-        <span class="pl-s1">image</span><span class="pl-c1">=</span><span class="pl-en">Path</span>(<span class="pl-s">"g4f.dev/docs/images/strawberry.jpg"</span>),
-        <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">Azure</span>,
-        <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"flux-kontext"</span>,
-        <span class="pl-s1">prompt</span><span class="pl-c1">=</span><span class="pl-s">"Add text 'Hello World' in the center"</span>,
-        <span class="pl-s1">response_format</span><span class="pl-c1">=</span><span class="pl-s">"url"</span>
-    )
-    <span class="pl-en">print</span>(<span class="pl-s1">result</span>)
-
-<span class="pl-s1">asyncio</span>.<span class="pl-c1">run</span>(<span class="pl-en">main_with_azure</span>())</pre></div>
-            <h3>URL-based Providers</h3>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">asyncio</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">AsyncClient</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">import</span> <span class="pl-v">PollinationsAI</span>, <span class="pl-v">Together</span>
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">AsyncClient</span>()
-
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">main_pollinations</span>():
-    <span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span>.<span class="pl-c1">images</span>.<span class="pl-c1">create_variation</span>(
-        <span class="pl-s1">image</span><span class="pl-c1">=</span><span class="pl-s">"https://g4f.dev/docs/images/strawberry.jpg"</span>,
-        <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">PollinationsAI</span>,
-        <span class="pl-s1">prompt</span><span class="pl-c1">=</span><span class="pl-s">"Remove background"</span>,
-        <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"kontext"</span>,
-        <span class="pl-s1">response_format</span><span class="pl-c1">=</span><span class="pl-s">"url"</span>
-    )
-    <span class="pl-en">print</span>(<span class="pl-s1">result</span>)
-
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">main_with_together</span>():
-    <span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span>.<span class="pl-c1">images</span>.<span class="pl-c1">create_variation</span>(
-        <span class="pl-s1">image</span><span class="pl-c1">=</span><span class="pl-s">"https://g4f.dev/docs/images/strawberry.jpg"</span>,
-        <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">Together</span>,
-        <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"flux-kontext-pro"</span>,
-        <span class="pl-s1">prompt</span><span class="pl-c1">=</span><span class="pl-s">"Add nature background"</span>,
-        <span class="pl-s1">response_format</span><span class="pl-c1">=</span><span class="pl-s">"url"</span>
-    )
-    <span class="pl-en">print</span>(<span class="pl-s1">result</span>)
-
-<span class="pl-s1">asyncio</span>.<span class="pl-c1">run</span>(<span class="pl-en">main_with_together</span>())</pre></div>
-<hr>
-<h2>Troubleshooting</h2>
-            <ul>
-                <li><strong>File Not Found:</strong> Verify that the file paths exist and are correct.</li>
-                <li><strong>Authentication Errors:</strong> Ensure your provider credentials are correct and up to date.</li>
-                <li><strong>Provider Limits:</strong> Some providers enforce rate limits; monitor usage carefully.</li>
-                <li><strong>Model Compatibility:</strong> Not all models support all features; check model docs.</li>
-            </ul>
-        </section>
-
-        <hr />
-
-        <section id="conclusion" aria-labelledby="conclusion-heading">
-            <h2 id="conclusion-heading">Conclusion</h2>
-            <p>GPT4Free offers flexible image variation generation through multiple providers. Key features include:</p>
-            <ul>
-                <li>Support for both local and remote images</li>
-                <li>Automatic handling of file uploads</li>
-                <li>Multiple provider options with different capabilities</li>
-            </ul>
-            <p><a href="/docs/" rel="noopener">Return to Documentation</a></p>
-        </section>
-    </article>
+        // Add copy button to code blocks
+        document.querySelectorAll('pre code').forEach(function(block) {
+            const button = document.createElement('button');
+            button.textContent = 'Copy';
+            button.className = 'copy-button';
+            button.style.cssText = `
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background: rgba(139, 61, 255, 0.8);
+                color: white;
+                border: none;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.8rem;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            const pre = block.closest('pre');
+            pre.style.position = 'relative';
+            pre.appendChild(button);
+            
+            pre.addEventListener('mouseenter', function() {
+                button.style.opacity = '1';
+            });
+            
+            pre.addEventListener('mouseleave', function() {
+                button.style.opacity = '0';
+            });
+            
+            button.addEventListener('click', function() {
+                navigator.clipboard.writeText(block.textContent).then(function() {
+                    button.textContent = 'Copied!';
+                    setTimeout(function() {
+                        button.textContent = 'Copy';
+                    }, 2000);
+                });
+            });
+        });
+    </script>
 </body>
 </html>

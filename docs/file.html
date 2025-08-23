@@ -1,402 +1,547 @@
 <!DOCTYPE html>
 <html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G4F - File API Documentation with Web Download and Enhanced File Support</title>
-    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png">
-    <link rel="manifest" href="/dist/img/site.webmanifest">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>G4F - File API Documentation with Web Download and Enhanced File Support | GPT4Free Documentation</title>
+
+    <meta name="description" content="GPT4Free documentation for G4F - File API Documentation with Web Download and Enhanced File Support. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
+    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, G4F - File API Documentation with Web Download and Enhanced File Support" />
+    <meta name="author" content="GPT4Free Team" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="G4F - File API Documentation with Web Download and Enhanced File Support | GPT4Free Documentation" />
+    <meta property="og:description" content="GPT4Free documentation for G4F - File API Documentation with Web Download and Enhanced File Support. Free AI endpoints, examples, and comprehensive guides." />
+    <meta property="og:url" content="https://g4f.dev/docs/file.html" />
+    <meta property="og:site_name" content="GPT4Free Documentation" />
+    <meta property="og:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="G4F - File API Documentation with Web Download and Enhanced File Support | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for G4F - File API Documentation with Web Download and Enhanced File Support." />
+    <meta name="twitter:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://g4f.dev/docs/file.html" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png" />
+    <link rel="manifest" href="/dist/img/site.webmanifest" />
+
+    <!-- GitHub Primer CSS & styles -->
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
+
+    <!-- Highlight.js for enhanced JavaScript syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    
     <style>
         :root {
-            --colour-1: #000000;
-            --colour-2: #ccc;
-            --colour-3: #e4d4ff;
-            --colour-4: #f0f0f0;
-            --colour-5: #181818;
-            --colour-6: #242424;
             --accent: #8b3dff;
-            --gradient: #1a1a1a;
             --background: #16101b;
-            --size: 70vw;
-            --top: 50%;
-            --blur: 40px;
-            --opacity: 0.6;
+            --text-primary: #ddd;
+            --text-secondary: #9b7dff;
+            --card-bg: #1e152e;
+            --border-color: #333;
+            --hover-color: #a67eff;
         }
 
-        /* Body and text color */
         body {
-            height: 100vh;
             margin: 0;
             padding: 0;
+            background: var(--background);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            line-height: 1.6;
+            min-height: 100vh;
         }
 
-        .hidden {
-            display: none;
-        }
-
-        .container-lg {
+        .container {
+            display: flex;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 8px;
+            padding: 2rem;
+            gap: 3rem;
+            min-height: calc(100vh - 4rem);
         }
 
-        @media only screen and (min-width: 40em) {
-            .container-lg {
-                max-width: 84%;
+        /* Enhanced main content styling */
+        main {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            overflow-wrap: break-word;
+            position: relative;
+        }
+
+        /* Typography improvements */
+        .markdown-body h1 {
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 0.5rem;
+        }
+
+        .markdown-body h2 {
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body h3 {
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body p {
+            margin-bottom: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        /* Enhanced link styling */
+        .markdown-body a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .markdown-body a:hover,
+        .markdown-body a:focus {
+            color: var(--hover-color);
+            outline: none;
+            text-decoration: underline;
+            text-shadow: 0 0 8px rgba(139, 61, 255, 0.3);
+        }
+
+        /* Enhanced code block styling */
+        .markdown-body pre {
+            background: #2c2247 !important;
+            border-radius: 12px;
+            padding: 1.5rem !important;
+            font-size: 0.95rem !important;
+            overflow-x: auto;
+            max-height: 500px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.4);
+            color: #fff;
+            border: 1px solid #3d2a5c;
+            position: relative;
+        }
+
+        .markdown-body pre:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--hover-color));
+            border-radius: 12px 12px 0 0;
+        }
+
+        .markdown-body code {
+            font-family: 'SF Mono', 'Cascadia Code', 'Roboto Mono', Consolas, Liberation Mono, Menlo, monospace;
+            background: rgba(139, 61, 255, 0.1);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            color: #e6ccff;
+            font-size: 0.9em;
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        /* Table styling */
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 2rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .markdown-body table th,
+        .markdown-body table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .markdown-body table th {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .markdown-body table tr:nth-child(even) {
+            background: rgba(139, 61, 255, 0.05);
+        }
+
+        /* List styling */
+        .markdown-body ul, 
+        .markdown-body ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        .markdown-body li {
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        /* Blockquote styling */
+        .markdown-body blockquote {
+            border-left: 4px solid var(--accent);
+            background: rgba(139, 61, 255, 0.1);
+            margin: 2rem 0;
+            padding: 1rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* HR styling */
+        .markdown-body hr {
+            border: none;
+            border-top: 2px solid var(--accent);
+            margin: 3rem 0;
+            opacity: 0.6;
+        }
+
+        /* Sticky table of contents */
+        nav#toc {
+            flex: 0 0 280px;
+            position: sticky;
+            top: 2rem;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid rgba(139, 61, 255, 0.2);
+        }
+
+        nav#toc h2 {
+            font-size: 1.4rem;
+            margin: 0 0 1.5rem 0;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        nav#toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        nav#toc li {
+            margin-bottom: 0.8rem;
+        }
+
+        nav#toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: block;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        nav#toc a:hover, 
+        nav#toc a:focus {
+            background: rgba(139, 61, 255, 0.1);
+            color: var(--hover-color);
+            text-decoration: none;
+            transform: translateX(4px);
+        }
+
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 2rem;
+            }
+
+            nav#toc {
+                position: relative;
+                max-height: none;
+                order: -1;
+                flex: none;
+            }
+
+            .markdown-body h1 {
+                font-size: 2.2rem;
             }
         }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            main {
+                padding: 1.5rem;
+            }
+
+            .markdown-body h1 {
+                font-size: 1.8rem;
+            }
+
+            .markdown-body pre {
+                padding: 1rem !important;
+                font-size: 0.85rem !important;
+            }
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Focus indicators */
+        *:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* Print styles */
+        @media print {
+            .container {
+                display: block;
+            }
+            
+            nav#toc {
+                display: none;
+            }
+            
+            main {
+                box-shadow: none;
+                background: white;
+                color: black;
+            }
+        }
+
+        /* Loading animation for syntax highlighting */
+        .highlight-loading {
+            position: relative;
+            opacity: 0.7;
+        }
+
+        .highlight-loading::after {
+            content: 'Loading syntax highlighting...';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
     </style>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "G4F - File API Documentation with Web Download and Enhanced File Support",
+      "description": "GPT4Free documentation for G4F - File API Documentation with Web Download and Enhanced File Support. Complete guides, examples, and API reference for free AI endpoints.",
+      "author": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization",
+        "name": "GPT4Free",
+        "url": "https://g4f.dev",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://g4f.dev/dist/img/apple-touch-icon.png"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://g4f.dev/docs/file.html"
+      },
+      "datePublished": "2024-01-01T00:00:00Z",
+      "dateModified": "2024-01-01T00:00:00Z",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "keywords": "GPT4Free, AI documentation, free AI API, code generation",
+      "articleSection": "Documentation"
+    }
+    </script>
 </head>
 <body>
-    <article class="markdown-body entry-content container-lg" itemprop="text"><h2>G4F - File API Documentation with Web Download and Enhanced File Support</h2>
-<p>This document details the enhanced G4F File API, allowing users to upload files, download files from web URLs, and process a wider range of file types for integration with language models.</p>
-<p><strong>Key Improvements:</strong></p>
-<ul>
-<li>
-<p><strong>Web URL Downloads:</strong>  Upload a <code class="notranslate">downloads.json</code> file to your bucket containing a list of URLs. The API will download and process these files.  Example: <code class="notranslate">[{"url": "https://example.com/document.pdf"}]</code></p>
-</li>
-<li>
-<p><strong>Expanded File Support:</strong>  Added support for additional plain text file extensions:  <code class="notranslate">.txt</code>, <code class="notranslate">.xml</code>, <code class="notranslate">.json</code>, <code class="notranslate">.js</code>, <code class="notranslate">.har</code>, <code class="notranslate">.sh</code>, <code class="notranslate">.py</code>, <code class="notranslate">.php</code>, <code class="notranslate">.css</code>, <code class="notranslate">.yaml</code>, <code class="notranslate">.sql</code>, <code class="notranslate">.log</code>, <code class="notranslate">.csv</code>, <code class="notranslate">.twig</code>, <code class="notranslate">.md</code>.  Binary file support remains for <code class="notranslate">.pdf</code>, <code class="notranslate">.html</code>, <code class="notranslate">.docx</code>, <code class="notranslate">.odt</code>, <code class="notranslate">.epub</code>, <code class="notranslate">.xlsx</code>, and <code class="notranslate">.zip</code>.</p>
-</li>
-<li>
-<p><strong>Server-Sent Events (SSE):</strong>  SSE are now used to provide asynchronous updates on file download and processing progress. This improves the user experience, particularly for large files and multiple downloads.</p>
-</li>
-</ul>
-<p><strong>API Endpoints:</strong></p>
-<ul>
-<li>
-<p><strong>Upload:</strong> <code class="notranslate">/backend-api/v2/files/{bucket_id}</code> (POST)</p>
-<ul>
-<li><strong>Method:</strong> POST</li>
-<li><strong>Path Parameters:</strong> <code class="notranslate">bucket_id</code> (Generated by your own. For example a UUID)</li>
-<li><strong>Body:</strong> Multipart/form-data with files OR a <code class="notranslate">downloads.json</code> file containing URLs.</li>
-<li><strong>Response:</strong> JSON object with <code class="notranslate">bucket_id</code>, <code class="notranslate">url</code>, and a list of uploaded/downloaded filenames.</li>
-</ul>
-</li>
-<li>
-<p><strong>Retrieve:</strong> <code class="notranslate">/backend-api/v2/files/{bucket_id}</code> (GET)</p>
-<ul>
-<li><strong>Method:</strong> GET</li>
-<li><strong>Path Parameters:</strong> <code class="notranslate">bucket_id</code></li>
-<li><strong>Query Parameters:</strong>
-<ul>
-<li><code class="notranslate">delete_files</code>: (Optional, boolean, default <code class="notranslate">true</code>) Delete files after retrieval.</li>
-<li><code class="notranslate">refine_chunks_with_spacy</code>: (Optional, boolean, default <code class="notranslate">false</code>) Apply spaCy-based refinement.</li>
-</ul>
-</li>
-<li><strong>Response:</strong> Streaming response with extracted text, separated by ``` markers.  SSE updates are sent if the <code class="notranslate">Accept</code> header includes `text/event-stream`.</li>
-</ul>
-</li>
-</ul>
-<p><strong>Example Usage (Python):</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">requests</span>
-<span class="pl-k">import</span> <span class="pl-s1">uuid</span>
-<span class="pl-k">import</span> <span class="pl-s1">json</span>
+    <div class="container">
+        <nav id="toc" aria-label="Table of contents" role="navigation">
+            <h2>Contents</h2>
+            <ul id="toc-list">
+                <!-- Table of contents will be generated here -->
+            </ul>
+            <hr style="margin: 1.5rem 0; opacity: 0.3;">
+            <ul>
+                <li><a href="/docs/" aria-label="Return to documentation home">📚 Documentation Hub</a></li>
+                <li><a href="/" aria-label="Return to main site">🏠 G4F Home</a></li>
+            </ul>
+        </nav>
 
-<span class="pl-k">def</span> <span class="pl-en">upload_and_process</span>(<span class="pl-s1">files_or_urls</span>, <span class="pl-s1">bucket_id</span><span class="pl-c1">=</span><span class="pl-c1">None</span>):
-    <span class="pl-k">if</span> <span class="pl-s1">bucket_id</span> <span class="pl-c1">is</span> <span class="pl-c1">None</span>:
-        <span class="pl-s1">bucket_id</span> <span class="pl-c1">=</span> <span class="pl-en">str</span>(<span class="pl-s1">uuid</span>.<span class="pl-c1">uuid4</span>())
-    
-    <span class="pl-k">if</span> <span class="pl-en">isinstance</span>(<span class="pl-s1">files_or_urls</span>, <span class="pl-s1">list</span>): <span class="pl-c">#URLs</span>
-        <span class="pl-s1">files</span> <span class="pl-c1">=</span> {<span class="pl-s">'files'</span>: (<span class="pl-s">'downloads.json'</span>, <span class="pl-s1">json</span>.<span class="pl-c1">dumps</span>(<span class="pl-s1">files_or_urls</span>), <span class="pl-s">'application/json'</span>)}
-    <span class="pl-k">elif</span> <span class="pl-en">isinstance</span>(<span class="pl-s1">files_or_urls</span>, <span class="pl-s1">dict</span>): <span class="pl-c">#Files</span>
-        <span class="pl-s1">files</span> <span class="pl-c1">=</span> <span class="pl-s1">files_or_urls</span>
-    <span class="pl-k">else</span>:
-        <span class="pl-k">raise</span> <span class="pl-en">ValueError</span>(<span class="pl-s">"files_or_urls must be a list of URLs or a dictionary of files"</span>)
+        <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
+            Blocked by DNS monitoring proxy
+        </main>
+    </div>
 
-    <span class="pl-s1">upload_response</span> <span class="pl-c1">=</span> <span class="pl-s1">requests</span>.<span class="pl-c1">post</span>(<span class="pl-s">f'http://localhost:8080/backend-api/v2/files/<span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">bucket_id</span><span class="pl-kos">}</span></span>'</span>, <span class="pl-s1">files</span><span class="pl-c1">=</span><span class="pl-s1">files</span>)
+    <script>
+        // Enhanced syntax highlighting with error handling
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // Initialize highlight.js
+                hljs.configure({
+                    languages: ['javascript', 'python', 'bash', 'json', 'typescript', 'html', 'css'],
+                    ignoreUnescapedHTML: true
+                });
 
-    <span class="pl-k">if</span> <span class="pl-s1">upload_response</span>.<span class="pl-c1">status_code</span> <span class="pl-c1">==</span> <span class="pl-c1">200</span>:
-        <span class="pl-s1">upload_data</span> <span class="pl-c1">=</span> <span class="pl-s1">upload_response</span>.<span class="pl-c1">json</span>()
-        <span class="pl-en">print</span>(<span class="pl-s">f"Upload successful. Bucket ID: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">upload_data</span>[<span class="pl-s">'bucket_id'</span>]<span class="pl-kos">}</span></span>"</span>)
-    <span class="pl-k">else</span>:
-        <span class="pl-en">print</span>(<span class="pl-s">f"Upload failed: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">upload_response</span>.<span class="pl-c1">status_code</span><span class="pl-kos">}</span></span> - <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">upload_response</span>.<span class="pl-c1">text</span><span class="pl-kos">}</span></span>"</span>)
+                // Add loading class to pre elements
+                document.querySelectorAll('pre code').forEach(function(block) {
+                    block.closest('pre').classList.add('highlight-loading');
+                });
 
-    <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">requests</span>.<span class="pl-c1">get</span>(<span class="pl-s">f'http://localhost:8080/backend-api/v2/files/<span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">bucket_id</span><span class="pl-kos">}</span></span>'</span>, <span class="pl-s1">stream</span><span class="pl-c1">=</span><span class="pl-c1">True</span>, <span class="pl-s1">headers</span><span class="pl-c1">=</span>{<span class="pl-s">'Accept'</span>: <span class="pl-s">'text/event-stream'</span>})
-    <span class="pl-k">for</span> <span class="pl-s1">line</span> <span class="pl-c1">in</span> <span class="pl-s1">response</span>.<span class="pl-c1">iter_lines</span>():
-      <span class="pl-k">if</span> <span class="pl-s1">line</span>:
-          <span class="pl-s1">line</span> <span class="pl-c1">=</span> <span class="pl-s1">line</span>.<span class="pl-c1">decode</span>(<span class="pl-s">'utf-8'</span>)
-          <span class="pl-k">if</span> <span class="pl-s1">line</span>.<span class="pl-c1">startswith</span>(<span class="pl-s">'data:'</span>):
-              <span class="pl-k">try</span>:
-                  <span class="pl-s1">data</span> <span class="pl-c1">=</span> <span class="pl-s1">json</span>.<span class="pl-c1">loads</span>(<span class="pl-s1">line</span>[<span class="pl-c1">5</span>:]) <span class="pl-c">#remove data: prefix</span>
-                  <span class="pl-k">if</span> <span class="pl-s">"action"</span> <span class="pl-c1">in</span> <span class="pl-s1">data</span>:
-                      <span class="pl-en">print</span>(<span class="pl-s">f"SSE Event: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">data</span><span class="pl-kos">}</span></span>"</span>)
-                  <span class="pl-k">elif</span> <span class="pl-s">"error"</span> <span class="pl-c1">in</span> <span class="pl-s1">data</span>:
-                      <span class="pl-en">print</span>(<span class="pl-s">f"Error: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">data</span>[<span class="pl-s">'error'</span>][<span class="pl-s">'message'</span>]<span class="pl-kos">}</span></span>"</span>)
-                  <span class="pl-k">else</span>:
-                      <span class="pl-en">print</span>(<span class="pl-s">f"File data received: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">data</span><span class="pl-kos">}</span></span>"</span>) <span class="pl-c">#Assuming it's file content</span>
-              <span class="pl-k">except</span> <span class="pl-s1">json</span>.<span class="pl-c1">JSONDecodeError</span> <span class="pl-k">as</span> <span class="pl-s1">e</span>:
-                  <span class="pl-en">print</span>(<span class="pl-s">f"Error decoding JSON: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">e</span><span class="pl-kos">}</span></span>"</span>)
-          <span class="pl-k">else</span>:
-              <span class="pl-en">print</span>(<span class="pl-s">f"Unhandled SSE event: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">line</span><span class="pl-kos">}</span></span>"</span>)
-    <span class="pl-s1">response</span>.<span class="pl-c1">close</span>()
-    <span class="pl-k">return</span> <span class="pl-s1">bucket_id</span>
+                // Highlight all code blocks
+                hljs.highlightAll();
 
-<span class="pl-c"># Example with URLs</span>
-<span class="pl-s1">urls</span> <span class="pl-c1">=</span> [{<span class="pl-s">"url"</span>: <span class="pl-s">"https://github.com/xtekky/gpt4free/issues"</span>}]
-<span class="pl-s1">bucket_id</span> <span class="pl-c1">=</span> <span class="pl-en">upload_and_process</span>(<span class="pl-s1">urls</span>)
+                // Remove loading class after highlighting
+                setTimeout(function() {
+                    document.querySelectorAll('.highlight-loading').forEach(function(pre) {
+                        pre.classList.remove('highlight-loading');
+                    });
+                }, 100);
 
-<span class="pl-c">#Example with files</span>
-<span class="pl-s1">files</span> <span class="pl-c1">=</span> {<span class="pl-s">'files'</span>: (<span class="pl-s">'document.pdf'</span>, <span class="pl-en">open</span>(<span class="pl-s">'document.pdf'</span>, <span class="pl-s">'rb'</span>))}
-<span class="pl-s1">bucket_id</span> <span class="pl-c1">=</span> <span class="pl-en">upload_and_process</span>(<span class="pl-s1">files</span>)</pre></div>
-<p><strong>Usage of Uploaded Files:</strong></p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
+                // Generate table of contents
+                generateTableOfContents();
+                
+            } catch (error) {
+                console.warn('Syntax highlighting failed:', error);
+                // Remove loading indicators on error
+                document.querySelectorAll('.highlight-loading').forEach(function(pre) {
+                    pre.classList.remove('highlight-loading');
+                });
+            }
+        });
 
-<span class="pl-c"># Enable debug mode</span>
-<span class="pl-k">import</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">debug</span>
-<span class="pl-s1">g4f</span>.<span class="pl-c1">debug</span>.<span class="pl-c1">logging</span> <span class="pl-c1">=</span> <span class="pl-c1">True</span>
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>()
-
-<span class="pl-c"># Upload example file</span>
-<span class="pl-s1">files</span> <span class="pl-c1">=</span> {<span class="pl-s">'files'</span>: (<span class="pl-s">'demo.docx'</span>, <span class="pl-en">open</span>(<span class="pl-s">'demo.docx'</span>, <span class="pl-s">'rb'</span>))}
-<span class="pl-s1">bucket_id</span> <span class="pl-c1">=</span> <span class="pl-en">upload_and_process</span>(<span class="pl-s1">files</span>)
-
-<span class="pl-c"># Send request with file:</span>
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>(
-    [{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: [
-        {<span class="pl-s">"type"</span>: <span class="pl-s">"text"</span>, <span class="pl-s">"text"</span>: <span class="pl-s">"Discribe this file."</span>},
-        {<span class="pl-s">"bucket_id"</span>: <span class="pl-s1">bucket_id</span>}
-    ]}],
-)
-<span class="pl-en">print</span>(<span class="pl-s1">response</span>.<span class="pl-c1">choices</span>[<span class="pl-c1">0</span>].<span class="pl-c1">message</span>.<span class="pl-c1">content</span>)</pre></div>
-<p><strong>Example Output:</strong></p>
-<pre class="notranslate"><code class="notranslate">This document is a demonstration of the DOCX Input plugin capabilities in the software ...
-</code></pre>
-<p><strong>Example Usage (JavaScript):</strong></p>
-<div class="highlight highlight-source-js"><pre class="notranslate"><span class="pl-k">function</span> <span class="pl-en">uuid</span><span class="pl-kos">(</span><span class="pl-kos">)</span> <span class="pl-kos">{</span>
-    <span class="pl-k">return</span> <span class="pl-kos">(</span><span class="pl-kos">[</span><span class="pl-c1">1e7</span><span class="pl-kos">]</span><span class="pl-c1">+</span><span class="pl-c1">-</span><span class="pl-c1">1e3</span><span class="pl-c1">+</span><span class="pl-c1">-</span><span class="pl-c1">4e3</span><span class="pl-c1">+</span><span class="pl-c1">-</span><span class="pl-c1">8e3</span><span class="pl-c1">+</span><span class="pl-c1">-</span><span class="pl-c1">1e11</span><span class="pl-kos">)</span><span class="pl-kos">.</span><span class="pl-en">replace</span><span class="pl-kos">(</span><span class="pl-pds"><span class="pl-c1">/</span><span class="pl-kos">[</span><span class="pl-c1">0</span><span class="pl-c1">1</span><span class="pl-c1">8</span><span class="pl-kos">]</span><span class="pl-c1">/</span>g</span><span class="pl-kos">,</span> <span class="pl-s1">c</span> <span class="pl-c1">=&gt;</span>
-      <span class="pl-kos">(</span><span class="pl-s1">c</span> <span class="pl-c1">^</span> <span class="pl-s1">crypto</span><span class="pl-kos">.</span><span class="pl-en">getRandomValues</span><span class="pl-kos">(</span><span class="pl-k">new</span> <span class="pl-v">Uint8Array</span><span class="pl-kos">(</span><span class="pl-c1">1</span><span class="pl-kos">)</span><span class="pl-kos">)</span><span class="pl-kos">[</span><span class="pl-c1">0</span><span class="pl-kos">]</span> <span class="pl-c1">&amp;</span> <span class="pl-c1">15</span> <span class="pl-c1">&gt;&gt;</span> <span class="pl-s1">c</span> <span class="pl-c1">/</span> <span class="pl-c1">4</span><span class="pl-kos">)</span><span class="pl-kos">.</span><span class="pl-en">toString</span><span class="pl-kos">(</span><span class="pl-c1">16</span><span class="pl-kos">)</span>
-    <span class="pl-kos">)</span><span class="pl-kos">;</span>
-<span class="pl-kos">}</span>
-
-<span class="pl-k">async</span> <span class="pl-k">function</span> <span class="pl-en">upload_files_or_urls</span><span class="pl-kos">(</span><span class="pl-s1">data</span><span class="pl-kos">)</span> <span class="pl-kos">{</span>
-    <span class="pl-k">let</span> <span class="pl-s1">bucket_id</span> <span class="pl-c1">=</span> <span class="pl-en">uuid</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span> <span class="pl-c">// Use a random generated key for your bucket</span>
-
-    <span class="pl-k">let</span> <span class="pl-s1">formData</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">FormData</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-k">if</span> <span class="pl-kos">(</span><span class="pl-k">typeof</span> <span class="pl-s1">data</span> <span class="pl-c1">===</span> <span class="pl-s">"object"</span> <span class="pl-c1">&amp;&amp;</span> <span class="pl-s1">data</span><span class="pl-kos">.</span><span class="pl-c1">constructor</span> <span class="pl-c1">===</span> <span class="pl-v">Array</span><span class="pl-kos">)</span> <span class="pl-kos">{</span> <span class="pl-c">//URLs</span>
-        <span class="pl-k">const</span> <span class="pl-s1">blob</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">Blob</span><span class="pl-kos">(</span><span class="pl-kos">[</span><span class="pl-c1">JSON</span><span class="pl-kos">.</span><span class="pl-en">stringify</span><span class="pl-kos">(</span><span class="pl-s1">data</span><span class="pl-kos">)</span><span class="pl-kos">]</span><span class="pl-kos">,</span> <span class="pl-kos">{</span> <span class="pl-c1">type</span>: <span class="pl-s">'application/json'</span> <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-        <span class="pl-k">const</span> <span class="pl-s1">file</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">File</span><span class="pl-kos">(</span><span class="pl-kos">[</span><span class="pl-s1">blob</span><span class="pl-kos">]</span><span class="pl-kos">,</span> <span class="pl-s">'downloads.json'</span><span class="pl-kos">,</span> <span class="pl-kos">{</span> <span class="pl-c1">type</span>: <span class="pl-s">'application/json'</span> <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span> <span class="pl-c">// Create File object</span>
-        <span class="pl-s1">formData</span><span class="pl-kos">.</span><span class="pl-en">append</span><span class="pl-kos">(</span><span class="pl-s">'files'</span><span class="pl-kos">,</span> <span class="pl-s1">file</span><span class="pl-kos">)</span><span class="pl-kos">;</span> <span class="pl-c">// Append as a file</span>
-    <span class="pl-kos">}</span> <span class="pl-k">else</span> <span class="pl-kos">{</span> <span class="pl-c">//Files</span>
-        <span class="pl-v">Array</span><span class="pl-kos">.</span><span class="pl-en">from</span><span class="pl-kos">(</span><span class="pl-s1">data</span><span class="pl-kos">)</span><span class="pl-kos">.</span><span class="pl-en">forEach</span><span class="pl-kos">(</span><span class="pl-s1">file</span> <span class="pl-c1">=&gt;</span> <span class="pl-kos">{</span>
-            <span class="pl-s1">formData</span><span class="pl-kos">.</span><span class="pl-en">append</span><span class="pl-kos">(</span><span class="pl-s">'files'</span><span class="pl-kos">,</span> <span class="pl-s1">file</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-        <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-kos">}</span>
-
-    <span class="pl-k">await</span> <span class="pl-en">fetch</span><span class="pl-kos">(</span><span class="pl-s">"/backend-api/v2/files/"</span> <span class="pl-c1">+</span> <span class="pl-s1">bucket_id</span><span class="pl-kos">,</span> <span class="pl-kos">{</span>
-        <span class="pl-c1">method</span>: <span class="pl-s">'POST'</span><span class="pl-kos">,</span>
-        <span class="pl-c1">body</span>: <span class="pl-s1">formData</span>
-    <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-
-    <span class="pl-k">function</span> <span class="pl-en">connectToSSE</span><span class="pl-kos">(</span><span class="pl-s1">url</span><span class="pl-kos">)</span> <span class="pl-kos">{</span>
-        <span class="pl-k">const</span> <span class="pl-s1">eventSource</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">EventSource</span><span class="pl-kos">(</span><span class="pl-s1">url</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-        <span class="pl-s1">eventSource</span><span class="pl-kos">.</span><span class="pl-en">onmessage</span> <span class="pl-c1">=</span> <span class="pl-kos">(</span><span class="pl-s1">event</span><span class="pl-kos">)</span> <span class="pl-c1">=&gt;</span> <span class="pl-kos">{</span>
-            <span class="pl-k">const</span> <span class="pl-s1">data</span> <span class="pl-c1">=</span> <span class="pl-c1">JSON</span><span class="pl-kos">.</span><span class="pl-en">parse</span><span class="pl-kos">(</span><span class="pl-s1">event</span><span class="pl-kos">.</span><span class="pl-c1">data</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-            <span class="pl-k">if</span> <span class="pl-kos">(</span><span class="pl-s1">data</span><span class="pl-kos">.</span><span class="pl-c1">error</span><span class="pl-kos">)</span> <span class="pl-kos">{</span>
-                <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">error</span><span class="pl-kos">(</span><span class="pl-s">"Error:"</span><span class="pl-kos">,</span> <span class="pl-s1">data</span><span class="pl-kos">.</span><span class="pl-c1">error</span><span class="pl-kos">.</span><span class="pl-c1">message</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-            <span class="pl-kos">}</span> <span class="pl-k">else</span> <span class="pl-k">if</span> <span class="pl-kos">(</span><span class="pl-s1">data</span><span class="pl-kos">.</span><span class="pl-c1">action</span> <span class="pl-c1">===</span> <span class="pl-s">"done"</span><span class="pl-kos">)</span> <span class="pl-kos">{</span>
-                <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">log</span><span class="pl-kos">(</span><span class="pl-s">"Files loaded successfully. Bucket ID:"</span><span class="pl-kos">,</span> <span class="pl-s1">bucket_id</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-                <span class="pl-c">// Use bucket_id in your LLM prompt.</span>
-                <span class="pl-k">const</span> <span class="pl-s1">prompt</span> <span class="pl-c1">=</span> <span class="pl-s">`Use files from bucket. <span class="pl-s1"><span class="pl-kos">${</span><span class="pl-c1">JSON</span><span class="pl-kos">.</span><span class="pl-en">stringify</span><span class="pl-kos">(</span><span class="pl-kos">{</span><span class="pl-s">"bucket_id"</span>: <span class="pl-s1">bucket_id</span><span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">}</span></span> to answer this: ...your question...`</span><span class="pl-kos">;</span>
-                <span class="pl-c">// ... Send prompt to your language model ...</span>
-            <span class="pl-kos">}</span> <span class="pl-k">else</span> <span class="pl-kos">{</span>
-                <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">log</span><span class="pl-kos">(</span><span class="pl-s">"SSE Event:"</span><span class="pl-kos">,</span> <span class="pl-s1">data</span><span class="pl-kos">)</span><span class="pl-kos">;</span> <span class="pl-c">// Update UI with progress as needed</span>
-            <span class="pl-kos">}</span>
-        <span class="pl-kos">}</span><span class="pl-kos">;</span>
-        <span class="pl-s1">eventSource</span><span class="pl-kos">.</span><span class="pl-en">onerror</span> <span class="pl-c1">=</span> <span class="pl-kos">(</span><span class="pl-s1">event</span><span class="pl-kos">)</span> <span class="pl-c1">=&gt;</span> <span class="pl-kos">{</span>
-            <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">error</span><span class="pl-kos">(</span><span class="pl-s">"SSE Error:"</span><span class="pl-kos">,</span> <span class="pl-s1">event</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-            <span class="pl-s1">eventSource</span><span class="pl-kos">.</span><span class="pl-en">close</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-        <span class="pl-kos">}</span><span class="pl-kos">;</span>
-    <span class="pl-kos">}</span>
-
-    <span class="pl-en">connectToSSE</span><span class="pl-kos">(</span><span class="pl-s">`/backend-api/v2/files/<span class="pl-s1"><span class="pl-kos">${</span><span class="pl-s1">bucket_id</span><span class="pl-kos">}</span></span>`</span><span class="pl-kos">)</span><span class="pl-kos">;</span> <span class="pl-c">//Retrieve and refine</span>
-<span class="pl-kos">}</span>
-
-<span class="pl-c">// Example with URLs</span>
-<span class="pl-k">const</span> <span class="pl-s1">urls</span> <span class="pl-c1">=</span> <span class="pl-kos">[</span><span class="pl-kos">{</span><span class="pl-s">"url"</span>: <span class="pl-s">"https://github.com/xtekky/gpt4free/issues"</span><span class="pl-kos">}</span><span class="pl-kos">]</span><span class="pl-kos">;</span>
-<span class="pl-en">upload_files_or_urls</span><span class="pl-kos">(</span><span class="pl-s1">urls</span><span class="pl-kos">)</span>
-
-<span class="pl-c">// Example with files (using a file input element)</span>
-<span class="pl-k">const</span> <span class="pl-s1">fileInput</span> <span class="pl-c1">=</span> <span class="pl-smi">document</span><span class="pl-kos">.</span><span class="pl-en">getElementById</span><span class="pl-kos">(</span><span class="pl-s">'fileInput'</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-<span class="pl-s1">fileInput</span><span class="pl-kos">.</span><span class="pl-en">addEventListener</span><span class="pl-kos">(</span><span class="pl-s">'change'</span><span class="pl-kos">,</span> <span class="pl-kos">(</span><span class="pl-kos">)</span> <span class="pl-c1">=&gt;</span> <span class="pl-kos">{</span>
-    <span class="pl-en">upload_files_or_urls</span><span class="pl-kos">(</span><span class="pl-s1">fileInput</span><span class="pl-kos">.</span><span class="pl-c1">files</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-<span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span></pre></div>
-<p><strong>Integrating with <code class="notranslate">ChatCompletion</code>:</strong></p>
-<p>To incorporate file uploads into your client applications, include the <code class="notranslate">bucket</code> in your chat completion requests, using inline content parts.</p>
-<div class="highlight highlight-source-json"><pre class="notranslate">{
-  <span class="pl-ent">"messages"</span>: [
-    {
-      <span class="pl-ent">"role"</span>: <span class="pl-s"><span class="pl-pds">"</span>user<span class="pl-pds">"</span></span>,
-      <span class="pl-ent">"content"</span>: [
-        {<span class="pl-ent">"type"</span>: <span class="pl-s"><span class="pl-pds">"</span>text<span class="pl-pds">"</span></span>, <span class="pl-ent">"text"</span>: <span class="pl-s"><span class="pl-pds">"</span>Answer this question using the files in the specified bucket: ...your question...<span class="pl-pds">"</span></span>},
-        {<span class="pl-ent">"bucket_id"</span>: <span class="pl-s"><span class="pl-pds">"</span>your_actual_bucket_id<span class="pl-pds">"</span></span>}
-      ]
-    }
-  ]
-}</pre></div>
-<p><strong>Important Considerations:</strong></p>
-<ul>
-<li><strong>Error Handling:</strong> Implement robust error handling in both Python and JavaScript to gracefully manage potential issues during file uploads, downloads, and API interactions.</li>
-<li><strong>Dependencies:</strong> Ensure all required packages are installed (<code class="notranslate">pip install -U g4f[files]</code> for Python).</li>
-</ul>
-<hr>
-<h2>📄 MarkItDown – Lightweight File-to-Text API (Alternative to G4F File API)</h2>
-<p><code class="notranslate">markitdown</code> is a simple and lightweight alternative to the G4F File API for extracting <strong>plain or markdown-formatted text</strong> from uploaded files. While the G4F File API supports bucket-based multi-file workflows and streaming, <code class="notranslate">markitdown</code> is ideal for <strong>quick, direct conversion of individual files</strong> (e.g. <code class="notranslate">.pdf</code>, <code class="notranslate">.docx</code>, <code class="notranslate">.wav</code>, etc.).</p>
-<h3>✅ Key Features</h3>
-<ul>
-<li>🔄 Converts a wide range of files (PDF, DOCX, TXT, AUDIO, etc.) to markdown/plain text.</li>
-<li>📤 Simple POST API: Send a file, receive extracted text.</li>
-<li>⚡ Fast, no bucket, SSE, or URL fetch needed.</li>
-<li>🎯 Ideal for use-cases where full document text is needed inline in chat prompts.</li>
-</ul>
-<hr>
-<h3>📦 Installation</h3>
-<div class="highlight highlight-source-shell"><pre class="notranslate">pip install markitdown[all]</pre></div>
-<hr>
-<h3>🐍 Example Usage (Python)</h3>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">requests</span>
-
-<span class="pl-k">def</span> <span class="pl-en">convert_with_markitdown</span>(<span class="pl-s1">file_path</span>):
-    <span class="pl-k">with</span> <span class="pl-en">open</span>(<span class="pl-s1">file_path</span>, <span class="pl-s">'rb'</span>) <span class="pl-k">as</span> <span class="pl-s1">file</span>:
-        <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">requests</span>.<span class="pl-c1">post</span>(<span class="pl-s">'http://localhost:8080/api/markitdown'</span>, <span class="pl-s1">files</span><span class="pl-c1">=</span>{<span class="pl-s">'file'</span>: <span class="pl-s1">file</span>})
-        <span class="pl-k">if</span> <span class="pl-s1">response</span>.<span class="pl-c1">status_code</span> <span class="pl-c1">==</span> <span class="pl-c1">200</span>:
-            <span class="pl-s1">data</span> <span class="pl-c1">=</span> <span class="pl-s1">response</span>.<span class="pl-c1">json</span>()
-            <span class="pl-k">return</span> <span class="pl-s1">data</span>[<span class="pl-s">'text'</span>]
-        <span class="pl-k">else</span>:
-            <span class="pl-k">raise</span> <span class="pl-en">Exception</span>(<span class="pl-s">f"Conversion failed: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">response</span>.<span class="pl-c1">status_code</span><span class="pl-kos">}</span></span> - <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">response</span>.<span class="pl-c1">text</span><span class="pl-kos">}</span></span>"</span>)
-
-<span class="pl-c"># Usage</span>
-<span class="pl-s1">text</span> <span class="pl-c1">=</span> <span class="pl-en">convert_with_markitdown</span>(<span class="pl-s">'example.pdf'</span>)
-<span class="pl-en">print</span>(<span class="pl-s1">text</span>)</pre></div>
-<hr>
-<h3>🌐 Example Usage (JavaScript)</h3>
-<div class="highlight highlight-text-html-basic"><pre class="notranslate"><span class="pl-kos">&lt;</span><span class="pl-ent">input</span> <span class="pl-c1">type</span>="<span class="pl-s">file</span>" <span class="pl-c1">id</span>="<span class="pl-s">fileInput</span>" <span class="pl-kos">/&gt;</span>
-
-<span class="pl-kos">&lt;</span><span class="pl-ent">script</span><span class="pl-kos">&gt;</span>
-<span class="pl-k">async</span> <span class="pl-k">function</span> <span class="pl-en">convertToMarkdown</span><span class="pl-kos">(</span><span class="pl-s1">file</span><span class="pl-kos">)</span> <span class="pl-kos">{</span>
-    <span class="pl-k">const</span> <span class="pl-s1">formData</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">FormData</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-s1">formData</span><span class="pl-kos">.</span><span class="pl-en">append</span><span class="pl-kos">(</span><span class="pl-s">'file'</span><span class="pl-kos">,</span> <span class="pl-s1">file</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-
-    <span class="pl-k">try</span> <span class="pl-kos">{</span>
-        <span class="pl-k">const</span> <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-en">fetch</span><span class="pl-kos">(</span><span class="pl-s">'http://localhost:8080/api/markitdown'</span><span class="pl-kos">,</span> <span class="pl-kos">{</span>
-            <span class="pl-c1">method</span>: <span class="pl-s">'POST'</span><span class="pl-kos">,</span>
-            <span class="pl-c1">body</span>: <span class="pl-s1">formData</span>
-        <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-
-        <span class="pl-k">if</span> <span class="pl-kos">(</span><span class="pl-c1">!</span><span class="pl-s1">response</span><span class="pl-kos">.</span><span class="pl-c1">ok</span><span class="pl-kos">)</span> <span class="pl-k">throw</span> <span class="pl-k">new</span> <span class="pl-v">Error</span><span class="pl-kos">(</span><span class="pl-s">`HTTP <span class="pl-s1"><span class="pl-kos">${</span><span class="pl-s1">response</span><span class="pl-kos">.</span><span class="pl-c1">status</span><span class="pl-kos">}</span></span>`</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-
-        <span class="pl-k">const</span> <span class="pl-s1">data</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">response</span><span class="pl-kos">.</span><span class="pl-en">json</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-        <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">log</span><span class="pl-kos">(</span><span class="pl-s">"Converted Text:"</span><span class="pl-kos">,</span> <span class="pl-s1">data</span><span class="pl-kos">.</span><span class="pl-c1">text</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-
-        <span class="pl-c">// You can now inject data.text into a prompt or display in the UI.</span>
-    <span class="pl-kos">}</span> <span class="pl-k">catch</span> <span class="pl-kos">(</span><span class="pl-s1">error</span><span class="pl-kos">)</span> <span class="pl-kos">{</span>
-        <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">error</span><span class="pl-kos">(</span><span class="pl-s">'Conversion failed:'</span><span class="pl-kos">,</span> <span class="pl-s1">error</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-kos">}</span>
-<span class="pl-kos">}</span>
-
-<span class="pl-smi">document</span><span class="pl-kos">.</span><span class="pl-en">getElementById</span><span class="pl-kos">(</span><span class="pl-s">'fileInput'</span><span class="pl-kos">)</span><span class="pl-kos">.</span><span class="pl-en">addEventListener</span><span class="pl-kos">(</span><span class="pl-s">'change'</span><span class="pl-kos">,</span> <span class="pl-k">async</span> <span class="pl-kos">(</span><span class="pl-s1">e</span><span class="pl-kos">)</span> <span class="pl-c1">=&gt;</span> <span class="pl-kos">{</span>
-    <span class="pl-k">const</span> <span class="pl-s1">file</span> <span class="pl-c1">=</span> <span class="pl-s1">e</span><span class="pl-kos">.</span><span class="pl-c1">target</span><span class="pl-kos">.</span><span class="pl-c1">files</span><span class="pl-kos">[</span><span class="pl-c1">0</span><span class="pl-kos">]</span><span class="pl-kos">;</span>
-    <span class="pl-k">if</span> <span class="pl-kos">(</span><span class="pl-s1">file</span><span class="pl-kos">)</span> <span class="pl-k">await</span> <span class="pl-en">convertToMarkdown</span><span class="pl-kos">(</span><span class="pl-s1">file</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-<span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-<span class="pl-kos">&lt;/</span><span class="pl-ent">script</span><span class="pl-kos">&gt;</span></pre></div>
-<hr>
-<h3>💬 Integration with ChatCompletion</h3>
-<p>Once you retrieve <code class="notranslate">text</code> from <code class="notranslate">markitdown</code>, you can insert it into your LLM prompt as inline content:</p>
-<div class="highlight highlight-source-json"><pre class="notranslate">{
-  <span class="pl-ent">"messages"</span>: [
-    {
-      <span class="pl-ent">"role"</span>: <span class="pl-s"><span class="pl-pds">"</span>user<span class="pl-pds">"</span></span>,
-      <span class="pl-ent">"content"</span>: [
-        { <span class="pl-ent">"type"</span>: <span class="pl-s"><span class="pl-pds">"</span>text<span class="pl-pds">"</span></span>, <span class="pl-ent">"text"</span>: <span class="pl-s"><span class="pl-pds">"</span>&lt;text_from_markitdown&gt;<span class="pl-pds">"</span></span> },
-        { <span class="pl-ent">"type"</span>: <span class="pl-s"><span class="pl-pds">"</span>text<span class="pl-pds">"</span></span>, <span class="pl-ent">"text"</span>: <span class="pl-s"><span class="pl-pds">"</span>Answer this question using the above content: ...your question...<span class="pl-pds">"</span></span> }
-      ]
-    }
-  ]
-}</pre></div>
-<p>Example in Python:</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[
-        {
-            <span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>,
-            <span class="pl-s">"content"</span>: [
-                {<span class="pl-s">"type"</span>: <span class="pl-s">"text"</span>, <span class="pl-s">"text"</span>: <span class="pl-s1">text</span>},
-                {<span class="pl-s">"type"</span>: <span class="pl-s">"text"</span>, <span class="pl-s">"text"</span>: <span class="pl-s">"Summarize this document."</span>}
-            ]
+        function generateTableOfContents() {
+            const headings = document.querySelectorAll('main h2, main h3');
+            const tocList = document.getElementById('toc-list');
+            
+            if (!tocList || headings.length === 0) return;
+            
+            tocList.innerHTML = '';
+            
+            headings.forEach(function(heading, index) {
+                const id = heading.id || `heading-${index}`;
+                if (!heading.id) {
+                    heading.id = id;
+                }
+                
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `#${id}`;
+                a.textContent = heading.textContent;
+                a.setAttribute('aria-label', `Jump to ${heading.textContent}`);
+                
+                if (heading.tagName === 'H3') {
+                    li.style.marginLeft = '1rem';
+                    li.style.fontSize = '0.9em';
+                }
+                
+                li.appendChild(a);
+                tocList.appendChild(li);
+            });
         }
-    ]
-)</pre></div>
-<hr>
-<h3>🔄 G4F File API vs MarkItDown</h3>
-<markdown-accessiblity-table><table role="table">
-<thead>
-<tr>
-<th>Feature</th>
-<th>G4F File API</th>
-<th>MarkItDown API</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Upload Files</td>
-<td>✅ Yes</td>
-<td>✅ Yes</td>
-</tr>
-<tr>
-<td>Web URL Downloads</td>
-<td>✅ Yes via <code class="notranslate">downloads.json</code></td>
-<td>❌ No</td>
-</tr>
-<tr>
-<td>SSE Progress Streaming</td>
-<td>✅ Yes</td>
-<td>❌ No</td>
-</tr>
-<tr>
-<td>Markdown/Text Output</td>
-<td>Raw/structured</td>
-<td>Clean markdown/plain text</td>
-</tr>
-<tr>
-<td>Bucket/File Management</td>
-<td>✅ Multi-file</td>
-<td>❌ Single-file only</td>
-</tr>
-<tr>
-<td>Use Case</td>
-<td>Multi-step pipelines, large workflows</td>
-<td>Quick extraction, inline usage</td>
-</tr>
-</tbody>
-</table></markdown-accessiblity-table>
-<hr>
-<h3>📌 Summary</h3>
-<ul>
-<li>
-<p>Use <strong>G4F File API</strong> when:</p>
-<ul>
-<li>You need to upload/download many files.</li>
-<li>You want streamed SSE progress.</li>
-<li>You're building a multi-step or large workflow.</li>
-</ul>
-</li>
-<li>
-<p>Use <strong>MarkItDown</strong> when:</p>
-<ul>
-<li>You want quick markdown/plain text extraction from a single file.</li>
-<li>You plan to inject the text directly into an LLM prompt.</li>
-<li>You prefer a simple one-call API.</li>
-</ul>
-</li>
-</ul>
-<hr>
-<p><a href="/docs/">Return to Documentation</a></p></article>
+
+        // Smooth scrolling for anchor links
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
+                e.preventDefault();
+                const target = document.querySelector(e.target.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }
+        });
+
+        // Add copy button to code blocks
+        document.querySelectorAll('pre code').forEach(function(block) {
+            const button = document.createElement('button');
+            button.textContent = 'Copy';
+            button.className = 'copy-button';
+            button.style.cssText = `
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background: rgba(139, 61, 255, 0.8);
+                color: white;
+                border: none;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.8rem;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            const pre = block.closest('pre');
+            pre.style.position = 'relative';
+            pre.appendChild(button);
+            
+            pre.addEventListener('mouseenter', function() {
+                button.style.opacity = '1';
+            });
+            
+            pre.addEventListener('mouseleave', function() {
+                button.style.opacity = '0';
+            });
+            
+            button.addEventListener('click', function() {
+                navigator.clipboard.writeText(block.textContent).then(function() {
+                    button.textContent = 'Copied!';
+                    setTimeout(function() {
+                        button.textContent = 'Copy';
+                    }, 2000);
+                });
+            });
+        });
+    </script>
 </body>
 </html>

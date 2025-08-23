@@ -1,245 +1,547 @@
 <!DOCTYPE html>
 <html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PydanticAI Integration with G4F Client</title>
-    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png">
-    <link rel="manifest" href="/dist/img/site.webmanifest">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PydanticAI Integration with G4F Client | GPT4Free Documentation</title>
+
+    <meta name="description" content="GPT4Free documentation for PydanticAI Integration with G4F Client. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
+    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, PydanticAI Integration with G4F Client" />
+    <meta name="author" content="GPT4Free Team" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="PydanticAI Integration with G4F Client | GPT4Free Documentation" />
+    <meta property="og:description" content="GPT4Free documentation for PydanticAI Integration with G4F Client. Free AI endpoints, examples, and comprehensive guides." />
+    <meta property="og:url" content="https://g4f.dev/docs/pydantic_ai.html" />
+    <meta property="og:site_name" content="GPT4Free Documentation" />
+    <meta property="og:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="PydanticAI Integration with G4F Client | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for PydanticAI Integration with G4F Client." />
+    <meta name="twitter:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://g4f.dev/docs/pydantic_ai.html" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png" />
+    <link rel="manifest" href="/dist/img/site.webmanifest" />
+
+    <!-- GitHub Primer CSS & styles -->
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
+
+    <!-- Highlight.js for enhanced JavaScript syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    
     <style>
         :root {
-            --colour-1: #000000;
-            --colour-2: #ccc;
-            --colour-3: #e4d4ff;
-            --colour-4: #f0f0f0;
-            --colour-5: #181818;
-            --colour-6: #242424;
             --accent: #8b3dff;
-            --gradient: #1a1a1a;
             --background: #16101b;
-            --size: 70vw;
-            --top: 50%;
-            --blur: 40px;
-            --opacity: 0.6;
+            --text-primary: #ddd;
+            --text-secondary: #9b7dff;
+            --card-bg: #1e152e;
+            --border-color: #333;
+            --hover-color: #a67eff;
         }
 
-        /* Body and text color */
         body {
-            height: 100vh;
             margin: 0;
             padding: 0;
+            background: var(--background);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            line-height: 1.6;
+            min-height: 100vh;
         }
 
-        .hidden {
-            display: none;
-        }
-
-        .container-lg {
+        .container {
+            display: flex;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 8px;
+            padding: 2rem;
+            gap: 3rem;
+            min-height: calc(100vh - 4rem);
         }
 
-        @media only screen and (min-width: 40em) {
-            .container-lg {
-                max-width: 84%;
+        /* Enhanced main content styling */
+        main {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            overflow-wrap: break-word;
+            position: relative;
+        }
+
+        /* Typography improvements */
+        .markdown-body h1 {
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 0.5rem;
+        }
+
+        .markdown-body h2 {
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body h3 {
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body p {
+            margin-bottom: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        /* Enhanced link styling */
+        .markdown-body a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .markdown-body a:hover,
+        .markdown-body a:focus {
+            color: var(--hover-color);
+            outline: none;
+            text-decoration: underline;
+            text-shadow: 0 0 8px rgba(139, 61, 255, 0.3);
+        }
+
+        /* Enhanced code block styling */
+        .markdown-body pre {
+            background: #2c2247 !important;
+            border-radius: 12px;
+            padding: 1.5rem !important;
+            font-size: 0.95rem !important;
+            overflow-x: auto;
+            max-height: 500px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.4);
+            color: #fff;
+            border: 1px solid #3d2a5c;
+            position: relative;
+        }
+
+        .markdown-body pre:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--hover-color));
+            border-radius: 12px 12px 0 0;
+        }
+
+        .markdown-body code {
+            font-family: 'SF Mono', 'Cascadia Code', 'Roboto Mono', Consolas, Liberation Mono, Menlo, monospace;
+            background: rgba(139, 61, 255, 0.1);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            color: #e6ccff;
+            font-size: 0.9em;
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        /* Table styling */
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 2rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .markdown-body table th,
+        .markdown-body table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .markdown-body table th {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .markdown-body table tr:nth-child(even) {
+            background: rgba(139, 61, 255, 0.05);
+        }
+
+        /* List styling */
+        .markdown-body ul, 
+        .markdown-body ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        .markdown-body li {
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        /* Blockquote styling */
+        .markdown-body blockquote {
+            border-left: 4px solid var(--accent);
+            background: rgba(139, 61, 255, 0.1);
+            margin: 2rem 0;
+            padding: 1rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* HR styling */
+        .markdown-body hr {
+            border: none;
+            border-top: 2px solid var(--accent);
+            margin: 3rem 0;
+            opacity: 0.6;
+        }
+
+        /* Sticky table of contents */
+        nav#toc {
+            flex: 0 0 280px;
+            position: sticky;
+            top: 2rem;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid rgba(139, 61, 255, 0.2);
+        }
+
+        nav#toc h2 {
+            font-size: 1.4rem;
+            margin: 0 0 1.5rem 0;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        nav#toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        nav#toc li {
+            margin-bottom: 0.8rem;
+        }
+
+        nav#toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: block;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        nav#toc a:hover, 
+        nav#toc a:focus {
+            background: rgba(139, 61, 255, 0.1);
+            color: var(--hover-color);
+            text-decoration: none;
+            transform: translateX(4px);
+        }
+
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 2rem;
+            }
+
+            nav#toc {
+                position: relative;
+                max-height: none;
+                order: -1;
+                flex: none;
+            }
+
+            .markdown-body h1 {
+                font-size: 2.2rem;
             }
         }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            main {
+                padding: 1.5rem;
+            }
+
+            .markdown-body h1 {
+                font-size: 1.8rem;
+            }
+
+            .markdown-body pre {
+                padding: 1rem !important;
+                font-size: 0.85rem !important;
+            }
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Focus indicators */
+        *:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* Print styles */
+        @media print {
+            .container {
+                display: block;
+            }
+            
+            nav#toc {
+                display: none;
+            }
+            
+            main {
+                box-shadow: none;
+                background: white;
+                color: black;
+            }
+        }
+
+        /* Loading animation for syntax highlighting */
+        .highlight-loading {
+            position: relative;
+            opacity: 0.7;
+        }
+
+        .highlight-loading::after {
+            content: 'Loading syntax highlighting...';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
     </style>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5896143631849307"
-     crossorigin="anonymous"></script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "PydanticAI Integration with G4F Client",
+      "description": "GPT4Free documentation for PydanticAI Integration with G4F Client. Complete guides, examples, and API reference for free AI endpoints.",
+      "author": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization",
+        "name": "GPT4Free",
+        "url": "https://g4f.dev",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://g4f.dev/dist/img/apple-touch-icon.png"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://g4f.dev/docs/pydantic_ai.html"
+      },
+      "datePublished": "2024-01-01T00:00:00Z",
+      "dateModified": "2024-01-01T00:00:00Z",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "keywords": "GPT4Free, AI documentation, free AI API, code generation",
+      "articleSection": "Documentation"
+    }
+    </script>
 </head>
 <body>
-    <article class="markdown-body entry-content container-lg" itemprop="text"><h2>PydanticAI Integration with G4F Client</h2>
-<p>This README provides an overview of how to integrate PydanticAI with the G4F client to create an agent that interacts with a language model. With this setup, you'll be able to apply patches to use PydanticAI with G4F, enable debugging, and run simple agent-based interactions synchronously. However, please note that tool calls within AI requests are currently <strong>not fully supported</strong> in this environment.</p>
-<h2>Requirements</h2>
-<p>Before starting, make sure you have the following Python dependencies installed:</p>
-<ul>
-<li><code class="notranslate">g4f</code>: A client that interfaces with various LLMs.</li>
-<li><code class="notranslate">pydantic_ai</code>: A module that provides integration with Pydantic-based models.</li>
-</ul>
-<h3>Installation</h3>
-<p>To install these dependencies, you can use <code class="notranslate">pip</code>:</p>
-<div class="highlight highlight-source-shell"><pre class="notranslate">pip install g4f pydantic_ai</pre></div>
-<h2>Step-by-Step Setup</h2>
-<h3>1. Patch PydanticAI to Use G4F Models</h3>
-<p>In order to use PydanticAI with G4F models, you need to apply the necessary patch to the client. This can be done by importing <code class="notranslate">patch_infer_model</code> from <code class="notranslate">g4f.integration.pydantic_ai</code>. The <code class="notranslate">api_key</code> parameter is optional, so if you have one, you can provide it. If not, the system will proceed without it.</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">integration</span>.<span class="pl-s1">pydantic_ai</span> <span class="pl-k">import</span> <span class="pl-s1">patch_infer_model</span>
+    <div class="container">
+        <nav id="toc" aria-label="Table of contents" role="navigation">
+            <h2>Contents</h2>
+            <ul id="toc-list">
+                <!-- Table of contents will be generated here -->
+            </ul>
+            <hr style="margin: 1.5rem 0; opacity: 0.3;">
+            <ul>
+                <li><a href="/docs/" aria-label="Return to documentation home">📚 Documentation Hub</a></li>
+                <li><a href="/" aria-label="Return to main site">🏠 G4F Home</a></li>
+            </ul>
+        </nav>
 
-<span class="pl-en">patch_infer_model</span>(<span class="pl-s1">api_key</span><span class="pl-c1">=</span><span class="pl-s">"your_api_key_here"</span>)  <span class="pl-c"># Optional</span></pre></div>
-<p>If you don't have an API key, simply omit the <code class="notranslate">api_key</code> argument.</p>
-<h3>2. Enable Debug Logging</h3>
-<p>For troubleshooting and monitoring purposes, you may want to enable debug logging. This can be achieved by setting <code class="notranslate">g4f.debug.logging</code> to <code class="notranslate">True</code>.</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">debug</span>
+        <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
+            Blocked by DNS monitoring proxy
+        </main>
+    </div>
 
-<span class="pl-s1">g4f</span>.<span class="pl-c1">debug</span>.<span class="pl-c1">logging</span> <span class="pl-c1">=</span> <span class="pl-c1">True</span></pre></div>
-<p>This will log detailed information about the internal processes and interactions.</p>
-<h3>3. Create a Simple Agent</h3>
-<p>Now you are ready to create a simple agent that can interact with the LLM. The agent is initialized with a model, and you can also define a system prompt. Here's an example where a basic agent is created with the model <code class="notranslate">g4f:Gemini:Gemini</code> and a simple system prompt:</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">pydantic_ai</span> <span class="pl-k">import</span> <span class="pl-v">Agent</span>
+    <script>
+        // Enhanced syntax highlighting with error handling
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // Initialize highlight.js
+                hljs.configure({
+                    languages: ['javascript', 'python', 'bash', 'json', 'typescript', 'html', 'css'],
+                    ignoreUnescapedHTML: true
+                });
 
-<span class="pl-c"># Define the agent</span>
-<span class="pl-s1">agent</span> <span class="pl-c1">=</span> <span class="pl-en">Agent</span>(
-    <span class="pl-s">'g4f:Gemini:Gemini'</span>, <span class="pl-c"># g4f:provider:model_name or g4f:model_name</span>
-    <span class="pl-s1">system_prompt</span><span class="pl-c1">=</span><span class="pl-s">'Be concise, reply with one sentence.'</span>,
-)</pre></div>
-<h3>4. Run the Agent Synchronously</h3>
-<p>Once the agent is set up, you can run it synchronously to interact with the LLM. The <code class="notranslate">run_sync</code> method sends a query to the LLM and returns the result.</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-c"># Run the agent synchronously with a user query</span>
-<span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-s1">agent</span>.<span class="pl-c1">run_sync</span>(<span class="pl-s">'Where does "hello world" come from?'</span>)
+                // Add loading class to pre elements
+                document.querySelectorAll('pre code').forEach(function(block) {
+                    block.closest('pre').classList.add('highlight-loading');
+                });
 
-<span class="pl-c"># Output the response</span>
-<span class="pl-en">print</span>(<span class="pl-s1">result</span>.<span class="pl-c1">data</span>)</pre></div>
-<p>In this example, the agent will send the system prompt along with the user query (<code class="notranslate">"Where does 'hello world' come from?"</code>) to the LLM. The LLM will process the request and return a concise answer.</p>
-<h3>Example Output</h3>
-<div class="highlight highlight-source-shell"><pre class="notranslate">The phrase <span class="pl-s"><span class="pl-pds">"</span>hello world<span class="pl-pds">"</span></span> is commonly used <span class="pl-k">in</span> programming tutorials to demonstrate basic syntax and the concept of outputting text to the screen.</pre></div>
-<h2>Tool Calls and Limitations</h2>
-<p><strong>Important</strong>: Tool calls (such as applying external functions or calling APIs within the AI request itself) are <strong>currently not fully supported</strong>. If your system relies on invoking specific external tools or functions during the conversation with the model, you will need to implement this functionality outside the agent's context or handle it before or after the agent's request.</p>
-<p>For example, you can process your query or interact with external systems before passing the data to the agent.</p>
-<hr>
-<h3>Simple Example without <code class="notranslate">patch_infer_model</code></h3>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">pydantic_ai</span> <span class="pl-k">import</span> <span class="pl-v">Agent</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">integration</span>.<span class="pl-s1">pydantic_ai</span> <span class="pl-k">import</span> <span class="pl-v">AIModel</span>
+                // Highlight all code blocks
+                hljs.highlightAll();
 
-<span class="pl-s1">agent</span> <span class="pl-c1">=</span> <span class="pl-en">Agent</span>(
-    <span class="pl-en">AIModel</span>(<span class="pl-s">"gpt-4o"</span>),
-)
+                // Remove loading class after highlighting
+                setTimeout(function() {
+                    document.querySelectorAll('.highlight-loading').forEach(function(pre) {
+                        pre.classList.remove('highlight-loading');
+                    });
+                }, 100);
 
-<span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-s1">agent</span>.<span class="pl-c1">run_sync</span>(<span class="pl-s">'Are you gpt-4o?'</span>)
-<span class="pl-en">print</span>(<span class="pl-s1">result</span>.<span class="pl-c1">data</span>)</pre></div>
-<p>This example shows how to initialize an agent with a specific model (<code class="notranslate">gpt-4o</code>) and run it synchronously.</p>
-<hr>
-<h3>Full Example with Tool Calls:</h3>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">pydantic</span> <span class="pl-k">import</span> <span class="pl-v">BaseModel</span>
-<span class="pl-k">from</span> <span class="pl-s1">pydantic_ai</span> <span class="pl-k">import</span> <span class="pl-v">Agent</span>
-<span class="pl-k">from</span> <span class="pl-s1">pydantic_ai</span>.<span class="pl-s1">models</span> <span class="pl-k">import</span> <span class="pl-v">ModelSettings</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">integration</span>.<span class="pl-s1">pydantic_ai</span> <span class="pl-k">import</span> <span class="pl-v">AIModel</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">import</span> <span class="pl-v">PollinationsAI</span>
+                // Generate table of contents
+                generateTableOfContents();
+                
+            } catch (error) {
+                console.warn('Syntax highlighting failed:', error);
+                // Remove loading indicators on error
+                document.querySelectorAll('.highlight-loading').forEach(function(pre) {
+                    pre.classList.remove('highlight-loading');
+                });
+            }
+        });
 
+        function generateTableOfContents() {
+            const headings = document.querySelectorAll('main h2, main h3');
+            const tocList = document.getElementById('toc-list');
+            
+            if (!tocList || headings.length === 0) return;
+            
+            tocList.innerHTML = '';
+            
+            headings.forEach(function(heading, index) {
+                const id = heading.id || `heading-${index}`;
+                if (!heading.id) {
+                    heading.id = id;
+                }
+                
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `#${id}`;
+                a.textContent = heading.textContent;
+                a.setAttribute('aria-label', `Jump to ${heading.textContent}`);
+                
+                if (heading.tagName === 'H3') {
+                    li.style.marginLeft = '1rem';
+                    li.style.fontSize = '0.9em';
+                }
+                
+                li.appendChild(a);
+                tocList.appendChild(li);
+            });
+        }
 
-<span class="pl-k">class</span> <span class="pl-v">MyModel</span>(<span class="pl-v">BaseModel</span>):
-    <span class="pl-s1">city</span>: <span class="pl-smi">str</span>
-    <span class="pl-s1">country</span>: <span class="pl-smi">str</span>
+        // Smooth scrolling for anchor links
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
+                e.preventDefault();
+                const target = document.querySelector(e.target.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }
+        });
 
-<span class="pl-s1">agent</span> <span class="pl-c1">=</span> <span class="pl-en">Agent</span>(<span class="pl-en">AIModel</span>(
-    <span class="pl-s">"gpt-4o"</span>, <span class="pl-c"># Specify the provider and model</span>
-    <span class="pl-v">PollinationsAI</span> <span class="pl-c"># Use a supported provider to handle tool-based response formatting</span>
-), <span class="pl-s1">result_type</span><span class="pl-c1">=</span><span class="pl-v">MyModel</span>, <span class="pl-s1">model_settings</span><span class="pl-c1">=</span><span class="pl-en">ModelSettings</span>(<span class="pl-s1">temperature</span><span class="pl-c1">=</span><span class="pl-c1">0</span>))
-
-<span class="pl-k">if</span> <span class="pl-s1">__name__</span> <span class="pl-c1">==</span> <span class="pl-s">'__main__'</span>:
-    <span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-s1">agent</span>.<span class="pl-c1">run_sync</span>(<span class="pl-s">'The windy city in the US of A.'</span>)
-    <span class="pl-en">print</span>(<span class="pl-s1">result</span>.<span class="pl-c1">data</span>)
-    <span class="pl-en">print</span>(<span class="pl-s1">result</span>.<span class="pl-c1">usage</span>())</pre></div>
-<p>This example demonstrates the use of a custom Pydantic model (<code class="notranslate">MyModel</code>) to capture structured data (city and country) from the response and running the agent with specific model settings.</p>
-<hr>
-<h3>Support for Models/Providers without Tool Call Support</h3>
-<p>For models/providers that do not fully support tool calls or lack a direct API for structured output, the <code class="notranslate">ToolSupportProvider</code> can be used to bridge the gap. This provider ensures that the agent properly formats the response, even when the model itself doesn't have built-in support for structured outputs. It does so by leveraging a tool list and creating a response format when only one tool is used.</p>
-<h3>Example for Models/Providers without Tool Support (Single Tool Usage)</h3>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">pydantic</span> <span class="pl-k">import</span> <span class="pl-v">BaseModel</span>
-<span class="pl-k">from</span> <span class="pl-s1">pydantic_ai</span> <span class="pl-k">import</span> <span class="pl-v">Agent</span>
-<span class="pl-k">from</span> <span class="pl-s1">pydantic_ai</span>.<span class="pl-s1">models</span> <span class="pl-k">import</span> <span class="pl-v">ModelSettings</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">integration</span>.<span class="pl-s1">pydantic_ai</span> <span class="pl-k">import</span> <span class="pl-v">AIModel</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">providers</span>.<span class="pl-s1">tool_support</span> <span class="pl-k">import</span> <span class="pl-v">ToolSupportProvider</span>
-
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span> <span class="pl-k">import</span> <span class="pl-s1">debug</span>
-<span class="pl-s1">debug</span>.<span class="pl-c1">logging</span> <span class="pl-c1">=</span> <span class="pl-c1">True</span>
-
-<span class="pl-c"># Define a custom model for structured output (e.g., city and country)</span>
-<span class="pl-k">class</span> <span class="pl-v">MyModel</span>(<span class="pl-v">BaseModel</span>):
-    <span class="pl-s1">city</span>: <span class="pl-smi">str</span>
-    <span class="pl-s1">country</span>: <span class="pl-smi">str</span>
-
-<span class="pl-c"># Create the agent for a model with tool support (using one tool)</span>
-<span class="pl-s1">agent</span> <span class="pl-c1">=</span> <span class="pl-en">Agent</span>(<span class="pl-en">AIModel</span>(
-    <span class="pl-s">"OpenaiChat:gpt-4o"</span>, <span class="pl-c"># Specify the provider and model</span>
-    <span class="pl-v">ToolSupportProvider</span> <span class="pl-c"># Use ToolSupportProvider to handle tool-based response formatting</span>
-), <span class="pl-s1">result_type</span><span class="pl-c1">=</span><span class="pl-v">MyModel</span>, <span class="pl-s1">model_settings</span><span class="pl-c1">=</span><span class="pl-en">ModelSettings</span>(<span class="pl-s1">temperature</span><span class="pl-c1">=</span><span class="pl-c1">0</span>))
-
-<span class="pl-k">if</span> <span class="pl-s1">__name__</span> <span class="pl-c1">==</span> <span class="pl-s">'__main__'</span>:
-    <span class="pl-c"># Run the agent with a query to extract information (e.g., city and country)</span>
-    <span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-s1">agent</span>.<span class="pl-c1">run_sync</span>(<span class="pl-s">'European city with the bear.'</span>)
-    <span class="pl-en">print</span>(<span class="pl-s1">result</span>.<span class="pl-c1">data</span>)  <span class="pl-c"># Structured output of city and country</span>
-    <span class="pl-en">print</span>(<span class="pl-s1">result</span>.<span class="pl-c1">usage</span>()) <span class="pl-c"># Usage statistics</span></pre></div>
-<h3>Explanation:</h3>
-<ul>
-<li>
-<p><strong><code class="notranslate">ToolSupportProvider</code> as a Bridge:</strong> The <code class="notranslate">ToolSupportProvider</code> acts as a bridge between the agent and the model, ensuring that the response is formatted into a structured output, even if the model doesn't have an API that directly supports such formatting.</p>
-<ul>
-<li>For instance, if the model generates raw text or unstructured data, the <code class="notranslate">ToolSupportProvider</code> will convert this into the expected format (like <code class="notranslate">MyModel</code>), allowing the agent to process it as structured data.</li>
-</ul>
-</li>
-<li>
-<p><strong>Model Initialization:</strong> We initialize the agent with the <code class="notranslate">PollinationsAI:openai</code> model, which may not have a built-in API for returning structured outputs. Instead, it relies on the <code class="notranslate">ToolSupportProvider</code> to format the output.</p>
-</li>
-<li>
-<p><strong>Custom Result Model:</strong> We define a custom Pydantic model (<code class="notranslate">MyModel</code>) to capture the expected output in a structured way (e.g., <code class="notranslate">city</code> and <code class="notranslate">country</code> fields). This helps ensure that even when the model doesn't support structured data, the agent can interpret and format it.</p>
-</li>
-<li>
-<p><strong>Debug Logging:</strong> The <code class="notranslate">g4f.debug.logging</code> is enabled to provide detailed logs for troubleshooting and monitoring the agent's execution.</p>
-</li>
-</ul>
-<h3>Example Output:</h3>
-<div class="highlight highlight-source-shell"><pre class="notranslate">city=<span class="pl-s"><span class="pl-pds">'</span>Berlin<span class="pl-pds">'</span></span>
-country=<span class="pl-s"><span class="pl-pds">'</span>Germany<span class="pl-pds">'</span></span>
-usage={<span class="pl-s"><span class="pl-pds">'</span>prompt_tokens<span class="pl-pds">'</span></span>: 15, <span class="pl-s"><span class="pl-pds">'</span>completion_tokens<span class="pl-pds">'</span></span>: 50}</pre></div>
-<h3>Key Points:</h3>
-<ul>
-<li>
-<p><strong><code class="notranslate">ToolSupportProvider</code> Role:</strong> The <code class="notranslate">ToolSupportProvider</code> ensures that the agent formats the raw or unstructured response from the model into a structured format, even if the model itself lacks built-in support for structured data.</p>
-</li>
-<li>
-<p><strong>Single Tool Usage:</strong> The <code class="notranslate">ToolSupportProvider</code> is particularly useful when only one tool is used by the model, and it needs to format or transform the model's output into a structured response without additional tools.</p>
-</li>
-</ul>
-<h3>Notes:</h3>
-<ul>
-<li>This approach is ideal for models that return unstructured text or data that needs to be transformed into a structured format (e.g., Pydantic models).</li>
-<li>The <code class="notranslate">ToolSupportProvider</code> bridges the gap between the model's output and the expected structured format, enabling seamless integration into workflows that require structured responses.</li>
-</ul>
-<hr>
-<h2>LangChain Integration Example</h2>
-<p>For users working with LangChain, here is an example demonstrating how to integrate G4F models into a LangChain environment:</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">integration</span>.<span class="pl-s1">langchain</span> <span class="pl-k">import</span> <span class="pl-v">ChatAI</span>
-<span class="pl-k">import</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">debug</span>
-
-<span class="pl-c"># Enable debugging logs</span>
-<span class="pl-s1">g4f</span>.<span class="pl-c1">debug</span>.<span class="pl-c1">logging</span> <span class="pl-c1">=</span> <span class="pl-c1">True</span>
-
-<span class="pl-s1">llm</span> <span class="pl-c1">=</span> <span class="pl-en">ChatAI</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"llama3-70b-8192"</span>,
-    <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-s">"Groq"</span>,
-    <span class="pl-s1">api_key</span><span class="pl-c1">=</span><span class="pl-s">""</span>  <span class="pl-c"># Optionally add your API key here</span>
-)
-
-<span class="pl-s1">messages</span> <span class="pl-c1">=</span> [
-    {<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"2 🦜 2"</span>},
-    {<span class="pl-s">"role"</span>: <span class="pl-s">"assistant"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"4 🦜"</span>},
-    {<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"2 🦜 3"</span>},
-    {<span class="pl-s">"role"</span>: <span class="pl-s">"assistant"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"5 🦜"</span>},
-    {<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"3 🦜 4"</span>},
-]
-
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">llm</span>.<span class="pl-c1">invoke</span>(<span class="pl-s1">messages</span>)
-<span class="pl-k">assert</span>(<span class="pl-s1">response</span>.<span class="pl-c1">content</span> <span class="pl-c1">==</span> <span class="pl-s">"7 🦜"</span>)</pre></div>
-<p>This example shows how to use LangChain's <code class="notranslate">ChatAI</code> integration to create a conversational agent with a G4F model. The interaction takes place with the given messages and the agent processes them step-by-step to return the expected output.</p>
-<hr>
-<h2>Conclusion</h2>
-<p>By following these steps, you have successfully integrated G4F models into PydanticAI, created an agent, and enabled debugging. This allows you to conduct conversations with the language model, pass system prompts, and retrieve responses synchronously.</p>
-<h3>Notes:</h3>
-<ul>
-<li>The <code class="notranslate">api_key</code> parameter when calling <code class="notranslate">patch_infer_model</code> is optional. If you don’t provide it, the system will still work without an API key.</li>
-<li>Modify the agent’s <code class="notranslate">system_prompt</code> to suit the nature of the conversation you wish to have.</li>
-<li><strong>Tool calls within AI requests are not fully supported</strong> at the moment. Use the agent's basic functionality for generating responses and handle external calls separately.</li>
-</ul>
-<p>For further customization and advanced use cases, refer to the G4F and PydanticAI documentation.</p>
-<hr>
-<p><a href="/docs/">Return to Documentation</a></p></article>
+        // Add copy button to code blocks
+        document.querySelectorAll('pre code').forEach(function(block) {
+            const button = document.createElement('button');
+            button.textContent = 'Copy';
+            button.className = 'copy-button';
+            button.style.cssText = `
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background: rgba(139, 61, 255, 0.8);
+                color: white;
+                border: none;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.8rem;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            const pre = block.closest('pre');
+            pre.style.position = 'relative';
+            pre.appendChild(button);
+            
+            pre.addEventListener('mouseenter', function() {
+                button.style.opacity = '1';
+            });
+            
+            pre.addEventListener('mouseleave', function() {
+                button.style.opacity = '0';
+            });
+            
+            button.addEventListener('click', function() {
+                navigator.clipboard.writeText(block.textContent).then(function() {
+                    button.textContent = 'Copied!';
+                    setTimeout(function() {
+                        button.textContent = 'Copy';
+                    }, 2000);
+                });
+            });
+        });
+    </script>
 </body>
 </html>

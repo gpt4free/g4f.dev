@@ -1,595 +1,547 @@
 <!DOCTYPE html>
 <html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G4F - Media Documentation</title>
-    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png">
-    <link rel="manifest" href="/dist/img/site.webmanifest">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>G4F - Media Documentation | GPT4Free Documentation</title>
+
+    <meta name="description" content="GPT4Free documentation for G4F - Media Documentation. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
+    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, G4F - Media Documentation" />
+    <meta name="author" content="GPT4Free Team" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="G4F - Media Documentation | GPT4Free Documentation" />
+    <meta property="og:description" content="GPT4Free documentation for G4F - Media Documentation. Free AI endpoints, examples, and comprehensive guides." />
+    <meta property="og:url" content="https://g4f.dev/docs/media.html" />
+    <meta property="og:site_name" content="GPT4Free Documentation" />
+    <meta property="og:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="G4F - Media Documentation | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for G4F - Media Documentation." />
+    <meta name="twitter:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://g4f.dev/docs/media.html" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png" />
+    <link rel="manifest" href="/dist/img/site.webmanifest" />
+
+    <!-- GitHub Primer CSS & styles -->
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
     <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
+
+    <!-- Highlight.js for enhanced JavaScript syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    
     <style>
         :root {
-            --colour-1: #000000;
-            --colour-2: #ccc;
-            --colour-3: #e4d4ff;
-            --colour-4: #f0f0f0;
-            --colour-5: #181818;
-            --colour-6: #242424;
             --accent: #8b3dff;
-            --gradient: #1a1a1a;
             --background: #16101b;
-            --size: 70vw;
-            --top: 50%;
-            --blur: 40px;
-            --opacity: 0.6;
+            --text-primary: #ddd;
+            --text-secondary: #9b7dff;
+            --card-bg: #1e152e;
+            --border-color: #333;
+            --hover-color: #a67eff;
         }
 
-        /* Body and text color */
         body {
-            height: 100vh;
             margin: 0;
             padding: 0;
+            background: var(--background);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            line-height: 1.6;
+            min-height: 100vh;
         }
 
-        .hidden {
-            display: none;
-        }
-
-        .container-lg {
+        .container {
+            display: flex;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 8px;
+            padding: 2rem;
+            gap: 3rem;
+            min-height: calc(100vh - 4rem);
         }
 
-        @media only screen and (min-width: 40em) {
-            .container-lg {
-                max-width: 84%;
+        /* Enhanced main content styling */
+        main {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            overflow-wrap: break-word;
+            position: relative;
+        }
+
+        /* Typography improvements */
+        .markdown-body h1 {
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 0.5rem;
+        }
+
+        .markdown-body h2 {
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body h3 {
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body p {
+            margin-bottom: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        /* Enhanced link styling */
+        .markdown-body a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .markdown-body a:hover,
+        .markdown-body a:focus {
+            color: var(--hover-color);
+            outline: none;
+            text-decoration: underline;
+            text-shadow: 0 0 8px rgba(139, 61, 255, 0.3);
+        }
+
+        /* Enhanced code block styling */
+        .markdown-body pre {
+            background: #2c2247 !important;
+            border-radius: 12px;
+            padding: 1.5rem !important;
+            font-size: 0.95rem !important;
+            overflow-x: auto;
+            max-height: 500px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.4);
+            color: #fff;
+            border: 1px solid #3d2a5c;
+            position: relative;
+        }
+
+        .markdown-body pre:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--hover-color));
+            border-radius: 12px 12px 0 0;
+        }
+
+        .markdown-body code {
+            font-family: 'SF Mono', 'Cascadia Code', 'Roboto Mono', Consolas, Liberation Mono, Menlo, monospace;
+            background: rgba(139, 61, 255, 0.1);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            color: #e6ccff;
+            font-size: 0.9em;
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        /* Table styling */
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 2rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .markdown-body table th,
+        .markdown-body table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .markdown-body table th {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .markdown-body table tr:nth-child(even) {
+            background: rgba(139, 61, 255, 0.05);
+        }
+
+        /* List styling */
+        .markdown-body ul, 
+        .markdown-body ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        .markdown-body li {
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        /* Blockquote styling */
+        .markdown-body blockquote {
+            border-left: 4px solid var(--accent);
+            background: rgba(139, 61, 255, 0.1);
+            margin: 2rem 0;
+            padding: 1rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* HR styling */
+        .markdown-body hr {
+            border: none;
+            border-top: 2px solid var(--accent);
+            margin: 3rem 0;
+            opacity: 0.6;
+        }
+
+        /* Sticky table of contents */
+        nav#toc {
+            flex: 0 0 280px;
+            position: sticky;
+            top: 2rem;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid rgba(139, 61, 255, 0.2);
+        }
+
+        nav#toc h2 {
+            font-size: 1.4rem;
+            margin: 0 0 1.5rem 0;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        nav#toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        nav#toc li {
+            margin-bottom: 0.8rem;
+        }
+
+        nav#toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: block;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        nav#toc a:hover, 
+        nav#toc a:focus {
+            background: rgba(139, 61, 255, 0.1);
+            color: var(--hover-color);
+            text-decoration: none;
+            transform: translateX(4px);
+        }
+
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 2rem;
+            }
+
+            nav#toc {
+                position: relative;
+                max-height: none;
+                order: -1;
+                flex: none;
+            }
+
+            .markdown-body h1 {
+                font-size: 2.2rem;
             }
         }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            main {
+                padding: 1.5rem;
+            }
+
+            .markdown-body h1 {
+                font-size: 1.8rem;
+            }
+
+            .markdown-body pre {
+                padding: 1rem !important;
+                font-size: 0.85rem !important;
+            }
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Focus indicators */
+        *:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* Print styles */
+        @media print {
+            .container {
+                display: block;
+            }
+            
+            nav#toc {
+                display: none;
+            }
+            
+            main {
+                box-shadow: none;
+                background: white;
+                color: black;
+            }
+        }
+
+        /* Loading animation for syntax highlighting */
+        .highlight-loading {
+            position: relative;
+            opacity: 0.7;
+        }
+
+        .highlight-loading::after {
+            content: 'Loading syntax highlighting...';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
     </style>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5896143631849307"
-     crossorigin="anonymous"></script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "G4F - Media Documentation",
+      "description": "GPT4Free documentation for G4F - Media Documentation. Complete guides, examples, and API reference for free AI endpoints.",
+      "author": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization",
+        "name": "GPT4Free",
+        "url": "https://g4f.dev",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://g4f.dev/dist/img/apple-touch-icon.png"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://g4f.dev/docs/media.html"
+      },
+      "datePublished": "2024-01-01T00:00:00Z",
+      "dateModified": "2024-01-01T00:00:00Z",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "keywords": "GPT4Free, AI documentation, free AI API, code generation",
+      "articleSection": "Documentation"
+    }
+    </script>
 </head>
 <body>
-    <article class="markdown-body entry-content container-lg" itemprop="text"><h2>G4F - Media Documentation</h2>
-<p>This document outlines how to use the G4F (Generative Framework) library to generate and process various media types, including audio, images, and videos.</p>
-<hr>
-<h3>1. <strong>Audio Generation and Transcription</strong></h3>
-<p>G4F supports audio generation through providers like PollinationsAI, OpenAIFM, and others, as well as audio transcription using providers like Microsoft_Phi_4_Multimodal.</p>
-<h4><strong>Generate Audio with PollinationsAI:</strong></h4>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">asyncio</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">AsyncClient</span>
-<span class="pl-k">import</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span>
-
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">main</span>():
-    <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">AsyncClient</span>(<span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">PollinationsAI</span>)
-
-    <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>(
-        <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"openai-audio"</span>,
-        <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Say good day to the world"</span>}],
-        <span class="pl-s1">audio</span><span class="pl-c1">=</span>{<span class="pl-s">"voice"</span>: <span class="pl-s">"alloy"</span>, <span class="pl-s">"format"</span>: <span class="pl-s">"mp3"</span>},
-    )
-    <span class="pl-s1">response</span>.<span class="pl-c1">choices</span>[<span class="pl-c1">0</span>].<span class="pl-c1">message</span>.<span class="pl-c1">save</span>(<span class="pl-s">"alloy.mp3"</span>)
-
-<span class="pl-s1">asyncio</span>.<span class="pl-c1">run</span>(<span class="pl-en">main</span>())</pre></div>
-<details>
-<summary>Generate Audio with OpenAIFM:</summary>
-<p>OpenAIFM provides high-quality text-to-speech with various voice options and customizable voice styles.</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
-<span class="pl-k">import</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">as</span> <span class="pl-v">Provider</span>
-
-<span class="pl-c"># Initialize client with OpenAIFM provider</span>
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(<span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">Provider</span>.<span class="pl-c1">OpenAIFM</span>)
-
-<span class="pl-c"># Generate audio with default settings</span>
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">media</span>.<span class="pl-c1">generate</span>(
-    <span class="pl-s">"Hello, this is a test message for text-to-speech conversion."</span>,
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4o-mini-tts"</span>,
-    <span class="pl-s1">audio</span><span class="pl-c1">=</span>{<span class="pl-s">"voice"</span>: <span class="pl-s">"coral"</span>}
-)
-
-<span class="pl-c"># Save the generated audio</span>
-<span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">save</span>(<span class="pl-s">"openai_fm_audio.mp3"</span>)</pre></div>
-</details>
-<details>
-<summary>Available Voices in OpenAIFM:</summary>
-<p>OpenAIFM supports multiple voice options:</p>
-<ul>
-<li>alloy</li>
-<li>ash</li>
-<li>ballad</li>
-<li>coral (default)</li>
-<li>echo</li>
-<li>fable</li>
-<li>onyx</li>
-<li>nova</li>
-<li>sage</li>
-<li>shimmer</li>
-<li>verse</li>
-</ul>
-</details>
-<details>
-<summary>Using Predefined Voice Styles in OpenAIFM:</summary>
-<p>OpenAIFM provides several predefined voice styles that can be accessed as class attributes. These styles define the personality, tone, and delivery characteristics of the generated speech:</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
-<span class="pl-k">import</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">as</span> <span class="pl-v">Provider</span>
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(<span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">Provider</span>.<span class="pl-c1">OpenAIFM</span>)
-
-<span class="pl-c"># Available predefined styles as class attributes</span>
-<span class="pl-c"># Provider.OpenAIFM.friendly - Default friendly style</span>
-<span class="pl-c"># Provider.OpenAIFM.patient_teacher - Educational, patient tone</span>
-<span class="pl-c"># Provider.OpenAIFM.noir_detective - Mysterious detective style</span>
-<span class="pl-c"># Provider.OpenAIFM.cowboy - Relaxed western drawl</span>
-<span class="pl-c"># Provider.OpenAIFM.calm - Reassuring, composed tone</span>
-<span class="pl-c"># Provider.OpenAIFM.scientific_style - Formal academic style</span>
-
-<span class="pl-c"># Using the noir_detective style</span>
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">media</span>.<span class="pl-c1">generate</span>(
-    <span class="pl-s">"It appears the package was delivered to the wrong address. We need to find it."</span>,
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4o-mini-tts"</span>,
-    <span class="pl-s1">audio</span><span class="pl-c1">=</span>{
-        <span class="pl-s">"voice"</span>: <span class="pl-s">"onyx"</span>,
-        <span class="pl-s">"instructions"</span>: <span class="pl-v">Provider</span>.<span class="pl-c1">OpenAIFM</span>.<span class="pl-c1">noir_detective</span>
-    }
-)
-
-<span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">save</span>(<span class="pl-s">"detective_style.mp3"</span>)</pre></div>
-<p>Here's a description of each predefined style:</p>
-<ol>
-<li><strong>friendly</strong> (default): Cheerful, clear, and reassuring tone that creates a calm atmosphere.</li>
-<li><strong>patient_teacher</strong>: Warm, refined, and gently instructive tone like a friendly art instructor.</li>
-<li><strong>noir_detective</strong>: Cool, detached, mysterious tone with dramatic pauses to build suspense.</li>
-<li><strong>cowboy</strong>: Warm, relaxed, and friendly tone with a steady cowboy drawl.</li>
-<li><strong>calm</strong>: Composed, reassuring tone with quiet authority and confidence.</li>
-<li><strong>scientific_style</strong>: Authoritative and precise academic tone for technical content.</li>
-</ol>
-</details>
-<details>
-<summary>Creating Custom Voice Instructions in OpenAIFM:</summary>
-<p>You can create your own voice style by defining custom instructions as a multi-line string. The instructions should describe the voice characteristics, tone, pacing, emotion, pronunciation, and pauses:</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
-<span class="pl-k">import</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">as</span> <span class="pl-v">Provider</span>
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(<span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">Provider</span>.<span class="pl-c1">OpenAIFM</span>)
-
-<span class="pl-c"># Custom voice style</span>
-<span class="pl-s1">custom_instructions</span> <span class="pl-c1">=</span> <span class="pl-s">"""</span>
-<span class="pl-s">Voice: Energetic and enthusiastic, with a youthful quality.</span>
-<span class="pl-s"></span>
-<span class="pl-s">Tone: Upbeat and positive, conveying excitement and passion about the topic.</span>
-<span class="pl-s"></span>
-<span class="pl-s">Pacing: Quick but clear, with dynamic variations to maintain interest.</span>
-<span class="pl-s"></span>
-<span class="pl-s">Emotion: Genuinely excited and enthusiastic, with occasional moments of awe or surprise.</span>
-<span class="pl-s"></span>
-<span class="pl-s">Pronunciation: Crisp and clear, with emphasis on key words to highlight important points.</span>
-<span class="pl-s"></span>
-<span class="pl-s">Pauses: Strategic short pauses before important information, creating anticipation.</span>
-<span class="pl-s">"""</span>
-
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">media</span>.<span class="pl-c1">generate</span>(
-    <span class="pl-s">"This is amazing news! We're launching a new product that will change the industry!"</span>,
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4o-mini-tts"</span>,
-    <span class="pl-s1">audio</span><span class="pl-c1">=</span>{
-        <span class="pl-s">"voice"</span>: <span class="pl-s">"nova"</span>,
-        <span class="pl-s">"instructions"</span>: <span class="pl-s1">custom_instructions</span>
-    }
-)
-
-<span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">save</span>(<span class="pl-s">"custom_enthusiastic_style.mp3"</span>)</pre></div>
-<h5><strong>Structure for Custom Voice Instructions:</strong></h5>
-<p>When creating custom instructions, consider including these elements:</p>
-<ol>
-<li><strong>Voice/Affect</strong>: The overall personality or character of the voice.</li>
-<li><strong>Tone</strong>: The emotional quality and attitude of the speech.</li>
-<li><strong>Pacing</strong>: The speed and rhythm of speech delivery.</li>
-<li><strong>Emotion</strong>: The specific feelings to convey in the speech.</li>
-<li><strong>Pronunciation</strong>: How words should be articulated.</li>
-<li><strong>Pauses</strong>: Where and how long to pause between phrases.</li>
-</ol>
-<p>This structure helps the model understand exactly how to style the generated speech.</p>
-</details>
-<details>
-<summary>Full example for JavaScript</summary>
-<div class="highlight highlight-source-js"><pre class="notranslate"><span class="pl-k">async</span> <span class="pl-k">function</span> <span class="pl-en">generateSpeech</span><span class="pl-kos">(</span><span class="pl-s1">text</span><span class="pl-kos">)</span> <span class="pl-kos">{</span>
-    <span class="pl-k">const</span> <span class="pl-s1">url</span> <span class="pl-c1">=</span> <span class="pl-s">'/v1/audio/speech'</span><span class="pl-kos">;</span> <span class="pl-c">// Replace with actual API URL</span>
-    <span class="pl-k">const</span> <span class="pl-s1">requestData</span> <span class="pl-c1">=</span> <span class="pl-kos">{</span>
-        <span class="pl-c1">input</span>: <span class="pl-s1">text</span><span class="pl-kos">,</span>
-        <span class="pl-c1">voice</span>: <span class="pl-s">''</span><span class="pl-kos">,</span> <span class="pl-c">// Adjust voice settings as needed</span>
-        <span class="pl-c1">response_format</span>: <span class="pl-s">'mp3'</span> <span class="pl-c">// Adjust format settings</span>
-    <span class="pl-kos">}</span><span class="pl-kos">;</span>
-
-    <span class="pl-k">try</span> <span class="pl-kos">{</span>
-        <span class="pl-k">const</span> <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-en">fetch</span><span class="pl-kos">(</span><span class="pl-s1">url</span><span class="pl-kos">,</span> <span class="pl-kos">{</span>
-            <span class="pl-c1">method</span>: <span class="pl-s">'POST'</span><span class="pl-kos">,</span>
-            <span class="pl-c1">headers</span>: <span class="pl-kos">{</span>
-                <span class="pl-s">'Content-Type'</span>: <span class="pl-s">'application/json'</span><span class="pl-kos">,</span>
-            <span class="pl-kos">}</span><span class="pl-kos">,</span>
-            <span class="pl-c1">body</span>: <span class="pl-c1">JSON</span><span class="pl-kos">.</span><span class="pl-en">stringify</span><span class="pl-kos">(</span><span class="pl-s1">requestData</span><span class="pl-kos">)</span>
-        <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-
-        <span class="pl-k">if</span> <span class="pl-kos">(</span><span class="pl-c1">!</span><span class="pl-s1">response</span><span class="pl-kos">.</span><span class="pl-c1">ok</span><span class="pl-kos">)</span> <span class="pl-kos">{</span>
-            <span class="pl-k">throw</span> <span class="pl-k">new</span> <span class="pl-v">Error</span><span class="pl-kos">(</span><span class="pl-s">`API error: <span class="pl-s1"><span class="pl-kos">${</span><span class="pl-s1">response</span><span class="pl-kos">.</span><span class="pl-c1">status</span><span class="pl-kos">}</span></span> <span class="pl-s1"><span class="pl-kos">${</span><span class="pl-s1">response</span><span class="pl-kos">.</span><span class="pl-c1">statusText</span><span class="pl-kos">}</span></span>`</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-        <span class="pl-kos">}</span>
-
-        <span class="pl-k">const</span> <span class="pl-s1">audioBlob</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">response</span><span class="pl-kos">.</span><span class="pl-en">blob</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-        <span class="pl-k">const</span> <span class="pl-s1">audioUrl</span> <span class="pl-c1">=</span> <span class="pl-c1">URL</span><span class="pl-kos">.</span><span class="pl-en">createObjectURL</span><span class="pl-kos">(</span><span class="pl-s1">audioBlob</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-        <span class="pl-k">const</span> <span class="pl-s1">audioElement</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">Audio</span><span class="pl-kos">(</span><span class="pl-s1">audioUrl</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-        <span class="pl-s1">audioElement</span><span class="pl-kos">.</span><span class="pl-en">play</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-kos">}</span> <span class="pl-k">catch</span> <span class="pl-kos">(</span><span class="pl-s1">error</span><span class="pl-kos">)</span> <span class="pl-kos">{</span>
-        <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">error</span><span class="pl-kos">(</span><span class="pl-s">'Error generating speech audio:'</span><span class="pl-kos">,</span> <span class="pl-s1">error</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-kos">}</span>
-<span class="pl-kos">}</span>
-
-<span class="pl-c">// Example usage</span>
-<span class="pl-en">generateSpeech</span><span class="pl-kos">(</span><span class="pl-s">'Hello, this is a speech synthesis test.'</span><span class="pl-kos">)</span><span class="pl-kos">;</span></pre></div>
-</details>
-<details>
-<summary>Examples for all providers</summary>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
-
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">import</span> <span class="pl-s1">gTTS</span>, <span class="pl-v">EdgeTTS</span>, <span class="pl-v">Gemini</span>, <span class="pl-v">PollinationsAI</span>, <span class="pl-v">OpenAIFM</span>
-
-<span class="pl-c"># OpenAIFM</span>
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(<span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">OpenAIFM</span>)
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">media</span>.<span class="pl-c1">generate</span>(
-    <span class="pl-s">"Hello"</span>,
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4o-mini-tts"</span>,
-    <span class="pl-s1">audio</span><span class="pl-c1">=</span>{<span class="pl-s">"voice"</span>: <span class="pl-s">"coral"</span>}
-)
-<span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">save</span>(<span class="pl-s">"openai_fm.mp3"</span>)
-
-<span class="pl-c"># PollinationsAI</span>
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(<span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">PollinationsAI</span>)
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">media</span>.<span class="pl-c1">generate</span>(<span class="pl-s">"Hello"</span>, <span class="pl-s1">audio</span><span class="pl-c1">=</span>{<span class="pl-s">"voice"</span>: <span class="pl-s">"alloy"</span>, <span class="pl-s">"format"</span>: <span class="pl-s">"mp3"</span>})
-<span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">save</span>(<span class="pl-s">"openai.mp3"</span>)
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(<span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">PollinationsAI</span>)
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">media</span>.<span class="pl-c1">generate</span>(<span class="pl-s">"Hello"</span>, <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"hypnosis-tracy"</span>)
-<span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">save</span>(<span class="pl-s">"hypnosis.mp3"</span>)
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(<span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">Gemini</span>)
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">media</span>.<span class="pl-c1">generate</span>(<span class="pl-s">"Hello"</span>, <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gemini-audio"</span>)
-<span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">save</span>(<span class="pl-s">"gemini.ogx"</span>)
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(<span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">EdgeTTS</span>)
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">media</span>.<span class="pl-c1">generate</span>(<span class="pl-s">"Hello"</span>, <span class="pl-s1">audio</span><span class="pl-c1">=</span>{<span class="pl-s">"language"</span>: <span class="pl-s">"en"</span>})
-<span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">save</span>(<span class="pl-s">"edge-tts.mp3"</span>)
-
-<span class="pl-c"># The EdgeTTS provider also support the audio parameters `rate`, `volume` and `pitch`</span>
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>(<span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-s1">gTTS</span>)
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">media</span>.<span class="pl-c1">generate</span>(<span class="pl-s">"Hello"</span>, <span class="pl-s1">audio</span><span class="pl-c1">=</span>{<span class="pl-s">"language"</span>: <span class="pl-s">"en-US"</span>})
-<span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">save</span>(<span class="pl-s">"google-tts.mp3"</span>)
-
-<span class="pl-c"># The gTTS provider also support the audio parameters `tld` and `slow`</span></pre></div>
-</details>
-<h4><strong>Transcribe an Audio File:</strong></h4>
-<p>Some providers in G4F support audio inputs in chat completions, allowing you to transcribe audio files by instructing the model accordingly. This example demonstrates how to use the <code class="notranslate">AsyncClient</code> to transcribe an audio file asynchronously:</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">asyncio</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">AsyncClient</span>
-<span class="pl-k">import</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span>
-
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">main</span>():
-    <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">AsyncClient</span>(<span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-s1">g4f</span>.<span class="pl-c1">Provider</span>.<span class="pl-c1">Microsoft_Phi_4_Multimodal</span>)
-
-    <span class="pl-k">with</span> <span class="pl-en">open</span>(<span class="pl-s">"audio.wav"</span>, <span class="pl-s">"rb"</span>) <span class="pl-k">as</span> <span class="pl-s1">audio_file</span>:
-        <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>(
-            <span class="pl-s1">messages</span><span class="pl-c1">=</span><span class="pl-s">"Transcribe this audio"</span>,
-            <span class="pl-s1">media</span><span class="pl-c1">=</span>[[<span class="pl-s1">audio_file</span>, <span class="pl-s">"audio.wav"</span>]],
-            <span class="pl-s1">modalities</span><span class="pl-c1">=</span>[<span class="pl-s">"text"</span>],
-        )
-
-    <span class="pl-en">print</span>(<span class="pl-s1">response</span>.<span class="pl-c1">choices</span>[<span class="pl-c1">0</span>].<span class="pl-c1">message</span>.<span class="pl-c1">content</span>)
-
-<span class="pl-k">if</span> <span class="pl-s1">__name__</span> <span class="pl-c1">==</span> <span class="pl-s">"__main__"</span>:
-    <span class="pl-s1">asyncio</span>.<span class="pl-c1">run</span>(<span class="pl-en">main</span>())</pre></div>
-<h4>Explanation</h4>
-<ul>
-<li><strong>Client Initialization</strong>: An <code class="notranslate">AsyncClient</code> instance is created with a provider that supports audio inputs, such as <code class="notranslate">PollinationsAI</code> or <code class="notranslate">Microsoft_Phi_4_Multimodal</code>.</li>
-<li><strong>File Handling</strong>: The audio file (<code class="notranslate">audio.wav</code>) is opened in binary read mode (<code class="notranslate">"rb"</code>) using a context manager (<code class="notranslate">with</code> statement) to ensure proper file closure after use.</li>
-<li><strong>API Call</strong>: The <code class="notranslate">chat.completions.create</code> method is called with:
-<ul>
-<li><code class="notranslate">messages</code>: Containing a user message instructing the model to transcribe the audio.</li>
-<li><code class="notranslate">media</code>: A list of lists, where each inner list contains the file object and its name (<code class="notranslate">[[audio_file, "audio.wav"]]</code>).</li>
-<li><code class="notranslate">modalities=["text"]</code>: Specifies that the output should be text (the transcription).</li>
-</ul>
-</li>
-<li><strong>Response</strong>: The transcription is extracted from <code class="notranslate">response.choices[0].message.content</code> and printed.</li>
-</ul>
-<h4>Notes</h4>
-<ul>
-<li><strong>Provider Support</strong>: Ensure the chosen provider (e.g., <code class="notranslate">PollinationsAI</code> or <code class="notranslate">Microsoft_Phi_4_Multimodal</code>) supports audio inputs in chat completions. Not all providers may offer this functionality.</li>
-<li><strong>File Path</strong>: Replace <code class="notranslate">"audio.wav"</code> with the path to your own audio file. The file format (e.g., WAV) should be compatible with the provider.</li>
-<li><strong>Model Selection</strong>: If <code class="notranslate">g4f.models.default</code> does not support audio transcription, you may need to specify a model that does (consult the provider's documentation for supported models).</li>
-</ul>
-<p>This example complements the guide by showcasing how to handle audio inputs asynchronously, expanding on the multimodal capabilities of the G4F AsyncClient API.</p>
-<h4><strong>More examples for Transcription:</strong></h4>
-<details>
-<summary>JavaScript</summary>
-<div class="highlight highlight-source-js"><pre class="notranslate"><span class="pl-k">const</span> <span class="pl-s1">endpoint</span> <span class="pl-c1">=</span> <span class="pl-s">"/v1/audio/transcriptions"</span><span class="pl-kos">;</span>
-<span class="pl-k">const</span> <span class="pl-s1">formData</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">FormData</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-
-<span class="pl-s1">formData</span><span class="pl-kos">.</span><span class="pl-en">append</span><span class="pl-kos">(</span><span class="pl-s">"file"</span><span class="pl-kos">,</span> <span class="pl-s1">audioFile</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-<span class="pl-s1">formData</span><span class="pl-kos">.</span><span class="pl-en">append</span><span class="pl-kos">(</span><span class="pl-s">"model"</span><span class="pl-kos">,</span> <span class="pl-s">""</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-
-<span class="pl-k">try</span> <span class="pl-kos">{</span>
-    <span class="pl-k">const</span> <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-en">fetch</span><span class="pl-kos">(</span><span class="pl-s1">endpoint</span><span class="pl-kos">,</span> <span class="pl-kos">{</span>
-        <span class="pl-c1">method</span>: <span class="pl-s">"POST"</span><span class="pl-kos">,</span>
-        <span class="pl-c1">body</span>: <span class="pl-s1">formData</span><span class="pl-kos">,</span>
-    <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-k">if</span> <span class="pl-kos">(</span><span class="pl-c1">!</span><span class="pl-s1">response</span><span class="pl-kos">.</span><span class="pl-c1">ok</span><span class="pl-kos">)</span> <span class="pl-kos">{</span>
-        <span class="pl-k">throw</span> <span class="pl-k">new</span> <span class="pl-v">Error</span><span class="pl-kos">(</span><span class="pl-s">`API request failed: <span class="pl-s1"><span class="pl-kos">${</span><span class="pl-s1">response</span><span class="pl-kos">.</span><span class="pl-c1">status</span><span class="pl-kos">}</span></span>`</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-kos">}</span>
-    <span class="pl-k">const</span> <span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">response</span><span class="pl-kos">.</span><span class="pl-en">json</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">log</span><span class="pl-kos">(</span><span class="pl-s">"Transcribed text:"</span><span class="pl-kos">,</span> <span class="pl-s1">result</span><span class="pl-kos">.</span><span class="pl-c1">text</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-<span class="pl-kos">}</span> <span class="pl-k">catch</span> <span class="pl-kos">(</span><span class="pl-s1">error</span><span class="pl-kos">)</span> <span class="pl-kos">{</span>
-    <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">error</span><span class="pl-kos">(</span><span class="pl-s">"Transcription error:"</span><span class="pl-kos">,</span> <span class="pl-s1">error</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-k">return</span> <span class="pl-c1">null</span><span class="pl-kos">;</span>
-<span class="pl-kos">}</span></pre></div>
-</details>
-<details>
-<summary>JavaScript with MediaRecorder</summary>
-<p>Required:</p>
-<pre class="notranslate"><code class="notranslate">pip install markitdown[audio-transcription]
-</code></pre>
-<pre class="notranslate"><code class="notranslate">apt-get install ffmpeg flac
-</code></pre>
-<p>Optional:</p>
-<pre class="notranslate"><code class="notranslate">pip install faster_whisper soundfile
-</code></pre>
-<p>Full example:</p>
-<div class="highlight highlight-source-js"><pre class="notranslate"><span class="pl-k">let</span> <span class="pl-s1">mediaRecorder</span><span class="pl-kos">;</span>
-
-<span class="pl-s1">audioButton</span><span class="pl-kos">.</span><span class="pl-en">addEventListener</span><span class="pl-kos">(</span><span class="pl-s">'click'</span><span class="pl-kos">,</span> <span class="pl-k">async</span> <span class="pl-kos">(</span><span class="pl-s1">event</span><span class="pl-kos">)</span> <span class="pl-c1">=&gt;</span> <span class="pl-kos">{</span>
-    <span class="pl-k">if</span> <span class="pl-kos">(</span><span class="pl-s1">mediaRecorder</span><span class="pl-kos">)</span> <span class="pl-kos">{</span>
-        <span class="pl-s1">mediaRecorder</span><span class="pl-kos">.</span><span class="pl-en">stop</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-        <span class="pl-s1">mediaRecorder</span><span class="pl-kos">.</span><span class="pl-c1">stream</span><span class="pl-kos">.</span><span class="pl-en">getTracks</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">.</span><span class="pl-en">forEach</span><span class="pl-kos">(</span><span class="pl-s1">track</span> <span class="pl-c1">=&gt;</span> <span class="pl-s1">track</span><span class="pl-kos">.</span><span class="pl-en">stop</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-        <span class="pl-s1">mediaRecorder</span> <span class="pl-c1">=</span> <span class="pl-c1">null</span><span class="pl-kos">;</span>
-        <span class="pl-k">return</span><span class="pl-kos">;</span>
-    <span class="pl-kos">}</span>
-
-    <span class="pl-s1">stream</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">navigator</span><span class="pl-kos">.</span><span class="pl-c1">mediaDevices</span><span class="pl-kos">.</span><span class="pl-en">getUserMedia</span><span class="pl-kos">(</span><span class="pl-kos">{</span>
-        <span class="pl-c1">audio</span>: <span class="pl-c1">true</span>
-    <span class="pl-kos">}</span><span class="pl-kos">)</span>
-
-    <span class="pl-k">if</span> <span class="pl-kos">(</span><span class="pl-c1">!</span><span class="pl-v">MediaRecorder</span><span class="pl-kos">.</span><span class="pl-en">isTypeSupported</span><span class="pl-kos">(</span><span class="pl-s">'audio/webm'</span><span class="pl-kos">)</span><span class="pl-kos">)</span> <span class="pl-kos">{</span>
-        <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">warn</span><span class="pl-kos">(</span><span class="pl-s">'audio/webm is not supported'</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-kos">}</span>
-
-    <span class="pl-s1">mediaRecorder</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">MediaRecorder</span><span class="pl-kos">(</span><span class="pl-s1">stream</span><span class="pl-kos">,</span> <span class="pl-kos">{</span>
-        <span class="pl-c1">mimeType</span>: <span class="pl-s">'audio/webm'</span><span class="pl-kos">,</span>
-    <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-
-    <span class="pl-s1">mediaRecorder</span><span class="pl-kos">.</span><span class="pl-en">addEventListener</span><span class="pl-kos">(</span><span class="pl-s">'dataavailable'</span><span class="pl-kos">,</span> <span class="pl-k">async</span> <span class="pl-s1">event</span> <span class="pl-c1">=&gt;</span> <span class="pl-kos">{</span>
-        <span class="pl-k">const</span> <span class="pl-s1">formData</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">FormData</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-        <span class="pl-s1">formData</span><span class="pl-kos">.</span><span class="pl-en">append</span><span class="pl-kos">(</span><span class="pl-s">'files'</span><span class="pl-kos">,</span> <span class="pl-s1">event</span><span class="pl-kos">.</span><span class="pl-c1">data</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-        <span class="pl-k">const</span> <span class="pl-s1">bucketId</span> <span class="pl-c1">=</span> <span class="pl-s1">crypto</span><span class="pl-kos">.</span><span class="pl-en">randomUUID</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-        <span class="pl-k">const</span> <span class="pl-s1">language</span> <span class="pl-c1">=</span> <span class="pl-smi">document</span><span class="pl-kos">.</span><span class="pl-en">getElementById</span><span class="pl-kos">(</span><span class="pl-s">"recognition-language"</span><span class="pl-kos">)</span><span class="pl-kos">?.</span><span class="pl-c1">value</span><span class="pl-kos">;</span>
-        <span class="pl-k">const</span> <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-en">fetch</span><span class="pl-kos">(</span><span class="pl-s">"/backend-api/v2/files/"</span> <span class="pl-c1">+</span> <span class="pl-s1">bucketId</span><span class="pl-kos">,</span> <span class="pl-kos">{</span>
-            <span class="pl-c1">method</span>: <span class="pl-s">'POST'</span><span class="pl-kos">,</span>
-            <span class="pl-c1">body</span>: <span class="pl-s1">formData</span><span class="pl-kos">,</span>
-            <span class="pl-c1">headers</span>: <span class="pl-kos">{</span>
-                <span class="pl-s">"x-recognition-language"</span>: <span class="pl-s1">language</span><span class="pl-kos">,</span>
-            <span class="pl-kos">}</span>
-        <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-        <span class="pl-k">const</span> <span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">response</span><span class="pl-kos">.</span><span class="pl-en">json</span><span class="pl-kos">(</span><span class="pl-kos">)</span>
-        <span class="pl-k">if</span> <span class="pl-kos">(</span><span class="pl-s1">result</span><span class="pl-kos">.</span><span class="pl-c1">media</span><span class="pl-kos">)</span> <span class="pl-kos">{</span>
-            <span class="pl-k">const</span> <span class="pl-s1">media</span> <span class="pl-c1">=</span> <span class="pl-kos">[</span><span class="pl-kos">]</span><span class="pl-kos">;</span>
-            <span class="pl-s1">result</span><span class="pl-kos">.</span><span class="pl-c1">media</span><span class="pl-kos">.</span><span class="pl-en">forEach</span><span class="pl-kos">(</span><span class="pl-kos">(</span><span class="pl-s1">part</span><span class="pl-kos">)</span><span class="pl-c1">=&gt;</span> <span class="pl-kos">{</span>
-                <span class="pl-c">// Handle result</span>
-                <span class="pl-k">const</span> <span class="pl-s1">url</span> <span class="pl-c1">=</span> <span class="pl-s">`/files/<span class="pl-s1"><span class="pl-kos">${</span><span class="pl-s1">bucketId</span><span class="pl-kos">}</span></span>/media/<span class="pl-s1"><span class="pl-kos">${</span><span class="pl-s1">part</span><span class="pl-kos">.</span><span class="pl-c1">name</span><span class="pl-kos">}</span></span>`</span><span class="pl-kos">;</span>
-                <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">log</span><span class="pl-kos">(</span><span class="pl-s1">url</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-            <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-        <span class="pl-kos">}</span>
-    <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-
-    <span class="pl-s1">mediaRecorder</span><span class="pl-kos">.</span><span class="pl-en">start</span><span class="pl-kos">(</span><span class="pl-kos">)</span>
-<span class="pl-kos">}</span><span class="pl-kos">)</span></pre></div>
-</details>
-<details>
-<summary>Python and requests</summary>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">requests</span>
-
-<span class="pl-k">with</span> <span class="pl-en">open</span>(<span class="pl-s">'audio.wav'</span>, <span class="pl-s">'rb'</span>) <span class="pl-k">as</span> <span class="pl-s1">audio_file</span>:
-    <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">requests</span>.<span class="pl-c1">post</span>(<span class="pl-s">'http://localhost:8080/api/markitdown'</span>, <span class="pl-s1">files</span><span class="pl-c1">=</span>{<span class="pl-s">'file'</span>: <span class="pl-s1">audio_file</span>})
-    <span class="pl-k">if</span> <span class="pl-s1">response</span>.<span class="pl-c1">status_code</span> <span class="pl-c1">==</span> <span class="pl-c1">200</span>:
-        <span class="pl-s1">data</span> <span class="pl-c1">=</span> <span class="pl-s1">response</span>.<span class="pl-c1">json</span>()
-        <span class="pl-en">print</span>(<span class="pl-s1">data</span>[<span class="pl-s">'text'</span>])
-    <span class="pl-k">else</span>:
-        <span class="pl-en">print</span>(<span class="pl-s">f"Error: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">response</span>.<span class="pl-c1">status_code</span><span class="pl-kos">}</span></span>, <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">response</span>.<span class="pl-c1">text</span><span class="pl-kos">}</span></span>"</span>)</pre></div>
-</details>
-<details>
-<summary>Python and openai</summary>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">openai</span> <span class="pl-k">import</span> <span class="pl-v">OpenAI</span>
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">OpenAI</span>(<span class="pl-s1">base_url</span><span class="pl-c1">=</span><span class="pl-s">"http://localhost:8080/v1"</span>, <span class="pl-s1">api_key</span><span class="pl-c1">=</span><span class="pl-s">"secret"</span>)
-
-<span class="pl-k">with</span> <span class="pl-en">open</span>(<span class="pl-s">"audio.wav"</span>, <span class="pl-s">"rb"</span>) <span class="pl-k">as</span> <span class="pl-s1">file</span>:
-    <span class="pl-s1">transcript</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">audio</span>.<span class="pl-c1">transcriptions</span>.<span class="pl-c1">create</span>(
-        <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">""</span>,
-        <span class="pl-s1">extra_body</span><span class="pl-c1">=</span>{<span class="pl-s">"provider"</span>: <span class="pl-s">"MarkItDown"</span>},
-        <span class="pl-s1">file</span><span class="pl-c1">=</span><span class="pl-s1">file</span>
-    )
-<span class="pl-en">print</span>(<span class="pl-s1">transcript</span>.<span class="pl-c1">text</span>)</pre></div>
-</details>
-<hr>
-<h3>2. <strong>Image Generation</strong></h3>
-<p>G4F can generate images from text prompts and provides options to retrieve images as URLs or base64-encoded strings.</p>
-<h4><strong>Generate an Image:</strong></h4>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">asyncio</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">AsyncClient</span>
-
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">main</span>():
-    <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">AsyncClient</span>()
-
-    <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span>.<span class="pl-c1">images</span>.<span class="pl-c1">generate</span>(
-        <span class="pl-s1">prompt</span><span class="pl-c1">=</span><span class="pl-s">"a white siamese cat"</span>,
-        <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"flux"</span>,
-        <span class="pl-s1">response_format</span><span class="pl-c1">=</span><span class="pl-s">"url"</span>,
-    )
-
-    <span class="pl-s1">image_url</span> <span class="pl-c1">=</span> <span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">url</span>
-    <span class="pl-en">print</span>(<span class="pl-s">f"Generated image URL: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">image_url</span><span class="pl-kos">}</span></span>"</span>)
-
-<span class="pl-s1">asyncio</span>.<span class="pl-c1">run</span>(<span class="pl-en">main</span>())</pre></div>
-<h4><strong>Base64 Response Format:</strong></h4>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">asyncio</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">AsyncClient</span>
-
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">main</span>():
-    <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">AsyncClient</span>()
-
-    <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span>.<span class="pl-c1">images</span>.<span class="pl-c1">generate</span>(
-        <span class="pl-s1">prompt</span><span class="pl-c1">=</span><span class="pl-s">"a white siamese cat"</span>,
-        <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"flux"</span>,
-        <span class="pl-s1">response_format</span><span class="pl-c1">=</span><span class="pl-s">"b64_json"</span>,
-    )
-
-    <span class="pl-s1">base64_text</span> <span class="pl-c1">=</span> <span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">b64_json</span>
-    <span class="pl-en">print</span>(<span class="pl-s1">base64_text</span>)
-
-<span class="pl-s1">asyncio</span>.<span class="pl-c1">run</span>(<span class="pl-en">main</span>())</pre></div>
-<h4><strong>Image Parameters:</strong></h4>
-<ul>
-<li><strong><code class="notranslate">width</code></strong>: Defines the width of the generated image.</li>
-<li><strong><code class="notranslate">height</code></strong>: Defines the height of the generated image.</li>
-<li><strong><code class="notranslate">n</code></strong>: Specifies the number of images to generate.</li>
-<li><strong><code class="notranslate">response_format</code></strong>: Specifies the format of the response:
-<ul>
-<li><code class="notranslate">"url"</code>: Returns the URL of the image.</li>
-<li><code class="notranslate">"b64_json"</code>: Returns the image as a base64-encoded JSON string.</li>
-<li>(Default): Saves the image locally and returns a local url.</li>
-</ul>
-</li>
-</ul>
-<h4><strong>Example with Image Parameters:</strong></h4>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">asyncio</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">AsyncClient</span>
-
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">main</span>():
-    <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">AsyncClient</span>()
-
-    <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span>.<span class="pl-c1">images</span>.<span class="pl-c1">generate</span>(
-        <span class="pl-s1">prompt</span><span class="pl-c1">=</span><span class="pl-s">"a white siamese cat"</span>,
-        <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"flux"</span>,
-        <span class="pl-s1">response_format</span><span class="pl-c1">=</span><span class="pl-s">"url"</span>,
-        <span class="pl-s1">width</span><span class="pl-c1">=</span><span class="pl-c1">512</span>,
-        <span class="pl-s1">height</span><span class="pl-c1">=</span><span class="pl-c1">512</span>,
-        <span class="pl-s1">n</span><span class="pl-c1">=</span><span class="pl-c1">2</span>,
-    )
-
-    <span class="pl-k">for</span> <span class="pl-s1">image</span> <span class="pl-c1">in</span> <span class="pl-s1">response</span>.<span class="pl-c1">data</span>:
-        <span class="pl-en">print</span>(<span class="pl-s">f"Generated image URL: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">image</span>.<span class="pl-c1">url</span><span class="pl-kos">}</span></span>"</span>)
-
-<span class="pl-s1">asyncio</span>.<span class="pl-c1">run</span>(<span class="pl-en">main</span>())</pre></div>
-<hr>
-<h3>3. <strong>Creating Image Variations</strong></h3>
-<p>You can generate variations of an existing image using G4F.</p>
-<h4><strong>Create Image Variations:</strong></h4>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">asyncio</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">AsyncClient</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">import</span> <span class="pl-v">OpenaiChat</span>
-
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">main</span>():
-    <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">AsyncClient</span>(<span class="pl-s1">image_provider</span><span class="pl-c1">=</span><span class="pl-v">OpenaiChat</span>)
-
-    <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span>.<span class="pl-c1">images</span>.<span class="pl-c1">create_variation</span>(
-        <span class="pl-s1">image</span><span class="pl-c1">=</span><span class="pl-en">open</span>(<span class="pl-s">"docs/images/cat.jpg"</span>, <span class="pl-s">"rb"</span>),
-        <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"dall-e-3"</span>,
-    )
-
-    <span class="pl-s1">image_url</span> <span class="pl-c1">=</span> <span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">url</span>
-    <span class="pl-en">print</span>(<span class="pl-s">f"Generated image URL: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">image_url</span><span class="pl-kos">}</span></span>"</span>)
-
-<span class="pl-s1">asyncio</span>.<span class="pl-c1">run</span>(<span class="pl-en">main</span>())</pre></div>
-<hr>
-<h3>4. <strong>Video Generation</strong></h3>
-<p>G4F supports video generation through providers like HuggingFaceMedia.</p>
-<h4><strong>Generate a Video:</strong></h4>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">asyncio</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">AsyncClient</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">import</span> <span class="pl-v">HuggingFaceMedia</span>
-
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">main</span>():
-    <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">AsyncClient</span>(
-        <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">HuggingFaceMedia</span>,
-        <span class="pl-s1">api_key</span><span class="pl-c1">=</span><span class="pl-s1">os</span>.<span class="pl-c1">getenv</span>(<span class="pl-s">"HF_TOKEN"</span>) <span class="pl-c"># Your API key here</span>
-    )
-
-    <span class="pl-s1">video_models</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">models</span>.<span class="pl-c1">get_video</span>()
-    <span class="pl-en">print</span>(<span class="pl-s">"Available Video Models:"</span>, <span class="pl-s1">video_models</span>)
-
-    <span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span>.<span class="pl-c1">media</span>.<span class="pl-c1">generate</span>(
-        <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s1">video_models</span>[<span class="pl-c1">0</span>],
-        <span class="pl-s1">prompt</span><span class="pl-c1">=</span><span class="pl-s">"G4F AI technology is the best in the world."</span>,
-        <span class="pl-s1">response_format</span><span class="pl-c1">=</span><span class="pl-s">"url"</span>,
-    )
-
-    <span class="pl-en">print</span>(<span class="pl-s">"Generated Video URL:"</span>, <span class="pl-s1">result</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">url</span>)
-
-<span class="pl-s1">asyncio</span>.<span class="pl-c1">run</span>(<span class="pl-en">main</span>())</pre></div>
-<h4><strong>Video Parameters:</strong></h4>
-<ul>
-<li><strong><code class="notranslate">resolution</code></strong>: Specifies the resolution of the generated video. Options include:
-<ul>
-<li><code class="notranslate">"480p"</code> (default)</li>
-<li><code class="notranslate">"720p"</code></li>
-</ul>
-</li>
-<li><strong><code class="notranslate">aspect_ratio</code></strong>: Defines the width-to-height ratio (e.g., <code class="notranslate">"16:9"</code>).</li>
-<li><strong><code class="notranslate">n</code></strong>: Specifies the number of videos to generate.</li>
-<li><strong><code class="notranslate">response_format</code></strong>: Specifies the format of the response:
-<ul>
-<li><code class="notranslate">"url"</code>: Returns the URL of the video.</li>
-<li><code class="notranslate">"b64_json"</code>: Returns the video as a base64-encoded JSON string.</li>
-<li>(Default): Saves the video locally and returns a local url.</li>
-</ul>
-</li>
-</ul>
-<h4><strong>Example with Video Parameters:</strong></h4>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">os</span>
-<span class="pl-k">import</span> <span class="pl-s1">asyncio</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">AsyncClient</span>
-<span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-v">Provider</span> <span class="pl-k">import</span> <span class="pl-v">HuggingFaceMedia</span>
-
-<span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">main</span>():
-    <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">AsyncClient</span>(
-        <span class="pl-s1">provider</span><span class="pl-c1">=</span><span class="pl-v">HuggingFaceMedia</span>,
-        <span class="pl-s1">api_key</span><span class="pl-c1">=</span><span class="pl-s1">os</span>.<span class="pl-c1">getenv</span>(<span class="pl-s">"HF_TOKEN"</span>)  <span class="pl-c"># Your API key here</span>
-    )
-
-    <span class="pl-s1">video_models</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">models</span>.<span class="pl-c1">get_video</span>()
-    <span class="pl-en">print</span>(<span class="pl-s">"Available Video Models:"</span>, <span class="pl-s1">video_models</span>)
-
-    <span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span>.<span class="pl-c1">media</span>.<span class="pl-c1">generate</span>(
-        <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s1">video_models</span>[<span class="pl-c1">0</span>],
-        <span class="pl-s1">prompt</span><span class="pl-c1">=</span><span class="pl-s">"G4F AI technology is the best in the world."</span>,
-        <span class="pl-s1">resolution</span><span class="pl-c1">=</span><span class="pl-s">"720p"</span>,
-        <span class="pl-s1">aspect_ratio</span><span class="pl-c1">=</span><span class="pl-s">"16:9"</span>,
-        <span class="pl-s1">n</span><span class="pl-c1">=</span><span class="pl-c1">1</span>,
-        <span class="pl-s1">response_format</span><span class="pl-c1">=</span><span class="pl-s">"url"</span>,
-    )
-
-    <span class="pl-en">print</span>(<span class="pl-s">"Generated Video URL:"</span>, <span class="pl-s1">result</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">url</span>)
-
-<span class="pl-s1">asyncio</span>.<span class="pl-c1">run</span>(<span class="pl-en">main</span>())</pre></div>
-<hr>
-<p><strong>Key Points:</strong></p>
-<ul>
-<li><strong>Provider Selection</strong>: Ensure the selected provider supports the desired media generation or processing task.</li>
-<li><strong>API Keys</strong>: Some providers require API keys for authentication.</li>
-<li><strong>Response Formats</strong>: Use <code class="notranslate">response_format</code> to control the output format (URL, base64, local file).</li>
-<li><strong>Parameter Usage</strong>: Use parameters like <code class="notranslate">width</code>, <code class="notranslate">height</code>, <code class="notranslate">resolution</code>, <code class="notranslate">aspect_ratio</code>, and <code class="notranslate">n</code> to customize the generated media.</li>
-</ul>
-<hr>
-<p><a href="/docs/">Return to Documentation</a></p></article>
+    <div class="container">
+        <nav id="toc" aria-label="Table of contents" role="navigation">
+            <h2>Contents</h2>
+            <ul id="toc-list">
+                <!-- Table of contents will be generated here -->
+            </ul>
+            <hr style="margin: 1.5rem 0; opacity: 0.3;">
+            <ul>
+                <li><a href="/docs/" aria-label="Return to documentation home">📚 Documentation Hub</a></li>
+                <li><a href="/" aria-label="Return to main site">🏠 G4F Home</a></li>
+            </ul>
+        </nav>
+
+        <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
+            Blocked by DNS monitoring proxy
+        </main>
+    </div>
+
+    <script>
+        // Enhanced syntax highlighting with error handling
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // Initialize highlight.js
+                hljs.configure({
+                    languages: ['javascript', 'python', 'bash', 'json', 'typescript', 'html', 'css'],
+                    ignoreUnescapedHTML: true
+                });
+
+                // Add loading class to pre elements
+                document.querySelectorAll('pre code').forEach(function(block) {
+                    block.closest('pre').classList.add('highlight-loading');
+                });
+
+                // Highlight all code blocks
+                hljs.highlightAll();
+
+                // Remove loading class after highlighting
+                setTimeout(function() {
+                    document.querySelectorAll('.highlight-loading').forEach(function(pre) {
+                        pre.classList.remove('highlight-loading');
+                    });
+                }, 100);
+
+                // Generate table of contents
+                generateTableOfContents();
+                
+            } catch (error) {
+                console.warn('Syntax highlighting failed:', error);
+                // Remove loading indicators on error
+                document.querySelectorAll('.highlight-loading').forEach(function(pre) {
+                    pre.classList.remove('highlight-loading');
+                });
+            }
+        });
+
+        function generateTableOfContents() {
+            const headings = document.querySelectorAll('main h2, main h3');
+            const tocList = document.getElementById('toc-list');
+            
+            if (!tocList || headings.length === 0) return;
+            
+            tocList.innerHTML = '';
+            
+            headings.forEach(function(heading, index) {
+                const id = heading.id || `heading-${index}`;
+                if (!heading.id) {
+                    heading.id = id;
+                }
+                
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `#${id}`;
+                a.textContent = heading.textContent;
+                a.setAttribute('aria-label', `Jump to ${heading.textContent}`);
+                
+                if (heading.tagName === 'H3') {
+                    li.style.marginLeft = '1rem';
+                    li.style.fontSize = '0.9em';
+                }
+                
+                li.appendChild(a);
+                tocList.appendChild(li);
+            });
+        }
+
+        // Smooth scrolling for anchor links
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
+                e.preventDefault();
+                const target = document.querySelector(e.target.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }
+        });
+
+        // Add copy button to code blocks
+        document.querySelectorAll('pre code').forEach(function(block) {
+            const button = document.createElement('button');
+            button.textContent = 'Copy';
+            button.className = 'copy-button';
+            button.style.cssText = `
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background: rgba(139, 61, 255, 0.8);
+                color: white;
+                border: none;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.8rem;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            const pre = block.closest('pre');
+            pre.style.position = 'relative';
+            pre.appendChild(button);
+            
+            pre.addEventListener('mouseenter', function() {
+                button.style.opacity = '1';
+            });
+            
+            pre.addEventListener('mouseleave', function() {
+                button.style.opacity = '0';
+            });
+            
+            button.addEventListener('click', function() {
+                navigator.clipboard.writeText(block.textContent).then(function() {
+                    button.textContent = 'Copied!';
+                    setTimeout(function() {
+                        button.textContent = 'Copy';
+                    }, 2000);
+                });
+            });
+        });
+    </script>
 </body>
 </html>
