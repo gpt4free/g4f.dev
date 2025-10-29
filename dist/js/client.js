@@ -60,7 +60,7 @@ class Client {
         this.useModelName = options.useModelName || false;
         this.apiKey = options.apiKey;
         this.extraBody = options.extraBody || {};
-        this.logCallback = options.logCallback;
+        this.logCallback = options.logCallback || console.log;
 
         this.extraHeaders = {
             'Content-Type': 'application/json',
@@ -258,10 +258,17 @@ class Client {
       try {
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split('\n');
-          buffer = parts.pop();
+          let parts = [];
+          if (!done) {
+            buffer += decoder.decode(value, { stream: true });
+            const parts = buffer.split('\n');
+            buffer = parts.pop();
+          } else if (buffer) {
+            parts =  [buffer];
+            buffer = '';
+          } else {
+            break;
+          }
           for (const part of parts) {
             if (!part.trim() || part === 'data: [DONE]') continue;
             try {
@@ -283,10 +290,16 @@ class Client {
               } else if (response.headers.get('Content-Type').startsWith('application/json')) {
                 const data = JSON.parse(part);
                 if (data.choices && data.choices[0]?.message) {
-                        data.choices[0].delta = data.choices[0].message;
+                    data.choices[0].delta = data.choices[0].message;
                 } else if (data.choices === undefined) {
-                    if (data.output && data.output[0].content) {
-                        data.choices = [{delta: {content: data.output[0].content[0].text}}];
+                    if (data.output) {
+                        for (const message of data.output) {
+                            if (message.type === 'message') {
+                                yield {choices: [{delta: {content: message.content[0].text}}]};
+                            } else if (message.type === 'reasoning') {
+                                yield {choices: [{delta: {reasoning: message.content[0].text}}]};
+                            }
+                        }
                     } else if (data.message) {
                         data.choices = [{delta: data.message}];
                     }

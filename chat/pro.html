@@ -105,8 +105,7 @@
 <div id="topbar">
   <div class="block">
     <label>Provider:
-      <select id="provider">
-      </select>
+      <select id="provider"><option disabled selected>Loading...</option></select>
     </label>
   </div>
   <div class="block">
@@ -146,6 +145,7 @@
   // Set the initial height of the container to fit the viewport
   document.querySelector(".container").style.maxHeight = window.innerHeight + "px";
 
+  providerSelect.innerHTML = '';
   for (const key of Object.keys(providers)) {
       providerSelect.appendChild(new Option(key, key));
   }
@@ -170,7 +170,6 @@
         const opt = document.createElement('option');
         opt.value = model.id;
         opt.textContent = model.id + (model.type == "image" ? " 🎨" : "");
-        // Store the model type (e.g., 'chat' or 'image') in a data attribute.
         if (model.type) {
           opt.dataset.type = model.type;
         }
@@ -207,9 +206,7 @@
     chat.scrollTop = chat.scrollHeight;
 
     try {
-      // Conditionally call the correct client method based on model type.
       if (modelType === 'image') {
-        // Handle image generation
         const response = await client.images.generate({
           model: selectedModel,
           prompt: text,
@@ -220,7 +217,6 @@
         messages.push({ role: 'assistant', content: `Image generated: ${imageUrl}` });
 
       } else {
-        // Handle chat completion (existing logic)
         const stream = await client.chat.completions.create({
           model: selectedModel,
           messages,
@@ -266,6 +262,5 @@
 
   await initClient();
 </script>
-
 </body>
 </html>
