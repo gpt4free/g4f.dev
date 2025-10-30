@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Storage Usage in Settings</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 2rem;
+    background: #f9f9f9;
+  }
+  #settings {
+    background: white;
+    max-width: 400px;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+  h1 {
+    margin-bottom: 1rem;
+  }
+  p {
+    font-size: 1.1rem;
+  }
+  .bytes {
+    font-weight: bold;
+  }
+  #breakdown {
+    margin-top: 1rem;
+    padding-left: 1rem;
+  }
+  #error {
+    color: red;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+  <section id="settings">
+    <h1>Storage Usage</h1>
+    <p>Used space: <span id="used" class="bytes">-</span></p>
+    <p>Quota (max allowed): <span id="quota" class="bytes">-</span></p>
+    <div id="breakdown"></div>
+    <p id="error"></p>
+  </section>
+
+<script>
+  function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  async function updateStorageUsage() {
+    const usedElem = document.getElementById('used');
+    const quotaElem = document.getElementById('quota');
+    const breakdownElem = document.getElementById('breakdown');
+    const errorElem = document.getElementById('error');
+    errorElem.textContent = '';
+    breakdownElem.textContent = '';
+
+    if ('storage' in navigator && 'estimate' in navigator.storage) {
+      try {
+        const estimate = await navigator.storage.estimate();
+        const used = estimate.usage || 0;
+        const quota = estimate.quota || 0;
+        usedElem.textContent = formatBytes(used);
+        quotaElem.textContent = formatBytes(quota);
+
+        if (estimate.usageDetails) {
+          // Show breakdown by storage type if available
+          const details = estimate.usageDetails;
+          const keys = Object.keys(details);
+          if (keys.length) {
+            const list = document.createElement('ul');
+            list.style.paddingLeft = '20px';
+            keys.forEach(key => {
+              const li = document.createElement('li');
+              li.textContent = `${key}: ${formatBytes(details[key])}`;
+              list.appendChild(li);
+            });
+            breakdownElem.appendChild(document.createTextNode('Breakdown:'));
+            breakdownElem.appendChild(list);
+          }
+        }
+      } catch (err) {
+        errorElem.textContent = 'Failed to get storage estimate: ' + err.message;
+        usedElem.textContent = '-';
+        quotaElem.textContent = '-';
+      }
+    } else {
+      errorElem.textContent = 'StorageManager API is not supported in your browser.';
+      usedElem.textContent = '-';
+      quotaElem.textContent = '-';
+    }
+  }
+
+  window.addEventListener('load', updateStorageUsage);
+</script>
+</body>
+</html>

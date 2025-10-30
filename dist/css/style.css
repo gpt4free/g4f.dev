@@ -139,7 +139,7 @@ body:not(.white) a:visited{
     --colour-1: #000000;
 }
 
-body.liquid:not(.no-animations) {
+body.liquid:not(.no-animations):not(.white) {
     background: linear-gradient(135deg, rgba(30, 30, 45, 0.95), rgba(15, 15, 25, 0.95)),
                 var(--gradient-1),
                 var(--gradient-2);
