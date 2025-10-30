@@ -982,7 +982,8 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
     } else if (message.type == "content") {
         if (message.content) {
             if (!message_storage[message_id]) {
-                content_map.inner.innerHTML = '<span class="cursor"></span><br><br>';
+                content_map.inner.innerHTML = '<pre><span class="cursor"></span><pre><br>';
+                content_map.inner = content_map.inner.querySelector("pre");
             }
             message_storage[message_id] += message.content;
             if (message.data) {
@@ -2805,7 +2806,6 @@ async function on_load() {
     let chat_params = new URLSearchParams(window.location.search);
     if (chat_params.get("prompt")) {
         userInput.value = chat_params.get("prompt");
-        userInput.style.height = userInputHeight?.value + "px";
         userInput.focus();
     }
     if (!conversation_id) {
@@ -3056,10 +3056,6 @@ async function on_api() {
     hide_systemPrompt ? hide_systemPrompt.addEventListener('change', async (event) => {
         update_systemPrompt_icon(event.target.checked);
     }) : null;
-    const value = userInputHeight?.value;
-    if (value) {
-        userInput.style.height = `${value}px`;
-    }
     const darkMode = document.getElementById("darkMode");
     if (darkMode) {
         darkMode.addEventListener('change', async (event) => {
