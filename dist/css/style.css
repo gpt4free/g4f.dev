@@ -190,7 +190,7 @@ body.liquid:not(.no-animations):not(.white) {
     margin-bottom: 0;
 }
 
-.liquid .chat-top-panel, .liquid #chatPrompt, .liquid .message, .liquid .suggestions {
+.liquid #chatPrompt, .liquid .message, .liquid .suggestions {
     margin-bottom: 10px;
 }
 
@@ -1754,6 +1754,7 @@ form textarea {
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    padding-top: 10px;
 }
 .chat-footer {
     display: flex;

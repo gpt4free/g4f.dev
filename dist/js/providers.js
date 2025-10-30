@@ -15,7 +15,7 @@ const providers = {
     "groq": {class: Client, baseUrl: "https://g4f.dev/api/groq", tags: "", defaultModel: "openai/gpt-oss-120b"},
     "hugging-face": {class: HuggingFace, tags: "", localStorageApiKey: "HuggingFace-api_key"},
     "ollama": {class: Client, baseUrl: "https://g4f.dev/api/ollama", tags: "", localStorageApiKey: "Ollama-api_base"},
-    // "openrouter": {class: Client, baseUrl: "https://g4f.dev/api/openrouter", tags: "👓", localStorageApiKey: "OpenRouter-api_key"},
+    "openrouter": {class: Client, baseUrl: "https://g4f.dev/api/openrouter", tags: "👓", localStorageApiKey: "OpenRouter-api_key"},
     "pollinations.ai": {class: PollinationsAI, tags: "🎨 👓", localStorageApiKey: "PollinationsAI-api_key"},
     "puter": {class: Puter, tags: "👓"},
     // "stringable-inf": {class: Client, baseUrl: "https://stringableinf.com/api", apiEndpoint: "https://stringableinf.com/api/v1/chat/completions", tags: "", extraHeaders: {"HTTP-Referer": "https://g4f.dev/", "X-Title": "G4F Chat"}},
