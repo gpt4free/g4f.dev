@@ -3080,13 +3080,13 @@ async function on_api() {
             }
         });
     }
-    const disableGradient = document.getElementById("disableGradient");
-    if (disableGradient) {
-        disableGradient.addEventListener('change', async (event) => {
+    const disableAnimations = document.getElementById("disableAnimations");
+    if (disableAnimations) {
+        disableAnimations.addEventListener('change', async (event) => {
             if (event.target.checked) {
-                document.body.classList.add("gradient-none");
+                document.body.classList.add("no-animations");
             } else {
-                document.body.classList.remove("gradient-none");
+                document.body.classList.remove("no-animations");
             }
         });
     }

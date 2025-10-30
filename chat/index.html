@@ -102,8 +102,8 @@
       if (localStorage.getItem("darkMode") === "false") {
         document.body.classList.add("white");
       }
-      if (localStorage.getItem("disableGradient") !== "false") {
-        document.body.classList.add("gradient-none");
+      if (localStorage.getItem("disableAnimations") !== "false") {
+        document.body.classList.add("no-animations");
       }
     </script>
 
@@ -186,9 +186,9 @@
                       <label for="liquid" class="toogle" title="Toggle Liquid Mode"></label>
                   </div>
                   <div class="field">
-                      <span class="label">Disable Gradient Background</span>
-                      <input type="checkbox" id="disableGradient" checked />
-                      <label for="disableGradient" class="toogle" title="Disable gradient background"></label>
+                      <span class="label">Disable Animations</span>
+                      <input type="checkbox" id="disableAnimations" checked />
+                      <label for="disableAnimations" class="toogle" title="Disable animations"></label>
                   </div>
                   <div class="field">
                       <span class="label">Render Markdown</span>

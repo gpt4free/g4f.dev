@@ -139,7 +139,7 @@ body:not(.white) a:visited{
     --colour-1: #000000;
 }
 
-.liquid body {
+body.liquid:not(.no-animations) {
     background: linear-gradient(135deg, rgba(30, 30, 45, 0.95), rgba(15, 15, 25, 0.95)),
                 var(--gradient-1),
                 var(--gradient-2);
@@ -180,7 +180,7 @@ body:not(.white) a:visited{
 }
 
 /* Gradient swipe effect for buttons */
-.liquid button {
+.liquid:not(.no-animations) button {
     background: linear-gradient(135deg, rgba(144, 202, 249, 0.3), rgba(255, 176, 189, 0.3));
     background-size: 200% 200%;
     animation: liquidGlow 8s ease infinite;
@@ -1101,7 +1101,7 @@ select:hover,
     .count_total {
         padding-left: 98px;
     }
-    body:not(.white, .gradient-none) .gradient{
+    body:not(.white, .no-animations) .gradient{
         display: block;
     }
     form .label {
