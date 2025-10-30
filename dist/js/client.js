@@ -259,7 +259,6 @@ class Client {
         while (true) {
           const { done, value } = await reader.read();
           let parts = [];
-          console.log({done, value});
           if (!done) {
             buffer += decoder.decode(value, { stream: true });
             parts = buffer.split('\n');
