@@ -259,9 +259,10 @@ class Client {
         while (true) {
           const { done, value } = await reader.read();
           let parts = [];
+          console.log({done, value});
           if (!done) {
             buffer += decoder.decode(value, { stream: true });
-            const parts = buffer.split('\n');
+            parts = buffer.split('\n');
             buffer = parts.pop();
           } else if (buffer) {
             parts =  [buffer];
@@ -269,7 +270,9 @@ class Client {
           } else {
             break;
           }
+          console.log('Received chunk:', buffer, parts);
           for (const part of parts) {
+            console.log('Stream part:', part);
             if (!part.trim() || part === 'data: [DONE]') continue;
             try {
               if (part.startsWith('data: ')) {
