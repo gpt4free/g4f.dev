@@ -23,10 +23,11 @@ function add_error(event, log=false) {
     if (event.target && (event.target.src || event.target.href)) {
         p.innerText = `Resource failed to load: ${event.target.src || event.target.href}`;
     } else if (event.message) {
-        p.innerText = `${event.type}: ${event.message}` + (event.filename ? `\n${event.filename}:${event.lineno}:${event.colno}` : "");
+        p.innerText = event.type ? `${event.type}: ${event.message}` + (event.filename ? `\n${event.filename}:${event.lineno}:${event.colno}` : "") : event.message;
     } else {
         p.innerText = typeof event === 'string' ? event : JSON.stringify(event);
     }
+    p.innerHTML = p.innerHTML.replaceAll("\n", "<br>");
     logStorage.appendChild(p);
 }
 
@@ -81,13 +82,13 @@ framework.connectToBackend = async (connectStatus) => {
 };
 let newTranslations = [];
 framework.translate = (text) => {
-    if (text) {
+    const stripText = text.trim();
+    if (stripText) {
         const endWithSpace = text.endsWith(" ");
-        strip_text = text.trim();
-        if (strip_text in framework.translations && framework.translations[strip_text]) {
-            return framework.translations[strip_text] + (endWithSpace ? " " : "");
+        if (stripText in framework.translations && framework.translations[stripText]) {
+            return framework.translations[stripText] + (endWithSpace ? " " : "");
         }
-        strip_text && !newTranslations.includes(strip_text) ? newTranslations.push(strip_text) : null;
+        stripText && !newTranslations.includes(stripText) ? newTranslations.push(stripText) : null;
     }
     return text;
 };
@@ -97,14 +98,16 @@ framework.translateElements = function (elements = null) {
     if (!framework.translations) {
         return;
     }
-    elements = elements || document.querySelectorAll("p:not(:has(*)), a:not(:has(*)), h1, h2, h3, h4, h5, h6, button:not(:has(*)), title, span:not(:has(*)), strong, a:not(:has(*)), [data-translate], input, textarea, small, label:not(:has(*)), i, option[value='']");
+    elements = elements || document.querySelectorAll("*");
     elements.forEach(function (element) {
         let parent = element.parentElement;
         if (element.classList.contains("notranslate") || parent && parent.classList.contains("notranslate")) {
             return;
         }
-        if (element.textContent.trim()) {
-            element.textContent = framework.translate(element.textContent);
+        for (const child of element.childNodes) {
+            if (child.nodeType === Node.TEXT_NODE) {
+                child.textContent = framework.translate(child.textContent);
+            }
         }
         if (element.alt) {
             element.alt = framework.translate(element.alt);
@@ -139,18 +142,18 @@ framework.translateAll = async () =>{
     for (const text of newTranslations) {
         allTranslations[text] = "";
     }
-    for (var key in allTranslations) {
+    for (const key in allTranslations) {
         allTranslations[key] = "";
     }
-    const json_translations = "\n\n```json\n" + JSON.stringify(allTranslations, null, 4) + "\n```";
-    const json_language = "`" + navigator.language + "`";
-    const prompt = `Translate the following text snippets in a JSON object to ${json_language} (iso code): ${json_translations}`;
+    const jsonTranslations = "\n\n```json\n" + JSON.stringify(allTranslations, null, 4) + "\n```";
+    const jsonLanguage = "`" + navigator.language + "`";
+    const prompt = `Translate the following text snippets in a JSON object to ${jsonLanguage} (iso code): ${jsonTranslations}`;
     response = await query(prompt, true);
     let translations = await response.json();
-    if (translations[navigator.language]) {
+    if (translations[navigator.language] && typeof translations[navigator.language] === 'object' && Object.keys(translations[navigator.language]).length > 0) {
         translations = translations[navigator.language];
     }
-    localStorage.setItem(framework.translationKey, JSON.stringify(translations || allTranslations));
+    localStorage.setItem(framework.translationKey, JSON.stringify(translations));
     return allTranslations;
 }
 function delete_translations() {
@@ -161,9 +164,9 @@ function delete_translations() {
         }
     }
 }
-framework.delete = async (bucket_id) => {
-    const delete_url = `${framework.backendUrl}/backend-api/v2/files/${encodeURIComponent(bucket_id)}`;
-    return await fetch(delete_url, {
+framework.delete = async (bucketId) => {
+    const deleteUrl = `${framework.backendUrl}/backend-api/v2/files/${encodeURIComponent(bucketId)}`;
+    return await fetch(deleteUrl, {
         method: 'DELETE'
     });
 }
@@ -172,16 +175,14 @@ async function query(prompt, options={ json: false, cache: true }) {
         options = { json: options, cache: true };
     }
     let encodedParams = (new URLSearchParams(options)).toString();
-    if (encodedParams) {
-        encodedParams = "?" + encodedParams
-    }
-    let twoPartyUrl = `https://g4f.dev/ai/${encodeURIComponent(prompt)}${encodedParams}`;
-    const response = await fetch(twoPartyUrl);
+    let secondPartyUrl = `https://g4f.dev/ai/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
+    const response = await fetch(secondPartyUrl);
     if (!response.ok) {
-        let firstPartyUrl = `https://text.pollinations.ai/${encodeURIComponent(prompt)}${encodedParams}`;
+        add_error(`Error ${response.status} with URL: \`${secondPartyUrl}\`\n ${await response.text()}`, true);
+        let firstPartyUrl = `https://text.pollinations.ai/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
         const response = await fetch(firstPartyUrl);
         if (!response.ok) {
-            console.error(`Error ${response.status}: `, await response.text());
+            add_error(`Error ${response.status} with URL: \`${firstPartyUrl}\`\n ${await response.text()}`, true);
             return;
         }
     }
@@ -190,9 +191,6 @@ async function query(prompt, options={ json: false, cache: true }) {
 const renderMarkdown = (content) => {
     if (!content) {
         return "";
-    }
-    if (!window.markdownit) {
-        return escapeHtml(content);
     }
     if (Array.isArray(content)) {
         content = content.map((item) => {
@@ -214,6 +212,9 @@ const renderMarkdown = (content) => {
             }
             return `[![${item.name}](${item.url.replaceAll("/media/", "/thumbnail/") || item.image_url?.url})](${item.url || item.image_url?.url})`;
         }).join("\n");
+    }
+    if (!window.markdownit) {
+        return escapeHtml(content);
     }
     const markdown = window.markdownit({
         html: window.sanitizeHtml ? true : false,

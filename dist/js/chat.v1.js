@@ -3230,7 +3230,7 @@ audioButton.addEventListener('click', async (event) => {
             audio: true
         });
 
-        if (modelSelect.options[modelSelect.selectedIndex].dataset.audio) {
+        if (modelSelect.selectedIndex && modelSelect.options[modelSelect.selectedIndex].dataset.audio) {
             mediaRecorder = new Recorder(stream);
             mediaRecorder.start();
             return;
@@ -3262,24 +3262,24 @@ audioButton.addEventListener('click', async (event) => {
                         "x-recognition-language": await get_recognition_language()
                     }
                 });
+                if (!response.ok) {
+                    inputCount.innerText = framework.translate("Error uploading audio");
+                    return;
+                }
+                const result = await response.json()
+                if (result.media) {
+                    const media = [];
+                    result.media.forEach((part)=> {
+                        part = part.name ? part : {name: part};
+                        const url = `${framework.backendUrl}/files/${bucket_id}/media/${part.name}`;
+                        media.push({bucket_id: bucket_id, url: url, ...part});
+                    });
+                    await handle_ask(false, media);
+                }
             } finally {
                 document.body.removeChild(loadingIndicator);
+                t.innerText = framework.translate("Record Audio");
             }
-            if (!response.ok) {
-                inputCount.innerText = framework.translate("Error uploading audio");
-                return;
-            }
-            const result = await response.json()
-            if (result.media) {
-                const media = [];
-                result.media.forEach((part)=> {
-                    part = part.name ? part : {name: part};
-                    const url = `${framework.backendUrl}/files/${bucket_id}/media/${part.name}`;
-                    media.push({bucket_id: bucket_id, url: url, ...part});
-                });
-                await handle_ask(false, media);
-            }
-            t.innerText = framework.translate("Record Audio");
         });
 
         mediaRecorder.start()
