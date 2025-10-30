@@ -270,9 +270,7 @@ class Client {
           } else {
             break;
           }
-          console.log('Received chunk:', buffer, parts);
           for (const part of parts) {
-            console.log('Stream part:', part);
             if (!part.trim() || part === 'data: [DONE]') continue;
             try {
               if (part.startsWith('data: ')) {
