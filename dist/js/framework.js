@@ -104,6 +104,9 @@ framework.translateElements = function (elements = null) {
         if (element.classList.contains("notranslate") || parent && parent.classList.contains("notranslate")) {
             return;
         }
+        if (["SCRIPT", "STYLE"].includes(element.tagName)) {
+            return;
+        } 
         for (const child of element.childNodes) {
             if (child.nodeType === Node.TEXT_NODE) {
                 child.textContent = framework.translate(child.textContent);

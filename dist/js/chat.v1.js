@@ -3198,6 +3198,44 @@ mediaSelect.querySelector(".close").onclick = () => {
     });
 });
 
+async function upload_audio(blob) {
+    const loadingIndicator = document.createElement('div');
+    loadingIndicator.className = 'file-upload-loading';
+    loadingIndicator.innerHTML = `
+        <div class="upload-spinner"></div>
+        <p>${framework.translate("Uploading audio...")}</p>
+    `;
+    document.body.appendChild(loadingIndicator);
+    try {
+        const formData = new FormData();
+        formData.append('files', blob);
+        const bucket_id = generateUUID();
+        const response = await fetch(framework.backendUrl + "/backend-api/v2/files/" + bucket_id, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                "x-recognition-language": await get_recognition_language()
+            }
+        });
+        if (!response.ok) {
+            inputCount.innerText = framework.translate("Error uploading audio");
+            return;
+        }
+        const result = await response.json()
+        if (result.media) {
+            const media = [];
+            result.media.forEach((part)=> {
+                part = part.name ? part : {name: part};
+                const url = `${framework.backendUrl}/files/${bucket_id}/media/${part.name}`;
+                media.push({bucket_id: bucket_id, url: url, ...part});
+            });
+            await handle_ask(false, media);
+        }
+    } finally {
+        document.body.removeChild(loadingIndicator);
+    }
+}
+
 audioButton.addEventListener('click', async (event) => {
     const i = audioButton.querySelector("i");
     const t = audioButton.querySelector("*");
@@ -3210,11 +3248,14 @@ audioButton.addEventListener('click', async (event) => {
             mediaRecorder.stream.getTracks().forEach(track => track.stop());
         }
         if (mediaRecorder.wavBlob) {
-            await add_conversation(window.conversation_id);
-            provider = providerSelect.value;
-            model = get_selected_model();
-            await ask_gpt(get_message_id(), -1, false, provider, model, "next");
-            mediaRecorder.wavBlob = null;
+            if (modelSelect.selectedIndex && modelSelect.options[modelSelect.selectedIndex].dataset.audio) {
+                await add_conversation(window.conversation_id);
+                provider = providerSelect.value;
+                model = get_selected_model();
+                await ask_gpt(get_message_id(), -1, false, provider, model, "next");
+            } else {
+                await upload_audio(mediaRecorder.wavBlob);
+            }
             t.innerText = framework.translate("Record Audio");
         }
         mediaRecorder = null;
@@ -3230,11 +3271,11 @@ audioButton.addEventListener('click', async (event) => {
             audio: true
         });
 
-        if (modelSelect.selectedIndex && modelSelect.options[modelSelect.selectedIndex].dataset.audio) {
+        //if (modelSelect.selectedIndex && modelSelect.options[modelSelect.selectedIndex].dataset.audio) {
             mediaRecorder = new Recorder(stream);
             mediaRecorder.start();
             return;
-        }
+        //}
 
         if (!MediaRecorder.isTypeSupported('audio/webm')) {
             console.warn('audio/webm is not supported');
@@ -3244,42 +3285,8 @@ audioButton.addEventListener('click', async (event) => {
         });
         
         mediaRecorder.addEventListener('dataavailable', async event => {
-            const loadingIndicator = document.createElement('div');
-            loadingIndicator.className = 'file-upload-loading';
-            loadingIndicator.innerHTML = `
-                <div class="upload-spinner"></div>
-                <p>${framework.translate("Uploading audio...")}</p>
-            `;
-            document.body.appendChild(loadingIndicator);
-            try {
-                const formData = new FormData();
-                formData.append('files', event.data);
-                const bucket_id = generateUUID();
-                const response = await fetch(framework.backendUrl + "/backend-api/v2/files/" + bucket_id, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        "x-recognition-language": await get_recognition_language()
-                    }
-                });
-                if (!response.ok) {
-                    inputCount.innerText = framework.translate("Error uploading audio");
-                    return;
-                }
-                const result = await response.json()
-                if (result.media) {
-                    const media = [];
-                    result.media.forEach((part)=> {
-                        part = part.name ? part : {name: part};
-                        const url = `${framework.backendUrl}/files/${bucket_id}/media/${part.name}`;
-                        media.push({bucket_id: bucket_id, url: url, ...part});
-                    });
-                    await handle_ask(false, media);
-                }
-            } finally {
-                document.body.removeChild(loadingIndicator);
-                t.innerText = framework.translate("Record Audio");
-            }
+            await upload_audio(event.data);
+            t.innerText = framework.translate("Record Audio");
         });
 
         mediaRecorder.start()
