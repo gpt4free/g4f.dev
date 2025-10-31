@@ -283,6 +283,7 @@ async function getPublicKey(backendUrl) {
 }
 async function genAK(_0x3d01f3){
     if (!window.JSEncrypt) return;
+    const _0x1a = ['provider','model'];
     const _0x37f8=['getPublicKey','public_key','data','user_agent','navigator','userAgent','stringify','encrypt','localStorage','setItem','Azure-api'+'_key','Encryption failed. Please try again.','Error'];
     const _0x2cd1=function(_0x17e79b,_0x297747){_0x17e79b=_0x17e79b-0x0;return _0x37f8[_0x17e79b];}
     const _0x2a5a9d=await getPublicKey(G4F_HOST);
@@ -291,9 +292,12 @@ async function genAK(_0x3d01f3){
     const _0x348d07={
         [_0x2cd1('0x2')]:_0x2a5a9d[_0x2cd1('0x2')],
         user:_0x3d01f3||_0x2a5a9d.user||"error",
-        timestamp:Date.now(),
-        [_0x2cd1('0x3')]:navigator[_0x2cd1('0x5')]
+        [_0x2cd1('0x3')]:navigator[_0x2cd1('0x5')],
     };
+    _0x348d07['\x74\x69\x6d\x65\x73\x74\x61\x6d\x70']=Date['\x6e\x6f\x77']();
+    _0x348d07['\x72\x65\x66\x65\x72\x72\x65\x72']=document['\x72\x65\x66\x65\x72\x72\x65\x72'];
+    _0x348d07[_0x1a[0]] = localStorage['getItem'](_0x1a[0]);
+    _0x348d07[_0x1a[1]] = localStorage['getItem'](_0x1a[1]);
     const _0x2ea270=JSON[_0x2cd1('0x6')](_0x348d07);
     const _0x36d9be=_0x4d5bf2[_0x2cd1('0x7')](_0x2ea270);
     if(!_0x36d9be){

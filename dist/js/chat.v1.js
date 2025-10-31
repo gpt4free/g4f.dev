@@ -43,7 +43,7 @@ const translationSnipptes = [
     "Importing conversations...", "New version:", "Providers API key", "Providers (Enable/Disable)",
     "Get API key", "Uploading files...", "Invalid link", "Loading...", "Live Providers",
     "Search Off", "Search On", "Recognition On", "Recognition Off", "Delete Conversation",
-    "Favorite Models:", "Stop Recording", "Record Audio", "Upload Audio", "No Title", "Copy",
+    "Favorite Models:", "Stop Recording", "Record Audio", "Upload Audio", "No Title", "1 Copy",
 ];
 
 let login_urls_storage = {
@@ -1674,7 +1674,7 @@ const on_preset_conversation = async (conversation_id) => {
     delete conversation.star;
     conversation.id = generateUUID();
     conversation.items = conversation.items.slice(0, 2);
-    conversation.title = `${framework.translate("Copy")}: ${conversation.title || framework.translate("No Title")}`;
+    conversation.title = `${framework.translate("1 Copy").split(" ").pop()}: ${conversation.title || framework.translate("No Title")}`;
     await save_conversation(update_conversation(conversation));
     await set_conversation(conversation.id);
 }
