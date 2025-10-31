@@ -236,7 +236,7 @@ const renderMarkdown = (content) => {
         content = window.sanitizeHtml(content, {
             allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'iframe', 'audio', 'video', 'details', 'summary']),
             allowedAttributes: {
-                a: [ 'href', 'title', 'target', 'data-width', 'data-height' ],
+                a: [ 'href', 'title', 'target', 'data-width', 'data-height', 'data-src' ],
                 i: [ 'class' ],
                 span: [ 'class' ],
                 code: [ 'class' ],

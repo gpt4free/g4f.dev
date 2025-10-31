@@ -28,7 +28,7 @@ lightbox.addFilter('itemData', (itemData, index) => {
         itemData.width = itemData.width || img.naturalWidth || 1024;
         itemData.height = itemData.height || img.naturalHeight || 1024;
     }
-    itemData.src = itemData.src.replaceAll("/thumbnail/", "/media/");
+    itemData.src = itemData.element.dataset.src || itemData.src.replaceAll("/thumbnail/", "/media/");
     console.log(`Item data for index ${index}:`, itemData);
     return itemData;
 });
