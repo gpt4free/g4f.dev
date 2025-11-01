@@ -476,6 +476,8 @@ if __name__ == "__main__":
 
 The **Search Tool Support** feature enables triggering a web search during chat completions. This is useful for retrieving real-time or specific data, offering a more flexible solution than `web_search`.
 
+> **📚 For comprehensive tool documentation, see:** [Tool Usage Documentation](tools.md)
+
 **Example Usage:**
 ```python
 import asyncio
