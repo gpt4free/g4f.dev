@@ -243,7 +243,7 @@ class MCPClient {
      */
     async executeToolCall(toolCall) {
         const toolName = toolCall.function.name;
-        const args = JSON.parse(toolCall.function.arguments);
+        const args = typeof toolCall.function.arguments === 'string' ? JSON.parse(toolCall.function.arguments) : toolCall.function.arguments;
         
         // Find which server has this tool
         const allTools = this.getAllTools();

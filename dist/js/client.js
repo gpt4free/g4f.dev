@@ -45,15 +45,13 @@ class CorsProxyManager {
 
 class Client {
     constructor(options = {}) {
-        if (!options.baseUrl && !options.apiEndpoint && !options.apiKey) {
-            if (typeof localStorage !== 'undefined' && localStorage && localStorage.getItem("Azure-api_key")) {
-                options.apiKey = localStorage.getItem("Azure-api_key");
-            } else {
-                throw new Error('Client requires at least baseUrl, apiEndpoint, or apiKey to be set.');
-            }
+        if (!options.baseUrl && !options.apiEndpoint) {
+            options.baseUrl = "https://g4f.dev/api/auto";
+            options.apiEndpoint = "https://g4f.dev/ai/";
+            options.sleep = 10000;
         }
         this.proxyManager = new CorsProxyManager();
-        this.baseUrl = options.baseUrl || ((typeof G4F_HOST !== 'undefined' && G4F_HOST || "") + "/api/Azure");
+        this.baseUrl = options.baseUrl;
         this.apiEndpoint = options.apiEndpoint || `${this.baseUrl}/chat/completions`;
         this.imageEndpoint = options.imageEndpoint || `${this.baseUrl}/images/generations`;
         this.defaultModel = options.defaultModel;
@@ -61,6 +59,7 @@ class Client {
         this.apiKey = options.apiKey;
         this.extraBody = options.extraBody || {};
         this.logCallback = options.logCallback || console.log;
+        this.sleep = options.sleep || 0;
 
         this.extraHeaders = {
             'Content-Type': 'application/json',
@@ -100,6 +99,17 @@ class Client {
         throw new Error(`All CORS proxy attempts failed for ${targetUrl}.`);
     }
 
+    async _sleep() {
+        if (this.sleep && this.lastRequest) {
+            let timeSinceLastRequest = Date.now() - this.lastRequest;
+            while (this.sleep > timeSinceLastRequest) {
+                await new Promise(resolve => setTimeout(resolve, this.sleep - timeSinceLastRequest + 100));
+                timeSinceLastRequest = Date.now() - this.lastRequest;
+            }
+        }
+        this.lastRequest = Date.now();
+    }
+
     get chat() {
         return {
             completions: {
@@ -127,6 +137,7 @@ class Client {
                     body: JSON.stringify(options),
                     signal: signal
                 };
+                await this._sleep();
                 const response = await fetch(this.apiEndpoint.replace("{now}", Date.now()), requestOptions);
                 if (params.stream) {
                     return this._streamCompletion(response);
@@ -182,6 +193,9 @@ class Client {
                 model.type = "image";
               }
             }
+            if (model.type === 'text') {
+                model.type = 'chat';
+            }
             return model;
           });
           return data;
@@ -199,12 +213,14 @@ class Client {
                 if (this.imageEndpoint.includes('{prompt}')) {
                     return this._defaultImageGeneration(this.imageEndpoint, params, { headers: this.extraHeaders });
                 }
+                await this._sleep();
                 return this._regularImageGeneration(this.imageEndpoint, params, { headers: this.extraHeaders });
             },
 
             edit: async (params) => {
                 const extraHeaders = {...this.extraHeaders};
                 delete extraHeaders['Content-Type'];
+                await this._sleep();
                 return this._regularImageEditing(this.imageEndpoint.replace('/generations', '/edits'), params, { headers: extraHeaders });
             }
         };
@@ -301,6 +317,9 @@ class Client {
                             }
                         }
                     } else if (data.message) {
+                        if (data.message.thinking) {
+                            data.message.reasoning = data.message.thinking;
+                        }
                         data.choices = [{delta: data.message}];
                     }
                 }
@@ -325,8 +344,7 @@ class Client {
 
     async _defaultImageGeneration(imageEndpoint, params, requestOptions) {
         params = {...params};
-        let prompt = params.prompt ? params.prompt : '';
-        prompt = encodeURIComponent(prompt).replaceAll('%20', '+');
+        const prompt = encodeURIComponent(params.prompt || '').replaceAll('%20', '+');
         delete params.prompt;
         if (params.nologo === undefined) params.nologo = true;
         if (this.extraBody.referrer) params.referrer = this.extraBody.referrer;
@@ -337,8 +355,7 @@ class Client {
         }
         this.logCallback && this.logCallback({request: {prompt, ...params}, type: 'image'});
         const encodedParams = new URLSearchParams(params);
-        let url = imageEndpoint.replace('{prompt}', prompt);
-        url += '?' + encodedParams.toString();
+        const url = imageEndpoint.replace('{prompt}', prompt) + '?' + encodedParams.toString();
         const response = await fetch(url, requestOptions);
         this.logCallback && this.logCallback({response: response, type: 'image'});
         if (!response.ok) {
@@ -549,6 +566,7 @@ class Worker extends Client {
         super({
             baseUrl: 'https://g4f.dev/api/worker',
             useModelName: true,
+            sleep: 10000,
             ...options
         });
     }
