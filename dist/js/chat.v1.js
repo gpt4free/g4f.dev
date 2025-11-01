@@ -3248,7 +3248,7 @@ audioButton.addEventListener('click', async (event) => {
             mediaRecorder.stream.getTracks().forEach(track => track.stop());
         }
         if (mediaRecorder.wavBlob) {
-            if (modelSelect.selectedIndex && modelSelect.options[modelSelect.selectedIndex].dataset.audio) {
+            if (modelSelect.selectedIndex >= 0 && modelSelect.options[modelSelect.selectedIndex].dataset.audio) {
                 await add_conversation(window.conversation_id);
                 provider = providerSelect.value;
                 model = get_selected_model();
