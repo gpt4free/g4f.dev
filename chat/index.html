@@ -37,6 +37,7 @@
     <link rel="manifest" href="../dist/img/site.webmanifest" />
 
     <script src="../dist/js/framework.js?v={{ v }}" defer></script>
+    <script src="../dist/js/mcp-client.js?v={{ v }}" defer></script>
     <script src="../dist/js/chat.v1.js?v={{ v }}" defer></script>
     <script src="../dist/js/recorder.js" async></script>
     <script src="../dist/js/highlight.min.js" async></script>
@@ -282,6 +283,29 @@
                       <label for="BingCreateImages-api_key" class="label">Microsoft Designer Bing Cookie (_U)</label>
                       <input type="text" id="BingCreateImages-api_key" name="BingCreateImages[api_key]" placeholder="&quot;_U&quot; cookie" autocomplete="off" />
                   </div>
+                  
+                  <!-- MCP Servers Section -->
+                  <div class="field mcp-section">
+                      <div class="mcp-header">
+                          <span class="label">MCP Servers</span>
+                          <button type="button" id="add-mcp-server-btn" aria-label="Add MCP Server" title="Add a new MCP server">
+                              <i class="fa-solid fa-plus"></i>
+                          </button>
+                      </div>
+                      <div id="mcp-servers-list" class="mcp-servers-list"></div>
+                  </div>
+
+                  <!-- MCP Tools Section -->
+                  <div class="field mcp-section">
+                      <div class="mcp-header">
+                          <span class="label">MCP Tools</span>
+                          <button type="button" id="refresh-mcp-tools-btn" aria-label="Refresh Tools" title="Refresh tools from MCP servers">
+                              <i class="fa-solid fa-sync"></i>
+                          </button>
+                      </div>
+                      <div id="mcp-tools-list" class="mcp-tools-list"></div>
+                  </div>
+                  
                   <div class="bottom_buttons">
                       <button type="button" onclick="delete_conversations()" aria-label="Clear all conversations">
                           <i class="fa-solid fa-trash" aria-hidden="true"></i>
