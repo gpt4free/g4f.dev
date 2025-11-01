@@ -5067,5 +5067,3 @@ async function handleToolCalls(toolCalls, messages, model, message_id) {
 window.toggleMCPServer = toggleMCPServer;
 window.removeMCPServer = removeMCPServer;
 window.toggleMCPTool = toggleMCPTool;
-
-}
