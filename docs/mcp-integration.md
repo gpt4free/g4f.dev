@@ -167,24 +167,6 @@ Executes a tool with the given arguments.
 - `-32603`: Internal error
 - `-32000` to `-32099`: Server error
 
-## Example MCP Server
-
-A test MCP server using JSON-RPC is included at `/tmp/test-mcp-server-jsonrpc.js` that provides example tools:
-
-- **get_weather**: Get weather for a location
-- **calculate**: Perform mathematical calculations
-- **search_web**: Search the web (mocked)
-
-To run it:
-
-```bash
-node /tmp/test-mcp-server-jsonrpc.js
-```
-
-Then add it in the chat UI:
-- Name: "Test Server"
-- URL: "http://localhost:3001"
-
 **Testing with curl:**
 
 List tools:

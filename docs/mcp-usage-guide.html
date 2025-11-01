@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>gpt4free MCP Server | GPT4Free Documentation</title>
+
+    <meta name="description" content="GPT4Free documentation for gpt4free MCP Server. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
+    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, gpt4free MCP Server" />
+    <meta name="author" content="GPT4Free Team" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="gpt4free MCP Server | GPT4Free Documentation" />
+    <meta property="og:description" content="GPT4Free documentation for gpt4free MCP Server. Free AI endpoints, examples, and comprehensive guides." />
+    <meta property="og:url" content="https://g4f.dev/docs/mcp-usage-guide.html" />
+    <meta property="og:site_name" content="GPT4Free Documentation" />
+    <meta property="og:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="gpt4free MCP Server | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for gpt4free MCP Server." />
+    <meta name="twitter:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://g4f.dev/docs/mcp-usage-guide.html" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png" />
+    <link rel="manifest" href="/dist/img/site.webmanifest" />
+
+    <!-- GitHub Primer CSS & styles -->
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
+
+    
+    <style>
+        :root {
+            --accent: #8b3dff;
+            --background: #16101b;
+            --text-primary: #ddd;
+            --text-secondary: #9b7dff;
+            --card-bg: #1e152e;
+            --border-color: #333;
+            --hover-color: #a67eff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--background);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            max-width: 100%;
+            margin: 0;
+            padding: 2rem;
+            gap: 3rem;
+            min-height: calc(100vh - 4rem);
+        }
+
+        /* Enhanced main content styling */
+        main {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            overflow-wrap: break-word;
+            position: relative;
+        }
+
+        /* Typography improvements */
+        .markdown-body h1 {
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 0.5rem;
+        }
+
+        .markdown-body h2 {
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body h3 {
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body p {
+            margin-bottom: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        /* Enhanced link styling */
+        .markdown-body a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .markdown-body a:hover,
+        .markdown-body a:focus {
+            color: var(--hover-color);
+            outline: none;
+            text-decoration: underline;
+            text-shadow: 0 0 8px rgba(139, 61, 255, 0.3);
+        }
+
+        /* Enhanced code block styling */
+        .markdown-body pre {
+            border-radius: 12px;
+            padding: 1.5rem !important;
+            font-size: 0.95rem !important;
+            overflow-x: auto;
+            max-height: 500px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.4);
+            color: #fff;
+            border: 1px solid #3d2a5c;
+            position: relative;
+        }
+
+
+        .markdown-body code {
+            font-family: 'SF Mono', 'Cascadia Code', 'Roboto Mono', Consolas, Liberation Mono, Menlo, monospace;
+            background: rgba(139, 61, 255, 0.1);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            color: #e6ccff;
+            font-size: 0.9em;
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+            color: var(--fgColor-default, var(--color-fg-default))
+        }
+
+        /* Table styling */
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 2rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .markdown-body table th,
+        .markdown-body table td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        .markdown-body table th {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .markdown-body table tr:nth-child(even) {
+            background: rgba(139, 61, 255, 0.05);
+        }
+
+        .markdown-body table tr {
+            background-color: transparent;
+        }
+
+        /* List styling */
+        .markdown-body ul, 
+        .markdown-body ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        .markdown-body li {
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        /* Blockquote styling */
+        .markdown-body blockquote {
+            border-left: 4px solid var(--accent);
+            background: rgba(139, 61, 255, 0.1);
+            margin: 2rem 0;
+            padding: 1rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* HR styling */
+        .markdown-body hr {
+            border: none;
+            border-top: 2px solid var(--accent);
+            margin: 3rem 0;
+            opacity: 0.6;
+        }
+
+        /* Sticky table of contents */
+        nav#toc {
+            flex: 0 0 280px;
+            position: sticky;
+            top: 2rem;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid rgba(139, 61, 255, 0.2);
+        }
+
+        nav#toc h2 {
+            font-size: 1.4rem;
+            margin: 0 0 1.5rem 0;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        nav#toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        nav#toc li {
+            margin-bottom: 0.8rem;
+        }
+
+        nav#toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: block;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        nav#toc a:hover, 
+        nav#toc a:focus {
+            background: rgba(139, 61, 255, 0.1);
+            color: var(--hover-color);
+            text-decoration: none;
+            transform: translateX(4px);
+        }
+
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 2rem;
+            }
+
+            nav#toc {
+                position: relative;
+                max-height: none;
+                order: -1;
+                flex: none;
+            }
+
+            .markdown-body h1 {
+                font-size: 2.2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            main {
+                padding: 1.5rem;
+            }
+
+            .markdown-body h1 {
+                font-size: 1.8rem;
+            }
+
+            .markdown-body pre {
+                padding: 1rem !important;
+                font-size: 0.85rem !important;
+            }
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Focus indicators */
+        *:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* Print styles */
+        @media print {
+            .container {
+                display: block;
+            }
+            
+            nav#toc {
+                display: none;
+            }
+            
+            main {
+                box-shadow: none;
+                background: white;
+                color: black;
+            }
+        }
+
+        /* Loading animation for syntax highlighting */
+        .highlight-loading {
+            position: relative;
+            opacity: 0.7;
+        }
+
+        .highlight-loading::after {
+            content: 'Loading syntax highlighting...';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Translate Button Style */
+        #translate-toggle {
+            display: block;
+            background: var(--accent);
+            color: #fff;
+            text-align: center;
+            padding: 0.5rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            border: none;
+        }
+        #google_translate_element {
+            margin-bottom: 1rem;
+        }
+    </style>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "gpt4free MCP Server",
+      "description": "GPT4Free documentation for gpt4free MCP Server. Complete guides, examples, and API reference for free AI endpoints.",
+      "author": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization",
+        "name": "GPT4Free",
+        "url": "https://g4f.dev",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://g4f.dev/dist/img/apple-touch-icon.png"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://g4f.dev/docs/mcp-usage-guide.html"
+      },
+      "datePublished": "2024-01-01T00:00:00Z",
+      "dateModified": "2024-01-01T00:00:00Z",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "keywords": "GPT4Free, AI documentation, free AI API, code generation",
+      "articleSection": "Documentation"
+    }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="toc" aria-label="Table of contents" role="navigation">
+            <!-- Translation Button -->
+            <button id="translate-toggle">🌐 Translate Page</button>
+            <div id="google_translate_element" style="display:none;"></div>
+            <h2>Contents</h2>
+            <ul id="toc-list">
+                <!-- Table of contents will be generated here -->
+            </ul>
+            <hr style="margin: 1.5rem 0; opacity: 0.3;">
+            <ul>
+                <li><a href="/docs/" aria-label="Return to documentation home">📚 Documentation Hub</a></li>
+                <li><a href="/" aria-label="Return to main site">🏠 G4F Home</a></li>
+            </ul>
+        </nav>
+
+        <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
+            <h1>gpt4free MCP Server</h1>
+<p>A Model Context Protocol (MCP) server implementation for gpt4free that provides AI assistants with access to web search, scraping, and image generation capabilities.</p>
+<h2>Overview</h2>
+<p>The gpt4free MCP server exposes three main tools:</p>
+<ol>
+<li><strong>Web Search</strong> - Search the web using DuckDuckGo</li>
+<li><strong>Web Scraping</strong> - Extract and clean text content from web pages</li>
+<li><strong>Image Generation</strong> - Generate images from text prompts using various AI providers</li>
+</ol>
+<h2>Installation</h2>
+<p>The MCP server is included with gpt4free. No additional installation is required beyond the base gpt4free package.</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">pip install -e <span class="pl-c1">.</span></pre></div>
+<h2>Usage</h2>
+<h3>Running the MCP Server</h3>
+<p><strong>Stdio Mode (Default)</strong></p>
+<p>Start the MCP server using:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">python -m g4f.mcp</pre></div>
+<p>Or using the g4f command:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">g4f mcp</pre></div>
+<p>The server communicates over stdin/stdout using JSON-RPC 2.0 protocol.</p>
+<p><strong>HTTP Mode</strong></p>
+<p>Start the MCP server with HTTP transport:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">g4f mcp --http --port 8765</pre></div>
+<p>This starts an HTTP server with the following endpoints:</p>
+<ul>
+<li><code class="notranslate">POST http://localhost:8765/mcp</code> - MCP JSON-RPC endpoint</li>
+<li><code class="notranslate">GET http://localhost:8765/health</code> - Health check endpoint</li>
+</ul>
+<p>HTTP mode is useful for:</p>
+<ul>
+<li>Web-based integrations</li>
+<li>Testing with curl or HTTP clients</li>
+<li>Remote access (configure host with <code class="notranslate">--host</code>)</li>
+</ul>
+<p>Options:</p>
+<ul>
+<li><code class="notranslate">--http</code>: Enable HTTP transport instead of stdio</li>
+<li><code class="notranslate">--host HOST</code>: Host to bind to (default: 0.0.0.0)</li>
+<li><code class="notranslate">--port PORT</code>: Port to bind to (default: 8765)</li>
+</ul>
+<h3>Configuration for AI Assistants</h3>
+<p><strong>For Claude Desktop (Stdio)</strong> - <code class="notranslate">claude_desktop_config.json</code>:</p>
+<div class="highlight highlight-source-json"><pre class="notranslate">{
+  <span class="pl-ent">"mcpServers"</span>: {
+    <span class="pl-ent">"gpt4free"</span>: {
+      <span class="pl-ent">"command"</span>: <span class="pl-s"><span class="pl-pds">"</span>python<span class="pl-pds">"</span></span>,
+      <span class="pl-ent">"args"</span>: [<span class="pl-s"><span class="pl-pds">"</span>-m<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>g4f.mcp<span class="pl-pds">"</span></span>]
+    }
+  }
+}</pre></div>
+<p><strong>For HTTP-based clients</strong>:</p>
+<p>Make POST requests to <code class="notranslate">http://localhost:8765/mcp</code> with JSON-RPC payloads.</p>
+<p>Example with curl:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">curl -X POST http://localhost:8765/mcp \
+  -H <span class="pl-s"><span class="pl-pds">"</span>Content-Type: application/json<span class="pl-pds">"</span></span> \
+  -d <span class="pl-s"><span class="pl-pds">'</span>{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}<span class="pl-pds">'</span></span></pre></div>
+<p><strong>For VS Code with Cline</strong>:</p>
+<div class="highlight highlight-source-json"><pre class="notranslate">{
+  <span class="pl-ent">"mcpServers"</span>: {
+    <span class="pl-ent">"gpt4free"</span>: {
+      <span class="pl-ent">"command"</span>: <span class="pl-s"><span class="pl-pds">"</span>python<span class="pl-pds">"</span></span>,
+      <span class="pl-ent">"args"</span>: [<span class="pl-s"><span class="pl-pds">"</span>-m<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>g4f.mcp<span class="pl-pds">"</span></span>],
+      <span class="pl-ent">"disabled"</span>: <span class="pl-c1">false</span>
+    }
+  }
+}</pre></div>
+<h2>Available Tools</h2>
+<h3>web_search</h3>
+<p>Search the web for information.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code class="notranslate">query</code> (string, required): The search query</li>
+<li><code class="notranslate">max_results</code> (integer, optional): Maximum number of results (default: 5)</li>
+</ul>
+<p><strong>Example:</strong></p>
+<div class="highlight highlight-source-json"><pre class="notranslate">{
+  <span class="pl-ent">"name"</span>: <span class="pl-s"><span class="pl-pds">"</span>web_search<span class="pl-pds">"</span></span>,
+  <span class="pl-ent">"arguments"</span>: {
+    <span class="pl-ent">"query"</span>: <span class="pl-s"><span class="pl-pds">"</span>latest AI developments 2024<span class="pl-pds">"</span></span>,
+    <span class="pl-ent">"max_results"</span>: <span class="pl-c1">5</span>
+  }
+}</pre></div>
+<h3>web_scrape</h3>
+<p>Scrape and extract text content from a web page.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code class="notranslate">url</code> (string, required): The URL to scrape</li>
+<li><code class="notranslate">max_words</code> (integer, optional): Maximum words to extract (default: 1000)</li>
+</ul>
+<p><strong>Example:</strong></p>
+<div class="highlight highlight-source-json"><pre class="notranslate">{
+  <span class="pl-ent">"name"</span>: <span class="pl-s"><span class="pl-pds">"</span>web_scrape<span class="pl-pds">"</span></span>,
+  <span class="pl-ent">"arguments"</span>: {
+    <span class="pl-ent">"url"</span>: <span class="pl-s"><span class="pl-pds">"</span>https://example.com/article<span class="pl-pds">"</span></span>,
+    <span class="pl-ent">"max_words"</span>: <span class="pl-c1">1000</span>
+  }
+}</pre></div>
+<h3>image_generation</h3>
+<p>Generate images from text prompts.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code class="notranslate">prompt</code> (string, required): Description of the image to generate</li>
+<li><code class="notranslate">model</code> (string, optional): Image model to use (default: "flux")</li>
+<li><code class="notranslate">width</code> (integer, optional): Image width in pixels (default: 1024)</li>
+<li><code class="notranslate">height</code> (integer, optional): Image height in pixels (default: 1024)</li>
+</ul>
+<p><strong>Example:</strong></p>
+<div class="highlight highlight-source-json"><pre class="notranslate">{
+  <span class="pl-ent">"name"</span>: <span class="pl-s"><span class="pl-pds">"</span>image_generation<span class="pl-pds">"</span></span>,
+  <span class="pl-ent">"arguments"</span>: {
+    <span class="pl-ent">"prompt"</span>: <span class="pl-s"><span class="pl-pds">"</span>A serene mountain landscape at sunset<span class="pl-pds">"</span></span>,
+    <span class="pl-ent">"width"</span>: <span class="pl-c1">1024</span>,
+    <span class="pl-ent">"height"</span>: <span class="pl-c1">1024</span>
+  }
+}</pre></div>
+<h2>Protocol Details</h2>
+<p>The MCP server implements the Model Context Protocol using JSON-RPC 2.0 over stdio transport.</p>
+<h3>Supported Methods</h3>
+<ul>
+<li><code class="notranslate">initialize</code> - Initialize connection with the server</li>
+<li><code class="notranslate">tools/list</code> - List all available tools</li>
+<li><code class="notranslate">tools/call</code> - Execute a tool with given arguments</li>
+<li><code class="notranslate">ping</code> - Health check</li>
+</ul>
+<h3>Example Request/Response</h3>
+<p><strong>Request:</strong></p>
+<div class="highlight highlight-source-json"><pre class="notranslate">{
+  <span class="pl-ent">"jsonrpc"</span>: <span class="pl-s"><span class="pl-pds">"</span>2.0<span class="pl-pds">"</span></span>,
+  <span class="pl-ent">"id"</span>: <span class="pl-c1">1</span>,
+  <span class="pl-ent">"method"</span>: <span class="pl-s"><span class="pl-pds">"</span>tools/call<span class="pl-pds">"</span></span>,
+  <span class="pl-ent">"params"</span>: {
+    <span class="pl-ent">"name"</span>: <span class="pl-s"><span class="pl-pds">"</span>web_search<span class="pl-pds">"</span></span>,
+    <span class="pl-ent">"arguments"</span>: {
+      <span class="pl-ent">"query"</span>: <span class="pl-s"><span class="pl-pds">"</span>Python programming tutorials<span class="pl-pds">"</span></span>,
+      <span class="pl-ent">"max_results"</span>: <span class="pl-c1">3</span>
+    }
+  }
+}</pre></div>
+<p><strong>Response:</strong></p>
+<div class="highlight highlight-source-json"><pre class="notranslate">{
+  <span class="pl-ent">"jsonrpc"</span>: <span class="pl-s"><span class="pl-pds">"</span>2.0<span class="pl-pds">"</span></span>,
+  <span class="pl-ent">"id"</span>: <span class="pl-c1">1</span>,
+  <span class="pl-ent">"result"</span>: {
+    <span class="pl-ent">"content"</span>: [
+      {
+        <span class="pl-ent">"type"</span>: <span class="pl-s"><span class="pl-pds">"</span>text<span class="pl-pds">"</span></span>,
+        <span class="pl-ent">"text"</span>: <span class="pl-s"><span class="pl-pds">"</span>{<span class="pl-cce">\"</span>query<span class="pl-cce">\"</span>: <span class="pl-cce">\"</span>Python programming tutorials<span class="pl-cce">\"</span>, <span class="pl-cce">\"</span>results<span class="pl-cce">\"</span>: [...], <span class="pl-cce">\"</span>count<span class="pl-cce">\"</span>: 3}<span class="pl-pds">"</span></span>
+      }
+    ]
+  }
+}</pre></div>
+<h2>Requirements</h2>
+<p>The MCP server requires the following dependencies (included in gpt4free):</p>
+<ul>
+<li><code class="notranslate">aiohttp</code> - For async HTTP requests</li>
+<li><code class="notranslate">beautifulsoup4</code> - For web scraping</li>
+<li><code class="notranslate">ddgs</code> - For web search</li>
+</ul>
+<p>These are automatically installed with:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">pip install -r requirements.txt</pre></div>
+<h2>Error Handling</h2>
+<p>The server returns standard JSON-RPC error responses:</p>
+<ul>
+<li><code class="notranslate">-32601</code>: Method not found</li>
+<li><code class="notranslate">-32602</code>: Invalid parameters</li>
+<li><code class="notranslate">-32603</code>: Internal error</li>
+</ul>
+<p>Errors specific to tools are returned in the result object with an <code class="notranslate">error</code> field.</p>
+<h2>Development</h2>
+<h3>Project Structure</h3>
+<pre class="notranslate"><code class="notranslate">g4f/mcp/
+├── __init__.py      # Package initialization
+├── __main__.py      # CLI entry point
+├── server.py        # MCP server implementation
+├── tools.py         # Tool implementations
+└── README.md        # This file
+</code></pre>
+<h3>Adding New Tools</h3>
+<p>To add a new tool:</p>
+<ol>
+<li>Create a new class inheriting from <code class="notranslate">MCPTool</code> in <code class="notranslate">tools.py</code></li>
+<li>Implement the required properties and methods</li>
+<li>Register the tool in <code class="notranslate">MCPServer.__init__()</code> in <code class="notranslate">server.py</code></li>
+</ol>
+<p>Example:</p>
+<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">class</span> <span class="pl-v">MyNewTool</span>(<span class="pl-v">MCPTool</span>):
+    <span class="pl-en">@<span class="pl-s1">property</span></span>
+    <span class="pl-k">def</span> <span class="pl-en">description</span>(<span class="pl-s1">self</span>) <span class="pl-c1">-&gt;</span> <span class="pl-smi">str</span>:
+        <span class="pl-k">return</span> <span class="pl-s">"Description of what the tool does"</span>
+    
+    <span class="pl-en">@<span class="pl-s1">property</span></span>
+    <span class="pl-k">def</span> <span class="pl-en">input_schema</span>(<span class="pl-s1">self</span>) <span class="pl-c1">-&gt;</span> <span class="pl-v">Dict</span>[<span class="pl-smi">str</span>, <span class="pl-smi">Any</span>]:
+        <span class="pl-k">return</span> {
+            <span class="pl-s">"type"</span>: <span class="pl-s">"object"</span>,
+            <span class="pl-s">"properties"</span>: {
+                <span class="pl-s">"param1"</span>: {
+                    <span class="pl-s">"type"</span>: <span class="pl-s">"string"</span>,
+                    <span class="pl-s">"description"</span>: <span class="pl-s">"Parameter description"</span>
+                }
+            },
+            <span class="pl-s">"required"</span>: [<span class="pl-s">"param1"</span>]
+        }
+    
+    <span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">execute</span>(<span class="pl-s1">self</span>, <span class="pl-s1">arguments</span>: <span class="pl-v">Dict</span>[<span class="pl-smi">str</span>, <span class="pl-smi">Any</span>]) <span class="pl-c1">-&gt;</span> <span class="pl-smi">Any</span>:
+        <span class="pl-c"># Implementation</span>
+        <span class="pl-k">pass</span></pre></div>
+<h2>Troubleshooting</h2>
+<h3>Server Won't Start</h3>
+<p>Make sure all dependencies are installed:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">pip install -r requirements.txt</pre></div>
+<h3>Tools Return Errors</h3>
+<p>Check that:</p>
+<ul>
+<li>Network connectivity is available for web search and scraping</li>
+<li>URLs are valid and accessible</li>
+<li>Image generation providers are not rate-limited</li>
+</ul>
+<h3>Debug Mode</h3>
+<p>The server writes diagnostic information to stderr. To see debug output:</p>
+<div class="highlight highlight-source-shell"><pre class="notranslate">python -m g4f.mcp <span class="pl-k">2&gt;</span> debug.log</pre></div>
+<h2>License</h2>
+<p>This MCP server is part of the gpt4free project and is licensed under the GNU General Public License v3.0.</p>
+<h2>Contributing</h2>
+<p>Contributions are welcome! Please see the main gpt4free repository for contribution guidelines.</p>
+<h2>Related Links</h2>
+<ul>
+<li><a href="https://github.com/xtekky/gpt4free">gpt4free Repository</a></li>
+<li><a href="https://modelcontextprotocol.io/" rel="nofollow">Model Context Protocol Specification</a></li>
+<li><a href="https://modelcontextprotocol.io/docs" rel="nofollow">MCP Documentation</a></li>
+</ul>
+        </main>
+    </div>
+
+    
+    <script>
+        // Toggle Translation Widget
+        document.getElementById("translate-toggle").addEventListener("click", function() {
+            const el = document.getElementById("google_translate_element");
+            el.style.display = (el.style.display === "none") ? "block" : "none";
+        });
+
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'en',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+            }, 'google_translate_element');
+        }
+    </script>
+    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+    <script>
+        // Enhanced syntax highlighting with error handling
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // Generate table of contents
+                generateTableOfContents();
+            } catch (error) {
+                console.error('Error generating table of contents:', error);
+            }
+        });
+
+        function generateTableOfContents() {
+            const headings = document.querySelectorAll('main h2, main h3');
+            const tocList = document.getElementById('toc-list');
+            
+            if (!tocList || headings.length === 0) return;
+            
+            tocList.innerHTML = '';
+            
+            headings.forEach(function(heading, index) {
+                const id = heading.id || `heading-${index}`;
+                if (!heading.id) {
+                    heading.id = id;
+                }
+                
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `#${id}`;
+                a.textContent = heading.textContent;
+                a.setAttribute('aria-label', `Jump to ${heading.textContent}`);
+                
+                if (heading.tagName === 'H3') {
+                    li.style.marginLeft = '1rem';
+                    li.style.fontSize = '0.9em';
+                }
+                
+                li.appendChild(a);
+                tocList.appendChild(li);
+            });
+        }
+
+        // Smooth scrolling for anchor links
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
+                e.preventDefault();
+                const target = document.querySelector(e.target.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }
+        });
+
+        // Add copy button to code blocks
+        document.querySelectorAll('pre code, .highlight pre').forEach(function(block) {
+            const button = document.createElement('button');
+            button.textContent = 'Copy';
+            button.className = 'copy-button';
+            button.style.cssText = `
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background: rgba(139, 61, 255, 0.8);
+                color: white;
+                border: none;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.8rem;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            const pre = block.parentElement;
+            pre.style.position = 'relative';
+            pre.appendChild(button);
+            
+            pre.addEventListener('mouseenter', function() {
+                button.style.opacity = '1';
+            });
+            
+            pre.addEventListener('mouseleave', function() {
+                button.style.opacity = '0';
+            });
+            
+            button.addEventListener('click', function() {
+                navigator.clipboard.writeText(block.textContent).then(function() {
+                    button.textContent = 'Copied!';
+                    setTimeout(function() {
+                        button.textContent = 'Copy';
+                    }, 2000);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
