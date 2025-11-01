@@ -998,32 +998,34 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
             content_map.inner.appendChild(div);
             let cursorDiv = content_map.inner.querySelector(".cursor");
             if (cursorDiv) cursorDiv.parentNode.removeChild(cursorDiv);
-        } else if (appStorage.getItem("simulateTyping") != "false") {
-            let cursorDiv = content_map.inner.querySelector(".cursor");
-            let firstLine = true;
-            for (line of message.content.split("\n")) {
-                if (firstLine) {
-                    firstLine = false;
-                } else {
-                    content_map.inner.insertBefore(document.createElement("br"), cursorDiv);
-                }
-                if (line.length > 0) {
-                    let firstToken = true;
-                    for (token of line.split(' ')) {
-                        if (token) {
-                            await new Promise(resolve => setTimeout(resolve, (Math.random() * (20 - 40) + 20)))
-                        }
-                        if (firstToken) {
-                            firstToken = false;
-                        } else {
-                            token = ' ' + token
-                        }
-                        content_map.inner.insertBefore(document.createTextNode(token), cursorDiv);
-                    }
-                }
-            };
         } else if (message.content) {
-            update_message(content_map, message_id, null);
+            let lastChild = content_map.inner.querySelector(".cursor") || content_map.inner.lastChild;
+            if (appStorage.getItem("simulateTyping") === "false") {
+                content_map.inner.insertBefore(document.createTextNode(message.content), lastChild);
+            } else {
+                let firstLine = true;
+                for (line of message.content.split("\n")) {
+                    if (firstLine) {
+                        firstLine = false;
+                    } else {
+                        content_map.inner.insertBefore(document.createElement("br"), lastChild);
+                    }
+                    if (line.length > 0) {
+                        let firstToken = true;
+                        for (token of line.split(' ')) {
+                            if (token) {
+                                await new Promise(resolve => setTimeout(resolve, (Math.random() * (20 - 40) + 20)))
+                            }
+                            if (firstToken) {
+                                firstToken = false;
+                            } else {
+                                token = ' ' + token
+                            }
+                            content_map.inner.insertBefore(document.createTextNode(token), lastChild);
+                        }
+                    }
+                };
+            }
         }
     } else if (message.type == "log") {
         let p = document.createElement("p");
