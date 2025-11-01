@@ -3,28 +3,28 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>G4F - Providers and Models | GPT4Free Documentation</title>
+    <title>G4F - Tool Usage Documentation | GPT4Free Documentation</title>
 
-    <meta name="description" content="GPT4Free documentation for G4F - Providers and Models. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
-    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, G4F - Providers and Models" />
+    <meta name="description" content="GPT4Free documentation for G4F - Tool Usage Documentation. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
+    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, G4F - Tool Usage Documentation" />
     <meta name="author" content="GPT4Free Team" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="article" />
-    <meta property="og:title" content="G4F - Providers and Models | GPT4Free Documentation" />
-    <meta property="og:description" content="GPT4Free documentation for G4F - Providers and Models. Free AI endpoints, examples, and comprehensive guides." />
-    <meta property="og:url" content="https://g4f.dev/docs/providers-and-models.html" />
+    <meta property="og:title" content="G4F - Tool Usage Documentation | GPT4Free Documentation" />
+    <meta property="og:description" content="GPT4Free documentation for G4F - Tool Usage Documentation. Free AI endpoints, examples, and comprehensive guides." />
+    <meta property="og:url" content="https://g4f.dev/docs/tools.html" />
     <meta property="og:site_name" content="GPT4Free Documentation" />
     <meta property="og:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="G4F - Providers and Models | GPT4Free Documentation" />
-    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for G4F - Providers and Models." />
+    <meta name="twitter:title" content="G4F - Tool Usage Documentation | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for G4F - Tool Usage Documentation." />
     <meta name="twitter:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
 
     <!-- Canonical -->
-    <link rel="canonical" href="https://g4f.dev/docs/providers-and-models.html" />
+    <link rel="canonical" href="https://g4f.dev/docs/tools.html" />
 
     <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png" />
@@ -374,8 +374,8 @@
     {
       "@context": "https://schema.org",
       "@type": "TechArticle",
-      "headline": "G4F - Providers and Models",
-      "description": "GPT4Free documentation for G4F - Providers and Models. Complete guides, examples, and API reference for free AI endpoints.",
+      "headline": "G4F - Tool Usage Documentation",
+      "description": "GPT4Free documentation for G4F - Tool Usage Documentation. Complete guides, examples, and API reference for free AI endpoints.",
       "author": {
         "@type": "Organization",
         "@id": "https://g4f.dev/#organization",
@@ -392,7 +392,7 @@
       },
       "mainEntityOfPage": {
         "@type": "WebPage",
-        "@id": "https://g4f.dev/docs/providers-and-models.html"
+        "@id": "https://g4f.dev/docs/tools.html"
       },
       "datePublished": "2024-01-01T00:00:00Z",
       "dateModified": "2024-01-01T00:00:00Z",
@@ -421,371 +421,288 @@
         </nav>
 
         <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
-            <h1>G4F - Providers and Models</h1>
+            <h1>G4F - Tool Usage Documentation</h1>
 <h2>Table of Contents</h2>
 <ul>
 <li><a href="#introduction">Introduction</a></li>
-<li><a href="#understanding-providers">Understanding Providers</a></li>
-<li><a href="#viewing-available-providers">Viewing Available Providers</a>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#search-tool">Search Tool</a>
 <ul>
-<li><a href="#interactive-provider-list">Interactive Provider List</a></li>
-<li><a href="#via-api">Via API</a></li>
-<li><a href="#via-python-client">Via Python Client</a></li>
-<li><a href="#via-javascript-client">Via JavaScript Client</a></li>
+<li><a href="#basic-usage">Basic Usage</a></li>
+<li><a href="#parameters">Parameters</a></li>
+<li><a href="#python-example">Python Example</a></li>
+<li><a href="#javascript-example">JavaScript Example</a></li>
 </ul>
 </li>
-<li><a href="#provider-types">Provider Types</a></li>
-<li><a href="#provider-capabilities">Provider Capabilities</a></li>
-<li><a href="#model-support">Model Support</a></li>
-<li><a href="#selecting-providers">Selecting Providers</a></li>
+<li><a href="#custom-tools">Custom Tools</a></li>
+<li><a href="#tool-response-format">Tool Response Format</a></li>
 <li><a href="#best-practices">Best Practices</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
 </ul>
 <h2>Introduction</h2>
-<p>GPT4Free (G4F) provides access to multiple AI providers and their models through a unified interface. This document explains how to discover and use the available providers and models.</p>
-<h2>Understanding Providers</h2>
-<p>Providers are the backends that power G4F's AI capabilities. Each provider:</p>
+<p>Tools in GPT4Free enable AI models to perform actions beyond simple text generation. The most common tool is the <strong>search tool</strong>, which allows models to retrieve real-time information from the web during a conversation.</p>
+<h2>Overview</h2>
+<p>Tools are passed to the chat completion API using the <code>tool_calls</code> parameter. Each tool call specifies:</p>
 <ul>
-<li>Offers different AI models (text, image, audio, video)</li>
-<li>Has unique characteristics (speed, quality, capabilities)</li>
-<li>May require different authentication methods</li>
-<li>Supports different features (vision, streaming, web search)</li>
+<li><strong>Type</strong>: The type of tool (currently <code>&quot;function&quot;</code>)</li>
+<li><strong>Function name</strong>: The name of the tool to invoke (e.g., <code>&quot;search_tool&quot;</code>)</li>
+<li><strong>Arguments</strong>: A dictionary of parameters specific to that tool</li>
 </ul>
-<h2>Viewing Available Providers</h2>
-<h3>Interactive Provider List</h3>
-<p>The easiest way to explore providers and models is through our interactive web interface:</p>
-<p><strong><a href="https://g4f.dev/docs/providers-and-models.html">View Providers &amp; Models →</a></strong></p>
-<p>This page displays:</p>
-<ul>
-<li><strong>JS Providers</strong>: JavaScript client library providers with integrated functionality</li>
-<li><strong>Core Providers</strong>: Backend API providers loaded dynamically from the server</li>
-</ul>
-<p>Each provider shows:</p>
-<ul>
-<li>🤗 HuggingFace Space integration</li>
-<li>🌐 Browser automation support</li>
-<li>🔑 Authentication required</li>
-<li>🟢 Currently active/live</li>
-<li>🎨 Image generation support</li>
-<li>👓 Vision capabilities</li>
-<li>🎧 Audio support</li>
-<li>🎥 Video support</li>
-</ul>
-<h3>Via API</h3>
-<p>You can query available providers programmatically:</p>
-<h4>List All Providers</h4>
-<pre><code class="language-bash">curl https://g4f.dev/backend-api/v2/providers
-</code></pre>
-<p>Or using the v1 endpoint:</p>
-<pre><code class="language-bash">curl http://localhost:1337/v1/providers
-</code></pre>
-<p>Response format:</p>
-<pre><code class="language-json">[
-  {
-    &quot;id&quot;: &quot;OpenaiChat&quot;,
-    &quot;object&quot;: &quot;provider&quot;,
-    &quot;created&quot;: 1234567890,
-    &quot;url&quot;: &quot;https://chat.openai.com&quot;,
-    &quot;label&quot;: &quot;OpenAI ChatGPT&quot;
-  },
-  ...
+<p>Unlike the <code>web_search</code> parameter which is provider-dependent, tools work with any provider and offer more granular control.</p>
+<hr />
+<h2>Search Tool</h2>
+<p>The <code>search_tool</code> enables models to perform web searches and incorporate real-time information into their responses.</p>
+<h3>Basic Usage</h3>
+<p>The search tool is invoked by including it in the <code>tool_calls</code> array when making a chat completion request.</p>
+<h3>Parameters</h3>
+<p>| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| <code>query</code> | string | Yes | - | The search query to execute |
+| <code>max_results</code> | integer | No | 5 | Maximum number of search results to retrieve |
+| <code>max_words</code> | integer | No | 2500 | Maximum number of words in the search response |
+| <code>backend</code> | string | No | &quot;auto&quot; | Search backend to use (<code>&quot;api&quot;</code>, <code>&quot;html&quot;</code>, <code>&quot;lite&quot;</code>, or <code>&quot;auto&quot;</code>) |
+| <code>add_text</code> | boolean | No | true | Whether to include text snippets from search results |
+| <code>timeout</code> | integer | No | 5 | Maximum time (in seconds) for the search operation |</p>
+<h3>Python Example</h3>
+<pre><code class="language-python">from g4f.client import Client
+
+client = Client()
+
+# Define the search tool
+tool_calls = [
+    {
+        &quot;function&quot;: {
+            &quot;arguments&quot;: {
+                &quot;query&quot;: &quot;Latest developments in quantum computing 2024&quot;,
+                &quot;max_results&quot;: 5,
+                &quot;max_words&quot;: 2500,
+                &quot;backend&quot;: &quot;auto&quot;,
+                &quot;add_text&quot;: True,
+                &quot;timeout&quot;: 5
+            },
+            &quot;name&quot;: &quot;search_tool&quot;
+        },
+        &quot;type&quot;: &quot;function&quot;
+    }
 ]
-</code></pre>
-<h4>Get Provider Details</h4>
-<pre><code class="language-bash">curl http://localhost:1337/v1/providers/OpenaiChat
-</code></pre>
-<p>Response format:</p>
-<pre><code class="language-json">{
-  &quot;id&quot;: &quot;OpenaiChat&quot;,
-  &quot;object&quot;: &quot;provider&quot;,
-  &quot;created&quot;: 1234567890,
-  &quot;url&quot;: &quot;https://chat.openai.com&quot;,
-  &quot;label&quot;: &quot;OpenAI ChatGPT&quot;,
-  &quot;models&quot;: [&quot;gpt-4&quot;, &quot;gpt-4-turbo&quot;, &quot;gpt-3.5-turbo&quot;],
-  &quot;image_models&quot;: [&quot;dall-e-3&quot;],
-  &quot;vision_models&quot;: [&quot;gpt-4-vision&quot;],
-  &quot;params&quot;: [&quot;api_key&quot;, &quot;temperature&quot;, &quot;max_tokens&quot;]
-}
-</code></pre>
-<h4>List All Models</h4>
-<pre><code class="language-bash">curl http://localhost:1337/v1/models
-</code></pre>
-<p>Response format:</p>
-<pre><code class="language-json">[
-  {
-    &quot;id&quot;: &quot;gpt-4&quot;,
-    &quot;object&quot;: &quot;model&quot;,
-    &quot;created&quot;: 1234567890,
-    &quot;owned_by&quot;: &quot;openai&quot;
-  },
-  ...
-]
-</code></pre>
-<h3>Via Python Client</h3>
-<pre><code class="language-python">import requests
 
-# List all providers
-response = requests.get(&quot;http://localhost:1337/v1/providers&quot;)
-providers = response.json()
+# Make a request with the search tool
+response = client.chat.completions.create(
+    model=&quot;gpt-4&quot;,
+    messages=[
+        {
+            &quot;role&quot;: &quot;user&quot;,
+            &quot;content&quot;: &quot;What are the latest developments in quantum computing?&quot;
+        }
+    ],
+    tool_calls=tool_calls
+)
 
-for provider in providers:
-    print(f&quot;Provider: {provider['label']} ({provider['id']})&quot;)
-    print(f&quot;URL: {provider['url']}\n&quot;)
-
-# Get details for a specific provider
-provider_id = &quot;OpenaiChat&quot;
-response = requests.get(f&quot;http://localhost:1337/v1/providers/{provider_id}&quot;)
-details = response.json()
-
-print(f&quot;\nProvider: {details['label']}&quot;)
-print(f&quot;Supported Models: {', '.join(details['models'])}&quot;)
-print(f&quot;Image Models: {', '.join(details['image_models'])}&quot;)
-print(f&quot;Vision Models: {', '.join(details['vision_models'])}&quot;)
-print(f&quot;Required Parameters: {', '.join(details['params'])}&quot;)
+print(response.choices[0].message.content)
 </code></pre>
-<h3>Via JavaScript Client</h3>
-<pre><code class="language-javascript">// List all providers
-async function listProviders() {
-    const response = await fetch('http://localhost:1337/v1/providers');
-    const providers = await response.json();
-    
-    providers.forEach(provider =&gt; {
-        console.log(`Provider: ${provider.label} (${provider.id})`);
-        console.log(`URL: ${provider.url}\n`);
-    });
-}
-
-// Get details for a specific provider
-async function getProviderDetails(providerId) {
-    const response = await fetch(`http://localhost:1337/v1/providers/${providerId}`);
-    const details = await response.json();
-    
-    console.log(`\nProvider: ${details.label}`);
-    console.log(`Supported Models: ${details.models.join(', ')}`);
-    console.log(`Image Models: ${details.image_models.join(', ')}`);
-    console.log(`Vision Models: ${details.vision_models.join(', ')}`);
-    console.log(`Required Parameters: ${details.params.join(', ')}`);
-}
-
-await listProviders();
-await getProviderDetails('OpenaiChat');
-</code></pre>
-<h2>Provider Types</h2>
-<h3>JS Providers (Client-Side)</h3>
-<p>These providers work directly in the browser using the JavaScript client:</p>
+<h3>JavaScript Example</h3>
 <pre><code class="language-javascript">import Client from 'https://g4f.dev/dist/js/client.js';
 
 const client = new Client();
+
+// Define the search tool
+const toolCalls = [
+    {
+        function: {
+            arguments: {
+                query: &quot;Latest developments in quantum computing 2024&quot;,
+                max_results: 5,
+                max_words: 2500,
+                backend: &quot;auto&quot;,
+                add_text: true,
+                timeout: 5
+            },
+            name: &quot;search_tool&quot;
+        },
+        type: &quot;function&quot;
+    }
+];
+
+// Make a request with the search tool
 const response = await client.chat.completions.create({
-    model: 'gpt-4',
-    messages: [{ role: 'user', content: 'Hello!' }]
+    model: &quot;gpt-4&quot;,
+    messages: [
+        {
+            role: &quot;user&quot;,
+            content: &quot;What are the latest developments in quantum computing?&quot;
+        }
+    ],
+    tool_calls: toolCalls
 });
-</code></pre>
-<p><strong>Advantages:</strong></p>
-<ul>
-<li>No backend server required</li>
-<li>Works directly in the browser</li>
-<li>Reduced latency for certain operations</li>
-<li>Easy integration into web apps</li>
-</ul>
-<h3>Core Providers (Server-Side)</h3>
-<p>These providers run on the backend server and are accessed via the API:</p>
-<pre><code class="language-python">from g4f.client import Client
-from g4f.Provider import OpenaiChat, Gemini
 
-client = Client(
-    provider=OpenaiChat,  # Specify a provider
-    image_provider=Gemini  # Different provider for images
-)
+console.log(response.choices[0].message.content);
 </code></pre>
-<p><strong>Advantages:</strong></p>
+<hr />
+<h2>Custom Tools</h2>
+<p>While the <code>search_tool</code> is currently the primary tool available, the architecture supports custom tools. Future versions may include additional tools such as:</p>
 <ul>
-<li>More providers available</li>
-<li>Better performance for complex operations</li>
-<li>API key management on server</li>
-<li>Consistent behavior across clients</li>
+<li><strong>Calculator tools</strong>: For mathematical computations</li>
+<li><strong>Code execution tools</strong>: For running code snippets</li>
+<li><strong>Data retrieval tools</strong>: For accessing structured data sources</li>
+<li><strong>Image analysis tools</strong>: For processing images</li>
 </ul>
-<h2>Provider Capabilities</h2>
-<h3>Text Generation Providers</h3>
-<p>Most providers support text generation. Common models include:</p>
-<ul>
-<li><code>gpt-4</code>, <code>gpt-4-turbo</code>, <code>gpt-4o</code></li>
-<li><code>gpt-3.5-turbo</code></li>
-<li><code>claude-3-opus</code>, <code>claude-3-sonnet</code></li>
-<li><code>gemini-pro</code>, <code>gemini-1.5-pro</code></li>
-<li><code>llama-2</code>, <code>llama-3</code></li>
-<li><code>mistral-large</code>, <code>mistral-medium</code></li>
-<li><code>deepseek-v3</code></li>
-</ul>
-<h3>Image Generation Providers</h3>
-<p>Providers with image generation capabilities:</p>
-<ul>
-<li><code>dall-e-3</code> (OpenAI)</li>
-<li><code>flux</code> (Multiple providers)</li>
-<li><code>stable-diffusion</code> (Multiple providers)</li>
-<li><code>midjourney</code> (Selected providers)</li>
-</ul>
-<h3>Vision-Enabled Providers</h3>
-<p>Providers that can analyze images:</p>
-<ul>
-<li><code>gpt-4-vision</code> (OpenAI)</li>
-<li><code>claude-3-opus</code> (Anthropic)</li>
-<li><code>gemini-pro-vision</code> (Google)</li>
-<li><code>llava</code> (Open source)</li>
-</ul>
-<h3>Audio Support</h3>
-<p>Providers with audio capabilities:</p>
-<ul>
-<li>Speech-to-text (transcription)</li>
-<li>Text-to-speech (synthesis)</li>
-<li>Audio understanding</li>
-</ul>
-<h3>Video Support</h3>
-<p>Experimental providers with video generation or analysis capabilities.</p>
-<h2>Model Support</h2>
-<h3>Querying Model Support</h3>
-<p>To check which models a provider supports:</p>
-<pre><code class="language-python">import requests
-
-provider_id = &quot;OpenaiChat&quot;
-response = requests.get(f&quot;http://localhost:1337/v1/providers/{provider_id}&quot;)
-provider_details = response.json()
-
-print(&quot;Text Models:&quot;, provider_details.get('models', []))
-print(&quot;Image Models:&quot;, provider_details.get('image_models', []))
-print(&quot;Vision Models:&quot;, provider_details.get('vision_models', []))
+<p>Check the <a href="/api-docs">API documentation</a> for the latest available tools.</p>
+<hr />
+<h2>Tool Response Format</h2>
+<p>When tools are used, the response format remains consistent with standard chat completions:</p>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;chatcmpl-123&quot;,
+  &quot;object&quot;: &quot;chat.completion&quot;,
+  &quot;created&quot;: 1677652288,
+  &quot;model&quot;: &quot;gpt-4&quot;,
+  &quot;provider&quot;: &quot;OpenaiChat&quot;,
+  &quot;choices&quot;: [
+    {
+      &quot;index&quot;: 0,
+      &quot;message&quot;: {
+        &quot;role&quot;: &quot;assistant&quot;,
+        &quot;content&quot;: &quot;Based on recent information...&quot;,
+        &quot;tool_calls&quot;: []
+      },
+      &quot;finish_reason&quot;: &quot;stop&quot;
+    }
+  ],
+  &quot;usage&quot;: {
+    &quot;prompt_tokens&quot;: 56,
+    &quot;completion_tokens&quot;: 31,
+    &quot;total_tokens&quot;: 87
+  }
+}
 </code></pre>
-<h3>Model Aliases</h3>
-<p>Many models have aliases that point to the same underlying model:</p>
-<ul>
-<li><code>gpt-4</code> → <code>gpt-4-0613</code></li>
-<li><code>gpt-3.5-turbo</code> → <code>gpt-3.5-turbo-0125</code></li>
-<li><code>claude-3-opus</code> → <code>claude-3-opus-20240229</code></li>
-</ul>
-<p>Using the base alias (e.g., <code>gpt-4</code>) automatically uses the latest version.</p>
-<h2>Selecting Providers</h2>
-<h3>Automatic Provider Selection</h3>
-<p>By default, G4F automatically selects the best available provider:</p>
-<pre><code class="language-python">from g4f.client import Client
-
-client = Client()  # Automatic provider selection
-response = client.chat.completions.create(
-    model=&quot;gpt-4&quot;,
-    messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Hello&quot;}]
-)
-</code></pre>
-<h3>Explicit Provider Selection</h3>
-<p>Specify a provider explicitly:</p>
-<pre><code class="language-python">from g4f.client import Client
-from g4f.Provider import OpenaiChat
-
-client = Client(provider=OpenaiChat)
-response = client.chat.completions.create(
-    model=&quot;gpt-4&quot;,
-    messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Hello&quot;}]
-)
-</code></pre>
-<h3>Provider via API Parameter</h3>
-<p>Use the <code>provider</code> query parameter:</p>
-<pre><code class="language-bash">curl -X POST http://localhost:1337/v1/chat/completions?provider=OpenaiChat \
-  -H &quot;Content-Type: application/json&quot; \
-  -d '{
-    &quot;model&quot;: &quot;gpt-4&quot;,
-    &quot;messages&quot;: [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Hello&quot;}]
-  }'
-</code></pre>
-<h3>Multiple Providers with Retry</h3>
-<p>Use <code>RetryProvider</code> to try multiple providers in sequence:</p>
-<pre><code class="language-python">from g4f.client import Client
-from g4f.Provider import RetryProvider, OpenaiChat, Gemini, Claude
-
-client = Client(
-    provider=RetryProvider([OpenaiChat, Gemini, Claude], shuffle=False)
-)
-
-response = client.chat.completions.create(
-    model=&quot;gpt-4&quot;,
-    messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Hello&quot;}]
-)
-</code></pre>
-<h3>Provider Selection via String</h3>
-<p>You can also specify providers using space-separated strings:</p>
-<pre><code class="language-python">response = client.chat.completions.create(
-    model=&quot;gpt-4&quot;,
-    messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Hello&quot;}],
-    provider=&quot;OpenaiChat Gemini&quot;  # Try these providers in order
-)
-</code></pre>
+<hr />
 <h2>Best Practices</h2>
-<h3>1. Let G4F Choose</h3>
-<p>For most use cases, let G4F automatically select the best provider:</p>
-<pre><code class="language-python">client = Client()  # No provider specified
+<ol>
+<li>
+<p><strong>Use Specific Queries</strong>: Make search queries as specific as possible for better results</p>
+<pre><code class="language-python"># Good
+&quot;query&quot;: &quot;Python 3.12 new features release date&quot;
+
+# Less effective
+&quot;query&quot;: &quot;Python features&quot;
 </code></pre>
-<p><strong>Advantages:</strong></p>
+</li>
+<li>
+<p><strong>Adjust max_results</strong>: Use fewer results for faster responses, more for comprehensive answers</p>
+<pre><code class="language-python"># For quick facts
+&quot;max_results&quot;: 3
+
+# For detailed research
+&quot;max_results&quot;: 10
+</code></pre>
+</li>
+<li>
+<p><strong>Set Appropriate Timeouts</strong>: Balance between getting results and response time</p>
+<pre><code class="language-python"># For quick responses
+&quot;timeout&quot;: 3
+
+# For comprehensive searches
+&quot;timeout&quot;: 10
+</code></pre>
+</li>
+<li>
+<p><strong>Choose the Right Backend</strong>:</p>
 <ul>
-<li>Automatic failover</li>
-<li>Load balancing</li>
-<li>Always uses available providers</li>
+<li><code>&quot;auto&quot;</code>: Let the system choose (recommended)</li>
+<li><code>&quot;api&quot;</code>: Faster, structured results</li>
+<li><code>&quot;html&quot;</code>: More comprehensive, slower</li>
+<li><code>&quot;lite&quot;</code>: Minimal processing, fastest</li>
 </ul>
-<h3>2. Use RetryProvider for Reliability</h3>
-<p>For production applications, use multiple providers:</p>
-<pre><code class="language-python">from g4f.Provider import RetryProvider, Provider1, Provider2, Provider3
-
-client = Client(
-    provider=RetryProvider([Provider1, Provider2, Provider3])
-)
+</li>
+<li>
+<p><strong>Combine with System Messages</strong>: Guide the model on how to use search results</p>
+<pre><code class="language-python">messages=[
+    {
+        &quot;role&quot;: &quot;system&quot;,
+        &quot;content&quot;: &quot;Use the search results to provide accurate, up-to-date information. Cite sources when possible.&quot;
+    },
+    {
+        &quot;role&quot;: &quot;user&quot;,
+        &quot;content&quot;: &quot;What's the latest news about space exploration?&quot;
+    }
+]
 </code></pre>
-<h3>3. Choose Providers by Capability</h3>
-<p>Select providers based on your needs:</p>
-<pre><code class="language-python"># For vision tasks
-from g4f.Provider import ProviderWithVision
+</li>
+</ol>
+<hr />
+<h2>Troubleshooting</h2>
+<h3>Common Issues</h3>
+<p><strong>Issue</strong>: Search returns no results</p>
+<ul>
+<li><strong>Solution</strong>: Check your query for typos, try broader terms, or increase <code>timeout</code></li>
+</ul>
+<p><strong>Issue</strong>: Response takes too long</p>
+<ul>
+<li><strong>Solution</strong>: Reduce <code>max_results</code>, decrease <code>max_words</code>, or lower <code>timeout</code></li>
+</ul>
+<p><strong>Issue</strong>: Tool not being invoked</p>
+<ul>
+<li><strong>Solution</strong>: Ensure <code>tool_calls</code> is properly formatted and the function name is exactly <code>&quot;search_tool&quot;</code></li>
+</ul>
+<p><strong>Issue</strong>: Backend-specific errors</p>
+<ul>
+<li><strong>Solution</strong>: Try switching <code>backend</code> to <code>&quot;auto&quot;</code> or a different option</li>
+</ul>
+<h3>Example Error Handling</h3>
+<pre><code class="language-python">from g4f.client import Client
 
-# For fast responses
-from g4f.Provider import FastProvider
+client = Client()
 
-# For high-quality output
-from g4f.Provider import QualityProvider
-</code></pre>
-<h3>4. Monitor Provider Availability</h3>
-<p>Providers may occasionally be unavailable. Always implement error handling:</p>
-<pre><code class="language-python">try:
+try:
+    tool_calls = [
+        {
+            &quot;function&quot;: {
+                &quot;arguments&quot;: {
+                    &quot;query&quot;: &quot;search query&quot;,
+                    &quot;timeout&quot;: 5
+                },
+                &quot;name&quot;: &quot;search_tool&quot;
+            },
+            &quot;type&quot;: &quot;function&quot;
+        }
+    ]
+    
     response = client.chat.completions.create(
         model=&quot;gpt-4&quot;,
-        messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Hello&quot;}]
+        messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Search for something&quot;}],
+        tool_calls=tool_calls
     )
+    
+    print(response.choices[0].message.content)
+    
 except Exception as e:
-    print(f&quot;Error: {e}&quot;)
-    # Implement fallback logic
+    print(f&quot;Error using search tool: {e}&quot;)
+    # Fallback to without tools
+    response = client.chat.completions.create(
+        model=&quot;gpt-4&quot;,
+        messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Search for something&quot;}]
+    )
 </code></pre>
-<h3>5. Check Provider Status</h3>
-<p>Use the interactive provider page to check current status:</p>
-<ul>
-<li><a href="https://g4f.dev/docs/providers-and-models.html">https://g4f.dev/docs/providers-and-models.html</a></li>
-</ul>
-<h3>6. Consider Rate Limits</h3>
-<p>Different providers have different rate limits:</p>
-<ul>
-<li>Free providers: May have stricter limits</li>
-<li>API-based providers: Follow API tier limits</li>
-<li>Browser-based providers: May be slower but more available</li>
-</ul>
-<h3>7. Match Model to Provider</h3>
-<p>Not all providers support all models. Check compatibility:</p>
-<pre><code class="language-python"># Check if provider supports model
-response = requests.get(f&quot;http://localhost:1337/v1/providers/{provider_id}&quot;)
-details = response.json()
-if model_name in details['models']:
-    print(f&quot;{provider_id} supports {model_name}&quot;)
-</code></pre>
+<hr />
+<h2>Advantages Over web_search Parameter</h2>
+<p>The <code>tool_calls</code> approach offers several advantages over the simple <code>web_search=True</code> parameter:</p>
+<ol>
+<li><strong>Provider Independence</strong>: Works with any provider, not just those that support native web search</li>
+<li><strong>Fine-grained Control</strong>: Customize search parameters like timeout, result count, and backend</li>
+<li><strong>Consistent Behavior</strong>: Predictable search behavior across all providers</li>
+<li><strong>Extensibility</strong>: Architecture supports adding custom tools beyond search</li>
+<li><strong>Better Error Handling</strong>: More control over error scenarios and fallback options</li>
+</ol>
+<hr />
 <h2>Related Documentation</h2>
 <ul>
-<li><a href="selecting_a_provider.md">Selecting a Provider</a> - Detailed provider selection guide</li>
-<li><a href="client.md">Client API Guide</a> - Python client documentation</li>
-<li><a href="client_js.md">JavaScript Client</a> - Browser-based usage</li>
+<li><a href="client.md">Client API Guide</a> - Complete Python client documentation</li>
+<li><a href="async_client.md">Async Client</a> - Asynchronous client usage</li>
+<li><a href="client_js.md">JavaScript Client</a> - Browser-based JavaScript usage</li>
 <li><a href="/api-docs">API Documentation</a> - Full API specification</li>
-<li><a href="config.md">Configuration Guide</a> - Authentication and settings</li>
+<li><a href="providers-and-models.html">Providers &amp; Models</a> - Available providers and models</li>
 </ul>
 <hr />
-<p><strong>Note</strong>: Provider availability and model support may change over time. Always refer to the <a href="https://g4f.dev/docs/providers-and-models.html">live provider page</a> for the most current information.</p>
+<p>For more examples and advanced usage, check the <a href="README.md">main documentation hub</a>.</p>
 
         </main>
     </div>
