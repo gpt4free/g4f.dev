@@ -190,7 +190,11 @@ body.liquid:not(.no-animations):not(.white) {
     margin-bottom: 0;
 }
 
-.liquid #chatPrompt, .liquid .message, .liquid .suggestions {
+.liquid #chatPrompt {
+    margin-top: 10px;
+}
+
+.liquid .message, .liquid .suggestions {
     margin-bottom: 10px;
 }
 
@@ -2531,12 +2535,13 @@ form textarea {
   margin: 10px 0;
 }
 
-.mcp-server-group-title {
+.mcp-server-group-title, .mcp-server-name {
   font-weight: bold;
   padding: 8px;
-  background: var(--media-select);
-  border-radius: 4px;
-  margin-bottom: 5px;
+  user-select: none;
+  background: transparent;
+  border: 1px solid var(--conversations);
+  border-radius: var(--border-radius-1);
 }
 
 .mcp-tool-item {
@@ -2556,6 +2561,7 @@ form textarea {
 .mcp-tool-item label {
   cursor: pointer;
   flex: 1;
+  padding: 2px;
 }
 
 .mcp-tool-name {
@@ -2573,5 +2579,4 @@ form textarea {
 .mcp-tool-item:hover {
   background: var(--background-light);
   border-left-color: var(--button);
-}
 }
