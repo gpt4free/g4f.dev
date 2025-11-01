@@ -1411,16 +1411,23 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
 
                 controller_storage[message_id] = new AbortController();
 
+                // Get MCP tools if available
+                const mcpTools = mcpClient && mcpClient.selectedTools.length > 0 
+                    ? mcpClient.getSelectedToolsForAPI() 
+                    : undefined;
+
                 // Handle chat completion (existing logic)
                 const stream = await client.chat.completions.create({
                     model: selectedModel,
                     messages,
                     stream: true,
-                    signal: controller_storage[message_id].signal
+                    signal: controller_storage[message_id].signal,
+                    ...(mcpTools && mcpTools.length > 0 ? { tools: mcpTools } : {})
                 });
 
-                const baseUrl = client.baseUrl ? client.baseUrl.split("/api/")[0] : "";
                 let hasModel = false;
+                let pendingToolCalls = [];
+                
                 for await (const chunk of stream) {
                     let delta;
                     if (chunk.usage) {
@@ -1435,16 +1442,43 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                         return;
                     }
                     if (chunk.choices) {
-                        if (chunk.choices[0]?.delta?.reasoning_content) {
-                            delta = chunk.choices[0].delta.reasoning_content;
-                            await add_message_chunk({type: "reasoning", token: delta}, message_id);
+                        const choice = chunk.choices[0];
+                        
+                        // Handle tool calls
+                        if (choice?.delta?.tool_calls) {
+                            for (const toolCall of choice.delta.tool_calls) {
+                                if (!pendingToolCalls[toolCall.index]) {
+                                    pendingToolCalls[toolCall.index] = {
+                                        id: toolCall.id,
+                                        type: 'function',
+                                        function: { name: '', arguments: '' }
+                                    };
+                                }
+                                
+                                if (toolCall.function?.name) {
+                                    pendingToolCalls[toolCall.index].function.name = toolCall.function.name;
+                                }
+                                if (toolCall.function?.arguments) {
+                                    pendingToolCalls[toolCall.index].function.arguments += toolCall.function.arguments;
+                                }
+                            }
+                        }
+                        
+                        if (choice?.delta?.reasoning || choice?.delta?.reasoning_content) {
+                            const reasoning = choice?.delta?.reasoning || choice.delta.reasoning_content;
+                            await add_message_chunk({type: "reasoning", token: reasoning}, message_id);
                         } else {
-                            delta = chunk.choices[0]?.delta?.content || '';
-                            delta = delta.replaceAll("/media/", baseUrl + "/media/");
-                            delta = delta.replaceAll("/thumbnail/", baseUrl + "/thumbnail/");
-                            await add_message_chunk({type: "content", content: delta}, message_id);
+                            const delta = choice?.delta?.content || '';
+                            const processedDelta = delta.replaceAll("/media/", framework.backendUrl + "/media/")
+                                                         .replaceAll("/thumbnail/", framework.backendUrl + "/thumbnail/");
+                            await add_message_chunk({type: "content", content: processedDelta}, message_id);
                         }
                     }
+                }
+                
+                // Handle tool calls if any
+                if (pendingToolCalls.length > 0 && mcpClient) {
+                    await handleToolCalls(pendingToolCalls, messages, selectedModel, message_id);
                 }
             }
             await finish_message();
@@ -4804,3 +4838,241 @@ function insertBackticksInTextarea(el) {
   el.setSelectionRange(caretPos, caretPos);
   el.focus();
 }
+
+// ============================================================
+// MCP (Model Context Protocol) Integration
+// ============================================================
+
+let mcpClient = null;
+
+// Initialize MCP client when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof MCPClient !== 'undefined') {
+        mcpClient = new MCPClient();
+        initializeMCPUI();
+    }
+});
+
+function initializeMCPUI() {
+    // Render servers list
+    renderMCPServers();
+    
+    // Render tools list
+    renderMCPTools();
+    
+    // Add server button
+    document.getElementById('add-mcp-server-btn')?.addEventListener('click', showAddServerDialog);
+    
+    // Refresh tools button
+    document.getElementById('refresh-mcp-tools-btn')?.addEventListener('click', refreshMCPTools);
+}
+
+function renderMCPServers() {
+    const container = document.getElementById('mcp-servers-list');
+    if (!container || !mcpClient) return;
+    
+    const servers = mcpClient.servers;
+    
+    if (servers.length === 0) {
+        container.innerHTML = '<div class="mcp-empty">No MCP servers configured. Click + to add one.</div>';
+        return;
+    }
+    
+    container.innerHTML = servers.map(server => `
+        <div class="mcp-server-item" data-server-id="${server.id}">
+            <div class="mcp-server-info">
+                <input type="checkbox" 
+                       id="mcp-server-${server.id}" 
+                       ${server.enabled ? 'checked' : ''}
+                       onchange="toggleMCPServer('${server.id}')">
+                <label for="mcp-server-${server.id}" class="mcp-server-name">${escapeHtml(server.name)}</label>
+                <span class="mcp-server-url">${escapeHtml(server.url)}</span>
+            </div>
+            <button type="button" 
+                    class="mcp-remove-btn" 
+                    onclick="removeMCPServer('${server.id}')"
+                    aria-label="Remove server">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+function renderMCPTools() {
+    const container = document.getElementById('mcp-tools-list');
+    if (!container || !mcpClient) return;
+    
+    const tools = mcpClient.getAllTools();
+    
+    if (tools.length === 0) {
+        container.innerHTML = '<div class="mcp-empty">No tools available. Add an MCP server and refresh.</div>';
+        return;
+    }
+    
+    // Group tools by server
+    const toolsByServer = {};
+    tools.forEach(tool => {
+        if (!toolsByServer[tool.serverName]) {
+            toolsByServer[tool.serverName] = [];
+        }
+        toolsByServer[tool.serverName].push(tool);
+    });
+    
+    container.innerHTML = Object.entries(toolsByServer).map(([serverName, serverTools]) => `
+        <div class="mcp-server-tools">
+            <div class="mcp-server-group-title">${escapeHtml(serverName)}</div>
+            ${serverTools.map(tool => `
+                <div class="mcp-tool-item">
+                    <input type="checkbox" 
+                           id="mcp-tool-${tool.toolId}" 
+                           ${mcpClient.isToolSelected(tool.toolId) ? 'checked' : ''}
+                           onchange="toggleMCPTool('${tool.toolId}')">
+                    <label for="mcp-tool-${tool.toolId}">
+                        <span class="mcp-tool-name">${escapeHtml(tool.name)}</span>
+                        ${tool.description ? `<span class="mcp-tool-desc">${escapeHtml(tool.description)}</span>` : ''}
+                    </label>
+                </div>
+            `).join('')}
+        </div>
+    `).join('');
+}
+
+function showAddServerDialog() {
+    const name = prompt('Enter MCP server name:');
+    if (!name) return;
+    
+    const url = prompt('Enter MCP server URL (e.g., http://localhost:3000):');
+    if (!url) return;
+    
+    try {
+        mcpClient.addServer({ name, url });
+        renderMCPServers();
+        refreshMCPTools();
+    } catch (error) {
+        alert('Error adding server: ' + error.message);
+    }
+}
+
+function removeMCPServer(serverId) {
+    if (!confirm('Remove this MCP server?')) return;
+    
+    mcpClient.removeServer(serverId);
+    renderMCPServers();
+    renderMCPTools();
+}
+
+function toggleMCPServer(serverId) {
+    mcpClient.toggleServer(serverId);
+    renderMCPServers();
+    renderMCPTools();
+}
+
+function toggleMCPTool(toolId) {
+    mcpClient.toggleToolSelection(toolId);
+}
+
+async function refreshMCPTools() {
+    const button = document.getElementById('refresh-mcp-tools-btn');
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<i class="fa-solid fa-sync fa-spin"></i>';
+    }
+    
+    try {
+        await mcpClient.fetchAllTools();
+        renderMCPTools();
+    } catch (error) {
+        alert('Error refreshing tools: ' + error.message);
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.innerHTML = '<i class="fa-solid fa-sync"></i>';
+        }
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/**
+ * Handle tool calls from assistant
+ */
+async function handleToolCalls(toolCalls, messages, model, message_id) {
+    try {
+        // Display tool calls in the chat
+        for (const toolCall of toolCalls) {
+            const toolName = toolCall.function.name;
+            const toolArgs = toolCall.function.arguments;
+            
+            const toolMessage = `🔧 **Tool Call:** \`${toolName}\`\n\`\`\`json\n${toolArgs}\n\`\`\`\n`;
+            await add_message_chunk({type: "reasoning", token: toolMessage}, message_id);
+        }
+        
+        // Execute tool calls
+        const toolResults = await mcpClient.executeToolCalls(toolCalls);
+        
+        // Display tool results
+        for (const result of toolResults) {
+            const resultMessage = `✅ **Tool Result:** \`${result.name}\`\n\`\`\`json\n${result.content}\n\`\`\`\n`;
+            await add_message_chunk({type: "reasoning", token: resultMessage}, message_id);
+        }
+        
+        // Add tool results to messages and continue conversation
+        const updatedMessages = [...messages, {
+            role: 'assistant',
+            content: '',
+            tool_calls: toolCalls.map(tc => ({
+                id: tc.id,
+                type: 'function',
+                function: {
+                    name: tc.function.name,
+                    arguments: tc.function.arguments
+                }
+            }))
+        }, ...toolResults];
+
+        await new Promise(resolve => setTimeout(resolve, 20000)); // Wait for 20 seconds
+        
+        // Make another API call with tool results
+        controller_storage[message_id] = new AbortController();
+        const stream = await client.chat.completions.create({
+            model: model,
+            messages: updatedMessages,
+            stream: true,
+            signal: controller_storage[message_id].signal
+        });
+        
+        for await (const chunk of stream) {
+            if (chunk.error) {
+                add_message_chunk({type: "error", ...chunk.error}, message_id);
+                return;
+            }
+            if (chunk.choices) {
+                const choice = chunk.choices[0];
+                const reasoning = choice?.delta?.reasoning || choice?.delta?.reasoning_content;
+                if (reasoning) {
+                    await add_message_chunk({type: "reasoning", content: reasoning}, message_id);
+                } else {
+                    const delta = choice?.delta?.content || '';
+                    const processedDelta = delta.replaceAll("/media/", framework.backendUrl + "/media/")
+                                            .replaceAll("/thumbnail/", framework.backendUrl + "/thumbnail/");
+                    if (processedDelta) {
+                        await add_message_chunk({type: "content", content: processedDelta}, message_id);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error handling tool calls:', error);
+        const errorMessage = `❌ **Tool Execution Error:** ${error.message}`;
+        await add_message_chunk({type: "reasoning", token: errorMessage}, message_id);
+    }
+}
+
+// Expose functions to global scope
+window.toggleMCPServer = toggleMCPServer;
+window.removeMCPServer = removeMCPServer;
+window.toggleMCPTool = toggleMCPTool;

@@ -2437,3 +2437,141 @@ form textarea {
   padding: 2px 6px;
   border-radius: 10px;
 }
+
+/* MCP (Model Context Protocol) Integration Styles */
+.mcp-section {
+  margin: 20px 0;
+  padding: 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-light);
+}
+
+.mcp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.mcp-header .label {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.mcp-header button {
+  background: var(--button);
+  color: var(--button-text);
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.mcp-header button:hover {
+  background: var(--button-hover);
+}
+
+.mcp-servers-list,
+.mcp-tools-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.mcp-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 10px;
+  text-align: center;
+}
+
+.mcp-server-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  margin: 5px 0;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--background);
+}
+
+.mcp-server-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.mcp-server-name {
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.mcp-server-url {
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+
+.mcp-remove-btn {
+  background: var(--error);
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.mcp-remove-btn:hover {
+  opacity: 0.8;
+}
+
+.mcp-server-tools {
+  margin: 10px 0;
+}
+
+.mcp-server-group-title {
+  font-weight: bold;
+  padding: 8px;
+  background: var(--media-select);
+  border-radius: 4px;
+  margin-bottom: 5px;
+}
+
+.mcp-tool-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px;
+  margin: 3px 0;
+  border-left: 3px solid var(--border-color);
+  padding-left: 10px;
+}
+
+.mcp-tool-item input[type="checkbox"] {
+  margin-right: 8px;
+  margin-top: 2px;
+}
+
+.mcp-tool-item label {
+  cursor: pointer;
+  flex: 1;
+}
+
+.mcp-tool-name {
+  font-weight: 500;
+  display: block;
+}
+
+.mcp-tool-desc {
+  color: var(--text-muted);
+  font-size: 0.9em;
+  display: block;
+  margin-top: 2px;
+}
+
+.mcp-tool-item:hover {
+  background: var(--background-light);
+  border-left-color: var(--button);
+}
+}
