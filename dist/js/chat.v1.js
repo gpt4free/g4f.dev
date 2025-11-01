@@ -1429,7 +1429,6 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 let pendingToolCalls = [];
                 
                 for await (const chunk of stream) {
-                    let delta;
                     if (chunk.usage) {
                         add_message_chunk({type: "usage", usage: chunk.usage}, message_id);
                     }
@@ -1447,26 +1446,19 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                         // Handle tool calls
                         if (choice?.delta?.tool_calls) {
                             for (const toolCall of choice.delta.tool_calls) {
+                                if (typeof toolCall.index === 'undefined') {
+                                    toolCall.index = toolCall.function.index || 0;
+                                }
                                 if (!pendingToolCalls[toolCall.index]) {
-                                    pendingToolCalls[toolCall.index] = {
-                                        id: toolCall.id,
-                                        type: 'function',
-                                        function: { name: '', arguments: '' }
-                                    };
-                                }
-                                
-                                if (toolCall.function?.name) {
-                                    pendingToolCalls[toolCall.index].function.name = toolCall.function.name;
-                                }
-                                if (toolCall.function?.arguments) {
+                                    pendingToolCalls[toolCall.index] = toolCall
+                                } else if (toolCall.function?.arguments) {
                                     pendingToolCalls[toolCall.index].function.arguments += toolCall.function.arguments;
                                 }
                             }
                         }
                         
-                        if (choice?.delta?.reasoning || choice?.delta?.reasoning_content) {
-                            const reasoning = choice?.delta?.reasoning || choice.delta.reasoning_content;
-                            await add_message_chunk({type: "reasoning", token: reasoning}, message_id);
+                        if (choice?.delta?.reasoning) {
+                            await add_message_chunk({type: "reasoning", token: choice?.delta?.reasoning}, message_id);
                         } else {
                             const delta = choice?.delta?.content || '';
                             const processedDelta = delta.replaceAll("/media/", framework.backendUrl + "/media/")
@@ -4854,11 +4846,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initializeMCPUI() {
+    // Add default server if none exist
+    if (mcpClient.servers.length === 0) {
+        mcpClient.addServer({ name: 'Default', url: 'https://mcp.g4f.dev' });
+    }
+
     // Render servers list
     renderMCPServers();
     
     // Render tools list
     renderMCPTools();
+
+    // Initial refresh of tools
+    refreshMCPTools();
     
     // Add server button
     document.getElementById('add-mcp-server-btn')?.addEventListener('click', showAddServerDialog);
@@ -5006,8 +5006,8 @@ async function handleToolCalls(toolCalls, messages, model, message_id) {
         for (const toolCall of toolCalls) {
             const toolName = toolCall.function.name;
             const toolArgs = toolCall.function.arguments;
-            
-            const toolMessage = `🔧 **Tool Call:** \`${toolName}\`\n\`\`\`json\n${toolArgs}\n\`\`\`\n`;
+
+            const toolMessage = `\n🔧 **Tool Call:** \`${toolName}\`\n\`\`\`json\n${typeof toolArgs === 'string' ? toolArgs : JSON.stringify(toolArgs, null, 2)}\n\`\`\``;
             await add_message_chunk({type: "reasoning", token: toolMessage}, message_id);
         }
         
@@ -5016,7 +5016,8 @@ async function handleToolCalls(toolCalls, messages, model, message_id) {
         
         // Display tool results
         for (const result of toolResults) {
-            const resultMessage = `✅ **Tool Result:** \`${result.name}\`\n\`\`\`json\n${result.content}\n\`\`\`\n`;
+            result.content = result.content.replaceAll("/media/", framework.backendUrl + "/media/");
+            const resultMessage = `\n✅ **Tool Result:** \`${result.name}\`\n\`\`\`json\n${result.content}\n\`\`\`\n`;
             await add_message_chunk({type: "reasoning", token: resultMessage}, message_id);
         }
         
@@ -5034,7 +5035,6 @@ async function handleToolCalls(toolCalls, messages, model, message_id) {
             }))
         }, ...toolResults];
 
-        await new Promise(resolve => setTimeout(resolve, 20000)); // Wait for 20 seconds
         
         // Make another API call with tool results
         controller_storage[message_id] = new AbortController();
@@ -5052,9 +5052,8 @@ async function handleToolCalls(toolCalls, messages, model, message_id) {
             }
             if (chunk.choices) {
                 const choice = chunk.choices[0];
-                const reasoning = choice?.delta?.reasoning || choice?.delta?.reasoning_content;
-                if (reasoning) {
-                    await add_message_chunk({type: "reasoning", content: reasoning}, message_id);
+                if (choice?.delta?.reasoning) {
+                    await add_message_chunk({type: "reasoning", content: choice?.delta?.reasoning}, message_id);
                 } else {
                     const delta = choice?.delta?.content || '';
                     const processedDelta = delta.replaceAll("/media/", framework.backendUrl + "/media/")
@@ -5067,7 +5066,7 @@ async function handleToolCalls(toolCalls, messages, model, message_id) {
         }
     } catch (error) {
         console.error('Error handling tool calls:', error);
-        const errorMessage = `❌ **Tool Execution Error:** ${error.message}`;
+        const errorMessage = `\n❌ **Tool Execution Error:** ${error.message}`;
         await add_message_chunk({type: "reasoning", token: errorMessage}, message_id);
     }
 }
