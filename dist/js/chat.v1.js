@@ -998,7 +998,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
             content_map.inner.appendChild(div);
             let cursorDiv = content_map.inner.querySelector(".cursor");
             if (cursorDiv) cursorDiv.parentNode.removeChild(cursorDiv);
-        } else if (true || document.body.classList.contains("screen-reader") || appStorage.getItem("renderMarkdown") == "false") {
+        } else if (appStorage.getItem("simulateTyping") != "false" || document.body.classList.contains("screen-reader") || appStorage.getItem("renderMarkdown") == "false") {
             let cursorDiv = content_map.inner.querySelector(".cursor");
             let firstLine = true;
             for (line of message.content.split("\n")) {
