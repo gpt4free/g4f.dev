@@ -1423,7 +1423,6 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     ...(mcpTools && mcpTools.length > 0 ? { tools: mcpTools } : {})
                 });
 
-                const baseUrl = client.baseUrl ? client.baseUrl.split("/api/")[0] : "";
                 let hasModel = false;
                 let pendingToolCalls = [];
                 
@@ -1463,14 +1462,14 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                             }
                         }
                         
-                        if (choice?.delta?.reasoning_content) {
-                            delta = choice.delta.reasoning_content;
-                            await add_message_chunk({type: "reasoning", token: delta}, message_id);
+                        if (choice?.delta?.reasoning || choice?.delta?.reasoning_content) {
+                            const reasoning = choice?.delta?.reasoning || choice.delta.reasoning_content;
+                            await add_message_chunk({type: "reasoning", token: reasoning}, message_id);
                         } else {
-                            delta = choice?.delta?.content || '';
-                            delta = delta.replaceAll("/media/", baseUrl + "/media/");
-                            delta = delta.replaceAll("/thumbnail/", baseUrl + "/thumbnail/");
-                            await add_message_chunk({type: "content", content: delta}, message_id);
+                            const delta = choice?.delta?.content || '';
+                            const processedDelta = delta.replaceAll("/media/", framework.backendUrl + "/media/")
+                                                         .replaceAll("/thumbnail/", framework.backendUrl + "/thumbnail/");
+                            await add_message_chunk({type: "content", content: processedDelta}, message_id);
                         }
                     }
                 }
@@ -5006,8 +5005,8 @@ async function handleToolCalls(toolCalls, messages, model, message_id) {
             const toolName = toolCall.function.name;
             const toolArgs = toolCall.function.arguments;
             
-            const toolMessage = `🔧 **Tool Call:** \`${toolName}\`\n\`\`\`json\n${toolArgs}\n\`\`\``;
-            await add_message_chunk({type: "content", content: toolMessage}, message_id);
+            const toolMessage = `🔧 **Tool Call:** \`${toolName}\`\n\`\`\`json\n${toolArgs}\n\`\`\`\n`;
+            await add_message_chunk({type: "reasoning", token: toolMessage}, message_id);
         }
         
         // Execute tool calls
@@ -5015,8 +5014,8 @@ async function handleToolCalls(toolCalls, messages, model, message_id) {
         
         // Display tool results
         for (const result of toolResults) {
-            const resultMessage = `✅ **Tool Result:** \`${result.name}\`\n\`\`\`json\n${result.content}\n\`\`\``;
-            await add_message_chunk({type: "content", content: resultMessage}, message_id);
+            const resultMessage = `✅ **Tool Result:** \`${result.name}\`\n\`\`\`json\n${result.content}\n\`\`\`\n`;
+            await add_message_chunk({type: "reasoning", token: resultMessage}, message_id);
         }
         
         // Add tool results to messages and continue conversation
@@ -5032,6 +5031,8 @@ async function handleToolCalls(toolCalls, messages, model, message_id) {
                 }
             }))
         }, ...toolResults];
+
+        await new Promise(resolve => setTimeout(resolve, 20000)); // Wait for 20 seconds
         
         // Make another API call with tool results
         controller_storage[message_id] = new AbortController();
@@ -5042,7 +5043,6 @@ async function handleToolCalls(toolCalls, messages, model, message_id) {
             signal: controller_storage[message_id].signal
         });
         
-        const baseUrl = client.baseUrl ? client.baseUrl.split("/api/")[0] : "";
         for await (const chunk of stream) {
             if (chunk.error) {
                 add_message_chunk({type: "error", ...chunk.error}, message_id);
@@ -5050,16 +5050,23 @@ async function handleToolCalls(toolCalls, messages, model, message_id) {
             }
             if (chunk.choices) {
                 const choice = chunk.choices[0];
-                const delta = choice?.delta?.content || '';
-                const processedDelta = delta.replaceAll("/media/", baseUrl + "/media/")
-                                           .replaceAll("/thumbnail/", baseUrl + "/thumbnail/");
-                await add_message_chunk({type: "content", content: processedDelta}, message_id);
+                const reasoning = choice?.delta?.reasoning || choice?.delta?.reasoning_content;
+                if (reasoning) {
+                    await add_message_chunk({type: "reasoning", content: reasoning}, message_id);
+                } else {
+                    const delta = choice?.delta?.content || '';
+                    const processedDelta = delta.replaceAll("/media/", framework.backendUrl + "/media/")
+                                            .replaceAll("/thumbnail/", framework.backendUrl + "/thumbnail/");
+                    if (processedDelta) {
+                        await add_message_chunk({type: "content", content: processedDelta}, message_id);
+                    }
+                }
             }
         }
     } catch (error) {
         console.error('Error handling tool calls:', error);
         const errorMessage = `❌ **Tool Execution Error:** ${error.message}`;
-        await add_message_chunk({type: "content", content: errorMessage}, message_id);
+        await add_message_chunk({type: "reasoning", token: errorMessage}, message_id);
     }
 }
 

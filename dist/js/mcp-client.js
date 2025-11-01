@@ -48,6 +48,8 @@ class MCPClient {
         if (!server.name || !server.url) {
             throw new Error('Server must have name and url');
         }
+
+        server.url = (new URL('/mcp', server.url)).toString();
         
         // Check if server already exists
         const exists = this.servers.some(s => s.url === server.url);
