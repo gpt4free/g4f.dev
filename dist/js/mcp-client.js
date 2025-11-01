@@ -72,11 +72,14 @@ class MCPClient {
      * @param {string} serverId - Server ID to remove
      */
     removeServer(serverId) {
+        // Find the server before removing it
+        const server = this.servers.find(s => s.id === serverId);
+        
+        // Remove server from list
         this.servers = this.servers.filter(s => s.id !== serverId);
         this.saveServers();
         
         // Remove tools from this server
-        const server = this.servers.find(s => s.id === serverId);
         if (server) {
             this.tools.delete(server.url);
         }
