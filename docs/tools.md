@@ -299,7 +299,7 @@ The `tool_calls` approach offers several advantages over the simple `web_search=
 - [Async Client](async_client.md) - Asynchronous client usage
 - [JavaScript Client](client_js.md) - Browser-based JavaScript usage
 - [API Documentation](/api-docs) - Full API specification
-- [Providers & Models](providers-and-models.html) - Available providers and models
+- [Providers & Models](providers-and-models.md) - Available providers and models
 
 ---
 
