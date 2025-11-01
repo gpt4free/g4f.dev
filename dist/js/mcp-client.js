@@ -104,18 +104,25 @@ class MCPClient {
     }
 
     /**
-     * Fetch tools from an MCP server
+     * Fetch tools from an MCP server using JSON-RPC
      * @param {string} serverUrl - Server URL
      * @returns {Promise<Array>} List of tools
      */
     async fetchTools(serverUrl) {
         try {
-            // MCP protocol: GET /tools endpoint
-            const response = await fetch(`${serverUrl}/tools`, {
-                method: 'GET',
+            // JSON-RPC request to list tools
+            const response = await fetch(serverUrl, {
+                method: 'POST',
                 headers: {
+                    'Content-Type': 'application/json',
                     'Accept': 'application/json'
-                }
+                },
+                body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    method: 'tools/list',
+                    params: {},
+                    id: Date.now()
+                })
             });
 
             if (!response.ok) {
@@ -123,7 +130,13 @@ class MCPClient {
             }
 
             const data = await response.json();
-            const tools = data.tools || data || [];
+            
+            // Handle JSON-RPC response
+            if (data.error) {
+                throw new Error(`JSON-RPC error: ${data.error.message}`);
+            }
+            
+            const tools = data.result?.tools || data.result || [];
             
             this.tools.set(serverUrl, tools);
             return tools;
@@ -239,21 +252,36 @@ class MCPClient {
         }
 
         try {
-            // MCP protocol: POST /tools/{toolName}/execute
-            const response = await fetch(`${tool.serverUrl}/tools/${toolName}/execute`, {
+            // JSON-RPC request to execute tool
+            const response = await fetch(tool.serverUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 },
-                body: JSON.stringify({ arguments: args })
+                body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    method: 'tools/call',
+                    params: {
+                        name: toolName,
+                        arguments: args
+                    },
+                    id: Date.now()
+                })
             });
 
             if (!response.ok) {
                 throw new Error(`Tool execution failed: ${response.status}`);
             }
 
-            const result = await response.json();
+            const data = await response.json();
+            
+            // Handle JSON-RPC response
+            if (data.error) {
+                throw new Error(`JSON-RPC error: ${data.error.message}`);
+            }
+            
+            const result = data.result;
             return {
                 tool_call_id: toolCall.id,
                 role: 'tool',

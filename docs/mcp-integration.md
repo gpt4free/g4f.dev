@@ -64,59 +64,112 @@ The current weather in New York is 22°C and partly cloudy.
 
 ## MCP Server Protocol
 
-MCP servers must implement the following endpoints:
+MCP servers use **JSON-RPC 2.0** over HTTP POST. All requests must be sent to the server's base URL using the `POST` method.
 
-### GET /tools
+### JSON-RPC Request Format
 
-Returns a list of available tools.
+All requests must include:
+- `jsonrpc`: "2.0"
+- `method`: The method name (e.g., "tools/list", "tools/call")
+- `params`: Method parameters (object)
+- `id`: Request identifier (number or string)
+
+### Method: tools/list
+
+Lists all available tools from the server.
+
+**Request:**
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/list",
+  "params": {},
+  "id": 1
+}
+```
 
 **Response:**
 ```json
 {
-  "tools": [
-    {
-      "name": "tool_name",
-      "description": "Tool description",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "param": {
-            "type": "string",
-            "description": "Parameter description"
-          }
-        },
-        "required": ["param"]
+  "jsonrpc": "2.0",
+  "result": {
+    "tools": [
+      {
+        "name": "tool_name",
+        "description": "Tool description",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "param": {
+              "type": "string",
+              "description": "Parameter description"
+            }
+          },
+          "required": ["param"]
+        }
       }
-    }
-  ]
+    ]
+  },
+  "id": 1
 }
 ```
 
-### POST /tools/{toolName}/execute
+### Method: tools/call
 
 Executes a tool with the given arguments.
 
 **Request:**
 ```json
 {
-  "arguments": {
-    "param": "value"
-  }
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "tool_name",
+    "arguments": {
+      "param": "value"
+    }
+  },
+  "id": 2
 }
 ```
 
 **Response:**
 ```json
 {
-  "content": {
-    "result": "Tool execution result"
-  }
+  "jsonrpc": "2.0",
+  "result": {
+    "content": {
+      "result": "Tool execution result"
+    }
+  },
+  "id": 2
 }
 ```
 
+**Error Response:**
+```json
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32000,
+    "message": "Error message"
+  },
+  "id": 2
+}
+```
+
+### JSON-RPC Error Codes
+
+- `-32700`: Parse error
+- `-32600`: Invalid Request
+- `-32601`: Method not found
+- `-32602`: Invalid params
+- `-32603`: Internal error
+- `-32000` to `-32099`: Server error
+
 ## Example MCP Server
 
-A test MCP server is included at `/tmp/test-mcp-server.js` that provides example tools:
+A test MCP server using JSON-RPC is included at `/tmp/test-mcp-server-jsonrpc.js` that provides example tools:
 
 - **get_weather**: Get weather for a location
 - **calculate**: Perform mathematical calculations
@@ -125,12 +178,28 @@ A test MCP server is included at `/tmp/test-mcp-server.js` that provides example
 To run it:
 
 ```bash
-node /tmp/test-mcp-server.js
+node /tmp/test-mcp-server-jsonrpc.js
 ```
 
 Then add it in the chat UI:
 - Name: "Test Server"
 - URL: "http://localhost:3001"
+
+**Testing with curl:**
+
+List tools:
+```bash
+curl -X POST http://localhost:3001 \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/list","params":{},"id":1}'
+```
+
+Call a tool:
+```bash
+curl -X POST http://localhost:3001 \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"get_weather","arguments":{"location":"San Francisco, CA"}},"id":2}'
+```
 
 ## Technical Details
 
