@@ -419,6 +419,10 @@ body.liquid:not(.no-animations):not(.white) {
     white-space: pre-wrap;
 }
 
+.message .content_inner p {
+    margin-bottom: 1em;
+}
+
 .message .content img, .message .content video{
     max-width: 400px;
     max-height: 400px;
