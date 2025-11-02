@@ -417,10 +417,74 @@ body.liquid:not(.no-animations):not(.white) {
 }
 .message .content_inner pre{
     white-space: pre-wrap;
+    margin-bottom: 1em;
 }
 
 .message .content_inner p {
     margin-bottom: 1em;
+}
+
+/* Set spacing between paragraph and list to 0.35em */
+.message .content_inner p + ul,
+.message .content_inner p + ol {
+    margin-top: -0.65em; /* Reduces spacing from 1em to 0.35em */
+}
+
+/* Set spacing between heading and list to 0.35em */
+.message .content_inner h1 + ul,
+.message .content_inner h1 + ol,
+.message .content_inner h2 + ul,
+.message .content_inner h2 + ol,
+.message .content_inner h3 + ul,
+.message .content_inner h3 + ol,
+.message .content_inner h4 + ul,
+.message .content_inner h4 + ol,
+.message .content_inner h5 + ul,
+.message .content_inner h5 + ol,
+.message .content_inner h6 + ul,
+.message .content_inner h6 + ol {
+    margin-top: -0.25em; /* Reduces spacing from 0.6em to 0.35em */
+}
+
+/* Reduce spacing when heading is immediately followed by a paragraph */
+.message .content_inner h1 + p,
+.message .content_inner h2 + p,
+.message .content_inner h3 + p,
+.message .content_inner h4 + p,
+.message .content_inner h5 + p,
+.message .content_inner h6 + p {
+    margin-top: -0.4em; /* Reduces spacing from 1em to 0.6em */
+}
+
+/* Ensure vertical spacing for lists and separators inside messages */
+.message .content_inner ul,
+.message .content_inner ol {
+    margin: 0 0 1em;
+}
+
+/* Subtle spacing between adjacent list items for readability */
+.message .content_inner li + li {
+    margin-top: .35em;
+}
+
+/* Visible gap around horizontal rules rendered from '---' */
+.message .content_inner hr {
+    margin: 1.2em 0;
+}
+
+/* Spacing after tables (same as paragraphs) */
+.message .content_inner table {
+    margin-bottom: 1em;
+}
+
+/* Normalize heading spacing inside message content */
+.message .content_inner h1,
+.message .content_inner h2,
+.message .content_inner h3,
+.message .content_inner h4,
+.message .content_inner h5,
+.message .content_inner h6 {
+    margin: 1em 0 .6em;
 }
 
 .message .content img, .message .content video{
