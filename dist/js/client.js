@@ -103,6 +103,7 @@ class Client {
         if (this.sleep && this.lastRequest) {
             let timeSinceLastRequest = Date.now() - this.lastRequest;
             while (this.sleep > timeSinceLastRequest) {
+                console.log(`Sleeping for ${this.sleep - timeSinceLastRequest} ms to respect rate limits.`);
                 await new Promise(resolve => setTimeout(resolve, this.sleep - timeSinceLastRequest + 100));
                 timeSinceLastRequest = Date.now() - this.lastRequest;
             }
