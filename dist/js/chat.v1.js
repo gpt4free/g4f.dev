@@ -717,6 +717,12 @@ const prepare_messages = (messages, message_index = -1, do_continue = false, do_
 
     // Insert system prompt as first message
     let last_steps_messages = [];
+    if (document.getElementById('globalPrompt')?.value) {
+        last_steps_messages.push({
+            "role": "system",
+            "content": document.getElementById('globalPrompt').value
+        });
+    }
     if (chatPrompt?.value) {
         last_steps_messages.push({
             "role": "system",
@@ -5016,7 +5022,6 @@ async function handleToolCalls(toolCalls, messages, model, message_id) {
         
         // Display tool results
         for (const result of toolResults) {
-            result.content = result.content.replaceAll("/media/", framework.backendUrl + "/media/");
             const resultMessage = `\n✅ **Tool Result:** \`${result.name}\`\n\`\`\`json\n${result.content}\n\`\`\`\n`;
             await add_message_chunk({type: "reasoning", token: resultMessage}, message_id);
         }

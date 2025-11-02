@@ -259,8 +259,14 @@
                       <input type="text" id="voice" value="" placeholder="gemini" />
                   </div>
                   <div class="field row box">
-                      <label for="systemPrompt" class="label">System Prompt</label>
-                      <textarea id="systemPrompt" placeholder="You are a helpful assistant." aria-describedby="systemPrompt-desc" data-example="You can use this prompt to customize AI behavior, e.g., to enable image generation by using specified syntax."></textarea>
+                      <label for="globalPrompt" class="label">Global System Prompt</label>
+                      <textarea id="globalPrompt" value="Render image URLs in Markdown format: `![](http://example/image.jpg)`
+Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3&quot;&gt;&lt;/audio&gt;`" aria-describedby="globalPrompt-desc"></textarea>
+                      <small id="globalPrompt-desc" class="sr-only">Customize the AI's global prompt to personalize responses or enable features like image generation.</small>
+                  </div>
+                  <div class="field row box">
+                      <label for="systemPrompt" class="label">System Prompt Template</label>
+                      <textarea id="systemPrompt" placeholder="You are a helpful assistant." aria-describedby="systemPrompt-desc"></textarea>
                       <small id="systemPrompt-desc" class="sr-only">Customize the AI's system prompt to personalize responses or enable features like image generation.</small>
                   </div>
                   <div class="field mem0 hidden">

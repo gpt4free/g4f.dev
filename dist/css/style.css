@@ -1019,7 +1019,7 @@ select:hover,
     padding: var(--inner-gap) 28px;
 }
 
-#systemPrompt, #chatPrompt, .settings textarea, form textarea, .chat-body textarea {
+#systemPrompt, #chatPrompt, #globalPrompt, .settings textarea, form textarea, .chat-body textarea {
     font-size: 15px;
     color: var(--colour-3);
     outline: none;
@@ -1027,7 +1027,7 @@ select:hover,
     width: 100%;
 }
 
-#systemPrompt:focus, #chatPrompt:focus {
+#systemPrompt:focus, #chatPrompt:focus, #globalPrompt:focus {
     min-height: 200px;
     max-height: 1000px;
     transition: max-height 0.25s ease-in;
