@@ -42,6 +42,9 @@ function createClient(provider, options = {}) {
         options.baseUrl = config.backupUrl;
         options.sleep = 10000; // 10 seconds delay to avoid rate limiting
     }
+    if (config.sleep && !options.sleep) {
+        options.sleep = config.sleep;
+    }
     if (provider === "custom") {
         if (!options.baseUrl) {
             if (typeof localStorage !== "undefined" && localStorage.getItem("Custom-api_base")) {
