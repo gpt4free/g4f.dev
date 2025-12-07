@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Media Size Display Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .comparison {
+            display: flex;
+            gap: 40px;
+            margin: 30px 0;
+        }
+        .before, .after {
+            flex: 1;
+            border: 2px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .before {
+            background-color: #fff5f5;
+            border-color: #ff6b6b;
+        }
+        .after {
+            background-color: #f0fff4;
+            border-color: #51cf66;
+        }
+        h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .message {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .count {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 8px;
+        }
+        .image-placeholder {
+            width: 100%;
+            height: 150px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        .highlight {
+            background-color: #ffd700;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎨 Media Size Display - Before & After</h1>
+    <p>This PR changes how media responses are displayed in the chat interface.</p>
+    
+    <div class="comparison">
+        <div class="before">
+            <h2>❌ Before</h2>
+            <div class="message">
+                <div class="image-placeholder">[Generated Image]</div>
+                <div class="count">
+                    <span class="highlight">(0 words, 0 chars, 0 tokens)</span>
+                </div>
+            </div>
+            <p style="color: #c92a2a; font-size: 0.9em;">
+                ⚠️ Shows confusing word/token counts for image responses
+            </p>
+        </div>
+        
+        <div class="after">
+            <h2>✅ After</h2>
+            <div class="message">
+                <div class="image-placeholder">[Generated Image]</div>
+                <div class="count">
+                    <span class="highlight">(234.56 KB)</span>
+                </div>
+            </div>
+            <p style="color: #2f9e44; font-size: 0.9em;">
+                ✓ Shows actual file size for media responses
+            </p>
+        </div>
+    </div>
+    
+    <h3>What Changed?</h3>
+    <ul>
+        <li>✨ Automatically detects base64-encoded images and videos in responses</li>
+        <li>📏 Calculates and displays the actual file size (B, KB, MB, GB)</li>
+        <li>🔤 Regular text messages still show word and token counts</li>
+        <li>🎯 Works with both markdown images and HTML video/audio tags</li>
+    </ul>
+    
+    <h3>Technical Details</h3>
+    <pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto;">
+- Added calculateBase64Size() helper function
+- Added get_media_size() to detect and size media
+- Modified count_words_and_tokens() to show size for media
+- Uses regex patterns to match base64 data in messages
+- Properly calculates size from base64 encoding</pre>
+</body>
+</html>
