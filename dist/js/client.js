@@ -360,9 +360,16 @@ class Client {
         this.logCallback && this.logCallback({request: {prompt, ...params}, type: 'image'});
         const encodedParams = new URLSearchParams(params);
         const url = imageEndpoint.replace('{prompt}', prompt) + '?' + encodedParams.toString();
+        await this._sleep();
         const response = await fetch(url, requestOptions);
         this.logCallback && this.logCallback({response: response, type: 'image'});
         if (!response.ok) {
+            if (response.headers.get('Retry-After')) {
+                const retryAfter = parseInt(response.headers.get('Retry-After'), 10) * 1000;
+                console.warn(`Rate limited. Retrying after ${retryAfter} ms.`);
+                await new Promise(resolve => setTimeout(resolve, retryAfter));
+                return this._defaultImageGeneration(imageEndpoint, params, requestOptions);
+            }
             throw new Error(`Status ${response.status}: ${await response.text()}`);
         }
         return {data: [{url: response.url}]}

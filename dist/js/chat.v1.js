@@ -3048,37 +3048,42 @@ async function on_api() {
         providersListContainer.querySelector(".collapsible-content").classList.toggle('hidden');
         providersListContainer.querySelector(".collapsible-header").classList.toggle('active');
     });
-
-    const optgroup = document.createElement("optgroup");
-    optgroup.label = framework.translate('Live Providers');
-    Object.entries(window.providers || {}).forEach(([name, config]) => {
-        let option = document.createElement("option");
-        if (name === "default") {
-            option.selected = true;
-        }
-        option.value = name;
-        option.dataset.live = "true";
-        option.text = `${name} ${config.tags}`;
-        fetch(`https://g4f.dev/ai/${name}/Response%20with%20ok?seed=${Math.floor(Date.now() / 1000 / 3600 / 24)}`).then((response) => {
-            if (response.ok) {
-                option.text += " 🟢";
+    if (providerSelect) {
+        const optgroup = document.createElement("optgroup");
+        optgroup.label = framework.translate('Live Providers');
+        Object.entries(window.providers || {}).forEach(([name, config]) => {
+            let option = document.createElement("option");
+            if (name === "default") {
+                option.selected = true;
             }
+            option.value = name;
+            option.dataset.live = "true";
+            option.text = `${name} ${config.tags}`;
+            fetch(`https://g4f.dev/ai/${name}/Response%20with%20ok?seed=${Math.floor(Date.now() / 1000 / 3600 / 24)}`).then((response) => {
+                if (response.ok) {
+                    option.text += " 🟢";
+                }
+            });
+            optgroup.appendChild(option);
         });
-        optgroup.appendChild(option);
-    });
-    providerSelect.appendChild(optgroup);
+        providerSelect.appendChild(optgroup);
 
-    let provider_options = [];
-    api("providers").then(async (providers) => {
-        await load_providers(providers, provider_options, providersListContainer);
-        load_provider_models(appStorage.getItem("provider"));
-    }).catch(async (e)=>{
-        console.log(e)
-        providerSelect.querySelectorAll("option:not([data-live])").forEach((el)=>el.remove());
+        let provider_options = [];
+        api("providers").then(async (providers) => {
+            await load_providers(providers, provider_options, providersListContainer);
+            load_provider_models(appStorage.getItem("provider"));
+        }).catch(async (e)=>{
+            console.log(e)
+            providerSelect.querySelectorAll("option:not([data-live])").forEach((el)=>el.remove());
+            await load_provider_login_urls(providersListContainer);
+            await load_settings(provider_options);
+            await load_provider_models(appStorage.getItem("provider"));
+        });
+    } else {
         await load_provider_login_urls(providersListContainer);
-        await load_settings(provider_options);
-        await load_provider_models(appStorage.getItem("provider"));
-    });
+        await load_settings({});
+        await initClient();
+    }
 
     const update_systemPrompt_icon = (checked) => {
         slide_systemPrompt_icon.classList[checked ? "remove": "add"]("fa-angles-up");
@@ -3817,10 +3822,12 @@ async function load_provider_models(provider=null, search=null) {
         appStorage.setItem(`${provider}:models`, JSON.stringify(models));
     }
 };
-providerSelect.addEventListener("change", () => load_provider_models());
+if (providerSelect) {
+    providerSelect.addEventListener("change", () => load_provider_models());
+}
 modelSelect.addEventListener("change", () => {
     const favorites = appStorage.getItem("favorites") ? JSON.parse(appStorage.getItem("favorites")) : {};
-    const selected = favorites[providerSelect.value] || {};
+    const selected = favorites[providerSelect ? providerSelect.value : 'pollinations'] || {};
     const selectedOption = modelSelect.options[modelSelect.selectedIndex];
     console.log("Selected model:", modelSelect.value, selectedOption);
     if (!selected[modelSelect.value]) {
@@ -4705,6 +4712,9 @@ function enhanceFileUpload() {
 enhanceFileUpload();
 
 function isLive() {
+    if (!providerSelect) {
+        return true;
+    }
     return providerSelect.options[providerSelect.selectedIndex]?.dataset?.live;
 }
 
@@ -4725,7 +4735,7 @@ async function initClient() {
             count += 1;
         }
     }
-    const provider = providerSelect.value;
+    const provider = providerSelect ? providerSelect.value : 'pollinations';
     const apiKey = get_api_key_by_provider(provider);
     const options = apiKey ? { apiKey } : {};
     if (appStorage.getItem("debugMode") == "true") {
@@ -4763,7 +4773,7 @@ async function loadClientModels() {
             modelSelect.appendChild(opt);
         });
         if (models.length > 2) {
-            set_favorite_models(providerSelect.value);
+            set_favorite_models(providerSelect ? providerSelect.value : 'pollinations');
         }
     } catch (err) {
         console.error('Model load failed:', err);
