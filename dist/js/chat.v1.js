@@ -3538,7 +3538,7 @@ chatPrompt?.addEventListener("input", async () => {
 
 function get_selected_model() {
     let model = null;
-    if (modelSearch.value) {
+    if (modelSearch && modelSearch.value) {
         return modelSearch.value;
     } else if (modelSelect.selectedIndex >= 0) {
         model = modelSelect.options[modelSelect.selectedIndex];
@@ -3876,7 +3876,7 @@ document.getElementById("model_edit")?.addEventListener("click", () => {
     modelSelector.classList.remove("hidden");
     modelSearch.focus()
 });
-modelSearch.addEventListener('input', function() {
+modelSearch?.addEventListener('input', function() {
   const searchTerm = this.value.toLowerCase();
   modelSuggestions.innerHTML = '';
 
