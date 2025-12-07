@@ -347,8 +347,11 @@ class Client {
         params = {...params};
         const prompt = encodeURIComponent(params.prompt || '').replaceAll('%20', '+');
         delete params.prompt;
-        if (params.nologo === undefined) params.nologo = true;
-        if (this.extraBody.referrer) params.referrer = this.extraBody.referrer;
+        delete params.response_format;
+        if (!this.apiKey) {
+            if (params.nologo === undefined) params.nologo = true;
+            if (this.extraBody.referrer) params.referrer = this.extraBody.referrer;
+        }
         if (params.size) {
             params.width = params.size.split('x')[0];
             params.height = params.size.split('x')[1];
@@ -408,13 +411,13 @@ class Client {
 class PollinationsAI extends Client {
     constructor(options = {}) {
         super({
-            baseUrl: 'https://text.pollinations.ai',
-            apiEndpoint: 'https://text.pollinations.ai/openai',
-            imageEndpoint: 'https://image.pollinations.ai/prompt/{prompt}',
-            defaultModel: 'gpt-5-nano',
+            baseUrl: options.apiKey ? 'https://gen.pollinations.ai/v1' : 'https://text.pollinations.ai',
+            apiEndpoint: options.apiKey ? null : 'https://text.pollinations.ai/openai',
+            imageEndpoint: options.apiKey ? 'https://gen.pollinations.ai/image/{prompt}' : 'https://image.pollinations.ai/prompt/{prompt}',
+            defaultModel: 'openai',
             extraBody: {
                 referrer: 'https://g4f.dev/',
-                seed: '10352102'
+                seed: 10352102
             },
             modelAliases: {
                 "sdxl-turbo": "turbo",
@@ -431,8 +434,9 @@ class PollinationsAI extends Client {
           if (this._models.length > 0) return this._models;
           try {
             let textModelsResponse;
+            let imageModelsResponse;
             try {
-                textModelsResponse = await fetch('https://g4f.dev/api/pollinations.ai/models');
+                textModelsResponse = await fetch(this.apiKey ? 'https://gen.pollinations.ai/text/models' : 'https://g4f.dev/api/pollinations.ai/models');
                 if (!textModelsResponse.ok) {
                     throw new Error(`Status ${textModelsResponse.status}: ${await textModelsResponse.text()}`);
                 }
@@ -442,21 +446,32 @@ class PollinationsAI extends Client {
                     console.error("Failed to fetch text models from all proxies:", e); return { data: [] };
                 });
             }
-            let imageModelsResponse = await this._fetchWithProxyRotation('https://image.pollinations.ai/models').catch(e => {
-                console.error("Failed to fetch image models from all proxies:", e); return { data: [] };
-            });
+            try {
+                imageModelsResponse = await fetch(this.apiKey ? 'https://gen.pollinations.ai/image/models' : 'https://g4f.dev/api/pollinations.ai/image/models');
+                if (!imageModelsResponse.ok) {
+                    throw new Error(`Status ${imageModelsResponse.status}: ${await imageModelsResponse.text()}`);
+                }
+            } catch (e) {
+                console.error("Failed to fetch pollinations.ai image models from g4f.dev:", e);
+                imageModelsResponse = await this._fetchWithProxyRotation('https://image.pollinations.ai/models').catch(e => {
+                    console.error("Failed to fetch image models from all proxies:", e); return { data: [] };
+                });
+            }
             textModelsResponse = await textModelsResponse.json();
             imageModelsResponse = await imageModelsResponse.json();
             const textModels = (textModelsResponse.data || textModelsResponse || []);
             this._models = [
                 ...textModels.map(model => {
-                    model.id = model.aliases && model.aliases.length > 0 ? model.aliases[0] : (this.swapAliases[model.name]  || model.name);
-                    this.modelAliases[model.id] = model.name;
+                    model.id = model.name;
+                    model.label = model.aliases && model.aliases.length > 0 ? model.aliases[0] : (this.swapAliases[model.name]  || model.name);
+                    this.modelAliases[model.label] = model.name;
                     model.type = model.type || 'chat';
                     return model
                 }),
                 ...imageModelsResponse.map(model => {
-                    return { id: this.swapAliases[model]  || model, type: 'image', seed: true};
+                    const isVideo = model.output_modalities && model.output_modalities.includes('video');
+                    const modelName = model.name || model
+                    return { id: modelName, label: this.swapAliases[modelName]  || modelName, type: isVideo ? 'video' : 'image', seed: true};
                 })
             ];
             return this._models;

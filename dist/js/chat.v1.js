@@ -50,7 +50,7 @@ let login_urls_storage = {
     "Azure": ["Azure", "", []],
     "HuggingFace": ["HuggingFace", "https://huggingface.co/settings/tokens", ["HuggingFaceMedia"]],
     "HuggingSpace": ["HuggingSpace", "", []],
-    "PollinationsAI": ["Pollinations AI", "https://auth.pollinations.ai", ["Live"]],
+    "PollinationsAI": ["Pollinations AI", "https://enter.pollinations.ai", []],
     "Puter": ["Puter.js", "", []],
 };
 
@@ -1372,8 +1372,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         const isAudio = selectedOption?.dataset.audio == "true";
         try {
             // Conditionally call the correct client method based on model type.
-            if (['image', 'image-edit'].includes(modelType)) {
-                const method = modelType == 'image' ? 'generate' : 'edit';
+            if (['image', 'image-edit', 'video'].includes(modelType)) {
+                const method = ['image', 'video'].includes(modelType) ? 'generate' : 'edit';
                 // Handle image generation
                 const image = image_storage ? Object.values(image_storage)[0] : null;
                 const response = await client.images[method]({
@@ -1384,7 +1384,11 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     ...(image && image.url ? { image: image.url } : {})
                 });
                 const imageUrl = response.data[0].b64_json ? `data:image/png;base64,${response.data[0].b64_json}` : response.data[0].url;
-                message_storage[message_id] = `[![${sanitize(message, ' ')}](${imageUrl})](${imageUrl.startsWith('data:') ? '' : imageUrl})`
+                if (modelType === 'video') {
+                    message_storage[message_id] = `<video controls src="${imageUrl}"></video>`;
+                } else {
+                    message_storage[message_id] = `[![${sanitize(message, ' ')}](${imageUrl})](${imageUrl.startsWith('data:') ? '' : imageUrl})`
+                }
             } else if (isAudio) {
                 // Handle audio generation
                 const response = await client.chat.completions.create({

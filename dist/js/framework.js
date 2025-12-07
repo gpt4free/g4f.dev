@@ -335,7 +335,7 @@ async function includeAdsense() {
     document.head.appendChild(script);
 }
 function isValidModel(model) {
-    return !model.type || ["chat", "image", "text", "image-edit"].includes(model.type);
+    return !model.type || ["chat", "image", "text", "image-edit", "video"].includes(model.type);
 }
 
 framework.query = query;
