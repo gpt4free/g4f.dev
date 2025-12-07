@@ -2,6 +2,7 @@ import { Client, Pollinations, DeepInfra, Puter, HuggingFace, Worker, Audio } fr
 
 const providers = {
     "default": {class: Client, baseUrl: "https://g4f.dev/api/auto", apiEndpoint: "https://g4f.dev/ai/{now}", tags: ""},
+    "nectar": {class: Pollinations, baseUrl: "https://g4f.dev/api/nectar", apiEndpoint: "https://g4f.dev/api/nectar/v1/chat/completions", imageEndpoint: "https://g4f.dev/api/nectar/image/{prompt}", modelsEndpoint: "https://g4f.dev/api/nectar/text/models", tags: ""},
     "api.airforce": {class: Client, baseUrl: "https://api.airforce/v1", tags: "🎨 👓", localStorageApiKey: "ApiAirforce-api_key", sleep: 60000},
     "anondrop.net": {class: Client, baseUrl: "https://anondrop.net/v1", tags: ""},
     "audio": {class: Audio, baseUrl: "https://g4f.dev/api/audio", tags: "🎧", sleep: 10000},
@@ -61,6 +62,9 @@ function createClient(provider, options = {}) {
     // Set apiEndpoint if specified
     if (config.apiEndpoint && !options.apiEndpoint) {
         options.apiEndpoint = config.apiEndpoint;
+    }
+    if (config.modelsEndpoint && !options.modelsEndpoint) {
+        options.modelsEndpoint = config.modelsEndpoint;
     }
     
     // Set extraHeaders if specified

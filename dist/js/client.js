@@ -54,6 +54,7 @@ class Client {
         this.baseUrl = options.baseUrl;
         this.apiEndpoint = options.apiEndpoint || `${this.baseUrl}/chat/completions`;
         this.imageEndpoint = options.imageEndpoint || `${this.baseUrl}/images/generations`;
+        this.modelsEndpoint = options.modelsEndpoint || `${this.baseUrl}/models`;
         this.defaultModel = options.defaultModel;
         this.useModelName = options.useModelName || false;
         this.apiKey = options.apiKey;
@@ -416,9 +417,10 @@ class Client {
 class PollinationsAI extends Client {
     constructor(options = {}) {
         super({
-            baseUrl: options.apiKey ? 'https://gen.pollinations.ai/v1' : 'https://text.pollinations.ai',
-            apiEndpoint: options.apiKey ? null : 'https://text.pollinations.ai/openai',
-            imageEndpoint: options.apiKey ? 'https://gen.pollinations.ai/image/{prompt}' : 'https://image.pollinations.ai/prompt/{prompt}',
+            baseUrl: options.apiKey ? 'https://gen.pollinations.ai/v1' : options.baseUrl || 'https://text.pollinations.ai',
+            apiEndpoint: options.apiKey ? null : options.apiEndpoint || 'https://text.pollinations.ai/openai',
+            imageEndpoint: options.apiKey ? 'https://gen.pollinations.ai/image/{prompt}' : options.imageEndpoint || 'https://image.pollinations.ai/prompt/{prompt}',
+            modelsEndpoint: options.apiKey ? 'https://gen.pollinations.ai/text/models' : options.modelsEndpoint || 'https://g4f.dev/api/pollinations/models',
             defaultModel: 'openai',
             extraBody: {
                 referrer: 'https://g4f.dev/',
@@ -441,7 +443,7 @@ class PollinationsAI extends Client {
             let textModelsResponse;
             let imageModelsResponse;
             try {
-                textModelsResponse = await fetch(this.apiKey ? 'https://gen.pollinations.ai/text/models' : 'https://g4f.dev/api/pollinations.ai/models');
+                textModelsResponse = await fetch(this.modelsEndpoint);
                 if (!textModelsResponse.ok) {
                     throw new Error(`Status ${textModelsResponse.status}: ${await textModelsResponse.text()}`);
                 }
