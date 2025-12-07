@@ -2515,7 +2515,7 @@ function calculateBase64Size(base64String) {
     const cleanBase64 = base64String.replace(/\s/g, '');
     // Each base64 character represents 6 bits, and padding is accounted for
     const padding = (cleanBase64.match(/=/g) || []).length;
-    const sizeInBytes = (cleanBase64.length * 3) / 4 - padding;
+    const sizeInBytes = Math.floor((cleanBase64.length * 3) / 4) - padding;
     return sizeInBytes;
 }
 
