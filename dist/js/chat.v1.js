@@ -2510,32 +2510,30 @@ function count_chars(text) {
     return text.match(/[^\s\p{P}]/gu)?.length || 0;
 }
 
+function calculateBase64Size(base64String) {
+    // Remove any whitespace that might be in the base64 string
+    const cleanBase64 = base64String.replace(/\s/g, '');
+    // Each base64 character represents 6 bits, and padding is accounted for
+    const padding = (cleanBase64.match(/=/g) || []).length;
+    const sizeInBytes = (cleanBase64.length * 3) / 4 - padding;
+    return sizeInBytes;
+}
+
 function get_media_size(text) {
     if (Array.isArray(text) || !text) {
         return null;
     }
     
     // Check for base64-encoded image in markdown format: [![alt](data:image/...))](...)
-    const imageMarkdownMatch = text.match(/!\[.*?\]\(data:image\/[^;]+;base64,([^)]+)\)/);
+    const imageMarkdownMatch = text.match(/!\[.*?\]\(data:image\/[^;]+;base64,([A-Za-z0-9+/=]+)\)/);
     if (imageMarkdownMatch && imageMarkdownMatch[1]) {
-        // Calculate size from base64 string
-        const base64Data = imageMarkdownMatch[1];
-        // Remove any whitespace that might be in the base64 string
-        const cleanBase64 = base64Data.replace(/\s/g, '');
-        // Each base64 character represents 6 bits, and padding is accounted for
-        const padding = (cleanBase64.match(/=/g) || []).length;
-        const sizeInBytes = (cleanBase64.length * 3) / 4 - padding;
-        return sizeInBytes;
+        return calculateBase64Size(imageMarkdownMatch[1]);
     }
     
     // Check for base64-encoded media in video/audio tags: <video controls src="data:..."></video>
-    const mediaTagMatch = text.match(/<(?:video|audio)[^>]*src="data:[^;]+;base64,([^"]+)"/);
+    const mediaTagMatch = text.match(/<(?:video|audio)[^>]*src="data:[^;]+;base64,([A-Za-z0-9+/=]+)"/);
     if (mediaTagMatch && mediaTagMatch[1]) {
-        const base64Data = mediaTagMatch[1];
-        const cleanBase64 = base64Data.replace(/\s/g, '');
-        const padding = (cleanBase64.match(/=/g) || []).length;
-        const sizeInBytes = (cleanBase64.length * 3) / 4 - padding;
-        return sizeInBytes;
+        return calculateBase64Size(mediaTagMatch[1]);
     }
     
     return null;
