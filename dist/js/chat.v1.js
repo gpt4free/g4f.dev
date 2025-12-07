@@ -3927,6 +3927,7 @@ async function loadModels(providers) {
 }
 
 // Close dropdown when clicking outside
+if (modelSuggestions)
 document.addEventListener('click', (e) => {
   if (e.target !== modelSearch) {
     modelSuggestions.innerHTML = '';

@@ -344,21 +344,19 @@ class Client {
     }
 
     async _defaultImageGeneration(imageEndpoint, params, requestOptions) {
-        params = {...params};
+        const payload = {...params};
         const prompt = encodeURIComponent(params.prompt || '').replaceAll('%20', '+');
-        delete params.prompt;
-        delete params.response_format;
-        if (!this.apiKey) {
-            if (params.nologo === undefined) params.nologo = true;
-            if (this.extraBody.referrer) params.referrer = this.extraBody.referrer;
+        delete payload.prompt;
+        delete payload.response_format;
+        if (payload.nologo === undefined) payload.nologo = true;
+        if (this.extraBody.referrer) payload.referrer = this.extraBody.referrer;
+        if (payload.size) {
+            payload.width = payload.size.split('x')[0];
+            payload.height = payload.size.split('x')[1];
+            delete payload.size;
         }
-        if (params.size) {
-            params.width = params.size.split('x')[0];
-            params.height = params.size.split('x')[1];
-            delete params.size;
-        }
-        this.logCallback && this.logCallback({request: {prompt, ...params}, type: 'image'});
-        const encodedParams = new URLSearchParams(params);
+        this.logCallback && this.logCallback({request: {prompt, ...payload}, type: 'image'});
+        const encodedParams = new URLSearchParams(payload);
         const url = imageEndpoint.replace('{prompt}', prompt) + '?' + encodedParams.toString();
         await this._sleep();
         const response = await fetch(url, requestOptions);
@@ -494,6 +492,8 @@ class PollinationsAI extends Client {
       };
     }
 }
+
+class Pollinations extends PollinationsAI {}
 
 class Audio extends Client {
     constructor(options = {}) {
@@ -857,5 +857,5 @@ class HuggingFace extends Client {
 }
 
 
-export { Client, PollinationsAI, DeepInfra, Together, Puter, HuggingFace, Worker, Audio };
+export { Client, Pollinations, PollinationsAI, DeepInfra, Together, Puter, HuggingFace, Worker, Audio };
 export default Client;
