@@ -1146,7 +1146,7 @@ const toUrl = async (file)=>{
 const ask_gpt = async (message_id, message_index = -1, regenerate = false, provider = null, model = null, action = null, message = null) => {
     if (!model && !provider) {
         model = get_selected_model();
-        provider = providerSelect.options[providerSelect.selectedIndex]?.value;
+        provider = get_selected_provider();
     }
     const is_youtube = provider == "YouTube";
     let conversation = await get_conversation(window.conversation_id);
@@ -3293,7 +3293,7 @@ audioButton.addEventListener('click', async (event) => {
         if (mediaRecorder.wavBlob) {
             if (modelSelect.selectedIndex >= 0 && modelSelect.options[modelSelect.selectedIndex].dataset.audio) {
                 await add_conversation(window.conversation_id);
-                provider = providerSelect.value;
+                provider = get_selected_provider();
                 model = get_selected_model();
                 await ask_gpt(get_message_id(), -1, false, provider, model, "next");
             } else {
@@ -3544,6 +3544,10 @@ function get_selected_model() {
         model = modelSelect.options[modelSelect.selectedIndex];
     }
     return model?.value ? model.value : null;
+}
+
+function get_selected_provider() {
+    return providerSelect ? providerSelect.value : 'pollinations';
 }
 
 async function api(ressource, args=null, files=null, message_id=null, finish_message=null) {
@@ -3827,7 +3831,7 @@ if (providerSelect) {
 }
 modelSelect.addEventListener("change", () => {
     const favorites = appStorage.getItem("favorites") ? JSON.parse(appStorage.getItem("favorites")) : {};
-    const selected = favorites[providerSelect ? providerSelect.value : 'pollinations'] || {};
+    const selected = favorites[get_selected_provider()] || {};
     const selectedOption = modelSelect.options[modelSelect.selectedIndex];
     console.log("Selected model:", modelSelect.value, selectedOption);
     if (!selected[modelSelect.value]) {
@@ -3856,7 +3860,7 @@ modelSelect.addEventListener("change", () => {
     const selected_values = selected[modelSelect.value] ? selected[modelSelect.value] + 1 : 1;
     delete selected[modelSelect.value];
     selected[modelSelect.value] = selected_values;
-    favorites[providerSelect.value] = selected;
+    favorites[get_selected_provider()] = selected;
     appStorage.setItem("favorites", JSON.stringify(favorites));
 });
 document.getElementById("model_edit")?.addEventListener("click", () => {
@@ -4735,7 +4739,7 @@ async function initClient() {
             count += 1;
         }
     }
-    const provider = providerSelect ? providerSelect.value : 'pollinations';
+    const provider = get_selected_provider();
     const apiKey = get_api_key_by_provider(provider);
     const options = apiKey ? { apiKey } : {};
     if (appStorage.getItem("debugMode") == "true") {
@@ -4773,7 +4777,7 @@ async function loadClientModels() {
             modelSelect.appendChild(opt);
         });
         if (models.length > 2) {
-            set_favorite_models(providerSelect ? providerSelect.value : 'pollinations');
+            set_favorite_models(get_selected_provider());
         }
     } catch (err) {
         console.error('Model load failed:', err);
