@@ -2528,10 +2528,47 @@ function count_chars(text) {
     return text.match(/[^\s\p{P}]/gu)?.length || 0;
 }
 
+function calculateBase64Size(base64String) {
+    // Remove any whitespace that might be in the base64 string
+    const cleanBase64 = base64String.replace(/\s/g, '');
+    // Each base64 character represents 6 bits, and padding is accounted for
+    const padding = (cleanBase64.match(/=/g) || []).length;
+    const sizeInBytes = Math.floor((cleanBase64.length * 3) / 4) - padding;
+    return sizeInBytes;
+}
+
+function get_media_size(text) {
+    if (Array.isArray(text) || !text) {
+        return null;
+    }
+    
+    // Check for base64-encoded image in markdown format: [![alt](data:image/...))](...)
+    const imageMarkdownMatch = text.match(/!\[.*?\]\(data:image\/[^;]+;base64,([A-Za-z0-9+/=]+)\)/);
+    if (imageMarkdownMatch && imageMarkdownMatch[1]) {
+        return calculateBase64Size(imageMarkdownMatch[1]);
+    }
+    
+    // Check for base64-encoded media in video/audio tags: <video controls src="data:..."></video>
+    const mediaTagMatch = text.match(/<(?:video|audio)[^>]*src="data:[^;]+;base64,([A-Za-z0-9+/=]+)"/);
+    if (mediaTagMatch && mediaTagMatch[1]) {
+        return calculateBase64Size(mediaTagMatch[1]);
+    }
+    
+    return null;
+}
+
 function count_words_and_tokens(text, model, completion_tokens, prompt_tokens) {
     if (Array.isArray(text) || !text) {
         return "";
     }
+    
+    // Check if the message contains media (image/video)
+    const mediaSize = get_media_size(text);
+    if (mediaSize !== null) {
+        // Show size instead of word/token count for media responses
+        return `(${formatFileSize(mediaSize)})`;
+    }
+    
     text = filter_message(text);
     return `(${count_words(text)} ${framework.translate('words')}, ${count_chars(text)} ${framework.translate('chars')}, ${completion_tokens ? completion_tokens : count_tokens(model, text, prompt_tokens)} ${framework.translate('tokens')})`;
 }
