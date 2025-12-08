@@ -88,6 +88,7 @@ let image_storage = {};
 let wakeLock = null;
 let countTokensEnabled = true;
 let suggestions = null;
+let tool_calls_storage = {};
 let startup_questions = [];
 let lastUpdated = null;
 let mediaRecorder = null;
@@ -1077,6 +1078,23 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         });
     } else if (message.type == "suggestions") {
         suggestions = message.suggestions;
+    } else if (message.type == "tool_calls") {
+        // Handle tool calls
+        if (message.tool_calls) {
+            if (!tool_calls_storage[message_id]) {
+                tool_calls_storage[message_id] = [];
+            }
+            for (const toolCall of message.tool_calls) {
+                if (typeof toolCall.index === 'undefined') {
+                    toolCall.index = toolCall.function.index || 0;
+                }
+                if (!tool_calls_storage[message_id][toolCall.index]) {
+                    tool_calls_storage[message_id][toolCall.index] = toolCall
+                } else if (toolCall.function?.arguments) {
+                    tool_calls_storage[message_id][toolCall.index].function.arguments += toolCall.function.arguments;
+                }
+            }
+        }
     } else if (["request", "response"].includes(message.type)) {
         debug_response_counter[message_id] = (debug_response_counter[message_id] || 0) + (message.type == "response" ? 1 : 0);
         logRequestResponse(message, message_id, debug_response_counter[message_id]);
@@ -1207,6 +1225,10 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         if (!error_storage[message_id] && message_storage[message_id]) {
             content_map.inner.innerHTML = renderer(message_storage[message_id]);
             highlight(content_map.inner);
+        }
+        // Handle tool calls if any
+        if (tool_calls_storage[message_id] && tool_calls_storage[message_id].length > 0 && mcpClient) {
+            await handleToolCalls(tool_calls_storage[message_id], messages, model, provider, message_id);
         }
         if (message_storage[message_id] || reasoning_storage[message_id]?.status || reasoning_storage[message_id]?.text) {
             const message_provider = message_id in provider_storage ? provider_storage[message_id] : null;
@@ -1484,7 +1506,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 
                 // Handle tool calls if any
                 if (pendingToolCalls.length > 0 && mcpClient) {
-                    await handleToolCalls(pendingToolCalls, messages, selectedModel, message_id);
+                    await handleToolCalls(pendingToolCalls, messages, selectedModel, provider, message_id);
                 }
             }
             await finish_message();
@@ -1527,6 +1549,10 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             conversationData = conversation.data[provider];
         }
         controller_storage[message_id] = new AbortController();
+        // Get MCP tools if available
+        const mcpTools = mcpClient && mcpClient.selectedTools.length > 0 
+            ? mcpClient.getSelectedToolsForAPI() 
+            : undefined;
         await api("conversation", {
             id: message_id,
             conversation_id: window.conversation_id,
@@ -1542,6 +1568,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             api_base: apiBase,
             ignored: ignored,
             aspect_ratio: aspectRatio,
+            ...(mcpTools && mcpTools.length > 0 ? { tools: mcpTools } : {}),
             ...extraBody
         }, Object.values(image_storage), message_id, finish_message);
     } catch (e) {
@@ -5088,7 +5115,7 @@ function escapeHtml(text) {
 /**
  * Handle tool calls from assistant
  */
-async function handleToolCalls(toolCalls, messages, model, message_id) {
+async function handleToolCalls(toolCalls, messages, model, provider, message_id, finish_message=()=>{}) {
     try {
         // Display tool calls in the chat
         for (const toolCall of toolCalls) {
@@ -5125,31 +5152,54 @@ async function handleToolCalls(toolCalls, messages, model, message_id) {
         
         // Make another API call with tool results
         controller_storage[message_id] = new AbortController();
-        const stream = await client.chat.completions.create({
-            model: model,
-            messages: updatedMessages,
-            stream: true,
-            signal: controller_storage[message_id].signal
-        });
-        
-        for await (const chunk of stream) {
-            if (chunk.error) {
-                add_message_chunk({type: "error", ...chunk.error}, message_id);
-                return;
-            }
-            if (chunk.choices) {
-                const choice = chunk.choices[0];
-                if (choice?.delta?.reasoning) {
-                    await add_message_chunk({type: "reasoning", content: choice?.delta?.reasoning}, message_id);
-                } else {
-                    const delta = choice?.delta?.content || '';
-                    const processedDelta = delta.replaceAll("/media/", framework.backendUrl + "/media/")
-                                            .replaceAll("/thumbnail/", framework.backendUrl + "/thumbnail/");
-                    if (processedDelta) {
-                        await add_message_chunk({type: "content", content: processedDelta}, message_id);
+        if (client) {
+            const stream = await client.chat.completions.create({
+                model: model,
+                messages: updatedMessages,
+                stream: true,
+                signal: controller_storage[message_id].signal
+            });
+            
+            for await (const chunk of stream) {
+                if (chunk.error) {
+                    add_message_chunk({type: "error", ...chunk.error}, message_id);
+                    return;
+                }
+                if (chunk.choices) {
+                    const choice = chunk.choices[0];
+                    if (choice?.delta?.reasoning) {
+                        await add_message_chunk({type: "reasoning", content: choice?.delta?.reasoning}, message_id);
+                    } else {
+                        const delta = choice?.delta?.content || '';
+                        const processedDelta = delta.replaceAll("/media/", framework.backendUrl + "/media/")
+                                                .replaceAll("/thumbnail/", framework.backendUrl + "/thumbnail/");
+                        if (processedDelta) {
+                            await add_message_chunk({type: "content", content: processedDelta}, message_id);
+                        }
                     }
                 }
             }
+        } else {
+            const apiKey = get_api_key_by_provider(provider);
+            const downloadMedia = document.getElementById("download_media")?.checked;
+            let apiBase;
+            if (provider == "Custom") {
+                apiBase = appStorage.getItem("Custom-api_base");
+            }
+            const ignored = Array.from(settings.querySelectorAll("input.provider:not(:checked)")).map((el)=>el.value);
+            await api("conversation", {
+                id: message_id,
+                conversation_id: window.conversation_id,
+                model: model,
+                provider: provider,
+                messages: updatedMessages,
+                action: "next",
+                download_media: downloadMedia,
+                debug_mode: appStorage.getItem("debugMode") == "true",
+                api_key: apiKey,
+                api_base: apiBase,
+                ignored: ignored
+            }, [], message_id, finish_message);
         }
     } catch (error) {
         console.error('Error handling tool calls:', error);
