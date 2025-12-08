@@ -62,6 +62,16 @@ function extractRetryDelay(message) {
     return null;
 }
 
+async function get_error_message(response) {
+    try {
+        const data = await response.clone().json();
+        if (data.error?.message) {
+            return data.error.message
+        }
+    } catch { }
+    return await response.text();
+}
+
 class Client {
     constructor(options = {}) {
         if (!options.baseUrl && !options.apiEndpoint) {
@@ -241,14 +251,12 @@ class Client {
                 if (this.imageEndpoint.includes('{prompt}')) {
                     return this._defaultImageGeneration(this.imageEndpoint, params, { headers: this.extraHeaders });
                 }
-                await this._sleep();
                 return this._regularImageGeneration(this.imageEndpoint, params, { headers: this.extraHeaders });
             },
 
             edit: async (params) => {
                 const extraHeaders = {...this.extraHeaders};
                 delete extraHeaders['Content-Type'];
-                await this._sleep();
                 return this._regularImageEditing(this.imageEndpoint.replace('/generations', '/edits'), params, { headers: extraHeaders });
             }
         };
@@ -265,7 +273,7 @@ class Client {
             ...requestOptions
         });
         if (!response.ok) {
-            const errorBody = await response.text();
+            const errorBody = await get_error_message(response);
             throw new Error(`Status ${response.status}: ${errorBody}`);
         }
         const toBase64 = file => new Promise((resolve, reject) => {
@@ -279,7 +287,8 @@ class Client {
 
     async _regularCompletion(response) {
         if (!response.ok) {
-            throw new Error(`Status ${response.status}: ${await response.text()}`);
+            const errorBody = await get_error_message(response);
+            throw new Error(`Status ${response.status}: ${errorBody}`);
         }
         const data = await response.json();
         if (response.headers.get('x-provider')) {
@@ -291,7 +300,8 @@ class Client {
 
     async *_streamCompletion(response) {
       if (!response.ok) {
-        throw new Error(`Status ${response.status}: ${await response.text()}`);
+        const errorBody = await get_error_message(response);
+        throw new Error(`Status ${response.status}: ${errorBody}`);
       }
       if (!response.body) {
         throw new Error('Streaming not supported in this environment');
@@ -395,20 +405,31 @@ class Client {
                 await new Promise(resolve => setTimeout(resolve, retryAfter));
                 return this._defaultImageGeneration(imageEndpoint, params, requestOptions);
             }
-            throw new Error(`Status ${response.status}: ${await response.text()}`);
+            const errorBody = await get_error_message(response);
+            throw new Error(`Status ${response.status}: ${errorBody}`);
         }
         return {data: [{url: response.url}]}
     }
 
     async _regularImageGeneration(imageEndpoint, params, requestOptions) {
-        const response = await fetch(imageEndpoint, {
+        requestOptions = {
             method: 'POST',
             body: JSON.stringify(params),
             ...requestOptions
-        });
+        };
         this.logCallback && this.logCallback({request: params, type: 'image'});
+        await this._sleep();
+        let response = await fetch(imageEndpoint, requestOptions);
         if (!response.ok) {
-            const errorBody = await response.text();
+            const delay = parseInt(response.headers.get('Retry-After'), 10) || extractRetryDelay(await response.clone().text()) || this.sleep / 1000;
+            if (delay > 0) {
+                console.log(`Retrying after ${delay} seconds...`);
+                await new Promise(resolve => setTimeout(resolve, delay * 1000));
+                response = await fetch(imageEndpoint, requestOptions);
+            }
+        }
+        if (!response.ok) {
+            const errorBody = await get_error_message(response);
             throw new Error(`Status ${response.status}: ${errorBody}`);
         }
         if (response.headers.get('Content-Type').startsWith('application/json')) {
@@ -420,8 +441,8 @@ class Client {
             if (data.image) {
                 return {data: [{b64_json: data.image}]}
             }
-            if (data && data[0]?.b64_json) {
-                return data.map(img => ({
+            if (data.data && data.data[0]?.b64_json) {
+                data.data = data.data.map(img => ({
                     ...img,
                     get url() {
                         return `data:image/png;base64,${img.b64_json}`;
@@ -469,6 +490,7 @@ class PollinationsAI extends Client {
             let textModelsResponse;
             let imageModelsResponse;
             try {
+                await this._sleep();
                 textModelsResponse = await fetch(this.modelsEndpoint);
                 if (!textModelsResponse.ok) {
                     throw new Error(`Status ${textModelsResponse.status}: ${await textModelsResponse.text()}`);
@@ -480,9 +502,18 @@ class PollinationsAI extends Client {
                 });
             }
             try {
-                imageModelsResponse = await fetch(this.apiKey ? 'https://gen.pollinations.ai/image/models' : 'https://g4f.dev/api/pollinations.ai/image/models');
+                const imageModelsUrl = this.apiKey ? 'https://gen.pollinations.ai/image/models' : 'https://g4f.dev/api/pollinations/image/models';
+                imageModelsResponse = await fetch(imageModelsUrl);
                 if (!imageModelsResponse.ok) {
-                    throw new Error(`Status ${imageModelsResponse.status}: ${await imageModelsResponse.text()}`);
+                    const delay = parseInt(response.headers.get('Retry-After'), 10);
+                    if (delay > 0) {
+                        console.log(`Retrying after ${delay} seconds...`);
+                        await new Promise(resolve => setTimeout(resolve, delay * 1000));
+                        imageModelsResponse = await fetch(imageModelsUrl);
+                    }
+                    if (!imageModelsResponse.ok) {
+                       throw new Error(`Status ${imageModelsResponse.status}: ${await imageModelsResponse.text()}`);
+                    }
                 }
             } catch (e) {
                 console.error("Failed to fetch pollinations.ai image models from g4f.dev:", e);

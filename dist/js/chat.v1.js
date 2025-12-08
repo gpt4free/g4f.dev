@@ -1384,7 +1384,10 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     ...(!modelSeed ? { response_format: 'b64_json' } : {}),
                     ...(image && image.url ? { image: image.url } : {})
                 });
-                const imageUrl = response.data[0].b64_json ? `data:image/png;base64,${response.data[0].b64_json}` : response.data[0].url;
+                const imageUrl = response.data ? response.data[0].url : null;
+                if (!imageUrl) {
+                    throw new Error(framework.translate("No image URL returned from the API."));
+                }
                 if (modelType === 'video') {
                     message_storage[message_id] = `<video controls src="${imageUrl}"></video>`;
                 } else {
@@ -3070,13 +3073,7 @@ async function on_api() {
             if (name === "custom" && !localStorage.getItem("Custom-api_base")) {
                 return;
             }
-            if (name === "together" && !localStorage.getItem("Together-api_key")) {
-                return;
-            }
-            if (name === "huggingface" && !localStorage.getItem("HuggingFace-api_key")) {
-                return;
-            }
-            if (name === "typegpt" && !localStorage.getItem("typegpt-api_key")) {
+            if (["together", "huggingface", "typegpt"].includes(name) && !localStorage.getItem(config.localStorageApiKey)) {
                 return;
             }
             let option = document.createElement("option");
@@ -3086,10 +3083,12 @@ async function on_api() {
             option.value = name;
             option.dataset.live = "true";
             option.text = `${name} ${config.tags}`;
+            optgroup.appendChild(option);
             fetch(`https://g4f.dev/ai/${name}/Response%20with%20ok?seed=${Math.floor(Date.now() / 1000 / 3600 / 24)}`).then((response) => {
                 if (response.ok) {
                     option.text += " 🟢";
-                    optgroup.appendChild(option);
+                } else {
+                    optgroup.removeChild(option);
                 }
             });
         });
