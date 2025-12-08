@@ -39,19 +39,9 @@
     <script src="../dist/js/sanitize-html.js" async></script>
 
     <script type="module" defer>
-      import { Client, Custom, PollinationsAI, DeepInfra, Puter, HuggingFace, Worker, Audio } from "../dist/js/client.js?v={{ v }}";
-      window.providers = {
-        Audio,
-        Azure: Client,
-        PollinationsAI,
-        ApiAirforce: Client,
-        AnonDrop: Client,
-        Worker: Worker,
-        DeepInfra,
-        Puter,
-        HuggingFace,
-        Custom
-      };
+        import providers, { createClient }  from "../dist/js/providers.js";
+        window.providers = providers;
+        window.createClient = createClient;
     </script>
     <script>
       const user_image = 'User: ';
