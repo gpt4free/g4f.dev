@@ -1,3 +1,65 @@
+# robots.txt for g4f.dev
+# Improving access for AI bots and crawlers
+
+# Default rules for all bots
 User-agent: *
-Disallow:
+Disallow: /private/
+Disallow: /dist/
+Allow: /
+Crawl-delay: 1
+
+# OpenAI GPTBot - Allow full access for AI training
+User-agent: GPTBot
+Allow: /
+Crawl-delay: 1
+
+# Google AI - Allow full access
+User-agent: Google-Extended
+Allow: /
+Crawl-delay: 1
+
+# Anthropic Claude - Allow full access
+User-agent: ClaudeBot
+User-agent: Claude-Web
+Allow: /
+Crawl-delay: 1
+
+# Common Crawl - Allow full access for AI training datasets
+User-agent: CCBot
+Allow: /
+Crawl-delay: 1
+
+# Cohere AI - Allow full access
+User-agent: cohere-ai
+Allow: /
+Crawl-delay: 1
+
+# Perplexity AI - Allow full access
+User-agent: PerplexityBot
+Allow: /
+Crawl-delay: 1
+
+# Applebot - Allow full access
+User-agent: Applebot
+User-agent: Applebot-Extended
+Allow: /
+Crawl-delay: 1
+
+# Meta/Facebook AI - Allow full access
+User-agent: FacebookBot
+User-agent: meta-externalagent
+Allow: /
+Crawl-delay: 1
+
+# Amazon - Allow full access
+User-agent: Amazonbot
+Allow: /
+Crawl-delay: 1
+
+# Bytedance - Allow full access
+User-agent: Bytespider
+Allow: /
+Crawl-delay: 1
+
+# Sitemap location
 Sitemap: https://g4f.dev/sitemap.xml
