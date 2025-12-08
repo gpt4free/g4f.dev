@@ -1,7 +1,7 @@
 import { Client, Pollinations, DeepInfra, Puter, HuggingFace, Worker, Audio } from "./client.js";
 
 const providers = {
-    "default": {class: Client, baseUrl: "https://g4f.dev/api/auto", apiEndpoint: "https://g4f.dev/ai/{now}", tags: ""},
+    "default": {class: Client, baseUrl: "https://g4f.dev/api/auto", apiEndpoint: "https://g4f.dev/ai/", tags: "", defaultModel: "auto"},
     "nectar": {class: Pollinations, baseUrl: "https://g4f.dev/api/nectar", apiEndpoint: "https://g4f.dev/api/nectar/v1/chat/completions", imageEndpoint: "https://g4f.dev/api/nectar/image/{prompt}", modelsEndpoint: "https://g4f.dev/api/nectar/text/models", tags: ""},
     "api.airforce": {class: Client, baseUrl: "https://api.airforce/v1", tags: "🎨 👓", localStorageApiKey: "ApiAirforce-api_key", sleep: 60000},
     "anondrop.net": {class: Client, baseUrl: "https://anondrop.net/v1", tags: ""},
@@ -20,10 +20,10 @@ const providers = {
     "pollinations": {class: Pollinations, tags: "🎨 👓", localStorageApiKey: "PollinationsAI-api_key"},
     "puter": {class: Puter, tags: "👓"},
     // "stringable-inf": {class: Client, baseUrl: "https://stringableinf.com/api", apiEndpoint: "https://stringableinf.com/api/v1/chat/completions", tags: "", extraHeaders: {"HTTP-Referer": "https://g4f.dev/", "X-Title": "G4F Chat"}},
-    "typegpt": {class: Client, baseUrl: "https://inference.typegpt.net/v1", backupUrl: "https://g4f.dev/api/typegpt", tags: ""},
+    "typegpt": {class: Client, baseUrl: "https://typegpt.net/api/v1", tags: "", modelsEndpoint: "https://typegpt.net/api/v1/models", localStorageApiKey: "typegpt-api_key"},
     "together": {class: Client, baseUrl: "https://api.together.xyz/v1", tags: "👓", localStorageApiKey: "Together-api_key"},
     "worker": {class: Worker, baseUrl: "https://g4f.dev/api/worker", tags: "🎨", sleep: 10000},
-    "x.ai": {class: Client, baseUrl: "https://api.x.ai/v1", backupUrl: "https://g4f.dev/api/grok", tags: ""}
+    "x.ai": {class: Client, baseUrl: "https://api.x.ai/v1", backupUrl: "https://g4f.dev/api/x.ai", tags: ""}
 };
 
 // Factory function to create a client instance based on provider

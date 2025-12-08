@@ -4,6 +4,7 @@ const DB_NAME = 'chat-db';
 const STORE_NAME = 'conversations';
 const VERSION = 1;
 const logStorage = document.querySelector(".log");
+const logContent = document.querySelector(".log-content") || logStorage;
 
 let privateConversation = null;
 
@@ -16,7 +17,7 @@ function add_error(event, log=false) {
     if (log) {
         console.error(event);
     }
-    if (!logStorage) {
+    if (!logContent) {
         return;
     }
     let p = document.createElement("p");
@@ -28,7 +29,7 @@ function add_error(event, log=false) {
         p.innerText = typeof event === 'string' ? event : JSON.stringify(event);
     }
     p.innerHTML = p.innerHTML.replaceAll("\n", "<br>");
-    logStorage.appendChild(p);
+    logContent.appendChild(p);
 }
 
 window.addEventListener('error', add_error, true);
@@ -179,11 +180,19 @@ async function query(prompt, options={ json: false, cache: true }) {
     }
     let encodedParams = (new URLSearchParams(options)).toString();
     let secondPartyUrl = `https://g4f.dev/ai/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
-    const response = await fetch(secondPartyUrl);
+    let response = await fetch(secondPartyUrl);
+    if (!response.ok) {
+        const delay = parseInt(response.headers.get('Retry-After'), 10);
+        if (delay > 0) {
+            console.log(`Retrying after ${delay} seconds...`);
+            await new Promise(resolve => setTimeout(resolve, delay * 1000));
+            response = await fetch(secondPartyUrl);
+        }
+    }
     if (!response.ok) {
         add_error(`Error ${response.status} with URL: \`${secondPartyUrl}\`\n ${await response.text()}`, true);
         let firstPartyUrl = `https://text.pollinations.ai/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
-        const response = await fetch(firstPartyUrl);
+        response = await fetch(firstPartyUrl);
         if (!response.ok) {
             add_error(`Error ${response.status} with URL: \`${firstPartyUrl}\`\n ${await response.text()}`, true);
             return;

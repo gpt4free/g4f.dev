@@ -24,6 +24,7 @@ const modelSelector     = document.querySelector(".model-selector");
 const modelSuggestions  = document.getElementById('model-suggestions');
 const chatPrompt        = document.getElementById("chatPrompt");
 const settings          = document.querySelector(".settings");
+const settingsContent   = settings.querySelector(".settings-content") || settings.querySelector(".paper");
 const chat              = document.querySelector(".chat-container");
 const album             = document.querySelector(".images");
 const searchButton      = document.getElementById("search");
@@ -967,7 +968,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         }
         let p = document.createElement("p");
         p.innerText = message.error;
-        logStorage.appendChild(p);
+        logContent.appendChild(p);
         await api("log", {...message, provider: provider_storage[message_id]});
     } else if (message.type == "preview") {
         if (message_storage[message_id]) {
@@ -1036,7 +1037,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
     } else if (message.type == "log") {
         let p = document.createElement("p");
         p.innerText = message.log;
-        logStorage.appendChild(p);
+        logContent.appendChild(p);
     } else if (message.type == "synthesize") {
         synthesize_storage[message_id] = message.synthesize;
     } else if (message.type == "title") {
@@ -1734,6 +1735,7 @@ const set_conversation = async (conversation_id) => {
 
 const new_conversation = async (private = false) => {
     if (window.location.hash) {
+        await clear_conversation();
         add_url_to_history(private ? "#private" : window.location.pathname);
     }
     window.conversation_id = private ? null : generateUUID();
@@ -1741,7 +1743,6 @@ const new_conversation = async (private = false) => {
     document.querySelector(".chat-top-panel .convo-title").innerText = private ? framework.translate("Private Conversation") : framework.translate("New Conversation");
     
     suggestions = null;
-    await clear_conversation();
     if (chatPrompt) {
         chatPrompt.value = document.getElementById("systemPrompt")?.value;
     }
@@ -1799,7 +1800,8 @@ function merge_messages(message1, message2) {
 // console.log(merge_messages("1 != 2", "```python\n1 != 2;"));
 // console.log(merge_messages("1 != 2;\n1 != 3;\n", "1 != 2;\n1 != 3;\n"));
 
-const load_conversation = async (conversation) => {
+const load_conversation = async (conversation, append = false) => {
+    console.log("Loading conversation...", conversation ? conversation.id : "new", append ? "(append)" : "");
     if (!conversation) {
         return;
     }
@@ -1828,6 +1830,10 @@ const load_conversation = async (conversation) => {
     let providers = [];
     let buffer = "";
     let completion_tokens = 0;
+
+    if (!append) {
+        chatBody.innerHTML = "";
+    }
 
     messages.forEach((item, i) => {
         if (item.continue) {
@@ -1949,7 +1955,7 @@ const load_conversation = async (conversation) => {
             prompt_tokens = next_usage?.prompt_tokens ? next_usage?.prompt_tokens : 0
         }
 
-        elements.push(`
+        const messageElement = `
             <div class="message${item.regenerate ? " regenerate": ""}" data-index="${i}" data-object_url="${objectUrl}" data-synthesize_url="${synthesize_url}">
                 <div class="${item.role}">
                     ${item.role == "assistant" ? gpt_image : user_image}
@@ -1974,9 +1980,11 @@ const load_conversation = async (conversation) => {
                     </div>
                 </div>
             </div>
-        `);
+        `;
+        const letter = document.createElement("div");
+        letter.innerHTML = messageElement;
+        chatBody.appendChild(letter.firstElementChild);
     });
-    chatBody.innerHTML = elements.join("");
 
     chatBody.querySelectorAll("video").forEach((el) => {
         el.onloadedmetadata = () => {
@@ -2459,17 +2467,24 @@ const load_settings_storage = async () => {
 const say_hello = async () => {
     tokens = framework.translate(`Hello! How can I assist you today?`).split(" ").map((token) => token + " ");
 
-    chatBody.innerHTML += `
-        <div class="message">
-            <div class="assistant">
-                ${gpt_image}
-                <i class="fa-regular fa-phone-arrow-down-left"></i>
+    let to_modify = document.querySelector(`.welcome-message`);
+    if (!to_modify) {
+        const message_container = document.createElement("div");
+        message_container.innerHTML = `
+            <div class="message">
+                <div class="assistant">
+                    ${gpt_image}
+                    <i class="fa-regular fa-phone-arrow-down-left"></i>
+                </div>
+                <div class="content">
+                    <p class=" welcome-message"></p>
+                </div>
             </div>
-            <div class="content">
-                <p class=" welcome-message"></p>
-            </div>
-        </div>
-    `;
+        `;
+        chatBody.appendChild(message_container.firstElementChild);
+    } else {
+        to_modify.textContent = "";
+    }
 
     to_modify = document.querySelector(`.welcome-message`);
     for (token of tokens) {
@@ -2631,7 +2646,7 @@ chatPrompt.addEventListener("input", function() {
     countFocus = userInput;
     count_input();
 });
-window.addEventListener("hashchange", (event) => {
+window.addEventListener("hashchange", async (event) => {
     iframe_container.classList.add("hidden");
     iframe.src = "";
     const conversation_id = window.location.hash.replace("#", "");
@@ -2939,7 +2954,7 @@ async function load_providers(providers, provider_options, providersListContaine
             </div>
             <div class="collapsible-content hidden"></div>
         `;
-        settings.querySelector(".paper").appendChild(providersContainer);
+        settingsContent.appendChild(providersContainer);
 
         providers.forEach((provider) => {
             if (!provider.parent || provider.name == "PuterJS") {
@@ -3042,7 +3057,7 @@ async function on_api() {
         </div>
         <div class="collapsible-content api-key hidden"></div>
     `;
-    settings.querySelector(".paper").appendChild(providersListContainer);
+    settingsContent.appendChild(providersListContainer);
 
     providersListContainer.querySelector(".collapsible-header").addEventListener('click', (e) => {
         providersListContainer.querySelector(".collapsible-content").classList.toggle('hidden');
@@ -3052,8 +3067,20 @@ async function on_api() {
         const optgroup = document.createElement("optgroup");
         optgroup.label = framework.translate('Live Providers');
         Object.entries(window.providers || {}).forEach(([name, config]) => {
+            if (name === "custom" && !localStorage.getItem("Custom-api_base")) {
+                return;
+            }
+            if (name === "together" && !localStorage.getItem("Together-api_key")) {
+                return;
+            }
+            if (name === "huggingface" && !localStorage.getItem("HuggingFace-api_key")) {
+                return;
+            }
+            if (name === "typegpt" && !localStorage.getItem("typegpt-api_key")) {
+                return;
+            }
             let option = document.createElement("option");
-            if (name === "default") {
+            if (name === config.defaultModel) {
                 option.selected = true;
             }
             option.value = name;
@@ -3062,9 +3089,9 @@ async function on_api() {
             fetch(`https://g4f.dev/ai/${name}/Response%20with%20ok?seed=${Math.floor(Date.now() / 1000 / 3600 / 24)}`).then((response) => {
                 if (response.ok) {
                     option.text += " 🟢";
+                    optgroup.appendChild(option);
                 }
             });
-            optgroup.appendChild(option);
         });
         providerSelect.appendChild(optgroup);
 
@@ -4123,7 +4150,7 @@ if (SpeechRecognition) {
 function showLog() {
     logStorage.classList.remove("hidden");
     settings.classList.add("hidden");
-    logStorage.scrollTop = logStorage.scrollHeight;
+    logContent.scrollTop = logContent.scrollHeight;
     chat.classList.add("hidden");
 }
 
@@ -4149,7 +4176,7 @@ function logRequestResponse(event, messageId, count=0) {
     }
     pre.appendChild(code)
     details.appendChild(pre);
-    logStorage.appendChild(details);
+    logContent.appendChild(details);
     if (window.hljs) {
         hljs.highlightElement(code);
     }

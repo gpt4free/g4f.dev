@@ -1563,13 +1563,17 @@ form textarea {
     padding: var(--inner-gap) var(--inner-gap) var(--inner-gap) 0;
 }
 
+.chat-body .field {
+    display: flex;
+    flex-direction: column;
+}
+
 .settings .field.row {
     display: flex;
     flex-direction: column;
 }
 
 .settings, .log, form {
-    overflow: auto;
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -1584,8 +1588,14 @@ form textarea {
 }
 
 .settings .paper {
+    display: flex;
     flex-direction: column;
     min-width: 400px;
+    height: 100%;
+}
+
+.settings .settings-content, .log .log-content {
+    overflow: auto;
 }
 
 .settings .field, form .field {
@@ -1614,7 +1624,7 @@ form textarea {
     outline: none;
 }
 
-.settings .label, form .label, .settings label, form label, .chat-body label {
+.settings .label, form .label, .settings label, form label, .chat-body .field label, .chat-body .field input, .chat-body .field a {
     font-size: 15px;
     margin-left: var(--inner-gap);
 }
