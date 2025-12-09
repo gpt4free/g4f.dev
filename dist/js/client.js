@@ -439,15 +439,14 @@ class Client {
                 throw new Error(`Image generation failed: ${data.error.message}`);
             }
             if (data.image) {
-                return {data: [{b64_json: data.image}]}
+                return {data: [{b64_json: data.image, url: `data:image/png;base64,${data.image}`}]};
             }
-            if (data.data && data.data[0]?.b64_json) {
-                data.data = data.data.map(img => ({
-                    ...img,
-                    get url() {
-                        return `data:image/png;base64,${img.b64_json}`;
+            if (data.data) {
+                data.data.forEach(img => {
+                    if (img.b64_json) {
+                        img.url = `data:image/png;base64,${img.b64_json}`;
                     }
-                }));
+                });
             }
             return data;
         }

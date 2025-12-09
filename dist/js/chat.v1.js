@@ -1126,7 +1126,8 @@ const requestWakeLock = async () => {
 
 async function play_last_message(response = null) {
     const last_message = Array.from(document.querySelectorAll(".message")).at(-1);
-    const last_media = last_message ? last_message.querySelector("audio, iframe") : null;
+    const last_content = last_message ? last_message.querySelector(".content_inner") : null;
+    const last_media = last_message ? last_content.querySelector("audio, iframe, img") : null;
     if (last_media) {
         if (last_media.tagName == "IFRAME") {
             if (YT) {
@@ -1140,11 +1141,20 @@ async function play_last_message(response = null) {
                     }
                 });
             }
-        } else {
+        } else if (last_media.tagName == "AUDIO") {
             if (response) {
+                if (response.choices) {
+                    response = `data:audio/mpeg;base64,${response.choices[0].message.audio.data}`;
+                }
                 last_media.src = response;
             }
             last_media.play();
+        } else {
+            width = last_media.parentElement.dataset.width || last_media.naturalWidth;
+            height = last_media.parentElement.dataset.height || last_media.naturalHeight;
+            if (width > 0 && height > 0) {
+                last_message.querySelector(".count").childNodes[0].nodeValue = `(width: ${width}px, height: ${height}px)`;
+            }
         }
     }
 }
@@ -2833,7 +2843,9 @@ window.addEventListener('DOMContentLoaded', async function () {
 
     let conversation = await get_conversation(window.conversation_id);
     if (conversation && !conversation.share) {
-        return await load_conversation(conversation);
+        await load_conversation(conversation);
+        await play_last_message();
+        return;
     }
     const response = await fetch(`${framework.backendUrl}/backend-api/v2/chat/${window.conversation_id}`, {
         headers: {'accept': 'application/json'},
