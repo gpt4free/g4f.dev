@@ -175,7 +175,7 @@ class Client {
                     const delay = parseInt(response.headers.get('Retry-After'), 10) || extractRetryDelay(await response.text()) || this.sleep / 1000;
                     console.log(`Retrying after ${delay} seconds...`);
                     await new Promise(resolve => setTimeout(resolve, delay * 1000));
-                    response = await fetch(`${this.baseUrl}/chat/completions`, requestOptions);
+                    response = await fetch(this.apiEndpoint, requestOptions);
                 }
                 if (params.stream) {
                     return this._streamCompletion(response);
