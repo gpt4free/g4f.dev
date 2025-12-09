@@ -569,11 +569,10 @@ class Audio extends Client {
         return {
             completions: {
             create: async (params) => {
-                const originalModel = params.model;
-                params.model = this.defaultModel;
                 if (this.extraBody) {
                     params = { ...params, ...this.extraBody };
                 }
+                const isStream = params.stream;
                 if (!params.audio) {
                     params.audio = {
                         "voice": "alloy",
@@ -591,16 +590,25 @@ class Audio extends Client {
                     body: JSON.stringify(options),
                     signal: signal
                 };
+                let response;
                 try {
-                    const response = await fetch(this.apiEndpoint, requestOptions);
-                    this.logCallback && this.logCallback({request: params, type: 'chat'});
-                    return await this._regularCompletion(response);
+                    if (!this.baseUrl) {
+                        throw new Error('No baseUrl defined');
+                    }
+                    delete options.referrer;
+                    requestOptions.body = JSON.stringify(options);
+                    response = await fetch(`${this.baseUrl}/chat/completions`, requestOptions);
+                    this.logCallback && this.logCallback({request: options, type: 'chat'});
                 } catch(e) {
-                    params.model = originalModel;
-                    delete params.referrer;
-                    requestOptions.body = JSON.stringify(params);
-                    const response = await fetch(`${this.baseUrl}/chat/completions`, requestOptions);
-                    return await this._regularCompletion(response);
+                    options.model = this.defaultModel;
+                    requestOptions.body = JSON.stringify(options);
+                    response = await fetch(this.apiEndpoint, requestOptions);
+                    this.logCallback && this.logCallback({request: options, type: 'chat'});
+                }
+                if (isStream) {
+                    return this._streamCompletion(response);
+                } else {
+                    return this._regularCompletion(response);
                 }
             }
             }
