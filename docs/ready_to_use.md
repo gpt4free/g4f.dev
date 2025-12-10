@@ -28,6 +28,7 @@
 - **Strinable Inf**: https://stringableinf.com/api/v1
 - **TypeGPT**: https://typegpt.ai/api
 - **Grok**: https://api.grok.com/v1
+- **AI Badgr**: https://aibadgr.com/api/v1
 - **ApiAirforce**: baseUrl: https://api.airforce/v1, apiEndpoint: https://stringableinf.com/api/v1/chat/completions
 - **Auto Provider & Model Selection**: apiEndpoint: https://g4f.dev/ai/{now}
 
