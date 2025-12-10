@@ -883,7 +883,9 @@ class HuggingFace extends Client {
                     let apiBase = this.apiBase;
                     for (const providerKey in providerMapping) {
                         let apiPath;
-                        if (providerKey === "novita")
+                        if (providerKey === "zai-org")
+                            apiPath = "zai-org/api/paas/v4"
+                        else if (providerKey === "novita")
                             apiPath = "novita/v3/openai";
                         else if (providerKey === "groq")
                             apiPath = "groq/openai/v1";
