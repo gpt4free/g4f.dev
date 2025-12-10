@@ -145,7 +145,8 @@ class Client {
         return {
             completions: {
             create: async (params) => {
-                let modelId = params.model || this.defaultModel;
+                const orginalModel = params.model || this.defaultModel;
+                let modelId = orginalModel;
                 if(this.modelAliases[modelId]) {
                     modelId = this.modelAliases[modelId];
                 }
@@ -169,13 +170,13 @@ class Client {
                     signal: signal
                 };
                 await this._sleep();
-                let response = await fetch(this.apiEndpoint, requestOptions);
+                let response = await fetch(this.apiEndpoint.replace('{model}', orginalModel), requestOptions);
                 if (response.status === 429) {
                     console.error("Error during completion, retrying without custom endpoint:", response);
-                    const delay = parseInt(response.headers.get('Retry-After'), 10) || extractRetryDelay(await response.text()) || this.sleep / 1000;
+                    const delay = parseInt(response.headers.get('Retry-After'), 10) || extractRetryDelay(await response.text()) || this.sleep / 1000 || 10;
                     console.log(`Retrying after ${delay} seconds...`);
                     await new Promise(resolve => setTimeout(resolve, delay * 1000));
-                    response = await fetch(this.apiEndpoint, requestOptions);
+                    response = await fetch(this.apiEndpoint.replace('{model}', orginalModel), requestOptions);
                 }
                 if (params.stream) {
                     return this._streamCompletion(response);
@@ -190,7 +191,7 @@ class Client {
     get models() {
       return {
         list: async () => {
-          const response = await fetch(this.modelsEndpoint, {
+          const response = await fetch(this.modelsEndpoint.replace('{model}', 'auto'), {
             method: 'GET',
             headers: this.extraHeaders
           });
