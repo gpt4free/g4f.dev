@@ -17,9 +17,7 @@ Google's Gemini AI models via the Generative Language API.
 ## Available Models
 
 - `gemini-2.5-flash` (recommended)
-- `gemini-2.5-pro`
-- `gemini-2.0-flash`
-- `gemini-1.5-pro`
+- `gemini-2.5-flash-lite`
 
 ## Examples
 
