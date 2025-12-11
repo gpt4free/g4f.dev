@@ -279,7 +279,7 @@ async function gen() {
     showMessage('Please enter a valid user ID.');
     return;
     }
-    document.getElementById('apiBaseUrl').value = framework.backendUrl + "/api/v1"
+    document.getElementById('apiBaseUrl').value = framework.backendUrl + "/v1"
     showMessage('Loading...');
     if (!localStorage.getItem('user')) localStorage.setItem('user', user);
 
