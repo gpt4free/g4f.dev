@@ -14,7 +14,6 @@
 | [https://g4f.dev/api/nvidia](https://g4f.dev/api/nvidia/models) | none required | Use Nvidia provider |
 | [https://g4f.dev/api/gemini](https://g4f.dev/ai/gemini) | none required | Hosted Gemini provider |
 | [https://g4f.dev/api/gpt-oss-120b](https://g4f.dev/api/gpt-oss-120b/models) | required | now requires API key from [g4f.dev/api_key](https://g4f.dev/api_key.html) |
-| [https://g4f.dev/api/Azure](https://g4f.dev/api/Azure/models) | required | Use Azure on my bill, get key from [g4f.dev/api_key](https://g4f.dev/api_key.html) |
 | [https://g4f.dev/v1](https://g4f.dev/v1/models) | required | Hosted instance, many models, get key from [g4f.dev/api_key](https://g4f.dev/api_key.html) |
 
 ### Also Supported API Routes:
@@ -45,7 +44,6 @@
   - https://localhost:1337/v1
 - If you want a free or public provider, you can use one of the g4f.dev endpoints (e.g., groq, ollama, pollinations.ai, nvidia, grok).
 - If you want Azure-backed usage or hosted instances, use:
-  - https://g4f.dev/api/Azure (requires API key)
   - https://g4f.dev/v1 (requires API key)
 
 ### API usage basics
