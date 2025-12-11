@@ -32,10 +32,13 @@
 - **Auto Provider & Model Selection**: apiEndpoint: https://g4f.dev/ai/{now}
 
 ### Individual clients available for:
-- Pollinations AI
-- Puter AI  
-- HuggingFace
-- Ollama
+- [Pollinations AI](providers/pollinations.md)
+- [Puter AI](providers/puter.md)
+- [HuggingFace](providers/huggingface.md)
+- [Ollama](providers/ollama.md)
+- [Gemini](providers/gemini.md)
+- [OpenAI Chat](providers/openai.md)
+- [Perplexity](providers/perplexity.md)
 
 ### How to choose a base URL
 - If you want a local or self-hosted instance, you can use:

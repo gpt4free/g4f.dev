@@ -129,6 +129,14 @@ Examples
 - [API endpoints and usage](ready_to_use.md) ***new**
 - [Available Providers & Models](https://g4f.dev/docs/providers-and-models.html)
 - [Selecting a Provider](selecting_a_provider.md)
+- **Provider Documentation:**
+  - [Pollinations AI](providers/pollinations.md)
+  - [Puter AI](providers/puter.md)
+  - [HuggingFace](providers/huggingface.md)
+  - [Ollama](providers/ollama.md)
+  - [Gemini](providers/gemini.md)
+  - [OpenAI Chat](providers/openai.md)
+  - [Perplexity](providers/perplexity.md)
 - [API docs (full spec)](/api-docs)
 - [File API Documentation (Files and Documents)](file.md)
 - [Media Documentation (Audio, Image and Video)](media.md)
