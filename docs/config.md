@@ -10,6 +10,7 @@ Authentication, API Keys, Cookies, `.har` files, Debug Mode, Proxy Setup, and GU
 Create a `.env` file in your cookies/config directory:
 
 ```env
+AIBADGR_API_KEY=
 HUGGINGFACE_API_KEY=
 POLLINATIONS_API_KEY=
 GEMINI_API_KEY=
