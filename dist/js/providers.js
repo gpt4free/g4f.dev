@@ -23,7 +23,7 @@ const providers = {
     "deepinfra": {class: DeepInfra, tags: "🎨 👓", localStorageApiKey: "DeepInfra-api_key"},
     "gemini": {class: Client, baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", backupUrl: "https://g4f.dev/api/gemini", tags: "👓", localStorageApiKey: "GeminiPro-api_key"},
     // "gpt-oss-120b": {class: Client, baseUrl: "https://g4f.dev/api/gpt-oss-120b", tags: ""},
-    "gpt4free.pro": {class: Client, baseUrl: "https://gpt4free.pro/v1", tags: ""},
+    // "gpt4free.pro": {class: Client, baseUrl: "https://gpt4free.pro/v1", tags: ""},
     "groq": {class: Client, baseUrl: "https://api.groq.com/openai/v1", backupUrl: "https://g4f.dev/api/groq", tags: ""},
     "huggingface": {class: HuggingFace, tags: "🤗", localStorageApiKey: "HuggingFace-api_key"},
     "nvidia": {class: Client, baseUrl: "https://integrate.api.nvidia.com/v1", backupUrl: "https://g4f.dev/api/nvidia", tags: "📟", localStorageApiKey: "Nvidia-api_key"},
@@ -40,7 +40,7 @@ const providers = {
 
 // Factory function to create a client instance based on provider
 function createClient(provider, options = {}) {
-    const { class: ClientClass, extraHeaders, backupUrl, localStorageApiKey, ...config } = providers[provider];
+    const { class: ClientClass, backupUrl, localStorageApiKey, tags, ...config } = providers[provider];
     if (!ClientClass) {
         throw new Error(`Provider "${provider}" not found.`);
     }
@@ -69,11 +69,6 @@ function createClient(provider, options = {}) {
 
     if (defaultModels[provider]) {
         options.defaultModel = options.defaultModel || defaultModels[provider];
-    }
-
-    // Set extraHeaders if specified
-    if (extraHeaders) {
-        options.extraHeaders = { ...options.extraHeaders, ...extraHeaders };
     }
     
     // Instantiate the client

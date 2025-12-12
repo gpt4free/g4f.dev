@@ -1090,6 +1090,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
                 }
                 if (!tool_calls_storage[message_id][toolCall.index]) {
                     tool_calls_storage[message_id][toolCall.index] = toolCall
+                    tool_calls_storage[message_id][toolCall.index].function.arguments = tool_calls_storage[message_id][toolCall.index].function.arguments || '';
                 } else if (toolCall.function?.arguments) {
                     tool_calls_storage[message_id][toolCall.index].function.arguments += toolCall.function.arguments;
                 }
@@ -1143,7 +1144,7 @@ async function play_last_message(response = null) {
             }
         } else if (last_media.tagName == "AUDIO") {
             if (response) {
-                if (response.choices) {
+                if (response.choices && response.choices[0].message?.audio?.data) {
                     response = `data:audio/mpeg;base64,${response.choices[0].message.audio.data}`;
                 }
                 last_media.src = response;
@@ -1156,7 +1157,9 @@ async function play_last_message(response = null) {
                 last_message.querySelector(".count").childNodes[0].nodeValue = `(width: ${width}px, height: ${height}px)`;
             }
         }
+        return true;
     }
+    return false;
 }
 
 const toBase64 = file => new Promise((resolve, reject) => {
@@ -1323,9 +1326,6 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 api("usage", usage);
             }
             delete usage_storage[message_id];
-            if (action === "next") {
-                load_follow_up_questions(messages, final_message);
-            }
         }
         // Update controller storage
         if (controller_storage[message_id]) {
@@ -1333,9 +1333,18 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         }
         // Reload conversation if no error
         if (!error_storage[message_id] && !document.body.classList.contains("screen-reader")) {
-            if(await safe_load_conversation(window.conversation_id)) {
-                play_last_message(content_data_storage[message_id]); // Play last message async
-                delete content_data_storage[message_id];
+            try {
+                if(await safe_load_conversation(window.conversation_id)) {
+                    // Play last message async
+                    if(!await play_last_message(content_data_storage[message_id])) {
+                        if (action === "next") {
+                            load_follow_up_questions(messages, final_message);
+                        }
+                    }
+                    delete content_data_storage[message_id];
+                }
+            } catch (e) {
+                add_error("Failed to load the conversation:", e);
             }
         }
         let cursorDiv = message_el.querySelector(".cursor");
@@ -1497,6 +1506,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                                 }
                                 if (!pendingToolCalls[toolCall.index]) {
                                     pendingToolCalls[toolCall.index] = toolCall
+                                    pendingToolCalls[toolCall.index].function.arguments = toolCall.function.arguments || '';
                                 } else if (toolCall.function?.arguments) {
                                     pendingToolCalls[toolCall.index].function.arguments += toolCall.function.arguments;
                                 }
