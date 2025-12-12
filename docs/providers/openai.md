@@ -11,7 +11,7 @@ Access OpenAI's ChatGPT through browser automation.
 ## Notes
 
 > ⚠️ This provider uses browser automation to interact with ChatGPT.
-> No public API routes are available. You need to be logged into ChatGPT in your browser.
+> No public API routes are available. You don't to be logged into ChatGPT in your browser.
 
 ## API Routes
 
