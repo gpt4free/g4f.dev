@@ -198,6 +198,7 @@ def safe_request():
 ### **Supported Providers**  
 | Provider       | Auth Type       | Example Models       |  
 |----------------|-----------------|----------------------|  
+| AIBadgr        | API Key         | `gpt-4o-mini`        |  
 | Anthropic      | API Key         | `claude-3.5-sonnet`  |  
 | Gemini         | Cookies         | `gemini-1.5-pro`     |  
 | Groq           | API Key         | `mixtral-8x7b`       |  
