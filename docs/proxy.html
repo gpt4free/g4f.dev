@@ -3,28 +3,28 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>GPT4Free Documentation Hub</title>
+    <title>API-Proxy-Server Dokumentation | GPT4Free Documentation</title>
 
-    <meta name="description" content="GPT4Free documentation for GPT4Free Documentation Hub. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
-    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, GPT4Free Documentation Hub" />
+    <meta name="description" content="GPT4Free documentation for API-Proxy-Server Dokumentation. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
+    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, API-Proxy-Server Dokumentation" />
     <meta name="author" content="GPT4Free Team" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="article" />
-    <meta property="og:title" content="GPT4Free Documentation Hub" />
-    <meta property="og:description" content="GPT4Free documentation for GPT4Free Documentation Hub. Free AI endpoints, examples, and comprehensive guides." />
-    <meta property="og:url" content="https://g4f.dev/docs/" />
+    <meta property="og:title" content="API-Proxy-Server Dokumentation | GPT4Free Documentation" />
+    <meta property="og:description" content="GPT4Free documentation for API-Proxy-Server Dokumentation. Free AI endpoints, examples, and comprehensive guides." />
+    <meta property="og:url" content="https://g4f.dev/docs/proxy.html" />
     <meta property="og:site_name" content="GPT4Free Documentation" />
     <meta property="og:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="GPT4Free Documentation Hub | GPT4Free Documentation" />
-    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for GPT4Free Documentation Hub." />
+    <meta name="twitter:title" content="API-Proxy-Server Dokumentation | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for API-Proxy-Server Dokumentation." />
     <meta name="twitter:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
 
     <!-- Canonical -->
-    <link rel="canonical" href="https://g4f.dev/docs/" />
+    <link rel="canonical" href="https://g4f.dev/docs/proxy.html" />
 
     <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png" />
@@ -154,6 +154,7 @@
             padding: 0;
             color: var(--fgColor-default, var(--color-fg-default))
         }
+
         /* Table styling */
         .markdown-body table {
             border-collapse: collapse;
@@ -373,8 +374,8 @@
     {
       "@context": "https://schema.org",
       "@type": "TechArticle",
-      "headline": "GPT4Free Documentation Hub",
-      "description": "GPT4Free documentation for GPT4Free Documentation Hub. Complete guides, examples, and API reference for free AI endpoints.",
+      "headline": "API-Proxy-Server Dokumentation",
+      "description": "GPT4Free documentation for API-Proxy-Server Dokumentation. Complete guides, examples, and API reference for free AI endpoints.",
       "author": {
         "@type": "Organization",
         "@id": "https://g4f.dev/#organization",
@@ -391,7 +392,7 @@
       },
       "mainEntityOfPage": {
         "@type": "WebPage",
-        "@id": "https://g4f.dev/docs/"
+        "@id": "https://g4f.dev/docs/proxy.html"
       },
       "datePublished": "2024-01-01T00:00:00Z",
       "dateModified": "2024-01-01T00:00:00Z",
@@ -408,9 +409,10 @@
             <!-- Translation Button -->
             <button id="translate-toggle">🌐 Translate Page</button>
             <div id="google_translate_element" style="display:none;"></div>
-
             <h2>Contents</h2>
-            <ul id="toc-list"></ul>
+            <ul id="toc-list">
+                <!-- Table of contents will be generated here -->
+            </ul>
             <hr style="margin: 1.5rem 0; opacity: 0.3;">
             <ul>
                 <li><a href="/docs/" aria-label="Return to documentation home">📚 Documentation Hub</a></li>
@@ -419,146 +421,106 @@
         </nav>
 
         <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
-<h2>GPT4Free Documentation Hub</h2>
-<p><a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/c40e7cb4a71e11cb40bac2140c48cc7c874524d66677a82484b08fa4a0ceb18c/68747470733a2f2f696d6167652e706f6c6c696e6174696f6e732e61692f70726f6d70742f4372656174652532426125324242616e6e65722532427769746825324274686525324262697264253242616e642532427468652532427465787425324225323247505434467265652532323f77696474683d343830266865696768743d383332266d6f64656c3d6b6f6e74657874266e6f6c6f676f3d7472756526707269766174653d66616c736526656e68616e63653d66616c736526736166653d66616c73652672656665727265723d68747470732533412f2f6734662e6465762f26696d6167653d68747470732533412f2f686f73742e6734662e6465762f66696c65732f66613031396539642d363761622d343731632d623063312d3466653138396631353763642f6d656469612f313030303034303030352e6a706726736565643d32333737343537383936"><img src="https://camo.githubusercontent.com/c40e7cb4a71e11cb40bac2140c48cc7c874524d66677a82484b08fa4a0ceb18c/68747470733a2f2f696d6167652e706f6c6c696e6174696f6e732e61692f70726f6d70742f4372656174652532426125324242616e6e65722532427769746825324274686525324262697264253242616e642532427468652532427465787425324225323247505434467265652532323f77696474683d343830266865696768743d383332266d6f64656c3d6b6f6e74657874266e6f6c6f676f3d7472756526707269766174653d66616c736526656e68616e63653d66616c736526736166653d66616c73652672656665727265723d68747470732533412f2f6734662e6465762f26696d6167653d68747470732533412f2f686f73742e6734662e6465762f66696c65732f66613031396539642d363761622d343731632d623063312d3466653138396631353763642f6d656469612f313030303034303030352e6a706726736565643d32333737343537383936" height="300" data-canonical-src="https://image.pollinations.ai/prompt/Create%2Ba%2BBanner%2Bwith%2Bthe%2Bbird%2Band%2Bthe%2Btext%2B%22GPT4Free%22?width=480&amp;height=832&amp;model=kontext&amp;nologo=true&amp;private=false&amp;enhance=false&amp;safe=false&amp;referrer=https%3A//g4f.dev/&amp;image=https%3A//host.g4f.dev/files/fa019e9d-67ab-471c-b0c1-4fe189f157cd/media/1000040005.jpg&amp;seed=2377457896" style="max-width: 100%; height: auto; max-height: 300px;"></a></p>
-<p>Welcome to the official docs for <strong>GPT4Free</strong> – free and convenient AI endpoints you can use directly in your apps, scripts, and even right in your browser.</p>
-<p>Here you’ll find a clear overview, quick examples, and entry points to deeper docs for every major feature.</p>
-<hr>
-<h2>Installation &amp; Setup</h2>
-<p>For full install guides—choose your method:</p>
+            <h1>API-Proxy-Server Dokumentation</h1>
+<h2>Übersicht</h2>
+<p>Dies ist ein Cloudflare Worker Code, der als Proxy-Server für verschiedene KI-Modelle und APIs dient. Der Server fungiert als Gateway zwischen Clients und verschiedenen KI-Anbietern, bietet Caching, Rate Limiting und Sicherheitsfunktionen.</p>
+<h2>Konfiguration</h2>
+<h3>Konstanten</h3>
 <ul>
-<li><a href="git.html">Git Install</a></li>
-<li><a href="docker.html">Docker</a></li>
-<li><a href="requirements.html">Requirements</a></li>
+<li><strong>API_HOST</strong>: Haupt-API-Host (<code class="notranslate">pass.g4f.dev</code>)</li>
+<li><strong>POLLINATIONS_HOST</strong>: Pollinations.ai Service-Host</li>
+<li><strong>GITHUB_HOST</strong>: GitHub Pages Host für statische Inhalte</li>
+<li><strong>MODEL_ID</strong>: Standard-Modell-ID für Cloudflare AI</li>
+<li><strong>MAX_CONTENT_LENGHT</strong>: Maximale Request-Größe (50KB)</li>
+<li><strong>CUSTOM_MAX_LENGHT</strong>: Erweiterte Maximalgröße für bestimmte Endpunkte (100KB)</li>
+<li><strong>CACHE_KONTROLLE</strong>: Caching-Einstellungen (4 Stunden)</li>
+<li><strong>CACHE_FOREVER</strong>: Dauerhaftes Caching (1 Jahr)</li>
+<li><strong>CORS_HEADERS</strong>: CORS-Konfiguration für Cross-Origin Requests</li>
 </ul>
-<p>For rapid starts, you can use either <strong>Python</strong> or <strong>JavaScript</strong> (web).</p>
-<hr>
-<h2>Getting Started</h2>
-<h3>📝 Text Generation</h3>
-<p>Python example for chat completion (with and without web search):</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>()
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4.1"</span>,  <span class="pl-c"># Try "gpt-4o", "deepseek-v3", etc.</span>
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello"</span>}],
-    <span class="pl-s1">web_search</span><span class="pl-c1">=</span><span class="pl-c1">False</span>
-)
-<span class="pl-en">print</span>(<span class="pl-s1">response</span>.<span class="pl-c1">choices</span>[<span class="pl-c1">0</span>].<span class="pl-c1">message</span>.<span class="pl-c1">content</span>)</pre></div>
-<p><strong>Output:</strong></p>
-<pre class="notranslate"><code class="notranslate">Hello! How can I assist you today?
-</code></pre>
-<hr>
-<h3>🎨  Image Generation</h3>
-<p>Generate images with a single call (returns URLs or base64):</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>()
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">images</span>.<span class="pl-c1">generate</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"flux"</span>,  <span class="pl-c"># Other models: 'dalle-3', 'gpt-image', etc.</span>
-    <span class="pl-s1">prompt</span><span class="pl-c1">=</span><span class="pl-s">"a white siamese cat"</span>,
-    <span class="pl-s1">response_format</span><span class="pl-c1">=</span><span class="pl-s">"url"</span>
-)
-<span class="pl-en">print</span>(<span class="pl-s">f"Generated image URL: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">url</span><span class="pl-kos">}</span></span>"</span>)</pre></div>
-<p><a href="client.html">More Python client info →</a></p>
-<p><a href="async_client.html">and Async client →</a></p>
-<hr>
-<h3>🧙‍♂️ Using GPT4Free.js</h3>
-<p>Use the <strong>official JS client</strong> right in the browser—no backend needed.</p>
-<p>For text generation:</p>
-<div class="highlight highlight-text-html-basic"><pre class="notranslate"><span class="pl-kos">&lt;</span><span class="pl-ent">script</span> <span class="pl-c1">type</span>="<span class="pl-s">module</span>"<span class="pl-kos">&gt;</span>
-    <span class="pl-k">import</span> <span class="pl-v">Client</span> <span class="pl-k">from</span> <span class="pl-s">'https://g4f.dev/dist/js/client.js'</span><span class="pl-kos">;</span>
-
-    <span class="pl-k">const</span> <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">Client</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-k">const</span> <span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span><span class="pl-kos">.</span><span class="pl-c1">chat</span><span class="pl-kos">.</span><span class="pl-c1">completions</span><span class="pl-kos">.</span><span class="pl-en">create</span><span class="pl-kos">(</span><span class="pl-kos">{</span>
-        <span class="pl-c1">model</span>: <span class="pl-s">'gpt-4.1'</span><span class="pl-kos">,</span>  <span class="pl-c">// Or "gpt-4o", "deepseek-v3"</span>
-        <span class="pl-c1">messages</span>: <span class="pl-kos">[</span><span class="pl-kos">{</span> <span class="pl-c1">role</span>: <span class="pl-s">'user'</span><span class="pl-kos">,</span> <span class="pl-c1">content</span>: <span class="pl-s">'Explain quantum computing'</span> <span class="pl-kos">}</span><span class="pl-kos">]</span>
-    <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">log</span><span class="pl-kos">(</span><span class="pl-s1">result</span><span class="pl-kos">.</span><span class="pl-c1">choices</span><span class="pl-kos">[</span><span class="pl-c1">0</span><span class="pl-kos">]</span><span class="pl-kos">.</span><span class="pl-c1">message</span><span class="pl-kos">.</span><span class="pl-c1">content</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-<span class="pl-kos">&lt;/</span><span class="pl-ent">script</span><span class="pl-kos">&gt;</span></pre></div>
-<p>And for image generation:</p>
-<div class="highlight highlight-text-html-basic"><pre class="notranslate"><span class="pl-kos">&lt;</span><span class="pl-ent">script</span> <span class="pl-c1">type</span>="<span class="pl-s">module</span>"<span class="pl-kos">&gt;</span>
-    <span class="pl-k">import</span> <span class="pl-v">Client</span> <span class="pl-k">from</span> <span class="pl-s">'https://g4f.dev/dist/js/client.js'</span><span class="pl-kos">;</span>
-
-    <span class="pl-k">const</span> <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">Client</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-k">const</span> <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span><span class="pl-kos">.</span><span class="pl-c1">images</span><span class="pl-kos">.</span><span class="pl-en">generate</span><span class="pl-kos">(</span><span class="pl-kos">{</span>
-        <span class="pl-c1">model</span>: <span class="pl-s">"flux"</span><span class="pl-kos">,</span> <span class="pl-c">// Or "dalle-3", "gpt-image"</span>
-        <span class="pl-c1">prompt</span>: <span class="pl-s">"a white siamese cat"</span>
-    <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-k">const</span> <span class="pl-s1">imageUrl</span> <span class="pl-c1">=</span> <span class="pl-s1">response</span><span class="pl-kos">.</span><span class="pl-c1">data</span><span class="pl-kos">[</span><span class="pl-c1">0</span><span class="pl-kos">]</span><span class="pl-kos">.</span><span class="pl-c1">url</span><span class="pl-kos">;</span>
-    <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">log</span><span class="pl-kos">(</span><span class="pl-s">`Generated Image URL: <span class="pl-s1"><span class="pl-kos">${</span><span class="pl-s1">imageUrl</span><span class="pl-kos">}</span></span>`</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-c">// Example: document.body.innerHTML += `&lt;img src="${imageUrl}" /&gt;`;</span>
-<span class="pl-kos">&lt;/</span><span class="pl-ent">script</span><span class="pl-kos">&gt;</span></pre></div>
-<p><a href="client_js.html">See more JS client usage →</a></p>
-<h3>💻 Using CLI Client</h3>
-<p>Examples</p>
+<h2>Hauptfunktionen</h2>
+<h3>1. API-Endpoint Handling</h3>
+<p>Der Server verarbeitet verschiedene Pfade:</p>
+<ul>
+<li><code class="notranslate">/api/[provider]/</code> - API-Aufrufe für spezifische Anbieter</li>
+<li><code class="notranslate">/ai/[query]</code> - Vereinfachte KI-Abfragen</li>
+<li><code class="notranslate">/media/</code>, <code class="notranslate">/files/</code>, <code class="notranslate">/search/</code> - Datei- und Media-Handling</li>
+<li><code class="notranslate">/dist/</code> - Statische Inhalte</li>
+<li><code class="notranslate">/backend-api/</code> - Backend-API-Routen</li>
+</ul>
+<h3>2. Supportierte KI-Anbieter</h3>
+<div class="highlight highlight-source-js"><pre class="notranslate"><span class="pl-k">const</span> <span class="pl-s1">models</span> <span class="pl-c1">=</span> <span class="pl-kos">{</span>
+  <span class="pl-s">"nvidia"</span><span class="pl-kos">,</span> <span class="pl-s">"openrouter"</span><span class="pl-kos">,</span> <span class="pl-s">"deepinfra"</span><span class="pl-kos">,</span> <span class="pl-s">"groq"</span><span class="pl-kos">,</span> <span class="pl-s">"ollama"</span><span class="pl-kos">,</span>
+  <span class="pl-s">"azure"</span><span class="pl-kos">,</span> <span class="pl-s">"grok"</span><span class="pl-kos">,</span> <span class="pl-s">"x.ai"</span><span class="pl-kos">,</span> <span class="pl-s">"gemini"</span><span class="pl-kos">,</span> <span class="pl-s">"typegpt"</span><span class="pl-kos">,</span> <span class="pl-s">"pollinations"</span><span class="pl-kos">,</span>
+  <span class="pl-s">"api.airforce"</span><span class="pl-kos">,</span> <span class="pl-s">"gpt4free.pro"</span><span class="pl-kos">,</span> <span class="pl-s">"nectar"</span><span class="pl-kos">,</span> <span class="pl-s">"audio"</span><span class="pl-kos">,</span> <span class="pl-s">"perplexity"</span><span class="pl-kos">,</span>
+  <span class="pl-s">"huggingface"</span><span class="pl-kos">,</span> <span class="pl-s">"puter"</span>
+<span class="pl-kos">}</span></pre></div>
+<h3>3. Sicherheitsfunktionen</h3>
+<ul>
+<li><strong>Rate Limiting</strong>: Begrenzung der Anfragen (1x/10s für API-Pfade)</li>
+<li><strong>Content-Length Validation</strong>: Prüfung der Request-Größe</li>
+<li><strong>CORS Handling</strong>: Cross-Origin Resource Sharing</li>
+<li><strong>API-Key Rotation</strong>: Zufällige Auswahl aus mehreren API-Keys</li>
+<li><strong>Content-Type Validation</strong>: Schutz vor unerwünschten Inhalten</li>
+</ul>
+<h2>Wichtige Funktionen</h2>
+<h3><code class="notranslate">handleRequest(request, env, ctx)</code></h3>
+<p>Hauptfunktion, die alle eingehenden Requests verarbeitet:</p>
 <ol>
-<li>
-<p><strong>Text generation</strong>:</p>
-<div class="highlight highlight-source-shell"><pre class="notranslate">g4f client <span class="pl-s"><span class="pl-pds">"</span>Explain quantum computing in simple terms<span class="pl-pds">"</span></span></pre></div>
-</li>
-<li>
-<p><strong>Image description</strong>:</p>
-<div class="highlight highlight-source-shell"><pre class="notranslate">g4f client image.jpg <span class="pl-s"><span class="pl-pds">"</span>Describe this image<span class="pl-pds">"</span></span></pre></div>
-</li>
-<li>
-<p><strong>Image generation</strong> (with supported models):</p>
-<div class="highlight highlight-source-shell"><pre class="notranslate">g4f client -m flux -O output.jpg <span class="pl-s"><span class="pl-pds">"</span>A futuristic cityscape<span class="pl-pds">"</span></span></pre></div>
-</li>
+<li><strong>OPTIONS Requests</strong>: CORS-Preflight Handling</li>
+<li><strong>Model-List Endpoints</strong>: Liefert verfügbare Modelle</li>
+<li><strong>Caching</strong>: Zwischenspeicherung von GET/HEAD Requests</li>
+<li><strong>Rate Limiting</strong>: Schutz vor Missbrauch</li>
+<li><strong>Content Validation</strong>: Größenprüfung der Requests</li>
+<li><strong>Routing</strong>: Weiterleitung an entsprechende Anbieter</li>
 </ol>
-<p><a href="client_cli.html">CLI Client documentation →</a></p>
-<hr>
-<h2>Deep Dives</h2>
+<h3><code class="notranslate">forwardApi(request, newUrl, liteRequest, ctx, cache_control)</code></h3>
+<p>Weiterleitung von API-Aufrufen mit Caching und CORS-Unterstützung.</p>
+<h3><code class="notranslate">forwardWorker(env, request, liteRequest, pathname, ctx)</code></h3>
+<p>Spezielle Behandlung für Cloudflare AI Worker-Endpoints.</p>
+<h3><code class="notranslate">shield(url, options)</code></h3>
+<p>Sicherheitsfunktion, die:</p>
 <ul>
-<li><a href="ready_to_use.html">API endpoints and usage</a> *<strong>new</strong></li>
-<li><a href="https://g4f.dev/docs/providers-and-models.html" rel="nofollow">Available Providers &amp; Models</a></li>
-<li><a href="selecting_a_provider.html">Selecting a Provider</a></li>
-<li><strong>Provider Documentation:</strong>
+<li>Content-Type überprüft</li>
+<li>Fehlerbehandlung standardisiert</li>
+<li>Sensible Header entfernt</li>
+<li>CORS-Header hinzufügt</li>
+</ul>
+<h3><code class="notranslate">retrieveCache(request, liteRequest, pathname, ctx, host, cache_control)</code></h3>
+<p>Caching-Mechanismus für wiederholte Anfragen.</p>
+<h2>Caching-Strategie</h2>
 <ul>
-<li><a href="providers/pollinations.html">Pollinations AI</a></li>
-<li><a href="providers/puter.html">Puter AI</a></li>
-<li><a href="providers/huggingface.html">HuggingFace</a></li>
-<li><a href="providers/ollama.html">Ollama</a></li>
-<li><a href="providers/gemini.html">Gemini</a></li>
-<li><a href="providers/openai.html">OpenAI Chat</a></li>
-<li><a href="providers/perplexity.html">Perplexity</a></li>
+<li><strong>Statische Inhalte</strong>: Dauerhaftes Caching (1 Jahr)</li>
+<li><strong>API-Responses</strong>: Zeitlich begrenztes Caching (4 Stunden)</li>
+<li><strong>Media/Files</strong>: Cache-basierte Auslieferung</li>
 </ul>
-</li>
-<li><a href="/api-docs">API docs (full spec)</a></li>
-<li><a href="file.html">File API Documentation (Files and Documents)</a></li>
-<li><a href="media.html">Media Documentation (Audio, Image and Video)</a></li>
-<li><a href="vision.html">Vision Support (Image Upload)</a></li>
-<li><a href="image_editing.html">Image Editing &amp; Variation</a></li>
-<li><a href="config.html">Authentication, Configuration Guide (.har and cookies)</a></li>
-<li><a href="guides/create_provider.html">Advanced: Create your own Provider</a></li>
-<li><a href="pydantic_ai.html">Integrations: LangChain, PydanticAI</a></li>
-<li><a href="gui.html">GUI/WebUI</a>, <a href="guides/phone.html">Phone</a>, <a href="backend_api_documentation.html">Backend API</a></li>
-<li><a href="https://github.com/gpt4free/g4f.dev/issues">Troubleshooting</a></li>
-</ul>
-<hr>
-<h2>Community &amp; Links</h2>
+<h2>Error Handling</h2>
 <ul>
-<li>
-<p><strong>Open Source:</strong> <a href="https://github.com/gpt4free/g4f.dev">GitHub: gpt4free/g4f.dev</a></p>
-</li>
-<li>
-<p><strong>Contribute &amp; Report Bugs:</strong> PRs &amp; issues are welcome!</p>
-</li>
-<li>
-<p><strong>Project Website:</strong> <a href="https://g4f.dev/" rel="nofollow">https://g4f.dev/</a></p>
-</li>
-<li>
-<p><strong>Pollinations AI:</strong><br>
-<a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/8341e031ba5b4186aa7bc75b70faa0377efea43c4eed1b880b6ce81ec0e74af5/68747470733a2f2f696d6167652e706f6c6c696e6174696f6e732e61692f70726f6d70742f4372656174652b612b6c6f676f2b666f722b506f6c6c696e6174696f6e732b41492b666561747572696e672b616e2b61627374726163742b666c6f7765722b626c6f6f6d696e672b6469676974616c2b706574616c732b676c6f77696e672b63656e7465722b667574757269737469632b666f6e742b506f6c6c696e6174696f6e732b41493f77696474683d353132266865696768743d323536266e6f6c6f676f3d74727565"><img src="https://camo.githubusercontent.com/8341e031ba5b4186aa7bc75b70faa0377efea43c4eed1b880b6ce81ec0e74af5/68747470733a2f2f696d6167652e706f6c6c696e6174696f6e732e61692f70726f6d70742f4372656174652b612b6c6f676f2b666f722b506f6c6c696e6174696f6e732b41492b666561747572696e672b616e2b61627374726163742b666c6f7765722b626c6f6f6d696e672b6469676974616c2b706574616c732b676c6f77696e672b63656e7465722b667574757269737469632b666f6e742b506f6c6c696e6174696f6e732b41493f77696474683d353132266865696768743d323536266e6f6c6f676f3d74727565" height="80" data-canonical-src="https://image.pollinations.ai/prompt/Create+a+logo+for+Pollinations+AI+featuring+an+abstract+flower+blooming+digital+petals+glowing+center+futuristic+font+Pollinations+AI?width=512&amp;height=256&amp;nologo=true" style="max-width: 100%; height: auto; max-height: 80px;"></a></p>
-<p><a href="https://github.com/pollinations/pollinations">GitHub: pollinations/pollinations</a></p>
-</li>
+<li>Structured Error Responses im JSON-Format</li>
+<li>Rate Limit Errors mit Retry-After Header</li>
+<li>Content-Length Validation Errors</li>
+<li>Provider-spezifische Fehlerbehandlung</li>
 </ul>
-<hr>
-<p>GPT4Free and g4f.dev are continuously improving. Have fun building, and let the bots do the heavy lifting for you!</p>
-<p><a href="https://github.com/xtekky/gpt4free">← Back to GPT4Free GitHub</a></p>
-</main>
+<h2>Besondere Features</h2>
+<ul>
+<li><strong>Auto-Model Selection</strong>: Zufällige Auswahl verfügbarer Anbieter</li>
+<li><strong>JSON Response Formatting</strong>: Automatische JSON-Formatierung</li>
+<li><strong>Audio Support</strong>: Integration von Text-to-Speech</li>
+<li><strong>Image Generation</strong>: Pollinations.ai Integration</li>
+<li><strong>Documentation Generation</strong>: Dynamische Doc-Erstellung</li>
+</ul>
+<h2>Deployment</h2>
+<p>Dieser Code ist für Cloudflare Workers optimiert und verwendet:</p>
+<ul>
+<li>Environment Variables für API-Keys</li>
+<li>Cloudflare KV für Rate Limiting</li>
+<li>Cloudflare AI für lokale Modelle</li>
+<li>Cloudflare Cache für Performance</li>
+</ul>
+<p>Die Dokumentation beschreibt einen robusten, skalierbaren API-Proxy, der Sicherheit, Performance und Flexibilität für KI-Service-Integrationen bietet.</p>
+        </main>
     </div>
 
+    
     <script>
         // Toggle Translation Widget
         document.getElementById("translate-toggle").addEventListener("click", function() {
@@ -613,7 +575,7 @@
                 
                 li.appendChild(a);
                 tocList.appendChild(li);
-        });
+            });
         }
 
         // Smooth scrolling for anchor links

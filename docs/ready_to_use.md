@@ -13,7 +13,6 @@
 | [https://g4f.dev/api/pollinations.ai](https://g4f.dev/api/pollinations.ai/models) | none required | Proxy for pollinations.ai |
 | [https://g4f.dev/api/nvidia](https://g4f.dev/api/nvidia/models) | none required | Use Nvidia provider |
 | [https://g4f.dev/api/gemini](https://g4f.dev/ai/gemini) | none required | Hosted Gemini provider |
-| [https://g4f.dev/api/gpt-oss-120b](https://g4f.dev/api/gpt-oss-120b/models) | required | now requires API key from [g4f.dev/api_key](https://g4f.dev/api_key.html) |
 | [https://g4f.dev/v1](https://g4f.dev/v1/models) | required | Hosted instance, many models, get key from [g4f.dev/api_key](https://g4f.dev/api_key.html) |
 
 ### Also Supported API Routes:
@@ -24,11 +23,10 @@
 - **xAI**: https://api.x.ai/v1
 - **Together**: https://api.together.xyz/v1
 - **OpenAI**: https://api.openai.com/v1
-- **Strinable Inf**: https://stringableinf.com/api/v1
 - **TypeGPT**: https://typegpt.ai/api
 - **Grok**: https://api.grok.com/v1
-- **ApiAirforce**: baseUrl: https://api.airforce/v1, apiEndpoint: https://stringableinf.com/api/v1/chat/completions
-- **Auto Provider & Model Selection**: apiEndpoint: https://g4f.dev/ai/{now}
+- **ApiAirforce**: https://api.airforce/v1
+- **Auto Provider & Model Selection**: https://g4f.dev/api/auto
 
 ### Individual clients available for:
 - [Pollinations AI](providers/pollinations.md)
@@ -128,7 +126,16 @@ print(response.choices[0].message.content)
 ```
 
 ### Notes and quick tips
-- **API Key Changes**: The gpt-oss-120b endpoint now requires an API key. Retrieve it from [g4f.dev/api_key.html](https://g4f.dev/api_key.html).
+- **API Key Changes**: The /v1 endpoint requires an API key. Retrieve it from [g4f.dev/api_key.html](https://g4f.dev/api_key.html).
 - **Hosted Instance URL**: Updated from host.g4f.dev/v1 to g4f.dev/v1
 - The examples assume a chat-style completions API where you pass messages and receive a response containing the assistant's content.
 - The base_url is always the URL without the trailing /models segment
+
+
+---
+
+[Go to API Proxy Server Documentation](proxy.md)
+
+---
+
+[Return to Documentation](/docs/)
