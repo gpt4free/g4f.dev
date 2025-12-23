@@ -15,7 +15,7 @@ const defaultModels = {
 const providers = {
     "default": {class: Client, baseUrl: "https://g4f.dev/api/{model}", tags: "", defaultModel: "auto", modelAliases: defaultModels},
     "nectar": {class: Pollinations, baseUrl: "https://g4f.dev/api/nectar", apiEndpoint: "https://g4f.dev/api/nectar/v1/chat/completions", imageEndpoint: "https://g4f.dev/api/nectar/image/{prompt}", modelsEndpoint: "https://g4f.dev/api/nectar/text/models", tags: ""},
-    "api.airforce": {class: Client, baseUrl: "https://g4f.dev/api.airforce", tags: "🎨 👓", localStorageApiKey: "ApiAirforce-api_key", sleep: 10000},
+    "api.airforce": {class: Client, baseUrl: "https://g4f.dev/api/api.airforce", tags: "🎨 👓", localStorageApiKey: "ApiAirforce-api_key", sleep: 10000},
     "anondrop.net": {class: Client, baseUrl: "https://anondrop.net/v1", tags: ""},
     "audio": {class: Audio, baseUrl: "https://g4f.dev/api/audio", tags: "🎧", sleep: 10000},
     "azure": {class: Client, baseUrl: "https://g4f.dev/api/azure", tags: "👓", sleep: 10000},
