@@ -6,7 +6,7 @@ This is a Cloudflare Worker script functioning as a proxy server for various AI 
 ## Configuration
 
 ### Constants
-- **API_HOST**: Main API host (`pass.g4f.dev`)
+- **API_HOST**: Main API host
 - **POLLINATIONS_HOST**: Pollinations.ai service host
 - **GITHUB_HOST**: GitHub Pages host for static contents
 - **MODEL_ID**: Default model ID for Cloudflare AI

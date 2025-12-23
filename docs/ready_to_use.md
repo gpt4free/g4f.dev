@@ -10,7 +10,7 @@
 | [https://localhost:1337/v1](https://localhost:1337/v1/models) | none required | use it locally |
 | [https://g4f.dev/api/groq](https://g4f.dev/api/groq/models) | none required | Use Groq provider |
 | [https://g4f.dev/api/ollama](https://g4f.dev/api/ollama/models) | none required | Use Ollama provider |
-| [https://g4f.dev/api/pollinations.ai](https://g4f.dev/api/pollinations.ai/models) | none required | Proxy for pollinations.ai |
+| [https://g4f.dev/api/pollinations.](https://g4f.dev/api/pollinations/models) | none required | Proxy for pollinations.ai |
 | [https://g4f.dev/api/nvidia](https://g4f.dev/api/nvidia/models) | none required | Use Nvidia provider |
 | [https://g4f.dev/api/gemini](https://g4f.dev/ai/gemini) | none required | Hosted Gemini provider |
 | [https://g4f.dev/v1](https://g4f.dev/v1/models) | required | Hosted instance, many models, get key from [g4f.dev/api_key](https://g4f.dev/api_key.html) |

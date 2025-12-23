@@ -453,7 +453,7 @@
 <td>Use Ollama provider</td>
 </tr>
 <tr>
-<td><a href="https://g4f.dev/api/pollinations.ai/models" rel="nofollow">https://g4f.dev/api/pollinations.ai</a></td>
+<td><a href="https://g4f.dev/api/pollinations/models" rel="nofollow">https://g4f.dev/api/pollinations.</a></td>
 <td>none required</td>
 <td>Proxy for pollinations.ai</td>
 </tr>
@@ -463,19 +463,9 @@
 <td>Use Nvidia provider</td>
 </tr>
 <tr>
-<td><a href="https://g4f.dev/ai/grok" rel="nofollow">https://g4f.dev/api/grok</a></td>
-<td>none required</td>
-<td>Hosted Grok provider</td>
-</tr>
-<tr>
 <td><a href="https://g4f.dev/ai/gemini" rel="nofollow">https://g4f.dev/api/gemini</a></td>
 <td>none required</td>
 <td>Hosted Gemini provider</td>
-</tr>
-<tr>
-<td><a href="https://g4f.dev/api/gpt-oss-120b/models" rel="nofollow">https://g4f.dev/api/gpt-oss-120b</a></td>
-<td>required</td>
-<td>now requires API key from <a href="https://g4f.dev/api_key.html" rel="nofollow">g4f.dev/api_key</a></td>
 </tr>
 <tr>
 <td><a href="https://g4f.dev/v1/models" rel="nofollow">https://g4f.dev/v1</a></td>
@@ -493,17 +483,20 @@
 <li><strong>xAI</strong>: <a href="https://api.x.ai/v1" rel="nofollow">https://api.x.ai/v1</a></li>
 <li><strong>Together</strong>: <a href="https://api.together.xyz/v1" rel="nofollow">https://api.together.xyz/v1</a></li>
 <li><strong>OpenAI</strong>: <a href="https://api.openai.com/v1" rel="nofollow">https://api.openai.com/v1</a></li>
-<li><strong>Strinable Inf</strong>: <a href="https://stringableinf.com/api/v1" rel="nofollow">https://stringableinf.com/api/v1</a></li>
 <li><strong>TypeGPT</strong>: <a href="https://typegpt.ai/api" rel="nofollow">https://typegpt.ai/api</a></li>
-<li><strong>ApiAirforce</strong>: baseUrl: <a href="https://api.airforce/v1" rel="nofollow">https://api.airforce/v1</a>, apiEndpoint: <a href="https://stringableinf.com/api/v1/chat/completions" rel="nofollow">https://stringableinf.com/api/v1/chat/completions</a></li>
-<li><strong>Auto Provider &amp; Model Selection</strong>: apiEndpoint: <a href="https://g4f.dev/ai/%7Bnow%7D" rel="nofollow">https://g4f.dev/ai/{now}</a></li>
+<li><strong>Grok</strong>: <a href="https://api.grok.com/v1" rel="nofollow">https://api.grok.com/v1</a></li>
+<li><strong>ApiAirforce</strong>: <a href="https://api.airforce/v1" rel="nofollow">https://api.airforce/v1</a></li>
+<li><strong>Auto Provider &amp; Model Selection</strong>: <a href="https://g4f.dev/api/auto" rel="nofollow">https://g4f.dev/api/auto</a></li>
 </ul>
 <h3>Individual clients available for:</h3>
 <ul>
-<li>Pollinations AI</li>
-<li>Puter AI</li>
-<li>HuggingFace</li>
-<li>Ollama</li>
+<li><a href="providers/pollinations.html">Pollinations AI</a></li>
+<li><a href="providers/puter.html">Puter AI</a></li>
+<li><a href="providers/huggingface.html">HuggingFace</a></li>
+<li><a href="providers/ollama.html">Ollama</a></li>
+<li><a href="providers/gemini.html">Gemini</a></li>
+<li><a href="providers/openai.html">OpenAI Chat</a></li>
+<li><a href="providers/perplexity.html">Perplexity</a></li>
 </ul>
 <h3>How to choose a base URL</h3>
 <ul>
@@ -599,11 +592,15 @@
 <span class="pl-kos">&lt;/</span><span class="pl-ent">script</span><span class="pl-kos">&gt;</span></pre></div>
 <h3>Notes and quick tips</h3>
 <ul>
-<li><strong>API Key Changes</strong>: The gpt-oss-120b endpoint now requires an API key. Retrieve it from <a href="https://g4f.dev/api_key.html" rel="nofollow">g4f.dev/api_key.html</a>.</li>
+<li><strong>API Key Changes</strong>: The /v1 endpoint requires an API key. Retrieve it from <a href="https://g4f.dev/api_key.html" rel="nofollow">g4f.dev/api_key.html</a>.</li>
 <li><strong>Hosted Instance URL</strong>: Updated from host.g4f.dev/v1 to g4f.dev/v1</li>
 <li>The examples assume a chat-style completions API where you pass messages and receive a response containing the assistant's content.</li>
 <li>The base_url is always the URL without the trailing /models segment</li>
 </ul>
+<hr>
+<p><a href="proxy.html">Go to API Proxy Server Documentation</a></p>
+<hr>
+<p><a href="/docs/">Return to Documentation</a></p>
 </main>
     </div>
 

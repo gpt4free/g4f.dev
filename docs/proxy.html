@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>API-Proxy-Server Dokumentation | GPT4Free Documentation</title>
+    <title>API Proxy Server Documentation</title>
 
     <meta name="description" content="GPT4Free documentation for API-Proxy-Server Dokumentation. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
     <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, API-Proxy-Server Dokumentation" />
@@ -421,103 +421,103 @@
         </nav>
 
         <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
-            <h1>API-Proxy-Server Dokumentation</h1>
-<h2>Übersicht</h2>
-<p>Dies ist ein Cloudflare Worker Code, der als Proxy-Server für verschiedene KI-Modelle und APIs dient. Der Server fungiert als Gateway zwischen Clients und verschiedenen KI-Anbietern, bietet Caching, Rate Limiting und Sicherheitsfunktionen.</p>
-<h2>Konfiguration</h2>
-<h3>Konstanten</h3>
+<h1>API Proxy Server Documentation</h1>
+<h2>Overview</h2>
+<p>This is a Cloudflare Worker script functioning as a proxy server for various AI models and APIs. It acts as a gateway between clients and different AI providers, offering features like caching, rate limiting, and security.</p>
+<h2>Configuration</h2>
+<h3>Constants</h3>
 <ul>
-<li><strong>API_HOST</strong>: Haupt-API-Host (<code class="notranslate">pass.g4f.dev</code>)</li>
-<li><strong>POLLINATIONS_HOST</strong>: Pollinations.ai Service-Host</li>
-<li><strong>GITHUB_HOST</strong>: GitHub Pages Host für statische Inhalte</li>
-<li><strong>MODEL_ID</strong>: Standard-Modell-ID für Cloudflare AI</li>
-<li><strong>MAX_CONTENT_LENGHT</strong>: Maximale Request-Größe (50KB)</li>
-<li><strong>CUSTOM_MAX_LENGHT</strong>: Erweiterte Maximalgröße für bestimmte Endpunkte (100KB)</li>
-<li><strong>CACHE_KONTROLLE</strong>: Caching-Einstellungen (4 Stunden)</li>
-<li><strong>CACHE_FOREVER</strong>: Dauerhaftes Caching (1 Jahr)</li>
-<li><strong>CORS_HEADERS</strong>: CORS-Konfiguration für Cross-Origin Requests</li>
+<li><strong>API_HOST</strong>: Main API host</li>
+<li><strong>POLLINATIONS_HOST</strong>: Pollinations.ai service host</li>
+<li><strong>GITHUB_HOST</strong>: GitHub Pages host for static contents</li>
+<li><strong>MODEL_ID</strong>: Default model ID for Cloudflare AI</li>
+<li><strong>MAX_CONTENT_LENGTH</strong>: Max request size (50KB)</li>
+<li><strong>CUSTOM_MAX_LENGTH</strong>: Extended max size for certain endpoints (100KB)</li>
+<li><strong>CACHE_CONTROL</strong>: Caching policy (4 hours)</li>
+<li><strong>CACHE_FOREVER</strong>: Permanent caching (1 year)</li>
+<li><strong>CORS_HEADERS</strong>: Cross-Origin Resource Sharing headers configuration</li>
 </ul>
-<h2>Hauptfunktionen</h2>
-<h3>1. API-Endpoint Handling</h3>
-<p>Der Server verarbeitet verschiedene Pfade:</p>
+<h2>Main Functions</h2>
+<h3>1. API Endpoint Handling</h3>
+<p>The server handles various routes:</p>
 <ul>
-<li><code class="notranslate">/api/[provider]/</code> - API-Aufrufe für spezifische Anbieter</li>
-<li><code class="notranslate">/ai/[query]</code> - Vereinfachte KI-Abfragen</li>
-<li><code class="notranslate">/media/</code>, <code class="notranslate">/files/</code>, <code class="notranslate">/search/</code> - Datei- und Media-Handling</li>
-<li><code class="notranslate">/dist/</code> - Statische Inhalte</li>
-<li><code class="notranslate">/backend-api/</code> - Backend-API-Routen</li>
+<li><code class="notranslate">/api/[provider]/</code> - API calls for specific providers</li>
+<li><code class="notranslate">/ai/[query]</code> - Simplified AI query interface</li>
+<li><code class="notranslate">/media/</code>, <code class="notranslate">/files/</code>, <code class="notranslate">/search/</code> - Media and file handling</li>
+<li><code class="notranslate">/dist/</code> - Static content</li>
+<li><code class="notranslate">/backend-api/</code> - Backend API routes</li>
 </ul>
-<h3>2. Supportierte KI-Anbieter</h3>
+<h3>2. Supported AI Providers</h3>
 <div class="highlight highlight-source-js"><pre class="notranslate"><span class="pl-k">const</span> <span class="pl-s1">models</span> <span class="pl-c1">=</span> <span class="pl-kos">{</span>
   <span class="pl-s">"nvidia"</span><span class="pl-kos">,</span> <span class="pl-s">"openrouter"</span><span class="pl-kos">,</span> <span class="pl-s">"deepinfra"</span><span class="pl-kos">,</span> <span class="pl-s">"groq"</span><span class="pl-kos">,</span> <span class="pl-s">"ollama"</span><span class="pl-kos">,</span>
   <span class="pl-s">"azure"</span><span class="pl-kos">,</span> <span class="pl-s">"grok"</span><span class="pl-kos">,</span> <span class="pl-s">"x.ai"</span><span class="pl-kos">,</span> <span class="pl-s">"gemini"</span><span class="pl-kos">,</span> <span class="pl-s">"typegpt"</span><span class="pl-kos">,</span> <span class="pl-s">"pollinations"</span><span class="pl-kos">,</span>
   <span class="pl-s">"api.airforce"</span><span class="pl-kos">,</span> <span class="pl-s">"gpt4free.pro"</span><span class="pl-kos">,</span> <span class="pl-s">"nectar"</span><span class="pl-kos">,</span> <span class="pl-s">"audio"</span><span class="pl-kos">,</span> <span class="pl-s">"perplexity"</span><span class="pl-kos">,</span>
   <span class="pl-s">"huggingface"</span><span class="pl-kos">,</span> <span class="pl-s">"puter"</span>
 <span class="pl-kos">}</span></pre></div>
-<h3>3. Sicherheitsfunktionen</h3>
+<h3>3. Security Features</h3>
 <ul>
-<li><strong>Rate Limiting</strong>: Begrenzung der Anfragen (1x/10s für API-Pfade)</li>
-<li><strong>Content-Length Validation</strong>: Prüfung der Request-Größe</li>
-<li><strong>CORS Handling</strong>: Cross-Origin Resource Sharing</li>
-<li><strong>API-Key Rotation</strong>: Zufällige Auswahl aus mehreren API-Keys</li>
-<li><strong>Content-Type Validation</strong>: Schutz vor unerwünschten Inhalten</li>
+<li><strong>Rate Limiting</strong>: Limits requests (1 per 10 seconds for API paths)</li>
+<li><strong>Content-Length Validation</strong>: Checks request size limits</li>
+<li><strong>CORS Handling</strong>: Manages cross-origin requests</li>
+<li><strong>API Key Rotation</strong>: Randomly selects from multiple API keys</li>
+<li><strong>Content-Type Validation</strong>: Protects against unwanted content types</li>
 </ul>
-<h2>Wichtige Funktionen</h2>
+<h2>Key Functions</h2>
 <h3><code class="notranslate">handleRequest(request, env, ctx)</code></h3>
-<p>Hauptfunktion, die alle eingehenden Requests verarbeitet:</p>
+<p>Main function that processes all incoming requests:</p>
 <ol>
-<li><strong>OPTIONS Requests</strong>: CORS-Preflight Handling</li>
-<li><strong>Model-List Endpoints</strong>: Liefert verfügbare Modelle</li>
-<li><strong>Caching</strong>: Zwischenspeicherung von GET/HEAD Requests</li>
-<li><strong>Rate Limiting</strong>: Schutz vor Missbrauch</li>
-<li><strong>Content Validation</strong>: Größenprüfung der Requests</li>
-<li><strong>Routing</strong>: Weiterleitung an entsprechende Anbieter</li>
+<li><strong>OPTIONS requests</strong>: Handles CORS preflight</li>
+<li><strong>Model list endpoints</strong>: Returns available models</li>
+<li><strong>Caching</strong>: Caches GET/HEAD responses</li>
+<li><strong>Rate limiting</strong>: Protects against abuse</li>
+<li><strong>Content validation</strong>: Enforces request size limit</li>
+<li><strong>Routing</strong>: Forwards requests to appropriate providers</li>
 </ol>
 <h3><code class="notranslate">forwardApi(request, newUrl, liteRequest, ctx, cache_control)</code></h3>
-<p>Weiterleitung von API-Aufrufen mit Caching und CORS-Unterstützung.</p>
+<p>Forwards API requests with caching and CORS support.</p>
 <h3><code class="notranslate">forwardWorker(env, request, liteRequest, pathname, ctx)</code></h3>
-<p>Spezielle Behandlung für Cloudflare AI Worker-Endpoints.</p>
+<p>Special handling for Cloudflare AI worker endpoints.</p>
 <h3><code class="notranslate">shield(url, options)</code></h3>
-<p>Sicherheitsfunktion, die:</p>
+<p>Performs safety checks:</p>
 <ul>
-<li>Content-Type überprüft</li>
-<li>Fehlerbehandlung standardisiert</li>
-<li>Sensible Header entfernt</li>
-<li>CORS-Header hinzufügt</li>
+<li>Content-Type validation</li>
+<li>Error handling standardization</li>
+<li>Removing sensitive headers</li>
+<li>Adding CORS headers</li>
 </ul>
 <h3><code class="notranslate">retrieveCache(request, liteRequest, pathname, ctx, host, cache_control)</code></h3>
-<p>Caching-Mechanismus für wiederholte Anfragen.</p>
-<h2>Caching-Strategie</h2>
+<p>Caching mechanism for repeated requests.</p>
+<h2>Caching Strategy</h2>
 <ul>
-<li><strong>Statische Inhalte</strong>: Dauerhaftes Caching (1 Jahr)</li>
-<li><strong>API-Responses</strong>: Zeitlich begrenztes Caching (4 Stunden)</li>
-<li><strong>Media/Files</strong>: Cache-basierte Auslieferung</li>
+<li><strong>Static contents</strong>: Forever cache (1 year)</li>
+<li><strong>API responses</strong>: Time-limited cache (4 hours)</li>
+<li><strong>Media/Files</strong>: Cache-based distribution</li>
 </ul>
 <h2>Error Handling</h2>
 <ul>
-<li>Structured Error Responses im JSON-Format</li>
-<li>Rate Limit Errors mit Retry-After Header</li>
-<li>Content-Length Validation Errors</li>
-<li>Provider-spezifische Fehlerbehandlung</li>
+<li>Structured JSON error responses</li>
+<li>Rate limit errors with <code class="notranslate">Retry-After</code> header</li>
+<li>Content-Length errors</li>
+<li>Provider-specific error handling</li>
 </ul>
-<h2>Besondere Features</h2>
+<h2>Special Features</h2>
 <ul>
-<li><strong>Auto-Model Selection</strong>: Zufällige Auswahl verfügbarer Anbieter</li>
-<li><strong>JSON Response Formatting</strong>: Automatische JSON-Formatierung</li>
-<li><strong>Audio Support</strong>: Integration von Text-to-Speech</li>
-<li><strong>Image Generation</strong>: Pollinations.ai Integration</li>
-<li><strong>Documentation Generation</strong>: Dynamische Doc-Erstellung</li>
+<li><strong>Auto-Model Selection</strong>: Random provider selection</li>
+<li><strong>JSON response formatting</strong>: Automatic JSON formatting</li>
+<li><strong>Audio support</strong>: Text-to-Speech integration</li>
+<li><strong>Image Generation</strong>: Pollinations.ai integration</li>
+<li><strong>Documentation Generation</strong>: Dynamic docs creation</li>
 </ul>
 <h2>Deployment</h2>
-<p>Dieser Code ist für Cloudflare Workers optimiert und verwendet:</p>
+<p>This code is optimized for Cloudflare Workers with:</p>
 <ul>
-<li>Environment Variables für API-Keys</li>
-<li>Cloudflare KV für Rate Limiting</li>
-<li>Cloudflare AI für lokale Modelle</li>
-<li>Cloudflare Cache für Performance</li>
+<li>Environment variables for API keys</li>
+<li>Cloudflare KV for rate limiting</li>
+<li>Cloudflare AI for local models</li>
+<li>Cloudflare cache for performance</li>
 </ul>
-<p>Die Dokumentation beschreibt einen robusten, skalierbaren API-Proxy, der Sicherheit, Performance und Flexibilität für KI-Service-Integrationen bietet.</p>
-        </main>
+<p>This proxy server provides a robust, scalable API gateway that enhances security, performance, and flexibility for integrating various AI services.</p>
+</main>
     </div>
 
     
