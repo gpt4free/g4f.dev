@@ -12,30 +12,43 @@ const defaultModels = {
     "gpt4free.pro": "deepseek-v3.2",
 };
 
+const providerLocalStorage = {
+    "api.airforce": "ApiAirforce-api_key",
+    "deepinfra": "DeepInfra-api_key",
+    "huggingface": "HuggingFace-api_key",
+    "gemini": "GeminiPro-api_key",
+    "nvidia": "Nvidia-api_key",
+    "ollama": "Ollama-api_base",
+    "openrouter": "OpenRouter-api_key",
+    "pollinations": "PollinationsAI-api_key",
+    "together": "Together-api_key",
+    "puter": "puter.auth.token",
+}
+
 const providers = {
     "default": {class: Client, baseUrl: "https://g4f.dev/api/{model}", tags: "", defaultModel: "auto", modelAliases: defaultModels},
     "nectar": {class: Pollinations, baseUrl: "https://g4f.dev/api/nectar", apiEndpoint: "https://g4f.dev/api/nectar/v1/chat/completions", imageEndpoint: "https://g4f.dev/api/nectar/image/{prompt}", modelsEndpoint: "https://g4f.dev/api/nectar/text/models", tags: ""},
-    "api.airforce": {class: Client, baseUrl: "https://g4f.dev/api/api.airforce", tags: "🎨 👓", localStorageApiKey: "ApiAirforce-api_key", sleep: 10000},
+    "api.airforce": {class: Client, baseUrl: "https://g4f.dev/api/api.airforce", tags: "🎨 👓", sleep: 10000},
     "anondrop.net": {class: Client, baseUrl: "https://anondrop.net/v1", tags: ""},
     "audio": {class: Audio, baseUrl: "https://g4f.dev/api/audio", tags: "🎧", sleep: 10000},
     "azure": {class: Client, baseUrl: "https://g4f.dev/api/azure", tags: "👓", sleep: 10000},
-    "custom": {class: Client, tags: "", localStorageApiKey: "Custom-api_key"},
-    "deepinfra": {class: DeepInfra, tags: "🎨 👓", localStorageApiKey: "DeepInfra-api_key"},
-    "gemini": {class: Client, baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", backupUrl: "https://g4f.dev/api/gemini", tags: "👓", localStorageApiKey: "GeminiPro-api_key"},
+    "custom": {class: Client, tags: ""},
+    "deepinfra": {class: DeepInfra, tags: "🎨 👓"},
+    "gemini": {class: Client, baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", backupUrl: "https://g4f.dev/api/gemini", tags: "👓"},
     // "gpt-oss-120b": {class: Client, baseUrl: "https://g4f.dev/api/gpt-oss-120b", tags: ""},
     // "gpt4free.pro": {class: Client, baseUrl: "https://gpt4free.pro/v1", tags: ""},
     "groq": {class: Client, baseUrl: "https://api.groq.com/openai/v1", backupUrl: "https://g4f.dev/api/groq", tags: ""},
-    "huggingface": {class: HuggingFace, tags: "🤗", localStorageApiKey: "HuggingFace-api_key"},
-    "nvidia": {class: Client, baseUrl: "https://integrate.api.nvidia.com/v1", backupUrl: "https://g4f.dev/api/nvidia", tags: "📟", localStorageApiKey: "Nvidia-api_key"},
-    "ollama": {class: Client, baseUrl: "https://g4f.dev/api/ollama", tags: "🦙", localStorageApiKey: "Ollama-api_base", sleep: 10000},
-    "openrouter": {class: Client, baseUrl: "https://openrouter.ai/api/v1", backupUrl: "https://g4f.dev/api/openrouter", tags: "👓", localStorageApiKey: "OpenRouter-api_key"},
-    "pollinations": {class: Pollinations, tags: "🎨 👓", localStorageApiKey: "PollinationsAI-api_key"},
+    "huggingface": {class: HuggingFace, tags: "🤗"},
+    "nvidia": {class: Client, baseUrl: "https://integrate.api.nvidia.com/v1", backupUrl: "https://g4f.dev/api/nvidia", tags: "📟"},
+    "ollama": {class: Client, baseUrl: "https://g4f.dev/api/ollama", tags: "🦙", sleep: 10000},
+    "openrouter": {class: Client, baseUrl: "https://openrouter.ai/api/v1", backupUrl: "https://g4f.dev/api/openrouter", tags: "👓"},
+    "pollinations": {class: Pollinations, tags: "🎨 👓"},
     "puter": {class: Puter, tags: "👓"},
     // "stringable-inf": {class: Client, baseUrl: "https://stringableinf.com/api", apiEndpoint: "https://stringableinf.com/api/v1/chat/completions", tags: "", extraHeaders: {"HTTP-Referer": "https://g4f.dev/", "X-Title": "G4F Chat"}},
-    "typegpt": {class: Client, baseUrl: "https://typegpt.net/api/v1", tags: "", modelsEndpoint: "https://typegpt.net/api/v1/models", localStorageApiKey: "typegpt-api_key"},
-    "together": {class: Client, baseUrl: "https://api.together.xyz/v1", tags: "👓", localStorageApiKey: "Together-api_key"},
+    // "typegpt": {class: Client, baseUrl: "https://typegpt.net/api/v1", tags: "", modelsEndpoint: "https://typegpt.net/api/v1/models", localStorageApiKey: "typegpt-api_key"},
+    "together": {class: Client, baseUrl: "https://api.together.xyz/v1", tags: "👓"},
     "worker": {class: Worker, baseUrl: "https://g4f.dev/api/worker", tags: "🎨", sleep: 10000},
-    "x.ai": {class: Client, baseUrl: "https://api.x.ai/v1", backupUrl: "https://g4f.dev/api/x.ai", tags: ""}
+    // "x.ai": {class: Client, baseUrl: "https://api.x.ai/v1", backupUrl: "https://g4f.dev/api/x.ai", tags: ""}
 };
 
 // Factory function to create a client instance based on provider
@@ -46,8 +59,8 @@ function createClient(provider, options = {}) {
     }
 
     // Set baseUrl
-    if (typeof localStorage !== "undefined" && localStorageApiKey && localStorage.getItem(localStorageApiKey)) {
-        options.apiKey = localStorage.getItem(localStorageApiKey);
+    if (typeof localStorage !== "undefined" && providerLocalStorage[provider] && localStorage.getItem(providerLocalStorage[provider])) {
+        options.apiKey = localStorage.getItem(providerLocalStorage[provider]);
     }
     
     // Set baseUrl
@@ -74,5 +87,5 @@ function createClient(provider, options = {}) {
     // Instantiate the client
     return new ClientClass({ ...config, ...options });
 }
-export { createClient };
+export { createClient, providerLocalStorage };
 export default providers;

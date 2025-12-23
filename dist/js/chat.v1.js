@@ -1337,7 +1337,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 if(await safe_load_conversation(window.conversation_id)) {
                     // Play last message async
                     if(!await play_last_message(content_data_storage[message_id])) {
-                        if (action === "next") {
+                        if (action === "next" && final_message) {
                             load_follow_up_questions(messages, final_message);
                         }
                     }
@@ -3162,7 +3162,7 @@ async function on_api() {
             if (name === "custom" && !localStorage.getItem("Custom-api_base")) {
                 return;
             }
-            if (["together", "huggingface", "typegpt"].includes(name) && !localStorage.getItem(config.localStorageApiKey)) {
+            if (["together", "huggingface", "typegpt"].includes(name) && !localStorage.getItem(window.providerLocalStorage[name])) {
                 return;
             }
             let option = document.createElement("option");
@@ -3173,11 +3173,22 @@ async function on_api() {
             option.dataset.live = "true";
             option.text = `${name} ${config.tags}`;
             optgroup.appendChild(option);
-            fetch(`https://g4f.dev/ai/${name}/Response%20with%20ok?seed=${Math.floor(Date.now() / 1000 / 3600 / 24)}`).then((response) => {
+            const url = `https://g4f.dev/ai/${name}/Response%20with%20ok?seed=${Math.floor(Date.now() / 1000 / 3600 / 24)}`;
+            let wait = 0;
+            const options = localStorage.getItem(window.providerLocalStorage[name]) ? { headers: {'authorization': `Bearer ${localStorage.getItem(window.providerLocalStorage[name])}`} } : undefined;
+            fetch(url).then((response) => {
+                console.log(response.headers.get("retry-after"))
                 if (response.ok) {
                     option.text += " 🟢";
                 } else {
-                    // optgroup.removeChild(option);
+                    wait += 10;
+                    setTimeout(() => {
+                        fetch(url, options).then((response) => {
+                            if (response.ok) {
+                                option.text += " 🟢";
+                            }
+                        });
+                    }, wait * 1000);
                 }
             });
         });
