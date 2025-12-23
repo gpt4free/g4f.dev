@@ -16,7 +16,7 @@
       color: #444;
     }
     #dashboard {
-      max-width: 900px;
+      max-width: 1100px;
       margin: 30px auto;
       padding: 24px;
       background: #fff;
@@ -41,6 +41,10 @@
       margin-left: 10px;
       cursor: pointer;
     }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
     #status {
       color: #666;
       text-align: center;
@@ -48,10 +52,29 @@
       margin-bottom: 15px;
       min-height: 18px;
     }
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: #e0e0e0;
+      border-radius: 2px;
+      margin: 10px 0;
+      display: none;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: #4a90d9;
+      border-radius: 2px;
+      transition: width 0.2s;
+      width: 0%;
+    }
+    .table-container {
+      max-height: 50vh;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 20px;
       table-layout: fixed;
       word-wrap: break-word;
     }
@@ -65,7 +88,12 @@
     th {
       background: #f3f6fc;
       cursor: pointer;
+      position: sticky;
+      top: 0;
+      z-index: 1;
     }
+    th.sorted-asc::after { content: ' ▲'; font-size: 10px; }
+    th.sorted-desc::after { content: ' ▼'; font-size: 10px; }
     tr:nth-child(even) {
       background: #fafbff;
     }
@@ -82,6 +110,31 @@
       color: #377;
       text-align: center;
       user-select: none;
+    }
+    .row-count {
+      font-size: 14px;
+      font-weight: normal;
+      color: #666;
+    }
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .pagination button {
+      padding: 4px 10px;
+      font-size: 12px;
+    }
+    .pagination select {
+      padding: 3px 6px;
+      font-size: 12px;
+    }
+    .pagination span {
+      color: #555;
+      font-size: 12px;
     }
     @media (max-width: 600px) {
       #dashboard {
@@ -104,79 +157,124 @@
       }
     }
   </style>
-  <!-- Assuming this framework.js defines `framework.backendUrl` -->
   <script src="../dist/js/framework.js"></script>
 </head>
 <body>
   <div id="dashboard">
     <h1>Usage Statistics</h1>
     <div id="status">Loading...</div>
+    <div class="progress-bar" id="progressBar"><div class="progress-bar-fill" id="progressFill"></div></div>
 
     <div class="picked-range">
       <label for="fromDate">From:</label>
       <input type="date" id="fromDate" />
       <label for="toDate" style="margin-left: 20px;">To:</label>
       <input type="date" id="toDate" />
-      <button onclick="fetchAndDisplay()">Load Data</button>
+      <button id="loadBtn" onclick="fetchAndDisplay()">Load Data</button>
     </div>
 
     <!-- User Usage Table -->
-    <div class="table-title">User Usage Table</div>
-    <table id="user-usage-table" aria-label="User usage data">
-      <thead>
-        <tr>
-          <th onclick="sortTable('user', 0)">User</th>
-          <th onclick="sortTable('user', 1)">Model</th>
-          <th onclick="sortTable('user', 2)">Provider</th>
-          <th onclick="sortTable('user', 3)">Count</th>
-          <th onclick="sortTable('user', 4)">Prompt Tokens</th>
-          <th onclick="sortTable('user', 5)">Completion Tokens</th>
-          <th onclick="sortTable('user', 6)">Total Tokens</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td colspan="7"><i>No data</i></td></tr>
-      </tbody>
-    </table>
+    <div class="table-title">User Usage Table <span class="row-count" id="userRowCount"></span></div>
+    <div class="table-container">
+      <table id="user-usage-table" aria-label="User usage data">
+        <thead>
+          <tr>
+            <th data-col="0" onclick="sortTable('user', 0)">User</th>
+            <th data-col="1" onclick="sortTable('user', 1)">Model</th>
+            <th data-col="2" onclick="sortTable('user', 2)">Provider</th>
+            <th data-col="3" onclick="sortTable('user', 3)">Count</th>
+            <th data-col="4" onclick="sortTable('user', 4)">Prompt Tokens</th>
+            <th data-col="5" onclick="sortTable('user', 5)">Completion Tokens</th>
+            <th data-col="6" onclick="sortTable('user', 6)">Total Tokens</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="7"><i>No data</i></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination" id="userPagination" style="display:none;">
+      <button onclick="goToPage('user', 1)">⏮</button>
+      <button onclick="goToPage('user', pagination.user.current - 1)">◀</button>
+      <span>Page <input type="number" id="userPageInput" min="1" style="width:45px;text-align:center;" onchange="goToPage('user', parseInt(this.value))"> of <span id="userTotalPages">1</span></span>
+      <button onclick="goToPage('user', pagination.user.current + 1)">▶</button>
+      <button onclick="goToPage('user', pagination.user.total)">⏭</button>
+      <select onchange="changePageSize('user', parseInt(this.value))">
+        <option value="50">50</option>
+        <option value="100" selected>100</option>
+        <option value="250">250</option>
+        <option value="0">All</option>
+      </select>
+    </div>
 
     <!-- Model Usage Table -->
-    <div class="table-title">Model Usage Table</div>
-    <table id="model-usage-table" aria-label="Model usage data">
-      <thead>
-        <tr>
-          <th onclick="sortTable('model', 0)">Model</th>
-          <th onclick="sortTable('model', 1)">Count</th>
-          <th onclick="sortTable('model', 2)">Prompt Tokens</th>
-          <th onclick="sortTable('model', 3)">Completion Tokens</th>
-          <th onclick="sortTable('model', 4)">Total Tokens</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td colspan="5"><i>No data</i></td></tr>
-      </tbody>
-    </table>
+    <div class="table-title">Model Usage Table <span class="row-count" id="modelRowCount"></span></div>
+    <div class="table-container">
+      <table id="model-usage-table" aria-label="Model usage data">
+        <thead>
+          <tr>
+            <th data-col="0" onclick="sortTable('model', 0)">Model</th>
+            <th data-col="1" onclick="sortTable('model', 1)">Count</th>
+            <th data-col="2" onclick="sortTable('model', 2)">Prompt Tokens</th>
+            <th data-col="3" onclick="sortTable('model', 3)">Completion Tokens</th>
+            <th data-col="4" onclick="sortTable('model', 4)">Total Tokens</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="5"><i>No data</i></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination" id="modelPagination" style="display:none;">
+      <button onclick="goToPage('model', 1)">⏮</button>
+      <button onclick="goToPage('model', pagination.model.current - 1)">◀</button>
+      <span>Page <input type="number" id="modelPageInput" min="1" style="width:45px;text-align:center;" onchange="goToPage('model', parseInt(this.value))"> of <span id="modelTotalPages">1</span></span>
+      <button onclick="goToPage('model', pagination.model.current + 1)">▶</button>
+      <button onclick="goToPage('model', pagination.model.total)">⏭</button>
+      <select onchange="changePageSize('model', parseInt(this.value))">
+        <option value="50">50</option>
+        <option value="100" selected>100</option>
+        <option value="250">250</option>
+        <option value="0">All</option>
+      </select>
+    </div>
 
     <!-- Provider Usage Table -->
-    <div class="table-title">Provider Usage Table</div>
-    <table id="provider-usage-table" aria-label="Provider usage data">
-      <thead>
-        <tr>
-          <th onclick="sortTable('provider', 0)">Provider</th>
-          <th onclick="sortTable('provider', 1)">Count</th>
-          <th onclick="sortTable('provider', 2)">Prompt Tokens</th>
-          <th onclick="sortTable('provider', 3)">Completion Tokens</th>
-          <th onclick="sortTable('provider', 4)">Total Tokens</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td colspan="5"><i>No data</i></td></tr>
-      </tbody>
-    </table>
+    <div class="table-title">Provider Usage Table <span class="row-count" id="providerRowCount"></span></div>
+    <div class="table-container">
+      <table id="provider-usage-table" aria-label="Provider usage data">
+        <thead>
+          <tr>
+            <th data-col="0" onclick="sortTable('provider', 0)">Provider</th>
+            <th data-col="1" onclick="sortTable('provider', 1)">Count</th>
+            <th data-col="2" onclick="sortTable('provider', 2)">Prompt Tokens</th>
+            <th data-col="3" onclick="sortTable('provider', 3)">Completion Tokens</th>
+            <th data-col="4" onclick="sortTable('provider', 4)">Total Tokens</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="5"><i>No data</i></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination" id="providerPagination" style="display:none;">
+      <button onclick="goToPage('provider', 1)">⏮</button>
+      <button onclick="goToPage('provider', pagination.provider.current - 1)">◀</button>
+      <span>Page <input type="number" id="providerPageInput" min="1" style="width:45px;text-align:center;" onchange="goToPage('provider', parseInt(this.value))"> of <span id="providerTotalPages">1</span></span>
+      <button onclick="goToPage('provider', pagination.provider.current + 1)">▶</button>
+      <button onclick="goToPage('provider', pagination.provider.total)">⏭</button>
+      <select onchange="changePageSize('provider', parseInt(this.value))">
+        <option value="50">50</option>
+        <option value="100" selected>100</option>
+        <option value="250">250</option>
+        <option value="0">All</option>
+      </select>
+    </div>
   </div>
 
 <script>
-  // Store last fetched and summarized data per table for sorting
-  const lastData = {
+  // Store full data for each table (for sorting across all pages)
+  const fullData = {
     user: [],
     model: [],
     provider: []
@@ -188,6 +286,23 @@
     model: [1, 1, 1, 1, 1],
     provider: [1, 1, 1, 1, 1]
   };
+
+  // Current sort column per table
+  const currentSortCol = {
+    user: -1,
+    model: -1,
+    provider: -1
+  };
+
+  // Pagination state
+  const pagination = {
+    user: { current: 1, total: 1, size: 100 },
+    model: { current: 1, total: 1, size: 100 },
+    provider: { current: 1, total: 1, size: 100 }
+  };
+
+  // Batch size for parallel fetches
+  const FETCH_BATCH_SIZE = 5;
 
   function formatDate(d) {
     let m = '' + (d.getMonth() + 1);
@@ -209,12 +324,12 @@
     return arr;
   }
 
-function get_total_tokens(row) {
+  function get_total_tokens(row) {
     if (row.model && row.model.toLowerCase().includes("flux")) {
-        return row.completion_tokens || 0;
+      return row.completion_tokens || 0;
     }
-    return (row.total_tokens || 0)
-}
+    return (row.total_tokens || 0);
+  }
 
   async function fetchUsageForDate(date) {
     let url = `${framework.backendUrl}/backend-api/v2/usage/${date}`;
@@ -228,17 +343,12 @@ function get_total_tokens(row) {
         try {
           if (!l.trim() || l.startsWith("Url:")) continue;
           let row = JSON.parse(l);
-
-          // Normalize tokens to numbers with fallback zero
           row.prompt_tokens = Number(row.prompt_tokens) || 0;
           row.completion_tokens = Number(row.completion_tokens) || 0;
           row.total_tokens = get_total_tokens(row);
-
           row.date = date;
           arr.push(row);
-        } catch (e) {
-          /* ignore parse errors */
-        }
+        } catch (e) {}
       }
       return { data: arr, url };
     } catch (e) {
@@ -246,9 +356,26 @@ function get_total_tokens(row) {
     }
   }
 
-  // Summarize usage by user-model-provider keys with token sums and counts
+  // Fetch dates in parallel batches
+  async function fetchDatesInBatches(dates, onProgress) {
+    let allData = [];
+    let completed = 0;
+    
+    for (let i = 0; i < dates.length; i += FETCH_BATCH_SIZE) {
+      const batch = dates.slice(i, i + FETCH_BATCH_SIZE);
+      const results = await Promise.all(batch.map(date => fetchUsageForDate(date)));
+      
+      for (const result of results) {
+        allData = allData.concat(result.data);
+        completed++;
+        if (onProgress) onProgress(completed, dates.length);
+      }
+    }
+    
+    return allData;
+  }
+
   function summarizeUsageByUserModelProvider(data) {
-    // key = `${user}|${model}|${provider}`
     const summary = new Map();
     for (let row of data) {
       let user = row.user && row.user.trim() ? row.user : "<none>";
@@ -258,9 +385,7 @@ function get_total_tokens(row) {
 
       if (!summary.has(key))
         summary.set(key, {
-          user,
-          model,
-          provider,
+          user, model, provider,
           count: 0,
           prompt_tokens: 0,
           completion_tokens: 0,
@@ -275,9 +400,7 @@ function get_total_tokens(row) {
     return Array.from(summary.values());
   }
 
-  // Summarize usage by model 
   function summarizeUsageByModel(data) {
-    // key = model
     const summary = new Map();
     for (let row of data) {
       let model = row.model || "<none>";
@@ -300,7 +423,6 @@ function get_total_tokens(row) {
 
   // Summarize usage by provider
   function summarizeUsageByProvider(data) {
-    // key = provider
     const summary = new Map();
     for (let row of data) {
       let provider = row.provider || "<none>";
@@ -321,155 +443,246 @@ function get_total_tokens(row) {
     return Array.from(summary.values());
   }
 
-  // Render helpers
+  function escapeHtml(text) {
+    if (text === "<none>") return "<span style='color:#aaa;'>&lt;none&gt;</span>";
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
 
-  function renderUserTable(data) {
+  function renderUserTable(data, page = 1) {
     const tbody = document.querySelector("#user-usage-table tbody");
-    tbody.innerHTML = "";
+    const rowCountEl = document.getElementById("userRowCount");
+    const paginationEl = document.getElementById("userPagination");
+    const pageInput = document.getElementById("userPageInput");
+    const totalPagesEl = document.getElementById("userTotalPages");
+    
+    rowCountEl.textContent = `(${data.length.toLocaleString()} rows)`;
+    
     if (!data.length) {
       tbody.innerHTML = "<tr><td colspan='7'><i>No data</i></td></tr>";
+      paginationEl.style.display = 'none';
       return;
     }
-    for (const rec of data) {
-      let uname = rec.user === "<none>" ? "<span style='color:#aaa;'>&lt;none&gt;</span>" : rec.user;
-      let modelName = rec.model === "<none>" ? "<span style='color:#aaa;'>&lt;none&gt;</span>" : rec.model;
-      let providerName = rec.provider === "<none>" ? "<span style='color:#aaa;'>&lt;none&gt;</span>" : rec.provider;
-
-      tbody.innerHTML += `<tr>
-        <td title="${uname.replace(/"/g,'&quot;')}">${uname}</td>
-        <td title="${modelName.replace(/"/g,'&quot;')}">${modelName}</td>
-        <td title="${providerName.replace(/"/g,'&quot;')}">${providerName}</td>
+    
+    let displayData;
+    const p = pagination.user;
+    if (p.size === 0) {
+      displayData = data;
+      p.total = 1;
+      p.current = 1;
+      paginationEl.style.display = 'none';
+    } else {
+      p.total = Math.ceil(data.length / p.size);
+      p.current = Math.max(1, Math.min(page, p.total));
+      const start = (p.current - 1) * p.size;
+      displayData = data.slice(start, start + p.size);
+      paginationEl.style.display = 'flex';
+      pageInput.value = p.current;
+      totalPagesEl.textContent = p.total;
+    }
+    
+    const fragment = document.createDocumentFragment();
+    for (const rec of displayData) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td title="${rec.user}">${escapeHtml(rec.user)}</td>
+        <td title="${rec.model}">${escapeHtml(rec.model)}</td>
+        <td title="${rec.provider}">${escapeHtml(rec.provider)}</td>
         <td class="num">${rec.count.toLocaleString()}</td>
         <td class="num">${rec.prompt_tokens.toLocaleString()}</td>
         <td class="num">${rec.completion_tokens.toLocaleString()}</td>
         <td class="num">${rec.total_tokens.toLocaleString()}</td>
-      </tr>`;
+      `;
+      fragment.appendChild(tr);
     }
+    tbody.innerHTML = '';
+    tbody.appendChild(fragment);
   }
 
-  function renderModelTable(data) {
+  function renderModelTable(data, page = 1) {
     const tbody = document.querySelector("#model-usage-table tbody");
-    tbody.innerHTML = "";
+    const rowCountEl = document.getElementById("modelRowCount");
+    const paginationEl = document.getElementById("modelPagination");
+    const pageInput = document.getElementById("modelPageInput");
+    const totalPagesEl = document.getElementById("modelTotalPages");
+    
+    rowCountEl.textContent = `(${data.length.toLocaleString()} rows)`;
+    
     if (!data.length) {
       tbody.innerHTML = "<tr><td colspan='5'><i>No data</i></td></tr>";
+      paginationEl.style.display = 'none';
       return;
     }
-    for (const rec of data) {
-      let modelName = rec.model === "<none>" ? "<span style='color:#aaa;'>&lt;none&gt;</span>" : rec.model;
-      tbody.innerHTML += `<tr>
-        <td title="${modelName.replace(/"/g,'&quot;')}">${modelName}</td>
+    
+    let displayData;
+    const p = pagination.model;
+    if (p.size === 0) {
+      displayData = data;
+      p.total = 1;
+      p.current = 1;
+      paginationEl.style.display = 'none';
+    } else {
+      p.total = Math.ceil(data.length / p.size);
+      p.current = Math.max(1, Math.min(page, p.total));
+      const start = (p.current - 1) * p.size;
+      displayData = data.slice(start, start + p.size);
+      paginationEl.style.display = 'flex';
+      pageInput.value = p.current;
+      totalPagesEl.textContent = p.total;
+    }
+    
+    const fragment = document.createDocumentFragment();
+    for (const rec of displayData) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td title="${rec.model}">${escapeHtml(rec.model)}</td>
         <td class="num">${rec.count.toLocaleString()}</td>
         <td class="num">${rec.prompt_tokens.toLocaleString()}</td>
         <td class="num">${rec.completion_tokens.toLocaleString()}</td>
         <td class="num">${get_total_tokens(rec).toLocaleString()}</td>
-      </tr>`;
+      `;
+      fragment.appendChild(tr);
     }
+    tbody.innerHTML = '';
+    tbody.appendChild(fragment);
   }
 
-  function renderProviderTable(data) {
+  function renderProviderTable(data, page = 1) {
     const tbody = document.querySelector("#provider-usage-table tbody");
-    tbody.innerHTML = "";
+    const rowCountEl = document.getElementById("providerRowCount");
+    const paginationEl = document.getElementById("providerPagination");
+    const pageInput = document.getElementById("providerPageInput");
+    const totalPagesEl = document.getElementById("providerTotalPages");
+    
+    rowCountEl.textContent = `(${data.length.toLocaleString()} rows)`;
+    
     if (!data.length) {
       tbody.innerHTML = "<tr><td colspan='5'><i>No data</i></td></tr>";
+      paginationEl.style.display = 'none';
       return;
     }
-    for (const rec of data) {
-      let providerName = rec.provider === "<none>" ? "<span style='color:#aaa;'>&lt;none&gt;</span>" : rec.provider;
-      tbody.innerHTML += `<tr>
-        <td title="${providerName.replace(/"/g,'&quot;')}">${providerName}</td>
+    
+    let displayData;
+    const p = pagination.provider;
+    if (p.size === 0) {
+      displayData = data;
+      p.total = 1;
+      p.current = 1;
+      paginationEl.style.display = 'none';
+    } else {
+      p.total = Math.ceil(data.length / p.size);
+      p.current = Math.max(1, Math.min(page, p.total));
+      const start = (p.current - 1) * p.size;
+      displayData = data.slice(start, start + p.size);
+      paginationEl.style.display = 'flex';
+      pageInput.value = p.current;
+      totalPagesEl.textContent = p.total;
+    }
+    
+    const fragment = document.createDocumentFragment();
+    for (const rec of displayData) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td title="${rec.provider}">${escapeHtml(rec.provider)}</td>
         <td class="num">${rec.count.toLocaleString()}</td>
         <td class="num">${rec.prompt_tokens.toLocaleString()}</td>
         <td class="num">${rec.completion_tokens.toLocaleString()}</td>
         <td class="num">${get_total_tokens(rec).toLocaleString()}</td>
-      </tr>`;
+      `;
+      fragment.appendChild(tr);
+    }
+    tbody.innerHTML = '';
+    tbody.appendChild(fragment);
+  }
+
+  function goToPage(tableType, page) {
+    const p = pagination[tableType];
+    if (page < 1 || page > p.total) return;
+    p.current = page;
+    const renderFn = tableType === 'user' ? renderUserTable : 
+                     tableType === 'model' ? renderModelTable : renderProviderTable;
+    renderFn(fullData[tableType], page);
+  }
+
+  function changePageSize(tableType, size) {
+    pagination[tableType].size = size;
+    pagination[tableType].current = 1;
+    const renderFn = tableType === 'user' ? renderUserTable : 
+                     tableType === 'model' ? renderModelTable : renderProviderTable;
+    renderFn(fullData[tableType], 1);
+  }
+
+  function updateSortIndicators(tableType, col) {
+    const table = document.getElementById(`${tableType}-usage-table`);
+    const headers = table.querySelectorAll('th');
+    headers.forEach(th => {
+      th.classList.remove('sorted-asc', 'sorted-desc');
+    });
+    if (col >= 0 && col < headers.length) {
+      headers[col].classList.add(sortDirections[tableType][col] === 1 ? 'sorted-asc' : 'sorted-desc');
     }
   }
 
-  // Sort tables by col - generic for each table type
   function sortTable(tableType, col) {
-    if (!lastData[tableType] || !lastData[tableType].length) return;
-    sortDirections[tableType][col] = -sortDirections[tableType][col]; // toggle
-
-    let sorted = [...lastData[tableType]];
-    const dir = sortDirections[tableType][col];
-
-    switch (tableType) {
-      case "user":
-        switch (col) {
-          case 0: // User
-            sorted.sort((a, b) => a.user.localeCompare(b.user) * dir);
-            break;
-          case 1: // Model
-            sorted.sort((a, b) => a.model.localeCompare(b.model) * dir);
-            break;
-          case 2: // Provider
-            sorted.sort((a, b) => a.provider.localeCompare(b.provider) * dir);
-            break;
-          case 3: // Count
-            sorted.sort((a, b) => (a.count - b.count) * dir);
-            break;
-          case 4: // Prompt tokens
-            sorted.sort((a, b) => (a.prompt_tokens - b.prompt_tokens) * dir);
-            break;
-          case 5: // Completion tokens
-            sorted.sort((a, b) => (a.completion_tokens - b.completion_tokens) * dir);
-            break;
-          case 6: // Total tokens
-            sorted.sort((a, b) => (a.total_tokens - b.total_tokens) * dir);
-            break;
-        }
-        renderUserTable(sorted);
-        lastData.user = sorted;
-        break;
-
-      case "model":
-        switch (col) {
-          case 0: // Model
-            sorted.sort((a, b) => a.model.localeCompare(b.model) * dir);
-            break;
-          case 1: // Count
-            sorted.sort((a, b) => (a.count - b.count) * dir);
-            break;
-          case 2: // Prompt tokens
-            sorted.sort((a, b) => (a.prompt_tokens - b.prompt_tokens) * dir);
-            break;
-          case 3: // Completion tokens
-            sorted.sort((a, b) => (a.completion_tokens - b.completion_tokens) * dir);
-            break;
-          case 4: // Total tokens
-            sorted.sort((a, b) => (a.total_tokens - b.total_tokens) * dir);
-            break;
-        }
-        renderModelTable(sorted);
-        lastData.model = sorted;
-        break;
-
-      case "provider":
-        switch (col) {
-          case 0: // Provider
-            sorted.sort((a, b) => a.provider.localeCompare(b.provider) * dir);
-            break;
-          case 1: // Count
-            sorted.sort((a, b) => (a.count - b.count) * dir);
-            break;
-          case 2: // Prompt tokens
-            sorted.sort((a, b) => (a.prompt_tokens - b.prompt_tokens) * dir);
-            break;
-          case 3: // Completion tokens
-            sorted.sort((a, b) => (a.completion_tokens - b.completion_tokens) * dir);
-            break;
-          case 4: // Total tokens
-            sorted.sort((a, b) => (a.total_tokens - b.total_tokens) * dir);
-            break;
-        }
-        renderProviderTable(sorted);
-        lastData.provider = sorted;
-        break;
+    if (!fullData[tableType] || !fullData[tableType].length) return;
+    
+    if (currentSortCol[tableType] === col) {
+      sortDirections[tableType][col] = -sortDirections[tableType][col];
+    } else {
+      sortDirections[tableType][col] = 1;
     }
+    currentSortCol[tableType] = col;
+
+    const dir = sortDirections[tableType][col];
+    const data = fullData[tableType];
+
+    const sortFns = {
+      user: [
+        (a, b) => a.user.localeCompare(b.user),
+        (a, b) => a.model.localeCompare(b.model),
+        (a, b) => a.provider.localeCompare(b.provider),
+        (a, b) => a.count - b.count,
+        (a, b) => a.prompt_tokens - b.prompt_tokens,
+        (a, b) => a.completion_tokens - b.completion_tokens,
+        (a, b) => a.total_tokens - b.total_tokens
+      ],
+      model: [
+        (a, b) => a.model.localeCompare(b.model),
+        (a, b) => a.count - b.count,
+        (a, b) => a.prompt_tokens - b.prompt_tokens,
+        (a, b) => a.completion_tokens - b.completion_tokens,
+        (a, b) => a.total_tokens - b.total_tokens
+      ],
+      provider: [
+        (a, b) => a.provider.localeCompare(b.provider),
+        (a, b) => a.count - b.count,
+        (a, b) => a.prompt_tokens - b.prompt_tokens,
+        (a, b) => a.completion_tokens - b.completion_tokens,
+        (a, b) => a.total_tokens - b.total_tokens
+      ]
+    };
+
+    data.sort((a, b) => sortFns[tableType][col](a, b) * dir);
+    updateSortIndicators(tableType, col);
+
+    const renderFn = tableType === 'user' ? renderUserTable : 
+                     tableType === 'model' ? renderModelTable : renderProviderTable;
+    renderFn(data, 1);
+  }
+
+  function showProgress(show) {
+    document.getElementById('progressBar').style.display = show ? 'block' : 'none';
+  }
+
+  function updateProgress(completed, total) {
+    const pct = Math.round((completed / total) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
   }
 
   async function fetchAndDisplay() {
     const status = document.getElementById("status");
+    const loadBtn = document.getElementById("loadBtn");
     let from = document.getElementById("fromDate").value;
     let to = document.getElementById("toDate").value;
 
@@ -482,40 +695,54 @@ function get_total_tokens(row) {
 
     let dates = from && to ? listDates(from, to) : [from || to];
 
-    status.innerText = "Fetching data...";
+    loadBtn.disabled = true;
+    showProgress(true);
+    updateProgress(0, 1);
+    status.innerText = `Fetching data for ${dates.length} day(s)...`;
 
-    let allData = [];
-    for (let date of dates) {
-      let { data } = await fetchUsageForDate(date);
-      allData = allData.concat(data);
+    try {
+      const allData = await fetchDatesInBatches(dates, (completed, total) => {
+        updateProgress(completed, total);
+        status.innerText = `Fetching data... (${completed}/${total} days)`;
+      });
+
+      if (!allData.length) {
+        status.innerText = "No usage data found for the selected date(s).";
+        clearAllTables();
+        return;
+      }
+
+      status.innerText = "Processing data...";
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      fullData.user = summarizeUsageByUserModelProvider(allData);
+      fullData.model = summarizeUsageByModel(allData);
+      fullData.provider = summarizeUsageByProvider(allData);
+
+      // Reset sort state
+      currentSortCol.user = currentSortCol.model = currentSortCol.provider = -1;
+
+      status.innerText = `Loaded ${allData.length.toLocaleString()} records`;
+      renderUserTable(fullData.user, 1);
+      renderModelTable(fullData.model, 1);
+      renderProviderTable(fullData.provider, 1);
+    } catch (e) {
+      status.innerText = "Error loading data: " + e.message;
+    } finally {
+      loadBtn.disabled = false;
+      showProgress(false);
     }
-
-    if (!allData.length) {
-      status.innerText = "No usage data found for the selected date(s).";
-      clearAllTables();
-      return;
-    }
-
-    status.innerText = "";
-
-    // Summarize all data for each table
-    lastData.user = summarizeUsageByUserModelProvider(allData);
-    lastData.model = summarizeUsageByModel(allData);
-    lastData.provider = summarizeUsageByProvider(allData);
-
-    // Render all tables (default sort order)
-    renderUserTable(lastData.user);
-    renderModelTable(lastData.model);
-    renderProviderTable(lastData.provider);
   }
 
   function clearAllTables() {
+    fullData.user = [];
+    fullData.model = [];
+    fullData.provider = [];
     renderUserTable([]);
     renderModelTable([]);
     renderProviderTable([]);
   }
 
-  // Default dates: last 7 days inclusive
   window.onload = function () {
     const today = new Date();
     const todayStr = today.toISOString().slice(0, 10);
@@ -525,7 +752,6 @@ function get_total_tokens(row) {
     document.getElementById("toDate").value = todayStr;
     fetchAndDisplay();
   };
-
 </script>
 </body>
 </html>

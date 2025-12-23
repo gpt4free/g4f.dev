@@ -1441,6 +1441,9 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     messages,
                 });
                 message_storage[message_id] = response.choices[0].message.content;
+                if (response.usage) {
+                    add_message_chunk({type: "usage", usage: response.usage}, message_id);
+                }
                 if (response.choices && response.choices[0].message.audio) {
                     const audio = response.choices[0].message.audio;
                     message_storage[message_id] = message_storage[message_id] || `<audio controls></audio>\n\n\n${audio.transcript}`;

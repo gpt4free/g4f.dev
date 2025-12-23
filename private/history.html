@@ -12,14 +12,25 @@
         label { font-weight: bold; margin-right: 5px; }
         input[type="date"] { padding: 4px 8px; font-size: 14px; }
         button { padding: 6px 14px; font-size: 14px; margin-left: 10px; cursor: pointer; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
         #status { color: #666; text-align: center; font-size: 13px; margin-bottom: 15px;}
+        .progress-bar { width: 100%; height: 4px; background: #e0e0e0; border-radius: 2px; margin: 10px 0; display: none; }
+        .progress-bar-fill { height: 100%; background: #4a90d9; border-radius: 2px; transition: width 0.2s; width: 0%; }
         table { width:100%; border-collapse:collapse; margin-top: 20px;}
         th, td { border:1px solid #e3e3e3; padding:8px 12px; text-align: center; }
-        th { background: #f3f6fc; cursor: pointer; user-select: none; }
+        th { background: #f3f6fc; cursor: pointer; user-select: none; position: sticky; top: 0; }
+        th.sorted-asc::after { content: ' ▲'; font-size: 10px; }
+        th.sorted-desc::after { content: ' ▼'; font-size: 10px; }
         tr:nth-child(even) { background: #fafbff;}
         tr:hover { background: #eaf4ff;}
         .num { font-family: monospace; }
         .table-title { margin-top: 30px; font-size: 19px; color: #377; text-align:center; }
+        .table-container { max-height: 70vh; overflow-y: auto; }
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .pagination button { padding: 6px 12px; }
+        .pagination select { padding: 4px 8px; }
+        .pagination span { color: #555; }
+        .summary-row { background: #e8f4e8 !important; font-weight: bold; }
         @media (max-width:800px) {
             #dashboard { padding: 4px; font-size:13px; }
             table, th, td { font-size: 12px; padding: 5px 4px; }
@@ -32,33 +43,58 @@
 <div id="dashboard">
     <h1>Usage Statistics</h1>
     <div id="status">Loading...</div>
+    <div class="progress-bar" id="progressBar"><div class="progress-bar-fill" id="progressFill"></div></div>
     <div class="picked-range">
         <label for="fromDate">From:</label>
         <input type="date" id="fromDate" />
         <label for="toDate" style="margin-left:20px;">To:</label>
         <input type="date" id="toDate" />
-        <button onclick="fetchAndDisplay()">Load Data</button>
+        <button id="loadBtn" onclick="fetchAndDisplay()">Load Data</button>
     </div>
-    <div class="table-title">User Usage Table</div>
-    <table id="usage-table" aria-label="User, Model, Provider, Prompt Tokens, Completion Tokens, Total Tokens usage data">
-        <thead>
-            <tr>
-                <th onclick="sortTable(0)" title="Sort by user">User</th>
-                <th onclick="sortTable(1)" title="Sort by model">Model</th>
-                <th onclick="sortTable(2)" title="Sort by provider">Provider</th>
-                <th onclick="sortTable(3)" title="Sort by prompt tokens">Prompt Tokens</th>
-                <th onclick="sortTable(4)" title="Sort by completion tokens">Completion Tokens</th>
-                <th onclick="sortTable(5)" title="Sort by total tokens">Total Tokens</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr><td colspan="6"><i>No data</i></td></tr>
-        </tbody>
-    </table>
+    <div class="table-title">User Usage Table (<span id="rowCount">0</span> rows)</div>
+    <div class="table-container">
+        <table id="usage-table" aria-label="User, Model, Provider, Prompt Tokens, Completion Tokens, Total Tokens usage data">
+            <thead>
+                <tr>
+                    <th data-col="0" onclick="sortTable(0)" title="Sort by user">User</th>
+                    <th data-col="1" onclick="sortTable(1)" title="Sort by model">Model</th>
+                    <th data-col="2" onclick="sortTable(2)" title="Sort by provider">Provider</th>
+                    <th data-col="3" onclick="sortTable(3)" title="Sort by prompt tokens">Prompt Tokens</th>
+                    <th data-col="4" onclick="sortTable(4)" title="Sort by completion tokens">Completion Tokens</th>
+                    <th data-col="5" onclick="sortTable(5)" title="Sort by total tokens">Total Tokens</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="6"><i>No data</i></td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="pagination" id="pagination" style="display:none;">
+        <button onclick="goToPage(1)" title="First page">⏮</button>
+        <button onclick="goToPage(currentPage - 1)" title="Previous page">◀</button>
+        <span>Page <input type="number" id="pageInput" min="1" style="width:50px;text-align:center;" onchange="goToPage(parseInt(this.value))"> of <span id="totalPages">1</span></span>
+        <button onclick="goToPage(currentPage + 1)" title="Next page">▶</button>
+        <button onclick="goToPage(totalPages)" title="Last page">⏭</button>
+        <select id="pageSizeSelect" onchange="changePageSize(parseInt(this.value))">
+            <option value="50">50 per page</option>
+            <option value="100" selected>100 per page</option>
+            <option value="250">250 per page</option>
+            <option value="500">500 per page</option>
+            <option value="0">Show all</option>
+        </select>
+    </div>
 </div>
 <script>
 let lastData = [];
-let sortDirections = [1, 1, 1, 1, 1, 1]; // Ascending for each column
+let fullData = [];
+let sortDirections = [1, 1, 1, 1, 1, 1];
+let currentSortCol = -1;
+let currentPage = 1;
+let pageSize = 100;
+let totalPages = 1;
+
+// Batch size for parallel fetches (prevent too many simultaneous requests)
+const FETCH_BATCH_SIZE = 5;
 
 function formatDate(d) {
     let m = '' + (d.getMonth() + 1);
@@ -102,8 +138,26 @@ async function fetchUsageForDate(date) {
     }
 }
 
+// Fetch dates in parallel batches for better performance
+async function fetchDatesInBatches(dates, onProgress) {
+    let allData = [];
+    let completed = 0;
+    
+    for (let i = 0; i < dates.length; i += FETCH_BATCH_SIZE) {
+        const batch = dates.slice(i, i + FETCH_BATCH_SIZE);
+        const results = await Promise.all(batch.map(date => fetchUsageForDate(date)));
+        
+        for (const result of results) {
+            allData = allData.concat(result.data);
+            completed++;
+            if (onProgress) onProgress(completed, dates.length);
+        }
+    }
+    
+    return allData;
+}
+
 function summarizeUsage(data) {
-    // key = `${user}|${model}|${provider}`
     const summary = new Map();
     for (let row of data) {
         let user = row.user && row.user.trim() ? row.user : "<none>";
@@ -126,47 +180,131 @@ function summarizeUsage(data) {
     return Array.from(summary.values());
 }
 
-function renderTable(data) {
-    let tbody = document.querySelector('#usage-table tbody');
-    tbody.innerHTML = "";
+function escapeHtml(text) {
+    if (text === "<none>") return "<span style='color:#aaa;'>&lt;none&gt;</span>";
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function renderTable(data, page = 1) {
+    const tbody = document.querySelector('#usage-table tbody');
+    const rowCountEl = document.getElementById('rowCount');
+    const paginationEl = document.getElementById('pagination');
+    const pageInput = document.getElementById('pageInput');
+    const totalPagesEl = document.getElementById('totalPages');
+    
+    rowCountEl.textContent = data.length.toLocaleString();
+    
     if (!data.length) {
         tbody.innerHTML = "<tr><td colspan='6'><i>No data</i></td></tr>";
+        paginationEl.style.display = 'none';
         return;
     }
-    for (let rec of data) {
-        let uname = rec.user === "<none>" ? "<span style='color:#aaa;'>&lt;none&gt;</span>" : rec.user;
-        let modelName = rec.model === "<none>" ? "<span style='color:#aaa;'>&lt;none&gt;</span>" : rec.model;
-        let providerName = rec.provider === "<none>" ? "<span style='color:#aaa;'>&lt;none&gt;</span>" : rec.provider;
-
-        tbody.innerHTML += `<tr>
-            <td>${uname}</td>
-            <td>${modelName}</td>
-            <td>${providerName}</td>
+    
+    // Calculate pagination
+    let displayData;
+    if (pageSize === 0) {
+        // Show all
+        displayData = data;
+        totalPages = 1;
+        currentPage = 1;
+        paginationEl.style.display = 'none';
+    } else {
+        totalPages = Math.ceil(data.length / pageSize);
+        currentPage = Math.max(1, Math.min(page, totalPages));
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+        displayData = data.slice(start, end);
+        paginationEl.style.display = 'flex';
+        pageInput.value = currentPage;
+        totalPagesEl.textContent = totalPages;
+    }
+    
+    // Build HTML in one operation using DocumentFragment for better performance
+    const fragment = document.createDocumentFragment();
+    
+    for (const rec of displayData) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${escapeHtml(rec.user)}</td>
+            <td>${escapeHtml(rec.model)}</td>
+            <td>${escapeHtml(rec.provider)}</td>
             <td class="num">${rec.prompt_tokens.toLocaleString()}</td>
             <td class="num">${rec.completion_tokens.toLocaleString()}</td>
             <td class="num">${rec.total_tokens.toLocaleString()}</td>
-        </tr>`;
+        `;
+        fragment.appendChild(tr);
     }
-    lastData = data;
+    
+    // Clear and append in one operation
+    tbody.innerHTML = '';
+    tbody.appendChild(fragment);
+    
+    lastData = displayData;
+}
+
+function updateSortIndicators(col) {
+    const headers = document.querySelectorAll('#usage-table th');
+    headers.forEach(th => {
+        th.classList.remove('sorted-asc', 'sorted-desc');
+    });
+    if (col >= 0 && col < headers.length) {
+        headers[col].classList.add(sortDirections[col] === 1 ? 'sorted-asc' : 'sorted-desc');
+    }
 }
 
 function sortTable(col) {
-    if (!lastData.length) return;
-    sortDirections[col] = -sortDirections[col];
-    let sorted = [...lastData];
-    switch (col) {
-        case 0: sorted.sort((a, b) => a.user.localeCompare(b.user) * sortDirections[col]); break;
-        case 1: sorted.sort((a, b) => a.model.localeCompare(b.model) * sortDirections[col]); break;
-        case 2: sorted.sort((a, b) => a.provider.localeCompare(b.provider) * sortDirections[col]); break;
-        case 3: sorted.sort((a, b) => (a.prompt_tokens - b.prompt_tokens) * sortDirections[col]); break;
-        case 4: sorted.sort((a, b) => (a.completion_tokens - b.completion_tokens) * sortDirections[col]); break;
-        case 5: sorted.sort((a, b) => (a.total_tokens - b.total_tokens) * sortDirections[col]); break;
+    if (!fullData.length) return;
+    
+    // Toggle direction if same column, otherwise reset to ascending
+    if (currentSortCol === col) {
+        sortDirections[col] = -sortDirections[col];
+    } else {
+        sortDirections[col] = 1;
     }
-    renderTable(sorted);
+    currentSortCol = col;
+    
+    const sortFns = [
+        (a, b) => a.user.localeCompare(b.user),
+        (a, b) => a.model.localeCompare(b.model),
+        (a, b) => a.provider.localeCompare(b.provider),
+        (a, b) => a.prompt_tokens - b.prompt_tokens,
+        (a, b) => a.completion_tokens - b.completion_tokens,
+        (a, b) => a.total_tokens - b.total_tokens
+    ];
+    
+    const dir = sortDirections[col];
+    fullData.sort((a, b) => sortFns[col](a, b) * dir);
+    
+    updateSortIndicators(col);
+    renderTable(fullData, 1);
+}
+
+function goToPage(page) {
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    renderTable(fullData, currentPage);
+}
+
+function changePageSize(size) {
+    pageSize = size;
+    currentPage = 1;
+    renderTable(fullData, 1);
+}
+
+function showProgress(show) {
+    document.getElementById('progressBar').style.display = show ? 'block' : 'none';
+}
+
+function updateProgress(completed, total) {
+    const pct = Math.round((completed / total) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
 }
 
 async function fetchAndDisplay() {
     const status = document.getElementById("status");
+    const loadBtn = document.getElementById("loadBtn");
     let from = document.getElementById("fromDate").value;
     let to = document.getElementById("toDate").value;
 
@@ -178,23 +316,43 @@ async function fetchAndDisplay() {
     if (from && to && from > to) [from, to] = [to, from];
 
     let dates = from && to ? listDates(from, to) : [from || to];
-    status.innerText = "Fetching data...";
+    
+    // Disable button and show progress
+    loadBtn.disabled = true;
+    showProgress(true);
+    updateProgress(0, 1);
+    status.innerText = `Fetching data for ${dates.length} day(s)...`;
 
-    let allData = [];
-    for (let date of dates) {
-        let { data } = await fetchUsageForDate(date);
-        allData = allData.concat(data);
+    try {
+        const allData = await fetchDatesInBatches(dates, (completed, total) => {
+            updateProgress(completed, total);
+            status.innerText = `Fetching data... (${completed}/${total} days)`;
+        });
+
+        if (!allData.length) {
+            status.innerText = "No usage data found for the selected date(s).";
+            renderTable([]);
+            fullData = [];
+            return;
+        }
+
+        status.innerText = "Processing data...";
+        
+        // Use requestAnimationFrame to prevent UI blocking
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        
+        const summarized = summarizeUsage(allData);
+        fullData = summarized;
+        currentSortCol = -1;
+        
+        status.innerText = `Loaded ${allData.length.toLocaleString()} records, ${summarized.length.toLocaleString()} unique combinations`;
+        renderTable(summarized, 1);
+    } catch (e) {
+        status.innerText = "Error loading data: " + e.message;
+    } finally {
+        loadBtn.disabled = false;
+        showProgress(false);
     }
-
-    if (!allData.length) {
-        status.innerText = "No usage data found for the selected date(s).";
-        renderTable([]);
-        return;
-    }
-
-    status.innerText = "";
-    let summarized = summarizeUsage(allData);
-    renderTable(summarized);
 }
 
 window.onload = function () {

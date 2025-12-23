@@ -9,34 +9,47 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 30px; background: #f8f8fb; }
         h1 { text-align: center; color: #444; }
-        #dashboard { max-width: 900px; margin: 30px auto; padding: 24px; background: #fff; border-radius: 10px; box-shadow: 0 2px 12px #bbb3; }
+        #dashboard { max-width: 1000px; margin: 30px auto; padding: 24px; background: #fff; border-radius: 10px; box-shadow: 0 2px 12px #bbb3; }
         .statrow { display: flex; justify-content: space-between; margin-bottom: 10px; }
         .stat { background: #f3f5ff; border-radius: 6px; padding: 10px 18px; margin: 8px; flex: 1; text-align: center; }
-        .picked-range { margin-bottom: 20px; }
+        .picked-range { margin-bottom: 20px; text-align: center; }
         label { font-weight: bold;}
+        button { padding: 6px 14px; font-size: 14px; margin-left: 10px; cursor: pointer; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
         #chart { background: #fff; }
         #status { color: #666; text-align: center; font-size: 13px; margin-bottom: 15px;}
-        #users-table { width:100%; border-collapse:collapse; margin: 27px 0 0 0; }
+        .progress-bar { width: 100%; height: 4px; background: #e0e0e0; border-radius: 2px; margin: 10px 0; display: none; }
+        .progress-bar-fill { height: 100%; background: #4a90d9; border-radius: 2px; transition: width 0.2s; width: 0%; }
+        .table-container { max-height: 50vh; overflow-y: auto; margin-top: 10px; }
+        #users-table { width:100%; border-collapse:collapse; }
         #users-table th, #users-table td { border:1px solid #e3e3e3; padding:7px 12px; text-align:center; }
-        #users-table th { background: #f3f6fc; cursor: pointer;}
+        #users-table th { background: #f3f6fc; cursor: pointer; position: sticky; top: 0; z-index: 1; }
+        #users-table th.sorted-asc::after { content: ' ▲'; font-size: 10px; }
+        #users-table th.sorted-desc::after { content: ' ▼'; font-size: 10px; }
         #users-table tr:nth-child(even) { background: #fafbff;}
         #users-table tr:hover {background:#eaf4ff;}
         #users-table .num { font-family: monospace;}
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+        .pagination button { padding: 4px 10px; font-size: 12px; }
+        .pagination select { padding: 3px 6px; font-size: 12px; }
+        .pagination span { color: #555; font-size: 12px; }
         @media (max-width:600px) { #dashboard {padding:10px;} .statrow{flex-direction:column;} .stat{margin-bottom:7px;}
         #users-table td, #users-table th { font-size:12px; padding:4px 5px;} }
-        .table-title { margin-top:30px;font-size:19px; color:#377;}
+        .table-title { margin-top:30px;font-size:19px; color:#377; text-align: center; }
+        .row-count { font-size: 14px; font-weight: normal; color: #666; }
     </style>
 </head>
 <body>
 <div id="dashboard">
     <h1>Usage Statistics</h1>
     <div id="status"></div>
+    <div class="progress-bar" id="progressBar"><div class="progress-bar-fill" id="progressFill"></div></div>
     <div class="picked-range">
         <label>Date or Range: </label>
         <input type="date" id="fromDate">
         to
         <input type="date" id="toDate">
-        <button onclick="fetchAndDisplay()">Load Data</button>
+        <button id="loadBtn" onclick="fetchAndDisplay()">Load Data</button>
     </div>
     <div class="statrow">
         <div class="stat">
@@ -58,23 +71,45 @@
       Source: <span id="urlLabel"></span>
     </div>
 
-    <div class="table-title">User Usage Table</div>
-    <table id="users-table">
-        <thead>
-            <tr>
-                <th onclick="sortTable(0)">User</th>
-                <th onclick="sortTable(1)">Completions</th>
-                <th onclick="sortTable(2)">Total Tokens</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr><td colspan="3"><i>No data</i></td></tr>
-        </tbody>
-    </table>
+    <div class="table-title">User Usage Table <span class="row-count" id="rowCount"></span></div>
+    <div class="table-container">
+        <table id="users-table">
+            <thead>
+                <tr>
+                    <th data-col="0" onclick="sortTable(0)">User</th>
+                    <th data-col="1" onclick="sortTable(1)">Completions</th>
+                    <th data-col="2" onclick="sortTable(2)">Total Tokens</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="3"><i>No data</i></td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="pagination" id="pagination" style="display:none;">
+        <button onclick="goToPage(1)">⏮</button>
+        <button onclick="goToPage(currentPage - 1)">◀</button>
+        <span>Page <input type="number" id="pageInput" min="1" style="width:45px;text-align:center;" onchange="goToPage(parseInt(this.value))"> of <span id="totalPages">1</span></span>
+        <button onclick="goToPage(currentPage + 1)">▶</button>
+        <button onclick="goToPage(totalPages)">⏭</button>
+        <select id="pageSizeSelect" onchange="changePageSize(parseInt(this.value))">
+            <option value="50">50</option>
+            <option value="100" selected>100</option>
+            <option value="250">250</option>
+            <option value="0">All</option>
+        </select>
+    </div>
 </div>
 <script>
 let chart;
-let lastUserTable = [];
+let fullUserData = [];
+let sortDirections = [1, 1, 1];
+let currentSortCol = -1;
+let currentPage = 1;
+let pageSize = 100;
+let totalPages = 1;
+
+const FETCH_BATCH_SIZE = 5;
 
 function formatDate(d) {
     let m = '' + (d.getMonth() + 1);
@@ -84,6 +119,7 @@ function formatDate(d) {
     if (day.length < 2) day = '0' + day;
     return [y, m, day].join('-');
 }
+
 function listDates(from, to) {
     let arr = [];
     let cur = new Date(from);
@@ -94,6 +130,7 @@ function listDates(from, to) {
     }
     return arr;
 }
+
 async function fetchUsageForDate(date) {
     let url = `${framework.backendUrl}/backend-api/v2/usage/${date}`;
     try {
@@ -108,22 +145,40 @@ async function fetchUsageForDate(date) {
                 let row = JSON.parse(l);
                 row.date = date;
                 arr.push(row);
-            } catch (e) { }
+            } catch (e) {}
         }
         return { data: arr, url };
     } catch (e) {
         return { data: [], url };
     }
 }
+
+async function fetchDatesInBatches(dates, onProgress) {
+    let allData = [];
+    let completed = 0;
+    
+    for (let i = 0; i < dates.length; i += FETCH_BATCH_SIZE) {
+        const batch = dates.slice(i, i + FETCH_BATCH_SIZE);
+        const results = await Promise.all(batch.map(date => fetchUsageForDate(date)));
+        
+        for (const result of results) {
+            allData = allData.concat(result.data);
+            completed++;
+            if (onProgress) onProgress(completed, dates.length);
+        }
+    }
+    
+    return allData;
+}
+
 function get_total_tokens(row) {
-    console.log(row);
     if (row.model && row.model.includes("flux")) {
         return row.completion_tokens || 0;
     }
-    return (row.total_tokens || 0)
+    return (row.total_tokens || 0);
 }
+
 function userSummary(data) {
-    // user => { completions, tokens }
     let summary = new Map();
     for (let row of data) {
         let user = (row.user && row.user.trim()) ? row.user : "<none>";
@@ -135,121 +190,225 @@ function userSummary(data) {
     }
     return Array.from(summary.values());
 }
-function renderUserTable(userArr) {
-    let tbody = document.querySelector('#users-table tbody');
-    tbody.innerHTML = "";
-    if (!userArr.length) {
+
+function escapeHtml(text) {
+    if (text === "<none>") return "<span style='color:#aaa;'>&lt;none&gt;</span>";
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function renderUserTable(data, page = 1) {
+    const tbody = document.querySelector('#users-table tbody');
+    const rowCountEl = document.getElementById('rowCount');
+    const paginationEl = document.getElementById('pagination');
+    const pageInput = document.getElementById('pageInput');
+    const totalPagesEl = document.getElementById('totalPages');
+    
+    rowCountEl.textContent = `(${data.length.toLocaleString()} rows)`;
+    
+    if (!data.length) {
         tbody.innerHTML = "<tr><td colspan='3'><i>No data</i></td></tr>";
+        paginationEl.style.display = 'none';
         return;
     }
-    for (let u of userArr) {
-        let uname = u.user === "<none>" ? "<span style='color:#aaa;'>&lt;none&gt;</span>" : u.user;
-        tbody.innerHTML += "<tr>" +
-            `<td>${uname}</td>` +
-            `<td class="num">${u.completions}</td>` +
-            `<td class="num">${u.tokens.toLocaleString()}</td></tr>`;
+    
+    let displayData;
+    if (pageSize === 0) {
+        displayData = data;
+        totalPages = 1;
+        currentPage = 1;
+        paginationEl.style.display = 'none';
+    } else {
+        totalPages = Math.ceil(data.length / pageSize);
+        currentPage = Math.max(1, Math.min(page, totalPages));
+        const start = (currentPage - 1) * pageSize;
+        displayData = data.slice(start, start + pageSize);
+        paginationEl.style.display = 'flex';
+        pageInput.value = currentPage;
+        totalPagesEl.textContent = totalPages;
     }
-    lastUserTable = userArr;
+    
+    const fragment = document.createDocumentFragment();
+    for (const u of displayData) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${escapeHtml(u.user)}</td>
+            <td class="num">${u.completions.toLocaleString()}</td>
+            <td class="num">${u.tokens.toLocaleString()}</td>
+        `;
+        fragment.appendChild(tr);
+    }
+    tbody.innerHTML = '';
+    tbody.appendChild(fragment);
 }
-function sortTable(col) {
-    // Simple sorting for table, col: 0=user, 1=completions, 2=tokens
-    let arr = [...lastUserTable];
-    // Track sorting order (asc/desc) per column in window.tableSort
-    if (!window.tableSort) window.tableSort = [1,1,1]; // 1=asc, -1=desc
-    // Flip direction
-    window.tableSort[col] = -(window.tableSort[col]||1);
 
-    if (col==0) arr.sort((a,b)=>a.user.localeCompare(b.user)*window.tableSort[0]);
-    if (col==1) arr.sort((a,b)=>(a.completions-b.completions)*window.tableSort[1]);
-    if (col==2) arr.sort((a,b)=>(a.tokens-b.tokens)*window.tableSort[2]);
-    renderUserTable(arr);
+function updateSortIndicators(col) {
+    const headers = document.querySelectorAll('#users-table th');
+    headers.forEach(th => {
+        th.classList.remove('sorted-asc', 'sorted-desc');
+    });
+    if (col >= 0 && col < headers.length) {
+        headers[col].classList.add(sortDirections[col] === 1 ? 'sorted-asc' : 'sorted-desc');
+    }
 }
+
+function sortTable(col) {
+    if (!fullUserData.length) return;
+    
+    if (currentSortCol === col) {
+        sortDirections[col] = -sortDirections[col];
+    } else {
+        sortDirections[col] = 1;
+    }
+    currentSortCol = col;
+    
+    const dir = sortDirections[col];
+    const sortFns = [
+        (a, b) => a.user.localeCompare(b.user),
+        (a, b) => a.completions - b.completions,
+        (a, b) => a.tokens - b.tokens
+    ];
+    
+    fullUserData.sort((a, b) => sortFns[col](a, b) * dir);
+    updateSortIndicators(col);
+    renderUserTable(fullUserData, 1);
+}
+
+function goToPage(page) {
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    renderUserTable(fullUserData, currentPage);
+}
+
+function changePageSize(size) {
+    pageSize = size;
+    currentPage = 1;
+    renderUserTable(fullUserData, 1);
+}
+
+function showProgress(show) {
+    document.getElementById('progressBar').style.display = show ? 'block' : 'none';
+}
+
+function updateProgress(completed, total) {
+    const pct = Math.round((completed / total) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+}
+
 async function fetchAndDisplay() {
     let from = document.getElementById("fromDate").value;
     let to = document.getElementById("toDate").value;
     let status = document.getElementById("status");
+    let loadBtn = document.getElementById("loadBtn");
+    
     if (!from && !to) {
         status.innerText = "Please pick a date or date range.";
-        renderUserTable([]); return;
+        fullUserData = [];
+        renderUserTable([]);
+        return;
     }
+    
     let dateArr = [];
     if (from && to) {
         if (from > to) [from, to] = [to, from];
         dateArr = listDates(new Date(from), new Date(to));
     } else {
         let d = from || to;
-        dateArr = [d]; from = to = d;
+        dateArr = [d];
+        from = to = d;
     }
-    status.innerText = "Fetching data...";
+    
+    loadBtn.disabled = true;
+    showProgress(true);
+    updateProgress(0, 1);
+    status.innerText = `Fetching data for ${dateArr.length} day(s)...`;
+    
     document.getElementById("urlLabel").innerHTML =
         dateArr.length === 1
             ? `<a href="${framework.backendUrl}/backend-api/v2/usage/${dateArr[0]}">${framework.backendUrl}/backend-api/v2/usage/${dateArr[0]}</a>`
             : `${framework.backendUrl}/backend-api/v2/usage/{${from} &rarr; ${to}}`;
 
-    let allData = [];
-    for (let date of dateArr) {
-        let result = await fetchUsageForDate(date);
-        allData = allData.concat(result.data);
-    }
-    if (allData.length == 0) {
-        status.innerText = "No usage data found for given date(s).";
-        document.getElementById("userCount").innerText = "0";
-        document.getElementById("totalCompletions").innerText = "0";
-        document.getElementById("totalTokens").innerText = "0";
+    try {
+        const allData = await fetchDatesInBatches(dateArr, (completed, total) => {
+            updateProgress(completed, total);
+            status.innerText = `Fetching data... (${completed}/${total} days)`;
+        });
+        
+        if (allData.length == 0) {
+            status.innerText = "No usage data found for given date(s).";
+            document.getElementById("userCount").innerText = "0";
+            document.getElementById("totalCompletions").innerText = "0";
+            document.getElementById("totalTokens").innerText = "0";
+            if (chart) chart.destroy();
+            let ctx = document.getElementById("chart").getContext("2d");
+            chart = new Chart(ctx, {type:'bar',data:{labels:[],datasets:[]},options:{}});
+            fullUserData = [];
+            renderUserTable([]);
+            return;
+        }
+        
+        status.innerText = "Processing data...";
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        
+        // Unique users (excluding null user id)
+        let users = new Set(allData.map(r => (r.user && r.user.trim())).filter(Boolean));
+        document.getElementById("userCount").innerText = users.size.toLocaleString();
+        document.getElementById("totalCompletions").innerText = allData.length.toLocaleString();
+        let totalTokens = allData.reduce((s, r) => s + get_total_tokens(r), 0);
+        document.getElementById("totalTokens").innerText = totalTokens.toLocaleString();
+        
+        // Per day for chart
+        let perDay = {};
+        allData.forEach(r => {
+            let d = r.date;
+            if (!perDay[d]) perDay[d] = { count: 0, tokens: 0 };
+            perDay[d].count += 1;
+            perDay[d].tokens += get_total_tokens(r);
+        });
+        let days = Object.keys(perDay).sort();
+        let values = days.map(d => perDay[d].count);
+        let tokenvals = days.map(d => perDay[d].tokens);
+        
         if (chart) chart.destroy();
         let ctx = document.getElementById("chart").getContext("2d");
-        chart = new Chart(ctx, {type:'bar',data:{labels:[],datasets:[]},options:{}});
-        renderUserTable([]);
-        return;
-    } else {
-        status.innerText = "";
-    }
-    // Unique users (excluding null user id)
-    let users = new Set(allData.map(r => (r.user && r.user.trim())).filter(Boolean));
-    document.getElementById("userCount").innerText = users.size;
-    document.getElementById("totalCompletions").innerText = allData.length;
-    let totalTokens = allData.reduce((s, r) => s + get_total_tokens(r), 0);
-    document.getElementById("totalTokens").innerText = totalTokens.toLocaleString();
-    // Per day for chart
-    let perDay = {};
-    allData.forEach(r => {
-        let d = r.date;
-        if (!perDay[d]) perDay[d] = { count: 0, tokens: 0 };
-        perDay[d].count += 1;
-        perDay[d].tokens += get_total_tokens(r);
-    });
-    let days = Object.keys(perDay).sort();
-    let values = days.map(d => perDay[d].count);
-    let tokenvals = days.map(d => perDay[d].tokens);
-    if (chart) chart.destroy();
-    let ctx = document.getElementById("chart").getContext("2d");
-    chart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: days,
-            datasets: [
-                { label: 'Completions', data: values, backgroundColor: '#5787F0' },
-                { label: 'Total Tokens', data: tokenvals, type: 'line', borderColor: '#FF8048', backgroundColor: 'rgba(255,128,72,0.2)', fill: true, yAxisID: 'y1' }
-            ]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: { title: { display: true, text: 'Completions' }, beginAtZero: true },
-                y1: { title: { display: true, text: 'Tokens' }, position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } }
+        chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: days,
+                datasets: [
+                    { label: 'Completions', data: values, backgroundColor: '#5787F0' },
+                    { label: 'Total Tokens', data: tokenvals, type: 'line', borderColor: '#FF8048', backgroundColor: 'rgba(255,128,72,0.2)', fill: true, yAxisID: 'y1' }
+                ]
             },
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: { enabled: true }
+            options: {
+                responsive: true,
+                scales: {
+                    y: { title: { display: true, text: 'Completions' }, beginAtZero: true },
+                    y1: { title: { display: true, text: 'Tokens' }, position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } }
+                },
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { enabled: true }
+                }
             }
-        }
-    });
-    // -- User Table --
-    let usersArr = userSummary(allData);
-    renderUserTable(usersArr);
+        });
+        
+        // Reset sort state
+        currentSortCol = -1;
+        
+        // User Table
+        fullUserData = userSummary(allData);
+        status.innerText = `Loaded ${allData.length.toLocaleString()} records`;
+        renderUserTable(fullUserData, 1);
+    } catch (e) {
+        status.innerText = "Error loading data: " + e.message;
+    } finally {
+        loadBtn.disabled = false;
+        showProgress(false);
+    }
 }
 
-// Set today's date as default, and optionally last week
 window.onload = function () {
     const today = new Date();
     const todayS = today.toISOString().slice(0, 10);
@@ -258,7 +417,6 @@ window.onload = function () {
     document.getElementById("toDate").value = todayS;
     fetchAndDisplay();
 };
-
 </script>
 </body>
 </html>
