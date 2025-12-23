@@ -1241,7 +1241,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         }
         // Handle tool calls if any
         if (tool_calls_storage[message_id] && tool_calls_storage[message_id].length > 0 && mcpClient) {
-            await handleToolCalls(tool_calls_storage[message_id], messages, model, provider, message_id);
+            await handleToolCalls(tool_calls_storage[message_id], messages, model, provider, message_id, finish_message);
         }
         if (message_storage[message_id] || reasoning_storage[message_id]?.status || reasoning_storage[message_id]?.text) {
             const message_provider = message_id in provider_storage ? provider_storage[message_id] : null;
@@ -1526,7 +1526,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 
                 // Handle tool calls if any
                 if (pendingToolCalls.length > 0 && mcpClient) {
-                    await handleToolCalls(pendingToolCalls, messages, selectedModel, provider, message_id);
+                    await handleToolCalls(pendingToolCalls, messages, selectedModel, provider, message_id, finish_message);
                 }
             }
             await finish_message();
@@ -3174,7 +3174,7 @@ async function on_api() {
                 if (response.ok) {
                     option.text += " 🟢";
                 } else {
-                    optgroup.removeChild(option);
+                    // optgroup.removeChild(option);
                 }
             });
         });
