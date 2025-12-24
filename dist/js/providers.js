@@ -10,6 +10,7 @@ const defaultModels = {
     "ollama": "deepseek-v3.1:671b",
     "groq": "openai/gpt-oss-120b",
     "gpt4free.pro": "deepseek-v3.2",
+    "puter": "gpt-5.2-chat-latest",
 };
 
 const providerLocalStorage = {
@@ -18,7 +19,7 @@ const providerLocalStorage = {
     "huggingface": "HuggingFace-api_key",
     "gemini": "GeminiPro-api_key",
     "nvidia": "Nvidia-api_key",
-    "ollama": "Ollama-api_base",
+    "ollama": "Ollama-api_key",
     "openrouter": "OpenRouter-api_key",
     "pollinations": "PollinationsAI-api_key",
     "together": "Together-api_key",
@@ -42,7 +43,7 @@ const providers = {
     "groq": {class: Client, baseUrl: "https://api.groq.com/openai/v1", backupUrl: "https://g4f.dev/api/groq", tags: ""},
     "huggingface": {class: HuggingFace, tags: "🤗"},
     "nvidia": {class: Client, baseUrl: "https://integrate.api.nvidia.com/v1", backupUrl: "https://g4f.dev/api/nvidia", tags: "📟"},
-    "ollama": {class: Client, baseUrl: "https://g4f.dev/api/ollama", tags: "🦙", sleep: 10000},
+    "ollama": {class: Client, baseUrl: "https://g4f.dev/api/ollama", apiEndpoint: "https://g4f.dev/ai/ollama/", tags: "🦙", sleep: 10000},
     "openrouter": {class: Client, baseUrl: "https://openrouter.ai/api/v1", backupUrl: "https://g4f.dev/api/openrouter", tags: "👓"},
     "puter": {class: Puter, tags: "👓"},
     // "stringable-inf": {class: Client, baseUrl: "https://stringableinf.com/api", apiEndpoint: "https://stringableinf.com/api/v1/chat/completions", tags: "", extraHeaders: {"HTTP-Referer": "https://g4f.dev/", "X-Title": "G4F Chat"}},

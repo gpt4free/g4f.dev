@@ -674,10 +674,17 @@ class Together extends Client {
 }
 
 
-class Puter {
+class Puter extends Client {
     constructor(options = {}) {
-        this.defaultModel = options.defaultModel || 'gpt-5';
-        this.logCallback = options.logCallback;
+        super({});
+        this.baseUrl = options.baseUrl || null;
+        this.extraHeaders = {
+            "content-type": "application/json",
+            ...(options.extraHeaders || {})
+        };
+        this.defaultModel = options.defaultModel || null;
+        this.logCallback = options.logCallback || console.log;
+        this.sleep = options.sleep || 0;
         this.puter = null;
     }
 
@@ -686,12 +693,19 @@ class Puter {
             completions: {
                 create: async (params) => {
                     this.puter = this.puter || await this._injectPuter();
+                    this.extraHeaders = {
+                        ...this.extraHeaders,
+                        'Authorization': `Bearer ${localStorage.getItem("puter.auth.token") || ''}`
+                    };
+                    if (this.baseUrl) {
+                        return super.chat.completions.create(params);
+                    }
                     const { messages, signal, ...options } = params;
                     if (!options.model && this.defaultModel) {
                         options.model = this.defaultModel;
                     }
                     if (options.stream) {
-                        return this._streamCompletion(options.model, messages, options);
+                        return this._streamPuter(options.model, messages, options);
                     }
                     const response = await this.puter.ai.chat(messages, false, options);
                     this.logCallback && this.logCallback({response: response, type: 'chat'});
@@ -749,7 +763,7 @@ class Puter {
         });
     }
 
-    async *_streamCompletion(model, messages, options = {}) {
+    async *_streamPuter(model, messages, options = {}) {
         this.logCallback && this.logCallback({request: {messages, ...options}, type: 'chat'});
         for await (const item of await this.puter.ai.chat(messages, false, options)) {
           item.model = model;
