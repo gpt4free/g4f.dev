@@ -824,6 +824,10 @@
         import * as hub from "@huggingface/hub";
         import { oauthLoginUrl, oauthHandleRedirectIfPresent } from "@huggingface/hub";
 
+        // API Configuration
+        const API_BASE = window.location.origin;
+        const MEMBERS_API = `${API_BASE}/members/api`;
+
         // DOM Elements
         const loginSection = document.getElementById('loginSection');
         const dashboard = document.getElementById('dashboard');
@@ -842,14 +846,34 @@
         const navAvatar = document.getElementById('navAvatar');
         const navUsername = document.getElementById('navUsername');
 
+        // Session token storage
+        let sessionToken = localStorage.getItem('g4f_session') || null;
+
         // OAuth Configuration
-        const GITHUB_CLIENT_ID = 'Ov23lin6fPvRsvE7JZ3S'; // Replace with your GitHub OAuth App client ID
-        const DISCORD_CLIENT_ID = '1453449146265764106'; // Replace with your Discord OAuth App client ID
+        const GITHUB_CLIENT_ID = 'Ov23lin6fPvRsvE7JZ3S';
+        const DISCORD_CLIENT_ID = '1453449146265764106';
         const REDIRECT_URI = window.location.origin + '/members.html';
         window.oauthConfig = {
             clientId: '762e4f6f-2af6-437c-ad93-944cc17f9d23',
             scopes: ['inference-api']
+        };
+
+        // API helper function
+        async function apiRequest(endpoint, options = {}) {
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {}),
+                ...options.headers
+            };
+            
+            const response = await fetch(`${MEMBERS_API}${endpoint}`, {
+                ...options,
+                headers
+            });
+            
+            return response.json();
         }
+
         // Toast notification
         function showToast(message, type = 'success') {
             toast.textContent = message;
@@ -860,10 +884,23 @@
         }
 
         // Check if user is logged in
-        function checkAuth() {
+        async function checkAuth() {
             const user = localStorage.getItem('g4f_user');
             if (user) {
-                showDashboard(JSON.parse(user));
+                const userData = JSON.parse(user);
+                // Verify session is still valid
+                if (sessionToken) {
+                    try {
+                        const result = await apiRequest('/session');
+                        if (result.authenticated) {
+                            showDashboard(result.user || userData);
+                            return;
+                        }
+                    } catch (e) {
+                        console.log('Session verification failed, using cached data');
+                    }
+                }
+                showDashboard(userData);
             } else {
                 showLogin();
             }
@@ -877,7 +914,7 @@
         }
 
         // Show dashboard
-        function showDashboard(user) {
+        async function showDashboard(user) {
             loginSection.style.display = 'none';
             dashboard.classList.add('active');
             
@@ -885,7 +922,13 @@
             userName.textContent = user.name || user.username || 'User';
             document.getElementById('accountUsername').textContent = user.username || user.name || '-';
             document.getElementById('accountEmail').textContent = user.email || 'Not provided';
-            document.getElementById('accountJoined').textContent = user.joinedAt || new Date().toLocaleDateString();
+            document.getElementById('accountJoined').textContent = user.created_at ? new Date(user.created_at).toLocaleDateString() : (user.joinedAt || new Date().toLocaleDateString());
+            
+            // Update tier badge
+            const planBadge = document.getElementById('accountPlan');
+            const tier = user.tier || 'free';
+            planBadge.textContent = tier.charAt(0).toUpperCase() + tier.slice(1);
+            planBadge.className = `badge ${tier}`;
             
             // Update provider badge
             const providerBadge = document.getElementById('accountProvider');
@@ -906,25 +949,65 @@
             const existingKey = localStorage.getItem('g4f_api_key');
             if (existingKey) {
                 apiKeyInput.value = existingKey;
+                apiKeyInput.placeholder = 'API key loaded from storage';
             }
             
             // Update base URL
-            if (framework.backendUrl) {
-                baseUrl.textContent = framework.backendUrl + '/v1';
-            }
+            baseUrl.textContent = `${API_BASE}/v1`;
             
-            // Load usage stats
-            loadUsageStats(user);
+            // Load usage stats from API
+            await loadUsageStats(user);
+            
+            // Load usage history for chart
+            await loadUsageHistory();
         }
 
-        // Load usage stats (simulated - replace with actual API call)
-        function loadUsageStats(user) {
-            // These would come from your backend API
-            const stats = JSON.parse(localStorage.getItem('g4f_stats') || '{}');
-            document.getElementById('statRequests').textContent = formatNumber(stats.requests || 0);
-            document.getElementById('statTokens').textContent = formatNumber(stats.tokens || 0);
-            document.getElementById('statImages').textContent = formatNumber(stats.images || 0);
-            document.getElementById('statChats').textContent = formatNumber(stats.chats || 0);
+        // Load usage stats from API
+        async function loadUsageStats(user) {
+            try {
+                const result = await apiRequest('/usage');
+                if (result.usage) {
+                    document.getElementById('statRequests').textContent = formatNumber(result.usage.requests_today || 0);
+                    document.getElementById('statTokens').textContent = formatNumber(result.usage.tokens_today || 0);
+                    document.getElementById('statImages').textContent = formatNumber(result.usage.images_today || 0);
+                    document.getElementById('statChats').textContent = formatNumber(result.usage.total_requests || 0);
+                    
+                    // Update remaining limits display if needed
+                    if (result.remaining) {
+                        console.log('Remaining:', result.remaining);
+                    }
+                }
+            } catch (e) {
+                console.log('Failed to load usage stats from API, using local storage');
+                // Fallback to localStorage
+                const stats = JSON.parse(localStorage.getItem('g4f_stats') || '{}');
+                document.getElementById('statRequests').textContent = formatNumber(stats.requests || 0);
+                document.getElementById('statTokens').textContent = formatNumber(stats.tokens || 0);
+                document.getElementById('statImages').textContent = formatNumber(stats.images || 0);
+                document.getElementById('statChats').textContent = formatNumber(stats.chats || 0);
+            }
+        }
+
+        // Load usage history for chart
+        async function loadUsageHistory() {
+            try {
+                const result = await apiRequest('/usage/history?days=7');
+                if (result.history && result.history.length > 0) {
+                    const bars = document.querySelectorAll('.usage-bar');
+                    const maxRequests = Math.max(...result.history.map(h => h.requests || 0), 1);
+                    
+                    result.history.reverse().forEach((day, index) => {
+                        if (bars[index]) {
+                            const height = ((day.requests || 0) / maxRequests) * 100;
+                            bars[index].style.height = `${Math.max(height, 5)}%`;
+                            const dayName = new Date(day.date).toLocaleDateString('en', { weekday: 'short' });
+                            bars[index].setAttribute('data-label', dayName);
+                        }
+                    });
+                }
+            } catch (e) {
+                console.log('Failed to load usage history');
+            }
         }
 
         function formatNumber(num) {
@@ -933,18 +1016,14 @@
             return num.toString();
         }
 
-        // GitHub OAuth
+        // GitHub OAuth - redirect to worker
         loginGithub.addEventListener('click', () => {
-            const scope = 'user:email';
-            const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${scope}&state=github`;
-            window.location.href = authUrl;
+            window.location.href = `${API_BASE}/members/auth/github`;
         });
 
-        // Discord OAuth
+        // Discord OAuth - redirect to worker
         loginDiscord.addEventListener('click', () => {
-            const scope = 'identify email';
-            const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(scope)}&state=discord`;
-            window.location.href = authUrl;
+            window.location.href = `${API_BASE}/members/auth/discord`;
         });
 
         // Hugging Face OAuth
@@ -959,16 +1038,36 @@
         // Handle OAuth callback
         async function handleOAuthCallback() {
             const urlParams = new URLSearchParams(window.location.search);
+            const session = urlParams.get('session');
+            const userParam = urlParams.get('user');
             const code = urlParams.get('code');
             const state = urlParams.get('state');
             const error = urlParams.get('error');
 
             if (error) {
                 showToast('Authentication failed: ' + error, 'error');
+                window.history.replaceState({}, document.title, window.location.pathname);
                 return;
             }
 
-            // Handle Hugging Face OAuth
+            // Handle worker OAuth callback (session from redirect)
+            if (session && userParam) {
+                try {
+                    const user = JSON.parse(decodeURIComponent(userParam));
+                    sessionToken = session;
+                    localStorage.setItem('g4f_session', session);
+                    localStorage.setItem('g4f_user', JSON.stringify(user));
+                    localStorage.setItem('user', user.name || user.username);
+                    showToast(`Successfully signed in with ${user.provider}!`);
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    showDashboard(user);
+                    return;
+                } catch (e) {
+                    console.error('Failed to parse user data:', e);
+                }
+            }
+
+            // Handle Hugging Face OAuth (client-side)
             if (window.oauthConfig) {
                 const oauthResult = await oauthHandleRedirectIfPresent();
                 if (oauthResult) {
@@ -979,64 +1078,55 @@
                         avatar: oauthResult.userInfo.picture,
                         provider: 'huggingface',
                         accessToken: oauthResult.accessToken,
-                        joinedAt: new Date().toLocaleDateString()
+                        tier: 'free',
+                        created_at: new Date().toISOString()
                     };
                     localStorage.setItem('g4f_user', JSON.stringify(user));
                     localStorage.setItem('HuggingFace-api_key', oauthResult.accessToken);
                     localStorage.setItem('user', user.name);
+                    localStorage.setItem('oauth', JSON.stringify(oauthResult));
                     showToast('Successfully signed in with Hugging Face!');
-                    // Clear URL params
                     window.history.replaceState({}, document.title, window.location.pathname);
                     showDashboard(user);
                     return;
                 }
             }
 
+            // Legacy: Handle direct OAuth code (for backward compatibility)
             if (code && state) {
-                // For GitHub and Discord, you would need to exchange the code for tokens on your backend
-                // This is a simplified example that simulates the OAuth flow
-                if (state === 'github') {
-                    // In production, exchange code for access token on your backend
-                    const user = {
-                        name: 'GitHub User',
-                        username: 'github_user',
-                        email: 'user@github.com',
-                        avatar: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',
-                        provider: 'github',
-                        joinedAt: new Date().toLocaleDateString()
-                    };
-                    localStorage.setItem('g4f_user', JSON.stringify(user));
-                    showToast('Successfully signed in with GitHub!');
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                    showDashboard(user);
-                } else if (state === 'discord') {
-                    const user = {
-                        name: 'Discord User',
-                        username: 'discord_user',
-                        email: 'user@discord.com',
-                        avatar: 'https://discord.com/assets/847541504914fd33810e70a0ea73177e.ico',
-                        provider: 'discord',
-                        joinedAt: new Date().toLocaleDateString()
-                    };
-                    localStorage.setItem('g4f_user', JSON.stringify(user));
-                    showToast('Successfully signed in with Discord!');
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                    showDashboard(user);
+                // Forward to worker for token exchange
+                try {
+                    const callbackUrl = `${API_BASE}/members/auth/${state}/callback?code=${code}&state=${state}`;
+                    window.location.href = callbackUrl;
+                } catch (e) {
+                    console.error('OAuth callback error:', e);
+                    showToast('Authentication failed', 'error');
                 }
             }
         }
 
         // Logout
-        logoutBtn.addEventListener('click', () => {
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await apiRequest('/logout', { method: 'POST' });
+            } catch (e) {
+                console.log('Logout API call failed, clearing local data anyway');
+            }
+            
+            // Clear all auth data
+            sessionToken = null;
             localStorage.removeItem('g4f_user');
+            localStorage.removeItem('g4f_session');
             localStorage.removeItem('g4f_api_key');
             localStorage.removeItem('oauth');
             localStorage.removeItem('HuggingFace-api_key');
+            localStorage.removeItem('user');
+            
             showToast('Successfully signed out');
             showLogin();
         });
 
-        // Generate API Key
+        // Generate API Key using worker
         generateKeyBtn.addEventListener('click', async () => {
             const user = JSON.parse(localStorage.getItem('g4f_user') || '{}');
             if (!user.username && !user.name) {
@@ -1048,23 +1138,35 @@
             generateKeyBtn.innerHTML = '<span class="loading"></span> Generating...';
 
             try {
-                // Connect to backend first
-                if (!framework.backendUrl) {
-                    await framework.connectToBackend();
+                const result = await apiRequest('/keys/generate', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name: `API Key - ${new Date().toLocaleDateString()}`
+                    })
+                });
+
+                if (result.error) {
+                    throw new Error(result.error);
                 }
-                
-                // Generate API key using existing framework function
-                const userId = user.username || user.name || 'user';
-                const apiKey = await genAK(userId);
-                
-                if (apiKey) {
-                    apiKeyInput.value = apiKey;
+
+                if (result.api_key) {
+                    apiKeyInput.value = result.api_key;
                     apiKeyInput.type = 'password';
-                    localStorage.setItem('g4f_api_key', apiKey);
-                    baseUrl.textContent = (framework.backendUrl || 'https://g4f.dev') + '/v1';
-                    showToast('API key generated successfully!');
+                    localStorage.setItem('g4f_api_key', result.api_key);
+                    showToast('API key generated successfully! Save it now - you won\'t see it again.');
                 } else {
-                    throw new Error('Failed to generate key');
+                    // Fallback to legacy genAK if worker not available
+                    const userId = user.id || user.username || user.name || 'user';
+                    const apiKey = await genAK(userId);
+                    
+                    if (apiKey) {
+                        apiKeyInput.value = apiKey;
+                        apiKeyInput.type = 'password';
+                        localStorage.setItem('g4f_api_key', apiKey);
+                        showToast('API key generated successfully!');
+                    } else {
+                        throw new Error('Failed to generate key');
+                    }
                 }
             } catch (error) {
                 console.error('Error generating API key:', error);
@@ -1116,7 +1218,7 @@
         baseUrl.style.cursor = 'pointer';
         baseUrl.title = 'Click to copy';
 
-        // genAK function reference from framework
+        // Legacy genAK function (fallback)
         async function genAK(userId) {
             if (!window.JSEncrypt) {
                 throw new Error('JSEncrypt not loaded');
@@ -1150,13 +1252,15 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
             // Connect to backend
-            framework.connectToBackend();
+            if (typeof framework !== 'undefined') {
+                framework.connectToBackend();
+            }
             
             // Handle OAuth callback first
             await handleOAuthCallback();
             
             // Then check auth state
-            checkAuth();
+            await checkAuth();
         });
 
         // Check for existing HuggingFace login from home.html
@@ -1171,7 +1275,8 @@
                         username: existingUser,
                         provider: 'huggingface',
                         accessToken: oauthData.accessToken,
-                        joinedAt: new Date().toLocaleDateString()
+                        tier: 'free',
+                        created_at: new Date().toISOString()
                     };
                     if (!localStorage.getItem('g4f_user')) {
                         localStorage.setItem('g4f_user', JSON.stringify(user));
@@ -1180,6 +1285,12 @@
             } catch (e) {
                 console.error('Error parsing existing OAuth:', e);
             }
+        }
+
+        // Restore session from localStorage
+        const storedSession = localStorage.getItem('g4f_session');
+        if (storedSession) {
+            sessionToken = storedSession;
         }
     </script>
 </body>
