@@ -104,6 +104,9 @@ document.addEventListener("DOMContentLoaded", (event) => {
             tabButton.click();
         }
     }
+
+    // Load voice models for the voice select dropdown
+    loadVoiceModels();
 });
 
 let provider_storage = {};
@@ -135,12 +138,84 @@ let stopRecognition = ()=>{};
 let providerModelSignal = null;
 let searchModels = {};
 let client = null;
+let voicePreviewAudio = null;
 
 appStorage = window.localStorage || {
     setItem: (key, value) => self[key] = value,
     getItem: (key) => self[key],
     removeItem: (key) => delete self[key],
     length: 0
+}
+
+// Load voice models from API and populate voice select dropdown
+async function loadVoiceModels() {
+    const voiceSelect = document.getElementById('voice');
+    if (!voiceSelect) return;
+
+    try {
+        const response = await fetch('https://g4f.dev/api/audio/models');
+        if (!response.ok) {
+            throw new Error('Failed to fetch voice models');
+        }
+        const data = await response.json();
+        
+        // Clear existing options
+        voiceSelect.innerHTML = '';
+        
+        // Populate with voice models
+        if (data.data && Array.isArray(data.data)) {
+            data.data.forEach(voice => {
+                const option = document.createElement('option');
+                option.selected = voice.id === "gpt-audio" ? true : false;
+                option.value = voice.id === "gpt-audio" ? "" : voice.id;
+                option.textContent = voice.id === "gpt-audio" ? "Default (gemini)" : voice.name || voice.id;
+                voiceSelect.appendChild(option);
+            });
+        } else if (Array.isArray(data)) {
+            data.forEach(voice => {
+                const option = document.createElement('option');
+                option.value = typeof voice === 'string' ? voice : voice.name || voice.id;
+                option.textContent = typeof voice === 'string' ? voice : voice.name || voice.id;
+                voiceSelect.appendChild(option);
+            });
+        }
+        
+        // Restore saved voice selection
+        const savedVoice = appStorage.getItem('voice');
+        if (savedVoice) {
+            voiceSelect.value = savedVoice;
+        }
+        
+        // Add change event listener to play preview and save selection
+        voiceSelect.addEventListener('change', async (event) => {
+            const selectedVoice = event.target.value;
+            appStorage.setItem('voice', selectedVoice);
+            
+            if (selectedVoice) {
+                playVoicePreview(selectedVoice);
+            }
+        });
+    } catch (error) {
+        console.error('Error loading voice models:', error);
+        voiceSelect.innerHTML = '<option value="">Failed to load voices</option>';
+    }
+}
+
+// Play a preview of the selected voice
+async function playVoicePreview(voice) {
+    // Stop any currently playing preview
+    if (voicePreviewAudio) {
+        voicePreviewAudio.pause();
+        voicePreviewAudio = null;
+    }
+    
+    const previewText = 'Hello, how are you?';
+    const audioUrl = `https://g4f.dev/ai/audio/${encodeURIComponent(previewText)}?voice=${encodeURIComponent(voice)}`;
+    
+    voicePreviewAudio = new Audio(audioUrl);
+    voicePreviewAudio.play().catch(error => {
+        console.error('Error playing voice preview:', error);
+    });
 }
 
 function render_reasoning(reasoning, final = false) {
