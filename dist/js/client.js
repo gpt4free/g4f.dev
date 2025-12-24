@@ -571,7 +571,7 @@ class Audio extends Client {
                 const isStream = params.stream;
                 if (!params.audio) {
                     params.audio = {
-                        "voice": "alloy",
+                        "voice": params.model === 'gpt-audio' ? "alloy" : params.model,
                         "format": "mp3"
                     }
                     delete params.stream;

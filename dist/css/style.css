@@ -1108,7 +1108,7 @@ select:hover,
     display: none !important;
 }
 .pswp__custom-caption {
-    opacity: 0 !important;
+    opacity: 1;
     background: rgba(0, 0, 0, 0.3);
     font-size: 16px;
     color: #fff;
@@ -1122,9 +1122,6 @@ select:hover,
     transform: translateX(-50%);
     max-height: 100px;
     overflow: auto;
-}
-.pswp__custom-caption:hover {
-    opacity: 1 !important;
 }
 .pswp__custom-caption a {
     color: #fff;

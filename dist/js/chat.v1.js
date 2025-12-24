@@ -1190,11 +1190,11 @@ async function play_last_message(response = null) {
             }
             last_media.play();
         } else {
-            width = last_media.parentElement.dataset.width || last_media.naturalWidth;
-            height = last_media.parentElement.dataset.height || last_media.naturalHeight;
-            if (width > 0 && height > 0) {
-                last_message.querySelector(".count").childNodes[0].nodeValue = `(width: ${width}px, height: ${height}px)`;
-            }
+            // width = last_media.parentElement.dataset.width || last_media.naturalWidth;
+            // height = last_media.parentElement.dataset.height || last_media.naturalHeight;
+            // if (width > 0 && height > 0) {
+            //     last_message.querySelector(".count").childNodes[0].nodeValue = `(width: ${width}px, height: ${height}px)`;
+            // }
         }
         return true;
     }

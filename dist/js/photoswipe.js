@@ -40,6 +40,15 @@ lightbox.on('uiRegister', function() {
         appendTo: 'root',
         html: 'Caption text',
         onInit: (el, pswp) => {
+            el.onmouseleave = () => {
+                el.style.opacity = "0";
+            }
+            el.onmouseenter = () => {
+                el.style.opacity = "1";
+            }
+            el.ontouchstart = () => {
+                el.style.opacity = el.style.opacity === "1" ? "0" : "1";
+            }
             lightbox.pswp.on('change', () => {
                 const currSlideElement = lightbox.pswp.currSlide.data.element;
                 if (currSlideElement) {
