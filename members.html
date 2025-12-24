@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G4F - Members Area</title>
+    <meta name="description" content="GPT4Free Members Area - Manage your API keys, view usage stats, and access premium features." />
+    <link rel="apple-touch-icon" sizes="180x180" href="dist/img/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="dist/img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="dist/img/favicon-16x16.png">
+    <link rel="manifest" href="dist/img/site.webmanifest">
+    <script src="https://cdn.jsdelivr.net/npm/jsencrypt/bin/jsencrypt.min.js"></script>
+    <style>
+        :root {
+            --primary: #6e48aa;
+            --secondary: #9d50bb;
+            --accent: #4776E6;
+            --dark: #1a1a2e;
+            --light: #f8f9fa;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --github: #333;
+            --discord: #5865F2;
+            --huggingface: #FFD21E;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, var(--dark), #16213e);
+            color: var(--light);
+            min-height: 100vh;
+        }
+        
+        .navbar {
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-decoration: none;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+        
+        .nav-links a {
+            color: var(--light);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-links a:hover {
+            color: var(--secondary);
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid var(--secondary);
+        }
+        
+        .main-container {
+            padding: 6rem 2rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* Login Section */
+        .login-section {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+        
+        .login-section h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, var(--primary), var(--secondary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .login-section p {
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+        
+        .login-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .oauth-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        
+        .oauth-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        
+        .oauth-btn.github {
+            background: var(--github);
+            color: white;
+        }
+        
+        .oauth-btn.discord {
+            background: var(--discord);
+            color: white;
+        }
+        
+        .oauth-btn.huggingface {
+            background: var(--huggingface);
+            color: #333;
+        }
+        
+        .oauth-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+        
+        /* Dashboard Section */
+        .dashboard {
+            display: none;
+        }
+        
+        .dashboard.active {
+            display: block;
+        }
+        
+        .welcome-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .welcome-header h1 {
+            font-size: 2rem;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .logout-btn {
+            background: rgba(255,255,255,0.1);
+            color: var(--light);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 0.5rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .card h2 {
+            font-size: 1.25rem;
+            margin: 0 0 1rem 0;
+            color: var(--light);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .card h2 .icon {
+            font-size: 1.5rem;
+        }
+        
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        
+        .stat-item {
+            background: rgba(255,255,255,0.05);
+            padding: 1rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .stat-label {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.6);
+            margin-top: 0.25rem;
+        }
+        
+        /* API Key Section */
+        .api-key-container {
+            margin-top: 1rem;
+        }
+        
+        .api-key-display {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .api-key-input {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: var(--light);
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        
+        .api-key-input:focus {
+            outline: none;
+            border-color: var(--secondary);
+        }
+        
+        .btn {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(110, 72, 170, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.2);
+            box-shadow: none;
+        }
+        
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .base-url {
+            background: rgba(0,0,0,0.2);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.8);
+            margin-top: 0.5rem;
+            word-break: break-all;
+        }
+        
+        .base-url-label {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 0.25rem;
+        }
+        
+        /* Usage Chart Placeholder */
+        .usage-chart {
+            height: 200px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.5);
+            margin-top: 1rem;
+        }
+        
+        .usage-bars {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            height: 150px;
+            width: 100%;
+            padding: 0 1rem;
+        }
+        
+        .usage-bar {
+            width: 12%;
+            background: linear-gradient(to top, var(--primary), var(--secondary));
+            border-radius: 4px 4px 0 0;
+            transition: height 0.5s ease;
+            position: relative;
+        }
+        
+        .usage-bar::after {
+            content: attr(data-label);
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.5);
+        }
+        
+        /* Recent Activity */
+        .activity-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        
+        .activity-icon.chat {
+            background: rgba(110, 72, 170, 0.2);
+        }
+        
+        .activity-icon.image {
+            background: rgba(71, 118, 230, 0.2);
+        }
+        
+        .activity-icon.api {
+            background: rgba(40, 167, 69, 0.2);
+        }
+        
+        .activity-details {
+            flex: 1;
+        }
+        
+        .activity-title {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+        
+        .activity-time {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.5);
+        }
+        
+        /* Account Info */
+        .account-info {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            color: rgba(255,255,255,0.6);
+        }
+        
+        .info-value {
+            font-weight: 500;
+        }
+        
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .badge.free {
+            background: rgba(255,255,255,0.1);
+            color: var(--light);
+        }
+        
+        .badge.pro {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+        }
+        
+        .badge.sponsor {
+            background: var(--success);
+            color: white;
+        }
+        
+        /* Provider Badge */
+        .provider-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .provider-badge.github {
+            background: rgba(51, 51, 51, 0.3);
+        }
+        
+        .provider-badge.discord {
+            background: rgba(88, 101, 242, 0.3);
+        }
+        
+        .provider-badge.huggingface {
+            background: rgba(255, 210, 30, 0.3);
+            color: #FFD21E;
+        }
+        
+        /* Loading Spinner */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: var(--secondary);
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: rgba(26, 26, 46, 0.95);
+            color: var(--light);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 2000;
+        }
+        
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .toast.success {
+            border-left: 4px solid var(--success);
+        }
+        
+        .toast.error {
+            border-left: 4px solid var(--danger);
+        }
+        
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            margin-top: 3rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.5);
+        }
+        
+        footer a {
+            color: var(--secondary);
+            text-decoration: none;
+        }
+        
+        footer a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 1rem;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .main-container {
+                padding: 5rem 1rem 1rem;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .welcome-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .api-key-display {
+                flex-direction: column;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="dist/css/all.min.css">
+    <script src="dist/js/framework.js" defer></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "@huggingface/hub": "https://cdn.jsdelivr.net/npm/@huggingface/hub@0.21.0/+esm"
+            }
+        }
+    </script>
+</head>
+<body class="translate">
+    <header class="navbar" role="banner">
+        <a href="/" class="logo">G4F</a>
+        <nav class="nav-links" role="navigation">
+            <a href="/">Home</a>
+            <a href="/chat/">Chat</a>
+            <a href="/docs/">Docs</a>
+            <a href="https://github.com/xtekky/gpt4free" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <div class="user-info" id="navUserInfo" style="display: none;">
+                <img class="user-avatar" id="navAvatar" src="" alt="User avatar">
+                <span id="navUsername"></span>
+            </div>
+        </nav>
+    </header>
+
+    <main class="main-container">
+        <!-- Login Section (shown when not logged in) -->
+        <section class="login-section" id="loginSection">
+            <h1>Members Area</h1>
+            <p>Sign in to access your dashboard, manage API keys, and view usage statistics.</p>
+            
+            <div class="login-buttons">
+                <button class="oauth-btn github" id="loginGithub">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                    Sign in with GitHub
+                </button>
+                
+                <button class="oauth-btn discord" id="loginDiscord">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028 14.09 14.09 0 001.226-1.994.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+                    </svg>
+                    Sign in with Discord
+                </button>
+                
+                <button class="oauth-btn huggingface" id="loginHuggingface">
+                    <svg viewBox="0 0 120 120" fill="currentColor">
+                        <path d="M37.6 62.9c2.3 0 4.2-1.9 4.2-4.2s-1.9-4.2-4.2-4.2-4.2 1.9-4.2 4.2 1.9 4.2 4.2 4.2zm44.8 0c2.3 0 4.2-1.9 4.2-4.2s-1.9-4.2-4.2-4.2-4.2 1.9-4.2 4.2 1.9 4.2 4.2 4.2zM60 95c16.6 0 30-13.4 30-30s-13.4-30-30-30-30 13.4-30 30 13.4 30 30 30zm0-50c11 0 20 9 20 20s-9 20-20 20-20-9-20-20 9-20 20-20z"/>
+                    </svg>
+                    Sign in with Hugging Face
+                </button>
+            </div>
+            
+            <p style="margin-top: 2rem; font-size: 0.9rem; color: rgba(255,255,255,0.5);">
+                By signing in, you agree to our <a href="#" style="color: var(--secondary);">Terms of Service</a> and <a href="#" style="color: var(--secondary);">Privacy Policy</a>.
+            </p>
+        </section>
+
+        <!-- Dashboard Section (shown when logged in) -->
+        <section class="dashboard" id="dashboard">
+            <div class="welcome-header">
+                <div>
+                    <h1>Welcome back, <span id="userName">User</span>! 👋</h1>
+                    <p style="margin: 0; color: rgba(255,255,255,0.6);">Manage your API keys and monitor your usage</p>
+                </div>
+                <button class="logout-btn" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i> Sign Out
+                </button>
+            </div>
+            
+            <div class="dashboard-grid">
+                <!-- Usage Stats Card -->
+                <div class="card">
+                    <h2><span class="icon">📊</span> Usage Statistics</h2>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="statRequests">0</div>
+                            <div class="stat-label">API Requests</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="statTokens">0</div>
+                            <div class="stat-label">Tokens Used</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="statImages">0</div>
+                            <div class="stat-label">Images Generated</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="statChats">0</div>
+                            <div class="stat-label">Chat Sessions</div>
+                        </div>
+                    </div>
+                    <div class="usage-chart">
+                        <div class="usage-bars">
+                            <div class="usage-bar" style="height: 40%;" data-label="Mon"></div>
+                            <div class="usage-bar" style="height: 65%;" data-label="Tue"></div>
+                            <div class="usage-bar" style="height: 45%;" data-label="Wed"></div>
+                            <div class="usage-bar" style="height: 80%;" data-label="Thu"></div>
+                            <div class="usage-bar" style="height: 55%;" data-label="Fri"></div>
+                            <div class="usage-bar" style="height: 30%;" data-label="Sat"></div>
+                            <div class="usage-bar" style="height: 25%;" data-label="Sun"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- API Key Card -->
+                <div class="card">
+                    <h2><span class="icon">🔑</span> API Key</h2>
+                    <p style="color: rgba(255,255,255,0.6); margin-bottom: 1rem; font-size: 0.9rem;">
+                        Use this key to authenticate your API requests
+                    </p>
+                    <div class="api-key-container">
+                        <div class="api-key-display">
+                            <input type="password" class="api-key-input" id="apiKeyInput" readonly placeholder="Click 'Generate' to create an API key">
+                            <button class="btn btn-secondary btn-small" id="toggleKeyBtn" title="Show/Hide">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-secondary btn-small" id="copyKeyBtn" title="Copy">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <button class="btn" id="generateKeyBtn" style="width: 100%;">
+                            <i class="fas fa-sync-alt"></i> Generate New Key
+                        </button>
+                        <div class="base-url-label" style="margin-top: 1rem;">Base URL</div>
+                        <div class="base-url" id="baseUrl">https://g4f.dev/v1</div>
+                    </div>
+                </div>
+                
+                <!-- Account Info Card -->
+                <div class="card">
+                    <h2><span class="icon">👤</span> Account Information</h2>
+                    <div class="account-info">
+                        <div class="info-row">
+                            <span class="info-label">Username</span>
+                            <span class="info-value" id="accountUsername">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Email</span>
+                            <span class="info-value" id="accountEmail">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Provider</span>
+                            <span class="info-value" id="accountProvider">
+                                <span class="provider-badge github">
+                                    <i class="fab fa-github"></i> GitHub
+                                </span>
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Plan</span>
+                            <span class="info-value">
+                                <span class="badge free" id="accountPlan">Free</span>
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Member Since</span>
+                            <span class="info-value" id="accountJoined">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Activity Card -->
+                <div class="card">
+                    <h2><span class="icon">⚡</span> Recent Activity</h2>
+                    <ul class="activity-list" id="activityList">
+                        <li class="activity-item">
+                            <div class="activity-icon chat">💬</div>
+                            <div class="activity-details">
+                                <div class="activity-title">Chat session started</div>
+                                <div class="activity-time">No activity yet</div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- Quick Links Card -->
+                <div class="card" style="grid-column: 1 / -1;">
+                    <h2><span class="icon">🚀</span> Quick Actions</h2>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+                        <a href="/chat/" class="btn">
+                            <i class="fas fa-comments"></i> Open Chat
+                        </a>
+                        <a href="/docs/" class="btn btn-secondary">
+                            <i class="fas fa-book"></i> API Documentation
+                        </a>
+                        <a href="https://github.com/sponsors/hlohaus" target="_blank" class="btn btn-secondary">
+                            <i class="fas fa-heart"></i> Become a Sponsor
+                        </a>
+                        <a href="https://github.com/xtekky/gpt4free" target="_blank" class="btn btn-secondary">
+                            <i class="fab fa-github"></i> View on GitHub
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 GPT4Free Project. All rights reserved.</p>
+        <p>
+            <a href="https://github.com/xtekky/gpt4free">GitHub</a> · 
+            <a href="/docs/">Documentation</a> · 
+            <a href="https://github.com/sponsors/hlohaus">Sponsor</a>
+        </p>
+    </footer>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <script type="module">
+        import * as hub from "@huggingface/hub";
+        import { oauthLoginUrl, oauthHandleRedirectIfPresent } from "@huggingface/hub";
+
+        // DOM Elements
+        const loginSection = document.getElementById('loginSection');
+        const dashboard = document.getElementById('dashboard');
+        const loginGithub = document.getElementById('loginGithub');
+        const loginDiscord = document.getElementById('loginDiscord');
+        const loginHuggingface = document.getElementById('loginHuggingface');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userName = document.getElementById('userName');
+        const generateKeyBtn = document.getElementById('generateKeyBtn');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const toggleKeyBtn = document.getElementById('toggleKeyBtn');
+        const copyKeyBtn = document.getElementById('copyKeyBtn');
+        const baseUrl = document.getElementById('baseUrl');
+        const toast = document.getElementById('toast');
+        const navUserInfo = document.getElementById('navUserInfo');
+        const navAvatar = document.getElementById('navAvatar');
+        const navUsername = document.getElementById('navUsername');
+
+        // OAuth Configuration
+        const GITHUB_CLIENT_ID = 'Ov23lin6fPvRsvE7JZ3S'; // Replace with your GitHub OAuth App client ID
+        const DISCORD_CLIENT_ID = '1453449146265764106'; // Replace with your Discord OAuth App client ID
+        const REDIRECT_URI = window.location.origin + '/members.html';
+        window.oauthConfig = {
+            clientId: '762e4f6f-2af6-437c-ad93-944cc17f9d23',
+            scopes: ['inference-api']
+        }
+        // Toast notification
+        function showToast(message, type = 'success') {
+            toast.textContent = message;
+            toast.className = 'toast ' + type + ' show';
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Check if user is logged in
+        function checkAuth() {
+            const user = localStorage.getItem('g4f_user');
+            if (user) {
+                showDashboard(JSON.parse(user));
+            } else {
+                showLogin();
+            }
+        }
+
+        // Show login section
+        function showLogin() {
+            loginSection.style.display = 'block';
+            dashboard.classList.remove('active');
+            navUserInfo.style.display = 'none';
+        }
+
+        // Show dashboard
+        function showDashboard(user) {
+            loginSection.style.display = 'none';
+            dashboard.classList.add('active');
+            
+            // Update user info
+            userName.textContent = user.name || user.username || 'User';
+            document.getElementById('accountUsername').textContent = user.username || user.name || '-';
+            document.getElementById('accountEmail').textContent = user.email || 'Not provided';
+            document.getElementById('accountJoined').textContent = user.joinedAt || new Date().toLocaleDateString();
+            
+            // Update provider badge
+            const providerBadge = document.getElementById('accountProvider');
+            const provider = user.provider || 'huggingface';
+            const providerIcons = {
+                github: '<i class="fab fa-github"></i> GitHub',
+                discord: '<i class="fab fa-discord"></i> Discord',
+                huggingface: '🤗 Hugging Face'
+            };
+            providerBadge.innerHTML = `<span class="provider-badge ${provider}">${providerIcons[provider]}</span>`;
+            
+            // Show nav user info
+            navUserInfo.style.display = 'flex';
+            navAvatar.src = user.avatar || 'dist/img/favicon-32x32.png';
+            navUsername.textContent = user.name || user.username;
+            
+            // Load existing API key if any
+            const existingKey = localStorage.getItem('g4f_api_key');
+            if (existingKey) {
+                apiKeyInput.value = existingKey;
+            }
+            
+            // Update base URL
+            if (framework.backendUrl) {
+                baseUrl.textContent = framework.backendUrl + '/v1';
+            }
+            
+            // Load usage stats
+            loadUsageStats(user);
+        }
+
+        // Load usage stats (simulated - replace with actual API call)
+        function loadUsageStats(user) {
+            // These would come from your backend API
+            const stats = JSON.parse(localStorage.getItem('g4f_stats') || '{}');
+            document.getElementById('statRequests').textContent = formatNumber(stats.requests || 0);
+            document.getElementById('statTokens').textContent = formatNumber(stats.tokens || 0);
+            document.getElementById('statImages').textContent = formatNumber(stats.images || 0);
+            document.getElementById('statChats').textContent = formatNumber(stats.chats || 0);
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toString();
+        }
+
+        // GitHub OAuth
+        loginGithub.addEventListener('click', () => {
+            const scope = 'user:email';
+            const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${scope}&state=github`;
+            window.location.href = authUrl;
+        });
+
+        // Discord OAuth
+        loginDiscord.addEventListener('click', () => {
+            const scope = 'identify email';
+            const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(scope)}&state=discord`;
+            window.location.href = authUrl;
+        });
+
+        // Hugging Face OAuth
+        loginHuggingface.addEventListener('click', async () => {
+            if (window.oauthConfig) {
+                window.location.href = await oauthLoginUrl(window.oauthConfig);
+            } else {
+                showToast('Hugging Face OAuth not configured', 'error');
+            }
+        });
+
+        // Handle OAuth callback
+        async function handleOAuthCallback() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const state = urlParams.get('state');
+            const error = urlParams.get('error');
+
+            if (error) {
+                showToast('Authentication failed: ' + error, 'error');
+                return;
+            }
+
+            // Handle Hugging Face OAuth
+            if (window.oauthConfig) {
+                const oauthResult = await oauthHandleRedirectIfPresent();
+                if (oauthResult) {
+                    const user = {
+                        name: oauthResult.userInfo.fullname || oauthResult.userInfo.name,
+                        username: oauthResult.userInfo.name,
+                        email: oauthResult.userInfo.email,
+                        avatar: oauthResult.userInfo.picture,
+                        provider: 'huggingface',
+                        accessToken: oauthResult.accessToken,
+                        joinedAt: new Date().toLocaleDateString()
+                    };
+                    localStorage.setItem('g4f_user', JSON.stringify(user));
+                    localStorage.setItem('HuggingFace-api_key', oauthResult.accessToken);
+                    localStorage.setItem('user', user.name);
+                    showToast('Successfully signed in with Hugging Face!');
+                    // Clear URL params
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    showDashboard(user);
+                    return;
+                }
+            }
+
+            if (code && state) {
+                // For GitHub and Discord, you would need to exchange the code for tokens on your backend
+                // This is a simplified example that simulates the OAuth flow
+                if (state === 'github') {
+                    // In production, exchange code for access token on your backend
+                    const user = {
+                        name: 'GitHub User',
+                        username: 'github_user',
+                        email: 'user@github.com',
+                        avatar: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',
+                        provider: 'github',
+                        joinedAt: new Date().toLocaleDateString()
+                    };
+                    localStorage.setItem('g4f_user', JSON.stringify(user));
+                    showToast('Successfully signed in with GitHub!');
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    showDashboard(user);
+                } else if (state === 'discord') {
+                    const user = {
+                        name: 'Discord User',
+                        username: 'discord_user',
+                        email: 'user@discord.com',
+                        avatar: 'https://discord.com/assets/847541504914fd33810e70a0ea73177e.ico',
+                        provider: 'discord',
+                        joinedAt: new Date().toLocaleDateString()
+                    };
+                    localStorage.setItem('g4f_user', JSON.stringify(user));
+                    showToast('Successfully signed in with Discord!');
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    showDashboard(user);
+                }
+            }
+        }
+
+        // Logout
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('g4f_user');
+            localStorage.removeItem('g4f_api_key');
+            localStorage.removeItem('oauth');
+            localStorage.removeItem('HuggingFace-api_key');
+            showToast('Successfully signed out');
+            showLogin();
+        });
+
+        // Generate API Key
+        generateKeyBtn.addEventListener('click', async () => {
+            const user = JSON.parse(localStorage.getItem('g4f_user') || '{}');
+            if (!user.username && !user.name) {
+                showToast('Please sign in first', 'error');
+                return;
+            }
+
+            generateKeyBtn.disabled = true;
+            generateKeyBtn.innerHTML = '<span class="loading"></span> Generating...';
+
+            try {
+                // Connect to backend first
+                if (!framework.backendUrl) {
+                    await framework.connectToBackend();
+                }
+                
+                // Generate API key using existing framework function
+                const userId = user.username || user.name || 'user';
+                const apiKey = await genAK(userId);
+                
+                if (apiKey) {
+                    apiKeyInput.value = apiKey;
+                    apiKeyInput.type = 'password';
+                    localStorage.setItem('g4f_api_key', apiKey);
+                    baseUrl.textContent = (framework.backendUrl || 'https://g4f.dev') + '/v1';
+                    showToast('API key generated successfully!');
+                } else {
+                    throw new Error('Failed to generate key');
+                }
+            } catch (error) {
+                console.error('Error generating API key:', error);
+                showToast('Error generating API key: ' + error.message, 'error');
+            } finally {
+                generateKeyBtn.disabled = false;
+                generateKeyBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Generate New Key';
+            }
+        });
+
+        // Toggle API key visibility
+        toggleKeyBtn.addEventListener('click', () => {
+            if (apiKeyInput.type === 'password') {
+                apiKeyInput.type = 'text';
+                toggleKeyBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+            } else {
+                apiKeyInput.type = 'password';
+                toggleKeyBtn.innerHTML = '<i class="fas fa-eye"></i>';
+            }
+        });
+
+        // Copy API key
+        copyKeyBtn.addEventListener('click', async () => {
+            if (!apiKeyInput.value) {
+                showToast('No API key to copy', 'error');
+                return;
+            }
+            
+            try {
+                await navigator.clipboard.writeText(apiKeyInput.value);
+                showToast('API key copied to clipboard!');
+            } catch (err) {
+                // Fallback for older browsers
+                apiKeyInput.select();
+                document.execCommand('copy');
+                showToast('API key copied to clipboard!');
+            }
+        });
+
+        // Copy base URL
+        baseUrl.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(baseUrl.textContent);
+                showToast('Base URL copied to clipboard!');
+            } catch (err) {
+                showToast('Failed to copy', 'error');
+            }
+        });
+        baseUrl.style.cursor = 'pointer';
+        baseUrl.title = 'Click to copy';
+
+        // genAK function reference from framework
+        async function genAK(userId) {
+            if (!window.JSEncrypt) {
+                throw new Error('JSEncrypt not loaded');
+            }
+            
+            const G4F_HOST = "https://g4f.dev";
+            const publicKeyData = await framework.getPublicKey(G4F_HOST);
+            
+            const encrypt = new JSEncrypt();
+            encrypt.setPublicKey(publicKeyData.public_key);
+            
+            const data = {
+                data: publicKeyData.data,
+                user: userId,
+                user_agent: navigator.userAgent,
+                timestamp: Date.now(),
+                referrer: document.referrer,
+                provider: localStorage.getItem('provider'),
+                model: localStorage.getItem('model')
+            };
+            
+            const encrypted = encrypt.encrypt(JSON.stringify(data));
+            if (!encrypted) {
+                throw new Error('Encryption failed');
+            }
+            
+            localStorage.setItem('Azure-api_key', encrypted);
+            return encrypted;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Connect to backend
+            framework.connectToBackend();
+            
+            // Handle OAuth callback first
+            await handleOAuthCallback();
+            
+            // Then check auth state
+            checkAuth();
+        });
+
+        // Check for existing HuggingFace login from home.html
+        const existingOAuth = localStorage.getItem('oauth');
+        if (existingOAuth) {
+            try {
+                const oauthData = JSON.parse(existingOAuth);
+                const existingUser = localStorage.getItem('user');
+                if (oauthData.accessToken && existingUser) {
+                    const user = {
+                        name: existingUser,
+                        username: existingUser,
+                        provider: 'huggingface',
+                        accessToken: oauthData.accessToken,
+                        joinedAt: new Date().toLocaleDateString()
+                    };
+                    if (!localStorage.getItem('g4f_user')) {
+                        localStorage.setItem('g4f_user', JSON.stringify(user));
+                    }
+                }
+            } catch (e) {
+                console.error('Error parsing existing OAuth:', e);
+            }
+        }
+    </script>
+</body>
+</html>
