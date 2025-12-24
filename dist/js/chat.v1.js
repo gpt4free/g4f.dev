@@ -3915,21 +3915,43 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
 
 async function read_response(response, message_id, provider, finish_message) {
     const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
-    let buffer = ""
+    let buffer = "";
+    let currentEvent = null;
+    let currentData = null;
+    
     while (true) {
         const { value, done } = await reader.read();
         if (done) {
             break;
         }
-        for (const line of value.split("\n")) {
-            if (!line) {
-                continue;
-            }
-            try {
-                await add_message_chunk(JSON.parse(buffer + line), message_id, provider, finish_message);
-                buffer = "";
-            } catch {
-                buffer += line
+        buffer += value;
+        const lines = buffer.split("\n");
+        // Keep the last incomplete line in the buffer
+        buffer = lines.pop();
+        
+        for (const line of lines) {
+            if (line.startsWith("event: ")) {
+                currentEvent = line.substring(7).trim();
+            } else if (line.startsWith("data: ")) {
+                currentData = line.substring(6);
+            } else if (line === "" && currentData !== null) {
+                // Empty line marks end of SSE event
+                try {
+                    const data = JSON.parse(currentData);
+                    await add_message_chunk(data, message_id, provider, finish_message);
+                } catch (e) {
+                    console.error("Failed to parse SSE data:", e, currentData);
+                }
+                currentEvent = null;
+                currentData = null;
+            } else if (line && !line.startsWith("event:") && !line.startsWith("data:")) {
+                // Fallback for legacy JSON-only format (no SSE prefix)
+                try {
+                    const data = JSON.parse(line);
+                    await add_message_chunk(data, message_id, provider, finish_message);
+                } catch {
+                    // Ignore parse errors for incomplete lines
+                }
             }
         }
     }
