@@ -65,6 +65,45 @@ const modelTags = {
 
 document.addEventListener("DOMContentLoaded", (event) => {
     translationSnipptes.forEach((text) => framework.translate(text));
+    
+    // Settings tabs functionality
+    const settingsTabs = document.querySelectorAll('.settings-tab');
+    const tabContents = document.querySelectorAll('.settings-tab-content');
+    
+    settingsTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const targetTab = tab.dataset.tab;
+            
+            // Update active tab button
+            settingsTabs.forEach(t => {
+                t.classList.remove('active');
+                t.setAttribute('aria-selected', 'false');
+            });
+            tab.classList.add('active');
+            tab.setAttribute('aria-selected', 'true');
+            
+            // Update active tab content
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+            const targetContent = document.getElementById(`tab-${targetTab}`);
+            if (targetContent) {
+                targetContent.classList.add('active');
+            }
+            
+            // Save active tab to localStorage
+            appStorage.setItem('settings-active-tab', targetTab);
+        });
+    });
+    
+    // Restore last active tab
+    const savedTab = appStorage.getItem('settings-active-tab');
+    if (savedTab) {
+        const tabButton = document.querySelector(`.settings-tab[data-tab="${savedTab}"]`);
+        if (tabButton) {
+            tabButton.click();
+        }
+    }
 });
 
 let provider_storage = {};
@@ -1925,7 +1964,7 @@ const load_conversation = async (conversation, append = false) => {
             if (!framework.backendUrl || appStorage.getItem("voice")) {
                 // synthesize_params = (new URLSearchParams({input: filter_message(text), voice: appStorage.getItem("voice") || "alloy"})).toString();
                 // synthesize_url = `https://www.openai.fm/api/generate?${synthesize_params}`;
-                synthesize_url = `http://g4f.dev/ai/audio/${encodeURIComponent("say only this text, no intro or confirmation: ")}${encodeURIComponent(filter_message(text))}?voice=${encodeURIComponent(appStorage.getItem("voice") || "alloy")}`;
+                synthesize_url = `http://g4f.dev/ai/audio/${encodeURIComponent(filter_message(text))}?voice=${encodeURIComponent(appStorage.getItem("voice") || "alloy")}`;
             } else {
                 if (item.synthesize) {
                     synthesize_params = item.synthesize.data

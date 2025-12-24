@@ -1894,9 +1894,74 @@ form textarea {
     display: flex;
     align-items: center;
     padding: 15px 0;
-    margin-bottom: 15px;
     border-bottom: 1px solid var(--blur-border);
     gap: 12px; /* Space between button and title */
+}
+
+/* Settings Tabs */
+.settings-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 0 15px 0;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--blur-border);
+    overflow-x: auto;
+    flex-shrink: 0;
+}
+
+.settings-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: transparent;
+    border: 1px solid var(--blur-border);
+    border-radius: var(--border-radius-1);
+    color: var(--colour-3);
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.settings-tab:hover {
+    background-color: var(--blur-bg);
+}
+
+.settings-tab.active {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+.settings-tab i {
+    font-size: 12px;
+}
+
+.settings-tab-content {
+    display: none;
+}
+
+.settings-tab-content.active {
+    display: block;
+}
+
+@media screen and (max-width: 640px) {
+    .settings-tabs {
+        padding: 0 10px 15px 10px;
+    }
+
+    .settings-tab span {
+        display: none;
+    }
+
+    .settings-tab {
+        padding: 10px 14px;
+    }
+
+    .settings-tab i {
+        font-size: 16px;
+    }
 }
 
 .settings-back-button, .log-back-button {

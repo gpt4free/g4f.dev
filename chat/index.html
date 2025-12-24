@@ -176,23 +176,32 @@
                     </button>
                      <h2>Settings</h2>
                 </header>
+                <nav class="settings-tabs" role="tablist" aria-label="Settings categories">
+                    <button class="settings-tab active" data-tab="general" role="tab" aria-selected="true" aria-controls="tab-general">
+                        <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                        <span>General</span>
+                    </button>
+                    <button class="settings-tab" data-tab="appearance" role="tab" aria-selected="false" aria-controls="tab-appearance">
+                        <i class="fa-solid fa-palette" aria-hidden="true"></i>
+                        <span>Appearance</span>
+                    </button>
+                    <button class="settings-tab" data-tab="prompts" role="tab" aria-selected="false" aria-controls="tab-prompts">
+                        <i class="fa-solid fa-comment" aria-hidden="true"></i>
+                        <span>Prompts</span>
+                    </button>
+                    <button class="settings-tab" data-tab="api" role="tab" aria-selected="false" aria-controls="tab-api">
+                        <i class="fa-solid fa-key" aria-hidden="true"></i>
+                        <span>API Keys</span>
+                    </button>
+                    <button class="settings-tab" data-tab="advanced" role="tab" aria-selected="false" aria-controls="tab-advanced">
+                        <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                        <span>Advanced</span>
+                    </button>
+                </nav>
                 <div class="settings-content">
                 <form>
-                  <div class="field">
-                      <span class="label">Enable Dark Mode</span>
-                      <input type="checkbox" id="darkMode" checked />
-                      <label for="darkMode" class="toogle" title="Toggle Dark Mode"></label>
-                  </div>
-                  <div class="field">
-                      <span class="label">Enable Liquid Mode</span>
-                      <input type="checkbox" id="liquid" checked />
-                      <label for="liquid" class="toogle" title="Toggle Liquid Mode"></label>
-                  </div>
-                  <div class="field">
-                      <span class="label">Disable Animations</span>
-                      <input type="checkbox" id="disableAnimations" checked />
-                      <label for="disableAnimations" class="toogle" title="Disable animations"></label>
-                  </div>
+                  <!-- General Tab -->
+                  <div class="settings-tab-content active" id="tab-general" role="tabpanel" aria-labelledby="tab-general">
                   <div class="field">
                       <span class="label">Render Markdown</span>
                       <input type="checkbox" id="renderMarkdown" checked />
@@ -202,11 +211,6 @@
                       <span class="label">Simulate Typing</span>
                       <input type="checkbox" id="simulateTyping" checked />
                       <label for="simulateTyping" class="toogle" title="Enable simulated typing effect for responses"></label>
-                  </div>
-                  <div class="field">
-                      <span class="label">Hide System Prompt</span>
-                      <input type="checkbox" id="hide-systemPrompt" />
-                      <label for="hide-systemPrompt" class="toogle" title="Hide system prompt for more space on phones"></label>
                   </div>
                   <div class="field">
                       <span class="label">AI Features</span>
@@ -233,21 +237,6 @@
                       <input type="checkbox" id="automaticOrientation" checked />
                       <label for="automaticOrientation" class="toogle" title="Auto-orient generated media"></label>
                   </div>
-                  <div class="field hidden">
-                      <span class="label">Refine Files with spaCy</span>
-                      <input type="checkbox" id="refine" />
-                      <label for="refine" class="toogle" title="Enable file refinement with spaCy"></label>
-                  </div>
-                  <div class="field">
-                      <span class="label">Report Errors</span>
-                      <input type="checkbox" id="reportError" checked />
-                      <label for="reportError" class="toogle" title="Send error reports"></label>
-                  </div>
-                  <div class="field">
-                      <span class="label">Debug Mode</span>
-                      <input type="checkbox" id="debugMode" />
-                      <label for="debugMode" class="toogle" title="Enable debug mode"></label>
-                  </div>
                   <div class="field box">
                       <label for="userInput-height" class="label" title="Set maximum height of input box">Input Max Height (px)</label>
                       <input type="number" id="userInput-height" value="180" min="100" max="500" />
@@ -260,6 +249,34 @@
                       <label for="voice" class="label" title="">Synthesize Voice</label>
                       <input type="text" id="voice" value="" placeholder="gemini" />
                   </div>
+                  </div>
+
+                  <!-- Appearance Tab -->
+                  <div class="settings-tab-content" id="tab-appearance" role="tabpanel" aria-labelledby="tab-appearance">
+                  <div class="field">
+                      <span class="label">Enable Dark Mode</span>
+                      <input type="checkbox" id="darkMode" checked />
+                      <label for="darkMode" class="toogle" title="Toggle Dark Mode"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Enable Liquid Mode</span>
+                      <input type="checkbox" id="liquid" checked />
+                      <label for="liquid" class="toogle" title="Toggle Liquid Mode"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Disable Animations</span>
+                      <input type="checkbox" id="disableAnimations" checked />
+                      <label for="disableAnimations" class="toogle" title="Disable animations"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Hide System Prompt</span>
+                      <input type="checkbox" id="hide-systemPrompt" />
+                      <label for="hide-systemPrompt" class="toogle" title="Hide system prompt for more space on phones"></label>
+                  </div>
+                  </div>
+
+                  <!-- Prompts Tab -->
+                  <div class="settings-tab-content" id="tab-prompts" role="tabpanel" aria-labelledby="tab-prompts">
                   <div class="field row box">
                       <label for="globalPrompt" class="label">Global System Prompt</label>
                       <textarea id="globalPrompt" value="Render image URLs in Markdown format: `![](http://example/image.jpg)`
@@ -271,6 +288,10 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                       <textarea id="systemPrompt" placeholder="You are a helpful assistant." aria-describedby="systemPrompt-desc"></textarea>
                       <small id="systemPrompt-desc" class="sr-only">Customize the AI's system prompt to personalize responses or enable features like image generation.</small>
                   </div>
+                  </div>
+
+                  <!-- API Keys Tab -->
+                  <div class="settings-tab-content" id="tab-api" role="tabpanel" aria-labelledby="tab-api">
                   <div class="field mem0 hidden">
                       <span class="label">Enable Memory with Mem0</span>
                       <input type="checkbox" id="mem0" />
@@ -295,6 +316,25 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                   <div class="field box hidden">
                       <label for="BingCreateImages-api_key" class="label">Microsoft Designer Bing Cookie (_U)</label>
                       <input type="text" id="BingCreateImages-api_key" name="BingCreateImages[api_key]" placeholder="&quot;_U&quot; cookie" autocomplete="off" />
+                  </div>
+                  </div>
+
+                  <!-- Advanced Tab -->
+                  <div class="settings-tab-content" id="tab-advanced" role="tabpanel" aria-labelledby="tab-advanced">
+                  <div class="field hidden">
+                      <span class="label">Refine Files with spaCy</span>
+                      <input type="checkbox" id="refine" />
+                      <label for="refine" class="toogle" title="Enable file refinement with spaCy"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Report Errors</span>
+                      <input type="checkbox" id="reportError" checked />
+                      <label for="reportError" class="toogle" title="Send error reports"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Debug Mode</span>
+                      <input type="checkbox" id="debugMode" />
+                      <label for="debugMode" class="toogle" title="Enable debug mode"></label>
                   </div>
                   
                   <!-- MCP Servers Section -->
@@ -345,6 +385,7 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                           <i class="fa-solid fa-terminal" aria-hidden="true"></i>
                           <span>Show log</span>
                       </button>
+                  </div>
                   </div>
                 </form>
                 </div>
