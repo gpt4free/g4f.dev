@@ -212,6 +212,8 @@ class Client {
                 model.type = 'chat';
               } else if (model.task?.name === "Text-to-Image") {
                 model.type = 'image';
+              } else if (model.id.toLowerCase().includes("video")) {
+                model.type = 'video';
               } else if (model.supports_chat) {
                 model.type = 'chat';
               } else if (model.supports_images) {
@@ -441,13 +443,6 @@ class Client {
             }
             if (data.image) {
                 return {data: [{b64_json: data.image, url: `data:image/png;base64,${data.image}`}]};
-            }
-            if (data.data) {
-                data.data.forEach(img => {
-                    if (img.b64_json) {
-                        img.url = `data:image/png;base64,${img.b64_json}`;
-                    }
-                });
             }
             return data;
         }

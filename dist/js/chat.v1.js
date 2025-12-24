@@ -1425,15 +1425,20 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     ...(!modelSeed ? { response_format: 'b64_json' } : {}),
                     ...(image && image.url ? { image: image.url } : {})
                 });
-                const imageUrl = response.data ? response.data[0].url : null;
-                if (!imageUrl) {
+                if (!response.data) {
                     throw new Error(framework.translate("No image URL returned from the API."));
                 }
-                if (modelType === 'video') {
-                    message_storage[message_id] = `<video controls src="${imageUrl}"></video>`;
-                } else {
-                    message_storage[message_id] = `[![${sanitize(message, ' ')}](${imageUrl})](${imageUrl.startsWith('data:') ? '' : imageUrl})`
-                }
+                response.data.forEach(img => {
+                    if (img.b64_json) {
+                        const mimeType = modelType === 'video' ? 'video/mp4' : 'image/png';
+                        img.url = `data:${mimeType};base64,${img.b64_json}`;
+                    }
+                    if (modelType === 'video') {
+                        message_storage[message_id] += `<video controls src="${img.url}"></video>`;
+                    } else {
+                        message_storage[message_id] += `[![${sanitize(message, ' ')}](${img.url})](${img.url.startsWith('data:') ? '' : img.url})`
+                    }
+                });
             } else if (isAudio) {
                 // Handle audio generation
                 const response = await client.chat.completions.create({
@@ -3171,17 +3176,16 @@ async function on_api() {
             }
             option.value = name;
             option.dataset.live = "true";
-            option.text = `${name} ${config.tags}`;
+            option.text = `${config.label || name} ${config.tags}`;
             optgroup.appendChild(option);
-            const url = `https://g4f.dev/ai/${name}/Response%20with%20ok?seed=${Math.floor(Date.now() / 1000 / 3600 / 24)}`;
+            const url = `https://g4f.dev/ai/${name}/ok?seed=${Math.floor(Date.now() / 1000 / 3600 / 24)}`;
             let wait = 0;
             const options = localStorage.getItem(window.providerLocalStorage[name]) ? { headers: {'authorization': `Bearer ${localStorage.getItem(window.providerLocalStorage[name])}`} } : undefined;
             fetch(url).then((response) => {
-                console.log(response.headers.get("retry-after"))
                 if (response.ok) {
                     option.text += " 🟢";
                 } else {
-                    wait += 10;
+                    wait += 12;
                     setTimeout(() => {
                         fetch(url, options).then((response) => {
                             if (response.ok) {
