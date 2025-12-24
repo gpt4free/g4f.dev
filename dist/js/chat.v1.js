@@ -3121,7 +3121,8 @@ function get_modelTags(model, add_vision = true) {
     return parts.join("");
 }
 
-async function load_providers(providers, provider_options, providersListContainer) {
+async function load_providers(providers, provider_options, providersListContainer, providersToggleContainer) {
+    providersToggleContainer = providersToggleContainer || settingsContent;
     providers.sort((a, b) => a.label.localeCompare(b.label));
     providers.forEach((provider) => {
         if (provider.hf_space) {
@@ -3166,7 +3167,7 @@ async function load_providers(providers, provider_options, providersListContaine
             </div>
             <div class="collapsible-content hidden"></div>
         `;
-        settingsContent.appendChild(providersContainer);
+        providersToggleContainer.appendChild(providersContainer);
 
         providers.forEach((provider) => {
             if (!provider.parent || provider.name == "PuterJS") {
@@ -3260,6 +3261,10 @@ async function on_api() {
         stopRecognition();
     });
 
+    // Get the Providers tab containers (or fall back to settingsContent for backward compatibility)
+    const providersApiKeysContainer = document.getElementById("providers-api-keys-container") || settingsContent;
+    const providersToggleContainer = document.getElementById("providers-toggle-container") || settingsContent;
+
     let providersListContainer = document.createElement("div");
     providersListContainer.classList.add("field", "collapsible");
     providersListContainer.innerHTML = `
@@ -3269,7 +3274,7 @@ async function on_api() {
         </div>
         <div class="collapsible-content api-key hidden"></div>
     `;
-    settingsContent.appendChild(providersListContainer);
+    providersApiKeysContainer.appendChild(providersListContainer);
 
     providersListContainer.querySelector(".collapsible-header").addEventListener('click', (e) => {
         providersListContainer.querySelector(".collapsible-content").classList.toggle('hidden');
@@ -3315,7 +3320,7 @@ async function on_api() {
 
         let provider_options = [];
         api("providers").then(async (providers) => {
-            await load_providers(providers, provider_options, providersListContainer);
+            await load_providers(providers, provider_options, providersListContainer, providersToggleContainer);
             load_provider_models(appStorage.getItem("provider"));
         }).catch(async (e)=>{
             console.log(e)

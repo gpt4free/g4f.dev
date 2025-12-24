@@ -189,9 +189,13 @@
                         <i class="fa-solid fa-comment" aria-hidden="true"></i>
                         <span>Prompts</span>
                     </button>
+                    <button class="settings-tab" data-tab="providers" role="tab" aria-selected="false" aria-controls="tab-providers">
+                        <i class="fa-solid fa-server" aria-hidden="true"></i>
+                        <span>Providers</span>
+                    </button>
                     <button class="settings-tab" data-tab="api" role="tab" aria-selected="false" aria-controls="tab-api">
                         <i class="fa-solid fa-key" aria-hidden="true"></i>
-                        <span>API Keys</span>
+                        <span>Custom Provider</span>
                     </button>
                     <button class="settings-tab" data-tab="advanced" role="tab" aria-selected="false" aria-controls="tab-advanced">
                         <i class="fa-solid fa-gear" aria-hidden="true"></i>
@@ -251,6 +255,33 @@
                           <option value="">Loading voices...</option>
                       </select>
                   </div>
+                  <div class="bottom_buttons">
+                      <button type="button" onclick="delete_conversations()" aria-label="Clear all conversations">
+                          <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                          <span>Clear Conversations</span>
+                      </button>
+                      <button type="button" onclick="save_storage()" aria-label="Export conversations">
+                          <i class="fa-solid fa-download" aria-hidden="true"></i>
+                          <span>Export Conversations</span>
+                      </button>
+                      <button type="button" onclick="save_storage(true)" aria-label="Export settings">
+                          <i class="fa-solid fa-pencil" aria-hidden="true"></i>
+                          <span>Export Settings</span>
+                      </button>
+                      <button type="button" onclick="this.querySelector('.fa-spin').classList.remove('hidden'); framework.translateAll().then(() => {window.location.reload()}).catch(() => {this.querySelector('.fa-spin').classList.add('hidden')})" aria-label="Translate user interface">
+                          <i class="fa-solid fa-language" aria-hidden="true"></i>
+                          <span>Translate UI</span>
+                          <i class="fas fa-spinner fa-spin hidden" aria-hidden="true"></i>
+                      </button>
+                      <button type="button" onclick="localStorage.getItem(framework.translationKey) ? (delete_translations() || window.location.reload()) : null" aria-label="Delete translations">
+                          <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                          <span>Delete Translations</span>
+                      </button>
+                      <button id="showLog" type="button" aria-label="Show log" onclick="window.showLog()">
+                          <i class="fa-solid fa-terminal" aria-hidden="true"></i>
+                          <span>Show log</span>
+                      </button>
+                  </div>
                   </div>
 
                   <!-- Appearance Tab -->
@@ -290,6 +321,14 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                       <textarea id="systemPrompt" placeholder="You are a helpful assistant." aria-describedby="systemPrompt-desc"></textarea>
                       <small id="systemPrompt-desc" class="sr-only">Customize the AI's system prompt to personalize responses or enable features like image generation.</small>
                   </div>
+                  </div>
+
+                  <!-- Providers Tab -->
+                  <div class="settings-tab-content" id="tab-providers" role="tabpanel" aria-labelledby="tab-providers">
+                  <!-- Provider API Keys section will be dynamically added here -->
+                  <div id="providers-api-keys-container"></div>
+                  <!-- Provider Enable/Disable section will be dynamically added here -->
+                  <div id="providers-toggle-container"></div>
                   </div>
 
                   <!-- API Keys Tab -->
@@ -359,34 +398,6 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                           </button>
                       </div>
                       <div id="mcp-tools-list" class="mcp-tools-list"></div>
-                  </div>
-                  
-                  <div class="bottom_buttons">
-                      <button type="button" onclick="delete_conversations()" aria-label="Clear all conversations">
-                          <i class="fa-solid fa-trash" aria-hidden="true"></i>
-                          <span>Clear Conversations</span>
-                      </button>
-                      <button type="button" onclick="save_storage()" aria-label="Export conversations">
-                          <i class="fa-solid fa-download" aria-hidden="true"></i>
-                          <span>Export Conversations</span>
-                      </button>
-                      <button type="button" onclick="save_storage(true)" aria-label="Export settings">
-                          <i class="fa-solid fa-pencil" aria-hidden="true"></i>
-                          <span>Export Settings</span>
-                      </button>
-                      <button type="button" onclick="this.querySelector('.fa-spin').classList.remove('hidden'); framework.translateAll().then(() => {window.location.reload()}).catch(() => {this.querySelector('.fa-spin').classList.add('hidden')})" aria-label="Translate user interface">
-                          <i class="fa-solid fa-language" aria-hidden="true"></i>
-                          <span>Translate UI</span>
-                          <i class="fas fa-spinner fa-spin hidden" aria-hidden="true"></i>
-                      </button>
-                      <button type="button" onclick="localStorage.getItem(framework.translationKey) ? (delete_translations() || window.location.reload()) : null" aria-label="Delete translations">
-                          <i class="fa-solid fa-trash" aria-hidden="true"></i>
-                          <span>Delete Translations</span>
-                      </button>
-                      <button id="showLog" type="button" aria-label="Show log" onclick="window.showLog()">
-                          <i class="fa-solid fa-terminal" aria-hidden="true"></i>
-                          <span>Show log</span>
-                      </button>
                   </div>
                   </div>
                 </form>
