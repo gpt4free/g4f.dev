@@ -1923,8 +1923,9 @@ const load_conversation = async (conversation, append = false) => {
         }
         if (text) {
             if (!framework.backendUrl || appStorage.getItem("voice")) {
-                synthesize_params = (new URLSearchParams({input: filter_message(text), voice: appStorage.getItem("voice") || "alloy"})).toString();
-                synthesize_url = `https://www.openai.fm/api/generate?${synthesize_params}`;
+                // synthesize_params = (new URLSearchParams({input: filter_message(text), voice: appStorage.getItem("voice") || "alloy"})).toString();
+                // synthesize_url = `https://www.openai.fm/api/generate?${synthesize_params}`;
+                synthesize_url = `http://g4f.dev/ai/audio/${encodeURIComponent("say only this text, no intro or confirmation: ")}${encodeURIComponent(filter_message(text))}?voice=${encodeURIComponent(appStorage.getItem("voice") || "alloy")}`;
             } else {
                 if (item.synthesize) {
                     synthesize_params = item.synthesize.data
