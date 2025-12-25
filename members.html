@@ -893,8 +893,8 @@
         <a href="/" class="logo">G4F</a>
         <nav class="nav-links" role="navigation">
             <a href="/">Home</a>
-            <a href="/chat/">Chat</a>
-            <a href="/docs/">Docs</a>
+            <a href="/chat/" title="Start Chat">Chat</a>
+            <a href="/docs/" title="Documentation">Docs</a>
             <a href="https://github.com/xtekky/gpt4free" target="_blank" rel="noopener noreferrer">GitHub</a>
             <div class="user-info" id="navUserInfo" style="display: none;">
                 <img class="user-avatar" id="navAvatar" src="" alt="User avatar">
@@ -904,6 +904,38 @@
     </header>
 
     <main class="main-container">
+        <!-- Redirect Login Section (shown when redirect parameter is present) -->
+        <section class="login-section" id="redirectLoginSection" style="display: none;">
+            <h1>Login Required</h1>
+            <p>Sign in to continue to your application. After signing in, you'll be redirected back with an API key.</p>
+            <p style="color: var(--secondary); font-size: 0.9rem;" id="redirectTarget"></p>
+            
+            <div class="login-buttons">
+                <button class="oauth-btn github" id="redirectLoginGithub">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                    Sign in with GitHub
+                </button>
+                
+                <button class="oauth-btn discord" id="redirectLoginDiscord">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028 14.09 14.09 0 001.226-1.994.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+                    </svg>
+                    Sign in with Discord
+                </button>
+                
+                <button class="oauth-btn huggingface" id="redirectLoginHuggingface">
+                    🤗
+                    Sign in with Hugging Face
+                </button>
+            </div>
+            
+            <p style="margin-top: 1.5rem;">
+                <a href="/members.html" style="color: rgba(255,255,255,0.6);">Cancel and go to Members Area</a>
+            </p>
+        </section>
+
         <!-- Login Section (shown when not logged in) -->
         <section class="login-section" id="loginSection">
             <h1>Members Area</h1>
@@ -1162,10 +1194,14 @@
 
         // DOM Elements
         const loginSection = document.getElementById('loginSection');
+        const redirectLoginSection = document.getElementById('redirectLoginSection');
         const dashboard = document.getElementById('dashboard');
         const loginGithub = document.getElementById('loginGithub');
         const loginDiscord = document.getElementById('loginDiscord');
         const loginHuggingface = document.getElementById('loginHuggingface');
+        const redirectLoginGithub = document.getElementById('redirectLoginGithub');
+        const redirectLoginDiscord = document.getElementById('redirectLoginDiscord');
+        const redirectLoginHuggingface = document.getElementById('redirectLoginHuggingface');
         const logoutBtn = document.getElementById('logoutBtn');
         const userName = document.getElementById('userName');
         const generateKeyBtn = document.getElementById('generateKeyBtn');
@@ -1177,9 +1213,14 @@
         const navUserInfo = document.getElementById('navUserInfo');
         const navAvatar = document.getElementById('navAvatar');
         const navUsername = document.getElementById('navUsername');
+        const redirectTarget = document.getElementById('redirectTarget');
 
         // Session token storage
         let sessionToken = localStorage.getItem('g4f_session') || null;
+        
+        // Check for redirect parameter (external login request)
+        const urlParams = new URLSearchParams(window.location.search);
+        const externalRedirect = urlParams.get('redirect');
 
         // OAuth Configuration
         const GITHUB_CLIENT_ID = 'Ov23lin6fPvRsvE7JZ3S';
@@ -1217,6 +1258,12 @@
 
         // Check if user is logged in
         async function checkAuth() {
+            // If there's an external redirect, show the redirect login section
+            if (externalRedirect) {
+                showRedirectLogin();
+                return;
+            }
+
             const user = localStorage.getItem('g4f_user');
             if (user) {
                 const userData = JSON.parse(user);
@@ -1238,9 +1285,26 @@
             }
         }
 
+        // Show redirect login section (for external login requests)
+        function showRedirectLogin() {
+            loginSection.style.display = 'none';
+            redirectLoginSection.style.display = 'block';
+            dashboard.classList.remove('active');
+            navUserInfo.style.display = 'none';
+            
+            // Display the redirect target
+            try {
+                const targetUrl = new URL(decodeURIComponent(externalRedirect));
+                redirectTarget.textContent = `You will be redirected to: ${targetUrl.origin}`;
+            } catch {
+                redirectTarget.textContent = `You will be redirected back to the application.`;
+            }
+        }
+
         // Show login section
         function showLogin() {
             loginSection.style.display = 'block';
+            redirectLoginSection.style.display = 'none';
             dashboard.classList.remove('active');
             navUserInfo.style.display = 'none';
         }
@@ -1248,6 +1312,7 @@
         // Show dashboard
         async function showDashboard(user) {
             loginSection.style.display = 'none';
+            redirectLoginSection.style.display = 'none';
             dashboard.classList.add('active');
             
             // Update user info
@@ -1368,6 +1433,19 @@
             } else {
                 showToast('Hugging Face OAuth not configured', 'error');
             }
+        });
+
+        // Redirect login buttons (include redirect parameter for temp API key)
+        redirectLoginGithub.addEventListener('click', () => {
+            window.location.href = `${API_BASE}/members/auth/github?redirect=${encodeURIComponent(externalRedirect)}`;
+        });
+
+        redirectLoginDiscord.addEventListener('click', () => {
+            window.location.href = `${API_BASE}/members/auth/discord?redirect=${encodeURIComponent(externalRedirect)}`;
+        });
+
+        redirectLoginHuggingface.addEventListener('click', () => {
+            window.location.href = `${API_BASE}/members/auth/huggingface?redirect=${encodeURIComponent(externalRedirect)}`;
         });
 
         // Handle OAuth callback

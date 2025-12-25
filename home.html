@@ -94,27 +94,10 @@
             z-index: 2;
         }
 
-        .description, form p a {
+        .description {
             font-size: 1.2rem;
             margin-bottom: 30px;
             color: var(--colour-2);
-        }
-
-        .input-field {
-            width: 80%;
-            max-width: 400px;
-            padding: 12px;
-            margin: 10px 0;
-            border: 2px solid var(--colour-6);
-            background-color: var(--colour-5);
-            color: var(--colour-3);
-            border-radius: 8px;
-            font-size: 1.1rem;
-        }
-
-        .input-field:focus {
-            outline: none;
-            border-color: var(--accent);
         }
 
         .button {
@@ -157,14 +140,6 @@
     </style>
     <link rel="stylesheet" href="dist/css/all.min.css">
     <script src="dist/js/framework.js" defer></script>
-    <script src="https://unpkg.com/es-module-shims@1.7.0/dist/es-module-shims.js"></script>
-    <script type="importmap">
-        {
-            "imports": {
-                "@huggingface/hub": "https://cdn.jsdelivr.net/npm/@huggingface/hub@0.21.0/+esm"
-            }
-        }
-    </script>
 </head>
 <body class="translate">
     <iframe id="background" src="background.html"></iframe>
@@ -187,99 +162,63 @@
             <p><strong>Connected to:</strong><span> </span><span id="connect_status">...</span></p>
         </div>
 
-        <!-- Input and Button -->
-        <form action="chat/">
-            <input type="text" name="token" class="input-field" placeholder="Enter an Access Token..." autocomplete="off">
-            <div class="button-container">
-                <a id="new_window" href="" class="button hidden" target="_blank">New Window</a>
-                <button class="button">Submit</button>
-            </div>
-            <p>
-                <a href="https://huggingface.co/settings/tokens" target="_blank">Get Access Token</a>
-            </p>
-            <img src="https://huggingface.co/datasets/huggingface/badges/resolve/main/sign-in-with-huggingface-xl-dark.svg" alt="Sign in with Hugging Face" style="cursor: pointer; display: none;" id="signin">
-        </form>
-        <button id="signout" style="display: none">Sign out</button>
-        <script type="module">
-            import * as hub from "@huggingface/hub";
-            import { oauthLoginUrl, oauthHandleRedirectIfPresent } from "@huggingface/hub";
-
+        <!-- Buttons -->
+        <div class="button-container">
+            <a href="chat/" class="button">Start Chat</a>
+            <a href="#" class="button" id="login-btn">Login</a>
+        </div>
+        <p id="user-status" class="hidden" style="margin-top: 15px; color: var(--colour-2);"></p>
+        <a href="#" class="button hidden" id="logout-btn" style="max-width: 200px;">Logout</a>
+        <script>
             document.addEventListener("DOMContentLoaded", (event) => {
                 localStorage.removeItem("backendUrl");
                 framework.connectToBackend(document.getElementById("connect_status"));
-            });
 
-            const isIframe = window.self !== window.top;
-            const button = document.querySelector('form a.button');
-            if (isIframe) {
-                button.classList.remove('hidden');
-            }
+                const loginBtn = document.getElementById("login-btn");
+                const logoutBtn = document.getElementById("logout-btn");
+                const userStatus = document.getElementById("user-status");
 
-            const form = document.querySelector("form");
-            const input = document.querySelector('form input[name="token"]');
-            async function check_access_token() {
-                const accessToken = input.value;
-                if (!accessToken) {
-                    return true;
-                }
-                let user;
-                try {
-                    user = await hub.whoAmI({accessToken: accessToken});
-                } catch(e) {
-                    console.log(e);
-                    input.setCustomValidity("Invalid Access Token.");
-                    localStorage.removeItem("HuggingFace-api_key");
-                    if (localStorage.getItem("oauth")) {
-                        localStorage.removeItem("oauth");
-                        window.location.href.replace((""+window.location.href).split("?")[0]);
+                // Check for API key in URL hash or query parameters (redirect back from members)
+                const urlParams = new URLSearchParams(window.location.search);
+                let apiKey = urlParams.get("api_key");
+                // Also check hash fragment for API key (starts with g4f_)
+                if (!apiKey && window.location.hash) {
+                    const hashValue = decodeURIComponent(window.location.hash.substring(1));
+                    if (hashValue.startsWith("g4f_")) {
+                        apiKey = hashValue;
                     }
-                    return false;
                 }
-                localStorage.setItem("HuggingFace-api_key", accessToken);
-                localStorage.setItem("user", user.name);
-                localStorage.setItem("report_error", "true")
-                return true;
-            }
-            form.addEventListener("submit", async (e) => {
-                e.preventDefault();
-                if(await check_access_token()) {
-                    window.location.href = "chat/";
+                if (apiKey) {
+                    localStorage.setItem("api_key", apiKey);
+                    // Clean URL by removing the api_key parameter and hash
+                    window.history.replaceState({}, document.title, location.origin + location.pathname);
                 }
-            });
 
-            let oauthResult = localStorage.getItem("oauth");
-            if (oauthResult) {
-                let user;
-                try {
-                    oauthResult = JSON.parse(oauthResult);
-                    user = await hub.whoAmI({accessToken: oauthResult.accessToken});
-                } catch (e) {
-                    console.error(e);
-                    oauthResult = null;
-                    localStorage.removeItem("oauth");
-                    localStorage.removeItem("HuggingFace-api_key");
+                // Check if user is logged in
+                const storedApiKey = localStorage.getItem("api_key");
+                if (storedApiKey) {
+                    loginBtn.classList.add("hidden");
+                    logoutBtn.classList.remove("hidden");
+                    userStatus.classList.remove("hidden");
+                    userStatus.textContent = "You are logged in";
                 }
-            }
-            if (window.oauthConfig) {
-                oauthResult ||= await oauthHandleRedirectIfPresent();
-            }
-            if (oauthResult) {
-                localStorage.setItem("oauth", JSON.stringify(oauthResult));
-                localStorage.setItem("HuggingFace-api_key", oauthResult.accessToken);
-                localStorage.setItem("user", oauthResult.userInfo.fullname);
-                document.getElementById("signout").style.removeProperty("display");
-                document.getElementById("signout").onclick = async function() {
-                    localStorage.removeItem("oauth");
-                    localStorage.removeItem("HuggingFace-api_key");
-                    window.location.href.replace((""+window.location.href).split("?")[0]);
-                }
-            } else if (window.oauthConfig) {
-                localStorage.removeItem("oauth");
-                document.getElementById("signin").style.removeProperty("display");
-                document.getElementById("signin").onclick = async function() {
-                    window.location.href = (await oauthLoginUrl(window.oauthConfig));
-                }
-            }
+
+                // Login button - redirect to members with return URL
+                loginBtn.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    const returnUrl = encodeURIComponent(location.origin + location.pathname);
+                    window.location.href = `https://g4f.dev/members?redirect=${returnUrl}`;
+                });
+
+                // Logout button
+                logoutBtn.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    localStorage.removeItem("api_key");
+                    loginBtn.classList.remove("hidden");
+                    logoutBtn.classList.add("hidden");
+                    userStatus.classList.add("hidden");
+                });
+            });
         </script>
 
         <!-- Footer -->
