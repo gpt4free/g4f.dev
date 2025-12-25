@@ -134,31 +134,6 @@
                     <div id="box_conversations" class="conversations" role="region" aria-live="polite" aria-label="List of conversations"></div>
                 </nav>
                 <section class="bottom_buttons" aria-label="Support and links">
-                    <div class="cloud-sync-section" id="cloudSyncSection" style="display: none;">
-                        <div class="cloud-sync-header">
-                            <i class="fa-solid fa-cloud"></i>
-                            <span>Cloud Sync</span>
-                            <span class="cloud-sync-user" id="cloudSyncUser"></span>
-                        </div>
-                        <button onclick="syncConversationsToCloud()">
-                            <i class="fa-solid fa-cloud-arrow-up"></i>
-                            <span>Upload to Cloud</span>
-                        </button>
-                        <button onclick="syncConversationsFromCloud()">
-                            <i class="fa-solid fa-cloud-arrow-down"></i>
-                            <span>Download from Cloud</span>
-                        </button>
-                        <button onclick="cloudSyncLogout()">
-                            <i class="fa-solid fa-right-from-bracket"></i>
-                            <span>Logout</span>
-                        </button>
-                    </div>
-                    <div class="cloud-sync-login" id="cloudSyncLogin">
-                        <button onclick="cloudSyncLoginRedirect('github')">
-                            <i class="fa-brands fa-github"></i>
-                            <span>Login for Cloud Sync</span>
-                        </button>
-                    </div>
                     <button onclick="open_settings();" aria-label="Open settings">
                         <i class="fa-solid fa-gear" aria-hidden="true"></i>
                         <span>Open Settings</span>
@@ -225,6 +200,10 @@
                     <button class="settings-tab" data-tab="advanced" role="tab" aria-selected="false" aria-controls="tab-advanced">
                         <i class="fa-solid fa-gear" aria-hidden="true"></i>
                         <span>Advanced</span>
+                    </button>
+                    <button class="settings-tab" data-tab="cloudsync" role="tab" aria-selected="false" aria-controls="tab-cloudsync">
+                        <i class="fa-solid fa-cloud" aria-hidden="true"></i>
+                        <span>Cloud Sync</span>
                     </button>
                 </nav>
                 <div class="settings-content">
@@ -424,6 +403,38 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                       </div>
                       <div id="mcp-tools-list" class="mcp-tools-list"></div>
                   </div>
+                  </div>
+
+                  <!-- Cloud Sync Tab -->
+                  <div class="settings-tab-content" id="tab-cloudsync" role="tabpanel" aria-labelledby="tab-cloudsync">
+                      <div class="cloud-sync-login" id="cloudSyncLogin">
+                          <p style="margin-bottom: 1rem; color: var(--colour-3);">Login to sync your conversations across devices.</p>
+                          <button type="button" id="cloudSyncLoginBtn" class="cloud-sync-btn">
+                              <i class="fa-brands fa-github"></i>
+                              <span>Login with GitHub</span>
+                          </button>
+                      </div>
+                      <div class="cloud-sync-section" id="cloudSyncSection" style="display: none;">
+                          <div class="cloud-sync-user-info" style="margin-bottom: 1rem; padding: 0.75rem; background: var(--blur-bg); border-radius: 8px;">
+                              <i class="fa-solid fa-user"></i>
+                              <span>Logged in as: </span>
+                              <strong id="cloudSyncUser"></strong>
+                          </div>
+                          <div class="cloud-sync-actions" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                              <button type="button" id="cloudSyncUpload" class="cloud-sync-btn">
+                                  <i class="fa-solid fa-cloud-arrow-up"></i>
+                                  <span>Upload Conversations to Cloud</span>
+                              </button>
+                              <button type="button" id="cloudSyncDownload" class="cloud-sync-btn">
+                                  <i class="fa-solid fa-cloud-arrow-down"></i>
+                                  <span>Download Conversations from Cloud</span>
+                              </button>
+                              <button type="button" id="cloudSyncLogoutBtn" class="cloud-sync-btn logout">
+                                  <i class="fa-solid fa-right-from-bracket"></i>
+                                  <span>Logout</span>
+                              </button>
+                          </div>
+                      </div>
                   </div>
                 </form>
                 </div>

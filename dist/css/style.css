@@ -1031,6 +1031,37 @@ form input:checked+label {
     background: linear-gradient(135deg, rgba(110, 72, 170, 0.4), rgba(157, 80, 187, 0.4));
 }
 
+/* Cloud Sync in Settings */
+.cloud-sync-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--blur-border);
+    background: var(--blur-bg);
+    color: var(--colour-3);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cloud-sync-btn:hover {
+    background: rgba(110, 72, 170, 0.3);
+    border-color: rgba(110, 72, 170, 0.4);
+}
+
+.cloud-sync-btn.logout {
+    background: rgba(200, 60, 60, 0.2);
+    border-color: rgba(200, 60, 60, 0.3);
+}
+
+.cloud-sync-btn.logout:hover {
+    background: rgba(200, 60, 60, 0.3);
+    border-color: rgba(200, 60, 60, 0.4);
+}
+
 .chat-buttons input:checked+label:after,
 .settings input:checked+label:after,
 form input:checked+label:after {

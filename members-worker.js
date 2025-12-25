@@ -96,23 +96,23 @@ export default {
       }
 
       try {
-          // OAuth endpoints
-          if (pathname === "/members/auth/github") {
+          // OAuth endpoints (both /auth/ and /oauth/ paths supported)
+          if (pathname === "/members/auth/github" || pathname === "/members/oauth/github") {
               return handleGitHubAuth(request, env, url);
           }
-          if (pathname === "/members/auth/github/callback") {
+          if (pathname === "/members/auth/github/callback" || pathname === "/members/oauth/github/callback") {
               return handleGitHubCallback(request, env, url);
           }
-          if (pathname === "/members/auth/discord") {
+          if (pathname === "/members/auth/discord" || pathname === "/members/oauth/discord") {
               return handleDiscordAuth(request, env, url);
           }
-          if (pathname === "/members/auth/discord/callback") {
+          if (pathname === "/members/auth/discord/callback" || pathname === "/members/oauth/discord/callback") {
               return handleDiscordCallback(request, env, url);
           }
-          if (pathname === "/members/auth/huggingface") {
+          if (pathname === "/members/auth/huggingface" || pathname === "/members/oauth/huggingface") {
               return handleHuggingFaceAuth(request, env, url);
           }
-          if (pathname === "/members/auth/huggingface/callback") {
+          if (pathname === "/members/auth/huggingface/callback" || pathname === "/members/oauth/huggingface/callback") {
               return handleHuggingFaceCallback(request, env, url);
           }
 
@@ -179,7 +179,10 @@ export default {
                   return handleSyncConversations(request, env);
               }
           }
-          if (pathname.startsWith("/members/api/conversations/") && pathname !== "/members/api/conversations/") {
+          if (pathname === "/members/api/conversations/sync") {
+              return handleSyncConversations(request, env);
+          }
+          if (pathname.startsWith("/members/api/conversations/") && pathname !== "/members/api/conversations/" && pathname !== "/members/api/conversations/sync") {
               const conversationId = pathname.replace("/members/api/conversations/", "");
               if (request.method === "GET") {
                   return handleGetConversation(request, env, conversationId);
@@ -203,7 +206,8 @@ export default {
 async function handleGitHubAuth(request, env, url) {
   const state = generateState();
   const scope = "user:email read:user";
-  const redirectParam = url.searchParams.get("redirect");
+  // Support both "redirect" and "redirect_chat" parameters
+  const redirectParam = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect");
   
   const authUrl = new URL("https://github.com/login/oauth/authorize");
   authUrl.searchParams.set("client_id", env.GITHUB_CLIENT_ID);
@@ -314,7 +318,8 @@ async function handleGitHubCallback(request, env, url) {
 async function handleDiscordAuth(request, env, url) {
   const state = generateState();
   const scope = "identify email";
-  const redirectParam = url.searchParams.get("redirect");
+  // Support both "redirect" and "redirect_chat" parameters
+  const redirectParam = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect");
   
   const authUrl = new URL("https://discord.com/api/oauth2/authorize");
   authUrl.searchParams.set("client_id", env.DISCORD_CLIENT_ID);
@@ -412,7 +417,8 @@ async function handleDiscordCallback(request, env, url) {
 async function handleHuggingFaceAuth(request, env, url) {
   const state = generateState();
   const scope = "openid profile email";
-  const redirectParam = url.searchParams.get("redirect");
+  // Support both "redirect" and "redirect_chat" parameters
+  const redirectParam = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect");
   
   const authUrl = new URL("https://huggingface.co/oauth/authorize");
   authUrl.searchParams.set("client_id", env.HUGGINGFACE_CLIENT_ID);
@@ -1800,20 +1806,20 @@ async function handleListConversations(request, env) {
         
         const conversations = [];
         for (const object of listed.objects) {
-            // Extract conversation ID from key
-            const convId = object.key.replace(prefix, "").replace(".json", "");
-            // Get metadata without loading full content
-            const metadata = await env.MEMBERS_BUCKET.head(object.key);
-            conversations.push({
-                id: convId,
-                size: object.size,
-                updated: metadata?.httpMetadata?.cacheControl || object.uploaded,
-                uploaded: object.uploaded
-            });
+            try {
+                // Get full conversation content
+                const convObject = await env.MEMBERS_BUCKET.get(object.key);
+                if (convObject) {
+                    const convData = await convObject.json();
+                    conversations.push(convData);
+                }
+            } catch (e) {
+                console.error("Failed to load conversation:", object.key, e);
+            }
         }
 
-        // Sort by upload time, newest first
-        conversations.sort((a, b) => new Date(b.uploaded) - new Date(a.uploaded));
+        // Sort by updated/added time, newest first
+        conversations.sort((a, b) => (b.updated || b.added || 0) - (a.updated || a.added || 0));
 
         return jsonResponse({ 
             conversations,

@@ -5601,7 +5601,236 @@ async function handleToolCalls(toolCalls, messages, model, provider, message_id,
     }
 }
 
+// Cloud Sync Functions
+const CLOUD_SYNC_API = "https://g4f.dev/members/api";
+
+async function checkCloudSyncSession() {
+    const token = appStorage.getItem("cloudSyncToken");
+    if (!token) {
+        showCloudSyncLogin();
+        return;
+    }
+    try {
+        const response = await fetch(`${CLOUD_SYNC_API}/user`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            if (data.user) {
+                showCloudSyncLoggedIn(data.user);
+                return;
+            } else {
+                appStorage.removeItem("cloudSyncToken");
+                showCloudSyncLogin();
+                return;
+            }
+        } else {
+            appStorage.removeItem("cloudSyncToken");
+            showCloudSyncLogin();
+            return;
+        }
+    } catch (e) {
+        console.error("Cloud sync session check failed:", e);
+        // Keep the token but show login section on error (network issue)
+        showCloudSyncLogin();
+    }
+}
+
+function showCloudSyncLogin() {
+    const loginSection = document.getElementById("cloudSyncLogin");
+    const syncSection = document.getElementById("cloudSyncSection");
+    if (loginSection) loginSection.style.display = "block";
+    if (syncSection) syncSection.style.display = "none";
+}
+
+function showCloudSyncLoggedIn(user) {
+    const loginSection = document.getElementById("cloudSyncLogin");
+    const syncSection = document.getElementById("cloudSyncSection");
+    const userEl = document.getElementById("cloudSyncUser");
+    if (loginSection) loginSection.style.display = "none";
+    if (syncSection) syncSection.style.display = "block";
+    if (userEl) userEl.textContent = user.name || user.email || "User";
+}
+
+function cloudSyncLoginRedirect(provider = "github") {
+    const returnUrl = encodeURIComponent(window.location.href);
+    const loginUrl = `https://g4f.dev/members/oauth/${provider}?redirect_chat=${returnUrl}`;
+    window.location.href = loginUrl;
+}
+
+function handleCloudSyncCallback() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("session_token");
+    const userParam = urlParams.get("user");
+    if (token) {
+        appStorage.setItem("cloudSyncToken", token);
+        
+        // Parse and use user info if provided
+        if (userParam) {
+            try {
+                const user = JSON.parse(decodeURIComponent(userParam));
+                showCloudSyncLoggedIn(user);
+            } catch (e) {
+                console.error("Failed to parse user data:", e);
+            }
+        }
+        
+        // Clean up URL
+        const url = new URL(window.location.href);
+        url.searchParams.delete("session_token");
+        url.searchParams.delete("user");
+        window.history.replaceState({}, document.title, url.pathname + url.search);
+        
+        // Open settings to cloud sync tab
+        if (typeof open_settings === "function") {
+            setTimeout(() => {
+                open_settings();
+                // Switch to cloud sync tab
+                const cloudSyncTab = document.querySelector('.settings-tab[data-tab="cloudsync"]');
+                if (cloudSyncTab) cloudSyncTab.click();
+            }, 100);
+        }
+        
+        checkCloudSyncSession();
+    }
+}
+
+async function cloudSyncLogout() {
+    const token = appStorage.getItem("cloudSyncToken");
+    if (token) {
+        try {
+            await fetch(`${CLOUD_SYNC_API}/logout`, {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+        } catch (e) {
+            console.error("Logout failed:", e);
+        }
+    }
+    appStorage.removeItem("cloudSyncToken");
+    showCloudSyncLogin();
+}
+
+// Helper function to show/hide cloud sync loading indicator
+function showCloudSyncLoading(message) {
+    let loadingEl = document.getElementById("cloudSyncLoading");
+    if (!loadingEl) {
+        loadingEl = document.createElement("div");
+        loadingEl.id = "cloudSyncLoading";
+        loadingEl.className = "file-upload-loading";
+        document.body.appendChild(loadingEl);
+    }
+    loadingEl.innerHTML = `
+        <div class="upload-spinner"></div>
+        <p>${framework.translate(message)}</p>
+    `;
+    loadingEl.style.display = "flex";
+}
+
+function hideCloudSyncLoading() {
+    const loadingEl = document.getElementById("cloudSyncLoading");
+    if (loadingEl) {
+        loadingEl.style.display = "none";
+    }
+}
+
+async function syncConversationsToCloud() {
+    const token = appStorage.getItem("cloudSyncToken");
+    if (!token) {
+        cloudSyncLoginRedirect();
+        return;
+    }
+    showCloudSyncLoading("Uploading conversations...");
+    try {
+        const conversations = await list_conversations();
+        if (!conversations || conversations.length === 0) {
+            hideCloudSyncLoading();
+            alert("No conversations to sync.");
+            return;
+        }
+        const response = await fetch(`${CLOUD_SYNC_API}/conversations/sync`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ conversations })
+        });
+        hideCloudSyncLoading();
+        if (response.ok) {
+            const data = await response.json();
+            console.log("Conversations synced to cloud:", data);
+            alert(`${conversations.length} conversations uploaded to cloud successfully!`);
+        } else {
+            const error = await response.json();
+            throw new Error(error.error || "Sync failed");
+        }
+    } catch (e) {
+        hideCloudSyncLoading();
+        console.error("Cloud sync upload failed:", e);
+        alert("Failed to upload conversations to cloud: " + e.message);
+    }
+}
+
+async function syncConversationsFromCloud() {
+    const token = appStorage.getItem("cloudSyncToken");
+    if (!token) {
+        cloudSyncLoginRedirect();
+        return;
+    }
+    showCloudSyncLoading("Downloading conversations...");
+    try {
+        const response = await fetch(`${CLOUD_SYNC_API}/conversations`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            if (data.conversations && data.conversations.length > 0) {
+                for (const conv of data.conversations) {
+                    // Remove cloud-specific fields before saving locally
+                    delete conv.synced_at;
+                    delete conv.user_id;
+                    await save_conversation(conv);
+                }
+                await load_conversations();
+                hideCloudSyncLoading();
+                console.log("Conversations synced from cloud");
+                alert(`Downloaded ${data.conversations.length} conversations from cloud!`);
+            } else {
+                hideCloudSyncLoading();
+                alert("No conversations found in cloud.");
+            }
+        } else {
+            const error = await response.json();
+            throw new Error(error.error || "Sync failed");
+        }
+    } catch (e) {
+        hideCloudSyncLoading();
+        console.error("Cloud sync download failed:", e);
+        alert("Failed to download conversations from cloud: " + e.message);
+    }
+}
+
+// Initialize cloud sync on page load
+handleCloudSyncCallback();
+checkCloudSyncSession();
+
+// Cloud Sync button event listeners
+const cloudSyncLoginBtn = document.getElementById("cloudSyncLoginBtn");
+const cloudSyncUploadBtn = document.getElementById("cloudSyncUpload");
+const cloudSyncDownloadBtn = document.getElementById("cloudSyncDownload");
+const cloudSyncLogoutBtn = document.getElementById("cloudSyncLogoutBtn");
+
+if (cloudSyncLoginBtn) cloudSyncLoginBtn.addEventListener("click", () => cloudSyncLoginRedirect("github"));
+if (cloudSyncUploadBtn) cloudSyncUploadBtn.addEventListener("click", syncConversationsToCloud);
+if (cloudSyncDownloadBtn) cloudSyncDownloadBtn.addEventListener("click", syncConversationsFromCloud);
+if (cloudSyncLogoutBtn) cloudSyncLogoutBtn.addEventListener("click", cloudSyncLogout);
+
 // Expose functions to global scope
 window.toggleMCPServer = toggleMCPServer;
 window.removeMCPServer = removeMCPServer;
 window.toggleMCPTool = toggleMCPTool;
+window.cloudSyncLoginRedirect = cloudSyncLoginRedirect;
+window.syncConversationsToCloud = syncConversationsToCloud;
+window.syncConversationsFromCloud = syncConversationsFromCloud;
+window.cloudSyncLogout = cloudSyncLogout;
