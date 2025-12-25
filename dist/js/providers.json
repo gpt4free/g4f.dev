@@ -1,7 +1,7 @@
 {
     "providers": {
         "default": {"baseUrl": "https://g4f.dev/api/{model}", "tags": "", "defaultModel": "auto"},
-        "pollinations": {"label": "pollinations.ai", "tags": "🎨 👓"},
+        "pollinations": {"label": "pollinations.ai", "tags": "🎨 👓", "provider": "PollinationsAI"},
         "nectar": {"label": "nectar by pollinations.ai", "baseUrl": "https://g4f.dev/api/nectar", "apiEndpoint": "https://g4f.dev/api/nectar/v1/chat/completions", "imageEndpoint": "https://g4f.dev/api/nectar/image/{prompt}", "modelsEndpoint": "https://g4f.dev/api/nectar/text/models", "tags": ""},
         "api.airforce": {"baseUrl": "https://api.airforce/v1", "tags": "🎨 👓", "sleep": 60000},
         "master": {"label": "master by api.airforce", "baseUrl": "https://g4f.dev/api/api.airforce", "tags": "🎨 👓", "sleep": 10000},
@@ -11,11 +11,11 @@
         "deepinfra": {"tags": "🎨 👓"},
         "gemini": {"baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai", "backupUrl": "https://g4f.dev/api/gemini", "tags": "👓"},
         "groq": {"baseUrl": "https://api.groq.com/openai/v1", "backupUrl": "https://g4f.dev/api/groq", "tags": ""},
-        "huggingface": {"tags": "🤗"},
+        "huggingface": {"tags": "🤗", "provider": "HuggingFace"},
         "nvidia": {"baseUrl": "https://integrate.api.nvidia.com/v1", "backupUrl": "https://g4f.dev/api/nvidia", "tags": "📟"},
         "ollama": {"baseUrl": "https://g4f.dev/api/ollama", "apiEndpoint": "https://g4f.dev/ai/ollama/", "tags": "🦙", "sleep": 10000},
         "openrouter": {"baseUrl": "https://openrouter.ai/api/v1", "backupUrl": "https://g4f.dev/api/openrouter", "tags": "👓"},
-        "puter": {"tags": "👓"},
+        "puter": {"tags": "👓", "provider": "PuterJS"},
         "together": {"baseUrl": "https://api.together.xyz/v1", "tags": "👓"},
         "worker": {"baseUrl": "https://g4f.dev/api/worker", "tags": "🎨", "sleep": 10000}
     },
@@ -23,7 +23,7 @@
         "nectar": "openai",
         "pollinations": "openai",
         "azure": "model-router",
-        "gemini": "gemini-2.5-flash",
+        "gemini": "models/gemini-2.5-flash",
         "openrouter": "openai/gpt-oss-120b:free",
         "nvidia": "deepseek-ai/deepseek-v3.1",
         "ollama": "deepseek-v3.1:671b",
