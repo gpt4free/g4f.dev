@@ -29,7 +29,8 @@
         "ollama": "deepseek-v3.2",
         "groq": "openai/gpt-oss-120b",
         "gpt4free.pro": "deepseek-ai/deepseek-v3.2",
-        "puter": "gpt-5.2-chat-latest"
+        "puter": "gpt-5.2-chat-latest",
+        "perplexity": "turbo"
     },
     "providerLocalStorage": {
         "api.airforce": "ApiAirforce-api_key",
