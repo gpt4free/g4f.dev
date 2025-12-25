@@ -180,7 +180,7 @@
 
                 // Check for API key in URL hash or query parameters (redirect back from members)
                 const urlParams = new URLSearchParams(window.location.search);
-                let apiKey = urlParams.get("api_key");
+                let apiKey = urlParams.get("session_token");
                 // Also check hash fragment for API key (starts with g4f_)
                 if (!apiKey && window.location.hash) {
                     const hashValue = decodeURIComponent(window.location.hash.substring(1));
@@ -189,13 +189,13 @@
                     }
                 }
                 if (apiKey) {
-                    localStorage.setItem("api_key", apiKey);
+                    localStorage.setItem("session_token", apiKey);
                     // Clean URL by removing the api_key parameter and hash
                     window.history.replaceState({}, document.title, location.origin + location.pathname);
                 }
 
                 // Check if user is logged in
-                const storedApiKey = localStorage.getItem("api_key");
+                const storedApiKey = localStorage.getItem("session_token");
                 if (storedApiKey) {
                     loginBtn.classList.add("hidden");
                     logoutBtn.classList.remove("hidden");

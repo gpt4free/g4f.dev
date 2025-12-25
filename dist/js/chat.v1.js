@@ -1523,9 +1523,11 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
     }
     if (client) {
         const selectedOption = modelSelect.options[modelSelect.selectedIndex];
+        const providerSelectOption = providerSelect.options[providerSelect.selectedIndex];
         const selectedModel = get_selected_model() || client.defaultModel;
         const modelType = selectedOption?.dataset.type || 'chat';
         const modelSeed = selectedOption?.dataset.seed;
+        const providerLabel = providerSelectOption?.dataset.label || provider;
         const isAudio = selectedOption?.dataset.audio == "true";
         try {
             // Conditionally call the correct client method based on model type.
@@ -1613,7 +1615,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     }
                     if (chunk.model && !hasModel) {
                         hasModel = true;
-                        add_message_chunk({type: "provider", provider: {name: chunk.provider || provider, model: chunk.model}}, message_id);
+                        add_message_chunk({type: "provider", provider: {name: chunk.provider || provider, model: chunk.model, label: providerLabel}}, message_id);
                     }
                     if (chunk.error) {
                         add_message_chunk({type: "error", ...chunk.error}, message_id, null, finish_message);
@@ -1678,11 +1680,6 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         let apiBase;
         if (provider == "Custom") {
             apiBase = appStorage.getItem("Custom-api_base");
-        } else if (provider && provider.startsWith("custom:")) {
-            // Handle custom providers from API (custom:server_id format)
-            const serverId = provider.substring(7); // Remove "custom:" prefix
-            apiBase = `https://g4f.dev/custom/${serverId}`;
-            provider = "Custom"; // Use Custom provider type for API request
         }
         const ignored = Array.from(settings.querySelectorAll("input.provider:not(:checked)")).map((el)=>el.value);
         const extraBody = {};
@@ -2649,9 +2646,12 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
     if (!customOptgroup) return;
     
     try {
-        const response = await fetch("https://g4f.dev/custom/api/servers/public");
-        if (!response.ok) return;
-        
+        let response = await fetch("https://g4f.dev/custom/api/servers", {
+            headers: {'Authorization': `Bearer ${localStorage.getItem("session_token") || ""}`}
+        });
+        if (!response.ok) {
+            response = await fetch("https://g4f.dev/custom/api/servers/public");
+        }
         const data = await response.json();
         const servers = data.servers || [];
         
@@ -4009,6 +4009,7 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
             try {
                 const modelsResponse = await fetch(`https://g4f.dev/custom/api/servers/${serverId}/models`, {
                     signal: providerModelSignal.signal,
+                    headers: {'Authorization': `Bearer ${localStorage.getItem("session_token") || ""}`}
                 });
                 if (modelsResponse.ok) {
                     const data = await modelsResponse.json();
@@ -5227,6 +5228,7 @@ async function initClient() {
         if (provider.startsWith("custom:")) {
             const serverId = provider.substring(7);
             options.baseUrl = `https://g4f.dev/custom/${serverId}`;
+            options.apiKey = localStorage.getItem("session_token");
             client = window.createClient("custom", options);
         } else {
             client = window.createClient(provider, options);

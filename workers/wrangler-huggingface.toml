@@ -1,0 +1,30 @@
+# Wrangler configuration for G4F HuggingFace Worker
+# See https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "g4f-huggingface"
+main = "huggingface-worker.js"
+compatibility_date = "2024-01-01"
+
+# KV Namespace for caching models and provider mappings (optional)
+# [[kv_namespaces]]
+# binding = "HUGGINGFACE_KV"
+# id = "your-kv-namespace-id"
+
+# Environment variables
+# HUGGINGFACE_API_KEY should be set via: wrangler secret put HUGGINGFACE_API_KEY
+[vars]
+# Optional: Set a default API key (or use wrangler secret)
+# HUGGINGFACE_API_KEY = ""
+
+# Routes - configure these to match your domain
+# routes = [
+#   { pattern = "g4f.dev/huggingface/*", zone_name = "g4f.dev" }
+# ]
+
+# Development settings
+[dev]
+port = 8789
+
+# Production environment overrides
+[env.production]
+# Add production-specific settings here
