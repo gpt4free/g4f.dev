@@ -3438,7 +3438,7 @@ async function on_api() {
         if (!liveProvidersEnabled) {
             optgroup.disabled = true;
         }
-        Object.entries(window.providers || {}).forEach(([name, config]) => {
+        Object.entries(await window.loadProviders()).forEach(([name, config]) => {
             if (name === "custom") {
                 return; // Skip custom here, will be added separately
             }
@@ -4003,29 +4003,6 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
         }
         providerModelSignal = new AbortController();
         
-        // Handle custom providers from API (custom:server_id format)
-        if (args.startsWith("custom:")) {
-            const serverId = args.substring(7);
-            try {
-                const modelsResponse = await fetch(`https://g4f.dev/custom/api/servers/${serverId}/models`, {
-                    signal: providerModelSignal.signal,
-                    headers: {'Authorization': `Bearer ${localStorage.getItem("session_token") || ""}`}
-                });
-                if (modelsResponse.ok) {
-                    const data = await modelsResponse.json();
-                    // Convert to expected format
-                    const models = (data.data || []).map(m => ({
-                        model: m.id,
-                        label: m.id,
-                    }));
-                    return models;
-                }
-            } catch (e) {
-                console.debug("Failed to load custom provider models:", e);
-            }
-            return [];
-        }
-        
         api_key = get_api_key_by_provider(args);
         if (api_key) {
             headers['x-api-key'] = api_key;
@@ -4241,9 +4218,9 @@ async function load_provider_models(provider=null, search=null) {
     modelSelect.innerHTML = '';
     modelSelect.name = `model[${provider}]`;
     modelSelect.classList.remove("hidden");
-    if (provider == "PuterJS" && !localStorage.getItem("puter.auth.token") && window.providers && window.providers.puter.class) {
+    if (provider == "PuterJS" && !localStorage.getItem("puter.auth.token") && window.Puter) {
         try {
-            await (await (new window.providers.puter.class()).puter).auth.signIn({attempt_temp_user_creation: true}).then((res) => {
+            await (await (new window.Puter()).puter).auth.signIn({attempt_temp_user_creation: true}).then((res) => {
                 console.log('PuterJS signed in:', res);
             });
         } catch (error) {
@@ -5225,14 +5202,7 @@ async function initClient() {
     }
     try {
         // Handle custom providers with custom:server_id format
-        if (provider.startsWith("custom:")) {
-            const serverId = provider.substring(7);
-            options.baseUrl = `https://g4f.dev/custom/${serverId}`;
-            options.apiKey = localStorage.getItem("session_token");
-            client = window.createClient("custom", options);
-        } else {
-            client = window.createClient(provider, options);
-        }
+        client = window.createClient(provider, options);
     } catch (error) {
         console.error('Failed to create client:', error);
         return;

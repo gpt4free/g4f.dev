@@ -1,63 +1,73 @@
+
 import { Client, Pollinations, DeepInfra, Puter, HuggingFace, Worker, Audio } from "./client.js";
-
-const defaultModels = {
-    "nectar": "openai",
-    "pollinations": "openai",
-    "azure": "model-router",
-    "gemini": "gemini-2.5-flash",
-    "openrouter": "openai/gpt-oss-120b:free",
-    "nvidia": "deepseek-ai/deepseek-v3.1",
-    "ollama": "deepseek-v3.1:671b",
-    "groq": "openai/gpt-oss-120b",
-    "gpt4free.pro": "deepseek-v3.2",
-    "puter": "gpt-5.2-chat-latest",
-};
-
-const providerLocalStorage = {
-    "api.airforce": "ApiAirforce-api_key",
-    "deepinfra": "DeepInfra-api_key",
-    "huggingface": "HuggingFace-api_key",
-    "gemini": "GeminiPro-api_key",
-    "nvidia": "Nvidia-api_key",
-    "ollama": "Ollama-api_key",
-    "openrouter": "OpenRouter-api_key",
-    "pollinations": "PollinationsAI-api_key",
-    "together": "Together-api_key",
-    "puter": "puter.auth.token",
+let fs;
+if (typeof window === "undefined") {
+    fs = require("fs");
 }
 
-const providers = {
-    "default": {class: Client, baseUrl: "https://g4f.dev/api/{model}", tags: "", defaultModel: "auto", modelAliases: defaultModels},
-    "pollinations": {label: "pollinations.ai", class: Pollinations, tags: "🎨 👓"},
-    "nectar": {label: "nectar by pollinations.ai", class: Pollinations, baseUrl: "https://g4f.dev/api/nectar", apiEndpoint: "https://g4f.dev/api/nectar/v1/chat/completions", imageEndpoint: "https://g4f.dev/api/nectar/image/{prompt}", modelsEndpoint: "https://g4f.dev/api/nectar/text/models", tags: ""},
-    "api.airforce": {class: Client, baseUrl: "https://api.airforce/v1", tags: "🎨 👓", localStorageApiKey: "ApiAirforce-api_key", sleep: 60000},
-    "master": {label: "master by api.airforce", class: Client, baseUrl: "https://g4f.dev/api/api.airforce", tags: "🎨 👓", sleep: 10000},
-    // "anondrop.net": {class: Client, baseUrl: "https://anondrop.net/v1", tags: ""},
-    "audio": {label: "audio by g4f.dev", class: Audio, baseUrl: "https://g4f.dev/api/audio", tags: "🎧", sleep: 10000},
-    "azure": {label: "azure by g4f.dev", class: Client, baseUrl: "https://g4f.dev/api/azure", tags: "👓", sleep: 10000},
-    "custom": {class: Client, tags: ""},
-    "deepinfra": {class: DeepInfra, tags: "🎨 👓"},
-    "gemini": {class: Client, baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", backupUrl: "https://g4f.dev/api/gemini", tags: "👓"},
-    // "gpt-oss-120b": {class: Client, baseUrl: "https://g4f.dev/api/gpt-oss-120b", tags: ""},
-    // "gpt4free.pro": {class: Client, baseUrl: "https://gpt4free.pro/v1", tags: ""},
-    "groq": {class: Client, baseUrl: "https://api.groq.com/openai/v1", backupUrl: "https://g4f.dev/api/groq", tags: ""},
-    "huggingface": {class: HuggingFace, tags: "🤗"},
-    "nvidia": {class: Client, baseUrl: "https://integrate.api.nvidia.com/v1", backupUrl: "https://g4f.dev/api/nvidia", tags: "📟"},
-    "ollama": {class: Client, baseUrl: "https://g4f.dev/api/ollama", apiEndpoint: "https://g4f.dev/ai/ollama/", tags: "🦙", sleep: 10000},
-    "openrouter": {class: Client, baseUrl: "https://openrouter.ai/api/v1", backupUrl: "https://g4f.dev/api/openrouter", tags: "👓"},
-    "puter": {class: Puter, tags: "👓"},
-    // "stringable-inf": {class: Client, baseUrl: "https://stringableinf.com/api", apiEndpoint: "https://stringableinf.com/api/v1/chat/completions", tags: "", extraHeaders: {"HTTP-Referer": "https://g4f.dev/", "X-Title": "G4F Chat"}},
-    // "typegpt": {class: Client, baseUrl: "https://typegpt.net/api/v1", tags: "", modelsEndpoint: "https://typegpt.net/api/v1/models", localStorageApiKey: "typegpt-api_key"},
-    "together": {class: Client, baseUrl: "https://api.together.xyz/v1", tags: "👓"},
-    "worker": {class: Worker, baseUrl: "https://g4f.dev/api/worker", tags: "🎨", sleep: 10000},
-    // "x.ai": {class: Client, baseUrl: "https://api.x.ai/v1", backupUrl: "https://g4f.dev/api/x.ai", tags: ""}
-};
+let providers = {};
+let defaultModels = {};
+let providerLocalStorage = {};
+let providerClassMap = {};
 
-// Factory function to create a client instance based on provider
+function loadProviders() {
+    let data;
+    if (typeof window !== "undefined" && window.fetch) {
+        // Web: fetch providers.json
+        return fetch("/dist/js/providers.json")
+            .then(res => res.json())
+            .then(json => {
+                providers = json.providers || {};
+                defaultModels = json.defaultModels || {};
+                providerLocalStorage = json.providerLocalStorage || {};
+                providerClassMap = {
+                    "default": Client,
+                    "pollinations": Pollinations,
+                    "nectar": Pollinations,
+                    "audio": Audio,
+                    "deepinfra": DeepInfra,
+                    "huggingface": HuggingFace,
+                    "puter": Puter,
+                    "worker": Worker,
+                };
+                return providers;
+            });
+    } else {
+        // Node: read providers.json
+        data = JSON.parse(fs.readFileSync("./providers.json", "utf-8"));
+        providers = data.providers || {};
+        defaultModels = data.defaultModels || {};
+        providerLocalStorage = data.providerLocalStorage || {};
+        providerClassMap = {
+            "default": Client,
+            "pollinations": Pollinations,
+            "nectar": Pollinations,
+            "audio": Audio,
+            "deepinfra": DeepInfra,
+            "huggingface": HuggingFace,
+            "puter": Puter,
+            "worker": Worker,
+        };
+    }
+    return providers;
+}
+
 function createClient(provider, options = {}) {
-    const { class: ClientClass, backupUrl, localStorageApiKey, tags, ...config } = providers[provider];
-    if (!ClientClass) {
+    if (provider.startsWith("custom:")) {
+        const serverId = provider.substring(7);
+        options.baseUrl = `https://g4f.dev/custom/${serverId}`;
+        options.apiKey = options.apiKey || (typeof window !== "undefined" ? window?.localStorage.getItem("session_token") : undefined);
+        if (typeof window !== "undefined" && window.createClient) {
+            return window.createClient("custom", options);
+        }
+    }
+    if (!providers[provider]) {
         throw new Error(`Provider "${provider}" not found.`);
+    }
+    const { class: ClientClass = (providerClassMap[provider] || Client), backupUrl, localStorageApiKey, tags, ...config } = providers[provider];
+
+    if (provider === "default") {
+        options.modelAliases = defaultModels;
     }
 
     // Set baseUrl
@@ -89,5 +99,5 @@ function createClient(provider, options = {}) {
     // Instantiate the client
     return new ClientClass({ ...config, ...options });
 }
-export { createClient, providerLocalStorage };
-export default providers;
+
+export { loadProviders, createClient, providerLocalStorage, Puter };

@@ -128,7 +128,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jsencrypt/bin/jsencrypt.min.js"></script>
 <script src="../dist/js/framework.js"></script>
 <script type="module">
-  import providers, { createClient }  from "../dist/js/providers.js";
+  import { loadProviders, providerLocalStorage, createClient }  from "../dist/js/providers.js";
   
   import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
 
@@ -146,7 +146,7 @@
   document.querySelector(".container").style.maxHeight = window.innerHeight + "px";
 
   providerSelect.innerHTML = '';
-  for (const key of Object.keys(providers)) {
+  for (const key of Object.keys(await loadProviders())) {
       providerSelect.appendChild(new Option(key, key));
   }
 

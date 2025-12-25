@@ -1,0 +1,46 @@
+{
+    "providers": {
+        "default": {"baseUrl": "https://g4f.dev/api/{model}", "tags": "", "defaultModel": "auto"},
+        "pollinations": {"label": "pollinations.ai", "tags": "🎨 👓"},
+        "nectar": {"label": "nectar by pollinations.ai", "baseUrl": "https://g4f.dev/api/nectar", "apiEndpoint": "https://g4f.dev/api/nectar/v1/chat/completions", "imageEndpoint": "https://g4f.dev/api/nectar/image/{prompt}", "modelsEndpoint": "https://g4f.dev/api/nectar/text/models", "tags": ""},
+        "api.airforce": {"baseUrl": "https://api.airforce/v1", "tags": "🎨 👓", "sleep": 60000},
+        "master": {"label": "master by api.airforce", "baseUrl": "https://g4f.dev/api/api.airforce", "tags": "🎨 👓", "sleep": 10000},
+        "audio": {"label": "audio by g4f.dev", "baseUrl": "https://g4f.dev/api/audio", "tags": "🎧", "sleep": 10000},
+        "azure": {"label": "azure by g4f.dev", "baseUrl": "https://g4f.dev/api/azure", "tags": "👓", "sleep": 10000},
+        "custom": {"tags": ""},
+        "deepinfra": {"tags": "🎨 👓"},
+        "gemini": {"baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai", "backupUrl": "https://g4f.dev/api/gemini", "tags": "👓"},
+        "groq": {"baseUrl": "https://api.groq.com/openai/v1", "backupUrl": "https://g4f.dev/api/groq", "tags": ""},
+        "huggingface": {"tags": "🤗"},
+        "nvidia": {"baseUrl": "https://integrate.api.nvidia.com/v1", "backupUrl": "https://g4f.dev/api/nvidia", "tags": "📟"},
+        "ollama": {"baseUrl": "https://g4f.dev/api/ollama", "apiEndpoint": "https://g4f.dev/ai/ollama/", "tags": "🦙", "sleep": 10000},
+        "openrouter": {"baseUrl": "https://openrouter.ai/api/v1", "backupUrl": "https://g4f.dev/api/openrouter", "tags": "👓"},
+        "puter": {"tags": "👓"},
+        "together": {"baseUrl": "https://api.together.xyz/v1", "tags": "👓"},
+        "worker": {"baseUrl": "https://g4f.dev/api/worker", "tags": "🎨", "sleep": 10000}
+    },
+    "defaultModels": {
+        "nectar": "openai",
+        "pollinations": "openai",
+        "azure": "model-router",
+        "gemini": "gemini-2.5-flash",
+        "openrouter": "openai/gpt-oss-120b:free",
+        "nvidia": "deepseek-ai/deepseek-v3.1",
+        "ollama": "deepseek-v3.1:671b",
+        "groq": "openai/gpt-oss-120b",
+        "gpt4free.pro": "deepseek-ai/deepseek-v3.2",
+        "puter": "gpt-5.2-chat-latest"
+    },
+    "providerLocalStorage": {
+        "api.airforce": "ApiAirforce-api_key",
+        "deepinfra": "DeepInfra-api_key",
+        "huggingface": "HuggingFace-api_key",
+        "gemini": "GeminiPro-api_key",
+        "nvidia": "Nvidia-api_key",
+        "ollama": "Ollama-api_key",
+        "openrouter": "OpenRouter-api_key",
+        "pollinations": "PollinationsAI-api_key",
+        "together": "Together-api_key",
+        "puter": "puter.auth.token"
+    }
+}

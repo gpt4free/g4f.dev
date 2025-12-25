@@ -46,10 +46,11 @@
     <script src="https://cdn.jsdelivr.net/npm/jsencrypt/bin/jsencrypt.min.js" defer></script>
     <script src="../dist/js/sanitize-html.js" async></script>
     <script type="module" defer>
-        import providers, { createClient, providerLocalStorage }  from "../dist/js/providers.js";
-        window.providers = providers;
+        import { loadProviders, createClient, providerLocalStorage, Puter }  from "../dist/js/providers.js";
+        window.loadProviders = loadProviders;
         window.createClient = createClient;
         window.providerLocalStorage = providerLocalStorage;
+        window.Puter = Puter;
     </script>
 
     <!-- MathJax Config -->
