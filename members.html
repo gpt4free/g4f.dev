@@ -1219,7 +1219,6 @@
         const redirectLoginGithub = document.getElementById('redirectLoginGithub');
         const redirectLoginDiscord = document.getElementById('redirectLoginDiscord');
         const redirectLoginHuggingface = document.getElementById('redirectLoginHuggingface');
-        const loginPollinations = document.getElementById('loginPollinations');
         const redirectLoginPollinations = document.getElementById('redirectLoginPollinations');
         const logoutBtn = document.getElementById('logoutBtn');
         const userName = document.getElementById('userName');
@@ -1454,11 +1453,6 @@
             }
         });
 
-        // Pollinations OAuth
-        loginPollinations.addEventListener('click', () => {
-            window.location.href = `https://enter.pollinations.ai/authorize?redirect_url=${encodeURIComponent(window.location.origin + '/members')}`;
-        });
-
         // Redirect login buttons (include redirect parameter for temp API key)
         redirectLoginGithub.addEventListener('click', () => {
             window.location.href = `${API_BASE}/members/auth/github?redirect=${encodeURIComponent(externalRedirect)}`;
@@ -1549,7 +1543,7 @@
                         localStorage.setItem('pollinations_pending_server', pollinationsToken);
                         showToast('Successfully signed in with Pollinations!');
                         window.history.replaceState({}, document.title, window.location.pathname);
-                        loginPollinations.style.display = 'none';
+                        redirectLoginPollinations.style.display = 'none';
                     }
                     return;
                 }
@@ -1564,7 +1558,7 @@
                     if (!response.ok) {
                         localStorage.removeItem('PollinationsAI-api_key');
                     } else {
-                        loginPollinations.style.display = 'none';
+                        redirectLoginPollinations.style.display = 'none';
                     }
                 }
             }
