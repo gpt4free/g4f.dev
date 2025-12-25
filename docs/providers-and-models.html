@@ -442,20 +442,24 @@ print(response)
         // Function to load and render Custom Providers (from custom/api/servers)
         async function loadCustomProviders() {
             const tableId = "custom-providers-table";
-            let url = "https://g4f.dev/custom/api/servers";
-            let resp = await fetch(url, {
+            const url = "https://g4f.dev/custom/api/servers";
+            const resp = await fetch(url, {
                 headers: {'Authorization': `Bearer ${localStorage.getItem("session_token") || ""}`}
             });
-            if (!resp.ok) {
-                url = "https://g4f.dev/custom/api/servers/public";
-                resp = await fetch(url);
-            }
+            const public_url = "https://g4f.dev/custom/api/servers/public";
+            const public_resp = await fetch(public_url);
             try {
-                const data = await resp.json();
+                let data = await public_resp.json();
+                data = data.servers;
+                let privateData = await resp.json();
+                if (privateData.servers) {
+                    data += privateData.servers.filter(server=>!server.is_public) || [];
+                }
+
                 // data is an array of custom provider objects
                 renderProviderTable(
                     tableId,
-                    data.servers,
+                    data,
                     p => p.name || p.label || p.key,
                     p => Array.isArray(p.models) && p.models.length > 0 ? p.models : (Array.isArray(p.allowed_models) ? p.allowed_models : []),
                     p => p.tags || "",
