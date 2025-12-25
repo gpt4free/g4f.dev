@@ -531,7 +531,8 @@ async function handleListPublicServers(request, env) {
 }
 
 async function handleGetServerModels(request, env, serverId) {
-    const server = await getServerById(env, serverId);
+    const user = await authenticateRequest(request, env);
+    const server = await getServerById(env, serverId, user);
     if (!server) {
         return jsonResponse({ error: "Server not found" }, 404);
     }
@@ -572,7 +573,8 @@ async function handleChatCompletions(request, env, ctx, serverId) {
 }
 
 async function handleModels(request, env, serverId) {
-    const server = await getServerById(env, serverId);
+    const user = await authenticateRequest(request, env);
+    const server = await getServerById(env, serverId, user);
     if (!server) {
         return jsonResponse({ error: "Server not found" }, 404);
     }
@@ -609,9 +611,22 @@ async function handleModels(request, env, serverId) {
 }
 
 async function handleProxyRequest(request, env, ctx, serverId, subPath) {
-    const server = await getServerById(env, serverId);
+    // Try to get server - first check if user owns it (private), then check public
+    const user = await authenticateRequest(request, env);
+    let server = await getServerById(env, serverId, user);
     if (!server) {
         return jsonResponse({ error: "Server not found" }, 404);
+    }
+
+    // Check rate limits for this server
+    const rateLimitResult = await checkServerRateLimit(env, serverId);
+    if (!rateLimitResult.allowed) {
+        return jsonResponse({
+            error: {
+                message: `Rate limit exceeded: ${rateLimitResult.used}/${rateLimitResult.limit} requests per ${rateLimitResult.window}`,
+                type: 'rate_limit_exceeded'
+            }
+        }, 429);
     }
 
     // Check if model is allowed
@@ -712,6 +727,9 @@ async function handleProxyRequest(request, env, ctx, serverId, subPath) {
                 }
             }
         }
+
+        // Update rate limit counters (async)
+        ctx.waitUntil(updateServerRateLimit(env, serverId, ctx));
 
         const newResponse = new Response(response.body, response);
         for (const [key, value] of Object.entries(CORS_HEADERS)) {
@@ -865,8 +883,23 @@ async function updateServerUsage(env, server, tokens, model) {
 // Helper Functions
 // ============================================
 
-async function getServerById(env, serverId) {
-    // Check public server index first
+/**
+ * Get a server by ID - checks user's private servers first, then public index
+ * @param {Object} env - Environment bindings
+ * @param {string} serverId - Server ID to find
+ * @param {Object|null} user - Authenticated user (optional)
+ * @returns {Object|null} Server object with owner_id, or null if not found
+ */
+async function getServerById(env, serverId, user = null) {
+    // First, check if the authenticated user owns this server (allows private server access)
+    if (user && user.custom_servers) {
+        const ownedServer = user.custom_servers.find(s => s.id === serverId);
+        if (ownedServer) {
+            return { ...ownedServer, owner_id: user.id };
+        }
+    }
+
+    // Check cache for public servers
     if (env.MEMBERS_KV) {
         const cached = await env.MEMBERS_KV.get(`server:${serverId}`);
         if (cached) {
@@ -874,7 +907,7 @@ async function getServerById(env, serverId) {
         }
     }
 
-    // Search through public servers
+    // Search through public servers index
     if (env.MEMBERS_KV) {
         const indexStr = await env.MEMBERS_KV.get('public_servers_index');
         if (indexStr) {
@@ -882,11 +915,11 @@ async function getServerById(env, serverId) {
             const server = servers.find(s => s.id === serverId);
             if (server) {
                 // Fetch full server data from owner
-                const user = await getUser(env, server.owner_id);
-                if (user) {
-                    const fullServer = (user.custom_servers || []).find(s => s.id === serverId);
-                    if (fullServer) {
-                        fullServer.owner_id = user.id;
+                const owner = await getUser(env, server.owner_id);
+                if (owner) {
+                    const fullServer = (owner.custom_servers || []).find(s => s.id === serverId);
+                    if (fullServer && fullServer.is_public) {
+                        fullServer.owner_id = owner.id;
                         // Cache for quick access
                         await env.MEMBERS_KV.put(
                             `server:${serverId}`,
@@ -901,6 +934,89 @@ async function getServerById(env, serverId) {
     }
 
     return null;
+}
+
+/**
+ * Check rate limits for a server
+ * @param {Object} env - Environment bindings
+ * @param {string} serverId - Server ID
+ * @returns {Object} { allowed: boolean, used: number, limit: number, window: string }
+ */
+async function checkServerRateLimit(env, serverId) {
+    if (!env.MEMBERS_KV) {
+        return { allowed: true };
+    }
+
+    const now = Date.now();
+    const windows = [
+        { name: 'minute', duration: SERVER_RATE_LIMITS.windows.minute, limit: SERVER_RATE_LIMITS.requests.perMinute },
+        { name: 'hour', duration: SERVER_RATE_LIMITS.windows.hour, limit: SERVER_RATE_LIMITS.requests.perHour },
+        { name: 'day', duration: SERVER_RATE_LIMITS.windows.day, limit: SERVER_RATE_LIMITS.requests.perDay }
+    ];
+
+    for (const window of windows) {
+        const key = `server_rate:${serverId}:${window.name}`;
+        const dataStr = await env.MEMBERS_KV.get(key);
+        
+        if (dataStr) {
+            const data = JSON.parse(dataStr);
+            // Check if window has expired
+            if (now - data.timestamp < window.duration) {
+                if (data.count >= window.limit) {
+                    return {
+                        allowed: false,
+                        used: data.count,
+                        limit: window.limit,
+                        window: window.name
+                    };
+                }
+            }
+        }
+    }
+
+    return { allowed: true };
+}
+
+/**
+ * Update rate limit counters for a server
+ * @param {Object} env - Environment bindings
+ * @param {string} serverId - Server ID
+ * @param {Object} ctx - Request context for waitUntil
+ */
+async function updateServerRateLimit(env, serverId, ctx) {
+    if (!env.MEMBERS_KV) return;
+
+    const now = Date.now();
+    const windows = [
+        { name: 'minute', duration: SERVER_RATE_LIMITS.windows.minute },
+        { name: 'hour', duration: SERVER_RATE_LIMITS.windows.hour },
+        { name: 'day', duration: SERVER_RATE_LIMITS.windows.day }
+    ];
+
+    for (const window of windows) {
+        const key = `server_rate:${serverId}:${window.name}`;
+        const dataStr = await env.MEMBERS_KV.get(key);
+        
+        let data;
+        if (dataStr) {
+            data = JSON.parse(dataStr);
+            // Check if window has expired
+            if (now - data.timestamp >= window.duration) {
+                // Start new window
+                data = { count: 1, timestamp: now };
+            } else {
+                data.count += 1;
+            }
+        } else {
+            data = { count: 1, timestamp: now };
+        }
+
+        // TTL = remaining window time + buffer
+        const elapsed = now - data.timestamp;
+        const ttl = Math.max(60, Math.ceil((window.duration - elapsed) / 1000) + 60);
+        
+        await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
+    }
 }
 
 async function updatePublicServerIndex(env, server, ownerId, action) {
