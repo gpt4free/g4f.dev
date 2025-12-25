@@ -13,7 +13,7 @@
         "groq": {"baseUrl": "https://api.groq.com/openai/v1", "backupUrl": "https://g4f.dev/api/groq", "tags": ""},
         "huggingface": {"tags": "🤗", "provider": "HuggingFace"},
         "nvidia": {"baseUrl": "https://integrate.api.nvidia.com/v1", "backupUrl": "https://g4f.dev/api/nvidia", "tags": "📟"},
-        "ollama": {"baseUrl": "https://g4f.dev/api/ollama", "apiEndpoint": "https://g4f.dev/ai/ollama/", "tags": "🦙", "sleep": 10000},
+        "ollama": {"baseUrl": "https://g4f.dev/api/ollama", "tags": "🦙", "sleep": 10000},
         "openrouter": {"baseUrl": "https://openrouter.ai/api/v1", "backupUrl": "https://g4f.dev/api/openrouter", "tags": "👓"},
         "puter": {"tags": "👓", "provider": "PuterJS"},
         "together": {"baseUrl": "https://api.together.xyz/v1", "tags": "👓"},
@@ -26,7 +26,7 @@
         "gemini": "models/gemini-2.5-flash",
         "openrouter": "openai/gpt-oss-120b:free",
         "nvidia": "deepseek-ai/deepseek-v3.1",
-        "ollama": "deepseek-v3.1:671b",
+        "ollama": "deepseek-v3.2",
         "groq": "openai/gpt-oss-120b",
         "gpt4free.pro": "deepseek-ai/deepseek-v3.2",
         "puter": "gpt-5.2-chat-latest"
