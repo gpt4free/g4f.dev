@@ -85,9 +85,10 @@ let newTranslations = [];
 framework.translate = (text) => {
     const stripText = text.trim();
     if (stripText) {
+        const startWithSpace = text.startsWith(" ");
         const endWithSpace = text.endsWith(" ");
         if (stripText in framework.translations && framework.translations[stripText]) {
-            return framework.translations[stripText] + (endWithSpace ? " " : "");
+            return (startWithSpace ? " " : "") + framework.translations[stripText] + (endWithSpace ? " " : "");
         }
         stripText && !newTranslations.includes(stripText) ? newTranslations.push(stripText) : null;
     }

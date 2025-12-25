@@ -1,0 +1,42 @@
+# Wrangler configuration for G4F Members Worker
+# See https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "g4f-members"
+main = "members-worker.js"
+compatibility_date = "2024-01-01"
+
+# KV Namespace for caching user sessions and API key lookups
+[[kv_namespaces]]
+binding = "MEMBERS_KV"
+id = "6c885eb6f17a49c6b6bca7f2e9f53e02"  # Replace with actual KV namespace ID
+
+# R2 Bucket for persistent user data storage
+[[r2_buckets]]
+binding = "MEMBERS_BUCKET"
+bucket_name = "g4f-members"  # Replace with actual bucket name
+
+# Environment variables (secrets should be set via wrangler secret put)
+[vars]
+JWT_SECRET = ""  # Set via: wrangler secret put JWT_SECRET
+API_KEY_SALT = ""  # Set via: wrangler secret put API_KEY_SALT
+
+# OAuth credentials (set as secrets)
+# wrangler secret put GITHUB_CLIENT_ID
+# wrangler secret put GITHUB_CLIENT_SECRET
+# wrangler secret put DISCORD_CLIENT_ID
+# wrangler secret put DISCORD_CLIENT_SECRET
+# wrangler secret put HUGGINGFACE_CLIENT_ID
+# wrangler secret put HUGGINGFACE_CLIENT_SECRET
+
+# Routes - configure these to match your domain
+# routes = [
+#   { pattern = "g4f.dev/members/*", zone_name = "g4f.dev" }
+# ]
+
+# Development settings
+[dev]
+port = 8787
+
+# Production environment overrides
+[env.production]
+# Add production-specific settings here

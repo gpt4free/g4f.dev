@@ -608,6 +608,275 @@
                 flex-direction: column;
             }
         }
+        
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, var(--dark), #16213e);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--light);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+        }
+        
+        .form-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: var(--light);
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--secondary);
+        }
+        
+        textarea.form-input {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--secondary);
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            justify-content: flex-end;
+        }
+        
+        .validation-status {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .validation-status.success {
+            background: rgba(40, 167, 69, 0.2);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+        
+        .validation-status.error {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+        }
+        
+        .validation-status.loading {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid var(--warning);
+            color: var(--warning);
+        }
+        
+        /* Server List Styles */
+        .servers-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .server-item {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1rem;
+            transition: all 0.2s;
+        }
+        
+        .server-item:hover {
+            background: rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .server-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+        
+        .server-info {
+            flex: 1;
+        }
+        
+        .server-label {
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .server-label .public-badge {
+            background: var(--success);
+            color: white;
+            font-size: 0.7rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+        
+        .server-url {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 0.25rem;
+            word-break: break-all;
+        }
+        
+        .server-stats {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+        
+        .server-stat {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .server-stat i {
+            color: var(--secondary);
+        }
+        
+        .server-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .server-actions button {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: var(--light);
+            padding: 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .server-actions button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .server-actions button.delete:hover {
+            background: rgba(220, 53, 69, 0.3);
+            color: var(--danger);
+        }
+        
+        .server-models {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            margin-top: 0.75rem;
+        }
+        
+        .model-tag {
+            background: rgba(110, 72, 170, 0.2);
+            color: var(--secondary);
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .model-tag.more {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .empty-servers {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .empty-servers i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
     </style>
     <link rel="stylesheet" href="dist/css/all.min.css">
     <script src="dist/js/framework.js" defer></script>
@@ -784,6 +1053,71 @@
                     </ul>
                 </div>
                 
+                <!-- Custom Servers Card -->
+                <div class="card" style="grid-column: 1 / -1;">
+                    <h2><span class="icon">🖥️</span> Custom Servers</h2>
+                    <p style="color: rgba(255,255,255,0.6); margin-bottom: 1rem; font-size: 0.9rem;">
+                        Add your own AI servers for model routing. Tokens are counted per server.
+                    </p>
+                    
+                    <!-- Server List -->
+                    <div id="serversList" class="servers-list">
+                        <p style="color: rgba(255,255,255,0.5); text-align: center; padding: 2rem;">
+                            Loading servers...
+                        </p>
+                    </div>
+                    
+                    <!-- Add Server Button -->
+                    <button class="btn" id="addServerBtn" style="width: 100%; margin-top: 1rem;">
+                        <i class="fas fa-plus"></i> Add Server
+                    </button>
+                </div>
+                
+                <!-- Add/Edit Server Modal -->
+                <div class="modal" id="serverModal" style="display: none;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="serverModalTitle">Add New Server</h3>
+                            <button class="modal-close" id="closeServerModal">&times;</button>
+                        </div>
+                        <form id="serverForm">
+                            <div class="form-group">
+                                <label for="serverLabel">Label</label>
+                                <input type="text" id="serverLabel" class="form-input" placeholder="My Custom Server" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="serverBaseUrl">Base URL</label>
+                                <input type="url" id="serverBaseUrl" class="form-input" placeholder="https://api.example.com/v1" required>
+                                <small style="color: rgba(255,255,255,0.5);">OpenAI-compatible API endpoint</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="serverApiKeys">API Keys (one per line)</label>
+                                <textarea id="serverApiKeys" class="form-input" rows="3" placeholder="sk-xxx...&#10;sk-yyy..."></textarea>
+                                <small style="color: rgba(255,255,255,0.5);">Multiple keys for load balancing. Leave empty if no auth required.</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="serverModels">Allowed Models (one per line, optional)</label>
+                                <textarea id="serverModels" class="form-input" rows="3" placeholder="gpt-4&#10;gpt-3.5-turbo"></textarea>
+                                <small style="color: rgba(255,255,255,0.5);">Leave empty to allow all models. Will auto-detect from server.</small>
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="serverPublic">
+                                    <span>Make server public (visible to other users)</span>
+                                </label>
+                            </div>
+                            <div id="serverValidation" class="validation-status" style="display: none;"></div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" id="cancelServerBtn">Cancel</button>
+                                <button type="submit" class="btn" id="saveServerBtn">
+                                    <i class="fas fa-check"></i> Save Server
+                                </button>
+                            </div>
+                            <input type="hidden" id="editServerId" value="">
+                        </form>
+                    </div>
+                </div>
+
                 <!-- Quick Links Card -->
                 <div class="card" style="grid-column: 1 / -1;">
                     <h2><span class="icon">🚀</span> Quick Actions</h2>
@@ -958,6 +1292,9 @@
             
             // Load usage history for chart
             await loadUsageHistory();
+            
+            // Load custom servers
+            await loadServers();
         }
 
         // Load usage stats from API
@@ -1259,7 +1596,296 @@
             
             // Then check auth state
             await checkAuth();
+            
+            // Initialize custom servers module
+            initCustomServers();
         });
+        
+        // ============================================
+        // Custom Servers Management
+        // ============================================
+        
+        const CUSTOM_API = `${API_BASE}/custom/api`;
+        
+        // DOM Elements for servers
+        const serversList = document.getElementById('serversList');
+        const addServerBtn = document.getElementById('addServerBtn');
+        const serverModal = document.getElementById('serverModal');
+        const closeServerModal = document.getElementById('closeServerModal');
+        const serverForm = document.getElementById('serverForm');
+        const cancelServerBtn = document.getElementById('cancelServerBtn');
+        const serverValidation = document.getElementById('serverValidation');
+        const serverModalTitle = document.getElementById('serverModalTitle');
+        const editServerId = document.getElementById('editServerId');
+        
+        function initCustomServers() {
+            // Add event listeners
+            if (addServerBtn) {
+                addServerBtn.addEventListener('click', () => openServerModal());
+            }
+            if (closeServerModal) {
+                closeServerModal.addEventListener('click', () => closeModal());
+            }
+            if (cancelServerBtn) {
+                cancelServerBtn.addEventListener('click', () => closeModal());
+            }
+            if (serverForm) {
+                serverForm.addEventListener('submit', handleServerSubmit);
+            }
+            if (serverModal) {
+                serverModal.addEventListener('click', (e) => {
+                    if (e.target === serverModal) closeModal();
+                });
+            }
+        }
+        
+        async function loadServers() {
+            if (!serversList) return;
+            
+            try {
+                const result = await customApiRequest('/servers');
+                
+                if (result.error) {
+                    serversList.innerHTML = `<p style="color: var(--danger); text-align: center;">${result.error}</p>`;
+                    return;
+                }
+                
+                const servers = result.servers || [];
+                
+                if (servers.length === 0) {
+                    serversList.innerHTML = `
+                        <div class="empty-servers">
+                            <i class="fas fa-server"></i>
+                            <p>No servers added yet</p>
+                            <p style="font-size: 0.9rem;">Add your own AI servers to get started</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                serversList.innerHTML = servers.map(server => renderServerItem(server)).join('');
+                
+                // Add event listeners to server actions
+                servers.forEach(server => {
+                    const editBtn = document.getElementById(`edit-${server.id}`);
+                    const deleteBtn = document.getElementById(`delete-${server.id}`);
+                    const copyBtn = document.getElementById(`copy-${server.id}`);
+                    
+                    if (editBtn) editBtn.addEventListener('click', () => openServerModal(server));
+                    if (deleteBtn) deleteBtn.addEventListener('click', () => deleteServer(server.id));
+                    if (copyBtn) copyBtn.addEventListener('click', () => copyServerUrl(server));
+                });
+                
+            } catch (e) {
+                console.error('Failed to load servers:', e);
+                serversList.innerHTML = `
+                    <div class="empty-servers">
+                        <i class="fas fa-server"></i>
+                        <p>No servers added yet</p>
+                        <p style="font-size: 0.9rem;">Add your own AI servers to get started</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function renderServerItem(server) {
+            const models = server.allowed_models || [];
+            const displayModels = models.slice(0, 3);
+            const moreCount = models.length - 3;
+            
+            return `
+                <div class="server-item" data-server-id="${server.id}">
+                    <div class="server-header">
+                        <div class="server-info">
+                            <div class="server-label">
+                                ${escapeHtml(server.label)}
+                                ${server.is_public ? '<span class="public-badge">Public</span>' : ''}
+                            </div>
+                            <div class="server-url">${escapeHtml(server.base_url)}</div>
+                        </div>
+                        <div class="server-actions">
+                            <button id="copy-${server.id}" title="Copy endpoint URL">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button id="edit-${server.id}" title="Edit server">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button id="delete-${server.id}" class="delete" title="Delete server">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="server-stats">
+                        <div class="server-stat">
+                            <i class="fas fa-paper-plane"></i>
+                            ${formatNumber(server.usage?.requests || 0)} requests
+                        </div>
+                        <div class="server-stat">
+                            <i class="fas fa-coins"></i>
+                            ${formatNumber(server.usage?.tokens || 0)} tokens
+                        </div>
+                        <div class="server-stat">
+                            <i class="fas fa-key"></i>
+                            ${server.api_key_count || 0} keys
+                        </div>
+                    </div>
+                    ${models.length > 0 ? `
+                        <div class="server-models">
+                            ${displayModels.map(m => `<span class="model-tag">${escapeHtml(m)}</span>`).join('')}
+                            ${moreCount > 0 ? `<span class="model-tag more">+${moreCount} more</span>` : ''}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+        
+        function openServerModal(server = null) {
+            if (!serverModal) return;
+            
+            // Reset form
+            serverForm.reset();
+            serverValidation.style.display = 'none';
+            
+            if (server) {
+                // Edit mode
+                serverModalTitle.textContent = 'Edit Server';
+                editServerId.value = server.id;
+                document.getElementById('serverLabel').value = server.label || '';
+                document.getElementById('serverBaseUrl').value = server.base_url || '';
+                document.getElementById('serverModels').value = (server.allowed_models || []).join('\n');
+                document.getElementById('serverPublic').checked = server.is_public || false;
+                // Note: API keys are not returned for security, user must re-enter
+            } else {
+                // Add mode
+                serverModalTitle.textContent = 'Add New Server';
+                editServerId.value = '';
+            }
+            
+            serverModal.style.display = 'flex';
+        }
+        
+        function closeModal() {
+            if (serverModal) {
+                serverModal.style.display = 'none';
+            }
+        }
+        
+        async function handleServerSubmit(e) {
+            e.preventDefault();
+            
+            const saveBtn = document.getElementById('saveServerBtn');
+            const originalBtnHtml = saveBtn.innerHTML;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="loading"></span> Validating...';
+            
+            const serverId = editServerId.value;
+            const label = document.getElementById('serverLabel').value.trim();
+            const baseUrl = document.getElementById('serverBaseUrl').value.trim();
+            const apiKeys = document.getElementById('serverApiKeys').value.trim();
+            const modelsInput = document.getElementById('serverModels').value.trim();
+            const isPublic = document.getElementById('serverPublic').checked;
+            
+            const allowedModels = modelsInput 
+                ? modelsInput.split('\n').map(m => m.trim()).filter(Boolean)
+                : [];
+            
+            try {
+                const endpoint = serverId ? '/servers/update' : '/servers/create';
+                const body = {
+                    label,
+                    base_url: baseUrl,
+                    api_keys: apiKeys,
+                    allowed_models: allowedModels,
+                    is_public: isPublic
+                };
+                
+                if (serverId) {
+                    body.server_id = serverId;
+                }
+                
+                const result = await customApiRequest(endpoint, {
+                    method: 'POST',
+                    body: JSON.stringify(body)
+                });
+                
+                if (result.error) {
+                    showValidation(result.error, 'error');
+                    return;
+                }
+                
+                showToast(serverId ? 'Server updated successfully!' : 'Server added successfully!');
+                closeModal();
+                await loadServers();
+                
+            } catch (error) {
+                showValidation('Failed to save server: ' + error.message, 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalBtnHtml;
+            }
+        }
+        
+        async function deleteServer(serverId) {
+            if (!confirm('Are you sure you want to delete this server? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const result = await customApiRequest('/servers/delete', {
+                    method: 'POST',
+                    body: JSON.stringify({ server_id: serverId })
+                });
+                
+                if (result.error) {
+                    showToast(result.error, 'error');
+                    return;
+                }
+                
+                showToast('Server deleted successfully');
+                await loadServers();
+                
+            } catch (error) {
+                showToast('Failed to delete server: ' + error.message, 'error');
+            }
+        }
+        
+        async function copyServerUrl(server) {
+            const url = `${API_BASE}/custom/${server.id}/chat/completions`;
+            try {
+                await navigator.clipboard.writeText(url);
+                showToast('Server endpoint copied to clipboard!');
+            } catch (err) {
+                showToast('Failed to copy URL', 'error');
+            }
+        }
+        
+        function showValidation(message, type) {
+            if (!serverValidation) return;
+            serverValidation.textContent = message;
+            serverValidation.className = 'validation-status ' + type;
+            serverValidation.style.display = 'block';
+        }
+        
+        async function customApiRequest(endpoint, options = {}) {
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {}),
+                ...options.headers
+            };
+            
+            const response = await fetch(`${CUSTOM_API}${endpoint}`, {
+                ...options,
+                headers
+            });
+            
+            return response.json();
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
         // Check for existing HuggingFace login from home.html
         const existingOAuth = localStorage.getItem('oauth');

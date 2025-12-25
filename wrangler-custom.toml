@@ -1,0 +1,33 @@
+# Wrangler configuration for G4F Custom Server Router Worker
+# See https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "g4f-custom"
+main = "custom-worker.js"
+compatibility_date = "2024-01-01"
+
+# KV Namespace (shared with members worker for auth and server index)
+[[kv_namespaces]]
+binding = "MEMBERS_KV"
+id = "6c885eb6f17a49c6b6bca7f2e9f53e02"  # Same as members-worker
+
+# R2 Bucket for server data storage (shared with members worker)
+[[r2_buckets]]
+binding = "MEMBERS_BUCKET"
+bucket_name = "g4f-members"
+
+# Environment variables (secrets should be set via wrangler secret put)
+[vars]
+API_KEY_SALT = ""  # Set via: wrangler secret put API_KEY_SALT
+
+# Routes - configure these to match your domain
+# routes = [
+#   { pattern = "g4f.dev/custom/*", zone_name = "g4f.dev" }
+# ]
+
+# Development settings
+[dev]
+port = 8788
+
+# Production environment overrides
+[env.production]
+# Add production-specific settings here

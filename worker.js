@@ -6,8 +6,46 @@ const MAX_CONTENT_LENGHT = 50 * 1024;
 const CUSTOM_MAX_LENGHT = 100 * 1024;
 const CACHE_CONTROL = 'public, max-age=14400, s-maxage=7200'
 const CACHE_FOREVER = 'public, max-age=31536000, immutable';
-const TOKEN_LIMIT_PER_MINUTE = 100000;
-const TOKEN_WINDOW_MS = 60 * 1000;
+
+// Rate limiting configuration for anonymous users
+const RATE_LIMITS = {
+  // Token limits
+  tokens: {
+    perMinute: 100000,
+    perHour: 200000,
+    perDay: 2000000
+  },
+  // Request limits
+  requests: {
+    perMinute: 10,
+    perHour: 100,
+    perDay: 1000
+  },
+  // Burst allowance (multiplier for short-term limits)
+  burstMultiplier: 2,
+  // Window durations in milliseconds
+  windows: {
+    minute: 60 * 1000,
+    hour: 60 * 60 * 1000,
+    day: 24 * 60 * 60 * 1000
+  }
+};
+
+// Rate limits for authenticated user tiers
+const USER_TIER_LIMITS = {
+  free: {
+    tokens: { perMinute: 150000, perHour: 500000, perDay: 1000000 },
+    requests: { perMinute: 20, perHour: 200, perDay: 2000 }
+  },
+  sponsor: {
+    tokens: { perMinute: 500000, perHour: 2500000, perDay: 10000000 },
+    requests: { perMinute: 50, perHour: 500, perDay: 5000 }
+  },
+  pro: {
+    tokens: { perMinute: 1000000, perHour: 5000000, perDay: 20000000 },
+    requests: { perMinute: 100, perHour: 1000, perDay: 10000 }
+  }
+};
 
 const ACCESS_CONTROL_ALLOW_ORIGIN = {
   "Access-Control-Allow-Origin": "*",
@@ -46,9 +84,7 @@ async function handleRequest(request, env, ctx) {
     "gpt4free.pro": {url: "https://gpt4free.pro/v1", model: "deepseek-v3.2"},
     "nectar": {url: "https://gen.pollinations.ai", endpoint: "https://gen.pollinations.ai/v1/chat/completions", api_key: env.POLLINATIONS_API_KEY, model: "openai"},
     "audio": {endpoint: "https://g4f-dev-resource.cognitiveservices.azure.com/openai/deployments/gpt-audio/chat/completions?api-version=2025-01-01-preview", api_key: env.AZURE_API_KEY, model: "gpt-audio"},
-    "perplexity": {url: "https://perplexity.g4f.workers.dev"},
     "huggingface": {url: "https://pass.g4f.dev/api/HuggingFace", extraHeaders: {"g4f-api-key": "_g4f"}},
-    "puter": {url: "https://pass.g4f.dev/api/PuterJS", extraHeaders: {"g4f-api-key": "_g4f"}}
   }
   const ALLOW_LIST = ["openrouter", "nvidia", "groq", "ollama", "azure", "nectar", "pollinations"];
 
@@ -68,14 +104,50 @@ async function handleRequest(request, env, ctx) {
     return handleOptions(request);
   }
 
+  // Rate limit status endpoint
+  if (pathname === "/api/rate-limit" || pathname === "/api/usage") {
+    const clientIP = getClientIP(request);
+    const usage = await getRateLimitUsage(env, clientIP);
+    const now = Date.now();
+    
+    return Response.json({
+      ip: clientIP.substring(0, clientIP.lastIndexOf('.')) + '.xxx', // Partially anonymized
+      limits: {
+        tokens: RATE_LIMITS.tokens,
+        requests: RATE_LIMITS.requests
+      },
+      usage: {
+        minute: {
+          tokens: usage.minute.tokens,
+          requests: usage.minute.requests,
+          remaining_tokens: Math.max(0, RATE_LIMITS.tokens.perMinute * RATE_LIMITS.burstMultiplier - usage.minute.tokens),
+          remaining_requests: Math.max(0, RATE_LIMITS.requests.perMinute * RATE_LIMITS.burstMultiplier - usage.minute.requests),
+          resets_in: Math.max(0, Math.ceil((RATE_LIMITS.windows.minute - (now - usage.minute.timestamp)) / 1000))
+        },
+        hour: {
+          tokens: usage.hour.tokens,
+          requests: usage.hour.requests,
+          remaining_tokens: Math.max(0, RATE_LIMITS.tokens.perHour - usage.hour.tokens),
+          remaining_requests: Math.max(0, RATE_LIMITS.requests.perHour - usage.hour.requests),
+          resets_in: Math.max(0, Math.ceil((RATE_LIMITS.windows.hour - (now - usage.hour.timestamp)) / 1000))
+        },
+        day: {
+          tokens: usage.day.tokens,
+          requests: usage.day.requests,
+          remaining_tokens: Math.max(0, RATE_LIMITS.tokens.perDay - usage.day.tokens),
+          remaining_requests: Math.max(0, RATE_LIMITS.requests.perDay - usage.day.requests),
+          resets_in: Math.max(0, Math.ceil((RATE_LIMITS.windows.day - (now - usage.day.timestamp)) / 1000))
+        }
+      }
+    }, {headers: ACCESS_CONTROL_ALLOW_ORIGIN});
+  }
+
   if (pathname == "/api/grok/models") {
     return Response.json({data: [{id: 'grok-4-fast-non-reasoning'}, {id: 'grok-4-fast-reasoning'}, {id: 'grok-code-fast-1'}]}, {headers: ACCESS_CONTROL_ALLOW_ORIGIN});
   } else if (pathname == "/api/auto/models") {
     return Response.json({data: defaultModels}, {headers: ACCESS_CONTROL_ALLOW_ORIGIN});
   } else if (pathname == "/api/audio/models") {
     return Response.json({data: [{id: 'gpt-audio', audio: true}, ...GPT_AUDIO_VOICES.map((voice)=>{return {id: voice, audio: true}})]}, {headers: ACCESS_CONTROL_ALLOW_ORIGIN});
-  } else if (pathname == "/api/ollama/models") {
-    return forwardApi(request, "https://ollama.com/api/tags");
   } else if (pathname == "/api/openrouter/models") {
     const modelsResponse = await forwardApi(request, "https://openrouter.ai/api/v1/models");
     return Response.json({data: (await modelsResponse.json()).data.filter((model)=>model.id.endsWith(":free"))}, {headers: ACCESS_CONTROL_ALLOW_ORIGIN});
@@ -120,11 +192,55 @@ async function handleRequest(request, env, ctx) {
     }
   }
 
+  // Authenticated user info - set during rate limit check, used for usage tracking
+  let authenticatedUser = null;
+
   // Check token usage limit for AI endpoints
   if (pathname.startsWith("/ai/") || pathname.startsWith("/api/") && pathname.endsWith("/chat/completions")) {
-    const tokenCheck = await checkTokenLimit(env, request);
-    if (!tokenCheck.allowed) {
-      return Response.json({error: {message: `Token limit (${TOKEN_LIMIT_PER_MINUTE} tokens/min) exceeded. Used: ${tokenCheck.usage.tokens} tokens.`}}, {status: 429, headers: {"Retry-After": tokenCheck.retryAfter.toString(), ...ACCESS_CONTROL_ALLOW_ORIGIN}});
+    // First, check if user has a valid API key for higher limits
+    authenticatedUser = await validateUserApiKey(request, env);
+    
+    if (authenticatedUser) {
+      // Authenticated user - use tier-based limits
+      const rateCheck = await checkUserRateLimits(env, authenticatedUser);
+      if (!rateCheck.allowed) {
+        const windowLabels = { minute: 'per minute', hour: 'per hour', day: 'per day' };
+        const message = rateCheck.reason === 'tokens'
+          ? `Token limit (${rateCheck.limit.toLocaleString()} ${windowLabels[rateCheck.window]}) exceeded for ${rateCheck.tier} tier. Used: ${rateCheck.used.toLocaleString()} tokens.`
+          : `Request limit (${rateCheck.limit} ${windowLabels[rateCheck.window]}) exceeded for ${rateCheck.tier} tier. Made: ${rateCheck.used} requests.`;
+        return Response.json({
+          error: {
+            message,
+            type: 'rate_limit_exceeded',
+            tier: rateCheck.tier,
+            window: rateCheck.window,
+            limit: rateCheck.limit,
+            used: rateCheck.used,
+            retry_after: rateCheck.retryAfter
+          }
+        }, {status: 429, headers: {"Retry-After": rateCheck.retryAfter.toString(), "X-User-Tier": rateCheck.tier, ...ACCESS_CONTROL_ALLOW_ORIGIN}});
+      }
+      // authenticatedUser is already set from validateUserApiKey
+    } else {
+      // Anonymous user - use default IP-based limits
+      const rateCheck = await checkRateLimits(env, request);
+      if (!rateCheck.allowed) {
+        const windowLabels = { minute: 'per minute', hour: 'per hour', day: 'per day' };
+        const message = rateCheck.reason === 'tokens'
+          ? `Token limit (${rateCheck.limit.toLocaleString()} ${windowLabels[rateCheck.window]}) exceeded. Used: ${rateCheck.used.toLocaleString()} tokens. Sign up at g4f.dev/members.html for higher limits.`
+          : `Request limit (${rateCheck.limit} ${windowLabels[rateCheck.window]}) exceeded. Made: ${rateCheck.used} requests. Sign up at g4f.dev/members.html for higher limits.`;
+        return Response.json({
+          error: {
+            message,
+            type: 'rate_limit_exceeded',
+            window: rateCheck.window,
+            limit: rateCheck.limit,
+            used: rateCheck.used,
+            retry_after: rateCheck.retryAfter,
+            upgrade_url: 'https://g4f.dev/members.html'
+          }
+        }, {status: 429, headers: {"Retry-After": rateCheck.retryAfter.toString(), ...ACCESS_CONTROL_ALLOW_ORIGIN}});
+      }
     }
   }
 
@@ -148,7 +264,16 @@ async function handleRequest(request, env, ctx) {
     const modelConfig = models[provider];
     const apiKeys = modelConfig && modelConfig.api_key ? modelConfig.api_key.split("\n") : null;
     const selectedApiKey = apiKeys ? apiKeys[apiKeys?.length * Math.random() << 0] : null;
-    const authorizationHeader = request.headers.get('authorization') && request.headers.get('authorization') === 'Bearer secret' ? null : request.headers.get('authorization')
+    const authHeader = request.headers.get('authorization');
+    let authorizationHeader = null;
+    if (authHeader && authHeader !== 'Bearer secret') {
+      // Handle space-separated keys (e.g., "Bearer g4f_xxx provider_key") - extract non-g4f key
+      const tokens = authHeader.replace(/^Bearer\s+/i, '').split(/\s+/);
+      const providerKey = tokens.find(t => t && !t.startsWith('g4f_'));
+      if (providerKey) {
+        authorizationHeader = `Bearer ${providerKey}`;
+      }
+    }
     const queryUrl = modelConfig ? modelConfig.endpoint || (modelConfig.url + "/chat/completions") : "";
     query = decodeURIComponent((query || '').trim());
     let queryBody;
@@ -214,7 +339,8 @@ async function handleRequest(request, env, ctx) {
         // Track usage for streaming responses
         if (queryBody.stream) {
           const clientIP = getClientIP(request);
-          const trackedStream = createUsageTrackingStream(response, env, clientIP, ctx, provider, queryBody.model);
+          const firstMessage = getFirstMessage(queryBody.messages, query);
+          const trackedStream = createUsageTrackingStream(response, env, clientIP, ctx, provider, queryBody.model, pathname, firstMessage, authenticatedUser);
           return new Response(trackedStream, {
             headers: response.headers
           });
@@ -233,7 +359,8 @@ async function handleRequest(request, env, ctx) {
         // Track usage for streaming responses
         if (queryBody.stream) {
           const clientIP = getClientIP(request);
-          const trackedStream = createUsageTrackingStream(response, env, clientIP, ctx, provider, queryBody.model);
+          const firstMessage = getFirstMessage(queryBody.messages, query);
+          const trackedStream = createUsageTrackingStream(response, env, clientIP, ctx, provider, queryBody.model, pathname, firstMessage, authenticatedUser);
           const newResponse = new Response(trackedStream, {
             headers: response.headers
           });
@@ -248,8 +375,9 @@ async function handleRequest(request, env, ctx) {
     // Track token usage from response
     const usage = extractDetailedUsage(data);
     if (usage.total > 0) {
-      const clientIP = getClientIP(request);
-      await updateTokenUsage(env, clientIP, usage.total, ctx, provider, queryBody.model, usage.prompt, usage.completion);
+        const clientIP = getClientIP(request);
+        const firstMessage = getFirstMessage(queryBody.messages, query);
+        await updateTokenUsage(env, clientIP, usage.total, ctx, provider || data.provider, data.model || queryBody.model, usage.prompt, usage.completion, pathname, firstMessage, authenticatedUser);
     }
     if (data.choices && data.choices[0].message.audio) {
         data = data.choices[0].message.audio.data;
@@ -304,15 +432,24 @@ async function handleRequest(request, env, ctx) {
   } else if (pathname.startsWith("/prompt/")) {
     return retrieveCache(request, liteRequest, pathname + search, ctx, `image.${POLLINATIONS_HOST}`, CACHE_FOREVER);
   } else {
-    for (const model in models){
-        let subpath = `/api/${model}`;
+    for (const provider in models){
+        let subpath = `/api/${provider}`;
         if (pathname.startsWith(subpath)) {
-          if (!models[model].url && pathname.endsWith("/models")) {
+          if (!models[provider].url && pathname.endsWith("/models")) {
             return Response.json({data: [{id: 'model-router'}]}, {headers: ACCESS_CONTROL_ALLOW_ORIGIN});
           }
-          const apiKeys = models[model].api_key ? models[model].api_key.split("\n") : null;
+          const apiKeys = models[provider].api_key ? models[provider].api_key.split("\n") : null;
           const selectedApiKey = apiKeys ? apiKeys[apiKeys.length * Math.random() << 0] : null;
-          const authorizationHeader = request.headers.get('authorization') && request.headers.get('authorization') === 'Bearer secret' ? null : request.headers.get('authorization')
+          const authHeader = request.headers.get('authorization');
+          let authorizationHeader = null;
+          if (authHeader && authHeader !== 'Bearer secret') {
+            // Handle space-separated keys (e.g., "Bearer g4f_xxx provider_key") - extract non-g4f key
+            const tokens = authHeader.replace(/^Bearer\s+/i, '').split(/\s+/);
+            const providerKey = tokens.find(t => t && !t.startsWith('g4f_'));
+            if (providerKey) {
+              authorizationHeader = `Bearer ${providerKey}`;
+            }
+          }
           const newRequest = new Request(request, {
             headers: {
               'authorization': authorizationHeader || selectedApiKey ? `Bearer ${selectedApiKey}` : null,
@@ -322,13 +459,13 @@ async function handleRequest(request, env, ctx) {
             }
           });
           let newUrl = pathWithParams.replace(subpath, '');
-          if (!models[model].url || (models[model].endpoint && newUrl === "/chat/completions")) {
-            newUrl = models[model].endpoint;
+          if (!models[provider].url || (models[provider].endpoint && newUrl === "/chat/completions")) {
+            newUrl = models[provider].endpoint;
           } else {
-            newUrl = models[model].url + newUrl;
+            newUrl = models[provider].url + newUrl;
           }
           let response;
-          if (model === "gemini" && pathname.endsWith("/models") && ["HEAD", "GET"].includes(request.method)) {
+          if (provider === "gemini" && pathname.endsWith("/models") && ["HEAD", "GET"].includes(request.method)) {
             response = await shield(newUrl, newRequest);
             if (!response.ok) {
               return response;
@@ -340,14 +477,15 @@ async function handleRequest(request, env, ctx) {
               ctx.waitUntil(caches.default.put(liteRequest, response.clone()))
             }
           } else {
-            const trackUsage = pathname.endsWith('/chat/completions') ? { env, ctx, clientIP: getClientIP(request), provider: model } : null;
+            const trackUsage = pathname.endsWith('/chat/completions') ? { env, ctx, clientIP: getClientIP(request), provider, model: null, pathname } : null;
             response = await forwardApi(newRequest, newUrl, null, null, CACHE_CONTROL, trackUsage);
           }
           return response;
         }
     }
     if (pathname.startsWith("/api/") || pathname.startsWith("/v1/")|| pathname.startsWith("/backend-api/") || pathname == "/openapi.json") {
-      const trackUsage = pathname.endsWith('/chat/completions') ? { env, ctx, clientIP: getClientIP(request), provider: 'api' } : null;
+      const provider = pathname.startsWith("/api/") ? pathname.split("/")[2] : "";
+      const trackUsage = { env, ctx, clientIP: getClientIP(request), provider: provider, pathname };
       return forwardApi(request, `https://${API_HOST}${pathWithParams}`, liteRequest, ctx, CACHE_CONTROL, trackUsage);
     } else {
       return fetch(`https://${GITHUB_HOST}${pathname}`, request);
@@ -390,10 +528,12 @@ async function forwardApi(request, newUrl, liteRequest=null, ctx=null, cache_con
   
   // For chat completions, inject stream_options to get usage in streaming responses
   let requestModel = null;
+  let firstMessage = '';
   if (trackUsage && request.method === 'POST') {
     try {
       const body = await request.clone().json();
       requestModel = body.model || null;
+      firstMessage = getFirstMessage(body.messages);
       if (body.stream) {
         body.stream_options = { include_usage: true };
         modifiedRequest = new Request(request, {
@@ -404,14 +544,13 @@ async function forwardApi(request, newUrl, liteRequest=null, ctx=null, cache_con
       // Ignore JSON parse errors, proceed with original request
     }
   }
-  
   const response = await shield(newUrl, modifiedRequest);
   // Track token usage for chat completions
   if (trackUsage && response.ok) {
     const contentType = response.headers.get('content-type') || '';
     // Handle streaming responses (text/event-stream)
     if (contentType.includes('text/event-stream')) {
-      const trackedStream = createUsageTrackingStream(response, trackUsage.env, trackUsage.clientIP, trackUsage.ctx, trackUsage.provider, requestModel);
+      const trackedStream = createUsageTrackingStream(response, trackUsage.env, trackUsage.clientIP, trackUsage.ctx, trackUsage.provider, requestModel, trackUsage.pathname, firstMessage);
       const newResponse = new Response(trackedStream, {
         headers: response.headers
       });
@@ -428,7 +567,7 @@ async function forwardApi(request, newUrl, liteRequest=null, ctx=null, cache_con
         const data = await clonedResponse.json();
         const usage = extractDetailedUsage(data);
         if (usage.total > 0) {
-          await updateTokenUsage(trackUsage.env, trackUsage.clientIP, usage.total, trackUsage.ctx, trackUsage.provider, requestModel, usage.prompt, usage.completion);
+          await updateTokenUsage(trackUsage.env, trackUsage.clientIP, usage.total, trackUsage.ctx, trackUsage.provider || data.provider, data.model || requestModel, usage.prompt, usage.completion, trackUsage.pathname, firstMessage, authenticatedUser);
         }
       } catch (e) {
         // Ignore JSON parse errors
@@ -436,7 +575,7 @@ async function forwardApi(request, newUrl, liteRequest=null, ctx=null, cache_con
     }
   }
   
-  const newResponse = new Response(response.body, response);
+  const newResponse = new Response(response.body, {headers: response.headers});
   for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
     newResponse.headers.set(key, value);
   }
@@ -573,73 +712,181 @@ function getClientIP(request) {
          'unknown';
 }
 
-async function getTokenUsage(env, clientIP) {
-  if (!env.TOKEN_USAGE) return { tokens: 0, timestamp: Date.now() };
-  const key = `token_usage:${clientIP}`;
-  const data = await env.TOKEN_USAGE.get(key, { type: 'json' });
-  if (!data) return { tokens: 0, timestamp: Date.now() };
-  // Reset if window expired
-  if (Date.now() - data.timestamp > TOKEN_WINDOW_MS) {
-    return { tokens: 0, timestamp: Date.now() };
+/**
+ * Extract the first non-empty user message from messages array or fallback to query
+ * @param {Array} messages - Array of message objects with role and content
+ * @param {string} fallback - Fallback string (usually the query)
+ * @returns {string} First non-empty message content
+ */
+function getFirstMessage(messages, fallback = '') {
+  if (!messages || !Array.isArray(messages)) {
+    return fallback || '';
   }
-  return data;
+  
+  // Find first non-empty content, preferring user messages
+  for (const msg of messages) {
+    const content = typeof msg.content === 'string' ? msg.content.replace(/^[\s.]+|[\s.]+$/g, '') : '';
+    if (content && !content.startsWith('Today is:') && !content.startsWith('[SYSTEM]:')) {
+      return content;
+    }
+  }
+  
+  return fallback || '';
 }
 
-async function updateTokenUsage(env, clientIP, tokensUsed, ctx, provider = null, model = null, promptTokens = 0, completionTokens = 0) {
-  if (tokensUsed <= 0) return;
+/**
+ * Get rate limit usage for a client across all windows
+ */
+async function getRateLimitUsage(env, clientIP) {
+  if (!env.TOKEN_USAGE) {
+    return {
+      minute: { tokens: 0, requests: 0, timestamp: Date.now() },
+      hour: { tokens: 0, requests: 0, timestamp: Date.now() },
+      day: { tokens: 0, requests: 0, timestamp: Date.now() }
+    };
+  }
   
-  // Persist to database
-  ctx.waitUntil(persistUsageToDb(env, clientIP, provider, model, tokensUsed, promptTokens, completionTokens));
+  const now = Date.now();
+  const keys = ['minute', 'hour', 'day'];
+  const results = {};
   
-  // Update rate limit KV
-  if (!env.TOKEN_USAGE) return;
-  const key = `token_usage:${clientIP}`;
+  // Fetch all windows in parallel
+  const promises = keys.map(async (window) => {
+    const key = `rate:${clientIP}:${window}`;
+    const data = await env.TOKEN_USAGE.get(key, { type: 'json' });
+    
+    if (!data || (now - data.timestamp > RATE_LIMITS.windows[window])) {
+      return { window, data: { tokens: 0, requests: 0, timestamp: now } };
+    }
+    return { window, data };
+  });
+  
+  const resolved = await Promise.all(promises);
+  for (const { window, data } of resolved) {
+    results[window] = data;
+  }
+  
+  return results;
+}
+
+/**
+ * Check if request is within rate limits
+ */
+async function checkRateLimits(env, request) {
+  const clientIP = getClientIP(request);
+  const usage = await getRateLimitUsage(env, clientIP);
   const now = Date.now();
   
-  // Get current usage directly from KV
-  const data = await env.TOKEN_USAGE.get(key, { type: 'json' });
+  // Check each window
+  const checks = [
+    {
+      window: 'minute',
+      tokenLimit: RATE_LIMITS.tokens.perMinute * RATE_LIMITS.burstMultiplier,
+      requestLimit: RATE_LIMITS.requests.perMinute * RATE_LIMITS.burstMultiplier,
+      usage: usage.minute
+    },
+    {
+      window: 'hour',
+      tokenLimit: RATE_LIMITS.tokens.perHour,
+      requestLimit: RATE_LIMITS.requests.perHour,
+      usage: usage.hour
+    },
+    {
+      window: 'day',
+      tokenLimit: RATE_LIMITS.tokens.perDay,
+      requestLimit: RATE_LIMITS.requests.perDay,
+      usage: usage.day
+    }
+  ];
   
-  let newData;
-  if (!data || (now - data.timestamp > TOKEN_WINDOW_MS)) {
-    // Start new window
-    newData = {
-      tokens: tokensUsed,
-      timestamp: now,
-      requests: 1
-    };
-  } else {
-    // Accumulate in existing window
-    newData = {
-      tokens: data.tokens + tokensUsed,
-      timestamp: data.timestamp,
-      requests: (data.requests || 0) + 1
-    };
+  for (const check of checks) {
+    // Check token limit
+    if (check.usage.tokens >= check.tokenLimit) {
+      const retryAfter = Math.ceil((RATE_LIMITS.windows[check.window] - (now - check.usage.timestamp)) / 1000);
+      return {
+        allowed: false,
+        reason: 'tokens',
+        window: check.window,
+        limit: check.tokenLimit,
+        used: check.usage.tokens,
+        retryAfter: Math.max(1, retryAfter)
+      };
+    }
+    
+    // Check request limit
+    if (check.usage.requests >= check.requestLimit) {
+      const retryAfter = Math.ceil((RATE_LIMITS.windows[check.window] - (now - check.usage.timestamp)) / 1000);
+      return {
+        allowed: false,
+        reason: 'requests',
+        window: check.window,
+        limit: check.requestLimit,
+        used: check.usage.requests,
+        retryAfter: Math.max(1, retryAfter)
+      };
+    }
   }
   
-  // Calculate TTL based on remaining window time plus buffer
-  const remainingWindow = Math.max(60, Math.ceil((TOKEN_WINDOW_MS - (now - newData.timestamp)) / 1000) + 60);
-  ctx.waitUntil(env.TOKEN_USAGE.put(key, JSON.stringify(newData), { expirationTtl: remainingWindow }));
-}
-
-async function checkTokenLimit(env, request) {
-  const clientIP = getClientIP(request);
-  const usage = await getTokenUsage(env, clientIP);
-  if (usage.tokens >= TOKEN_LIMIT_PER_MINUTE) {
-    const retryAfter = Math.ceil((TOKEN_WINDOW_MS - (Date.now() - usage.timestamp)) / 1000);
-    return { allowed: false, retryAfter: Math.max(1, retryAfter), usage };
-  }
   return { allowed: true, usage };
 }
 
-function extractUsageFromResponse(responseData) {
-  if (responseData?.usage) {
-    return responseData.usage.total_tokens || 
-           (responseData.usage.prompt_tokens || 0) + (responseData.usage.completion_tokens || 0);
+/**
+ * Update rate limit usage across all windows
+ */
+async function updateRateLimitUsage(env, clientIP, tokensUsed, ctx) {
+  if (!env.TOKEN_USAGE || tokensUsed <= 0) return;
+  
+  const now = Date.now();
+  const windows = ['minute', 'hour', 'day'];
+  
+  for (const window of windows) {
+    const key = `rate:${clientIP}:${window}`;
+    const windowMs = RATE_LIMITS.windows[window];
+    
+    // Get current data
+    const data = await env.TOKEN_USAGE.get(key, { type: 'json' });
+    
+    let newData;
+    if (!data || (now - data.timestamp > windowMs)) {
+      // Start new window
+      newData = {
+        tokens: tokensUsed,
+        requests: 1,
+        timestamp: now
+      };
+    } else {
+      // Accumulate in existing window
+      newData = {
+        tokens: data.tokens + tokensUsed,
+        requests: data.requests + 1,
+        timestamp: data.timestamp
+      };
+    }
+    
+    // Calculate TTL based on remaining window time plus buffer
+    const elapsed = now - newData.timestamp;
+    const remaining = Math.max(60, Math.ceil((windowMs - elapsed) / 1000) + 60);
+    
+    ctx.waitUntil(env.TOKEN_USAGE.put(key, JSON.stringify(newData), { expirationTtl: remaining }));
   }
-  return 0;
 }
 
-function createUsageTrackingStream(response, env, clientIP, ctx, provider = null, model = null) {
+async function updateTokenUsage(env, clientIP, tokensUsed, ctx, provider = null, model = null, promptTokens = 0, completionTokens = 0, pathname = null, firstMessage = null, userInfo = null) {
+  if (tokensUsed <= 0) return;
+  
+  // Persist to database (now includes userInfo)
+  ctx.waitUntil(persistUsageToDb(env, clientIP, provider, (model || "").replace("models/", ""), tokensUsed, promptTokens, completionTokens, pathname, firstMessage, userInfo));
+  
+  // Update rate limits across all windows (IP-based)
+  await updateRateLimitUsage(env, clientIP, tokensUsed, ctx);
+  
+  // Also update user-based rate limits and usage if authenticated
+  if (userInfo) {
+    ctx.waitUntil(trackUserUsage(env, userInfo, tokensUsed, provider, model, ctx));
+  }
+}
+
+function createUsageTrackingStream(response, env, clientIP, ctx, provider = null, model = null, pathname = null, firstMessage = null, userInfo = null) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -651,7 +898,7 @@ function createUsageTrackingStream(response, env, clientIP, ctx, provider = null
       if (done) {
         // Process any remaining buffer for usage data
         if (buffer) {
-          extractUsageFromBuffer(buffer, env, clientIP, ctx, provider, model);
+          extractUsageFromBuffer(buffer, env, clientIP, ctx, provider, model, pathname, firstMessage, userInfo);
         }
         controller.close();
         return;
@@ -673,11 +920,20 @@ function createUsageTrackingStream(response, env, clientIP, ctx, provider = null
             if (data.usage) {
               const usage = extractDetailedUsage(data);
               if (usage.total > 0) {
-                ctx.waitUntil(updateTokenUsage(env, clientIP, usage.total, ctx, provider, model, usage.prompt, usage.completion));
+                ctx.waitUntil(updateTokenUsage(env, clientIP, usage.total, ctx, provider || data.provider, data.model || model, usage.prompt, usage.completion, pathname, firstMessage, userInfo));
               }
             }
           } catch (e) {
             // Ignore parse errors for incomplete chunks
+          }
+        } else if ((response.headers.get("content-type") || "").includes("application/json")) {
+          try {
+            const data = JSON.parse(line);
+            if (data.eval_count) {
+              ctx.waitUntil(updateTokenUsage(env, clientIP, data.prompt_eval_count + data.eval_count, ctx, provider || data.provider, data.model || model, data.prompt_eval_count, data.eval_count, pathname, firstMessage, userInfo));
+            }
+          } catch(e) {
+            
           }
         }
       }
@@ -692,7 +948,7 @@ function createUsageTrackingStream(response, env, clientIP, ctx, provider = null
   return stream;
 }
 
-function extractUsageFromBuffer(buffer, env, clientIP, ctx, provider = null, model = null) {
+function extractUsageFromBuffer(buffer, env, clientIP, ctx, provider = null, model = null, pathname = null, firstMessage = null, userInfo = null) {
   const lines = buffer.split('\n');
   for (const line of lines) {
     if (line.startsWith('data: ') && line !== 'data: [DONE]') {
@@ -702,7 +958,7 @@ function extractUsageFromBuffer(buffer, env, clientIP, ctx, provider = null, mod
         if (data.usage) {
           const usage = extractDetailedUsage(data);
           if (usage.total > 0) {
-            ctx.waitUntil(updateTokenUsage(env, clientIP, usage.total, ctx, provider, model, usage.prompt, usage.completion));
+            ctx.waitUntil(updateTokenUsage(env, clientIP, usage.total, ctx, provider || data.provider, data.model || model, usage.prompt, usage.completion, pathname, firstMessage, userInfo));
           }
         }
       } catch (e) {
@@ -713,13 +969,13 @@ function extractUsageFromBuffer(buffer, env, clientIP, ctx, provider = null, mod
 }
 
 // Persist usage to D1 database
-async function persistUsageToDb(env, clientIP, provider, model, tokensUsed, promptTokens, completionTokens) {
+async function persistUsageToDb(env, clientIP, provider, model, tokensUsed, promptTokens, completionTokens, pathname = null, firstMessage = null, userInfo = null) {
   if (!env.USAGE_DB) return;
   
   try {
     await env.USAGE_DB.prepare(
-      `INSERT INTO usage_logs (ip, provider, model, tokens_total, tokens_prompt, tokens_completion, timestamp) 
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO usage_logs (ip, provider, model, tokens_total, tokens_prompt, tokens_completion, pathname, first_message, user_id, user_tier, timestamp) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       clientIP,
       provider || 'unknown',
@@ -727,6 +983,10 @@ async function persistUsageToDb(env, clientIP, provider, model, tokensUsed, prom
       tokensUsed,
       promptTokens || 0,
       completionTokens || 0,
+      pathname || 'unknown',
+      firstMessage ? firstMessage.substring(0, 500) : null,
+      userInfo?.user_id || null,
+      userInfo?.tier || null,
       new Date().toISOString()
     ).run();
   } catch (e) {
@@ -746,4 +1006,379 @@ function extractDetailedUsage(responseData) {
     };
   }
   return { total: 0, prompt: 0, completion: 0 };
+}
+
+// ============================================
+// User API Key Authentication & Tier-based Rate Limiting
+// ============================================
+
+/**
+ * Parse cookies from request header
+ */
+function parseCookies(request) {
+  const cookieHeader = request.headers.get('Cookie');
+  if (!cookieHeader) return {};
+  
+  const cookies = {};
+  cookieHeader.split(';').forEach(cookie => {
+    const [name, ...rest] = cookie.trim().split('=');
+    if (name) {
+      cookies[name] = rest.join('=');
+    }
+  });
+  return cookies;
+}
+
+/**
+ * Validate user API key and return user info with tier
+ * Supports: Authorization header, X-API-Key header, or g4f_session cookie (same-site)
+ * @param {Request} request - The incoming request
+ * @param {Object} env - Environment bindings
+ * @returns {Object|null} User info with tier, or null if not authenticated
+ */
+async function validateUserApiKey(request, env) {
+  // Get API key from Authorization header or X-API-Key header
+  const authHeader = request.headers.get('Authorization');
+  const xApiKey = request.headers.get('X-API-Key');
+  
+  let apiKey = null;
+  let sessionToken = null;
+  
+  // Check Authorization header for g4f_ API key
+  if (authHeader && authHeader.startsWith('Bearer ') && authHeader !== 'Bearer secret') {
+    const tokens = authHeader.substring(7).split(/\s+/);
+    const g4fKey = tokens.find(t => t.startsWith('g4f_'));
+    if (g4fKey) {
+      apiKey = g4fKey;
+    }
+  }
+  
+  // Check X-API-Key header
+  if (!apiKey && xApiKey && xApiKey.startsWith('g4f_')) {
+    apiKey = xApiKey;
+  }
+  
+  // Check for session cookie (same-site authentication)
+  if (!apiKey) {
+    const cookies = parseCookies(request);
+    if (cookies.g4f_session) {
+      sessionToken = cookies.g4f_session;
+    }
+  }
+  
+  // If we have an API key, validate it
+  if (apiKey) {
+    // Hash the API key for lookup
+    const keyHash = await hashApiKey(apiKey);
+    
+    // Look up in KV (populated by members-worker)
+    if (!env.MEMBERS_KV) {
+      return null;
+    }
+    
+    const keyDataStr = await env.MEMBERS_KV.get(`api_key:${keyHash}`);
+    if (!keyDataStr) {
+      return null;
+    }
+    
+    try {
+      const keyData = JSON.parse(keyDataStr);
+      return {
+        user_id: keyData.user_id,
+        key_id: keyData.key_id,
+        tier: keyData.tier || 'free',
+        api_key_hash: keyHash,
+        auth_method: 'api_key'
+      };
+    } catch (e) {
+      console.error('Failed to parse API key data:', e);
+      return null;
+    }
+  }
+  
+  // If we have a session token, validate it
+  if (sessionToken) {
+    if (!env.MEMBERS_KV) {
+      return null;
+    }
+    
+    // Look up session in KV
+    const sessionDataStr = await env.MEMBERS_KV.get(`session:${sessionToken}`);
+    if (!sessionDataStr) {
+      return null;
+    }
+    
+    try {
+      const sessionData = JSON.parse(sessionDataStr);
+      
+      // Check if session is expired
+      if (sessionData.expires_at && new Date(sessionData.expires_at) < new Date()) {
+        return null;
+      }
+      
+      return {
+        user_id: sessionData.user_id,
+        key_id: null,
+        tier: sessionData.tier || 'free',
+        api_key_hash: null,
+        auth_method: 'session'
+      };
+    } catch (e) {
+      console.error('Failed to parse session data:', e);
+      return null;
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Hash an API key for secure lookup
+ */
+async function hashApiKey(apiKey) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(apiKey);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = new Uint8Array(hashBuffer);
+  return Array.from(hashArray, byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Get rate limits based on user tier
+ */
+function getRateLimitsForTier(tier) {
+  if (tier && USER_TIER_LIMITS[tier]) {
+    return {
+      tokens: USER_TIER_LIMITS[tier].tokens,
+      requests: USER_TIER_LIMITS[tier].requests,
+      burstMultiplier: 1.5, // Less burst needed for authenticated users
+      windows: RATE_LIMITS.windows
+    };
+  }
+  return RATE_LIMITS;
+}
+
+/**
+ * Get rate limit usage for an authenticated user
+ */
+async function getUserRateLimitUsage(env, userId) {
+  if (!env.MEMBERS_KV) {
+    return {
+      minute: { tokens: 0, requests: 0, timestamp: Date.now() },
+      hour: { tokens: 0, requests: 0, timestamp: Date.now() },
+      day: { tokens: 0, requests: 0, timestamp: Date.now() }
+    };
+  }
+  
+  const now = Date.now();
+  const keys = ['minute', 'hour', 'day'];
+  const results = {};
+  
+  const promises = keys.map(async (window) => {
+    const key = `user_rate:${userId}:${window}`;
+    const data = await env.MEMBERS_KV.get(key, { type: 'json' });
+    
+    if (!data || (now - data.timestamp > RATE_LIMITS.windows[window])) {
+      return { window, data: { tokens: 0, requests: 0, timestamp: now } };
+    }
+    return { window, data };
+  });
+  
+  const resolved = await Promise.all(promises);
+  for (const { window, data } of resolved) {
+    results[window] = data;
+  }
+  
+  return results;
+}
+
+/**
+ * Check rate limits for authenticated user
+ */
+async function checkUserRateLimits(env, userInfo) {
+  const limits = getRateLimitsForTier(userInfo.tier);
+  const usage = await getUserRateLimitUsage(env, userInfo.user_id);
+  const now = Date.now();
+  
+  const checks = [
+    {
+      window: 'minute',
+      tokenLimit: limits.tokens.perMinute * limits.burstMultiplier,
+      requestLimit: limits.requests.perMinute * limits.burstMultiplier,
+      usage: usage.minute
+    },
+    {
+      window: 'hour',
+      tokenLimit: limits.tokens.perHour,
+      requestLimit: limits.requests.perHour,
+      usage: usage.hour
+    },
+    {
+      window: 'day',
+      tokenLimit: limits.tokens.perDay,
+      requestLimit: limits.requests.perDay,
+      usage: usage.day
+    }
+  ];
+  
+  for (const check of checks) {
+    if (check.usage.tokens >= check.tokenLimit) {
+      const retryAfter = Math.ceil((limits.windows[check.window] - (now - check.usage.timestamp)) / 1000);
+      return {
+        allowed: false,
+        reason: 'tokens',
+        window: check.window,
+        limit: check.tokenLimit,
+        used: check.usage.tokens,
+        retryAfter: Math.max(1, retryAfter),
+        tier: userInfo.tier
+      };
+    }
+    
+    if (check.usage.requests >= check.requestLimit) {
+      const retryAfter = Math.ceil((limits.windows[check.window] - (now - check.usage.timestamp)) / 1000);
+      return {
+        allowed: false,
+        reason: 'requests',
+        window: check.window,
+        limit: check.requestLimit,
+        used: check.usage.requests,
+        retryAfter: Math.max(1, retryAfter),
+        tier: userInfo.tier
+      };
+    }
+  }
+  
+  return { allowed: true, usage, tier: userInfo.tier };
+}
+
+/**
+ * Update rate limit usage for authenticated user
+ */
+async function updateUserRateLimitUsage(env, userId, tokensUsed, ctx) {
+  if (!env.MEMBERS_KV || tokensUsed <= 0) return;
+  
+  const now = Date.now();
+  const windows = ['minute', 'hour', 'day'];
+  
+  for (const window of windows) {
+    const key = `user_rate:${userId}:${window}`;
+    const windowMs = RATE_LIMITS.windows[window];
+    
+    const data = await env.MEMBERS_KV.get(key, { type: 'json' });
+    
+    let newData;
+    if (!data || (now - data.timestamp > windowMs)) {
+      newData = { tokens: tokensUsed, requests: 1, timestamp: now };
+    } else {
+      newData = {
+        tokens: data.tokens + tokensUsed,
+        requests: data.requests + 1,
+        timestamp: data.timestamp
+      };
+    }
+    
+    const elapsed = now - newData.timestamp;
+    const remaining = Math.max(60, Math.ceil((windowMs - elapsed) / 1000) + 60);
+    
+    ctx.waitUntil(env.MEMBERS_KV.put(key, JSON.stringify(newData), { expirationTtl: remaining }));
+  }
+}
+
+/**
+ * Track usage for authenticated user in members system
+ */
+async function trackUserUsage(env, userInfo, tokensUsed, provider, model, ctx) {
+  if (!env.MEMBERS_KV || !userInfo || tokensUsed <= 0) return;
+  
+  // Update rate limit counters
+  await updateUserRateLimitUsage(env, userInfo.user_id, tokensUsed, ctx);
+  
+  // Update user's total usage in R2 via KV queue (async)
+  ctx.waitUntil(updateUserTotalUsage(env, userInfo, tokensUsed, provider, model));
+}
+
+/**
+ * Update user's total usage stats
+ */
+async function updateUserTotalUsage(env, userInfo, tokensUsed, provider, model) {
+  if (!env.MEMBERS_BUCKET) return;
+  
+  try {
+    // Get current user data
+    const userPath = `users/${userInfo.user_id}.json`;
+    const userObj = await env.MEMBERS_BUCKET.get(userPath);
+    
+    if (!userObj) return;
+    
+    const user = await userObj.json();
+    const now = new Date();
+    const lastReset = new Date(user.usage?.last_reset || 0);
+    
+    // Reset daily counters if new day
+    if (now.getUTCDate() !== lastReset.getUTCDate() ||
+        now.getUTCMonth() !== lastReset.getUTCMonth() ||
+        now.getUTCFullYear() !== lastReset.getUTCFullYear()) {
+      user.usage = {
+        ...user.usage,
+        requests_today: 0,
+        tokens_today: 0,
+        last_reset: now.toISOString()
+      };
+    }
+    
+    // Update usage counters
+    user.usage = user.usage || { requests_today: 0, tokens_today: 0, total_requests: 0, total_tokens: 0 };
+    user.usage.requests_today = (user.usage.requests_today || 0) + 1;
+    user.usage.tokens_today = (user.usage.tokens_today || 0) + tokensUsed;
+    user.usage.total_requests = (user.usage.total_requests || 0) + 1;
+    user.usage.total_tokens = (user.usage.total_tokens || 0) + tokensUsed;
+    
+    // Update API key usage
+    if (userInfo.key_id && user.api_keys) {
+      const keyIndex = user.api_keys.findIndex(k => k.id === userInfo.key_id);
+      if (keyIndex !== -1) {
+        user.api_keys[keyIndex].usage = user.api_keys[keyIndex].usage || { requests: 0, tokens: 0 };
+        user.api_keys[keyIndex].usage.requests += 1;
+        user.api_keys[keyIndex].usage.tokens += tokensUsed;
+        user.api_keys[keyIndex].last_used = now.toISOString();
+      }
+    }
+    
+    // Save updated user
+    await env.MEMBERS_BUCKET.put(userPath, JSON.stringify(user, null, 2), {
+      httpMetadata: { contentType: "application/json" }
+    });
+    
+    // Update KV cache
+    await env.MEMBERS_KV.put(`user:${userInfo.user_id}`, JSON.stringify(user), { expirationTtl: 3600 });
+    
+    // Store daily usage log
+    const dateKey = now.toISOString().split("T")[0];
+    const usagePath = `usage/${userInfo.user_id}/${dateKey}.json`;
+    const existingUsage = await env.MEMBERS_BUCKET.get(usagePath);
+    
+    let dailyUsage;
+    if (existingUsage) {
+      dailyUsage = await existingUsage.json();
+    } else {
+      dailyUsage = { date: dateKey, requests: 0, tokens: 0, providers: {}, models: {} };
+    }
+    
+    dailyUsage.requests += 1;
+    dailyUsage.tokens += tokensUsed;
+    if (provider) {
+      dailyUsage.providers[provider] = (dailyUsage.providers[provider] || 0) + 1;
+    }
+    if (model) {
+      dailyUsage.models[model] = (dailyUsage.models[model] || 0) + 1;
+    }
+    
+    await env.MEMBERS_BUCKET.put(usagePath, JSON.stringify(dailyUsage, null, 2), {
+      httpMetadata: { contentType: "application/json" }
+    });
+    
+  } catch (e) {
+    console.error('Failed to update user usage:', e);
+  }
 }
