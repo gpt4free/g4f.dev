@@ -154,7 +154,7 @@
     const provider = providerSelect.value;
     const apiKey = apiKeyInput.value.trim();
     const options = apiKey ? { apiKey } : {};
-    client = createClient(provider, options);
+    client = await createClient(provider, options);
     await loadModels();
   }
 

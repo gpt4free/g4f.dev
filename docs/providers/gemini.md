@@ -45,7 +45,7 @@ print(response.choices[0].message.content)
 ```javascript
 import { createClient } from '@gpt4free/g4f.dev/providers';
 
-const client = createClient("gemini", { apiKey: 'YOUR_GOOGLE_API_KEY' });
+const client = await createClient("gemini", { apiKey: 'YOUR_GOOGLE_API_KEY' });
 
 const response = await client.chat.completions.create({
     model: "gemini-2.5-flash",

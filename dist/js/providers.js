@@ -52,14 +52,15 @@ async function loadProviders() {
     return providers;
 }
 
-function createClient(provider, options = {}) {
+async function createClient(provider, options = {}) {
     if (provider.startsWith("custom:")) {
         const serverId = provider.substring(7);
         options.baseUrl = `https://g4f.dev/custom/${serverId}`;
         options.apiKey = options.apiKey || (typeof window !== "undefined" ? window?.localStorage.getItem("session_token") : undefined);
-        if (typeof window !== "undefined" && window.createClient) {
-            return window.createClient("custom", options);
-        }
+        provider = "custom";
+    }
+    if (!providers) {
+        providers = await loadProviders();
     }
     if (!providers[provider]) {
         throw new Error(`Provider "${provider}" not found.`);

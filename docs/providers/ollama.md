@@ -53,7 +53,7 @@ print(response.choices[0].message.content)
 ```javascript
 import { createClient } from '@gpt4free/g4f.dev/providers';
 
-const client = createClient("ollama");
+const client = await createClient("ollama");
 
 const response = await client.chat.completions.create({
     model: "llama3",

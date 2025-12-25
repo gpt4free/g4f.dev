@@ -5202,7 +5202,7 @@ async function initClient() {
     }
     try {
         // Handle custom providers with custom:server_id format
-        client = window.createClient(provider, options);
+        client = await window.createClient(provider, options);
     } catch (error) {
         console.error('Failed to create client:', error);
         return;

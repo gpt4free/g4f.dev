@@ -146,7 +146,7 @@ const providerModels = {};
 for (const key of Object.keys(providers)) {
     console.log('Provider:', key, providers[key]);
     try {
-        const client = createClient(key);
+        const client = await createClient(key);
         providerModels[key] = await client.models.list();
         console.log(`Models for provider "${key}":`, providerModels[key].map(m => m.id));
     } catch (error) {
