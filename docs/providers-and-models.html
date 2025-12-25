@@ -30,6 +30,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png" />
     <link rel="manifest" href="/dist/img/site.webmanifest" />
+    <link rel="stylesheet" href="../dist/css/dracula.min.css" />
     <style>
         :root {
             --bg: #0f1724;
@@ -121,27 +122,132 @@
             margin-bottom: 30px;
         }
     </style>
+    <style>
+        .example-content { display: none; margin: 0.5em 0 1em 0; }
+        .expand-btn { cursor: pointer; color: #38bdf8; text-decoration: underline; background: none; border: none; font-size: 1em; padding: 0; display: block; }
+        .expand-btn:focus { outline: 1px solid #38bdf8; }
+    </style>
+    <script src="../dist/js/framework.js" defer></script>
+    <script src="../dist/js/highlight.min.js" async></script>
+    <script src="../dist/js/highlightjs-copy.min.js" async></script>
 </head>
 <body>
+
     <div class="section">
-        <h1>JS Providers</h1>
+        <h1>Live Providers</h1>
         <small>JavaScript client library providers with integrated functionality</small>
         <div class="table" id="js-providers-table">
             <div>Loading JS Providers...</div>
         </div>
+                <button class="expand-btn" onclick="toggleExample('js-client-example')">Show JS Client Example</button>
+                <div class="example-content" id="js-client-example">
+<pre><code class="language-javascript">
+import { createClient } from 'https://g4f.dev/dist/js/providers.js';
+
+const client = createClient("azure");
+const result = await client.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [{ role: 'user', content: 'Explain quantum computing' }]
+});
+console.log(result);
+</code></pre>
+                </div>
+                <button class="expand-btn" onclick="toggleExample('python-example')">Show Python Example</button>
+                <div class="example-content" id="python-example">
+                    <pre><code class="language-python">from g4f.client import ClientFactory
+
+client = ClientFactory.create_client("azure")
+response = client.chat.completions.create(
+    model="model-router",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+print(response)
+</code></pre>
+</div>
+<button class="expand-btn" onclick="toggleExample('js-fetch-example')">Show JS fetch Example</button>
+<div class="example-content" id="js-fetch-example">
+<pre><code>fetch('https://g4f.dev/api/azure/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: 'Explain quantum computing' }]
+    })
+})
+    .then(res => res.json())
+    .then(data => console.log(data));
+</code></pre>
+</div>
+<button class="expand-btn" onclick="toggleExample('python-requests-example')">Show Python requests Example</button>
+<div class="example-content" id="python-requests-example">
+    <pre><code class="language-python">import requests
+url = 'https://g4f.dev/api/azure/chat/completions'
+payload = {
+    'model': 'gpt-4o',
+    'messages': [{ 'role': 'user', 'content': 'Explain quantum computing' }]
+}
+response = requests.post(url, json=payload)
+print(response.json())
+</code></pre>
+                </div>
+    </div>
+
+    <div class="section">
+        <h2>Custom Providers</h2>
+        <small>Loaded from <a href="https://g4f.dev/custom/api/servers" target="_blank">custom/api/servers</a> (with fallback to public)</small>
+        <div class="table" id="custom-providers-table">
+            <div>Loading Custom Providers...</div>
+        </div>
+            <button class="expand-btn" onclick="toggleExample('python-clientfactory-example')">Show Python ClientFactory Example</button>
+            <div class="example-content" id="python-clientfactory-example">
+    <pre><code class="language-python">from g4f.client import ClientFactory
+
+client = ClientFactory.create_client("custom:srv_mjlq1ncq8a3f7fe0aea0", api_key="g4f_api_key")
+response = client.chat.completions.create(
+    model="turbo",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+print(response)
+</code></pre>
+</div>
+<button class="expand-btn" onclick="toggleExample('js-clientfactory-example')">Show JS ClientFactory Example</button>
+<div class="example-content" id="js-clientfactory-example">
+    <pre><code class="language-javascript">
+import { createClient } from 'https://g4f.dev/dist/js/providers.js';
+
+const client = createClient("custom:srv_mjlq1ncq8a3f7fe0aea0");
+const result = await client.chat.completions.create({
+    model: 'turbo',
+    messages: [{ role: 'user', content: 'Explain quantum computing' }]
+});
+console.log(result);
+</code></pre>
+            </div>
     </div>
 
     <div class="section">
         <h2>Core Providers</h2>
-        <small>Loaded from API: badges + model type icons 🎨👓🎧🎥</small>
+        <small>Loaded from API:</small>
         <div class="table" id="core-providers-table">
             <div>Loading Core Providers...</div>
         </div>
+<button class="expand-btn" onclick="toggleExample('python-core-example')">Show Python Example</button>
+<div class="example-content" id="python-core-example">
+<pre><code class="language-python">from g4f.client import ClientFactory
+
+client = ClientFactory.create_client("PollinationsAI")
+response = client.chat.completions.create(
+    model="",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+print(response)
+</code></pre>
+</div>
+            </div>
     </div>
 
     <script type="module">
-        import providers from 'https://g4f.dev/dist/js/providers.js';
-        import { createClient } from 'https://g4f.dev/dist/js/providers.js';
+        import { loadProviders, createClient } from 'https://g4f.dev/dist/js/providers.js';
 
         // Model type icons
         const modelTags = { image: "🎨", vision: "👓", audio: "🎧", video: "🎥" };
@@ -189,77 +295,123 @@
           return img;
         }
 
-        // Create table for JS Providers
-        async function renderJSTable() {
-            const table = document.getElementById('js-providers-table');
+        // Helper to render a provider table from a list
+        function renderProviderTable(tableId, providersList, getName = p => p.name || p.label || p.key, getModels = p => p.models || [], getTags = p => p.tags || "", getMeta = p => "") {
+            const table = document.getElementById(tableId);
             table.innerHTML = '';
-            for (const [key, p] of Object.entries(providers)) {
+            for (const p of providersList) {
                 const row = document.createElement('div');
                 row.className = 'row';
-                
-                // Provider info with logo
                 const prov = document.createElement('div');
                 prov.className = 'provider';
-                
                 const logo = document.createElement('div');
                 logo.className = 'logo';
-                // Simplified logo for JS providers
-                logo.appendChild(getImage(key));
-                
+                logo.appendChild(getImage(getName(p)));
                 const meta = document.createElement('div');
-                meta.innerHTML = `<div>${key}</div><small>${p.tags}</small>`;
-                
+                    let allowedModelsHtml = '';
+                    let serverIdHtml = '';
+                    if (p.id) {
+                        serverIdHtml = `<div style='font-size:11px;color:#fbbf24'><b>Server ID:</b> ${p.id}</div>`;
+                    }
+                    meta.innerHTML = `<div>${getName(p)}</div>${serverIdHtml}${allowedModelsHtml}<small>${getMeta(p)}</small>`;
                 prov.appendChild(logo);
                 prov.appendChild(meta);
-                
-                // Badges
                 const tags = document.createElement('div');
                 tags.className = 'badges';
-                
-                // Models preview
+                tags.textContent = getTags(p);
                 const preview = document.createElement('div');
                 preview.className = 'models-preview';
-
-                // Action button
                 const actions = document.createElement('div');
                 const btn = document.createElement('button');
                 btn.className = 'button';
                 btn.textContent = 'Show';
-                
                 actions.appendChild(btn);
-                
-                // Full models list
                 const modelDiv = document.createElement('div');
                 modelDiv.className = 'models-list';
+                const models = getModels(p);
+                models.slice(0, 5).forEach(m => {
+                    const pill = document.createElement('div');
+                    pill.className = 'model-pill';
+                    pill.textContent = m;
+                    preview.appendChild(pill);
+                });
+                if (models.length > 5) {
+                    const more = document.createElement('div');
+                    more.className = 'model-pill';
+                    more.textContent = `…+${models.length - 5}`;
+                    preview.appendChild(more);
+                }
+                models.forEach(m => {
+                    const pill = document.createElement('div');
+                    pill.className = 'model-pill';
+                    pill.textContent = m;
+                    modelDiv.appendChild(pill);
+                });
+                btn.addEventListener('click', () => {
+                    modelDiv.classList.toggle('visible');
+                    btn.textContent = modelDiv.classList.contains('visible') ? 'Hide' : 'Show';
+                });
+                row.appendChild(prov);
+                row.appendChild(tags);
+                row.appendChild(preview);
+                row.appendChild(actions);
+                table.appendChild(row);
+                table.appendChild(modelDiv);
+            }
+        }
 
+        // Create table for JS Providers
+        async function renderJSTable() {
+            const table = document.getElementById('js-providers-table');
+            table.innerHTML = '';
+            for (const [key, p] of Object.entries(await loadProviders())) {
+                const row = document.createElement('div');
+                row.className = 'row';
+                const prov = document.createElement('div');
+                prov.className = 'provider';
+                const logo = document.createElement('div');
+                logo.className = 'logo';
+                logo.appendChild(getImage(key));
+                const meta = document.createElement('div');
+                let labelHtml = '';
+                if (p.label) {
+                    labelHtml = `<div style='color:#7dd3fc;font-size:11px'>${p.label}</div>`;
+                }
+                meta.innerHTML = `<div>${key}</div>${labelHtml}<small>${p.tags}</small>`;
+                prov.appendChild(logo);
+                prov.appendChild(meta);
+                const tags = document.createElement('div');
+                tags.className = 'badges';
+                const preview = document.createElement('div');
+                preview.className = 'models-preview';
+                const actions = document.createElement('div');
+                const btn = document.createElement('button');
+                btn.className = 'button';
+                btn.textContent = 'Show';
+                actions.appendChild(btn);
+                const modelDiv = document.createElement('div');
+                modelDiv.className = 'models-list';
                 (async () => {
                     try {
-                        console.log(providers[key])
-                        const client = createClient(key);
+                        const client = await createClient(key);
                         p.models = await client.models.list();
                         p.models = p.models.map(m => m.id);
-                        console.log(`Models for provider "${key}":`, p.models);
                     } catch (error) {
                         p.models = [];
-                        console.error(`Error fetching models for provider "${key}":`, error);
                     }
-
                     if(p.models.length === 0) return;
-                    
                     p.models.slice(0, 5).forEach(m => {
                         const pill = document.createElement('div');
                         pill.className = 'model-pill';
                         pill.textContent = m;
                         preview.appendChild(pill);
                     });
-                    
                     if (p.models.length > 5) {
                         const more = document.createElement('div');
                         more.className = 'model-pill';
                         more.textContent = `…+${p.models.length - 5}`;
                         preview.appendChild(more);
                     }
-
                     p.models.forEach(m => {
                         const pill = document.createElement('div');
                         pill.className = 'model-pill';
@@ -267,66 +419,81 @@
                         modelDiv.appendChild(pill);
                     });
                 })();
-                
-                // Toggle show/hide
                 btn.addEventListener('click', () => {
                     modelDiv.classList.toggle('visible');
                     btn.textContent = modelDiv.classList.contains('visible') ? 'Hide' : 'Show';
                 });
-                
-                // Assemble row
                 row.appendChild(prov);
                 row.appendChild(tags);
                 row.appendChild(preview);
                 row.appendChild(actions);
-                
                 table.appendChild(row);
                 table.appendChild(modelDiv);
             }
         }
 
         // Render JS providers table immediately
-        renderJSTable();
+        try {
+            await renderJSTable();
+        } catch (e) {
+            document.getElementById("js-providers-table").innerHTML = `<div style='color:red'>Error loading JS providers: ${e}</div>`;
+        }
+
+        // Function to load and render Custom Providers (from custom/api/servers)
+        async function loadCustomProviders() {
+            const tableId = "custom-providers-table";
+            let url = "https://g4f.dev/custom/api/servers";
+            let resp = await fetch(url, {
+                headers: {'Authorization': `Bearer ${localStorage.getItem("session_token") || ""}`}
+            });
+            if (!resp.ok) {
+                url = "https://g4f.dev/custom/api/servers/public";
+                resp = await fetch(url);
+            }
+            try {
+                const data = await resp.json();
+                // data is an array of custom provider objects
+                renderProviderTable(
+                    tableId,
+                    data.servers,
+                    p => p.name || p.label || p.key,
+                    p => Array.isArray(p.models) && p.models.length > 0 ? p.models : (Array.isArray(p.allowed_models) ? p.allowed_models : []),
+                    p => p.tags || "",
+                    p => p.meta || ""
+                );
+            } catch (e) {
+                document.getElementById(tableId).innerHTML = `<div style='color:red'>Error loading custom providers: ${e}</div>`;
+            }
+        }
 
         // Function to load and render Core Providers (from API)
         async function loadCoreProviders() {
             const providersUrl = "https://g4f.dev/backend-api/v2/providers";
             const modelsUrl = "https://g4f.dev/backend-api/v2/models";
-            
             const table = document.getElementById("core-providers-table");
-            
             try {
                 const [providers, models] = await Promise.all([
                     fetch(providersUrl).then(r => r.json()),
                     fetch(modelsUrl).then(r => r.json())
                 ]);
-                
                 providers.sort((a, b) => (a.label || a.name).localeCompare(b.label || b.name));
                 table.innerHTML = "";
-                
                 providers.forEach(p => {
                     const row = document.createElement("div");
                     row.className = "row";
-                    
                     const prov = document.createElement("div");
                     prov.className = "provider";
-                    
                     const logo = document.createElement("div");
                     logo.className = "logo";
                     logo.appendChild(getImage(p.name));
-                    
                     const meta = document.createElement("div");
                     meta.innerHTML = `<div>${p.label || p.name}${p.label && p.label.split(" ")[0] !== p.name ? ` (${p.name})` : ""}</div><small>${iconsFor(p)}${badgesFor(p)}</small>`;
-                    
                     prov.appendChild(logo);
                     prov.appendChild(meta);
-                    
                     const tags = document.createElement("div");
                     tags.className = "badges";
-                    
                     const preview = document.createElement("div");
                     preview.className = "models-preview";
-                    
                     const modelList = models[p.name] || models[p.label] || [];
                     modelList.slice(0, 5).forEach(m => {
                         const pill = document.createElement("div");
@@ -334,51 +501,64 @@
                         pill.textContent = m;
                         preview.appendChild(pill);
                     });
-                    
                     if (modelList.length > 5) {
                         const more = document.createElement("div");
                         more.className = "model-pill";
                         more.textContent = `…+${modelList.length - 5}`;
                         preview.appendChild(more);
                     }
-                    
                     const actions = document.createElement("div");
                     const btn = document.createElement("button");
                     btn.className = "button";
                     btn.textContent = "Show";
                     actions.appendChild(btn);
-                    
                     row.appendChild(prov);
                     row.appendChild(tags);
                     row.appendChild(preview);
                     row.appendChild(actions);
-                    
                     const modelDiv = document.createElement("div");
                     modelDiv.className = "models-list";
-                    
                     modelList.forEach(m => {
                         const pill = document.createElement("div");
                         pill.className = "model-pill";
                         pill.textContent = m;
                         modelDiv.appendChild(pill);
                     });
-                    
                     btn.addEventListener("click", () => {
                         modelDiv.classList.toggle("visible");
                         btn.textContent = modelDiv.classList.contains("visible") ? "Hide" : "Show";
                     });
-                    
                     table.appendChild(row);
                     table.appendChild(modelDiv);
                 });
             } catch (e) {
                 table.innerHTML = `<div style='color:red'>Error loading data: ${e}</div>`;
-                console.error(e);
             }
         }
-        
-        // Load Core Providers from API
+
+        // Load all provider tables
+        loadCustomProviders();
         loadCoreProviders();
     </script>
 </body>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll('code:not(.hljs)').forEach((el) => {
+            if (el.className != "hljs") {
+                hljs.highlightElement(el);
+            }
+        });
+    });
+    function toggleExample(id) {
+        var content = document.getElementById(id);
+        var btn = event.target;
+        if (content.style.display === 'block') {
+            content.style.display = 'none';
+            btn.textContent = 'Show Example';
+        } else {
+            content.style.display = 'block';
+            btn.textContent = 'Hide Example';
+        }
+    }
+    </script>
 </html>
