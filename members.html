@@ -1115,6 +1115,10 @@
                         <button class="btn" id="addServerBtn" style="flex: 1;">
                             <i class="fas fa-plus"></i> Add Server
                         </button>
+                        <button class="oauth-btn huggingface" id="addHuggingFaceServerBtn" style="flex: 1;">
+                            🤗
+                            Add HuggingFace
+                        </button>
                         <button class="oauth-btn pollinations" id="addPollinationsServerBtn" style="flex: 1;">
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                             Add Pollinations
@@ -1775,6 +1779,53 @@
                 });
             }
             
+            // Add HuggingFace server button
+            const addHuggingFaceServerBtn = document.getElementById('addHuggingFaceServerBtn');
+            if (addHuggingFaceServerBtn) {
+                addHuggingFaceServerBtn.addEventListener('click', async () => {
+                    // Check if user already has HuggingFace OAuth token
+                    const hfApiKey = localStorage.getItem('HuggingFace-api_key');
+                    if (hfApiKey) {
+                        // Validate the token is not expired
+                        const isValid = await validateHuggingFaceToken(hfApiKey);
+                        if (isValid) {
+                            await createOrUpdateHuggingFaceServer(hfApiKey);
+                        } else {
+                            // Token expired, remove it and redirect to OAuth
+                            localStorage.removeItem('HuggingFace-api_key');
+                            showToast('HuggingFace token expired, please sign in again', 'error');
+                            if (window.oauthConfig) {
+                                localStorage.setItem('huggingface_pending_server', 'true');
+                                window.location.href = await oauthLoginUrl(window.oauthConfig);
+                            }
+                        }
+                    } else {
+                        // Redirect to HuggingFace OAuth
+                        if (window.oauthConfig) {
+                            localStorage.setItem('huggingface_pending_server', 'true');
+                            window.location.href = await oauthLoginUrl(window.oauthConfig);
+                        } else {
+                            showToast('HuggingFace OAuth not configured', 'error');
+                        }
+                    }
+                });
+            }
+            
+            // Validate HuggingFace token by checking user info
+            async function validateHuggingFaceToken(token) {
+                try {
+                    const response = await fetch('https://huggingface.co/api/whoami-v2', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    return response.ok;
+                } catch (e) {
+                    console.error('Failed to validate HuggingFace token:', e);
+                    return false;
+                }
+            }
+            
             // Add Pollinations server button
             const addPollinationsServerBtn = document.getElementById('addPollinationsServerBtn');
             if (addPollinationsServerBtn) {
@@ -1790,6 +1841,24 @@
                 localStorage.removeItem('pollinations_pending_server');
                 createOrUpdatePollinationsServer(pendingPollinationsToken);
             }
+            
+            // Check for pending HuggingFace server creation
+            const pendingHuggingFace = localStorage.getItem('huggingface_pending_server');
+            if (pendingHuggingFace) {
+                localStorage.removeItem('huggingface_pending_server');
+                const hfApiKey = localStorage.getItem('HuggingFace-api_key');
+                if (hfApiKey) {
+                    // Validate token before creating server
+                    validateHuggingFaceToken(hfApiKey).then(isValid => {
+                        if (isValid) {
+                            createOrUpdateHuggingFaceServer(hfApiKey);
+                        } else {
+                            localStorage.removeItem('HuggingFace-api_key');
+                            showToast('HuggingFace token expired, please try again', 'error');
+                        }
+                    });
+                }
+            }
         }
         
         async function createOrUpdatePollinationsServer(apiKey) {
@@ -1798,13 +1867,13 @@
                 const result = await customApiRequest('/servers');
                 const servers = result.servers || [];
                 const existingServer = servers.find(s => 
-                    s.base_url === 'https://text.pollinations.ai/openai' || 
+                    s.base_url === 'https://gen.pollinations.ai/v1' || 
                     s.label.toLowerCase().includes('pollinations')
                 );
                 
                 const serverData = {
                     label: 'Pollinations AI',
-                    base_url: 'https://text.pollinations.ai/openai',
+                    base_url: 'https://gen.pollinations.ai/v1',
                     api_keys: apiKey,
                     allowed_models: [],
                     is_public: false
@@ -1841,6 +1910,59 @@
             } catch (error) {
                 console.error('Failed to create/update Pollinations server:', error);
                 showToast('Failed to setup Pollinations server: ' + error.message, 'error');
+            }
+        }
+        
+        async function createOrUpdateHuggingFaceServer(apiKey) {
+            try {
+                // First, check if a HuggingFace server already exists
+                const result = await customApiRequest('/servers');
+                const servers = result.servers || [];
+                const existingServer = servers.find(s => 
+                    s.base_url === 'https://g4f.dev/api/huggingface' || 
+                    s.label.toLowerCase().includes('huggingface') ||
+                    s.label.toLowerCase().includes('hugging face')
+                );
+                
+                const serverData = {
+                    label: 'HuggingFace',
+                    base_url: 'https://g4f.dev/api/huggingface',
+                    api_keys: apiKey,
+                    allowed_models: [],
+                    is_public: false
+                };
+                
+                if (existingServer) {
+                    // Update existing server
+                    serverData.server_id = existingServer.id;
+                    const updateResult = await customApiRequest('/servers/update', {
+                        method: 'POST',
+                        body: JSON.stringify(serverData)
+                    });
+                    
+                    if (updateResult.error) {
+                        showToast('Failed to update HuggingFace server: ' + updateResult.error, 'error');
+                    } else {
+                        showToast('HuggingFace server updated with new API key!');
+                        await loadServers();
+                    }
+                } else {
+                    // Create new server
+                    const createResult = await customApiRequest('/servers/create', {
+                        method: 'POST',
+                        body: JSON.stringify(serverData)
+                    });
+                    
+                    if (createResult.error) {
+                        showToast('Failed to create HuggingFace server: ' + createResult.error, 'error');
+                    } else {
+                        showToast('HuggingFace server added successfully!');
+                        await loadServers();
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to create/update HuggingFace server:', error);
+                showToast('Failed to setup HuggingFace server: ' + error.message, 'error');
             }
         }
         
