@@ -226,6 +226,31 @@
             </div>
             </div>
             <div class="bottom_buttons">
+                <div class="cloud-sync-section" id="cloudSyncSection" style="display: none;">
+                    <div class="cloud-sync-header">
+                        <i class="fa-solid fa-cloud"></i>
+                        <span>Cloud Sync</span>
+                        <span class="cloud-sync-user" id="cloudSyncUser"></span>
+                    </div>
+                    <button id="cloudSyncUpload">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>Upload to Cloud</span>
+                    </button>
+                    <button id="cloudSyncDownload">
+                        <i class="fa-solid fa-cloud-arrow-down"></i>
+                        <span>Download from Cloud</span>
+                    </button>
+                    <button id="cloudSyncLogoutBtn">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Logout</span>
+                    </button>
+                </div>
+                <div class="cloud-sync-login" id="cloudSyncLogin">
+                    <button id="cloudSyncLoginBtn">
+                        <i class="fa-brands fa-github"></i>
+                        <span>Login for Cloud Sync</span>
+                    </button>
+                </div>
                 <button onclick="delete_conversations()">
                     <i class="fa-solid fa-trash"></i>
                     <span>Clear Conversations</span>

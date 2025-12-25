@@ -171,6 +171,23 @@ export default {
               return handleCheckSession(request, env);
           }
 
+          // Conversation cloud sync endpoints
+          if (pathname === "/members/api/conversations") {
+              if (request.method === "GET") {
+                  return handleListConversations(request, env);
+              } else if (request.method === "POST") {
+                  return handleSyncConversations(request, env);
+              }
+          }
+          if (pathname.startsWith("/members/api/conversations/") && pathname !== "/members/api/conversations/") {
+              const conversationId = pathname.replace("/members/api/conversations/", "");
+              if (request.method === "GET") {
+                  return handleGetConversation(request, env, conversationId);
+              } else if (request.method === "DELETE") {
+                  return handleDeleteConversation(request, env, conversationId);
+              }
+          }
+
           return jsonResponse({ error: "Not found" }, 404);
       } catch (error) {
           console.error("Worker error:", error);
@@ -186,6 +203,7 @@ export default {
 async function handleGitHubAuth(request, env, url) {
   const state = generateState();
   const scope = "user:email read:user";
+  const redirectParam = url.searchParams.get("redirect");
   
   const authUrl = new URL("https://github.com/login/oauth/authorize");
   authUrl.searchParams.set("client_id", env.GITHUB_CLIENT_ID);
@@ -193,8 +211,9 @@ async function handleGitHubAuth(request, env, url) {
   authUrl.searchParams.set("scope", scope);
   authUrl.searchParams.set("state", state);
 
-  // Store state in KV for verification
-  await env.MEMBERS_KV.put(`oauth_state:${state}`, "github", { expirationTtl: 600 });
+  // Store state in KV for verification, include redirect URL if present
+  const stateData = JSON.stringify({ provider: "github", redirect: redirectParam || null });
+  await env.MEMBERS_KV.put(`oauth_state:${state}`, stateData, { expirationTtl: 600 });
 
   return Response.redirect(authUrl.toString(), 302);
 }
@@ -207,12 +226,20 @@ async function handleGitHubCallback(request, env, url) {
       return redirectWithError("Missing code or state parameter");
   }
 
-  // Verify state
-  const storedProvider = await env.MEMBERS_KV.get(`oauth_state:${state}`);
-  if (storedProvider !== "github") {
+  // Verify state and get redirect URL if present
+  const storedStateData = await env.MEMBERS_KV.get(`oauth_state:${state}`);
+  let stateData;
+  try {
+      stateData = JSON.parse(storedStateData);
+  } catch {
+      // Legacy format: just the provider string
+      stateData = { provider: storedStateData, redirect: null };
+  }
+  if (stateData.provider !== "github") {
       return redirectWithError("Invalid state parameter");
   }
   await env.MEMBERS_KV.delete(`oauth_state:${state}`);
+  const externalRedirect = stateData.redirect;
 
   // Exchange code for access token
   const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
@@ -267,12 +294,27 @@ async function handleGitHubCallback(request, env, url) {
   // Generate session token
   const sessionToken = await createSession(env, user.id);
 
+  // If external redirect is requested, redirect with session token for cloud sync
+  if (externalRedirect) {
+      // Check if redirect is for chat/cloud sync (same origin)
+      try {
+          const redirectUrl = new URL(externalRedirect);
+          if (redirectUrl.hostname.endsWith("g4f.dev") || redirectUrl.hostname === "localhost") {
+              return redirectWithSessionToExternal(sessionToken, user, externalRedirect);
+          }
+      } catch (e) {
+          console.error("Invalid redirect URL:", e);
+      }
+      return redirectWithTempApiKey(env, user, externalRedirect);
+  }
+
   return redirectWithSession(sessionToken, user);
 }
 
 async function handleDiscordAuth(request, env, url) {
   const state = generateState();
   const scope = "identify email";
+  const redirectParam = url.searchParams.get("redirect");
   
   const authUrl = new URL("https://discord.com/api/oauth2/authorize");
   authUrl.searchParams.set("client_id", env.DISCORD_CLIENT_ID);
@@ -281,7 +323,8 @@ async function handleDiscordAuth(request, env, url) {
   authUrl.searchParams.set("scope", scope);
   authUrl.searchParams.set("state", state);
 
-  await env.MEMBERS_KV.put(`oauth_state:${state}`, "discord", { expirationTtl: 600 });
+  const stateData = JSON.stringify({ provider: "discord", redirect: redirectParam || null });
+  await env.MEMBERS_KV.put(`oauth_state:${state}`, stateData, { expirationTtl: 600 });
 
   return Response.redirect(authUrl.toString(), 302);
 }
@@ -294,11 +337,18 @@ async function handleDiscordCallback(request, env, url) {
       return redirectWithError("Missing code or state parameter");
   }
 
-  const storedProvider = await env.MEMBERS_KV.get(`oauth_state:${state}`);
-  if (storedProvider !== "discord") {
+  const storedStateData = await env.MEMBERS_KV.get(`oauth_state:${state}`);
+  let stateData;
+  try {
+      stateData = JSON.parse(storedStateData);
+  } catch {
+      stateData = { provider: storedStateData, redirect: null };
+  }
+  if (stateData.provider !== "discord") {
       return redirectWithError("Invalid state parameter");
   }
   await env.MEMBERS_KV.delete(`oauth_state:${state}`);
+  const externalRedirect = stateData.redirect;
 
   // Exchange code for access token
   const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
@@ -341,12 +391,28 @@ async function handleDiscordCallback(request, env, url) {
   });
 
   const sessionToken = await createSession(env, user.id);
+
+  // If external redirect is requested, redirect with session token for cloud sync
+  if (externalRedirect) {
+      // Check if redirect is for chat/cloud sync (same origin)
+      try {
+          const redirectUrl = new URL(externalRedirect);
+          if (redirectUrl.hostname.endsWith("g4f.dev") || redirectUrl.hostname === "localhost") {
+              return redirectWithSessionToExternal(sessionToken, user, externalRedirect);
+          }
+      } catch (e) {
+          console.error("Invalid redirect URL:", e);
+      }
+      return redirectWithTempApiKey(env, user, externalRedirect);
+  }
+
   return redirectWithSession(sessionToken, user);
 }
 
 async function handleHuggingFaceAuth(request, env, url) {
   const state = generateState();
   const scope = "openid profile email";
+  const redirectParam = url.searchParams.get("redirect");
   
   const authUrl = new URL("https://huggingface.co/oauth/authorize");
   authUrl.searchParams.set("client_id", env.HUGGINGFACE_CLIENT_ID);
@@ -355,7 +421,8 @@ async function handleHuggingFaceAuth(request, env, url) {
   authUrl.searchParams.set("scope", scope);
   authUrl.searchParams.set("state", state);
 
-  await env.MEMBERS_KV.put(`oauth_state:${state}`, "huggingface", { expirationTtl: 600 });
+  const stateData = JSON.stringify({ provider: "huggingface", redirect: redirectParam || null });
+  await env.MEMBERS_KV.put(`oauth_state:${state}`, stateData, { expirationTtl: 600 });
 
   return Response.redirect(authUrl.toString(), 302);
 }
@@ -368,11 +435,18 @@ async function handleHuggingFaceCallback(request, env, url) {
       return redirectWithError("Missing code or state parameter");
   }
 
-  const storedProvider = await env.MEMBERS_KV.get(`oauth_state:${state}`);
-  if (storedProvider !== "huggingface") {
+  const storedStateData = await env.MEMBERS_KV.get(`oauth_state:${state}`);
+  let stateData;
+  try {
+      stateData = JSON.parse(storedStateData);
+  } catch {
+      stateData = { provider: storedStateData, redirect: null };
+  }
+  if (stateData.provider !== "huggingface") {
       return redirectWithError("Invalid state parameter");
   }
   await env.MEMBERS_KV.delete(`oauth_state:${state}`);
+  const externalRedirect = stateData.redirect;
 
   // Exchange code for access token
   const tokenResponse = await fetch("https://huggingface.co/oauth/token", {
@@ -413,6 +487,21 @@ async function handleHuggingFaceCallback(request, env, url) {
   });
 
   const sessionToken = await createSession(env, user.id);
+
+  // If external redirect is requested, redirect with session token for cloud sync
+  if (externalRedirect) {
+      // Check if redirect is for chat/cloud sync (same origin)
+      try {
+          const redirectUrl = new URL(externalRedirect);
+          if (redirectUrl.hostname.endsWith("g4f.dev") || redirectUrl.hostname === "localhost") {
+              return redirectWithSessionToExternal(sessionToken, user, externalRedirect);
+          }
+      } catch (e) {
+          console.error("Invalid redirect URL:", e);
+      }
+      return redirectWithTempApiKey(env, user, externalRedirect);
+  }
+
   return redirectWithSession(sessionToken, user);
 }
 
@@ -1224,6 +1313,88 @@ function redirectWithSession(sessionToken, user) {
   });
 }
 
+/**
+ * Redirect to external URL with session token for cloud sync
+ * Used for login redirects from chat interface
+ */
+function redirectWithSessionToExternal(sessionToken, user, externalRedirectUrl) {
+    const redirectUrl = new URL(externalRedirectUrl);
+    redirectUrl.searchParams.set("session_token", sessionToken);
+    redirectUrl.searchParams.set("user", encodeURIComponent(JSON.stringify({
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        avatar: user.avatar,
+        provider: user.provider,
+        tier: user.tier
+    })));
+    
+    // Set session cookie with 7 day expiry
+    const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
+    const cookie = `g4f_session=${sessionToken}; Path=/; Expires=${cookieExpiry}; SameSite=Lax; Secure`;
+    
+    return new Response(null, {
+        status: 302,
+        headers: {
+            "Location": redirectUrl.toString(),
+            "Set-Cookie": cookie
+        }
+    });
+}
+
+/**
+ * Generate a temporary API key and redirect to external URL
+ * Used for login redirects from external sites
+ */
+async function redirectWithTempApiKey(env, user, externalRedirectUrl) {
+  try {
+      // Generate a temporary API key for the user
+      const apiKey = await generateApiKey(env, user.id);
+      const keyHash = await hashApiKey(apiKey);
+      const keyPrefix = apiKey.substring(0, 8);
+
+      const keyData = {
+          id: generateKeyId(),
+          name: "Temporary Login Key",
+          key_hash: keyHash,
+          prefix: keyPrefix,
+          user_id: user.id,
+          created_at: new Date().toISOString(),
+          last_used: null,
+          is_temporary: true,
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hour expiry
+          usage: {
+              requests: 0,
+              tokens: 0
+          }
+      };
+
+      // Store API key mapping in KV for fast lookup (with 24 hour TTL)
+      await env.MEMBERS_KV.put(`api_key:${keyHash}`, JSON.stringify({
+          user_id: user.id,
+          key_id: keyData.id,
+          tier: user.tier,
+          is_temporary: true,
+          expires_at: keyData.expires_at
+      }), { expirationTtl: 86400 }); // 24 hours
+
+      // Add to user's API keys
+      user.api_keys = user.api_keys || [];
+      user.api_keys.push(keyData);
+      user.updated_at = new Date().toISOString();
+      await saveUser(env, user);
+
+      // Redirect to external URL with the API key
+      const redirectUrl = `${(new URL(externalRedirectUrl)).toString()}#${encodeURIComponent(apiKey)}`;
+      
+      return Response.redirect(redirectUrl.toString(), 302);
+  } catch (error) {
+      console.error("Failed to generate temp API key:", error);
+      // Fallback to redirect without API key
+      return Response.redirect(externalRedirectUrl, 302);
+  }
+}
+
 // ============================================
 // Extended Rate Limiting Functions
 // ============================================
@@ -1606,5 +1777,167 @@ async function validateApiKeyWithRateLimits(env, apiKey) {
     } catch (e) {
         console.error('Failed to validate API key:', e);
         return null;
+    }
+}
+
+// ============================================
+// Conversation Cloud Sync
+// ============================================
+
+/**
+ * Handle GET /members/api/conversations - List all synced conversations
+ */
+async function handleListConversations(request, env) {
+    const user = await authenticateRequest(request, env);
+    if (!user) {
+        return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+
+    try {
+        // List all conversations from R2 for this user
+        const prefix = `conversations/${user.id}/`;
+        const listed = await env.MEMBERS_BUCKET.list({ prefix });
+        
+        const conversations = [];
+        for (const object of listed.objects) {
+            // Extract conversation ID from key
+            const convId = object.key.replace(prefix, "").replace(".json", "");
+            // Get metadata without loading full content
+            const metadata = await env.MEMBERS_BUCKET.head(object.key);
+            conversations.push({
+                id: convId,
+                size: object.size,
+                updated: metadata?.httpMetadata?.cacheControl || object.uploaded,
+                uploaded: object.uploaded
+            });
+        }
+
+        // Sort by upload time, newest first
+        conversations.sort((a, b) => new Date(b.uploaded) - new Date(a.uploaded));
+
+        return jsonResponse({ 
+            conversations,
+            count: conversations.length
+        });
+    } catch (error) {
+        console.error("Failed to list conversations:", error);
+        return jsonResponse({ error: "Failed to list conversations" }, 500);
+    }
+}
+
+/**
+ * Handle POST /members/api/conversations - Sync conversations to cloud
+ */
+async function handleSyncConversations(request, env) {
+    const user = await authenticateRequest(request, env);
+    if (!user) {
+        return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+
+    if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+    }
+
+    try {
+        const body = await request.json();
+        const { conversations } = body;
+
+        if (!Array.isArray(conversations)) {
+            return jsonResponse({ error: "conversations must be an array" }, 400);
+        }
+
+        // Limit number of conversations to sync (prevent abuse)
+        const MAX_CONVERSATIONS = 1000;
+        if (conversations.length > MAX_CONVERSATIONS) {
+            return jsonResponse({ 
+                error: `Maximum ${MAX_CONVERSATIONS} conversations allowed` 
+            }, 400);
+        }
+
+        const results = [];
+        const now = new Date().toISOString();
+
+        for (const conv of conversations) {
+            if (!conv.id) {
+                results.push({ id: null, success: false, error: "Missing conversation ID" });
+                continue;
+            }
+
+            try {
+                // Store conversation in R2
+                const key = `conversations/${user.id}/${conv.id}.json`;
+                await env.MEMBERS_BUCKET.put(
+                    key,
+                    JSON.stringify({
+                        ...conv,
+                        synced_at: now,
+                        user_id: user.id
+                    }),
+                    {
+                        httpMetadata: {
+                            contentType: "application/json",
+                            cacheControl: now
+                        }
+                    }
+                );
+                results.push({ id: conv.id, success: true });
+            } catch (err) {
+                results.push({ id: conv.id, success: false, error: err.message });
+            }
+        }
+
+        const successCount = results.filter(r => r.success).length;
+        return jsonResponse({
+            message: `Synced ${successCount} of ${conversations.length} conversations`,
+            results
+        });
+    } catch (error) {
+        console.error("Failed to sync conversations:", error);
+        return jsonResponse({ error: "Failed to sync conversations" }, 500);
+    }
+}
+
+/**
+ * Handle GET /members/api/conversations/:id - Get a specific conversation
+ */
+async function handleGetConversation(request, env, conversationId) {
+    const user = await authenticateRequest(request, env);
+    if (!user) {
+        return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+
+    try {
+        const key = `conversations/${user.id}/${conversationId}.json`;
+        const object = await env.MEMBERS_BUCKET.get(key);
+
+        if (!object) {
+            return jsonResponse({ error: "Conversation not found" }, 404);
+        }
+
+        const conversation = await object.json();
+        return jsonResponse({ conversation });
+    } catch (error) {
+        console.error("Failed to get conversation:", error);
+        return jsonResponse({ error: "Failed to get conversation" }, 500);
+    }
+}
+
+/**
+ * Handle DELETE /members/api/conversations/:id - Delete a synced conversation
+ */
+async function handleDeleteConversation(request, env, conversationId) {
+    const user = await authenticateRequest(request, env);
+    if (!user) {
+        return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+
+    try {
+        const key = `conversations/${user.id}/${conversationId}.json`;
+        await env.MEMBERS_BUCKET.delete(key);
+
+        return jsonResponse({ message: "Conversation deleted successfully" });
+    } catch (error) {
+        console.error("Failed to delete conversation:", error);
+        return jsonResponse({ error: "Failed to delete conversation" }, 500);
     }
 }

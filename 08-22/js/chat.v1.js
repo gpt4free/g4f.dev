@@ -4479,3 +4479,236 @@ function insertBackticksInTextarea(el) {
   el.setSelectionRange(caretPos, caretPos);
   el.focus();
 }
+
+// ============================================
+// Cloud Sync Functionality
+// ============================================
+
+const CLOUD_SYNC_API_BASE = "https://g4f.dev";
+
+// Check if user is logged in for cloud sync
+async function checkCloudSyncSession() {
+    const sessionToken = localStorage.getItem("g4f_session_token");
+    if (!sessionToken) {
+        showCloudSyncLogin();
+        return null;
+    }
+    
+    try {
+        const response = await fetch(`${CLOUD_SYNC_API_BASE}/members/api/session`, {
+            headers: {
+                "Authorization": `Bearer ${sessionToken}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.user) {
+                showCloudSyncLoggedIn(data.user);
+                return data.user;
+            }
+        }
+    } catch (e) {
+        console.debug("Cloud sync session check failed:", e);
+    }
+    
+    showCloudSyncLogin();
+    return null;
+}
+
+function showCloudSyncLogin() {
+    const loginSection = document.getElementById("cloudSyncLogin");
+    const syncSection = document.getElementById("cloudSyncSection");
+    if (loginSection) loginSection.style.display = "block";
+    if (syncSection) syncSection.style.display = "none";
+}
+
+function showCloudSyncLoggedIn(user) {
+    const loginSection = document.getElementById("cloudSyncLogin");
+    const syncSection = document.getElementById("cloudSyncSection");
+    const userEl = document.getElementById("cloudSyncUser");
+    
+    if (loginSection) loginSection.style.display = "none";
+    if (syncSection) syncSection.style.display = "block";
+    if (userEl) userEl.textContent = user.username || user.name || "";
+}
+
+// Redirect to login for cloud sync
+function cloudSyncLoginRedirect(provider = "github") {
+    const redirectUrl = encodeURIComponent(window.location.href);
+    window.location.href = `${CLOUD_SYNC_API_BASE}/members/auth/${provider}?redirect=${redirectUrl}`;
+}
+
+// Handle OAuth callback - check for session token in URL
+function handleCloudSyncCallback() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("session_token") || urlParams.get("token");
+    
+    if (token) {
+        localStorage.setItem("g4f_session_token", token);
+        // Clean URL
+        const cleanUrl = window.location.origin + window.location.pathname + window.location.hash;
+        window.history.replaceState({}, document.title, cleanUrl);
+        checkCloudSyncSession();
+        showNotification("Successfully logged in for Cloud Sync!", "success");
+    }
+}
+
+// Logout from cloud sync
+async function cloudSyncLogout() {
+    const sessionToken = localStorage.getItem("g4f_session_token");
+    
+    if (sessionToken) {
+        try {
+            await fetch(`${CLOUD_SYNC_API_BASE}/members/api/logout`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${sessionToken}`
+                }
+            });
+        } catch (e) {
+            console.debug("Logout request failed:", e);
+        }
+    }
+    
+    localStorage.removeItem("g4f_session_token");
+    showCloudSyncLogin();
+    showNotification("Logged out from Cloud Sync", "success");
+}
+
+// Upload conversations to cloud
+async function syncConversationsToCloud() {
+    const sessionToken = localStorage.getItem("g4f_session_token");
+    if (!sessionToken) {
+        showNotification("Please login first", "error");
+        return;
+    }
+    
+    try {
+        inputCount.innerText = framework.translate("Uploading conversations...");
+        
+        // Get all local conversations
+        const conversations = await list_conversations();
+        
+        if (!conversations || conversations.length === 0) {
+            showNotification("No conversations to sync", "error");
+            inputCount.innerText = "";
+            return;
+        }
+        
+        const response = await fetch(`${CLOUD_SYNC_API_BASE}/members/api/conversations`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${sessionToken}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ conversations })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showNotification(result.message || "Conversations synced to cloud!", "success");
+        } else {
+            const error = await response.json();
+            showNotification(error.error || "Failed to sync conversations", "error");
+        }
+    } catch (e) {
+        console.error("Cloud sync upload failed:", e);
+        showNotification("Failed to sync to cloud", "error");
+    } finally {
+        inputCount.innerText = "";
+    }
+}
+
+// Download conversations from cloud
+async function syncConversationsFromCloud() {
+    const sessionToken = localStorage.getItem("g4f_session_token");
+    if (!sessionToken) {
+        showNotification("Please login first", "error");
+        return;
+    }
+    
+    try {
+        inputCount.innerText = framework.translate("Downloading conversations...");
+        
+        // Get list of cloud conversations
+        const listResponse = await fetch(`${CLOUD_SYNC_API_BASE}/members/api/conversations`, {
+            headers: {
+                "Authorization": `Bearer ${sessionToken}`
+            }
+        });
+        
+        if (!listResponse.ok) {
+            showNotification("Failed to fetch cloud conversations", "error");
+            inputCount.innerText = "";
+            return;
+        }
+        
+        const { conversations: cloudConvList } = await listResponse.json();
+        
+        if (!cloudConvList || cloudConvList.length === 0) {
+            showNotification("No conversations in cloud", "error");
+            inputCount.innerText = "";
+            return;
+        }
+        
+        let importedCount = 0;
+        
+        // Download each conversation
+        for (const convMeta of cloudConvList) {
+            try {
+                const convResponse = await fetch(`${CLOUD_SYNC_API_BASE}/members/api/conversations/${convMeta.id}`, {
+                    headers: {
+                        "Authorization": `Bearer ${sessionToken}`
+                    }
+                });
+                
+                if (convResponse.ok) {
+                    const { conversation } = await convResponse.json();
+                    if (conversation && conversation.id) {
+                        // Check if conversation already exists locally
+                        const existing = await get_conversation(conversation.id);
+                        // Only import if not exists or cloud version is newer
+                        if (!existing || (conversation.updated && existing.updated && conversation.updated > existing.updated)) {
+                            await save_conversation(conversation);
+                            importedCount++;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn(`Failed to download conversation ${convMeta.id}:`, e);
+            }
+        }
+        
+        showNotification(`Imported ${importedCount} conversation(s) from cloud`, "success");
+        await load_conversations();
+    } catch (e) {
+        console.error("Cloud sync download failed:", e);
+        showNotification("Failed to download from cloud", "error");
+    } finally {
+        inputCount.innerText = "";
+    }
+}
+
+// Initialize cloud sync on page load
+document.addEventListener("DOMContentLoaded", () => {
+    handleCloudSyncCallback();
+    checkCloudSyncSession();
+    
+    // Attach event listeners for cloud sync buttons
+    const loginBtn = document.getElementById("cloudSyncLoginBtn");
+    const uploadBtn = document.getElementById("cloudSyncUpload");
+    const downloadBtn = document.getElementById("cloudSyncDownload");
+    const logoutBtn = document.getElementById("cloudSyncLogoutBtn");
+    
+    if (loginBtn) loginBtn.addEventListener("click", () => cloudSyncLoginRedirect("github"));
+    if (uploadBtn) uploadBtn.addEventListener("click", syncConversationsToCloud);
+    if (downloadBtn) downloadBtn.addEventListener("click", syncConversationsFromCloud);
+    if (logoutBtn) logoutBtn.addEventListener("click", cloudSyncLogout);
+});
+
+// Make cloud sync functions globally available for onclick handlers
+window.cloudSyncLoginRedirect = cloudSyncLoginRedirect;
+window.cloudSyncLogout = cloudSyncLogout;
+window.syncConversationsToCloud = syncConversationsToCloud;
+window.syncConversationsFromCloud = syncConversationsFromCloud;

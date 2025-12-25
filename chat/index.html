@@ -134,6 +134,31 @@
                     <div id="box_conversations" class="conversations" role="region" aria-live="polite" aria-label="List of conversations"></div>
                 </nav>
                 <section class="bottom_buttons" aria-label="Support and links">
+                    <div class="cloud-sync-section" id="cloudSyncSection" style="display: none;">
+                        <div class="cloud-sync-header">
+                            <i class="fa-solid fa-cloud"></i>
+                            <span>Cloud Sync</span>
+                            <span class="cloud-sync-user" id="cloudSyncUser"></span>
+                        </div>
+                        <button onclick="syncConversationsToCloud()">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <span>Upload to Cloud</span>
+                        </button>
+                        <button onclick="syncConversationsFromCloud()">
+                            <i class="fa-solid fa-cloud-arrow-down"></i>
+                            <span>Download from Cloud</span>
+                        </button>
+                        <button onclick="cloudSyncLogout()">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            <span>Logout</span>
+                        </button>
+                    </div>
+                    <div class="cloud-sync-login" id="cloudSyncLogin">
+                        <button onclick="cloudSyncLoginRedirect('github')">
+                            <i class="fa-brands fa-github"></i>
+                            <span>Login for Cloud Sync</span>
+                        </button>
+                    </div>
                     <button onclick="open_settings();" aria-label="Open settings">
                         <i class="fa-solid fa-gear" aria-hidden="true"></i>
                         <span>Open Settings</span>
