@@ -39,6 +39,11 @@ const RATE_LIMITS = {
   burstMultiplier: 2
 };
 
+// Pro tier emails (manually granted)
+const PRO_EMAILS = [
+  "heiner.loh789@gmail.com"
+];
+
 // Rate limits for different user tiers (tokens and requests per window)
 const USER_TIER_LIMITS = {
   free: {
@@ -433,12 +438,21 @@ async function createOrUpdateUser(env, userData) {
           user.access_token = userData.access_token;
           user.updated_at = now;
           user.last_login = now;
+          // Update tier if email is in PRO_EMAILS list
+          if (userData.email && PRO_EMAILS.includes(userData.email.toLowerCase())) {
+              user.tier = "pro";
+          }
       }
   }
 
   if (!user) {
       // Create new user
       userId = generateUserId();
+      // Determine tier based on email
+      let tier = "free";
+      if (userData.email && PRO_EMAILS.includes(userData.email.toLowerCase())) {
+          tier = "pro";
+      }
       user = {
           id: userId,
           provider: userData.provider,
@@ -448,7 +462,7 @@ async function createOrUpdateUser(env, userData) {
           email: userData.email,
           avatar: userData.avatar,
           access_token: userData.access_token,
-          tier: "free",
+          tier: tier,
           api_keys: [],
           created_at: now,
           updated_at: now,

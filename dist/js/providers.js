@@ -32,7 +32,7 @@ const providers = {
     "nectar": {label: "nectar by pollinations.ai", class: Pollinations, baseUrl: "https://g4f.dev/api/nectar", apiEndpoint: "https://g4f.dev/api/nectar/v1/chat/completions", imageEndpoint: "https://g4f.dev/api/nectar/image/{prompt}", modelsEndpoint: "https://g4f.dev/api/nectar/text/models", tags: ""},
     "api.airforce": {class: Client, baseUrl: "https://api.airforce/v1", tags: "🎨 👓", localStorageApiKey: "ApiAirforce-api_key", sleep: 60000},
     "master": {label: "master by api.airforce", class: Client, baseUrl: "https://g4f.dev/api/api.airforce", tags: "🎨 👓", sleep: 10000},
-    "anondrop.net": {class: Client, baseUrl: "https://anondrop.net/v1", tags: ""},
+    // "anondrop.net": {class: Client, baseUrl: "https://anondrop.net/v1", tags: ""},
     "audio": {label: "audio by g4f.dev", class: Audio, baseUrl: "https://g4f.dev/api/audio", tags: "🎧", sleep: 10000},
     "azure": {label: "azure by g4f.dev", class: Client, baseUrl: "https://g4f.dev/api/azure", tags: "👓", sleep: 10000},
     "custom": {class: Client, tags: ""},

@@ -42,7 +42,7 @@ const translationSnipptes = [
     "{0} Conversations/Settings were imported successfully",
     "No content found", "Files are loaded successfully",
     "Importing conversations...", "New version:", "Providers API key", "Providers (Enable/Disable)",
-    "Get API key", "Uploading files...", "Invalid link", "Loading...", "Live Providers",
+    "Get API key", "Uploading files...", "Invalid link", "Loading...", "Live Providers", "Custom Providers",
     "Search Off", "Search On", "Recognition On", "Recognition Off", "Delete Conversation",
     "Favorite Models:", "Stop Recording", "Record Audio", "Upload Audio", "No Title", "1 Copy",
 ];
@@ -1667,6 +1667,11 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         let apiBase;
         if (provider == "Custom") {
             apiBase = appStorage.getItem("Custom-api_base");
+        } else if (provider && provider.startsWith("custom:")) {
+            // Handle custom providers from API (custom:server_id format)
+            const serverId = provider.substring(7); // Remove "custom:" prefix
+            apiBase = `https://g4f.dev/custom/${serverId}`;
+            provider = "Custom"; // Use Custom provider type for API request
         }
         const ignored = Array.from(settings.querySelectorAll("input.provider:not(:checked)")).map((el)=>el.value);
         const extraBody = {};
@@ -2592,7 +2597,104 @@ const register_settings_storage = async () => {
                 element.value = ""
             });
         }
+        // Handle Custom-api_base changes to update custom provider dropdown
+        if (element.id === "Custom-api_base") {
+            element.addEventListener('input', async (event) => {
+                updateCustomProviderOption(element.value);
+            });
+            element.addEventListener('change', async (event) => {
+                updateCustomProviderOption(element.value);
+            });
+        }
     });
+}
+
+function updateCustomProviderOption(apiBaseValue) {
+    const customOptgroup = document.getElementById("custom-providers-optgroup");
+    if (!customOptgroup) return;
+    
+    const existingOption = customOptgroup.querySelector('option[value="Custom"]');
+    
+    if (apiBaseValue && apiBaseValue.trim()) {
+        if (!existingOption) {
+            const customOption = document.createElement("option");
+            customOption.value = "Custom";
+            customOption.dataset.live = "true";
+            customOption.dataset.custom = "true";
+            customOption.text = "Custom Provider 🔧";
+            customOptgroup.appendChild(customOption);
+        }
+    } else {
+        if (existingOption) {
+            existingOption.remove();
+        }
+    }
+}
+
+async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = null) {
+    if (!customOptgroup) {
+        customOptgroup = document.getElementById("custom-providers-optgroup");
+    }
+    if (!customOptgroup) return;
+    
+    try {
+        const response = await fetch("https://g4f.dev/custom/api/servers/public");
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        const servers = data.servers || [];
+        
+        // Store servers globally for client creation
+        window.customServers = servers;
+        
+        servers.forEach(server => {
+            // Check if this server already exists in dropdown
+            const existingOption = customOptgroup.querySelector(`option[data-server-id="${server.id}"]`);
+            if (!existingOption) {
+                const option = document.createElement("option");
+                option.value = `custom:${server.id}`;
+                option.dataset.live = "true";
+                option.dataset.custom = "true";
+                option.dataset.serverId = server.id;
+                option.dataset.baseUrl = server.base_url;
+                option.dataset.label = server.label;
+                
+                // Build label with model count if available
+                let label = server.label || server.id;
+                if (server.allowed_models && server.allowed_models.length > 0) {
+                    label += ` (${server.allowed_models.length} models)`;
+                }
+                option.text = `${label} 🌐`;
+                
+                customOptgroup.appendChild(option);
+            }
+            
+            // Add to providers toggle list if container provided
+            if (providersContainer) {
+                const toggleContent = providersContainer.querySelector(".collapsible-content");
+                if (toggleContent && !toggleContent.querySelector(`#ProviderCustom${server.id}`)) {
+                    const providerItem = document.createElement("div");
+                    providerItem.classList.add("provider-item", "custom-server-item");
+                    const isEnabled = appStorage.getItem(`enableCustomServer_${server.id}`) !== "false";
+                    providerItem.innerHTML = `
+                        <span class="label">${server.label || server.id} 🌐</span>
+                        <input id="ProviderCustom${server.id}" type="checkbox" name="ProviderCustom${server.id}" value="custom:${server.id}" class="provider custom-server" data-server-id="${server.id}" ${isEnabled ? 'checked="checked"' : ''}/>
+                        <label for="ProviderCustom${server.id}" class="toogle" title="Enable or disable this custom server"></label>
+                    `;
+                    providerItem.querySelector("input").addEventListener("change", (event) => {
+                        appStorage.setItem(`enableCustomServer_${server.id}`, event.target.checked ? "true" : "false");
+                        const option = customOptgroup.querySelector(`option[data-server-id="${server.id}"]`);
+                        if (option) {
+                            option.disabled = !event.target.checked;
+                        }
+                    });
+                    toggleContent.appendChild(providerItem);
+                }
+            }
+        });
+    } catch (e) {
+        console.debug("Failed to load custom providers from API:", e);
+    }
 }
 
 async function load_settings(provider_options) {
@@ -3190,6 +3292,45 @@ async function load_providers(providers, provider_options, providersListContaine
             providersContainer.querySelector(".collapsible-content").classList.toggle('hidden');
             providersContainer.querySelector(".collapsible-header").classList.toggle('active');
         });
+
+        // Add Live Providers toggle
+        let liveProvidersToggle = document.createElement("div");
+        liveProvidersToggle.classList.add("provider-item");
+        const liveEnabled = appStorage.getItem("enableLiveProviders") !== "false";
+        liveProvidersToggle.innerHTML = `
+            <span class="label">Enable Live Providers</span>
+            <input id="enableLiveProviders" type="checkbox" name="enableLiveProviders" value="live" class="provider-toggle" ${liveEnabled ? 'checked="checked"' : ''}/>
+            <label for="enableLiveProviders" class="toogle" title="Enable or disable all live providers in dropdown"></label>
+        `;
+        liveProvidersToggle.querySelector("input").addEventListener("change", (event) => {
+            appStorage.setItem("enableLiveProviders", event.target.checked ? "true" : "false");
+            const optgroup = document.getElementById("live-providers-optgroup");
+            if (optgroup) {
+                optgroup.disabled = !event.target.checked;
+            }
+        });
+        providersContainer.querySelector(".collapsible-content").insertBefore(liveProvidersToggle, providersContainer.querySelector(".collapsible-content").firstChild);
+
+        // Add Custom Providers toggle
+        let customProvidersToggle = document.createElement("div");
+        customProvidersToggle.classList.add("provider-item");
+        const customEnabled = appStorage.getItem("enableCustomProviders") !== "false";
+        customProvidersToggle.innerHTML = `
+            <span class="label">Enable Custom Providers</span>
+            <input id="enableCustomProviders" type="checkbox" name="enableCustomProviders" value="custom" class="provider-toggle" ${customEnabled ? 'checked="checked"' : ''}/>
+            <label for="enableCustomProviders" class="toogle" title="Enable or disable custom providers in dropdown"></label>
+        `;
+        customProvidersToggle.querySelector("input").addEventListener("change", (event) => {
+            appStorage.setItem("enableCustomProviders", event.target.checked ? "true" : "false");
+            const optgroup = document.getElementById("custom-providers-optgroup");
+            if (optgroup) {
+                optgroup.disabled = !event.target.checked;
+            }
+        });
+        providersContainer.querySelector(".collapsible-content").insertBefore(customProvidersToggle, providersContainer.querySelector(".collapsible-content").firstChild.nextSibling);
+        
+        // Load custom providers from API and add to toggle list
+        loadCustomProvidersFromAPI(document.getElementById("custom-providers-optgroup"), providersContainer);
     }
     load_provider_login_urls(providersListContainer);
     await load_settings(provider_options);
@@ -3281,11 +3422,17 @@ async function on_api() {
         providersListContainer.querySelector(".collapsible-header").classList.toggle('active');
     });
     if (providerSelect) {
+        // Add Live Providers optgroup
         const optgroup = document.createElement("optgroup");
+        optgroup.id = "live-providers-optgroup";
         optgroup.label = framework.translate('Live Providers');
+        const liveProvidersEnabled = appStorage.getItem("enableLiveProviders") !== "false";
+        if (!liveProvidersEnabled) {
+            optgroup.disabled = true;
+        }
         Object.entries(window.providers || {}).forEach(([name, config]) => {
-            if (name === "custom" && !localStorage.getItem("Custom-api_base")) {
-                return;
+            if (name === "custom") {
+                return; // Skip custom here, will be added separately
             }
             if (["together", "huggingface", "typegpt"].includes(name) && !localStorage.getItem(window.providerLocalStorage[name])) {
                 return;
@@ -3317,6 +3464,25 @@ async function on_api() {
             });
         });
         providerSelect.appendChild(optgroup);
+
+        // Add Custom Providers optgroup
+        const customOptgroup = document.createElement("optgroup");
+        customOptgroup.id = "custom-providers-optgroup";
+        customOptgroup.label = framework.translate('Custom Providers');
+        const customProvidersEnabled = appStorage.getItem("enableCustomProviders") !== "false";
+        if (!customProvidersEnabled) {
+            customOptgroup.disabled = true;
+        }
+        // Add Custom provider if configured (local custom provider)
+        if (localStorage.getItem("Custom-api_base")) {
+            const customOption = document.createElement("option");
+            customOption.value = "custom";
+            customOption.dataset.live = "true";
+            customOption.dataset.custom = "true";
+            customOption.text = "Custom Provider 🔧";
+            customOptgroup.appendChild(customOption);
+        }
+        providerSelect.appendChild(customOptgroup);
 
         let provider_options = [];
         api("providers").then(async (providers) => {
@@ -3825,6 +3991,29 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
             providerModelSignal.abort();
         }
         providerModelSignal = new AbortController();
+        
+        // Handle custom providers from API (custom:server_id format)
+        if (args.startsWith("custom:")) {
+            const serverId = args.substring(7);
+            try {
+                const modelsResponse = await fetch(`https://g4f.dev/custom/api/servers/${serverId}/models`, {
+                    signal: providerModelSignal.signal,
+                });
+                if (modelsResponse.ok) {
+                    const data = await modelsResponse.json();
+                    // Convert to expected format
+                    const models = (data.data || []).map(m => ({
+                        model: m.id,
+                        label: m.id,
+                    }));
+                    return models;
+                }
+            } catch (e) {
+                console.debug("Failed to load custom provider models:", e);
+            }
+            return [];
+        }
+        
         api_key = get_api_key_by_provider(args);
         if (api_key) {
             headers['x-api-key'] = api_key;
@@ -3965,6 +4154,10 @@ function get_api_key_by_provider(provider) {
         }
         if (["custom"].includes(provider)) {
             return appStorage.getItem("Custom-api_key");
+        }
+        // Custom providers from API don't need API key (handled by the server)
+        if (provider.startsWith("custom:")) {
+            return null;
         }
         if (provider == "AnyProvider") {
             return {
@@ -5019,7 +5212,14 @@ async function initClient() {
         options.logCallback = logCallback;
     }
     try {
-        client = window.createClient(provider, options);
+        // Handle custom providers with custom:server_id format
+        if (provider.startsWith("custom:")) {
+            const serverId = provider.substring(7);
+            options.baseUrl = `https://g4f.dev/custom/${serverId}`;
+            client = window.createClient("custom", options);
+        } else {
+            client = window.createClient(provider, options);
+        }
     } catch (error) {
         console.error('Failed to create client:', error);
         return;
