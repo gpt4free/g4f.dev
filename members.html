@@ -23,6 +23,7 @@
             --github: #333;
             --discord: #5865F2;
             --huggingface: #FFD21E;
+            --pollinations: #f0a8d0;
         }
         
         * {
@@ -159,6 +160,11 @@
         
         .oauth-btn.huggingface {
             background: var(--huggingface);
+            color: #333;
+        }
+
+        .oauth-btn.pollinations {
+            background: var(--pollinations);
             color: #333;
         }
         
@@ -929,6 +935,11 @@
                     🤗
                     Sign in with Hugging Face
                 </button>
+                
+                <button class="oauth-btn pollinations" id="redirectLoginPollinations">
+                    🌸
+                    Sign in with Pollinations
+                </button>
             </div>
             
             <p style="margin-top: 1.5rem;">
@@ -1100,9 +1111,15 @@
                     </div>
                     
                     <!-- Add Server Button -->
-                    <button class="btn" id="addServerBtn" style="width: 100%; margin-top: 1rem;">
-                        <i class="fas fa-plus"></i> Add Server
-                    </button>
+                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                        <button class="btn" id="addServerBtn" style="flex: 1;">
+                            <i class="fas fa-plus"></i> Add Server
+                        </button>
+                        <button class="oauth-btn pollinations" id="addPollinationsServerBtn" style="flex: 1;">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                            Add Pollinations
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- Add/Edit Server Modal -->
@@ -1202,6 +1219,8 @@
         const redirectLoginGithub = document.getElementById('redirectLoginGithub');
         const redirectLoginDiscord = document.getElementById('redirectLoginDiscord');
         const redirectLoginHuggingface = document.getElementById('redirectLoginHuggingface');
+        const loginPollinations = document.getElementById('loginPollinations');
+        const redirectLoginPollinations = document.getElementById('redirectLoginPollinations');
         const logoutBtn = document.getElementById('logoutBtn');
         const userName = document.getElementById('userName');
         const generateKeyBtn = document.getElementById('generateKeyBtn');
@@ -1435,6 +1454,11 @@
             }
         });
 
+        // Pollinations OAuth
+        loginPollinations.addEventListener('click', () => {
+            window.location.href = `https://enter.pollinations.ai/authorize?redirect_url=${encodeURIComponent(window.location.origin + '/members')}`;
+        });
+
         // Redirect login buttons (include redirect parameter for temp API key)
         redirectLoginGithub.addEventListener('click', () => {
             window.location.href = `${API_BASE}/members/auth/github?redirect=${encodeURIComponent(externalRedirect)}`;
@@ -1446,6 +1470,10 @@
 
         redirectLoginHuggingface.addEventListener('click', () => {
             window.location.href = `${API_BASE}/members/auth/huggingface?redirect=${encodeURIComponent(externalRedirect)}`;
+        });
+
+        redirectLoginPollinations.addEventListener('click', () => {
+            window.location.href = `https://enter.pollinations.ai/authorize?redirect_url=${encodeURIComponent(externalRedirect)}`;
         });
 
         // Handle OAuth callback
@@ -1505,6 +1533,42 @@
                 }
             }
 
+            // Handle Pollinations OAuth (API key from URL hash)
+            const hash = window.location.hash;
+            if (hash && (hash.startsWith('#polln_') || hash.startsWith('#pk_'))) {
+                const pollinationsToken = hash.replace('#', '');
+                if (pollinationsToken) {
+                    const response = await fetch('https://gen.pollinations.ai/text/hello', {
+                        headers: {
+                            'Authorization': `Bearer ${pollinationsToken}`
+                        }
+                    });
+                    if (response.ok) {
+                        localStorage.setItem('PollinationsAI-api_key', pollinationsToken);
+                        // Store token for creating/updating custom server after dashboard loads
+                        localStorage.setItem('pollinations_pending_server', pollinationsToken);
+                        showToast('Successfully signed in with Pollinations!');
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        loginPollinations.style.display = 'none';
+                    }
+                    return;
+                }
+            } else {
+                const existingToken = localStorage.getItem('PollinationsAI-api_key');
+                if (existingToken) {
+                    const response = await fetch('https://gen.pollinations.ai/text/hello', {
+                        headers: {
+                            'Authorization': `Bearer ${existingToken}`
+                        }
+                    });
+                    if (!response.ok) {
+                        localStorage.removeItem('PollinationsAI-api_key');
+                    } else {
+                        loginPollinations.style.display = 'none';
+                    }
+                }
+            }
+
             // Legacy: Handle direct OAuth code (for backward compatibility)
             if (code && state) {
                 // Forward to worker for token exchange
@@ -1533,6 +1597,7 @@
             localStorage.removeItem('g4f_api_key');
             localStorage.removeItem('oauth');
             localStorage.removeItem('HuggingFace-api_key');
+            localStorage.removeItem('PollinationsAI-api_key');
             localStorage.removeItem('user');
             
             showToast('Successfully signed out');
@@ -1714,6 +1779,74 @@
                 serverModal.addEventListener('click', (e) => {
                     if (e.target === serverModal) closeModal();
                 });
+            }
+            
+            // Add Pollinations server button
+            const addPollinationsServerBtn = document.getElementById('addPollinationsServerBtn');
+            if (addPollinationsServerBtn) {
+                addPollinationsServerBtn.addEventListener('click', () => {
+                    // Redirect to Pollinations OAuth
+                    window.location.href = `https://enter.pollinations.ai/authorize?redirect_url=${encodeURIComponent(window.location.origin + '/members')}`;
+                });
+            }
+            
+            // Check for pending Pollinations server creation
+            const pendingPollinationsToken = localStorage.getItem('pollinations_pending_server');
+            if (pendingPollinationsToken) {
+                localStorage.removeItem('pollinations_pending_server');
+                createOrUpdatePollinationsServer(pendingPollinationsToken);
+            }
+        }
+        
+        async function createOrUpdatePollinationsServer(apiKey) {
+            try {
+                // First, check if a Pollinations server already exists
+                const result = await customApiRequest('/servers');
+                const servers = result.servers || [];
+                const existingServer = servers.find(s => 
+                    s.base_url === 'https://text.pollinations.ai/openai' || 
+                    s.label.toLowerCase().includes('pollinations')
+                );
+                
+                const serverData = {
+                    label: 'Pollinations AI',
+                    base_url: 'https://text.pollinations.ai/openai',
+                    api_keys: apiKey,
+                    allowed_models: [],
+                    is_public: false
+                };
+                
+                if (existingServer) {
+                    // Update existing server
+                    serverData.server_id = existingServer.id;
+                    const updateResult = await customApiRequest('/servers/update', {
+                        method: 'POST',
+                        body: JSON.stringify(serverData)
+                    });
+                    
+                    if (updateResult.error) {
+                        showToast('Failed to update Pollinations server: ' + updateResult.error, 'error');
+                    } else {
+                        showToast('Pollinations server updated with new API key!');
+                        await loadServers();
+                    }
+                } else {
+                    // Create new server
+                    const createResult = await customApiRequest('/servers/create', {
+                        method: 'POST',
+                        body: JSON.stringify(serverData)
+                    });
+                    
+                    if (createResult.error) {
+                        showToast('Failed to create Pollinations server: ' + createResult.error, 'error');
+                    } else {
+                        showToast('Pollinations server added successfully!');
+                        await loadServers();
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to create/update Pollinations server:', error);
+                showToast('Failed to setup Pollinations server: ' + error.message, 'error');
             }
         }
         
