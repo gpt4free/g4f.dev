@@ -549,7 +549,7 @@ async function handleGetServerModels(request, env, serverId) {
         const apiKey = getRandomApiKey(server.api_keys);
         const headers = { 'Content-Type': 'application/json' };
         if (apiKey) {
-            headers['Authorization'] = `Bearer ${apiKey}`;
+            headers['Authorization'] = apiKey.includes("Bearer") ? apiKey : `Bearer ${apiKey}`;
         }
 
         const response = await fetch(`${server.base_url}/models`, { headers });
@@ -590,7 +590,7 @@ async function handleModels(request, env, serverId) {
     const apiKey = getRandomApiKey(server.api_keys);
     const headers = { 'Content-Type': 'application/json' };
     if (apiKey) {
-        headers['Authorization'] = `Bearer ${apiKey}`;
+        headers['Authorization'] = apiKey.includes("Bearer") ? apiKey : `Bearer ${apiKey}`;
     }
 
     try {
@@ -677,9 +677,9 @@ async function handleProxyRequest(request, env, ctx, serverId, subPath) {
     };
     
     if (userProvidedKey) {
-        proxyHeaders['Authorization'] = `Bearer ${userProvidedKey}`;
+        proxyHeaders['Authorization'] = userProvidedKey.includes("Bearer") ? userProvidedKey : `Bearer ${userProvidedKey}`;
     } else if (apiKey) {
-        proxyHeaders['Authorization'] = `Bearer ${apiKey}`;
+            proxyHeaders['Authorization'] = apiKey.includes("Bearer") ? apiKey : `Bearer ${apiKey}`;
     }
 
     // Build target URL
@@ -1125,7 +1125,7 @@ async function validateServer(baseUrl, apiKeysStr) {
                     if (models.length > 0) {
                         return {
                             valid: true,
-                            models: models.slice(0, 100), // Limit to 100 models
+                            models: models, //.slice(0, 100), // Limit to 100 models
                             endpoint: endpoint || '/'
                         };
                     }

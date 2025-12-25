@@ -17,8 +17,6 @@ bucket_name = "g4f-members"  # Replace with actual bucket name
 
 # Environment variables (secrets should be set via wrangler secret put)
 [vars]
-JWT_SECRET = ""  # Set via: wrangler secret put JWT_SECRET
-API_KEY_SALT = ""  # Set via: wrangler secret put API_KEY_SALT
 
 # OAuth credentials (set as secrets)
 # wrangler secret put GITHUB_CLIENT_ID
@@ -29,9 +27,9 @@ API_KEY_SALT = ""  # Set via: wrangler secret put API_KEY_SALT
 # wrangler secret put HUGGINGFACE_CLIENT_SECRET
 
 # Routes - configure these to match your domain
-# routes = [
-#   { pattern = "g4f.dev/members/*", zone_name = "g4f.dev" }
-# ]
+routes = [
+  { pattern = "g4f.dev/members/*", zone_name = "g4f.dev" }
+]
 
 # Development settings
 [dev]

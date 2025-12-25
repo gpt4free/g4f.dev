@@ -1347,6 +1347,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         message_index: message_index,
     }
     async function finish_message() {
+        let final_message  = null;
         content_map.update_timeouts.forEach((timeoutId)=>clearTimeout(timeoutId));
         content_map.update_timeouts = [];
         if (!error_storage[message_id] && message_storage[message_id]) {
@@ -1388,7 +1389,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 regenerate = conversation.items[conversation.items.length-1]["role"] != "user";
             }
             // Create final message content
-            const final_message = message_storage[message_id]
+            final_message = message_storage[message_id]
                                 + (error_storage[message_id] ? " [error]" : "")
                                 + (stop_generating.classList.contains('stop_generating-hidden') ? " [aborted]" : "")
             if (reasoning_storage[message_id] && !reasoning_storage[message_id].status) {
@@ -1599,7 +1600,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     messages,
                     stream: true,
                     signal: controller_storage[message_id].signal,
-                    ...(mcpTools && mcpTools.length > 0 ? { tools: mcpTools } : {})
+                    ...(mcpTools && mcpTools.length > 0 ? { tools: mcpTools } : {}),
+                    ...(conversation.data ? { conversation: conversation.data[provider] } : {})
                 });
 
                 let hasModel = false;
@@ -1633,6 +1635,15 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                                     pendingToolCalls[toolCall.index].function.arguments += toolCall.function.arguments;
                                 }
                             }
+                        }
+
+                        if (chunk.conversation) {
+                            const conversation = await get_conversation(window.conversation_id);
+                            if (!conversation.data) {
+                                conversation.data = {};
+                            }
+                            conversation.data[provider] = chunk.conversation;
+                            await save_conversation(update_conversation(conversation));
                         }
                         
                         if (choice?.delta?.reasoning) {
@@ -3328,9 +3339,6 @@ async function load_providers(providers, provider_options, providersListContaine
             }
         });
         providersContainer.querySelector(".collapsible-content").insertBefore(customProvidersToggle, providersContainer.querySelector(".collapsible-content").firstChild.nextSibling);
-        
-        // Load custom providers from API and add to toggle list
-        loadCustomProvidersFromAPI(document.getElementById("custom-providers-optgroup"), providersContainer);
     }
     load_provider_login_urls(providersListContainer);
     await load_settings(provider_options);
@@ -3483,6 +3491,9 @@ async function on_api() {
             customOptgroup.appendChild(customOption);
         }
         providerSelect.appendChild(customOptgroup);
+
+        // Load custom providers from API and add to toggle list
+        await loadCustomProvidersFromAPI(document.getElementById("custom-providers-optgroup"));
 
         let provider_options = [];
         api("providers").then(async (providers) => {
