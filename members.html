@@ -1919,14 +1919,14 @@
                 const result = await customApiRequest('/servers');
                 const servers = result.servers || [];
                 const existingServer = servers.find(s => 
-                    s.base_url === 'https://g4f.dev/api/huggingface' || 
+                    s.base_url === 'https://huggingface.g4f-dev.workers.dev' || 
                     s.label.toLowerCase().includes('huggingface') ||
                     s.label.toLowerCase().includes('hugging face')
                 );
                 
                 const serverData = {
                     label: 'HuggingFace',
-                    base_url: 'https://g4f.dev/api/huggingface',
+                    base_url: 'https://huggingface.g4f-dev.workers.dev',
                     api_keys: apiKey,
                     allowed_models: [],
                     is_public: false
