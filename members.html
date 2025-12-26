@@ -1797,7 +1797,6 @@
                     } else {
                         // Redirect to HuggingFace OAuth
                         if (window.oauthConfig) {
-                            localStorage.setItem('huggingface_pending_server', 'true');
                             window.location.href = await oauthLoginUrl(window.oauthConfig);
                         } else {
                             showToast('HuggingFace OAuth not configured', 'error');
@@ -1838,23 +1837,19 @@
             }
             
             // Check for pending HuggingFace server creation
-            const pendingHuggingFace = localStorage.getItem('huggingface_pending_server');
-            if (pendingHuggingFace) {
-                localStorage.removeItem('huggingface_pending_server');
-                const hfApiKey = localStorage.getItem('HuggingFace-api_key');
-                if (hfApiKey) {
-                    // Validate token before creating server
-                    validateHuggingFaceToken(hfApiKey).then(isValid => {
-                        if (isValid) {
-                            createOrUpdateHuggingFaceServer(hfApiKey);
-                        } else {
-                            localStorage.removeItem('HuggingFace-api_key');
-                            showToast('HuggingFace token expired, please try again', 'error');
-                        }
-                    });
-                }
+            const hfApiKey = localStorage.getItem('HuggingFace-api_key');
+            if (hfApiKey) {
+                // Validate token before creating server
+                validateHuggingFaceToken(hfApiKey).then(isValid => {
+                    if (isValid) {
+                        createOrUpdateHuggingFaceServer(hfApiKey);
+                        addHuggingFaceServerBtn.style.display = 'none';
+                    } else {
+                        localStorage.removeItem('HuggingFace-api_key');
+                        showToast('HuggingFace token expired, please try again', 'error');
+                    }
+                });
             }
-        }
         
         async function createOrUpdatePollinationsServer(apiKey) {
             try {
