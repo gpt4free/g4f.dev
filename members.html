@@ -1538,8 +1538,8 @@
 
             // Handle Pollinations OAuth (API key from URL hash)
             const hash = window.location.hash;
-            if (hash && (hash.startsWith('#polln_') || hash.startsWith('#pk_'))) {
-                const pollinationsToken = hash.replace('#', '');
+            if (hash && (hash.startsWith('#api_key='))) {
+                const pollinationsToken = hash.substring(9);
                 if (pollinationsToken) {
                     const response = await fetch('https://gen.pollinations.ai/text/hello', {
                         headers: {
