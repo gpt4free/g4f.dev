@@ -454,7 +454,7 @@ print(response)
                 data = data.servers;
                 let privateData = await resp.json();
                 if (privateData.servers) {
-                    data = data.concat(privateData.servers.filter(server=>!server.is_public) || []);
+                    data = data.concat(privateData.servers.filter(server=>!server.is_public));
                 }
 
                 // data is an array of custom provider objects
