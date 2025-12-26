@@ -2646,19 +2646,22 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
     if (!customOptgroup) return;
     
     try {
-        let response = await fetch("https://g4f.dev/custom/api/servers", {
+        const url = "https://g4f.dev/custom/api/servers";
+        const resp = await fetch(url, {
             headers: {'Authorization': `Bearer ${localStorage.getItem("session_token") || ""}`}
         });
-        if (!response.ok) {
-            response = await fetch("https://g4f.dev/custom/api/servers/public");
+        const publicUrl = "https://g4f.dev/custom/api/servers/public";
+        const publicResp = await fetch(publicUrl);
+        let data = await publicResp.json();
+        data = data.servers;
+        let privateData = await resp.json();
+        if (privateData.servers) {
+            data = data.servers.concat(privateData.servers.filter(server=>!server.is_public));
         }
-        const data = await response.json();
-        const servers = data.servers || [];
-        
         // Store servers globally for client creation
-        window.customServers = servers;
+        window.customServers = data;
         
-        servers.forEach(server => {
+        data.forEach(server => {
             // Check if this server already exists in dropdown
             const existingOption = customOptgroup.querySelector(`option[data-server-id="${server.id}"]`);
             if (!existingOption) {
