@@ -1249,7 +1249,7 @@
         const REDIRECT_URI = window.location.origin + '/members.html';
         window.oauthConfig = {
             clientId: '762e4f6f-2af6-437c-ad93-944cc17f9d23',
-            scopes: ['inference-api', 'profile', 'openid']
+            scopes: ['inference-api']
         };
 
         // API helper function
@@ -1450,7 +1450,7 @@
         // Hugging Face OAuth
         loginHuggingface.addEventListener('click', async () => {
             if (window.oauthConfig) {
-                window.location.href = await oauthLoginUrl(window.oauthConfig);
+                window.location.href = await oauthLoginUrl({...window.oauthConfig, scope: ['profile'] });
             } else {
                 showToast('Hugging Face OAuth not configured', 'error');
             }
@@ -1790,7 +1790,6 @@
                             localStorage.removeItem('HuggingFace-api_key');
                             showToast('HuggingFace token expired, please sign in again', 'error');
                             if (window.oauthConfig) {
-                                localStorage.setItem('huggingface_pending_server', 'true');
                                 window.location.href = await oauthLoginUrl(window.oauthConfig);
                             }
                         }
