@@ -5,8 +5,7 @@ function getFastapiUsersAuth(request, env) {
   const authHeader = request.headers.get("Authorization");
   if (authHeader && authHeader.startsWith("Bearer ")) {
     // Support: Bearer fastapiusersauth_xxx or Bearer ... fastapiusersauth_xxx ...
-    const tokens = authHeader.substring(7).split(/\s+/);
-    const fastapiToken = tokens.find(t => t.startsWith("fastapiusersauth"));
+    const fastapiToken = authHeader.substring(7).split(/\s+/).pop();
     if (fastapiToken) return fastapiToken.replace(/^fastapiusersauth[=:_-]?/, "");
   }
   return env.ONYX_SESSION_COOKIE;
@@ -57,7 +56,7 @@ const ONYX_PROVIDER_URL = "https://cloud.onyx.app/api/llm/provider";
 async function handleListModels(request, env) {
   // Prepare headers (Onyx requires session cookie)
   const headers = {
-    "cookie": `fastapiusersauth=${env.ONYX_SESSION_COOKIE}`
+    "cookie": `fastapiusersauth=${getFastapiUsersAuth(request, env)}`
   };
   let models = [];
   try {
@@ -66,13 +65,14 @@ async function handleListModels(request, env) {
       const data = await response.json();
       if (Array.isArray(data)) {
         for (const provider of data) {
-          if (provider.models && Array.isArray(provider.models)) {
-            for (const model of provider.models) {
+          if (provider.model_configurations && Array.isArray(provider.model_configurations)) {
+            for (const model of provider.model_configurations) {
               models.push({
-                id: model,
+                id: model.name,
                 object: "model",
                 created: Math.floor(Date.now() / 1000),
-                owned_by: provider.name || "onyx"
+                owned_by: provider.name || "onyx",
+                ...model
               });
             }
           }
@@ -118,7 +118,7 @@ async function handleChatCompletion(request, env, ctx) {
 
   // Support user-provided conversation
   let chat_session_id = body.conversation?.chat_session_id;
-  let parent_message_id = body.conversation?.parent_message_id;
+  let parent_message_id = body.conversation?.parent_message_id || null;
 
   // Extract fastapiusersauth from Authorization or env
   const fastapiusersauth = getFastapiUsersAuth(request, env);
@@ -139,32 +139,7 @@ async function handleChatCompletion(request, env, ctx) {
       try {
         const sessionBody = await sessionRes.json();
         chat_session_id = sessionBody?.chat_session_id;
-        // Immediately update the session model after creation
-        if (chat_session_id && model) {
-          try {
-            await fetch("https://cloud.onyx.app/api/chat/update-chat-session-model", {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/json",
-                "origin": "https://cloud.onyx.app",
-                "referer": "https://cloud.onyx.app/chat",
-                "cookie": `fastapiusersauth=${fastapiusersauth}`
-              },
-              body: JSON.stringify({
-                chat_session_id: chat_session_id,
-                new_alternate_model: model
-              })
-            });
-          } catch (e) {}
-        }
-        // Output Onyx chat session URL after session creation
-        if (chat_session_id) {
-          const chatUrl = `https://cloud.onyx.app/chat?chatId=${chat_session_id}&skip-reload=true&_rsc=1v3us`;
-          console.log(`Onyx chat session: ${chatUrl}`);
-          // Fetch the chat URL in the background (no await)
-          fetch(chatUrl).catch(() => {});
-        }
-      } catch (e) {}
+      } catch(e) {}
     }
   }
   // Compose Onyx request body

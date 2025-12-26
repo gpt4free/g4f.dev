@@ -742,7 +742,7 @@ async function handleGenerateApiKey(request, env, ctx) {
       return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  const tierLimits = USER_TIERS[user.tier] || USER_TIERS.free;
+  const tierLimits = USER_TIERS[user.tier] || USER_TIERS.new;
   let revokedKey = null;
 
   // Automatically revoke oldest API key if at limit
@@ -934,7 +934,7 @@ async function handleValidateApiKey(request, env) {
       user_id: user.id,
       tier: user.tier,
       username: user.username,
-      limits: USER_TIERS[user.tier] || USER_TIERS.free
+      limits: USER_TIERS[user.tier] || USER_TIERS.new
   });
 }
 
@@ -960,7 +960,7 @@ async function handleGetUsage(request, env) {
       await saveUser(env, user);
   }
 
-  const tierLimits = USER_TIERS[user.tier] || USER_TIERS.free;
+  const tierLimits = USER_TIERS[user.tier] || USER_TIERS.new;
 
   return jsonResponse({
       usage: {
@@ -1268,7 +1268,7 @@ function generateKeyId() {
 function generateSessionToken() {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
-  return Array.from(array, byte => byte.toString(16).padStart(2, "0")).join("");
+  return "gfs_" + Array.from(array, byte => byte.toString(16).padStart(2, "0")).join("");
 }
 
 async function generateApiKey(env, userId) {
@@ -1432,7 +1432,7 @@ async function redirectWithTempApiKey(env, user, externalRedirectUrl) {
  * Get rate limits configuration for a user tier
  */
 function getRateLimitsForTier(tier) {
-    const tierLimits = USER_TIER_LIMITS[tier] || USER_TIER_LIMITS.free;
+    const tierLimits = USER_TIER_LIMITS[tier] || USER_TIER_LIMITS.new;
     return {
         tokens: tierLimits.tokens,
         requests: tierLimits.requests,
@@ -1588,7 +1588,7 @@ async function handleGetRateLimit(request, env) {
         return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
-    const tier = user.tier || 'free';
+    const tier = user.tier || 'new';
     const limits = getRateLimitsForTier(tier);
     const usage = await getUserRateLimitUsage(env, user.id);
     const now = Date.now();
@@ -1648,7 +1648,7 @@ async function handleCheckRateLimit(request, env) {
         if (keyDataStr) {
             const keyData = JSON.parse(keyDataStr);
             userId = keyData.user_id;
-            tier = keyData.tier || 'free';
+            tier = keyData.tier || 'new';
         }
     }
 
@@ -1657,7 +1657,7 @@ async function handleCheckRateLimit(request, env) {
         const user = await authenticateRequest(request, env);
         if (user) {
             userId = user.id;
-            tier = user.tier || 'free';
+            tier = user.tier || 'new';
         }
     }
 
@@ -1716,7 +1716,7 @@ async function handleUpdateRateLimit(request, env, ctx) {
         if (keyDataStr) {
             const keyData = JSON.parse(keyDataStr);
             userId = keyData.user_id;
-            tier = keyData.tier || 'free';
+            tier = keyData.tier || 'new';
         }
     }
 
@@ -1724,7 +1724,7 @@ async function handleUpdateRateLimit(request, env, ctx) {
         const user = await authenticateRequest(request, env);
         if (user) {
             userId = user.id;
-            tier = user.tier || 'free';
+            tier = user.tier || 'new';
         }
     }
 
@@ -1793,7 +1793,7 @@ async function validateApiKeyWithRateLimits(env, apiKey) {
 
     try {
         const keyData = JSON.parse(keyDataStr);
-        const tier = keyData.tier || 'free';
+        const tier = keyData.tier || 'new';
         const rateCheck = await checkUserRateLimits(env, keyData.user_id, tier);
 
         return {
