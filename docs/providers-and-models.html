@@ -269,6 +269,7 @@ print(response)
         }
 
         function getImage(key) {
+          key = key || "";
           const img = new Image(40, 40);
           const gen = 'https://g4f.dev';
           img.src=gen+'/prompt/Create a logo for ' +
