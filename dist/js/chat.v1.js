@@ -2656,7 +2656,7 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
         data = data.servers;
         let privateData = await resp.json();
         if (privateData.servers) {
-            data = data.servers.concat(privateData.servers.filter(server=>!server.is_public));
+            data = data.concat(privateData.servers.filter(server=>!server.is_public));
         }
         // Store servers globally for client creation
         window.customServers = data;
