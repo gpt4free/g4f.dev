@@ -79,6 +79,7 @@ async function createClient(provider, options = {}) {
     // Set baseUrl
     if (backupUrl && !options.apiKey && !options.baseUrl) {
         options.baseUrl = backupUrl;
+        options.apiKey = (typeof window !== "undefined" ? window?.localStorage.getItem("session_token") : undefined);
         options.sleep = 10000; // 10 seconds delay to avoid rate limiting
     }
 

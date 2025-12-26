@@ -1,23 +1,23 @@
 {
     "providers": {
-        "default": {"baseUrl": "https://g4f.dev/api/{model}", "tags": "", "defaultModel": "auto"},
+        "default": {"baseUrl": "https://g4f.dev/api/{model}", "backupUrl": "https://g4f.dev/api/{model}", "tags": "", "defaultModel": "auto"},
         "pollinations": {"label": "pollinations.ai", "tags": "🎨 👓", "provider": "PollinationsAI"},
-        "nectar": {"label": "nectar by pollinations.ai", "baseUrl": "https://g4f.dev/api/nectar", "apiEndpoint": "https://g4f.dev/api/nectar/v1/chat/completions", "imageEndpoint": "https://g4f.dev/api/nectar/image/{prompt}", "modelsEndpoint": "https://g4f.dev/api/nectar/text/models", "tags": ""},
+        "nectar": {"label": "nectar by pollinations.ai", "baseUrl": "https://g4f.dev/api/nectar", "backupUrl": "https://g4f.dev/api/nectar", "apiEndpoint": "https://g4f.dev/api/nectar/v1/chat/completions", "imageEndpoint": "https://g4f.dev/api/nectar/image/{prompt}", "modelsEndpoint": "https://g4f.dev/api/nectar/text/models", "tags": ""},
         "api.airforce": {"baseUrl": "https://api.airforce/v1", "tags": "🎨 👓", "sleep": 60000},
         "master": {"label": "master by api.airforce", "baseUrl": "https://g4f.dev/api/api.airforce", "tags": "🎨 👓", "sleep": 10000},
-        "audio": {"label": "audio by g4f.dev", "baseUrl": "https://g4f.dev/api/audio", "tags": "🎧", "sleep": 10000},
-        "azure": {"label": "azure by g4f.dev", "baseUrl": "https://g4f.dev/api/azure", "tags": "👓", "sleep": 10000},
+        "audio": {"label": "audio by g4f.dev", "baseUrl": "https://g4f.dev/api/audio", "backupUrl": "https://g4f.dev/api/audio", "tags": "🎧", "sleep": 10000},
+        "azure": {"label": "azure by g4f.dev", "baseUrl": "https://g4f.dev/api/azure", "backupUrl": "https://g4f.dev/api/azure", "tags": "👓", "sleep": 10000},
         "custom": {"tags": ""},
         "deepinfra": {"tags": "🎨 👓"},
         "gemini": {"baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai", "backupUrl": "https://g4f.dev/api/gemini", "tags": "👓"},
         "groq": {"baseUrl": "https://api.groq.com/openai/v1", "backupUrl": "https://g4f.dev/api/groq", "tags": ""},
         "huggingface": {"tags": "🤗", "provider": "HuggingFace"},
         "nvidia": {"baseUrl": "https://integrate.api.nvidia.com/v1", "backupUrl": "https://g4f.dev/api/nvidia", "tags": "📟"},
-        "ollama": {"baseUrl": "https://g4f.dev/api/ollama", "tags": "🦙", "sleep": 10000},
+        "ollama": {"baseUrl": "https://ollama.g4f-dev.workers.dev", "backupUrl": "https://g4f.dev/api/ollama", "tags": "🦙", "sleep": 10000},
         "openrouter": {"baseUrl": "https://openrouter.ai/api/v1", "backupUrl": "https://g4f.dev/api/openrouter", "tags": "👓"},
         "puter": {"tags": "👓", "provider": "PuterJS"},
         "together": {"baseUrl": "https://api.together.xyz/v1", "tags": "👓"},
-        "worker": {"baseUrl": "https://g4f.dev/api/worker", "tags": "🎨", "sleep": 10000}
+        "worker": {"baseUrl": "https://g4f.dev/api/worker", "backupUrl": "https://g4f.dev/api/worker", "tags": "🎨", "sleep": 10000}
     },
     "defaultModels": {
         "nectar": "openai",

@@ -91,7 +91,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
                 targetContent.classList.add('active');
             }
             
-            // Save active tab to localStorage
+            // Save active tab to appStorage
             appStorage.setItem('settings-active-tab', targetTab);
         });
     });
@@ -1434,7 +1434,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     provider: message_provider?.name,
                     ...usage
                 };
-                const user = localStorage.getItem("user");
+                const user = appStorage.getItem("user");
                 if (user) {
                     usage = {user: user, ...usage};
                 }
@@ -2648,7 +2648,7 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
     try {
         const url = "https://g4f.dev/custom/api/servers";
         const resp = await fetch(url, {
-            headers: {'Authorization': `Bearer ${localStorage.getItem("session_token") || ""}`}
+            headers: {'Authorization': `Bearer ${appStorage.getItem("session_token") || ""}`}
         });
         const publicUrl = "https://g4f.dev/custom/api/servers/public";
         const publicResp = await fetch(publicUrl);
@@ -3027,7 +3027,7 @@ Example:
     ]
 }
 \`\`\``;
-    if (localStorage.getItem(framework.translationKey)) {
+    if (appStorage.getItem(framework.translationKey)) {
         prompt += `\nRespond in ${navigator.language}.`;
     }
     try {
@@ -3066,7 +3066,7 @@ async function load_follow_up_questions(messages, new_response) {
   ]
 }
 \`\`\``;
-    if (localStorage.getItem(framework.translationKey)) {
+    if (appStorage.getItem(framework.translationKey)) {
         prompt += `\n\nRespond in language ${navigator.language}.`;
     }
     const new_messages = [{role: "assistant", content: new_response}, {role: "user", content: prompt}];
@@ -3445,7 +3445,7 @@ async function on_api() {
             if (name === "custom") {
                 return; // Skip custom here, will be added separately
             }
-            if (["together", "huggingface", "typegpt"].includes(name) && !localStorage.getItem(window.providerLocalStorage[name])) {
+            if (["together", "huggingface", "typegpt"].includes(name) && !appStorage.getItem(window.providerLocalStorage[name])) {
                 return;
             }
             let option = document.createElement("option");
@@ -3458,7 +3458,7 @@ async function on_api() {
             optgroup.appendChild(option);
             const url = `https://g4f.dev/ai/${name}/ok?seed=${Math.floor(Date.now() / 1000 / 3600 / 24)}`;
             let wait = 0;
-            const options = localStorage.getItem(window.providerLocalStorage[name]) ? { headers: {'authorization': `Bearer ${localStorage.getItem(window.providerLocalStorage[name])}`} } : undefined;
+            const options = appStorage.getItem(window.providerLocalStorage[name]) ? { headers: {'authorization': `Bearer ${appStorage.getItem(window.providerLocalStorage[name])}`} } : undefined;
             fetch(url).then((response) => {
                 if (response.ok) {
                     option.text += " 🟢";
@@ -3485,7 +3485,7 @@ async function on_api() {
             customOptgroup.disabled = true;
         }
         // Add Custom provider if configured (local custom provider)
-        if (localStorage.getItem("Custom-api_base")) {
+        if (appStorage.getItem("Custom-api_base")) {
             const customOption = document.createElement("option");
             customOption.value = "custom";
             customOption.dataset.live = "true";
@@ -3924,7 +3924,7 @@ fileInput.addEventListener('change', async (event) => {
                                 appStorage.setItem(keyOption, data[key][keyOption]);
                                 count += 1;
                             });
-                        } else if (!localStorage.getItem(key)) {
+                        } else if (!appStorage.getItem(key)) {
                             if (key.startsWith("conversation:")) {
                                 await save_conversation(data[key]);
                                 count += 1;
@@ -4172,8 +4172,8 @@ function get_api_key_by_provider(provider) {
         if (api_key) {
             api_key = appStorage.getItem(api_key);
         }
-        if (!api_key && provider.startsWith("Puter") && localStorage.getItem('puter.auth.token')) {
-            return localStorage.getItem("puter.auth.token");
+        if (!api_key && provider.startsWith("Puter") && appStorage.getItem('puter.auth.token')) {
+            return appStorage.getItem("puter.auth.token");
         }
     }
     return api_key;
@@ -4221,7 +4221,7 @@ async function load_provider_models(provider=null, search=null) {
     modelSelect.innerHTML = '';
     modelSelect.name = `model[${provider}]`;
     modelSelect.classList.remove("hidden");
-    if (provider == "PuterJS" && !localStorage.getItem("puter.auth.token") && window.Puter) {
+    if (provider == "PuterJS" && !appStorage.getItem("puter.auth.token") && window.Puter) {
         try {
             await (await (new window.Puter()).puter).auth.signIn({attempt_temp_user_creation: true}).then((res) => {
                 console.log('PuterJS signed in:', res);
@@ -5244,28 +5244,28 @@ async function loadClientModels() {
     }
 }
 
-// Import old conversations from localStorage into IndexedDB
-async function import_from_localStorage() {
+// Import old conversations from appStorage into IndexedDB
+async function import_from_appStorage() {
   const prefix = 'conversation:';
-  const keys = Object.keys(localStorage).filter(k => k.startsWith(prefix));
+  const keys = Object.keys(appStorage).filter(k => k.startsWith(prefix));
 
   for (const key of keys) {
     try {
-      const json = localStorage.getItem(key);
+      const json = appStorage.getItem(key);
       if (!json) continue;
       const conv = JSON.parse(json);
       // Use the id from conversation, if missing fallback to key after prefix
       conv.id = conv.id || key.substring(prefix.length);
       conv.updated = conv.updated || Date.now();
       await save_conversation(conv);
-      localStorage.removeItem(key); // Optionally clear old storage
+      appStorage.removeItem(key); // Optionally clear old storage
     } catch (e) {
-      console.warn(`Skipping localStorage item ${key} due to error`, e);
+      console.warn(`Skipping appStorage item ${key} due to error`, e);
     }
   }
 }
 
-import_from_localStorage();
+import_from_appStorage();
 
 /**
  * Insert or wrap text with Markdown triple back‑ticks (```).
