@@ -48,11 +48,9 @@ const translationSnipptes = [
 ];
 
 let login_urls_storage = {
-    "Azure": ["Azure", "", []],
     "HuggingFace": ["HuggingFace", "https://huggingface.co/settings/tokens", ["HuggingFaceMedia"]],
-    "HuggingSpace": ["HuggingSpace", "", []],
     "PollinationsAI": ["Pollinations AI", "https://enter.pollinations.ai", []],
-    "Puter": ["Puter.js", "", []],
+    "PuterJS": ["Puter.js", "https://discord.gg/qXA4Wf4Fsm", []],
 };
 
 const modelTags = {

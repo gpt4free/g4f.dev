@@ -1450,7 +1450,7 @@
         // Hugging Face OAuth
         loginHuggingface.addEventListener('click', async () => {
             if (window.oauthConfig) {
-                window.location.href = await oauthLoginUrl({...window.oauthConfig, scope: ['profile'] });
+                window.location.href = await oauthLoginUrl({...window.oauthConfig, scope: ['openid', 'profile', 'email'] });
             } else {
                 showToast('Hugging Face OAuth not configured', 'error');
             }
