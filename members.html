@@ -940,11 +940,6 @@
                     🤗
                     Sign in with Hugging Face
                 </button>
-                
-                <button class="oauth-btn pollinations" id="redirectLoginPollinations">
-                    🌸
-                    Sign in with Pollinations
-                </button>
             </div>
             
             <p style="margin-top: 1.5rem;">
@@ -1125,7 +1120,7 @@
                             Add HuggingFace
                         </button>
                         <button class="oauth-btn pollinations" id="addPollinationsServerBtn" style="flex: 1;">
-                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                            🌸
                             Add Pollinations
                         </button>
                     </div>
@@ -1228,7 +1223,6 @@
         const redirectLoginGithub = document.getElementById('redirectLoginGithub');
         const redirectLoginDiscord = document.getElementById('redirectLoginDiscord');
         const redirectLoginHuggingface = document.getElementById('redirectLoginHuggingface');
-        const redirectLoginPollinations = document.getElementById('redirectLoginPollinations');
         const logoutBtn = document.getElementById('logoutBtn');
         const userName = document.getElementById('userName');
         const generateKeyBtn = document.getElementById('generateKeyBtn');
@@ -1475,10 +1469,6 @@
             window.location.href = `${API_BASE}/members/auth/huggingface?redirect=${encodeURIComponent(externalRedirect)}`;
         });
 
-        redirectLoginPollinations.addEventListener('click', () => {
-            window.location.href = `https://enter.pollinations.ai/authorize?redirect_url=${encodeURIComponent(externalRedirect)}`;
-        });
-
         // Handle OAuth callback
         async function handleOAuthCallback() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -1552,7 +1542,7 @@
                         localStorage.setItem('pollinations_pending_server', pollinationsToken);
                         showToast('Successfully signed in with Pollinations!');
                         window.history.replaceState({}, document.title, window.location.pathname);
-                        redirectLoginPollinations.style.display = 'none';
+                        addPollinationsServerBtn.style.display = 'none';
                     }
                     return;
                 }
@@ -1567,7 +1557,7 @@
                     if (!response.ok) {
                         localStorage.removeItem('PollinationsAI-api_key');
                     } else {
-                        redirectLoginPollinations.style.display = 'none';
+                        addPollinationsServerBtn.style.display = 'none';
                     }
                 }
             }
