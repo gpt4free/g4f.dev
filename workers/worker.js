@@ -271,7 +271,7 @@ async function handleRequest(request, env, ctx) {
     if (authHeader && authHeader !== 'Bearer secret') {
       // Handle space-separated keys (e.g., "Bearer g4f_xxx provider_key") - extract non-g4f key
       const tokens = authHeader.replace(/^Bearer\s+/i, '').split(/\s+/);
-      const providerKey = tokens.find(t => t && !t.startsWith('g4f_'));
+      const providerKey = tokens.find(t => t && !t.startsWith('g4f_') && !t.startsWith('gfs_'));
       if (providerKey) {
         authorizationHeader = `Bearer ${providerKey}`;
       }
@@ -435,7 +435,7 @@ async function handleRequest(request, env, ctx) {
     if (authHeader && authHeader !== 'Bearer secret') {
       // Handle space-separated keys (e.g., "Bearer g4f_xxx provider_key") - extract non-g4f key
       const tokens = authHeader.replace(/^Bearer\s+/i, '').split(/\s+/);
-      const providerKey = tokens.find(t => t && !t.startsWith('g4f_'));
+      const providerKey = tokens.find(t => t && !t.startsWith('g4f_') && !t.startsWith('gfs_'));
       if (providerKey) {
         authorizationHeader = `Bearer ${providerKey}`;
       }
@@ -1028,12 +1028,12 @@ async function validateUserApiKey(request, env) {
   // Get API key from Authorization header or X-API-Key header
   const authHeader = request.headers.get('Authorization');
   const xApiKey = request.headers.get('X-API-Key');
-  
+
   let apiKey = null;
   let sessionToken = null;
   
   // Check Authorization header for g4f_ API key
-  if (authHeader && authHeader.startsWith('Bearer ') && authHeader !== 'Bearer secret') {
+  if (authHeader && authHeader.startsWith('Bearer ')) {
     const tokens = authHeader.substring(7).split(/\s+/);
     const g4fKey = tokens.find(t => t.startsWith('g4f_'));
     if (g4fKey) {
@@ -1051,6 +1051,13 @@ async function validateUserApiKey(request, env) {
     const cookies = parseCookies(request);
     if (cookies.g4f_session) {
       sessionToken = cookies.g4f_session;
+    }
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const tokens = authHeader.substring(7).split(/\s+/);
+      const findToken = tokens.find(t => t.startsWith('gfs_'));
+      if (findToken) {
+        sessionToken = findToken;
+      }
     }
   }
   
@@ -1074,7 +1081,8 @@ async function validateUserApiKey(request, env) {
       return {
         user_id: keyData.user_id,
         key_id: keyData.key_id,
-        tier: keyData.tier || 'free',
+        tier: keyData.tier || 'new',
+        username: keyData.username || null,
         api_key_hash: keyHash,
         auth_method: 'api_key'
       };
@@ -1103,11 +1111,17 @@ async function validateUserApiKey(request, env) {
       if (sessionData.expires_at && new Date(sessionData.expires_at) < new Date()) {
         return null;
       }
+
+      const userData = await getUser(env, sessionData.user_id);
+      if (!userData) {
+        return null;
+      }
       
       return {
         user_id: sessionData.user_id,
         key_id: null,
-        tier: sessionData.tier || 'free',
+        tier: userData.tier || 'new',
+        username: userData.username || null,
         api_key_hash: null,
         auth_method: 'session'
       };
@@ -1144,6 +1158,27 @@ function getRateLimitsForTier(tier) {
     };
   }
   return RATE_LIMITS;
+}
+
+async function getUser(env, userId) {
+  // Try KV cache first
+  const cached = await env.MEMBERS_KV.get(`user:${userId}`);
+  if (cached) {
+      return JSON.parse(cached);
+  }
+
+  // Fall back to R2
+  const object = await env.MEMBERS_BUCKET.get(`users/${userId}.json`);
+  if (!object) {
+      return null;
+  }
+
+  const user = await object.json();
+  
+  // Cache for next time
+  await env.MEMBERS_KV.put(`user:${userId}`, JSON.stringify(user), { expirationTtl: 3600 });
+  
+  return user;
 }
 
 /**

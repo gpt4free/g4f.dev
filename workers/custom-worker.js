@@ -141,6 +141,10 @@ async function authenticateRequest(request, env) {
   const authHeader = request.headers.get("Authorization");
   
   let apiKey = null;
+  if (authHeader && authHeader.startsWith('Bearer ') && authHeader.includes('gfs_')) {
+      const tokens = authHeader.substring(7).split(/\s+/);
+      sessionToken = tokens.find(t => t.startsWith('gfs_'));
+  }
   if (authHeader && authHeader.startsWith('Bearer ') && authHeader.includes('g4f_')) {
       const tokens = authHeader.substring(7).split(/\s+/);
       apiKey = tokens.find(t => t.startsWith('g4f_'));

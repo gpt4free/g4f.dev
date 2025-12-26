@@ -810,7 +810,8 @@ async function handleGenerateApiKey(request, env, ctx) {
   await env.MEMBERS_KV.put(`api_key:${keyHash}`, JSON.stringify({
       user_id: user.id,
       key_id: keyData.id,
-      tier: user.tier
+      tier: user.tier,
+      username: user.username
   }));
 
   // Add to user's API keys
@@ -932,6 +933,7 @@ async function handleValidateApiKey(request, env) {
       valid: true,
       user_id: user.id,
       tier: user.tier,
+      username: user.username,
       limits: USER_TIERS[user.tier] || USER_TIERS.free
   });
 }
@@ -1101,6 +1103,7 @@ async function updateDailyUsage(env, userId, dateKey, requests, tokens, provider
 
 async function createSession(env, userId) {
   const sessionToken = generateSessionToken();
+  const user = await getUser(env, userId);
   const sessionData = {
       user_id: userId,
       created_at: new Date().toISOString(),
