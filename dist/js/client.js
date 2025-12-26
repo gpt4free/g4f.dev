@@ -297,6 +297,9 @@ class Client {
         if (response.headers.get('x-provider')) {
             data.provider = response.headers.get('x-provider');
         }
+        if (response.headers.get('x-server')) {
+            data.server = response.headers.get('x-server');
+        }
         this.logCallback && this.logCallback({response: data, type: 'chat'});
         return data;
     }
@@ -341,6 +344,9 @@ class Client {
                 }
                 if (response.headers.get('x-provider')) {
                     data.provider = response.headers.get('x-provider');
+                }
+                if (response.headers.get('x-server')) {
+                    data.server = response.headers.get('x-server');
                 }
                 this.logCallback && this.logCallback({response: data, type: 'chat'});
                 yield data;

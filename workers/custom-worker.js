@@ -618,6 +618,7 @@ const CORS_HEADERS = {
             newResponse.headers.set(key, value);
         }
         newResponse.headers.set('X-Server', serverId);
+        newResponse.headers.set('X-Provider', server);
         return newResponse;
     } catch (e) {
         return jsonResponse({ error: `Failed to connect to server: ${e.message}` }, 502);

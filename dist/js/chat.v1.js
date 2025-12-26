@@ -1615,7 +1615,13 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     }
                     if (chunk.model && !hasModel) {
                         hasModel = true;
-                        add_message_chunk({type: "provider", provider: {name: chunk.provider || provider, model: chunk.model, label: providerLabel}}, message_id);
+                        if (chunk.server) {
+                            provider = chunk.server;
+                            providerLabel = chunk.provider;
+                        } else if (chunk.provider) {
+                            provider = chunk.provider || provider;
+                        }
+                        add_message_chunk({type: "provider", provider: {name: provider, model: chunk.model, label: providerLabel}}, message_id);
                     }
                     if (chunk.error) {
                         add_message_chunk({type: "error", ...chunk.error}, message_id, null, finish_message);
