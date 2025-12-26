@@ -213,7 +213,7 @@
                 // Logout button
                 logoutBtn.addEventListener("click", (e) => {
                     e.preventDefault();
-                    localStorage.removeItem("api_key");
+                    localStorage.removeItem("session_token");
                     loginBtn.classList.remove("hidden");
                     logoutBtn.classList.add("hidden");
                     userStatus.classList.add("hidden");
