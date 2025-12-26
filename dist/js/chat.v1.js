@@ -1527,7 +1527,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         const selectedModel = get_selected_model() || client.defaultModel;
         const modelType = selectedOption?.dataset.type || 'chat';
         const modelSeed = selectedOption?.dataset.seed;
-        const providerLabel = providerSelectOption?.dataset.label || provider;
+        let providerLabel = providerSelectOption?.dataset.label || provider;
         const isAudio = selectedOption?.dataset.audio == "true";
         try {
             // Conditionally call the correct client method based on model type.
