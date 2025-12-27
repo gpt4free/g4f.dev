@@ -1652,8 +1652,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                             await save_conversation(update_conversation(conversation));
                         }
                         
-                        if (choice?.delta?.reasoning) {
-                            await add_message_chunk({type: "reasoning", token: choice?.delta?.reasoning}, message_id);
+                        if (choice?.delta?.reasoning || choice?.delta?.reasoning_content) {
+                            await add_message_chunk({type: "reasoning", token: choice?.delta?.reasoning || choice?.delta?.reasoning_content}, message_id);
                         } else {
                             const delta = choice?.delta?.content || '';
                             const processedDelta = delta.replaceAll("/media/", framework.backendUrl + "/media/")
