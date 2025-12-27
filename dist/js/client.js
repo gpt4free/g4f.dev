@@ -72,6 +72,13 @@ async function get_error_message(response) {
     return await response.text();
 }
 
+const toBase64 = file => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+});
+
 class Client {
     constructor(options = {}) {
         if (!options.baseUrl && !options.apiEndpoint) {
@@ -279,12 +286,6 @@ class Client {
             const errorBody = await get_error_message(response);
             throw new Error(`Status ${response.status}: ${errorBody}`);
         }
-        const toBase64 = file => new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-        });
         return {data: [{url: await toBase64(await response.blob())}]};
     }
 
@@ -417,7 +418,10 @@ class Client {
             const errorBody = await get_error_message(response);
             throw new Error(`Status ${response.status}: ${errorBody}`);
         }
-        await response.blob();
+        if (params.response_format === 'b64_json') {
+            const data = await response.blob();
+            return {data: [{b64_json: await toBase64(data).then(b64 => b64.split(',')[1])}]};
+        }
         return {data: [{url: response.url}]}
     }
 
@@ -453,12 +457,6 @@ class Client {
             }
             return data;
         }
-        const toBase64 = file => new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-        });
         return {data: [{url: await toBase64(await response.blob())}]};
     }
 }
