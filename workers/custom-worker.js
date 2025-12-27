@@ -108,10 +108,32 @@ const CORS_HEADERS = {
                 return handleChatCompletions(request, env, ctx, serverId);
             }
             
+            // Route: /api/:label/chat/completions
+            if (pathname.match(/^\/api\/[^/]+\/chat\/completions$/)) {
+                const label = pathname.split('/')[2];
+                const user = await authenticateRequest(request, env);
+                const server = await getServerByLabel(env, label, user);
+                if (!server) {
+                    return jsonResponse({ error: "Server not found" }, 404);
+                }
+                return handleProxyToServerAuthed(request, env, ctx, server, '/chat/completions');
+            }
+            
             // Route: /custom/:server_id/models
             if (pathname.match(/^\/custom\/[^/]+\/models$/)) {
                 const serverId = pathname.split('/')[2];
                 return handleModels(request, env, serverId);
+            }
+            
+            // Route: /api/:label/models
+            if (pathname.match(/^\/api\/[^/]+\/models$/)) {
+                const label = pathname.split('/')[2];
+                const user = await authenticateRequest(request, env);
+                const server = await getServerByLabel(env, label, user);
+                if (!server) {
+                    return jsonResponse({ error: "Server not found" }, 404);
+                }
+                return handleProxyToServerAuthed(request, env, ctx, server, '/models');
             }
             
             // Route: /custom/:server_id/* (generic proxy)
@@ -119,9 +141,26 @@ const CORS_HEADERS = {
                 const parts = pathname.split('/');
                 const serverId = parts[2];
                 const subPath = '/' + parts.slice(3).join('/');
-                return handleProxyRequest(request, env, ctx, serverId, subPath);
+                const user = await authenticateRequest(request, env);
+                const server = await getServerById(env, serverId, user);
+                if (!server) {
+                    return jsonResponse({ error: "Server not found" }, 404);
+                }
+                return handleProxyToServerAuthed(request, env, ctx, server, subPath);
             }
-  
+            
+            // Route: /api/:label/* (generic proxy)
+            if (pathname.startsWith("/api/") && pathname.split('/').length >= 3) {
+                const parts = pathname.split('/');
+                const label = parts[2];
+                const subPath = '/' + parts.slice(3).join('/');
+                const user = await authenticateRequest(request, env);
+                const server = await getServerByLabel(env, label, user);
+                if (!server) {
+                    return jsonResponse({ error: "Server not found" }, 404);
+                }
+                return handleProxyToServer(request, env, ctx, server, subPath);
+            }
             return jsonResponse({ error: "Not found" }, 404);
         } catch (error) {
             console.error("Custom worker error:", error);
@@ -583,7 +622,12 @@ const CORS_HEADERS = {
   // ============================================
   
   async function handleChatCompletions(request, env, ctx, serverId) {
-    return handleProxyRequest(request, env, ctx, serverId, '/chat/completions');
+    const user = await authenticateRequest(request, env);
+    const server = await getServerById(env, serverId, user);
+    if (!server) {
+        return jsonResponse({ error: "Server not found" }, 404);
+    }
+    return handleProxyToServer(request, env, ctx, server, '/chat/completions');
   }
   
   async function handleModels(request, env, serverId) {
@@ -625,16 +669,14 @@ const CORS_HEADERS = {
     }
   }
   
-  async function handleProxyRequest(request, env, ctx, serverId, subPath) {
-    // Try to get server - first check if user owns it (private), then check public
-    const user = await authenticateRequest(request, env);
-    let server = await getServerById(env, serverId, user);
+  async function handleProxyToServerAuthed(request, env, ctx, server, subPath) {
+    // Server is already authenticated and fetched
     if (!server) {
         return jsonResponse({ error: "Server not found" }, 404);
     }
   
     // Check rate limits for this server
-    const rateLimitResult = await checkServerRateLimit(env, serverId);
+    const rateLimitResult = await checkServerRateLimit(env, server.id);
     if (!rateLimitResult.allowed) {
         return jsonResponse({
             error: {
@@ -698,7 +740,7 @@ const CORS_HEADERS = {
     }
   
     // Build target URL
-    const targetUrl = `${server.base_url}${subPath}`;
+    const targetUrl = server.base_url.includes(subPath) ? server.base_url : `${server.base_url}${subPath}`;
     const clientIP = getClientIP(request);
   
     try {
@@ -722,13 +764,13 @@ const CORS_HEADERS = {
             if (contentType.includes('text/event-stream')) {
                 // Streaming response - track usage from stream
                 const trackedStream = createUsageTrackingStream(
-                    response, env, ctx, server, serverId, clientIP, requestModel, firstMessage, user
+                    response, env, ctx, server, server.id, clientIP, requestModel, firstMessage, user
                 );
                 const newResponse = new Response(trackedStream, { headers: response.headers });
                 for (const [key, value] of Object.entries(CORS_HEADERS)) {
                     newResponse.headers.set(key, value);
                 }
-                newResponse.headers.set('X-Server', serverId);
+                newResponse.headers.set('X-Server', server.id);
                 return newResponse;
             } else if (contentType.includes('application/json')) {
                 // Non-streaming - extract usage from response
@@ -748,13 +790,13 @@ const CORS_HEADERS = {
         }
   
         // Update rate limit counters (async)
-        ctx.waitUntil(updateServerRateLimit(env, serverId, ctx));
+        ctx.waitUntil(updateServerRateLimit(env, server.id, ctx));
   
         const newResponse = new Response(response.body, response);
         for (const [key, value] of Object.entries(CORS_HEADERS)) {
             newResponse.headers.set(key, value);
         }
-        newResponse.headers.set('X-Server', serverId);
+        newResponse.headers.set('X-Server', server.id);
         return newResponse;
   
     } catch (e) {
@@ -971,6 +1013,45 @@ const CORS_HEADERS = {
                             JSON.stringify(fullServer),
                             { expirationTtl: 300 }
                         );
+                        return fullServer;
+                    }
+                }
+            }
+        }
+    }
+  
+    return null;
+  }
+  
+  /**
+  * Get a server by label - checks user's private servers first, then public index
+  * @param {Object} env - Environment bindings
+  * @param {string} label - Server label to find
+  * @param {Object|null} user - Authenticated user (optional)
+  * @returns {Object|null} Server object with owner_id, or null if not found
+  */
+  async function getServerByLabel(env, label, user = null) {
+    // First, check if the authenticated user owns this server (allows private server access)
+    if (user && user.custom_servers) {
+        const ownedServer = user.custom_servers.find(s => s.label.includes(label));
+        if (ownedServer) {
+            return { ...ownedServer, owner_id: user.id };
+        }
+    }
+  
+    // Search through public servers index
+    if (env.MEMBERS_KV) {
+        const indexStr = await env.MEMBERS_KV.get('public_servers_index');
+        if (indexStr) {
+            const servers = JSON.parse(indexStr);
+            const serverIndex = servers.find(s => s.label.includes(label));
+            if (serverIndex) {
+                // Fetch full server data from owner
+                const owner = await getUser(env, serverIndex.owner_id);
+                if (owner) {
+                    const fullServer = (owner.custom_servers || []).find(s => s.id === serverIndex.id);
+                    if (fullServer && fullServer.is_public) {
+                        fullServer.owner_id = owner.id;
                         return fullServer;
                     }
                 }
@@ -1442,13 +1523,13 @@ const CORS_HEADERS = {
             if (contentType.includes('text/event-stream')) {
                 // Streaming response - track usage from stream
                 const trackedStream = createUsageTrackingStream(
-                    response, env, ctx, server, serverId, clientIP, requestModel, firstMessage, user
+                    response, env, ctx, server, server.id, clientIP, requestModel, firstMessage, user
                 );
                 const newResponse = new Response(trackedStream, { headers: response.headers });
                 for (const [key, value] of Object.entries(CORS_HEADERS)) {
                     newResponse.headers.set(key, value);
                 }
-                newResponse.headers.set('X-Server', serverId);
+                newResponse.headers.set('X-Server', server.id);
                 newResponse.headers.set('X-Provider', 'custom');
                 return newResponse;
             } else if (contentType.includes('application/json')) {

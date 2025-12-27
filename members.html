@@ -1845,6 +1845,42 @@
                     }
                 });
             }
+            
+            // Check for Puter auth and create server if available
+            const puterAuth = localStorage.getItem('puter_auth');
+            if (puterAuth) {
+                try {
+                    const puterData = JSON.parse(puterAuth);
+                    if (puterData.username && puterData.token) {
+                        // Validate Puter auth before creating server
+                        validatePuterAuth(puterData.token).then(isValid => {
+                            if (isValid) {
+                                createOrUpdatePuterServer(puterData);
+                                addPuterServerBtn.style.display = 'none';
+                            } else {
+                                showToast('Puter auth invalid or expired, please sign in again', 'error');
+                                localStorage.removeItem('puter_auth');
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.error('Error parsing Puter auth for server creation:', e);
+                }
+            }
+                // Validate Puter auth token by checking user info
+                async function validatePuterAuth(token) {
+                    try {
+                        const response = await fetch('https://api.puter.com/whoami', {
+                            headers: {
+                                'authorization': `Bearer ${token}`,
+                            },
+                        });
+                        return response.ok;
+                    } catch (e) {
+                        console.error('Failed to validate Puter auth:', e);
+                        return false;
+                    }
+                }
         }
         
         async function createOrUpdatePollinationsServer(apiKey) {
@@ -1949,6 +1985,61 @@
             } catch (error) {
                 console.error('Failed to create/update HuggingFace server:', error);
                 showToast('Failed to setup HuggingFace server: ' + error.message, 'error');
+            }
+        }
+        
+        async function createOrUpdatePuterServer(puterData) {
+            try {
+                // First, check if a Puter server already exists
+                const result = await customApiRequest('/servers');
+                const servers = result.servers || [];
+                const existingServer = servers.find(s => 
+                    s.base_url === 'https://puter.g4f-dev.workers.dev' || 
+                    s.label.toLowerCase().includes('puter')
+                );
+                
+                // For Puter, we'll store the auth token as the API key
+                const authToken = puterData.token || puterData.access_token || JSON.stringify(puterData);
+                
+                const serverData = {
+                    label: 'Puter',
+                    base_url: 'https://puter.g4f-dev.workers.dev',
+                    api_keys: authToken,
+                    allowed_models: [],
+                    is_public: false
+                };
+                
+                if (existingServer) {
+                    // Update existing server
+                    serverData.server_id = existingServer.id;
+                    const updateResult = await customApiRequest('/servers/update', {
+                        method: 'POST',
+                        body: JSON.stringify(serverData)
+                    });
+                    
+                    if (updateResult.error) {
+                        showToast('Failed to update Puter server: ' + updateResult.error, 'error');
+                    } else {
+                        showToast('Puter server updated!');
+                        await loadServers();
+                    }
+                } else {
+                    // Create new server
+                    const createResult = await customApiRequest('/servers/create', {
+                        method: 'POST',
+                        body: JSON.stringify(serverData)
+                    });
+                    
+                    if (createResult.error) {
+                        showToast('Failed to create Puter server: ' + createResult.error, 'error');
+                    } else {
+                        showToast('Puter server added successfully!');
+                        await loadServers();
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to create/update Puter server:', error);
+                showToast('Failed to setup Puter server: ' + error.message, 'error');
             }
         }
         

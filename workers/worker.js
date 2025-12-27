@@ -12,8 +12,8 @@ const RATE_LIMITS = {
   // Token limits
   tokens: {
     perMinute: 100000,
-    perHour: 200000,
-    perDay: 2000000
+    perHour: 300000,
+    perDay: 500000
   },
   // Request limits
   requests: {
@@ -33,6 +33,10 @@ const RATE_LIMITS = {
 
 // Rate limits for authenticated user tiers
 const USER_TIER_LIMITS = {
+  new: {
+    tokens: { perMinute: 100000, perHour: 300000, perDay: 500000 },
+    requests: { perMinute: 10, perHour: 100, perDay: 1000 }
+  },
   free: {
     tokens: { perMinute: 150000, perHour: 500000, perDay: 1000000 },
     requests: { perMinute: 20, perHour: 200, perDay: 2000 }
@@ -352,6 +356,7 @@ async function handleRequest(request, env, ctx) {
         ...(modelConfig.extraHeaders ? modelConfig.extraHeaders : {})
       }});
       if (!response.ok || queryBody.stream) {
+        response.headers.set("x-tier", authenticatedUser ? authenticatedUser.tier : "anonymous");
         response.headers.set("x-provider", provider);
         response.headers.set("x-url", queryUrl);
         // Track usage for streaming responses
@@ -362,6 +367,7 @@ async function handleRequest(request, env, ctx) {
           const newResponse = new Response(trackedStream, {
             headers: response.headers
           });
+          newResponse.headers.set("x-tier", authenticatedUser ? authenticatedUser.tier : "anonymous");
           newResponse.headers.set("x-provider", provider);
           newResponse.headers.set("x-url", queryUrl);
           return newResponse;
@@ -404,7 +410,9 @@ async function handleRequest(request, env, ctx) {
     const headers = {
       ...ACCESS_CONTROL_ALLOW_ORIGIN,
       "content-type": "text/plain; charset=UTF-8",
-      "x-provider": provider
+      "x-provider": provider,
+      "x-url": queryUrl,
+      "x-tier": authenticatedUser ? authenticatedUser.tier : "anonymous"
     };
     const newResponse = new Response(data, {headers});
     if (["HEAD", "GET"].includes(request.method)) {
@@ -566,6 +574,7 @@ async function forwardApi(request, newUrl, liteRequest=null, ctx=null, cache_con
       for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
         newResponse.headers.set(key, value);
       }
+      newResponse.headers.set("x-tier", userInfo ? userInfo.tier : "anonymous");
       return newResponse;
     }
     
@@ -584,7 +593,7 @@ async function forwardApi(request, newUrl, liteRequest=null, ctx=null, cache_con
     }
   }
   
-  const newResponse = new Response(response.body, {headers: response.headers});
+  const newResponse = new Response(response.body, {status: response.status, headers: response.headers});
   for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
     newResponse.headers.set(key, value);
   }
@@ -915,6 +924,8 @@ function createUsageTrackingStream(response, env, clientIP, ctx, provider = null
       } else {
         lines = buffer.split('\n');
       }
+
+      let lastData = null;
       
       for (const line of lines) {
         if (line.startsWith('data: ') && line !== 'data: [DONE]') {
@@ -922,27 +933,19 @@ function createUsageTrackingStream(response, env, clientIP, ctx, provider = null
             const jsonStr = line.slice(6);
             const data = JSON.parse(jsonStr);
             if (data.usage) {
-              const usage = extractDetailedUsage(data);
-              if (usage.total > 0) {
-                ctx.waitUntil(updateTokenUsage(env, clientIP, usage.total, ctx, provider || data.provider, data.model || model, usage.prompt, usage.completion, pathname, firstMessage, userInfo));
-              }
+              lastData = data;
             }
           } catch (e) {
             // Ignore parse errors for incomplete chunks
-          }
-        } else if ((response.headers.get("content-type") || "").includes("application/json")) {
-          try {
-            const data = JSON.parse(line);
-            if (data.eval_count) {
-              ctx.waitUntil(updateTokenUsage(env, clientIP, data.prompt_eval_count + data.eval_count, ctx, provider || data.provider, data.model || model, data.prompt_eval_count, data.eval_count, pathname, firstMessage, userInfo));
-            }
-          } catch(e) {
-            
           }
         }
       }
       if (done) {
         controller.close();
+        const usage = extractDetailedUsage(lastData);
+        if (usage.total > 0) {
+          ctx.waitUntil(updateTokenUsage(env, clientIP, usage.total, ctx, provider || lastData.provider, lastData.model || model, usage.prompt, usage.completion, pathname, firstMessage, userInfo));
+        }
         return;
       } else {
         controller.enqueue(value);
