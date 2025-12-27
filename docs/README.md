@@ -1,9 +1,6 @@
 ## GPT4Free Documentation Hub
-<img src="https://image.pollinations.ai/prompt/Create%2Ba%2BBanner%2Bwith%2Bthe%2Bbird%2Band%2Bthe%2Btext%2B%22GPT4Free%22?width=480&height=832&model=kontext&nologo=true&private=false&enhance=false&safe=false&referrer=https%3A//g4f.dev/&image=https%3A//host.g4f.dev/files/fa019e9d-67ab-471c-b0c1-4fe189f157cd/media/1000040005.jpg&seed=2377457896" height="300"/>
-
-Welcome to the official docs for **GPT4Free** – free and convenient AI endpoints you can use directly in your apps, scripts, and even right in your browser.
-
-Here you’ll find a clear overview, quick examples, and entry points to deeper docs for every major feature.
+<img src="https://g4f.dev/docs/images/create+a+banner+with+this+text+and+bird_+Welcome+to+the+official+docs+for+_GPT4Free_+–+free+and+convenient+AI+endpoints+you+can+use+directly+in+your+apps,+scripts,+and+even+right+in+your+browser.jpeg" height="300" alt="Welcome to the official docs for **GPT4Free** – free and convenient AI endpoints you can use directly in your apps, scripts, and even right in your browser.
+Here you’ll find a clear overview, quick examples, and entry points to deeper docs for every major feature."/>
 
 ---
 
