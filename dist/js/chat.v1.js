@@ -1613,7 +1613,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     }
                     if (chunk.model && !hasModel) {
                         hasModel = true;
-                        if (chunk.server) {
+                        if (chunk.server && chunk.provider) {
                             provider = chunk.server;
                             providerLabel = chunk.provider;
                         } else if (chunk.provider) {
