@@ -1533,12 +1533,17 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 const method = ['image', 'video'].includes(modelType) ? 'generate' : 'edit';
                 // Handle image generation
                 const image = image_storage ? Object.values(image_storage)[0] : null;
+                const isAutomaticOrientation = appStorage.getItem("automaticOrientation") != "false";
+                const imageHeight = isAutomaticOrientation ? (window.innerHeight > window.innerWidth ? 832 : 480) : undefined;
+                const imageWidth = isAutomaticOrientation ? (window.innerHeight > window.innerWidth ? 480 : 832) : undefined;
                 const response = await client.images[method]({
                     model: selectedModel,
                     prompt: message,
                     ...(modelSeed && regenerate ? { seed: Math.floor(Date.now() / 1000) } : {}),
                     ...(!modelSeed ? { response_format: 'b64_json' } : {}),
-                    ...(image && image.url ? { image: image.url } : {})
+                    ...(image && image.url ? { image: image.url } : {}),
+                    height: imageHeight,
+                    width: imageWidth,
                 });
                 if (!response.data) {
                     throw new Error(framework.translate("No image URL returned from the API."));

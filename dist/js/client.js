@@ -417,6 +417,7 @@ class Client {
             const errorBody = await get_error_message(response);
             throw new Error(`Status ${response.status}: ${errorBody}`);
         }
+        await response.blob();
         return {data: [{url: response.url}]}
     }
 
