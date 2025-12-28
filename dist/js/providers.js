@@ -63,6 +63,7 @@ async function createClient(provider, options = {}) {
         providers = await loadProviders();
     }
     if (!providers[provider]) {
+        return new Client({ baseUrl: `/api/${provider}` });
         throw new Error(`Provider "${provider}" not found.`);
     }
     const { class: ClientClass = (providerClassMap[provider] || Client), backupUrl, localStorageApiKey, tags, ...config } = providers[provider];

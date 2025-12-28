@@ -5186,6 +5186,9 @@ function isLive() {
     if (!providerSelect) {
         return true;
     }
+    if (["Copilot", "CopilotAccount"].includes(providerSelect.value)) {
+        return true;
+    }
     return providerSelect.options[providerSelect.selectedIndex]?.dataset?.live;
 }
 
