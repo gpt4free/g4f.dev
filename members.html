@@ -1895,39 +1895,6 @@
                     }
                 });
             }
-
-            // Check for Puter auth and create server if available
-            const puterAuth = localStorage.getItem('puter.auth.token');
-            if (puterAuth) {
-                try {
-                    // Validate Puter auth before creating server
-                    validatePuterAuth(puterAuth).then(isValid => {
-                        if (isValid) {
-                            createOrUpdatePuterServer(puterAuth);
-                            addPuterServerBtn.style.display = 'none';
-                        } else {
-                            showToast('Puter auth invalid or expired, please sign in again', 'error');
-                            localStorage.removeItem('puter.auth.token');
-                        }
-                    });
-                } catch (e) {
-                    console.error('Error parsing Puter auth for server creation:', e);
-                }
-            }
-                // Validate Puter auth token by checking user info
-                async function validatePuterAuth(token) {
-                    try {
-                        const response = await fetch('https://api.puter.com/whoami', {
-                            headers: {
-                                'authorization': `Bearer ${token}`,
-                            },
-                        });
-                        return response.ok;
-                    } catch (e) {
-                        console.error('Failed to validate Puter auth:', e);
-                        return false;
-                    }
-                }
         }
         
         async function createOrUpdatePollinationsServer(apiKey) {
@@ -2090,16 +2057,18 @@
         
         async function loadServers() {
             if (!serversList) return;
+
+            const servers = []
             
             try {
-                const result = await customApiRequest('/servers');
+                servers = await customApiRequest('/servers');
                 
-                if (result.error) {
+                if (servers.error) {
                     serversList.innerHTML = `<p style="color: var(--danger); text-align: center;">${result.error}</p>`;
                     return;
                 }
                 
-                const servers = result.servers || [];
+                servers = servers.servers || [];
                 
                 if (servers.length === 0) {
                     serversList.innerHTML = `
@@ -2135,6 +2104,44 @@
                     </div>
                 `;
             }
+
+            const existingServer = servers.find(s => 
+                s.base_url === 'https://puter.g4f-dev.workers.dev' || 
+                s.label.toLowerCase().includes('puter')
+            );
+
+            // Check for Puter auth and create server if available
+            const puterAuth = localStorage.getItem('puter.auth.token');
+            if (existingServer && puterAuth) {
+                try {
+                    // Validate Puter auth before creating server
+                    validatePuterAuth(puterAuth).then(isValid => {
+                        if (isValid) {
+                            createOrUpdatePuterServer(puterAuth);
+                            addPuterServerBtn.style.display = 'none';
+                        } else {
+                            showToast('Puter auth invalid or expired, please sign in again', 'error');
+                            localStorage.removeItem('puter.auth.token');
+                        }
+                    });
+                } catch (e) {
+                    console.error('Error parsing Puter auth for server creation:', e);
+                }
+            }
+                // Validate Puter auth token by checking user info
+                async function validatePuterAuth(token) {
+                    try {
+                        const response = await fetch('https://api.puter.com/whoami', {
+                            headers: {
+                                'authorization': `Bearer ${token}`,
+                            },
+                        });
+                        return response.ok;
+                    } catch (e) {
+                        console.error('Failed to validate Puter auth:', e);
+                        return false;
+                    }
+                }
         }
         
         function renderServerItem(server) {

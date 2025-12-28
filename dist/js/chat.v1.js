@@ -3463,25 +3463,8 @@ async function on_api() {
             }
             option.value = name;
             option.dataset.live = "true";
-            option.text = `${config.label || name} ${config.tags}`;
+            option.text = `${config.label || name} ${config.tags} 🟢`;
             optgroup.appendChild(option);
-            const url = `https://g4f.dev/ai/${name}/ok?seed=${Math.floor(Date.now() / 1000 / 3600 / 24)}`;
-            let wait = 0;
-            const options = appStorage.getItem(window.providerLocalStorage[name]) ? { headers: {'authorization': `Bearer ${appStorage.getItem(window.providerLocalStorage[name])}`} } : undefined;
-            fetch(url).then((response) => {
-                if (response.ok) {
-                    option.text += " 🟢";
-                } else {
-                    wait += 12;
-                    setTimeout(() => {
-                        fetch(url, options).then((response) => {
-                            if (response.ok) {
-                                option.text += " 🟢";
-                            }
-                        });
-                    }, wait * 1000);
-                }
-            });
         });
         providerSelect.appendChild(optgroup);
 
@@ -3511,12 +3494,14 @@ async function on_api() {
         api("providers").then(async (providers) => {
             await load_providers(providers, provider_options, providersListContainer, providersToggleContainer);
             load_provider_models(appStorage.getItem("provider"));
+            set_favorite_providers();
         }).catch(async (e)=>{
             console.log(e)
             providerSelect.querySelectorAll("option:not([data-live])").forEach((el)=>el.remove());
             await load_provider_login_urls(providersListContainer);
             await load_settings(provider_options);
             await load_provider_models(appStorage.getItem("provider"));
+            set_favorite_providers();
         });
     } else {
         await load_provider_login_urls(providersListContainer);
@@ -4199,24 +4184,32 @@ function set_favorite_models(provider) {
         option.text = key;
         const value_option = modelSelect.querySelector(`option[value="${key}"]`)
         if (value_option) {
-            option.text = value_option.text;
-            if (value_option.dataset.audio) {
-                option.dataset.audio = "true";
+            const option = value_option.cloneNode(true);
+            optgroup.appendChild(option);
+            if (optgroup.childElementCount > 5) {
+                delete selected[optgroup.firstChild.value];
+                optgroup.removeChild(optgroup.firstChild);
             }
-            if (value_option.dataset.type) {
-                option.dataset.type = value_option.dataset.type;
-            }
-        }
-        optgroup.appendChild(option);
-        if (optgroup.childElementCount > 5) {
-            delete selected[optgroup.firstChild.value];
-            optgroup.removeChild(optgroup.firstChild);
         }
     });
     favorites[provider] = selected;
     appStorage.setItem("favorites", JSON.stringify(favorites));
     optgroup.lastChild?.setAttribute("selected", "selected");
     modelSelect.appendChild(optgroup);
+}
+
+function set_favorite_providers() {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = framework.translate("Favorite Providers:");
+    const favorites = JSON.parse(appStorage.getItem("favorite_providers") || "{}");
+    Object.keys(favorites).forEach((key) => {
+        const value_option = providerSelect.querySelector(`option[value="${key}"]`)
+        if (value_option) {
+            const option = value_option.cloneNode(true);
+            optgroup.appendChild(option);
+        }
+    });
+    providerSelect.appendChild(optgroup);
 }
 
 async function load_provider_models(provider=null, search=null) {
@@ -4293,7 +4286,27 @@ async function load_provider_models(provider=null, search=null) {
     }
 };
 if (providerSelect) {
-    providerSelect.addEventListener("change", () => load_provider_models());
+    providerSelect.addEventListener("change", () => {
+        load_provider_models()
+        const favorites = appStorage.getItem("favorite_providers") ? JSON.parse(appStorage.getItem("favorite_providers")) : {};
+        const selected = providerSelect.options[providerSelect.selectedIndex];
+        console.log("Selected provider:", providerSelect.value, selected);
+        if (!favorites[providerSelect.value]) {
+            const option = selected.cloneNode(true);
+            const optgroup = providerSelect.querySelector('optgroup:last-child');
+            if (optgroup) {
+                optgroup.appendChild(option);
+                if (optgroup.childElementCount > 5) {
+                    delete favorites[optgroup.firstChild.value];
+                    optgroup.removeChild(optgroup.firstChild);
+                }
+            }
+        }
+        const selected_values = favorites[providerSelect.value] ? favorites[providerSelect.value] + 1 : 1;
+        delete favorites[providerSelect.value];
+        favorites[providerSelect.value] = selected_values;
+        appStorage.setItem("favorite_providers", JSON.stringify(favorites));
+    });
 }
 modelSelect.addEventListener("change", () => {
     const favorites = appStorage.getItem("favorites") ? JSON.parse(appStorage.getItem("favorites")) : {};
