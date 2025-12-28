@@ -1123,6 +1123,9 @@
                             🌸
                             Add Pollinations
                         </button>
+                        <button class="oauth-btn puter" id="addPuterServerBtn" style="flex: 1;">
+                            🤖
+                            Add Puter
                     </div>
                 </div>
                 
@@ -1270,7 +1273,7 @@
 
         // Toast notification
         function showToast(message, type = 'success') {
-            toast.textContent = framework.translate(message);
+            toast.textContent = framework ? framework.translate(message) : message;
             toast.className = 'toast ' + type + ' show';
             setTimeout(() => {
                 toast.classList.remove('show');
@@ -1278,7 +1281,7 @@
         }
 
         function showToastFormat(message, type = 'success', ...args) {
-            message = framework.translate(message);
+            message = framework ? framework.translate(message) : message;
             const formattedMessage = message.replace(/{(\d+)}/g, (match, number) => 
                 typeof args[number] != 'undefined' ? args[number] : match
             );
@@ -1856,7 +1859,43 @@
                     }
                 });
             }
-            
+            async function _injectPuter() {
+                return new Promise((resolve, reject) => {
+                    if (typeof window === 'undefined') {
+                        reject(new Error('Puter can only be used in a browser environment'));
+                        return;
+                    }
+                    if (window.puter) {
+                        resolve(puter);
+                        return;
+                    }
+                    var tag = document.createElement('script');
+                    tag.src = "https://js.puter.com/v2/";
+                    tag.onload = () => {
+                        resolve(puter);
+                    }
+                    tag.onerror = reject;
+                    var firstScriptTag = document.getElementsByTagName('script')[0];
+                    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+                });
+            }
+
+            // Add Puter server button
+            const addPuterServerBtn = document.getElementById('addPuterServerBtn');
+            if (addPuterServerBtn) {
+                addPuterServerBtn.addEventListener('click', async () => {
+                    try {
+                        await (await _injectPuter()).auth.signIn({attempt_temp_user_creation: true}).then((res) => {
+                            console.log('PuterJS signed in:', res);
+                            createOrUpdatePuterServer(res);
+                        });
+                    } catch (error) {
+                        console.error('Failed to sign in with PuterJS:', error);
+                        showToastFormat('Failed to sign in with PuterJS: {0}', 'error', error.message);
+                    }
+                });
+            }
+
             // Check for Puter auth and create server if available
             const puterAuth = localStorage.getItem('puter_auth');
             if (puterAuth) {
