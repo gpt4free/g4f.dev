@@ -1900,19 +1900,16 @@
             const puterAuth = localStorage.getItem('puter.auth.token');
             if (puterAuth) {
                 try {
-                    const puterData = JSON.parse(puterAuth);
-                    if (puterData.username && puterData.token) {
-                        // Validate Puter auth before creating server
-                        validatePuterAuth(puterData.token).then(isValid => {
-                            if (isValid) {
-                                createOrUpdatePuterServer(puterData);
-                                addPuterServerBtn.style.display = 'none';
-                            } else {
-                                showToast('Puter auth invalid or expired, please sign in again', 'error');
-                                localStorage.removeItem('puter_auth');
-                            }
-                        });
-                    }
+                    // Validate Puter auth before creating server
+                    validatePuterAuth(puterAuth).then(isValid => {
+                        if (isValid) {
+                            createOrUpdatePuterServer(puterData);
+                            addPuterServerBtn.style.display = 'none';
+                        } else {
+                            showToast('Puter auth invalid or expired, please sign in again', 'error');
+                            localStorage.removeItem('puter.auth.token');
+                        }
+                    });
                 } catch (e) {
                     console.error('Error parsing Puter auth for server creation:', e);
                 }
