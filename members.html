@@ -1887,7 +1887,7 @@
                     try {
                         await (await _injectPuter()).auth.signIn({attempt_temp_user_creation: true}).then((res) => {
                             console.log('PuterJS signed in:', res);
-                            createOrUpdatePuterServer(res);
+                            createOrUpdatePuterServer(res.token);
                         });
                     } catch (error) {
                         console.error('Failed to sign in with PuterJS:', error);
@@ -1903,7 +1903,7 @@
                     // Validate Puter auth before creating server
                     validatePuterAuth(puterAuth).then(isValid => {
                         if (isValid) {
-                            createOrUpdatePuterServer(puterData);
+                            createOrUpdatePuterServer(puterAuth);
                             addPuterServerBtn.style.display = 'none';
                         } else {
                             showToast('Puter auth invalid or expired, please sign in again', 'error');
@@ -2035,7 +2035,7 @@
             }
         }
         
-        async function createOrUpdatePuterServer(puterData) {
+        async function createOrUpdatePuterServer(authToken) {
             try {
                 // First, check if a Puter server already exists
                 const result = await customApiRequest('/servers');
@@ -2044,10 +2044,7 @@
                     s.base_url === 'https://puter.g4f-dev.workers.dev' || 
                     s.label.toLowerCase().includes('puter')
                 );
-                
-                // For Puter, we'll store the auth token as the API key
-                const authToken = puterData.token || puterData.access_token || JSON.stringify(puterData);
-                
+                                
                 const serverData = {
                     label: 'Puter',
                     base_url: 'https://puter.g4f-dev.workers.dev',
