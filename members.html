@@ -1897,7 +1897,7 @@
             }
 
             // Check for Puter auth and create server if available
-            const puterAuth = localStorage.getItem('puter_auth');
+            const puterAuth = localStorage.getItem('puter.auth.token');
             if (puterAuth) {
                 try {
                     const puterData = JSON.parse(puterAuth);
@@ -2072,6 +2072,7 @@
                     } else {
                         showToast('Puter server updated!');
                         await loadServers();
+                        addPuterServerBtn.style.display = 'none';
                     }
                 } else {
                     // Create new server
