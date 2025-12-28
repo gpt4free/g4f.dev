@@ -1,5 +1,5 @@
 ## GPT4Free Documentation Hub
-<img src="https://g4f.dev/docs/images/create+a+banner+with+this+text+and+bird_+Welcome+to+the+official+docs+for+_GPT4Free_+–+free+and+convenient+AI+endpoints+you+can+use+directly+in+your+apps,+scripts,+and+even+right+in+your+browser.jpeg" height="300" alt="Welcome to the official docs for **GPT4Free** – free and convenient AI endpoints you can use directly in your apps, scripts, and even right in your browser.
+<img src="https://g4f.dev/docs/images/pico.jpeg" height="300" alt="Welcome to the official docs for **GPT4Free** – free and convenient AI endpoints you can use directly in your apps, scripts, and even right in your browser.
 Here you’ll find a clear overview, quick examples, and entry points to deeper docs for every major feature."/>
 
 ---
