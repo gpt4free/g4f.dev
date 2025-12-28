@@ -2054,6 +2054,8 @@
                 showToastFormat('Failed to setup Puter server: {0}', 'error', error.message);
             }
         }
+
+        let serversListLoaded = false;
         
         async function loadServers() {
             if (!serversList) return;
@@ -2105,29 +2107,32 @@
                 `;
             }
 
-            const existingServer = servers.find(s => 
-                s.base_url === 'https://puter.g4f-dev.workers.dev' || 
-                s.label.toLowerCase().includes('puter')
-            );
+            if (!serversListLoaded) {
+                serversListLoaded = true;
 
-            // Check for Puter auth and create server if available
-            const puterAuth = localStorage.getItem('puter.auth.token');
-            if (existingServer && puterAuth) {
-                try {
-                    // Validate Puter auth before creating server
-                    validatePuterAuth(puterAuth).then(isValid => {
-                        if (isValid) {
-                            createOrUpdatePuterServer(puterAuth);
-                            addPuterServerBtn.style.display = 'none';
-                        } else {
-                            showToast('Puter auth invalid or expired, please sign in again', 'error');
-                            localStorage.removeItem('puter.auth.token');
-                        }
-                    });
-                } catch (e) {
-                    console.error('Error parsing Puter auth for server creation:', e);
+                const existingServer = servers.find(s => 
+                    s.base_url === 'https://puter.g4f-dev.workers.dev' || 
+                    s.label.toLowerCase().includes('puter')
+                );
+
+                // Check for Puter auth and create server if available
+                const puterAuth = localStorage.getItem('puter.auth.token');
+                if (existingServer && puterAuth) {
+                    try {
+                        // Validate Puter auth before creating server
+                        validatePuterAuth(puterAuth).then(isValid => {
+                            if (isValid) {
+                                createOrUpdatePuterServer(puterAuth);
+                                addPuterServerBtn.style.display = 'none';
+                            } else {
+                                showToast('Puter auth invalid or expired, please sign in again', 'error');
+                                localStorage.removeItem('puter.auth.token');
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Error parsing Puter auth for server creation:', e);
+                    }
                 }
-            }
                 // Validate Puter auth token by checking user info
                 async function validatePuterAuth(token) {
                     try {
@@ -2142,6 +2147,7 @@
                         return false;
                     }
                 }
+            }
         }
         
         function renderServerItem(server) {
