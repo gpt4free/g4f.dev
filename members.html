@@ -1270,7 +1270,18 @@
 
         // Toast notification
         function showToast(message, type = 'success') {
-            toast.textContent = message;
+            toast.textContent = framework.translate(message);
+            toast.className = 'toast ' + type + ' show';
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function showToastFormat(message, type = 'success', ...args) {
+            message = framework.translate(message);
+            const formattedMessage = message.replace(/{(\d+)}/g, (match, number) => 
+                typeof args[number] != 'undefined' ? args[number] : match
+            );
             toast.className = 'toast ' + type + ' show';
             setTimeout(() => {
                 toast.classList.remove('show');
@@ -1337,9 +1348,9 @@
             dashboard.classList.add('active');
             
             // Update user info
-            userName.textContent = user.name || user.username || 'User';
+            userName.textContent = user.name || user.username || framework.translate('User');
             document.getElementById('accountUsername').textContent = user.username || user.name || '-';
-            document.getElementById('accountEmail').textContent = user.email || 'Not provided';
+            document.getElementById('accountEmail').textContent = user.email || framework.translate('Not provided');
             document.getElementById('accountJoined').textContent = user.created_at ? new Date(user.created_at).toLocaleDateString() : (user.joinedAt || new Date().toLocaleDateString());
             
             // Update tier badge
@@ -1367,7 +1378,7 @@
             const existingKey = localStorage.getItem('g4f_api_key');
             if (existingKey) {
                 apiKeyInput.value = existingKey;
-                apiKeyInput.placeholder = 'API key loaded from storage';
+                apiKeyInput.placeholder = framework.translate('API key loaded from storage');
             }
             
             // Update base URL
@@ -1475,7 +1486,7 @@
             const error = urlParams.get('error');
 
             if (error) {
-                showToast('Authentication failed: ' + error, 'error');
+                showToastFormat('Authentication failed: {0}', 'error', error);
                 window.history.replaceState({}, document.title, window.location.pathname);
                 return;
             }
@@ -1488,7 +1499,7 @@
                     localStorage.setItem('g4f_session', session);
                     localStorage.setItem('g4f_user', JSON.stringify(user));
                     localStorage.setItem('user', user.name || user.username);
-                    showToast(`Successfully signed in with ${user.provider}!`);
+                    showToastFormat('Successfully signed in with {0}!', 'success', user.provider);
                     window.history.replaceState({}, document.title, window.location.pathname);
                     showDashboard(user);
                     return;
@@ -1602,7 +1613,7 @@
             }
 
             generateKeyBtn.disabled = true;
-            generateKeyBtn.innerHTML = '<span class="loading"></span> Generating...';
+            generateKeyBtn.innerHTML = '<span class="loading"></span> ' + framework.translate('Generating...');
 
             try {
                 const result = await apiRequest('/keys/generate', {
@@ -1637,10 +1648,10 @@
                 }
             } catch (error) {
                 console.error('Error generating API key:', error);
-                showToast('Error generating API key: ' + error.message, 'error');
+                showToastFormat('Error generating API key: {0}', 'error', error.message);
             } finally {
                 generateKeyBtn.disabled = false;
-                generateKeyBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Generate New Key';
+                generateKeyBtn.innerHTML = '<i class="fas fa-sync-alt"></i> ' + framework.translate('Generate New Key');
             }
         });
 
@@ -1910,7 +1921,7 @@
                     });
                     
                     if (updateResult.error) {
-                        showToast('Failed to update Pollinations server: ' + updateResult.error, 'error');
+                        showToastFormat('Failed to update Pollinations server: {0}', 'error', updateResult.error);
                     } else {
                         showToast('Pollinations server updated with new API key!');
                         await loadServers();
@@ -1923,7 +1934,7 @@
                     });
                     
                     if (createResult.error) {
-                        showToast('Failed to create Pollinations server: ' + createResult.error, 'error');
+                        showToastFormat('Failed to create Pollinations server: {0}', 'error', createResult.error);
                     } else {
                         showToast('Pollinations server added successfully!');
                         await loadServers();
@@ -1931,7 +1942,7 @@
                 }
             } catch (error) {
                 console.error('Failed to create/update Pollinations server:', error);
-                showToast('Failed to setup Pollinations server: ' + error.message, 'error');
+                showToastFormat('Failed to setup Pollinations server: {0}', 'error', error.message);
             }
         }
         
@@ -1963,7 +1974,7 @@
                     });
                     
                     if (updateResult.error) {
-                        showToast('Failed to update HuggingFace server: ' + updateResult.error, 'error');
+                        showToastFormat('Failed to update HuggingFace server: {0}', 'error', updateResult.error);
                     } else {
                         showToast('HuggingFace server updated with new API key!');
                         await loadServers();
@@ -1976,7 +1987,7 @@
                     });
                     
                     if (createResult.error) {
-                        showToast('Failed to create HuggingFace server: ' + createResult.error, 'error');
+                        showToastFormat('Failed to create HuggingFace server: {0}', 'error', createResult.error);
                     } else {
                         showToast('HuggingFace server added successfully!');
                         await loadServers();
@@ -1984,7 +1995,7 @@
                 }
             } catch (error) {
                 console.error('Failed to create/update HuggingFace server:', error);
-                showToast('Failed to setup HuggingFace server: ' + error.message, 'error');
+                showToastFormat('Failed to setup HuggingFace server: {0}', 'error', error.message);
             }
         }
         
@@ -2018,7 +2029,7 @@
                     });
                     
                     if (updateResult.error) {
-                        showToast('Failed to update Puter server: ' + updateResult.error, 'error');
+                        showToastFormat('Failed to update Puter server: {0}', 'error', updateResult.error);
                     } else {
                         showToast('Puter server updated!');
                         await loadServers();
@@ -2031,7 +2042,7 @@
                     });
                     
                     if (createResult.error) {
-                        showToast('Failed to create Puter server: ' + createResult.error, 'error');
+                        showToastFormat('Failed to create Puter server: {0}', 'error', createResult.error);
                     } else {
                         showToast('Puter server added successfully!');
                         await loadServers();
@@ -2039,7 +2050,7 @@
                 }
             } catch (error) {
                 console.error('Failed to create/update Puter server:', error);
-                showToast('Failed to setup Puter server: ' + error.message, 'error');
+                showToastFormat('Failed to setup Puter server: {0}', 'error', error.message);
             }
         }
         
@@ -2060,8 +2071,8 @@
                     serversList.innerHTML = `
                         <div class="empty-servers">
                             <i class="fas fa-server"></i>
-                            <p>No servers added yet</p>
-                            <p style="font-size: 0.9rem;">Add your own AI servers to get started</p>
+                            <p>${framework.translate('No servers added yet')}</p>
+                            <p style="font-size: 0.9rem;">${framework.translate('Add your own AI servers to get started')}</p>
                         </div>
                     `;
                     return;
@@ -2085,8 +2096,8 @@
                 serversList.innerHTML = `
                     <div class="empty-servers">
                         <i class="fas fa-server"></i>
-                        <p>No servers added yet</p>
-                        <p style="font-size: 0.9rem;">Add your own AI servers to get started</p>
+                        <p>${framework.translate('No servers added yet')}</p>
+                        <p style="font-size: 0.9rem;">${framework.translate('Add your own AI servers to get started')}</p>
                     </div>
                 `;
             }
@@ -2122,21 +2133,21 @@
                     <div class="server-stats">
                         <div class="server-stat">
                             <i class="fas fa-paper-plane"></i>
-                            ${formatNumber(server.usage?.requests || 0)} requests
+                            ${formatNumber(server.usage?.requests || 0)} ${framework.translate('requests')}
                         </div>
                         <div class="server-stat">
                             <i class="fas fa-coins"></i>
-                            ${formatNumber(server.usage?.tokens || 0)} tokens
+                            ${formatNumber(server.usage?.tokens || 0)} ${framework.translate('tokens')}
                         </div>
                         <div class="server-stat">
                             <i class="fas fa-key"></i>
-                            ${server.api_key_count || 0} keys
+                            ${server.api_key_count || 0} ${framework.translate('keys')}
                         </div>
                     </div>
                     ${models.length > 0 ? `
                         <div class="server-models">
                             ${displayModels.map(m => `<span class="model-tag">${escapeHtml(m)}</span>`).join('')}
-                            ${moreCount > 0 ? `<span class="model-tag more">+${moreCount} more</span>` : ''}
+                            ${moreCount > 0 ? `<span class="model-tag more">${framework.translate('+')}${moreCount} ${framework.translate('more')}</span>` : ''}
                         </div>
                     ` : ''}
                 </div>
@@ -2152,7 +2163,7 @@
             
             if (server) {
                 // Edit mode
-                serverModalTitle.textContent = 'Edit Server';
+                serverModalTitle.textContent = framework.translate('Edit Server');
                 editServerId.value = server.id;
                 document.getElementById('serverLabel').value = server.label || '';
                 document.getElementById('serverBaseUrl').value = server.base_url || '';
@@ -2161,7 +2172,7 @@
                 // Note: API keys are not returned for security, user must re-enter
             } else {
                 // Add mode
-                serverModalTitle.textContent = 'Add New Server';
+                serverModalTitle.textContent = framework.translate('Add New Server');
                 editServerId.value = '';
             }
             
@@ -2180,7 +2191,7 @@
             const saveBtn = document.getElementById('saveServerBtn');
             const originalBtnHtml = saveBtn.innerHTML;
             saveBtn.disabled = true;
-            saveBtn.innerHTML = '<span class="loading"></span> Validating...';
+            saveBtn.innerHTML = '<span class="loading"></span> ' + framework.translate('Validating...');
             
             const serverId = editServerId.value;
             const label = document.getElementById('serverLabel').value.trim();
@@ -2230,7 +2241,7 @@
         }
         
         async function deleteServer(serverId) {
-            if (!confirm('Are you sure you want to delete this server? This action cannot be undone.')) {
+            if (!confirm(framework.translate('Are you sure you want to delete this server? This action cannot be undone.'))) {
                 return;
             }
             
@@ -2249,7 +2260,7 @@
                 await loadServers();
                 
             } catch (error) {
-                showToast('Failed to delete server: ' + error.message, 'error');
+                showToastFormat('Failed to delete server: {0}', 'error', error.message);
             }
         }
         
@@ -2321,5 +2332,49 @@
             sessionToken = storedSession;
         }
     </script>
+<template>Successfully signed in with Hugging Face!</template>
+<template>Authentication failed: Invalid token</template>
+<template>Successfully signed in with Pollinations AI!</template>
+<template>Authentication failed: Access denied</template>
+<template>Successfully signed in with Puter!</template>
+<template>Authentication failed: Invalid credentials</template>
+<template>API key generated successfully! Save it now - you won't see it again.</template>
+<template>API key generated successfully!</template>
+<template>Error generating API key: {0}</template>
+<template>No API key to copy</template>
+<template>API key copied to clipboard!</template>
+<template>Base URL copied to clipboard!</template>
+<template>Failed to copy</template>
+<template>HuggingFace token expired, please sign in again</template>
+<template>HuggingFace OAuth not configured</template>
+<template>HuggingFace token expired, please try again</template>
+<template>Failed to setup HuggingFace server: {0}</template>
+<template>Failed to create/update HuggingFace server: {0}</template>
+<template>Pollinations server updated with new API key!</template>
+<template>Pollinations server added successfully!</template>
+<template>Failed to setup Pollinations server: {0}</template>
+<template>Failed to create/update Pollinations server: {0}</template>
+<template>Puter server updated!</template>
+<template>Puter server added successfully!</template>
+<template>Failed to setup Puter server: {0}</template>
+<template>Failed to create/update Puter server: {0}</template>
+<template>No servers added yet</template>
+<template>Add your own AI servers to get started</template>
+<template>Failed to load servers: {0}</template>
+<template>Public</template>
+<template>{0} requests</template>
+<template>{0} tokens</template>
+<template>{0} keys</template>
+<template>Edit Server</template>
+<template>Add New Server</template>
+<template>Are you sure you want to delete this server? This action cannot be undone.</template>
+<template>Server updated successfully!</template>
+<template>Server added successfully!</template>
+<template>Server deleted successfully</template>
+<template>Server endpoint copied to clipboard!</template>
+<template>Failed to copy URL</template>
+<template>Generating...</template>
+<template>Failed to delete server: {0}</template>
+<template>Validating...</template>
 </body>
 </html>
