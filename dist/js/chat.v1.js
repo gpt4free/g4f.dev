@@ -4314,18 +4314,7 @@ modelSelect.addEventListener("change", () => {
     const selectedOption = modelSelect.options[modelSelect.selectedIndex];
     console.log("Selected model:", modelSelect.value, selectedOption);
     if (!selected[modelSelect.value]) {
-        let option = document.createElement('option');
-        option.value = modelSelect.value;
-        if (selectedOption.dataset.type) {
-            option.dataset.type = selectedOption.dataset.type;
-        }
-        if (selectedOption.dataset.seed) {
-            option.dataset.seed = "true";
-        }
-        if (selectedOption.dataset.audio) {
-            option.dataset.audio = "true";
-        }
-        option.text = modelSelect.querySelector(`option[value="${modelSelect.value}"]`).text;
+        const option = selectedOption.cloneNode(true);
         option.selected = true;
         const optgroup = modelSelect.querySelector('optgroup:last-child');
         if (optgroup) {

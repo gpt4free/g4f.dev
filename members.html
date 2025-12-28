@@ -2058,7 +2058,7 @@
         async function loadServers() {
             if (!serversList) return;
 
-            const servers = []
+            let servers = []
             
             try {
                 servers = await customApiRequest('/servers');
