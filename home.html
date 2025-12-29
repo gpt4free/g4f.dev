@@ -184,7 +184,7 @@
                 // Also check hash fragment for API key (starts with g4f_)
                 if (!apiKey && window.location.hash) {
                     const hashValue = decodeURIComponent(window.location.hash.substring(1));
-                    if (hashValue.startsWith("g4f_")) {
+                    if (hashValue.startsWith("g4f_") || hashValue.startsWith("gfs_")) {
                         apiKey = hashValue;
                     }
                 }
@@ -200,7 +200,7 @@
                     loginBtn.classList.add("hidden");
                     logoutBtn.classList.remove("hidden");
                     userStatus.classList.remove("hidden");
-                    userStatus.textContent = "You are logged in";
+                    userStatus.textContent = framework.translate("You are logged in");
                 }
 
                 // Login button - redirect to members with return URL
@@ -245,5 +245,6 @@
             }
         })();
     </script>
+<template>You are logged in</template>
 </body>
 </html>
