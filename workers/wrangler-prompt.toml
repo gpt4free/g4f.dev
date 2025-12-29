@@ -1,0 +1,22 @@
+# Wrangler configuration for G4F Prompt Worker
+# See https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "g4f-prompt"
+main = "prompt-worker.js"
+compatibility_date = "2024-01-01"
+
+# Environment variables
+# No API keys required for basic image.pollinations.ai usage
+
+# Routes - configure these to match your domain
+# routes = [
+#   { pattern = "g4f.dev/prompt/*", zone_name = "g4f.dev" }
+# ]
+
+# Development settings
+[dev]
+port = 8791
+
+# Production environment overrides
+[env.production]
+# Add production-specific settings here

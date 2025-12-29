@@ -1903,13 +1903,13 @@
                 const result = await customApiRequest('/servers');
                 const servers = result.servers || [];
                 const existingServer = servers.find(s => 
-                    s.base_url === 'https://gen.pollinations.ai/v1' || 
+                    s.base_url === 'https://pollinations.g4f-dev.workers.dev' || 
                     s.label.toLowerCase().includes('pollinations')
                 );
                 
                 const serverData = {
                     label: 'Pollinations AI',
-                    base_url: 'https://gen.pollinations.ai/v1',
+                    base_url: 'https://pollinations.g4f-dev.workers.dev',
                     api_keys: apiKey,
                     allowed_models: [],
                     is_public: false
