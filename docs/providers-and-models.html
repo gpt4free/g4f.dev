@@ -272,7 +272,7 @@ print(response)
           key = key || "";
           const img = new Image(40, 40);
           const gen = 'https://g4f.dev';
-          img.src=gen+'/prompt/Create a logo for ' +
+          img.src=gen+'/logo/' +
             key.replace(
               'MetaAIAccount', 'Facebook AI').replace(
               'MetaAI', 'Facebook AI').replace(
@@ -292,7 +292,7 @@ print(response)
               'Qwen_Qwen_3', 'Qwen').replace(
               'Yupp', 'with yupp').replace(
               'anon-', 'anonymous ').replace(
-              'Stringable', 'String')+'?width=256&height=256&nologo=true';
+              'Stringable', 'String');
           return img;
         }
 
