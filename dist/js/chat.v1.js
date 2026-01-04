@@ -1619,7 +1619,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     if (chunk.model && !hasModel) {
                         hasModel = true;
                         if (chunk.server && chunk.provider) {
-                            provider = chunk.server;
+                            provider = `custom:${chunk.server}`;
                             providerLabel = chunk.provider;
                         } else if (chunk.provider) {
                             provider = chunk.provider || provider;
@@ -1629,6 +1629,14 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     if (chunk.error) {
                         add_message_chunk({type: "error", ...chunk.error}, message_id, null, finish_message);
                         return;
+                    }
+                    if (chunk.conversation) {
+                        const conversation = await get_conversation(window.conversation_id);
+                        if (!conversation.data) {
+                            conversation.data = {};
+                        }
+                        conversation.data[provider] = chunk.conversation;
+                        await save_conversation(update_conversation(conversation));
                     }
                     if (chunk.choices) {
                         const choice = chunk.choices[0];
@@ -1646,15 +1654,6 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                                     pendingToolCalls[toolCall.index].function.arguments += toolCall.function.arguments;
                                 }
                             }
-                        }
-
-                        if (chunk.conversation) {
-                            const conversation = await get_conversation(window.conversation_id);
-                            if (!conversation.data) {
-                                conversation.data = {};
-                            }
-                            conversation.data[provider] = chunk.conversation;
-                            await save_conversation(update_conversation(conversation));
                         }
                         
                         if (choice?.delta?.reasoning || choice?.delta?.reasoning_content) {
