@@ -1612,6 +1612,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 let hasModel = false;
                 let pendingToolCalls = [];
                 
+                add_message_chunk({type: "provider", provider: {name: provider, model: selectedModel, label: providerLabel}}, message_id);
+                
                 for await (const chunk of stream) {
                     if (chunk.usage) {
                         add_message_chunk({type: "usage", usage: chunk.usage}, message_id);
