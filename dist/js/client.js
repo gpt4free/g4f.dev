@@ -396,7 +396,6 @@ class Client {
         delete payload.prompt;
         delete payload.response_format;
         if (payload.nologo === undefined) payload.nologo = true;
-        if (this.extraBody.referrer) payload.referrer = this.extraBody.referrer;
         if (payload.size) {
             payload.width = payload.size.split('x')[0];
             payload.height = payload.size.split('x')[1];
@@ -470,7 +469,6 @@ class PollinationsAI extends Client {
             modelsEndpoint: options.apiKey ? 'https://gen.pollinations.ai/text/models' : options.modelsEndpoint || 'https://g4f.dev/api/pollinations/text/models',
             defaultModel: 'openai',
             extraBody: {
-                referrer: 'https://g4f.dev/',
                 seed: 10352102
             },
             modelAliases: {
@@ -558,9 +556,6 @@ class Audio extends Client {
     constructor(options = {}) {
         super({
             apiEndpoint: 'https://text.pollinations.ai/openai',
-            extraBody: {
-                referrer: 'https://g4f.dev/'
-            },
             defaultModel: 'openai-audio',
             ...options
         });
@@ -596,7 +591,6 @@ class Audio extends Client {
                     if (!this.baseUrl) {
                         throw new Error('No baseUrl defined');
                     }
-                    delete options.referrer;
                     requestOptions.body = JSON.stringify(options);
                     response = await fetch(`${this.baseUrl}/chat/completions`, requestOptions);
                     this.logCallback && this.logCallback({request: options, type: 'chat'});
