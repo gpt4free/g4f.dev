@@ -18,12 +18,11 @@
         "worker": {"baseUrl": "https://g4f.dev/api/worker", "backupUrl": "https://g4f.dev/api/worker", "tags": "🎨", "sleep": 10000}
     },
     "defaultModels": {
-        "nectar": "openai",
         "pollinations": "openai",
-        "azure": "model-router",
+        "azure": "model-router3",
         "gemini": "models/gemini-2.5-flash",
         "openrouter": "openai/gpt-oss-120b:free",
-        "nvidia": "deepseek-ai/deepseek-v3.1",
+        "nvidia": "deepseek-ai/deepseek-v3.2",
         "ollama": "deepseek-v3.2",
         "groq": "openai/gpt-oss-120b",
         "gpt4free.pro": "deepseek-ai/deepseek-v3.2",
