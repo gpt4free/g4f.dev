@@ -180,7 +180,7 @@ async function query(prompt, options={ json: false, cache: true }) {
         options = { json: options, cache: true };
     }
     let encodedParams = (new URLSearchParams(options)).toString();
-    let secondPartyUrl = `https://g4f.dev/ai/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
+    let secondPartyUrl = `https://g4f.dev/ai/auto/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
     let response = await fetch(secondPartyUrl);
     if (!response.ok) {
         const delay = parseInt(response.headers.get('Retry-After'), 10);

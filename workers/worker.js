@@ -77,18 +77,8 @@ async function handleRequest(request, env, ctx) {
     "ollama": {url: "https://ollama.g4f-dev.workers.dev", api_key: env.OLLAMA_API_KEY, model: "deepseek-v3.1:671b"},
     "azure": {endpoint: "https://g4f-dev-resource.cognitiveservices.azure.com/openai/deployments/model-router/chat/completions?api-version=2025-01-01-preview", api_key: env.AZURE_API_KEY, model: "model-router"},
     "auto": {endpoint: "https://g4f-dev-resource.cognitiveservices.azure.com/openai/deployments/model-router/chat/completions?api-version=2025-01-01-preview", api_key: env.AZURE_API_KEY, model: "model-router"},
-    "grok": {url: "https://api.x.ai/v1", api_key: env.GROK_API_KEY, model: "grok-4-fast-non-reasoning"},
-    "x.ai": {url: "https://api.x.ai/v1", api_key: env.GROK_API_KEY, model: "grok-4-fast-non-reasoning"},
-    "gemini": {url: "https://generativelanguage.googleapis.com/v1beta/openai", api_key: env.GEMINI_API_KEY, model: "gemini-2.5-flash-lite"},
-    "typegpt": {url: "https://typegpt.net/api/v1", api_key: env.TYPEGPT_API_KEY, model: "deepseek-ai/DeepSeek-V3.2-Exp"},
-    "pollinations": {endpoint: "https://text.pollinations.ai/openai?referrer=https://g4f.dev/", model: "openai"},
-    "pollinations.ai": {endpoint: "https://text.pollinations.ai/openai?referrer=https://g4f.dev/", model: "openai"},
-    //"stringable-inf": {url: "https://stringableinf.com/api", endpoint: "https://stringableinf.com/api/v1/chat/completions", extraHeaders: {"HTTP-Referer": "https://g4f.dev/", "X-Title": "G4F API"}, model: "gpt-oss-120b"},
-    "api.airforce": {url: "https://api.airforce/v1", model: "deepseek-v3.2", api_key: env.API_AIRFORCE_API_KEY},
-    "gpt4free.pro": {url: "https://gpt4free.pro/v1", model: "deepseek-v3.2"},
+    "pollinations": {endpoint: "https://text.pollinations.ai/openai", model: "openai"},
     "nectar": {url: "https://gen.pollinations.ai", endpoint: "https://gen.pollinations.ai/v1/chat/completions", api_key: env.POLLINATIONS_API_KEY, model: "openai"},
-    "audio": {endpoint: "https://g4f-dev-resource.cognitiveservices.azure.com/openai/deployments/gpt-audio/chat/completions?api-version=2025-01-01-preview", api_key: env.AZURE_API_KEY, model: "gpt-audio"},
-    "huggingface": {url: "https://pass.g4f.dev/api/HuggingFace", extraHeaders: {"g4f-api-key": "_g4f"}},
   }
   const ALLOW_LIST = ["openrouter", "nvidia", "groq", "ollama", "azure", "nectar", "pollinations"];
 

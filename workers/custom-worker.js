@@ -15,28 +15,71 @@
  * - API_KEY_SALT: Salt for validating API keys
  */
 
+// Rate limiting configuration for anonymous users
+const RATE_LIMITS = {
+  // Token limits
+  tokens: {
+    perMinute: 100000,
+    perHour: 300000,
+    perDay: 500000
+  },
+  // Request limits
+  requests: {
+    perMinute: 10,
+    perHour: 100,
+    perDay: 1000
+  },
+  // Burst allowance (multiplier for short-term limits)
+  burstMultiplier: 2,
+  // Window durations in milliseconds
+  windows: {
+    minute: 60 * 1000,
+    hour: 60 * 60 * 1000,
+    day: 24 * 60 * 60 * 1000
+  }
+};
+
+// Rate limits for authenticated user tiers
+const USER_TIER_LIMITS = {
+  new: {
+    tokens: { perMinute: 100000, perHour: 300000, perDay: 500000 },
+    requests: { perMinute: 10, perHour: 100, perDay: 1000 }
+  },
+  free: {
+    tokens: { perMinute: 150000, perHour: 500000, perDay: 1000000 },
+    requests: { perMinute: 20, perHour: 200, perDay: 2000 }
+  },
+  sponsor: {
+    tokens: { perMinute: 500000, perHour: 2500000, perDay: 10000000 },
+    requests: { perMinute: 50, perHour: 500, perDay: 5000 }
+  },
+  pro: {
+    tokens: { perMinute: 1000000, perHour: 5000000, perDay: 20000000 },
+    requests: { perMinute: 100, perHour: 1000, perDay: 10000 }
+  }
+};
+
+// Cache configurations
+const CACHE_HEADERS = {
+  FOREVER: 'public, max-age=31536000, immutable', // 1 year
+  LONG: 'public, max-age=86400', // 24 hours
+  MEDIUM: 'public, max-age=3600', // 1 hour
+  SHORT: 'public, max-age=300', // 5 minutes
+  NO_CACHE: 'no-cache, no-store, must-revalidate'
+};
+
 const CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Credentials": "true",
     "Access-Control-Allow-Methods": "GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization, X-User-Id, X-API-Key",
-    "Access-Control-Expose-Headers": "Content-Type, X-User-Id, X-Provider, X-Server"
+    "Access-Control-Expose-Headers": "Content-Type, X-User-Id, X-Provider, X-Server, X-Url"
   };
   
-  // Rate limits for custom servers
-  const SERVER_RATE_LIMITS = {
-    requests: {
-        perMinute: 60,
-        perHour: 600,
-        perDay: 6000
-    },
-    windows: {
-        minute: 60 * 1000,
-        hour: 60 * 60 * 1000,
-        day: 24 * 60 * 60 * 1000
-    }
-  };
-  
+const ACCESS_CONTROL_ALLOW_ORIGIN = {
+    "Access-Control-Allow-Origin": "*",
+  }
+
   export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
@@ -48,6 +91,60 @@ const CORS_HEADERS = {
         }
   
         try {
+            // Rate limiting for all endpoints except CORS preflight
+            const user = await authenticateRequest(request, env);
+            
+            if (user) {
+                // Authenticated user - use tier-based limits
+                const rateCheck = await checkUserRateLimits(env, user);
+                if (!rateCheck.allowed) {
+                    const windowLabels = { minute: 'per minute', hour: 'per hour', day: 'per day' };
+                    const message = rateCheck.reason === 'tokens'
+                        ? `Token limit (${rateCheck.limit.toLocaleString()} ${windowLabels[rateCheck.window]}) exceeded for ${rateCheck.tier} tier. Used: ${rateCheck.used.toLocaleString()} tokens.`
+                        : `Request limit (${rateCheck.limit} ${windowLabels[rateCheck.window]}) exceeded for ${rateCheck.tier} tier. Made: ${rateCheck.used} requests.`;
+                    return Response.json({
+                        error: {
+                            message,
+                            type: 'rate_limit_exceeded',
+                            tier: rateCheck.tier,
+                            window: rateCheck.window,
+                            limit: rateCheck.limit,
+                            used: rateCheck.used,
+                            retry_after: rateCheck.retryAfter
+                        }
+                    }, { status: 429, headers: {'Retry-After': rateCheck.retryAfter.toString(), ...ACCESS_CONTROL_ALLOW_ORIGIN} });
+                }
+                // Store usage for authenticated user
+                ctx.waitUntil(updateUserRateLimit(env, user.id, ctx));
+            } else {
+                // Anonymous user - use default IP-based limits
+                const rateCheck = await checkAnonymousRateLimits(env, request);
+                if (!rateCheck.allowed) {
+                    const windowLabels = { minute: 'per minute', hour: 'per hour', day: 'per day' };
+                    const message = rateCheck.reason === 'tokens'
+                        ? `Token limit (${rateCheck.limit.toLocaleString()} ${windowLabels[rateCheck.window]}) exceeded. Used: ${rateCheck.used.toLocaleString()} tokens. Sign up at g4f.dev/members.html for higher limits.`
+                        : `Request limit (${rateCheck.limit} ${windowLabels[rateCheck.window]}) exceeded. Made: ${rateCheck.used} requests. Sign up at g4f.dev/members.html for higher limits.`;
+                    return Response.json({
+                        error: {
+                            message,
+                            type: 'rate_limit_exceeded',
+                            window: rateCheck.window,
+                            limit: rateCheck.limit,
+                            used: rateCheck.used,
+                            retry_after: rateCheck.retryAfter,
+                            upgrade_url: 'https://g4f.dev/members.html'
+                        }
+                    }, { status: 429, headers: {'Retry-After': rateCheck.retryAfter.toString(), ...ACCESS_CONTROL_ALLOW_ORIGIN} } );
+                }
+                // Store usage for anonymous user
+                ctx.waitUntil(updateAnonymousRateLimit(env, getClientIP(request), ctx));
+            }
+
+            // Handle /ai/ routes using custom servers
+            if (pathname.startsWith("/ai/")) {
+                return handleCustomAiRoute(request, pathname, env, ctx);
+            }
+
             // ============================================
             // Server Management Endpoints (Members Area)
             // ============================================
@@ -92,39 +189,28 @@ const CORS_HEADERS = {
             // Model Router Endpoints
             // ============================================
             
-          // Route: /v1/chat/completions
-          if (pathname === "/v1/chat/completions" || pathname === "/custom/srv_mjncacwy529ad1e3c784/chat/completions") {
-              return handleV1ChatCompletions(request, env, ctx);
-          }
-  
+
           // Route: /v1/models
           if (pathname === "/v1/models" || pathname === "/custom/srv_mjncacwy529ad1e3c784/models") {
               return handleV1Models(request, env);
           }
-          
-            // Route: /custom/:server_id/chat/completions
-            if (pathname.match(/^\/custom\/[^/]+\/chat\/completions$/)) {
-                const serverId = pathname.split('/')[2];
-                return handleChatCompletions(request, env, ctx, serverId);
-            }
-            
-            // Route: /api/:label/chat/completions
-            if (pathname.match(/^\/api\/[^/]+\/chat\/completions$/)) {
-                const label = pathname.split('/')[2];
-                const user = await authenticateRequest(request, env);
-                const server = await getServerByLabel(env, label, user);
-                if (!server) {
-                    return jsonResponse({ error: "Server not found" }, 404);
-                }
-                return handleProxyToServerAuthed(request, env, ctx, server, '/chat/completions');
-            }
-            
+
             // Route: /custom/:server_id/models
             if (pathname.match(/^\/custom\/[^/]+\/models$/)) {
                 const serverId = pathname.split('/')[2];
-                return handleModels(request, env, serverId);
+                const user = await authenticateRequest(request, env);
+                const server = await getServerById(env, serverId, user);
+                return handleModels(request, env, serverId, user, server);
             }
-            
+
+            // Route: /custom/:server_id/models
+            if (pathname.match(/^\/api\/[^/]+\/models$/)) {
+                const label = pathname.split('/')[2];
+                const user = await authenticateRequest(request, env);
+                const server = await getServerByLabel(env, label, user);
+                return handleModels(request, env, server.id, user, server);
+            }
+
             // Route: /api/:label/models
             if (pathname.match(/^\/api\/[^/]+\/models$/)) {
                 const label = pathname.split('/')[2];
@@ -135,6 +221,30 @@ const CORS_HEADERS = {
                 }
                 return handleProxyToServerAuthed(request, env, ctx, server, '/models');
             }
+
+          
+          // Route: /v1/chat/completions
+          if (pathname === "/v1/chat/completions" || pathname === "/custom/srv_mjncacwy529ad1e3c784/chat/completions") {
+              return handleV1ChatCompletions(request, env, ctx);
+          }
+  
+            // Route: /custom/:server_id/chat/completions
+            if (pathname.match(/^\/custom\/[^/]+\/chat\/completions$/)) {
+                const serverId = pathname.split('/')[2];
+                return handleChatCompletions(request, pathname, env, ctx, serverId);
+            }
+            
+            // Route: /api/:label/chat/completions
+            if (pathname.match(/^\/api\/.+\/chat\/completions$/)) {
+                const label = pathname.split('/')[2];
+                const user = await authenticateRequest(request, env);
+                const server = await getServerByLabel(env, label, user);
+                if (!server) {
+                    return jsonResponse({ error: "Server not found" }, 404);
+                }
+                return handleProxyToServerAuthed(request, env, ctx, server, '/chat/completions', user, pathname);
+            }
+            
             
             // Route: /custom/:server_id/* (generic proxy)
             if (pathname.startsWith("/custom/") && pathname.split('/').length >= 3) {
@@ -146,7 +256,7 @@ const CORS_HEADERS = {
                 if (!server) {
                     return jsonResponse({ error: "Server not found" }, 404);
                 }
-                return handleProxyToServerAuthed(request, env, ctx, server, subPath);
+                return handleProxyToServerAuthed(request, env, ctx, server, subPath, user, pathname);
             }
             
             // Route: /api/:label/* (generic proxy)
@@ -159,8 +269,22 @@ const CORS_HEADERS = {
                 if (!server) {
                     return jsonResponse({ error: "Server not found" }, 404);
                 }
-                return handleProxyToServer(request, env, ctx, server, subPath);
+                return handleProxyToServer(request, pathname, env, ctx, server, subPath);
             }
+            
+            // Route: /ai/:label/* (generic proxy)
+            if (pathname.startsWith("/ai/") && pathname.split('/').length >= 3) {
+                const parts = pathname.split('/');
+                const label = parts[2];
+                const subPath = '/' + parts.slice(3).join('/');
+                const user = await authenticateRequest(request, env);
+                const server = await getServerByLabel(env, label, user);
+                if (!server) {
+                    return jsonResponse({ error: "Server not found" }, 404);
+                }
+                return handleProxyToServer(request, pathname, env, ctx, server, subPath, user);
+            }
+            
             return jsonResponse({ error: "Not found" }, 404);
         } catch (error) {
             console.error("Custom worker error:", error);
@@ -343,8 +467,8 @@ const CORS_HEADERS = {
     }
   
     // Check server limits based on tier
-    const maxServers = user.tier === 'pro' ? 20 : user.tier === 'sponsor' ? 10 : 3;
-    if ((user.custom_servers || []).length >= maxServers) {
+    const maxServers = user.tier === 'pro' ? 50 : user.tier === 'sponsor' ? 10 : 3;
+    if (user.tier !== 'admin' && (user.custom_servers || []).length >= maxServers) {
         return jsonResponse({ 
             error: `Maximum ${maxServers} servers allowed for ${user.tier || 'free'} tier` 
         }, 400);
@@ -616,32 +740,23 @@ const CORS_HEADERS = {
   
     return jsonResponse({ data: [] });
   }
-  
+
   // ============================================
   // Model Router / Proxy
   // ============================================
   
-  async function handleChatCompletions(request, env, ctx, serverId) {
+  async function handleChatCompletions(request, pathname, env, ctx, serverId) {
     const user = await authenticateRequest(request, env);
     const server = await getServerById(env, serverId, user);
     if (!server) {
         return jsonResponse({ error: "Server not found" }, 404);
     }
-    return handleProxyToServer(request, env, ctx, server, '/chat/completions');
+    return handleProxyToServer(request, pathname, env, ctx, server, '/chat/completions');
   }
   
-  async function handleModels(request, env, serverId) {
-    const user = await authenticateRequest(request, env);
-    const server = await getServerById(env, serverId, user);
+  async function handleModels(request, env, serverId, user, server) {
     if (!server) {
         return jsonResponse({ error: "Server not found" }, 404);
-    }
-  
-    // If server has allowed_models configured, return those
-    if (server.allowed_models && server.allowed_models.length > 0) {
-        return jsonResponse({
-            data: server.allowed_models.map(m => ({ id: m }))
-        });
     }
   
     // Proxy to server's models endpoint
@@ -656,35 +771,42 @@ const CORS_HEADERS = {
             method: request.method,
             headers
         });
+
+        if (!response.ok) {
+            throw Error(`Error ${response.status}: ${await response.text()}`)
+        }
+
+        const data = await response.json();
+        if (server.allowed_models && server.allowed_models.length > 0) {
+            data.data = data.data.filter(model=>server.allowed_models.includes(model.id))
+        }
         
-        const newResponse = new Response(response.body, response);
+        const newResponse = new Response(JSON.stringify(data), response);
         for (const [key, value] of Object.entries(CORS_HEADERS)) {
             newResponse.headers.set(key, value);
         }
         newResponse.headers.set('X-Server', serverId);
-        newResponse.headers.set('X-Provider', server);
+        newResponse.headers.set('X-Provider', server.label);
+        newResponse.headers.set('X-Url', `${server.base_url}/models`);
         return newResponse;
     } catch (e) {
+        // If server has allowed_models configured, return those
+        if (server.allowed_models && server.allowed_models.length > 0) {
+            console.log(e);
+            return jsonResponse({
+                data: server.allowed_models.map(m => ({ id: m, audio: m.includes('audio') }))
+            });
+        }
         return jsonResponse({ error: `Failed to connect to server: ${e.message}` }, 502);
     }
   }
   
-  async function handleProxyToServerAuthed(request, env, ctx, server, subPath) {
+  async function handleProxyToServerAuthed(request, env, ctx, server, subPath, user=null, pathname=null) {
     // Server is already authenticated and fetched
     if (!server) {
         return jsonResponse({ error: "Server not found" }, 404);
     }
   
-    // Check rate limits for this server
-    const rateLimitResult = await checkServerRateLimit(env, server.id);
-    if (!rateLimitResult.allowed) {
-        return jsonResponse({
-            error: {
-                message: `Rate limit exceeded: ${rateLimitResult.used}/${rateLimitResult.limit} requests per ${rateLimitResult.window}`,
-                type: 'rate_limit_exceeded'
-            }
-        }, 429);
-    }
   
     // Check if model is allowed
     let requestBody = null;
@@ -736,7 +858,7 @@ const CORS_HEADERS = {
     if (userProvidedKey) {
         proxyHeaders['Authorization'] = userProvidedKey.includes("Bearer") ? userProvidedKey : `Bearer ${userProvidedKey}`;
     } else if (apiKey) {
-            proxyHeaders['Authorization'] = apiKey.includes("Bearer") ? apiKey : `Bearer ${apiKey}`;
+        proxyHeaders['Authorization'] = apiKey.includes("Bearer") ? apiKey : `Bearer ${apiKey}`;
     }
   
     // Build target URL
@@ -748,12 +870,17 @@ const CORS_HEADERS = {
             method: request.method,
             headers: proxyHeaders
         };
+
+        if (subPath === '/chat/completions') {
+            fetchOptions.method = "POST";
+            fetchOptions.body = JSON.stringify({"messages": [{"role": "user", "content": "Hello"}]})
+        }
   
         if (request.method === 'POST') {
             fetchOptions.body = requestBody ? JSON.stringify(requestBody) : await request.text();
         }
   
-        const firstMessage = getFirstMessage(requestBody.messages);
+        const firstMessage = requestBody ? getFirstMessage(requestBody.messages) : null;
   
         const response = await fetch(targetUrl, fetchOptions);
   
@@ -764,12 +891,13 @@ const CORS_HEADERS = {
             if (contentType.includes('text/event-stream')) {
                 // Streaming response - track usage from stream
                 const trackedStream = createUsageTrackingStream(
-                    response, env, ctx, server, server.id, clientIP, requestModel, firstMessage, user
+                    response, env, ctx, server, server.id, clientIP, requestModel, firstMessage, user, pathname
                 );
                 const newResponse = new Response(trackedStream, { headers: response.headers });
                 for (const [key, value] of Object.entries(CORS_HEADERS)) {
                     newResponse.headers.set(key, value);
                 }
+                newResponse.headers.set('X-Url', targetUrl);
                 newResponse.headers.set('X-Server', server.id);
                 return newResponse;
             } else if (contentType.includes('application/json')) {
@@ -780,8 +908,15 @@ const CORS_HEADERS = {
                     if (data.usage) {
                         const tokens = data.usage.total_tokens || 
                             (data.usage.prompt_tokens || 0) + (data.usage.completion_tokens || 0);
-                        ctx.waitUntil(persistUsageToDb(env, clientIP, data.model || requestModel, tokens, data.usage.prompt_tokens, data.usage.completion_tokens, "", firstMessage, user));
+                        ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, data.model || requestModel, tokens, data.usage.prompt_tokens, data.usage.completion_tokens, pathname, firstMessage, user));
                         ctx.waitUntil(updateServerUsage(env, server, tokens, requestModel));
+                        
+                        // Update rate limit token usage
+                        if (user) {
+                            ctx.waitUntil(updateUserTokenUsage(env, user.id, tokens, ctx));
+                        } else {
+                            ctx.waitUntil(updateAnonymousTokenUsage(env, clientIP, tokens, ctx));
+                        }
                     }
                 } catch (e) {
                     // Ignore parse errors
@@ -789,13 +924,12 @@ const CORS_HEADERS = {
             }
         }
   
-        // Update rate limit counters (async)
-        ctx.waitUntil(updateServerRateLimit(env, server.id, ctx));
   
         const newResponse = new Response(response.body, response);
         for (const [key, value] of Object.entries(CORS_HEADERS)) {
             newResponse.headers.set(key, value);
         }
+        newResponse.headers.set('X-Url', targetUrl);
         newResponse.headers.set('X-Server', server.id);
         return newResponse;
   
@@ -810,7 +944,7 @@ const CORS_HEADERS = {
   // Usage Tracking
   // ============================================
   
-  function createUsageTrackingStream(response, env, ctx, server, serverId, clientIP, model, firstMessage, user) {
+  function createUsageTrackingStream(response, env, ctx, server, serverId, clientIP, model, firstMessage, user, pathname) {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -840,8 +974,15 @@ const CORS_HEADERS = {
                         if (data.usage) {
                              const tokens = data.usage.total_tokens ||
                                 (data.usage.prompt_tokens || 0) + (data.usage.completion_tokens || 0);
-                             ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${serverId}`, data.model || model, tokens, data.usage.prompt_tokens, data.usage.completion_tokens, "", firstMessage, user));
+                             ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${serverId}`, data.model || model, tokens, data.usage.prompt_tokens, data.usage.completion_tokens, pathname, firstMessage, user));
                              ctx.waitUntil(updateServerUsage(env, server, tokens, model));
+                             
+                             // Update rate limit token usage
+                             if (user) {
+                                 ctx.waitUntil(updateUserTokenUsage(env, user.id, tokens, ctx));
+                             } else {
+                                 ctx.waitUntil(updateAnonymousTokenUsage(env, clientIP, tokens, ctx));
+                             }
                         }
                     } catch (e) {
                         // Ignore parse errors
@@ -1033,7 +1174,7 @@ const CORS_HEADERS = {
   async function getServerByLabel(env, label, user = null) {
     // First, check if the authenticated user owns this server (allows private server access)
     if (user && user.custom_servers) {
-        const ownedServer = user.custom_servers.find(s => s.label.includes(label));
+        const ownedServer = user.custom_servers.find(s => s.label.toLowerCase().includes(label.toLowerCase()));
         if (ownedServer) {
             return { ...ownedServer, owner_id: user.id };
         }
@@ -1044,7 +1185,7 @@ const CORS_HEADERS = {
         const indexStr = await env.MEMBERS_KV.get('public_servers_index');
         if (indexStr) {
             const servers = JSON.parse(indexStr);
-            const serverIndex = servers.find(s => s.label.includes(label));
+            const serverIndex = servers.find(s => s.label.toLowerCase().includes(label.toLowerCase()));
             if (serverIndex) {
                 // Fetch full server data from owner
                 const owner = await getUser(env, serverIndex.owner_id);
@@ -1060,89 +1201,6 @@ const CORS_HEADERS = {
     }
   
     return null;
-  }
-  
-  /**
-  * Check rate limits for a server
-  * @param {Object} env - Environment bindings
-  * @param {string} serverId - Server ID
-  * @returns {Object} { allowed: boolean, used: number, limit: number, window: string }
-  */
-  async function checkServerRateLimit(env, serverId) {
-    if (!env.MEMBERS_KV) {
-        return { allowed: true };
-    }
-  
-    const now = Date.now();
-    const windows = [
-        { name: 'minute', duration: SERVER_RATE_LIMITS.windows.minute, limit: SERVER_RATE_LIMITS.requests.perMinute },
-        { name: 'hour', duration: SERVER_RATE_LIMITS.windows.hour, limit: SERVER_RATE_LIMITS.requests.perHour },
-        { name: 'day', duration: SERVER_RATE_LIMITS.windows.day, limit: SERVER_RATE_LIMITS.requests.perDay }
-    ];
-  
-    for (const window of windows) {
-        const key = `server_rate:${serverId}:${window.name}`;
-        const dataStr = await env.MEMBERS_KV.get(key);
-        
-        if (dataStr) {
-            const data = JSON.parse(dataStr);
-            // Check if window has expired
-            if (now - data.timestamp < window.duration) {
-                if (data.count >= window.limit) {
-                    return {
-                        allowed: false,
-                        used: data.count,
-                        limit: window.limit,
-                        window: window.name
-                    };
-                }
-            }
-        }
-    }
-  
-    return { allowed: true };
-  }
-  
-  /**
-  * Update rate limit counters for a server
-  * @param {Object} env - Environment bindings
-  * @param {string} serverId - Server ID
-  * @param {Object} ctx - Request context for waitUntil
-  */
-  async function updateServerRateLimit(env, serverId, ctx) {
-    if (!env.MEMBERS_KV) return;
-  
-    const now = Date.now();
-    const windows = [
-        { name: 'minute', duration: SERVER_RATE_LIMITS.windows.minute },
-        { name: 'hour', duration: SERVER_RATE_LIMITS.windows.hour },
-        { name: 'day', duration: SERVER_RATE_LIMITS.windows.day }
-    ];
-  
-    for (const window of windows) {
-        const key = `server_rate:${serverId}:${window.name}`;
-        const dataStr = await env.MEMBERS_KV.get(key);
-        
-        let data;
-        if (dataStr) {
-            data = JSON.parse(dataStr);
-            // Check if window has expired
-            if (now - data.timestamp >= window.duration) {
-                // Start new window
-                data = { count: 1, timestamp: now };
-            } else {
-                data.count += 1;
-            }
-        } else {
-            data = { count: 1, timestamp: now };
-        }
-  
-        // TTL = remaining window time + buffer
-        const elapsed = now - data.timestamp;
-        const ttl = Math.max(60, Math.ceil((window.duration - elapsed) / 1000) + 60);
-        
-        await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
-    }
   }
   
   async function updatePublicServerIndex(env, server, ownerId, action) {
@@ -1195,7 +1253,7 @@ const CORS_HEADERS = {
     return `srv_${timestamp}${randomStr}`;
   }
   
-  /**
+  /**validateServer
   * Validate a server by fetching its /models endpoint
   * @param {string} baseUrl - The base URL of the server
   * @param {string} apiKeysStr - Line-separated API keys
@@ -1217,6 +1275,51 @@ const CORS_HEADERS = {
         '/v1/models',
         ''
     ];
+
+    if (baseUrl.includes('/chat/completions')) {
+        try {
+            const url = baseUrl;
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+  
+            const response = await fetch(url, {
+                method: 'POST',
+                body: JSON.stringify({"messages": [{"role": "user", "content": "Hello"}]}),
+                headers,
+                signal: controller.signal
+            });
+            clearTimeout(timeout);
+  
+            if (response.ok) {
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    // Response is valid JSON but no models found - still valid server
+                    return {
+                        valid: true,
+                        models: [],
+                        endpoint: '',
+                        note: 'No models discovered'
+                    };
+                }
+            } else if (response.status === 401 || response.status === 403) {
+                return {
+                    valid: false,
+                    error: 'Authentication failed - check your API keys',
+                    details: { status: response.status, endpoint: '' }
+                };
+            }
+            // Continue to next endpoint
+        } catch (e) {
+            if (e.name === 'AbortError') {
+                return {
+                    valid: false,
+                    error: 'Server timeout - server did not respond within 10 seconds',
+                    details: { timeout: true }
+                };
+            }
+            // Continue to next endpoint on network errors
+        }
+    }
   
     for (const endpoint of modelsEndpoints) {
         try {
@@ -1318,6 +1421,495 @@ const CORS_HEADERS = {
     return Array.from(hashArray, byte => byte.toString(16).padStart(2, "0")).join("");
   }
   
+  // ============================================
+  // AI Route Handling (copied from worker.js)
+  // ============================================
+  
+  async function handleCustomAiRoute(request, pathname, env, ctx) {
+    const user = await authenticateRequest(request, env);
+    const url = new URL(request.url);
+    let query = pathname.substring(4);
+    let splited = query.split("/", 2);
+    let serverLabel = splited[0];
+    let prompt = splited[1] || '';
+    const cacheKey = generateCacheKey(request, `ai:${serverLabel}:${prompt}:${url.searchParams.get("seed") || ''}:${url.searchParams.get("voice") || ''}`);
+    
+    // For GET requests with simple prompts, check cache first
+    if (request.method === "GET" && prompt) {
+      const cachedResponse = await getCachedResponse(request, cacheKey);
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+    }
+    
+    // If no server specified, get a random public server
+    let server;
+    if (!serverLabel || request.method === "POST") {
+      server = await getRandomPublicServer(env);
+      if (!server) {
+        return jsonResponse({ error: "No available servers" }, 503);
+      }
+    } else {
+      // Find server by label (check user's private servers first, then public)
+      server = await getServerByLabel(env, serverLabel, user);
+      if (!server) {
+        return jsonResponse({ error: `Server '${serverLabel}' not found` }, 404);
+      }
+    }
+    
+
+    // Get API key for the server
+    const apiKey = getRandomApiKey(server.api_keys);
+    
+    // Check for user-provided API key
+    const authHeader = request.headers.get('authorization');
+    let userProvidedKey = null;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const tokens = authHeader.substring(7).split(/\s+/);
+        // Find a non-g4f key
+        userProvidedKey = tokens.find(t => t && !t.startsWith('g4f_') && !t.startsWith('gfs_'));
+    }
+    
+    const queryUrl = server.base_url.includes('/chat/completions') ? server.base_url : server.base_url + '/chat/completions';
+    prompt = decodeURIComponent((prompt || '').trim());
+    let queryBody;
+    
+    if (request.method === "POST") {
+      queryBody = await request.json();
+    } else {
+      if (prompt == "ok") {
+        prompt = "Respond with exactly the single word: ok";
+      }
+      let instructions = url.searchParams.get("instructions");
+      if (!instructions) {
+        instructions = `Today is: ${new Date(Date.now()).toLocaleString().split(',')[0]}, User language: ${request.headers.get('accept-language') || 'en'}`;
+      }
+      queryBody = {messages: [{role: "system", content: instructions}, {role: "user", content: prompt}]};
+    }
+    
+    // Use model from query params or server's default allowed model
+    queryBody.model = queryBody.model || url.searchParams.get("model") || (server.allowed_models && server.allowed_models[0]);
+    
+    if (url.searchParams.get("json") === "true") {
+      queryBody.response_format = {"type": "json_object"};
+    }
+
+    if (serverLabel === "audio") {
+      queryBody.audio = {
+          "voice": url.searchParams.get("voice") || "alloy",
+          "format": "mp3"
+      }
+      if (!queryBody.modalities) {
+        queryBody.modalities = ["text", "audio"]
+      }
+    }
+    
+    // Check if model is allowed
+    if (server.allowed_models && server.allowed_models.length > 0 && queryBody.model) {
+        if (!server.allowed_models.includes(queryBody.model)) {
+            return jsonResponse({
+                error: `Model '${queryBody.model}' not allowed. Available models: ${server.allowed_models.join(', ')}`
+            }, 400);
+        }
+    }
+    
+    // Build headers
+    const proxyHeaders = {
+        'Content-Type': 'application/json',
+    };
+    
+    if (userProvidedKey) {
+        proxyHeaders['Authorization'] = userProvidedKey.includes("Bearer") ? userProvidedKey : `Bearer ${userProvidedKey}`;
+    } else if (apiKey) {
+        proxyHeaders['Authorization'] = apiKey.includes("Bearer") ? apiKey : `Bearer ${apiKey}`;
+    }
+    
+    try {
+        const response = await fetch(queryUrl, {
+            method: 'POST',
+            body: JSON.stringify(queryBody),
+            headers: proxyHeaders
+        });
+        
+        
+        if (!response.ok || queryBody.stream) {
+            const newResponse = new Response(response.body, response);
+            for (const [key, value] of Object.entries(CORS_HEADERS)) {
+                newResponse.headers.set(key, value);
+            }
+            newResponse.headers.set("x-provider", server.label);
+            newResponse.headers.set("x-server", server.id);
+            newResponse.headers.set("x-url", queryUrl);
+            return newResponse;
+        }
+        
+        let data = await response.json();
+
+        if (data.choices && data.choices[0].message.audio) {
+            data = data.choices[0].message.audio.data;
+            const newResponse = new Response(base64toBlob(data), {
+                headers: { 'Content-Type': 'audio/mpeg', ...ACCESS_CONTROL_ALLOW_ORIGIN },
+            });
+            newResponse.headers.set('Cache-Control', CACHE_HEADERS.FOREVER);
+            ctx.waitUntil(setCachedResponse(request, newResponse, CACHE_HEADERS.FOREVER, audioCacheKey, ctx));
+            return newResponse;
+        }
+        
+        // Extract content from response
+        if (data.choices) {
+            data = data.choices[0].message.content;
+        } else if (data.message) {
+            data = data.message.content;
+        } else if (data.output) {
+            data = data.output[data.output.length-1]?.content[0].text;
+        } else {
+            data = JSON.stringify(data);
+        }
+        
+        if (url.searchParams.get("json") === "true") {
+            data = filterMarkdown(data, "json", data);
+        }
+        
+        if (data === "Model unavailable." || !data) {
+            return jsonResponse({error: {message: data || "Empty response"}}, 500);
+        }
+        
+        const newResponse = new Response(data, {
+            headers: { 'Content-Type': 'text/plain', ...CORS_HEADERS }
+        });
+        newResponse.headers.set("x-provider", server.label);
+        newResponse.headers.set("x-server", server.id);
+        newResponse.headers.set("x-url", queryUrl);
+        
+        // Cache GET responses that are not personalized
+        if (request.method === "GET" && prompt && !data.includes("Model unavailable")) {
+          ctx.waitUntil(setCachedResponse(request, newResponse, CACHE_HEADERS.LONG, cacheKey, ctx));
+        }
+        
+        return newResponse;
+        
+    } catch (e) {
+        return jsonResponse({
+            error: `Failed to connect to server: ${e.message}`
+        }, 502);
+    }
+  }
+  
+  async function getRandomPublicServer(env) {
+    if (!env.MEMBERS_KV) return null;
+    
+    const indexStr = await env.MEMBERS_KV.get('public_servers_index');
+    if (!indexStr) return null;
+    
+    const publicServers = JSON.parse(indexStr);
+    if (publicServers.length === 0) return null;
+    
+    return publicServers[Math.floor(Math.random() * publicServers.length)];
+  }
+  
+  function base64toBlob(base64Data) {
+    const byteCharacters = atob(base64Data);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    return byteArray;
+  }
+  
+  function filterMarkdown(text, type, fallback) {
+    const codeBlockRegex = /```(?:json|javascript|js)?\s*([\s\S]*?)```/gi;
+    const matches = [...text.matchAll(codeBlockRegex)];
+    
+    if (matches.length > 0) {
+      return matches[0][1].trim();
+    }
+    
+    return fallback;
+  }
+  
+  // ============================================
+  // Rate Limiting Functions
+  // ============================================
+  
+  async function checkUserRateLimits(env, user) {
+    const tier = user.tier || 'new';
+    const limits = USER_TIER_LIMITS[tier] || USER_TIER_LIMITS.new;
+    const userId = user.id;
+    const now = Date.now();
+    
+    const windows = [
+      { name: 'minute', duration: RATE_LIMITS.windows.minute, tokenLimit: limits.tokens.perMinute, requestLimit: limits.requests.perMinute },
+      { name: 'hour', duration: RATE_LIMITS.windows.hour, tokenLimit: limits.tokens.perHour, requestLimit: limits.requests.perHour },
+      { name: 'day', duration: RATE_LIMITS.windows.day, tokenLimit: limits.tokens.perDay, requestLimit: limits.requests.perDay }
+    ];
+    
+    if (!env.MEMBERS_KV) {
+      return { allowed: true };
+    }
+    
+    for (const window of windows) {
+      const key = `rate_limit:${userId}:${window.name}`;
+      const stored = await env.MEMBERS_KV.get(key);
+      const usage = stored ? JSON.parse(stored) : { tokens: 0, requests: 0, timestamp: now };
+      
+      // Reset if window expired
+      if (now - usage.timestamp > window.duration) {
+        usage.tokens = 0;
+        usage.requests = 0;
+        usage.timestamp = now;
+      }
+      
+      // Check limits
+      if (usage.requests >= window.requestLimit) {
+        return {
+          allowed: false,
+          reason: 'requests',
+          tier,
+          window: window.name,
+          limit: window.requestLimit,
+          used: usage.requests,
+          retryAfter: Math.ceil((window.duration - (now - usage.timestamp)) / 1000)
+        };
+      }
+      if (usage.tokens >= window.tokenLimit) {
+        return {
+          allowed: false,
+          reason: 'tokens',
+          tier,
+          window: window.name,
+          limit: window.tokenLimit,
+          used: usage.tokens,
+          retryAfter: Math.ceil((window.duration - (now - usage.timestamp)) / 1000)
+        };
+      }
+    }
+    
+    return { allowed: true };
+  }
+  
+  async function checkAnonymousRateLimits(env, request) {
+    const clientIP = getClientIP(request);
+    const now = Date.now();
+    
+    const windows = [
+      { name: 'minute', duration: RATE_LIMITS.windows.minute, tokenLimit: RATE_LIMITS.tokens.perMinute * RATE_LIMITS.burstMultiplier, requestLimit: RATE_LIMITS.requests.perMinute * RATE_LIMITS.burstMultiplier },
+      { name: 'hour', duration: RATE_LIMITS.windows.hour, tokenLimit: RATE_LIMITS.tokens.perHour, requestLimit: RATE_LIMITS.requests.perHour },
+      { name: 'day', duration: RATE_LIMITS.windows.day, tokenLimit: RATE_LIMITS.tokens.perDay, requestLimit: RATE_LIMITS.requests.perDay }
+    ];
+    
+    if (!env.MEMBERS_KV) {
+      return { allowed: true };
+    }
+    
+    for (const window of windows) {
+      const key = `rate_limit_ip:${clientIP}:${window.name}`;
+      const stored = await env.MEMBERS_KV.get(key);
+      const usage = stored ? JSON.parse(stored) : { tokens: 0, requests: 0, timestamp: now };
+      
+      // Reset if window expired
+      if (now - usage.timestamp > window.duration) {
+        usage.tokens = 0;
+        usage.requests = 0;
+        usage.timestamp = now;
+      }
+      
+      // Check limits
+      if (usage.requests >= window.requestLimit) {
+        return {
+          allowed: false,
+          reason: 'requests',
+          window: window.name,
+          limit: window.requestLimit,
+          used: usage.requests,
+          retryAfter: Math.ceil((window.duration - (now - usage.timestamp)) / 1000)
+        };
+      }
+      if (usage.tokens >= window.tokenLimit) {
+        return {
+          allowed: false,
+          reason: 'tokens',
+          window: window.name,
+          limit: window.tokenLimit,
+          used: usage.tokens,
+          retryAfter: Math.ceil((window.duration - (now - usage.timestamp)) / 1000)
+        };
+      }
+    }
+    
+    return { allowed: true };
+  }
+  
+  /**
+  * Update rate limit counters for a user
+  * @param {Object} env - Environment bindings
+  * @param {string} userId - User ID
+  * @param {Object} ctx - Request context for waitUntil
+  */
+  async function updateUserRateLimit(env, userId, ctx) {
+    if (!env.MEMBERS_KV) return;
+  
+    const now = Date.now();
+    const windows = [
+        { name: 'minute', duration: RATE_LIMITS.windows.minute },
+        { name: 'hour', duration: RATE_LIMITS.windows.hour },
+        { name: 'day', duration: RATE_LIMITS.windows.day }
+    ];
+  
+    for (const window of windows) {
+        const key = `rate_limit:${userId}:${window.name}`;
+        const dataStr = await env.MEMBERS_KV.get(key);
+        
+        let data;
+        if (dataStr) {
+            data = JSON.parse(dataStr);
+            // Check if window has expired
+            if (now - data.timestamp >= window.duration) {
+                // Start new window
+                data = { requests: 1, tokens: 0, timestamp: now };
+            } else {
+                data.requests += 1;
+            }
+        } else {
+            data = { requests: 1, tokens: 0, timestamp: now };
+        }
+  
+        // TTL = remaining window time + buffer
+        const elapsed = now - data.timestamp;
+        const ttl = Math.max(60, Math.ceil((window.duration - elapsed) / 1000) + 60);
+        
+        await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
+    }
+  }
+  
+  /**
+  * Update rate limit counters for an anonymous user
+  * @param {Object} env - Environment bindings
+  * @param {string} clientIP - Client IP address
+  * @param {Object} ctx - Request context for waitUntil
+  */
+  async function updateAnonymousRateLimit(env, clientIP, ctx) {
+    if (!env.MEMBERS_KV) return;
+  
+    const now = Date.now();
+    const windows = [
+        { name: 'minute', duration: RATE_LIMITS.windows.minute },
+        { name: 'hour', duration: RATE_LIMITS.windows.hour },
+        { name: 'day', duration: RATE_LIMITS.windows.day }
+    ];
+  
+    for (const window of windows) {
+        const key = `rate_limit_ip:${clientIP}:${window.name}`;
+        const dataStr = await env.MEMBERS_KV.get(key);
+        
+        let data;
+        if (dataStr) {
+            data = JSON.parse(dataStr);
+            // Check if window has expired
+            if (now - data.timestamp >= window.duration) {
+                // Start new window
+                data = { requests: 1, tokens: 0, timestamp: now };
+            } else {
+                data.requests += 1;
+            }
+        } else {
+            data = { requests: 1, tokens: 0, timestamp: now };
+        }
+  
+        // TTL = remaining window time + buffer
+        const elapsed = now - data.timestamp;
+        const ttl = Math.max(60, Math.ceil((window.duration - elapsed) / 1000) + 60);
+        
+        await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
+    }
+  }
+
+  /**
+  * Update token usage in rate limit counters for a user
+  * @param {Object} env - Environment bindings
+  * @param {string} userId - User ID
+  * @param {number} tokens - Number of tokens used
+  * @param {Object} ctx - Request context for waitUntil
+  */
+  async function updateUserTokenUsage(env, userId, tokens, ctx) {
+    if (!env.MEMBERS_KV || !tokens) return;
+  
+    const now = Date.now();
+    const windows = [
+        { name: 'minute', duration: RATE_LIMITS.windows.minute },
+        { name: 'hour', duration: RATE_LIMITS.windows.hour },
+        { name: 'day', duration: RATE_LIMITS.windows.day }
+    ];
+  
+    for (const window of windows) {
+        const key = `rate_limit:${userId}:${window.name}`;
+        const dataStr = await env.MEMBERS_KV.get(key);
+        
+        let data;
+        if (dataStr) {
+            data = JSON.parse(dataStr);
+            // Check if window has expired
+            if (now - data.timestamp >= window.duration) {
+                // Start new window
+                data = { requests: data.requests || 0, tokens: tokens, timestamp: now };
+            } else {
+                data.tokens = (data.tokens || 0) + tokens;
+            }
+        } else {
+            data = { requests: 0, tokens: tokens, timestamp: now };
+        }
+  
+        // TTL = remaining window time + buffer
+        const elapsed = now - data.timestamp;
+        const ttl = Math.max(60, Math.ceil((window.duration - elapsed) / 1000) + 60);
+        
+        await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
+    }
+  }
+
+  /**
+  * Update token usage in rate limit counters for an anonymous user
+  * @param {Object} env - Environment bindings
+  * @param {string} clientIP - Client IP address
+  * @param {number} tokens - Number of tokens used
+  * @param {Object} ctx - Request context for waitUntil
+  */
+  async function updateAnonymousTokenUsage(env, clientIP, tokens, ctx) {
+    if (!env.MEMBERS_KV || !tokens) return;
+  
+    const now = Date.now();
+    const windows = [
+        { name: 'minute', duration: RATE_LIMITS.windows.minute },
+        { name: 'hour', duration: RATE_LIMITS.windows.hour },
+        { name: 'day', duration: RATE_LIMITS.windows.day }
+    ];
+  
+    for (const window of windows) {
+        const key = `rate_limit_ip:${clientIP}:${window.name}`;
+        const dataStr = await env.MEMBERS_KV.get(key);
+        
+        let data;
+        if (dataStr) {
+            data = JSON.parse(dataStr);
+            // Check if window has expired
+            if (now - data.timestamp >= window.duration) {
+                // Start new window
+                data = { requests: data.requests || 0, tokens: tokens, timestamp: now };
+            } else {
+                data.tokens = (data.tokens || 0) + tokens;
+            }
+        } else {
+            data = { requests: 0, tokens: tokens, timestamp: now };
+        }
+  
+        // TTL = remaining window time + buffer
+        const elapsed = now - data.timestamp;
+        const ttl = Math.max(60, Math.ceil((window.duration - elapsed) / 1000) + 60);
+        
+        await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
+    }
+  }
+  
   async function handleV1ChatCompletions(request, env, ctx) {
     if (request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405);
@@ -1389,19 +1981,19 @@ const CORS_HEADERS = {
     }
   
     // Now proxy to the selected server
-    return handleProxyToServer(request, env, ctx, selectedServer, '/chat/completions', user);
+    return handleProxyToServer(request, "", env, ctx, selectedServer, '/chat/completions', user);
   }
   
   async function handleV1Models(request, env) {
     // Authenticate user (optional for public servers)
     const user = await authenticateRequest(request, env);
-  
+
     // Get private servers (if user authenticated)
     let privateServers = [];
     if (user && user.custom_servers) {
         privateServers = user.custom_servers.filter(s => !s.is_public);
     }
-  
+
     // Get public servers index
     let publicServersIndex = [];
     if (env.MEMBERS_KV) {
@@ -1410,42 +2002,31 @@ const CORS_HEADERS = {
             publicServersIndex = JSON.parse(indexStr);
         }
     }
-  
+
     // Collect all allowed models from all servers
     const allModels = new Set();
-  
+
     // Add models from private servers
     for (const server of privateServers) {
         if (server.allowed_models && server.allowed_models.length > 0) {
             server.allowed_models.forEach(model => allModels.add(model));
         }
     }
-  
+
     // Add models from public servers
     for (const serverIndex of publicServersIndex) {
         if (serverIndex.allowed_models && serverIndex.allowed_models.length > 0) {
             serverIndex.allowed_models.forEach(model => allModels.add(model));
         }
     }
-  
+
     // Return as array of objects
     return jsonResponse({
         data: Array.from(allModels).map(m => ({ id: m }))
     });
   }
-  
-  async function handleProxyToServer(request, env, ctx, server, subPath, user) {
-    // Check rate limits (use server id for rate limiting)
-    const serverId = server.id;
-    const rateLimitResult = await checkServerRateLimit(env, serverId);
-    if (!rateLimitResult.allowed) {
-        return jsonResponse({
-            error: {
-                message: `Rate limit exceeded: ${rateLimitResult.used}/${rateLimitResult.limit} requests per ${rateLimitResult.window}`,
-                type: 'rate_limit_exceeded'
-            }
-        }, 429);
-    }
+
+  async function handleProxyToServer(request, pathname, env, ctx, server, subPath, user) {
   
     // Validate model (already checked, but double-check)
     let requestBody = null;
@@ -1495,11 +2076,11 @@ const CORS_HEADERS = {
     if (userProvidedKey) {
         proxyHeaders['Authorization'] = userProvidedKey.includes("Bearer") ? userProvidedKey : `Bearer ${userProvidedKey}`;
     } else if (apiKey) {
-            proxyHeaders['Authorization'] = apiKey.includes("Bearer") ? apiKey : `Bearer ${apiKey}`;
+        proxyHeaders['Authorization'] = apiKey.includes("Bearer") ? apiKey : `Bearer ${apiKey}`;
     }
   
     // Build target URL
-    const targetUrl = `${server.base_url}${subPath}`;
+    const targetUrl = server.base_url.includes(subPath) ? server.base_url : `${server.base_url}${subPath}`;
     const clientIP = getClientIP(request);
   
     try {
@@ -1512,7 +2093,7 @@ const CORS_HEADERS = {
             fetchOptions.body = requestBody ? JSON.stringify(requestBody) : await request.text();
         }
   
-        const firstMessage = getFirstMessage(requestBody?.messages);
+        const firstMessage = requestBody ? getFirstMessage(requestBody?.messages) : null;
   
         const response = await fetch(targetUrl, fetchOptions);
   
@@ -1523,14 +2104,15 @@ const CORS_HEADERS = {
             if (contentType.includes('text/event-stream')) {
                 // Streaming response - track usage from stream
                 const trackedStream = createUsageTrackingStream(
-                    response, env, ctx, server, server.id, clientIP, requestModel, firstMessage, user
+                    response, env, ctx, server, server.id, clientIP, requestModel, firstMessage, user, pathname
                 );
                 const newResponse = new Response(trackedStream, { headers: response.headers });
                 for (const [key, value] of Object.entries(CORS_HEADERS)) {
                     newResponse.headers.set(key, value);
                 }
                 newResponse.headers.set('X-Server', server.id);
-                newResponse.headers.set('X-Provider', 'custom');
+                newResponse.headers.set('X-Provider', server.label);
+                newResponse.headers.set('X-Url', targetUrl);
                 return newResponse;
             } else if (contentType.includes('application/json')) {
                 // Non-streaming - extract usage from response
@@ -1540,8 +2122,15 @@ const CORS_HEADERS = {
                     if (data.usage) {
                         const tokens = data.usage.total_tokens || 
                             (data.usage.prompt_tokens || 0) + (data.usage.completion_tokens || 0);
-                        ctx.waitUntil(persistUsageToDb(env, clientIP, data.model || requestModel, tokens, data.usage.prompt_tokens, data.usage.completion_tokens, "", firstMessage, user));
+                        ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, data.model || requestModel, tokens, data.usage.prompt_tokens, data.usage.completion_tokens, pathname, firstMessage, user));
                         ctx.waitUntil(updateServerUsage(env, server, tokens, requestModel));
+                        
+                        // Update rate limit token usage
+                        if (user) {
+                            ctx.waitUntil(updateUserTokenUsage(env, user.id, tokens, ctx));
+                        } else {
+                            ctx.waitUntil(updateAnonymousTokenUsage(env, clientIP, tokens, ctx));
+                        }
                     }
                 } catch (e) {
                     // Ignore parse errors
@@ -1549,15 +2138,14 @@ const CORS_HEADERS = {
             }
         }
   
-        // Update rate limit counters (async)
-        ctx.waitUntil(updateServerRateLimit(env, serverId, ctx));
   
         const newResponse = new Response(response.body, response);
         for (const [key, value] of Object.entries(CORS_HEADERS)) {
             newResponse.headers.set(key, value);
         }
         newResponse.headers.set('X-Server', serverId);
-        newResponse.headers.set('X-Provider', 'custom');
+        newResponse.headers.set('X-Provider', server.label);
+        newResponse.headers.set('X-Url', targetUrl);
         return newResponse;
   
     } catch (e) {
@@ -1575,4 +2163,71 @@ const CORS_HEADERS = {
             ...CORS_HEADERS
         }
     });
+  }
+
+  // ============================================
+  // Cache Helper Functions
+  // ============================================
+
+  /**
+  * Generate cache key for requests
+  * @param {Request} request - The request object
+  * @param {string} extra - Additional data for cache key
+  * @returns {string} Cache key
+  */
+  function generateCacheKey(request, extra = '') {
+    const url = new URL(request.url);
+    const pathname = url.pathname;
+    const searchParams = url.searchParams.toString();
+    const method = request.method;
+    return `${method}:${pathname}${searchParams ? '?' + searchParams : ''}${extra ? ':' + extra : ''}`;
+  }
+
+  /**
+  * Check cache for a response
+  * @param {Request} request - The request object
+  * @param {string} cacheKey - Optional cache key override
+  * @returns {Response|null} Cached response or null
+  */
+  async function getCachedResponse(request, cacheKey = null) {
+    try {
+      const key = cacheKey || generateCacheKey(request);
+      const cacheRequest = new Request(`https://cache.example/${key}`, {
+        method: 'GET'
+      });
+      return await caches.default.match(cacheRequest);
+    } catch (e) {
+      console.error('Cache read error:', e);
+      return null;
+    }
+  }
+
+  /**
+  * Store response in cache
+  * @param {Request} request - The original request
+  * @param {Response} response - The response to cache
+  * @param {string} cacheControl - Cache control header value
+  * @param {string} cacheKey - Optional cache key override
+  * @param {Object} ctx - Request context for waitUntil
+  */
+  async function setCachedResponse(request, response, cacheControl, cacheKey = null, ctx = null) {
+    try {
+      const key = cacheKey || generateCacheKey(request);
+      const cacheRequest = new Request(`https://cache.example/${key}`, {
+        method: 'GET'
+      });
+      
+      const responseToCache = response.clone();
+      responseToCache.headers.set('Cache-Control', cacheControl);
+      
+      const cacheOperation = caches.default.put(cacheRequest, responseToCache);
+      
+      if (ctx) {
+        ctx.waitUntil(cacheOperation);
+      } else {
+        await cacheOperation;
+      }
+    } catch (e) {
+      console.error('Cache write error:', e);
+    }
   }
