@@ -1410,7 +1410,6 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 reasoning_storage[message_id],
                 action=="continue"
             );
-            delete message_storage[message_id];
             delete reasoning_storage[message_id];
             delete synthesize_storage[message_id];
             delete title_storage[message_id];
@@ -1462,6 +1461,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 add_error("Failed to load the conversation:", e);
             }
         }
+        delete message_storage[message_id];
         let cursorDiv = message_el.querySelector(".cursor");
         if (cursorDiv) cursorDiv.parentNode.removeChild(cursorDiv);
         await safe_remove_cancel_button();
