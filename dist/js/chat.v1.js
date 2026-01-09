@@ -1178,9 +1178,11 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         } if (message.token) {
             reasoning_storage[message_id].text += message.token;
         }
-        let reasoning_body = content_map.inner.querySelector(".reasoning_body") || content_map.inner;
-        reasoning_body.classList.remove("reasoning_body");
-        reasoning_body.innerHTML = render_reasoning(reasoning_storage[message_id]);
+        if (message.status || message.token || message.label) {
+            let reasoning_body = content_map.inner.querySelector(".reasoning_body") || content_map.inner;
+            reasoning_body.classList.remove("reasoning_body");
+            reasoning_body.innerHTML = render_reasoning(reasoning_storage[message_id]);
+        }
     } else if (message.type == "parameters") {
         if (!parameters_storage[provider]) {
             parameters_storage[provider] = {};
@@ -1413,7 +1415,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             delete synthesize_storage[message_id];
             delete title_storage[message_id];
             delete finish_storage[message_id];
-            if (variant_storage[message_id]) {
+            if (message_storage[message_id] && variant_storage[message_id]) {
                 message_index = await add_message(
                     window.conversation_id,
                     "assistant",
@@ -1445,7 +1447,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             delete controller_storage[message_id];
         }
         // Reload conversation if no error
-        if (!error_storage[message_id] && !document.body.classList.contains("screen-reader")) {
+        if (message_storage[message_id] && !document.body.classList.contains("screen-reader")) {
             try {
                 if(await safe_load_conversation(window.conversation_id)) {
                     // Play last message async
