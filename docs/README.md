@@ -1,5 +1,5 @@
 ## GPT4Free Documentation Hub
-<img src="https://g4f.dev/docs/images/pico.jpeg" height="300" alt="Welcome to the official docs for **GPT4Free** – free and convenient AI endpoints you can use directly in your apps, scripts, and even right in your browser.
+<img src="https://g4f.dev/docs/images/pico.jpeg" alt="Welcome to the official docs for **GPT4Free** – free and convenient AI endpoints you can use directly in your apps, scripts, and even right in your browser.
 Here you’ll find a clear overview, quick examples, and entry points to deeper docs for every major feature."/>
 
 ---
@@ -126,14 +126,7 @@ Examples
 - [API endpoints and usage](ready_to_use.md) ***new**
 - [Available Providers & Models](https://g4f.dev/docs/providers-and-models.html)
 - [Selecting a Provider](selecting_a_provider.md)
-- **Provider Documentation:**
-  - [Pollinations AI](providers/pollinations.md)
-  - [Puter AI](providers/puter.md)
-  - [HuggingFace](providers/huggingface.md)
-  - [Ollama](providers/ollama.md)
-  - [Gemini](providers/gemini.md)
-  - [OpenAI Chat](providers/openai.md)
-  - [Perplexity](providers/perplexity.md)
+- [Provider Documentation](providers/)
 - [API docs (full spec)](/api-docs)
 - [File API Documentation (Files and Documents)](file.md)
 - [Media Documentation (Audio, Image and Video)](media.md)

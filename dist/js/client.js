@@ -463,20 +463,21 @@ class Client {
 class PollinationsAI extends Client {
     constructor(options = {}) {
         super({
+            ...options,
             baseUrl: options.apiKey ? 'https://gen.pollinations.ai/v1' : options.baseUrl || 'https://text.pollinations.ai',
-            apiEndpoint: options.apiKey ? null : options.apiEndpoint || 'https://text.pollinations.ai/openai',
+            apiEndpoint: options.apiKey || options.baseUrl ? null : options.apiEndpoint || 'https://text.pollinations.ai/openai',
             imageEndpoint: options.apiKey ? 'https://gen.pollinations.ai/image/{prompt}' : options.imageEndpoint || 'https://image.pollinations.ai/prompt/{prompt}',
-            modelsEndpoint: options.apiKey ? 'https://gen.pollinations.ai/text/models' : options.modelsEndpoint || 'https://g4f.dev/api/pollinations/text/models',
-            defaultModel: 'openai',
-            extraBody: {
+            modelsEndpoint: options.apiKey ? 'https://gen.pollinations.ai/text/models' : options.modelsEndpoint || 'https://text.pollinations.ai/models',
+            defaultModel: options.defaultModel || 'openai',
+            extraBody: options.extraBody || {
                 seed: 10352102
             },
             modelAliases: {
                 "sdxl-turbo": "turbo",
                 "gpt-image": "gptimage",
                 "flux-kontext": "kontext",
-            },
-            ...options
+                ...(options.modelAliases || {})
+            }
         });
     }
 

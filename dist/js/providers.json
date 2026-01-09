@@ -1,7 +1,7 @@
 {
     "providers": {
         "default": {"baseUrl": "https://g4f.dev/api/{model}", "backupUrl": "https://g4f.dev/api/{model}", "tags": "", "defaultModel": "auto"},
-        "pollinations": {"label": "pollinations.ai", "tags": "🎨 👓", "provider": "PollinationsAI", "apiEndpoint": "https://g4f.dev/api/pollinations/chat/completions", "imageEndpoint": "https://g4f.dev/prompt/{prompt}"},
+        "pollinations": {"label": "pollinations.ai", "tags": "🎨 👓", "provider": "PollinationsAI", "baseUrl": "https://g4f.dev/api/pollinations"},
         "api.airforce": {"baseUrl": "https://api.airforce/v1", "tags": "🎨 👓", "sleep": 60000},
         "master": {"label": "master by api.airforce", "baseUrl": "https://g4f.dev/api/api.airforce", "tags": "🎨 👓", "sleep": 10000},
         "audio": {"label": "audio by g4f.dev", "baseUrl": "https://g4f.dev/api/audio", "backupUrl": "https://g4f.dev/api/audio", "tags": "🎧", "sleep": 10000},
