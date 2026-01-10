@@ -62,14 +62,42 @@ function extractRetryDelay(message) {
     return null;
 }
 
-async function get_error_message(response) {
+async function getErrorMessage(response) {
     try {
-        const data = await response.clone().json();
+        let data = await response.clone().json();
+        if (Array.isArray(data) && data) {
+            data = data[0];
+        }
         if (data.error?.message) {
             return data.error.message
         }
     } catch { }
     return await response.text();
+}
+
+function captureUserTierHeaders(response, usage) {
+    if (!response || !response.headers) return;
+    const isCached = (usage?.cache || response.headers.get('x-cache')) === 'HIT';
+    const userTier = response.headers.get('x-user-tier');
+    const modelFactor = parseFloat(response.headers.get('x-ratelimit-model-factor') || '1');
+    const remainingRequests = parseInt(response.headers.get('x-ratelimit-remaining-requests') || '1') - (usage ? 1 : 0);
+    let totalTokens = usage?.total_tokens || response.headers.get('x-total-tokens') || 0;
+    let remainingTokens = parseInt(response.headers.get('x-ratelimit-remaining-tokens') || '0');
+    if (!isCached && totalTokens > 0) {
+        remainingTokens -= totalTokens * modelFactor;
+    }
+    const limitRequests = response.headers.get('x-ratelimit-limit-requests');
+    const limitTokens = response.headers.get('x-ratelimit-limit-tokens');
+    if (userTier || remainingRequests || remainingTokens || limitRequests || limitTokens) {
+        const userInfo = {
+            tier: userTier,
+            remainingRequests: remainingRequests,
+            remainingTokens: remainingTokens,
+            limitRequests: limitRequests ? parseInt(limitRequests, 10) : null,
+            limitTokens: limitTokens ? parseInt(limitTokens, 10) : null
+        };
+        window.dispatchEvent(new CustomEvent('userTierUpdate', { detail: userInfo }));
+    }
 }
 
 const toBase64 = file => new Promise((resolve, reject) => {
@@ -283,7 +311,7 @@ class Client {
             ...requestOptions
         });
         if (!response.ok) {
-            const errorBody = await get_error_message(response);
+            const errorBody = await getErrorMessage(response);
             throw new Error(`Status ${response.status}: ${errorBody}`);
         }
         return {data: [{url: await toBase64(await response.blob())}]};
@@ -291,7 +319,7 @@ class Client {
 
     async _regularCompletion(response) {
         if (!response.ok) {
-            const errorBody = await get_error_message(response);
+            const errorBody = await getErrorMessage(response);
             throw new Error(`Status ${response.status}: ${errorBody}`);
         }
         const data = await response.json();
@@ -301,13 +329,15 @@ class Client {
         if (response.headers.get('x-server')) {
             data.server = response.headers.get('x-server');
         }
+        // Capture user tier info from headers
+        captureUserTierHeaders(response, data.usage);
         this.logCallback && this.logCallback({response: data, type: 'chat'});
         return data;
     }
 
     async *_streamCompletion(response) {
       if (!response.ok) {
-        const errorBody = await get_error_message(response);
+        const errorBody = await getErrorMessage(response);
         throw new Error(`Status ${response.status}: ${errorBody}`);
       }
       if (!response.body) {
@@ -316,6 +346,7 @@ class Client {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let usage = {};
       try {
         while (true) {
           const { done, value } = await reader.read();
@@ -328,6 +359,8 @@ class Client {
             parts =  [buffer];
             buffer = '';
           } else {
+            // Capture user tier info from headers
+            captureUserTierHeaders(response, usage);
             break;
           }
           for (const part of parts) {
@@ -335,6 +368,9 @@ class Client {
             try {
               if (part.startsWith('data: ')) {
                 const data = JSON.parse(part.slice(6));
+                if (data.usage) {
+                    usage = data.usage;
+                }
                 if (data.choices === undefined) {
                     if (data.response) {
                         data.choices = [{delta: {content: "" + data.response}}];
@@ -353,6 +389,9 @@ class Client {
                 yield data;
               } else if (response.headers.get('Content-Type').startsWith('application/json')) {
                 const data = JSON.parse(part);
+                if (data.usage) {
+                    usage = data.usage;
+                }
                 if (data.choices && data.choices[0]?.message) {
                     data.choices[0].delta = data.choices[0].message;
                 } else if (data.choices === undefined) {
@@ -376,6 +415,9 @@ class Client {
                 }
                 if (response.headers.get('x-provider')) {
                     data.provider = response.headers.get('x-provider');
+                }
+                if (response.headers.get('x-server')) {
+                    data.server = response.headers.get('x-server');
                 }
                 this.logCallback && this.logCallback({response: data, type: 'chat'});
                 yield data;
@@ -414,7 +456,7 @@ class Client {
                 await new Promise(resolve => setTimeout(resolve, retryAfter));
                 return this._defaultImageGeneration(imageEndpoint, params, requestOptions);
             }
-            const errorBody = await get_error_message(response);
+            const errorBody = await getErrorMessage(response);
             throw new Error(`Status ${response.status}: ${errorBody}`);
         }
         if (params.response_format === 'b64_json') {
@@ -442,7 +484,7 @@ class Client {
             }
         }
         if (!response.ok) {
-            const errorBody = await get_error_message(response);
+            const errorBody = await getErrorMessage(response);
             throw new Error(`Status ${response.status}: ${errorBody}`);
         }
         if (response.headers.get('Content-Type').startsWith('application/json')) {
@@ -935,5 +977,5 @@ class HuggingFace extends Client {
 }
 
 
-export { Client, Pollinations, PollinationsAI, DeepInfra, Together, Puter, HuggingFace, Worker, Audio };
+export { Client, Pollinations, PollinationsAI, DeepInfra, Together, Puter, HuggingFace, Worker, Audio, captureUserTierHeaders };
 export default Client;

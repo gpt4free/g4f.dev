@@ -181,7 +181,10 @@ async function query(prompt, options={ json: false, cache: true }) {
     }
     let encodedParams = (new URLSearchParams(options)).toString();
     let secondPartyUrl = `https://g4f.dev/ai/auto/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
-    let response = await fetch(secondPartyUrl);
+    let response = await fetch(secondPartyUrl, { headers: localStorage.getItem("session_token") ? {
+        'Authorization': `Bearer ${localStorage.getItem("session_token")}`
+    } : {}});
+    window.captureUserTierHeaders?.(response);
     if (!response.ok) {
         const delay = parseInt(response.headers.get('Retry-After'), 10);
         if (delay > 0) {

@@ -65,6 +65,26 @@
                         <i class="fa-solid fa-bars" aria-hidden="true"></i>
                     </button>
                 </header>
+                <div id="user-tier-info" class="user-tier-info" role="status" aria-label="User tier and usage info">
+                    <div class="tier-row">
+                        <div class="tier-badge">
+                            <i class="fa-solid fa-user" aria-hidden="true"></i>
+                            <span id="user-tier-text">Guest</span>
+                        </div>
+                        <a id="sidebar-login-btn" class="tier-auth-btn" href="#" onclick="event.preventDefault(); window.location.href='https://g4f.dev/members?redirect='+encodeURIComponent(location.href);" title="Login to Members Area">
+                            <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+                            <span>Login</span>
+                        </a>
+                        <button id="sidebar-logout-btn" class="tier-auth-btn hidden" onclick="cloudSyncLogout()" title="Logout">
+                            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                            <span>Logout</span>
+                        </button>
+                    </div>
+                    <div class="tier-limits hidden" id="tier-limits-row">
+                        <span id="max-tokens-text" title="Tokens remaining/limit"><i class="fa-solid fa-coins" aria-hidden="true"></i> -</span>
+                        <span id="max-requests-text" title="Requests remaining/limit"><i class="fa-solid fa-list" aria-hidden="true"></i> -</span>
+                    </div>
+                </div>
                 <nav class="top" aria-label="Conversation actions">
                     <button class="new_convo" onclick="new_conversation()" aria-label="Start a new conversation" tabindex="0">
                         <i class="fa-regular fa-plus" aria-hidden="true"></i>

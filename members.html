@@ -1541,7 +1541,7 @@
             if (hash && (hash.startsWith('#api_key='))) {
                 const pollinationsToken = hash.substring(9);
                 if (pollinationsToken) {
-                    const response = await fetch('https://gen.pollinations.ai/text/hello', {
+                    const response = await fetch('https://pollinations.g4f-dev.workers.dev/api/usage', {
                         headers: {
                             'Authorization': `Bearer ${pollinationsToken}`
                         }
@@ -1559,7 +1559,7 @@
             } else {
                 const existingToken = localStorage.getItem('PollinationsAI-api_key');
                 if (existingToken) {
-                    const response = await fetch('https://gen.pollinations.ai/text/hello', {
+                    const response = await fetch('https://pollinations.g4f-dev.workers.dev/api/usage', {
                         headers: {
                             'Authorization': `Bearer ${existingToken}`
                         }

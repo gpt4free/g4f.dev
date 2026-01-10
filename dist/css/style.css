@@ -1416,6 +1416,103 @@ ul {
     border-bottom: 1px solid var(--blur-border);
 }
 
+.user-tier-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    background: var(--blur-bg);
+    border: 1px solid var(--blur-border);
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+.user-tier-info.hidden {
+    display: none;
+}
+
+.user-tier-info .tier-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.user-tier-info .tier-badge i {
+    color: var(--accent);
+}
+
+.user-tier-info .tier-limits {
+    display: flex;
+    gap: 12px;
+    color: var(--colour-3);
+    font-size: 11px;
+}
+
+.user-tier-info .tier-limits span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.user-tier-info .tier-limits i {
+    font-size: 10px;
+}
+
+.user-tier-info .tier-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.user-tier-info .tier-auth-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: var(--blur-bg);
+    border: 1px solid var(--blur-border);
+    border-radius: 6px;
+    color: var(--colour-3);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.user-tier-info .tier-auth-btn:hover {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.user-tier-info .tier-auth-btn.hidden {
+    display: none;
+}
+
+.user-tier-info .tier-auth-btn i {
+    font-size: 12px;
+}
+
+.user-tier-info[data-tier="pro"] .tier-badge i {
+    color: #f0c040;
+}
+
+.user-tier-info[data-tier="sponsor"] .tier-badge i {
+    color: #e040fb;
+}
+
+.user-tier-info[data-tier="free"] .tier-badge i {
+    color: #4caf50;
+}
+
+.user-tier-info[data-tier="new"] .tier-badge i {
+    color: #64b5f6;
+}
+
 .sidebar-logo {
     font-size: 16px;
     font-weight: 500;
@@ -2105,7 +2202,8 @@ form textarea {
 .sidebar.minimized .new_convo span,
 .sidebar.minimized .bottom_buttons span,
 .sidebar.minimized .info span,
-.sidebar.minimized .datetime {
+.sidebar.minimized .datetime,
+.sidebar.minimized .user-tier-info {
     display: none;
 }
 

@@ -64,6 +64,47 @@ const modelTags = {
 document.addEventListener("DOMContentLoaded", (event) => {
     translationSnipptes.forEach((text) => framework.translate(text));
     
+    // Listen for user tier updates from API responses
+    window.addEventListener('userTierUpdate', (event) => {
+        const userInfo = event.detail;
+        const infoBar = document.getElementById('user-tier-info');
+        const tierText = document.getElementById('user-tier-text');
+        const maxTokensText = document.getElementById('max-tokens-text');
+        const maxRequestsText = document.getElementById('max-requests-text');
+        const tierLimitsRow = document.getElementById('tier-limits-row');
+        
+        if (infoBar && (userInfo.tier || userInfo.remainingTokens !== null || userInfo.remainingRequests !== null)) {
+            if (userInfo.tier) {
+                infoBar.setAttribute('data-tier', userInfo.tier);
+                // Only update tier text if user is not logged in (keep username if logged in)
+                const sidebarLogoutBtn = document.getElementById('sidebar-logout-btn');
+                if (sidebarLogoutBtn && sidebarLogoutBtn.classList.contains('hidden')) {
+                    if (tierText) tierText.textContent = userInfo.tier;
+                }
+            }
+            if (maxTokensText && (userInfo.remainingTokens !== null || userInfo.limitTokens !== null)) {
+                const remaining = userInfo.remainingTokens !== null ? formatNumber(userInfo.remainingTokens) : '-';
+                const limit = userInfo.limitTokens !== null ? formatNumber(userInfo.limitTokens) : '-';
+                maxTokensText.innerHTML = `<i class="fa-solid fa-coins" aria-hidden="true"></i> ${remaining}/${limit}`;
+                maxTokensText.title = `Tokens: ${remaining} remaining of ${limit}`;
+                if (tierLimitsRow) tierLimitsRow.classList.remove('hidden');
+            }
+            if (maxRequestsText && (userInfo.remainingRequests !== null || userInfo.limitRequests !== null)) {
+                const remaining = userInfo.remainingRequests !== null ? userInfo.remainingRequests : '-';
+                const limit = userInfo.limitRequests !== null ? userInfo.limitRequests : '-';
+                maxRequestsText.innerHTML = `<i class="fa-solid fa-list" aria-hidden="true"></i> ${remaining}/${limit}`;
+                maxRequestsText.title = `Requests: ${remaining} remaining of ${limit}`;
+                if (tierLimitsRow) tierLimitsRow.classList.remove('hidden');
+            }
+        }
+    });
+    
+    function formatNumber(num) {
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(0) + 'K';
+        return num.toString();
+    }
+    
     // Settings tabs functionality
     const settingsTabs = document.querySelectorAll('.settings-tab');
     const tabContents = document.querySelectorAll('.settings-tab-content');
@@ -209,8 +250,13 @@ async function playVoicePreview(voice) {
     
     const previewText = 'Hello, how are you?';
     const audioUrl = `https://g4f.dev/ai/audio/${encodeURIComponent(previewText)}?voice=${encodeURIComponent(voice)}`;
-    
-    voicePreviewAudio = new Audio(audioUrl);
+    const response = await fetch(audioUrl, {
+        headers: appStorage.getItem("session_token") ? {
+            'Authorization': `Bearer ${appStorage.getItem("session_token")}`
+        } : {}
+    });
+    const object = await response.blob();
+    voicePreviewAudio = new Audio(URL.createObjectURL(object));
     voicePreviewAudio.play().catch(error => {
         console.error('Error playing voice preview:', error);
     });
@@ -537,6 +583,17 @@ const register_message_buttons = async () => {
             const message_el = get_message_el(el);
             let audio;
             if (message_el.dataset.synthesize_url) {
+                console.log(message_el.dataset.synthesize_url)
+                if (message_el.dataset.synthesize_url.startsWith("https://g4f.dev/ai/audio/")) {
+                    const response = await fetch(message_el.dataset.synthesize_url, {
+                        headers: appStorage.getItem("session_token") ? {
+                            'Authorization': `Bearer ${appStorage.getItem("session_token")}`
+                        } : {}
+                    });
+                    window.captureUserTierHeaders?.(response);
+                    const object = await response.blob();
+                    message_el.dataset.synthesize_url = URL.createObjectURL(object);
+                }
                 el.classList.add("active");
                 setTimeout(()=>el.classList.remove("active"), 2000);
                 const media_player = document.querySelector(".media-player");
@@ -2064,7 +2121,7 @@ const load_conversation = async (conversation, append = false) => {
             if (!framework.backendUrl || appStorage.getItem("voice")) {
                 // synthesize_params = (new URLSearchParams({input: filter_message(text), voice: appStorage.getItem("voice") || "alloy"})).toString();
                 // synthesize_url = `https://www.openai.fm/api/generate?${synthesize_params}`;
-                synthesize_url = `http://g4f.dev/ai/audio/${encodeURIComponent(filter_message(text))}?voice=${encodeURIComponent(appStorage.getItem("voice") || "alloy")}`;
+                synthesize_url = `https://g4f.dev/ai/audio/${encodeURIComponent(filter_message(text))}?voice=${encodeURIComponent(appStorage.getItem("voice") || "alloy")}`;
             } else {
                 if (item.synthesize) {
                     synthesize_params = item.synthesize.data
@@ -2662,6 +2719,9 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
         const resp = await fetch(url, {
             headers: {'Authorization': `Bearer ${appStorage.getItem("session_token") || ""}`}
         });
+        if (resp.status === 401) {
+            appStorage.removeItem("session_token");
+        }
         const publicUrl = "https://g4f.dev/custom/api/servers/public";
         const publicResp = await fetch(publicUrl);
         let data = await publicResp.json();
@@ -3084,9 +3144,16 @@ async function load_follow_up_questions(messages, new_response) {
     const new_messages = [{role: "assistant", content: new_response}, {role: "user", content: prompt}];
     console.log("Loading follow up questions with messages:", new_messages);
     try {
-        const response = await fetch("https://g4f.dev/ai/?json=true", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({
-            messages: messages.concat(new_messages)
+        const response = await fetch("https://g4f.dev/ai/?json=true", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...appStorage.getItem("session_token") ? {"Authorization": `Bearer ${appStorage.getItem("session_token")}`} : {}
+            },
+            body: JSON.stringify({
+                messages: messages.concat(new_messages)
         })});
+        window.captureUserTierHeaders?.(response);
         const follow_up_questions = await response.json()
         suggestions = follow_up_questions.q || follow_up_questions.questions || follow_up_questions;
         const conversation = await get_conversation(window.conversation_id);
@@ -5597,7 +5664,7 @@ async function handleToolCalls(toolCalls, messages, model, provider, message_id,
 const CLOUD_SYNC_API = "https://g4f.dev/members/api";
 
 async function checkCloudSyncSession() {
-    const token = appStorage.getItem("cloudSyncToken");
+    const token = appStorage.getItem("session_token");
     if (!token) {
         showCloudSyncLogin();
         return;
@@ -5612,12 +5679,12 @@ async function checkCloudSyncSession() {
                 showCloudSyncLoggedIn(data.user);
                 return;
             } else {
-                appStorage.removeItem("cloudSyncToken");
+                appStorage.removeItem("session_token");
                 showCloudSyncLogin();
                 return;
             }
         } else {
-            appStorage.removeItem("cloudSyncToken");
+            appStorage.removeItem("session_token");
             showCloudSyncLogin();
             return;
         }
@@ -5633,6 +5700,16 @@ function showCloudSyncLogin() {
     const syncSection = document.getElementById("cloudSyncSection");
     if (loginSection) loginSection.style.display = "block";
     if (syncSection) syncSection.style.display = "none";
+    
+    // Update sidebar login/logout buttons
+    const sidebarLoginBtn = document.getElementById("sidebar-login-btn");
+    const sidebarLogoutBtn = document.getElementById("sidebar-logout-btn");
+    const tierText = document.getElementById("user-tier-text");
+    const tierLimitsRow = document.getElementById("tier-limits-row");
+    if (sidebarLoginBtn) sidebarLoginBtn.classList.remove("hidden");
+    if (sidebarLogoutBtn) sidebarLogoutBtn.classList.add("hidden");
+    if (tierText) tierText.textContent = "Guest";
+    if (tierLimitsRow) tierLimitsRow.classList.add("hidden");
 }
 
 function showCloudSyncLoggedIn(user) {
@@ -5642,20 +5719,39 @@ function showCloudSyncLoggedIn(user) {
     if (loginSection) loginSection.style.display = "none";
     if (syncSection) syncSection.style.display = "block";
     if (userEl) userEl.textContent = user.name || user.email || "User";
-}
-
-function cloudSyncLoginRedirect(provider = "github") {
-    const returnUrl = encodeURIComponent(window.location.href);
-    const loginUrl = `https://g4f.dev/members/oauth/${provider}?redirect_chat=${returnUrl}`;
-    window.location.href = loginUrl;
+    
+    // Update sidebar login/logout buttons
+    const sidebarLoginBtn = document.getElementById("sidebar-login-btn");
+    const sidebarLogoutBtn = document.getElementById("sidebar-logout-btn");
+    const tierText = document.getElementById("user-tier-text");
+    const tierLimitsRow = document.getElementById("tier-limits-row");
+    const infoBar = document.getElementById("user-tier-info");
+    if (sidebarLoginBtn) sidebarLoginBtn.classList.add("hidden");
+    if (sidebarLogoutBtn) sidebarLogoutBtn.classList.remove("hidden");
+    if (tierText) tierText.textContent = user.name || user.email || "User";
+    if (tierLimitsRow) tierLimitsRow.classList.remove("hidden");
+    if (infoBar && user.tier) {
+        infoBar.setAttribute("data-tier", user.tier);
+    }
 }
 
 function handleCloudSyncCallback() {
     const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get("session_token");
+    let token = urlParams.get("session_token");
+    
+    // Also check hash fragment for session token (starts with g4f_ or gfs_)
+    if (!token && window.location.hash) {
+        const hashValue = decodeURIComponent(window.location.hash.substring(1));
+        if (hashValue.startsWith("g4f_") || hashValue.startsWith("gfs_")) {
+            token = hashValue;
+        }
+    }
+    
     const userParam = urlParams.get("user");
+    const openSettings = urlParams.get("settings") === "true";
+    
     if (token) {
-        appStorage.setItem("cloudSyncToken", token);
+        appStorage.setItem("session_token", token);
         
         // Parse and use user info if provided
         if (userParam) {
@@ -5667,17 +5763,18 @@ function handleCloudSyncCallback() {
             }
         }
         
-        // Clean up URL
+        // Clean up URL by removing session_token, user, settings params and hash
         const url = new URL(window.location.href);
         url.searchParams.delete("session_token");
         url.searchParams.delete("user");
+        url.searchParams.delete("settings");
+        url.hash = "";
         window.history.replaceState({}, document.title, url.pathname + url.search);
         
-        // Open settings to cloud sync tab
-        if (typeof open_settings === "function") {
+        // Open settings to cloud sync tab if requested
+        if (openSettings && typeof open_settings === "function") {
             setTimeout(() => {
                 open_settings();
-                // Switch to cloud sync tab
                 const cloudSyncTab = document.querySelector('.settings-tab[data-tab="cloudsync"]');
                 if (cloudSyncTab) cloudSyncTab.click();
             }, 100);
@@ -5688,7 +5785,7 @@ function handleCloudSyncCallback() {
 }
 
 async function cloudSyncLogout() {
-    const token = appStorage.getItem("cloudSyncToken");
+    const token = appStorage.getItem("session_token");
     if (token) {
         try {
             await fetch(`${CLOUD_SYNC_API}/logout`, {
@@ -5699,7 +5796,7 @@ async function cloudSyncLogout() {
             console.error("Logout failed:", e);
         }
     }
-    appStorage.removeItem("cloudSyncToken");
+    appStorage.removeItem("session_token");
     showCloudSyncLogin();
 }
 
@@ -5727,7 +5824,7 @@ function hideCloudSyncLoading() {
 }
 
 async function syncConversationsToCloud() {
-    const token = appStorage.getItem("cloudSyncToken");
+    const token = appStorage.getItem("session_token");
     if (!token) {
         cloudSyncLoginRedirect();
         return;
@@ -5765,7 +5862,7 @@ async function syncConversationsToCloud() {
 }
 
 async function syncConversationsFromCloud() {
-    const token = appStorage.getItem("cloudSyncToken");
+    const token = appStorage.getItem("session_token");
     if (!token) {
         cloudSyncLoginRedirect();
         return;
@@ -5807,13 +5904,20 @@ async function syncConversationsFromCloud() {
 handleCloudSyncCallback();
 checkCloudSyncSession();
 
+// Redirect to members login page
+function cloudSyncLoginRedirect(openSettings = false) {
+    const returnUrl = encodeURIComponent(window.location.href);
+    const settingsParam = openSettings ? "&settings=true" : "";
+    window.location.href = `https://g4f.dev/members?redirect=${returnUrl}${settingsParam}`;
+}
+
 // Cloud Sync button event listeners
 const cloudSyncLoginBtn = document.getElementById("cloudSyncLoginBtn");
 const cloudSyncUploadBtn = document.getElementById("cloudSyncUpload");
 const cloudSyncDownloadBtn = document.getElementById("cloudSyncDownload");
 const cloudSyncLogoutBtn = document.getElementById("cloudSyncLogoutBtn");
 
-if (cloudSyncLoginBtn) cloudSyncLoginBtn.addEventListener("click", () => cloudSyncLoginRedirect("github"));
+if (cloudSyncLoginBtn) cloudSyncLoginBtn.addEventListener("click", () => cloudSyncLoginRedirect(true));
 if (cloudSyncUploadBtn) cloudSyncUploadBtn.addEventListener("click", syncConversationsToCloud);
 if (cloudSyncDownloadBtn) cloudSyncDownloadBtn.addEventListener("click", syncConversationsFromCloud);
 if (cloudSyncLogoutBtn) cloudSyncLogoutBtn.addEventListener("click", cloudSyncLogout);

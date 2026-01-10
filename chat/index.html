@@ -46,10 +46,11 @@
     <script src="https://cdn.jsdelivr.net/npm/jsencrypt/bin/jsencrypt.min.js" defer></script>
     <script src="../dist/js/sanitize-html.js" async></script>
     <script type="module" defer>
-        import { loadProviders, createClient, providerLocalStorage, Puter }  from "../dist/js/providers.js";
+        import { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, Puter }  from "../dist/js/providers.js";
         window.loadProviders = loadProviders;
         window.createClient = createClient;
         window.providerLocalStorage = providerLocalStorage;
+        window.captureUserTierHeaders = captureUserTierHeaders;
         window.Puter = Puter;
     </script>
 
@@ -123,6 +124,26 @@
                         <i class="fa-solid fa-bars" aria-hidden="true"></i>
                     </button>
                 </header>
+                <div id="user-tier-info" class="user-tier-info" role="status" aria-label="User tier and usage info">
+                    <div class="tier-row">
+                        <div class="tier-badge">
+                            <i class="fa-solid fa-user" aria-hidden="true"></i>
+                            <span id="user-tier-text">Guest</span>
+                        </div>
+                        <a id="sidebar-login-btn" class="tier-auth-btn" href="#" onclick="event.preventDefault(); window.location.href='https://g4f.dev/members?redirect='+encodeURIComponent(location.href);" title="Login to Members Area">
+                            <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+                            <span>Login</span>
+                        </a>
+                        <button id="sidebar-logout-btn" class="tier-auth-btn hidden" onclick="cloudSyncLogout()" title="Logout">
+                            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                            <span>Logout</span>
+                        </button>
+                    </div>
+                    <div class="tier-limits hidden" id="tier-limits-row">
+                        <span id="max-tokens-text" title="Tokens remaining/limit"><i class="fa-solid fa-coins" aria-hidden="true"></i> -</span>
+                        <span id="max-requests-text" title="Requests remaining/limit"><i class="fa-solid fa-list" aria-hidden="true"></i> -</span>
+                    </div>
+                </div>
                 <nav class="top" aria-label="Conversation actions">
                     <button class="new_convo" onclick="new_conversation()" aria-label="Start a new conversation">
                         <i class="fa-regular fa-plus" aria-hidden="true"></i>
@@ -411,8 +432,8 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                       <div class="cloud-sync-login" id="cloudSyncLogin">
                           <p style="margin-bottom: 1rem; color: var(--colour-3);">Login to sync your conversations across devices.</p>
                           <button type="button" id="cloudSyncLoginBtn" class="cloud-sync-btn">
-                              <i class="fa-brands fa-github"></i>
-                              <span>Login with GitHub</span>
+                              <i class="fa-solid fa-right-to-bracket"></i>
+                              <span>Login to Members Area</span>
                           </button>
                       </div>
                       <div class="cloud-sync-section" id="cloudSyncSection" style="display: none;">
