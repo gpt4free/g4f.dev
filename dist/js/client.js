@@ -76,6 +76,7 @@ async function getErrorMessage(response) {
 }
 
 function captureUserTierHeaders(headers, usage) {
+    if (!headers) return;
     const limitRequests = headers.get('x-ratelimit-limit-requests');
     const limitTokens = headers.get('x-ratelimit-limit-tokens');
     if (!limitRequests && !limitTokens) return;
