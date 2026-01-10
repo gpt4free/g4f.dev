@@ -184,10 +184,10 @@ async function query(prompt, options={ json: false, cache: true }) {
     let response = await fetch(secondPartyUrl, { headers: localStorage.getItem("session_token") ? {
         'Authorization': `Bearer ${localStorage.getItem("session_token")}`
     } : {}});
-    window.captureUserTierHeaders?.(response);
+    window.captureUserTierHeaders?.(response.headers);
     if (!response.ok) {
         const delay = parseInt(response.headers.get('Retry-After'), 10);
-        if (delay > 0) {
+        if (delay > 0 && delay <= 60) {
             console.log(`Retrying after ${delay} seconds...`);
             await new Promise(resolve => setTimeout(resolve, delay * 1000));
             response = await fetch(secondPartyUrl);

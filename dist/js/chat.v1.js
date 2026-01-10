@@ -45,6 +45,7 @@ const translationSnipptes = [
     "Get API key", "Uploading files...", "Invalid link", "Loading...", "Live Providers", "Custom Providers",
     "Search Off", "Search On", "Recognition On", "Recognition Off", "Delete Conversation",
     "Favorite Models:", "Stop Recording", "Record Audio", "Upload Audio", "No Title", "1 Copy",
+    "Delete all conversations?"
 ];
 
 let login_urls_storage = {
@@ -697,6 +698,9 @@ const register_message_buttons = async () => {
 }
 
 const delete_conversations = async () => {
+    if (!confirm(framework.translate("Delete all conversations?"))) {
+        return;
+    }
     // Delete all conversations
     const { store, done } = await withStore('readwrite');
     store.clear();
@@ -2275,6 +2279,9 @@ const load_conversation = async (conversation, append = false) => {
     });
 
     if (suggestions) {
+        if (!Array.isArray(suggestions)) {
+            suggestions = [suggestions];
+        }
         suggestions_el = document.createElement("div");
         suggestions_el.classList.add("suggestions");
         suggestions.forEach((suggestion)=> {
