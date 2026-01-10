@@ -125,12 +125,32 @@ framework.translateElements = function (elements = null) {
         }
     });
 }
+framework.loadPrebuiltTranslation = async (language) => {
+    try {
+        const response = await fetch(`/dist/translations/${language}.json`);
+        if (response.ok) {
+            const translations = await response.json();
+            localStorage.setItem(framework.translationKey, JSON.stringify(translations));
+            return true;
+        }
+    } catch (e) {
+        console.debug(`No prebuilt translation found for ${language}`);
+    }
+    return false;
+};
 window.addEventListener('load', async () => {
     if (!document.body.classList.contains("translate")) {
         return;
     }
     if (!localStorage.getItem(framework.translationKey)) {
         try {
+            // Try to load a prebuilt translation first
+            const language = navigator.language;
+            if (await framework.loadPrebuiltTranslation(language)) {
+                window.location.reload();
+                return;
+            }
+            // Fall back to AI translation
             if (!framework.backendUrl) {
                 await framework.connectToBackend();
             }
