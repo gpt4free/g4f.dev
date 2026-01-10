@@ -1146,10 +1146,6 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         logContent.appendChild(p);
         await api("log", {...message, provider: provider_storage[message_id]});
     } else if (message.type == "preview") {
-        if (message_storage[message_id]) {
-            variant_storage[message_id] = message.preview;
-            return;
-        }
         let img;
         if (img = content_map.inner.querySelector("img")) {
             if (img.complete) {
@@ -1221,6 +1217,8 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         update_message(content_map, message_id, framework.markdown(message.login));
     } else if (message.type == "finish") {
         finish_storage[message_id] = message.finish;
+    } else if (message.type == "variant") {
+        variant_storage[message_id] = message.variant;
     } else if (message.type == "continue") {
         continue_storage[message_id] = message;
     } else if (message.type == "usage") {
@@ -1482,7 +1480,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             delete synthesize_storage[message_id];
             delete title_storage[message_id];
             delete finish_storage[message_id];
-            if (message_storage[message_id] && variant_storage[message_id]) {
+            if (variant_storage[message_id]) {
                 message_index = await add_message(
                     window.conversation_id,
                     "assistant",
