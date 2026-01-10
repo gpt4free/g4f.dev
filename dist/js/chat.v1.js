@@ -166,6 +166,7 @@ let variant_storage = {};
 let debug_response_counter = {}
 let title_ids_storage = {};
 let image_storage = {};
+let headers_storage = {};
 let wakeLock = null;
 let countTokensEnabled = true;
 let suggestions = null;
@@ -590,7 +591,7 @@ const register_message_buttons = async () => {
                             'Authorization': `Bearer ${appStorage.getItem("session_token")}`
                         } : {}
                     });
-                    window.captureUserTierHeaders?.(response);
+                    window.captureUserTierHeaders?.(response.headers);
                     const object = await response.blob();
                     message_el.dataset.synthesize_url = URL.createObjectURL(object);
                 }
@@ -1220,6 +1221,10 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         continue_storage[message_id] = message;
     } else if (message.type == "usage") {
         usage_storage[message_id] = message.usage;
+        if (headers_storage[message_id]) {
+            window.captureUserTierHeaders?.(new Headers(headers_storage[message_id]), message.usage);
+            delete headers_storage[message_id];
+        }
     } else if (message.type == "reasoning") {
         if (!reasoning_storage[message_id]) {
             reasoning_storage[message_id] = message;
@@ -1270,7 +1275,9 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
     } else if (["request", "response"].includes(message.type)) {
         debug_response_counter[message_id] = (debug_response_counter[message_id] || 0) + (message.type == "response" ? 1 : 0);
         logRequestResponse(message, message_id, debug_response_counter[message_id]);
-    }
+    } else if (message.type == "headers") {
+        headers_storage[message_id] = message.headers;
+    } 
 }
 
 function renderer(text) {
@@ -3153,7 +3160,7 @@ async function load_follow_up_questions(messages, new_response) {
             body: JSON.stringify({
                 messages: messages.concat(new_messages)
         })});
-        window.captureUserTierHeaders?.(response);
+        window.captureUserTierHeaders?.(response.headers);
         const follow_up_questions = await response.json()
         suggestions = follow_up_questions.q || follow_up_questions.questions || follow_up_questions;
         const conversation = await get_conversation(window.conversation_id);
@@ -4205,8 +4212,8 @@ async function read_response(response, message_id, provider, finish_message) {
 function get_api_key_by_provider(provider) {
     let api_key = null;
     if (provider) {
-        if (["gpt-oss-120b"].includes(provider)) {
-            return appStorage.getItem("Azure-api_key");
+        if (["Azure"].includes(provider)) {
+            return appStorage.getItem("session_token");
         }
         if (["custom"].includes(provider)) {
             return appStorage.getItem("Custom-api_key");
@@ -4238,6 +4245,9 @@ function get_api_key_by_provider(provider) {
         }
         if (!api_key && provider.startsWith("Puter") && appStorage.getItem('puter.auth.token')) {
             return appStorage.getItem("puter.auth.token");
+        }
+        if (["GeminiPro", "Ollama", "Nvidia", "OpenRouterFree", "PollinationsAI", "Groq"].includes(provider)) {
+            return appStorage.getItem("session_token");
         }
     }
     return api_key;
@@ -5256,9 +5266,6 @@ enhanceFileUpload();
 
 function isLive() {
     if (!providerSelect) {
-        return true;
-    }
-    if (["Copilot", "CopilotAccount"].includes(providerSelect.value)) {
         return true;
     }
     return providerSelect.options[providerSelect.selectedIndex]?.dataset?.live;

@@ -75,19 +75,19 @@ async function getErrorMessage(response) {
     return await response.text();
 }
 
-function captureUserTierHeaders(response, usage) {
-    if (!response || !response.headers) return;
-    const isCached = (usage?.cache || response.headers.get('x-cache')) === 'HIT';
-    const userTier = response.headers.get('x-user-tier');
-    const modelFactor = parseFloat(response.headers.get('x-ratelimit-model-factor') || '1');
-    const remainingRequests = parseInt(response.headers.get('x-ratelimit-remaining-requests') || '1') - (usage ? 1 : 0);
-    let totalTokens = usage?.total_tokens || response.headers.get('x-total-tokens') || 0;
-    let remainingTokens = parseInt(response.headers.get('x-ratelimit-remaining-tokens') || '0');
+function captureUserTierHeaders(headers, usage) {
+    const limitRequests = headers.get('x-ratelimit-limit-requests');
+    const limitTokens = headers.get('x-ratelimit-limit-tokens');
+    if (!limitRequests && !limitTokens) return;
+    const isCached = (usage?.cache || headers.get('x-cache')) === 'HIT';
+    const userTier = headers.get('x-user-tier');
+    const modelFactor = parseFloat(headers.get('x-ratelimit-model-factor') || '1');
+    const remainingRequests = parseInt(headers.get('x-ratelimit-remaining-requests') || '1') - (usage ? 1 : 0);
+    let totalTokens = usage?.total_tokens || headers.get('x-total-tokens') || 0;
+    let remainingTokens = parseInt(headers.get('x-ratelimit-remaining-tokens') || '0');
     if (!isCached && totalTokens > 0) {
         remainingTokens -= totalTokens * modelFactor;
     }
-    const limitRequests = response.headers.get('x-ratelimit-limit-requests');
-    const limitTokens = response.headers.get('x-ratelimit-limit-tokens');
     if (userTier || remainingRequests || remainingTokens || limitRequests || limitTokens) {
         const userInfo = {
             tier: userTier,
@@ -330,7 +330,7 @@ class Client {
             data.server = response.headers.get('x-server');
         }
         // Capture user tier info from headers
-        captureUserTierHeaders(response, data.usage);
+        captureUserTierHeaders(response.headers, data.usage);
         this.logCallback && this.logCallback({response: data, type: 'chat'});
         return data;
     }
@@ -360,7 +360,7 @@ class Client {
             buffer = '';
           } else {
             // Capture user tier info from headers
-            captureUserTierHeaders(response, usage);
+            captureUserTierHeaders(response.headers, usage);
             break;
           }
           for (const part of parts) {
