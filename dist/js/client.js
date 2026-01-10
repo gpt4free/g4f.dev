@@ -249,6 +249,8 @@ class Client {
                 model.type = 'image';
               } else if (model.id.toLowerCase().includes("video")) {
                 model.type = 'video';
+              } else if (model.video) {
+                model.type = 'video';
               } else if (model.supports_chat) {
                 model.type = 'chat';
               } else if (model.supports_images) {

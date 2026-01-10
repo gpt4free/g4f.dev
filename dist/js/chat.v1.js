@@ -3312,9 +3312,6 @@ function get_modelTags(model, add_vision = true) {
         return " " + model.tags.join(" ")
     }
     const parts = []
-    if (modelTags[model.type]) {
-        parts.push(` ${modelTags[model.type]}`);
-    }
     for (let [name, text] of Object.entries(modelTags)) {
         if (name != "vision" || add_vision) {
             parts.push(model[name] ? ` ${text}` : "")
