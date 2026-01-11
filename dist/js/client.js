@@ -84,7 +84,7 @@ function captureUserTierHeaders(headers, usage) {
     const userTier = headers.get('x-user-tier');
     const modelFactor = parseFloat(headers.get('x-ratelimit-model-factor') || '1');
     const remainingRequests = parseInt(headers.get('x-ratelimit-remaining-requests') || '1') - (usage ? 1 : 0);
-    let totalTokens = usage?.total_tokens || headers.get('x-usage-total-tokens') || 0;
+    let totalTokens = usage?.total_tokens || parseInt(headers.get('x-usage-total-tokens') || '0');
     let remainingTokens = parseInt(headers.get('x-ratelimit-remaining-tokens') || '0');
     if (!isCached && totalTokens > 0) {
         remainingTokens -= totalTokens * modelFactor;
@@ -313,6 +313,7 @@ class Client {
             body: formData,
             ...requestOptions
         });
+        captureUserTierHeaders(response.headers);
         if (!response.ok) {
             const errorBody = await getErrorMessage(response);
             throw new Error(`Status ${response.status}: ${errorBody}`);
@@ -323,6 +324,7 @@ class Client {
     async _regularCompletion(response) {
         if (!response.ok) {
             const errorBody = await getErrorMessage(response);
+            captureUserTierHeaders(response.headers);
             throw new Error(`Status ${response.status}: ${errorBody}`);
         }
         const data = await response.json();
