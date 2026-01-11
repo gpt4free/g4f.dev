@@ -480,6 +480,7 @@ class Client {
         this.logCallback && this.logCallback({request: params, type: 'image'});
         await this._sleep();
         let response = await fetch(imageEndpoint, requestOptions);
+        captureUserTierHeaders(response.headers);
         if (!response.ok) {
             const delay = parseInt(response.headers.get('Retry-After'), 10) || extractRetryDelay(await response.clone().text()) || this.sleep / 1000;
             if (delay > 0) {

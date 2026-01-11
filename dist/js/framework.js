@@ -94,6 +94,9 @@ framework.translate = (text) => {
     }
     return text;
 };
+function countWords(text) {
+    return text.trim().match(/[\w\u4E00-\u9FA5]+/gu)?.length || 0;
+}
 framework.translationKey = "translations" + document.location.pathname;
 framework.translations = JSON.parse(localStorage.getItem(framework.translationKey) || "{}");
 framework.translateElements = function (elements = null) {
@@ -111,7 +114,9 @@ framework.translateElements = function (elements = null) {
         } 
         for (const child of element.childNodes) {
             if (child.nodeType === Node.TEXT_NODE) {
-                child.textContent = framework.translate(child.textContent);
+                if (countWords(child.textContent) > 0) {
+                    child.textContent = framework.translate(child.textContent);
+                }
             }
         }
         if (element.alt) {

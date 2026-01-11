@@ -353,15 +353,102 @@ export default {
         },
       });
     }
+    const url = new URL(request.url);
+    if (url.pathname.endsWith("/models")) {
+      return handleListModels(request, env);
+    }
 
     if (request.method !== "POST") {
       return new Response("Method not allowed", { status: 405 });
     }
 
     try {
-      const { model, messages, cookies, conversation } = await request.json();
+      const { model, messages, cookies, conversation, stream = true } = await request.json();
 
       const perplexity = new PerplexityWorker();
+
+      // Non-streaming response
+      if (!stream) {
+        let fullContent = "";
+        let fullReasoning = "";
+        let finalUsage = null;
+        let finalModel = model || perplexity.defaultModel;
+        let sources = [];
+        let media = [];
+        let followups = [];
+
+        try {
+          for await (const chunk of perplexity.streamResponse(model, messages, cookies, conversation)) {
+            // Collect content from delta chunks
+            if (chunk.choices?.[0]?.delta?.content) {
+              fullContent += chunk.choices[0].delta.content;
+            }
+            // Collect reasoning from delta chunks
+            if (chunk.choices?.[0]?.delta?.reasoning) {
+              fullReasoning += chunk.choices[0].delta.reasoning;
+            }
+            // Capture usage and model from final chunk
+            if (chunk.usage) {
+              finalUsage = chunk.usage;
+            }
+            if (chunk.model) {
+              finalModel = chunk.model;
+            }
+            // Collect sources
+            if (chunk.type === "sources") {
+              sources = chunk.data;
+            }
+            // Collect media
+            if (chunk.type === "media") {
+              media = chunk.data;
+            }
+            // Collect followups
+            if (chunk.type === "followups") {
+              followups = chunk.data;
+            }
+          }
+        } catch (error) {
+          return new Response(JSON.stringify({ error: error.message || String(error) }), {
+            status: 500,
+            headers: { 
+              "Content-Type": "application/json",
+              "Access-Control-Allow-Origin": "*",
+            },
+          });
+        }
+
+        // Build non-streaming response
+        const response = {
+          id: `chatcmpl-${crypto.randomUUID()}`,
+          object: "chat.completion",
+          created: Math.floor(Date.now() / 1000),
+          model: finalModel,
+          choices: [{
+            index: 0,
+            message: {
+              role: "assistant",
+              content: fullContent,
+              ...(fullReasoning && { reasoning: fullReasoning }),
+            },
+            finish_reason: "stop",
+          }],
+          usage: finalUsage || {
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            total_tokens: 0,
+          },
+          ...(sources.length > 0 && { sources }),
+          ...(media.length > 0 && { media }),
+          ...(followups.length > 0 && { followups }),
+        };
+
+        return new Response(JSON.stringify(response), {
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+        });
+      }
       
       // Create streaming response
       const { readable, writable } = new TransformStream();
@@ -391,10 +478,35 @@ export default {
         },
       });
     } catch (error) {
-      return new Response(JSON.stringify({ error: error }), {
+      return new Response(JSON.stringify({ error: error.message || String(error) }), {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
       });
     }
   },
 };
+
+
+/**
+ * Handle GET /v1/models - List available models
+ */
+async function handleListModels(request, env) {
+  const models = [];
+
+  models.push({
+    id: "turbo",
+    object: "model",
+    created: Math.floor(Date.now() / 1000),
+    owned_by: "perplexity"
+  });
+
+  return new Response(JSON.stringify({
+    object: "list",
+    data: models
+  }), {
+    headers: { "Content-Type": "application/json" }
+  });
+}
