@@ -4687,6 +4687,11 @@ function hideLog() {
 
 function logRequestResponse(event, messageId, count=0) {
     const eventType = event.response ? "response" : "request";
+    if (eventType == "response") {
+        if (count > 5 && event?.response?.choices && event.response.choices[0] && event.response.choices[0]?.delta?.content) {
+            return;
+        }
+    }
     let details = document.createElement("details");
     let summary = document.createElement("summary");
     summary.textContent = `${eventType[0].toUpperCase() + eventType.slice(1)} ${messageId} #${count}`;
