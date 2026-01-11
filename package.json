@@ -17,6 +17,7 @@
     "doc": "docs"
   },
   "files": [
+    "dist/js/client.js",
     "dist/js/client.d.ts",
     "dist/js/providers.js"
   ],
