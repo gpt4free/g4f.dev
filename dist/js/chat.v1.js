@@ -3165,6 +3165,9 @@ async function load_follow_up_questions(messages, new_response) {
             body: JSON.stringify({
                 messages: messages.concat(new_messages)
         })});
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        }
         window.captureUserTierHeaders?.(response.headers);
         const follow_up_questions = await response.json()
         suggestions = follow_up_questions.q || follow_up_questions.questions || follow_up_questions;
