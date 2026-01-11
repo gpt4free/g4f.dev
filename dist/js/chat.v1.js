@@ -3963,7 +3963,7 @@ async function upload_files(fileInput) {
     inputCount.innerText = framework.translate('{0} File(s) uploaded successfully').replace('{0}', count);
     if (result.files.length > 0) {
         let do_refine = document.getElementById("refine")?.checked;
-        connectToSSE(`${framework.backendUrl}/backend-api/v2/files/${bucket_id}`, do_refine, bucket_id);
+        connectToSSE(`${framework.backendUrl}/backend-api/v2/files/${bucket_id}/stream`, do_refine, bucket_id);
     } else {
         paperclip.classList.remove("blink");
         fileInput.value = "";

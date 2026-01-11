@@ -97,7 +97,9 @@ function captureUserTierHeaders(headers, usage) {
             limitRequests: limitRequests ? parseInt(limitRequests, 10) : null,
             limitTokens: limitTokens ? parseInt(limitTokens, 10) : null
         };
-        window.dispatchEvent(new CustomEvent('userTierUpdate', { detail: userInfo }));
+        if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent('userTierUpdate', { detail: userInfo }));
+        }
     }
 }
 
