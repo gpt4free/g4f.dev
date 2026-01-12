@@ -1,3 +1,4 @@
+
 /**
  * G4F Custom Server Router Worker
  * 
@@ -19,15 +20,15 @@
 const RATE_LIMITS = {
     // Token limits
     tokens: {
-      perMinute: 100000,
-      perHour: 300000,
+      perMinute: 50000,
+      perHour:  300000,
       perDay: 500000
     },
     // Request limits
     requests: {
-      perMinute: 10,
-      perHour: 100,
-      perDay: 1000
+      perMinute: 5,
+      perHour: 50,
+      perDay: 500
     },
     // Window durations in milliseconds
     windows: {
@@ -54,6 +55,10 @@ const RATE_LIMITS = {
     pro: {
       tokens: { perMinute: 1000000, perHour: 5000000, perDay: 20000000 },
       requests: { perMinute: 100, perHour: 1000, perDay: 10000 }
+    },
+    admin: {
+        tokens: { perMinute: 1000000, perHour: 5000000, perDay: 20000000 },
+        requests: { perMinute: 100, perHour: 1000, perDay: 10000 }
     }
   };
   
@@ -71,9 +76,8 @@ const RATE_LIMITS = {
       "Access-Control-Allow-Credentials": "true",
       "Access-Control-Allow-Methods": "GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
-      "Access-Control-Expose-Headers": "Content-Type, X-User-Id, X-User-Tier, X-Provider, X-Server, X-Url, X-Total-Tokens, X-Stream, X-Max-Tokens, X-Max-Requests"
+      "Access-Control-Expose-Headers": "Content-Type, X-User-Id, X-User-Tier, X-Provider, X-Server, X-Url, X-Usage-Total-Tokens, X-Stream, X-Ratelimit-Model-Factor, X-Ratelimit-Remaining-Requests, X-Ratelimit-Remaining-Tokens, X-Ratelimit-Limit-Requests, X-Ratelimit-Limit-Tokens"
     };
-    
   const ACCESS_CONTROL_ALLOW_ORIGIN = {
     "Access-Control-Allow-Origin": "*",
   }
@@ -83,13 +87,21 @@ const RATE_LIMITS = {
     'srv_mjnrgebd823697f2976d': 'llama-3.3-70b-versatile',
     'srv_mjnr7ksfae7dd0bd7972': 'deepseek-ai/deepseek-v3.2',
     'srv_mjnrjfctcd025471c5b9': 'deepseek-v3.2',
-    'srv_mjnraxvsc0d2d71ec9e4': 'nex-agi/deepseek-v3.1-nex-n1:free',
+    'srv_mjnraxvsc0d2d71ec9e4': 'tngtech/deepseek-r1t2-chimera:free', // openrouter
     'srv_mjlq1ncq8a3f7fe0aea0': 'turbo',
     'srv_mjnathgq5829c76faa05': 'openai', // pollinations
     'srv_mjovbs1p16a07136b8ad': 'deepseek-v3.2:free' // api.airforce
    };
 
-   const BLOCKED_SERVERS = ['srv_mk51doabb4aaef61129f', 'srv_mjygqsq6f735f5a0abb1', 'srv_mju9ak5fae1fd7738d36'];
+   const BLOCKED_SERVERS = [
+    'srv_mk51doabb4aaef61129f',
+    'srv_mjygqsq6f735f5a0abb1',
+    'srv_mju9ak5fae1fd7738d36',
+    'srv_mk8ilfnc502a62f0e444',
+    'srv_mjvas3cw95a53a66a5ae',
+    'srv_mjvb4wujde2dac5d6bad',
+    'srv_mjns3wqp0976710869ad',
+   ];
   
     export default {
       async fetch(request, env, ctx) {
@@ -100,16 +112,6 @@ const RATE_LIMITS = {
           if (request.method === "OPTIONS") {
               return new Response(null, { headers: CORS_HEADERS });
           }
-
-            const cacheKey = generateCacheKey(request, url.toString());
-            
-            // For GET requests with simple prompts, check cache first
-            if (request.method === "GET" && pathname.startsWith('/ai/')) {
-                const cachedResponse = await getCachedResponse(request, cacheKey);
-                if (cachedResponse) {
-                return cachedResponse;
-                }
-            }
     
           try {
               // Rate limiting for all endpoints except CORS preflight
@@ -133,7 +135,7 @@ const RATE_LIMITS = {
                       const message = rateCheck.reason === 'tokens'
                           ? `Token limit (${rateCheck.limit.toLocaleString()} ${windowLabels[rateCheck.window]}) exceeded for ${rateCheck.tier} tier. Used: ${rateCheck.used.toLocaleString()} tokens.`
                           : `Request limit (${rateCheck.limit} ${windowLabels[rateCheck.window]}) exceeded for ${rateCheck.tier} tier. Made: ${rateCheck.used} requests.`;
-                      return Response.json({
+                      const newResponse = Response.json({
                           error: {
                               message,
                               type: 'rate_limit_exceeded',
@@ -144,9 +146,9 @@ const RATE_LIMITS = {
                               retry_after: rateCheck.retryAfter
                           }
                       }, { status: 429, headers: {'Retry-After': rateCheck.retryAfter.toString(), ...ACCESS_CONTROL_ALLOW_ORIGIN} });
+                      updateResponsefromRateCheck(newResponse, rateCheck);
+                      return newResponse;
                   }
-                  // Store usage for authenticated user
-                  ctx.waitUntil(updateUserRateLimit(env, user.id, ctx));
               } else {
                   // Anonymous user - use default IP-based limits
                   rateCheck = await checkAnonymousRateLimits(env, request);
@@ -155,7 +157,7 @@ const RATE_LIMITS = {
                       const message = rateCheck.reason === 'tokens'
                           ? `Token limit (${rateCheck.limit.toLocaleString()} ${windowLabels[rateCheck.window]}) exceeded. Used: ${rateCheck.used.toLocaleString()} tokens. Sign up at g4f.dev/members.html for higher limits.`
                           : `Request limit (${rateCheck.limit} ${windowLabels[rateCheck.window]}) exceeded. Made: ${rateCheck.used} requests. Sign up at g4f.dev/members.html for higher limits.`;
-                      return Response.json({
+                      const newResponse = Response.json({
                           error: {
                               message,
                               type: 'rate_limit_exceeded',
@@ -166,10 +168,36 @@ const RATE_LIMITS = {
                               upgrade_url: 'https://g4f.dev/members.html'
                           }
                       }, { status: 429, headers: {'Retry-After': rateCheck.retryAfter.toString(), ...ACCESS_CONTROL_ALLOW_ORIGIN} } );
+                      updateResponsefromRateCheck(newResponse, rateCheck);
+                      return newResponse;
                   }
-                  // Store usage for anonymous user
-                  ctx.waitUntil(updateAnonymousRateLimit(env, getClientIP(request), ctx));
               }
+
+                // For GET requests with simple prompts, check cache first
+                const cacheKey = url.toString();
+                if (request.method === "GET" && (pathname.startsWith('/ai/') || pathname.endsWith("/models") || pathname.endsWith("/chat/completions"))) {
+                    const cachedResponse = await getCachedResponse(request, cacheKey);
+                    if (cachedResponse) {
+                        const newResponse = new Response(cachedResponse.body, cachedResponse);
+                        if (user) {
+                            newResponse.headers.set('X-User-Id', user.id)
+                            newResponse.headers.set('X-User-Tier', user.tier)
+                        }
+                        if (rateCheck) {
+                            updateResponsefromRateCheck(newResponse, rateCheck);
+                        }
+                        return newResponse;
+                    }
+                }
+                
+                if (!userProvidedKey && !pathname.startsWith('/custom/api/')) {
+                    if (user) {
+                        // Store usage for authenticated user
+                        ctx.waitUntil(updateUserRateLimit(env, user.id, ctx));
+                    }
+                    // Store usage for anonymous user
+                    ctx.waitUntil(updateAnonymousRateLimit(env, getClientIP(request), ctx));
+                }
   
               // Handle /ai/ routes using custom servers
               if (pathname.startsWith("/ai/")) {
@@ -230,7 +258,7 @@ const RATE_LIMITS = {
               if (pathname.match(/^\/custom\/[^/]+\/models$/)) {
                   const serverId = pathname.split('/')[2];
                   const server = await getServerById(env, serverId, user);
-                  return handleModels(request, env, serverId, user, server);
+                  return handleModels(request, env, ctx, serverId, user, server, cacheKey);
               }
   
               // Route: /custom/:server_id/models
@@ -240,12 +268,12 @@ const RATE_LIMITS = {
                   if (!server) {
                     return jsonResponse({ error: "Server not found" }, 404);
                   }
-                  return handleModels(request, env, server.id, user, server);
+                  return handleModels(request, env, ctx, server.id, user, server, cacheKey);
               }
             
             // Route: /v1/chat/completions
             if (pathname === "/v1/chat/completions" || pathname === "/custom/srv_mjncacwy529ad1e3c784/chat/completions") {
-                return handleV1ChatCompletions(request, env, ctx, pathname, rateCheck);
+                return handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, rateCheck);
             }
     
               // Route: /custom/:server_id/chat/completions
@@ -255,7 +283,7 @@ const RATE_LIMITS = {
                   if (!server) {
                       return jsonResponse({ error: "Server not found" }, 404);
                   }
-                  return handleProxyToServer(request, env, ctx, server, '/chat/completions', user, pathname, userProvidedKey, rateCheck);
+                  return handleProxyToServer(request, env, ctx, server, '/chat/completions', cacheKey, user, pathname, userProvidedKey, rateCheck);
               }
               
               // Route: /api/:label/chat/completions
@@ -268,9 +296,9 @@ const RATE_LIMITS = {
                     server = await getServerByLabel(env, label, user);
                   }
                   if (!server) {
-                      return jsonResponse({ error: "Server not found" }, 404);
+                      return jsonResponse({ error: `Server by label '${label}' not found`, servers: await getPublicServers(env) }, 404);
                   }
-                  return handleProxyToServer(request, env, ctx, server, '/chat/completions', user, pathname, userProvidedKey, rateCheck);
+                  return handleProxyToServer(request, env, ctx, server, '/chat/completions', cacheKey, user, pathname, userProvidedKey, rateCheck);
               }
               
               
@@ -284,7 +312,7 @@ const RATE_LIMITS = {
                   if (!server) {
                       return jsonResponse({ error: "Server not found" }, 404);
                   }
-                  return handleProxyToServer(request, env, ctx, server, subPath, user, pathname, userProvidedKey, rateCheck);
+                  return handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user, pathname, userProvidedKey, rateCheck);
               }
               
               // Route: /api/:label/* (generic proxy)
@@ -297,7 +325,7 @@ const RATE_LIMITS = {
                   if (!server) {
                       return jsonResponse({ error: "Server not found" }, 404);
                   }
-                  return handleProxyToServer(request, env, ctx, server, subPath, user, pathname, userProvidedKey, rateCheck);
+                  return handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user, pathname, userProvidedKey, rateCheck);
               }
               
               return jsonResponse({ error: "Not found" }, 404);
@@ -572,7 +600,7 @@ const RATE_LIMITS = {
                   } catch (e) {
                       return jsonResponse({ error: "Invalid base_url format" }, 400);
                   }
-              } else {
+              } else if (field != 'api_keys' || body[field]) {
                   server[field] = body[field];
               }
           }
@@ -765,7 +793,7 @@ const RATE_LIMITS = {
     // Model Router / Proxy
     // ============================================
     
-    async function handleModels(request, env, serverId, user, server) {
+    async function handleModels(request, env, ctx, serverId, user, server, cacheKey) {
       if (!server) {
           return jsonResponse({ error: "Server not found" }, 404);
       }
@@ -790,6 +818,9 @@ const RATE_LIMITS = {
           const data = await response.json();
           if (server.allowed_models && server.allowed_models.length > 0) {
               data.data = data.data.filter(model=>server.allowed_models.includes(model.id))
+              if (!data.data.length) {
+                data.data = server.allowed_models.map(m=>{ return {id: m} });
+              }
           }
           
           const newResponse = new Response(JSON.stringify(data), response);
@@ -799,6 +830,7 @@ const RATE_LIMITS = {
           newResponse.headers.set('X-Server', serverId);
           newResponse.headers.set('X-Provider', server.label);
           newResponse.headers.set('X-Url', `${server.base_url}/models`);
+          ctx.waitUntil(setCachedResponse(request, newResponse, CACHE_HEADERS.MEDIUM, cacheKey, ctx));
           return newResponse;
       } catch (e) {
           // If server has allowed_models configured, return those
@@ -812,7 +844,7 @@ const RATE_LIMITS = {
       }
     }
     
-    async function handleProxyToServer(request, env, ctx, server, subPath, user=null, pathname=null, userProvidedKey=null, rateCheck=null) {
+    async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user=null, pathname=null, userProvidedKey=null, rateCheck=null) {
       // Server is already authenticated and fetched
       if (!server) {
           return jsonResponse({ error: "Server not found" }, 404);
@@ -820,23 +852,29 @@ const RATE_LIMITS = {
     
       // Check if model is allowed
       let requestBody = {};
+      let requestModel = null;
       if(request.method === 'POST') {
         requestBody = await request.clone().json();
+        requestModel = requestBody.model;
+        const messages = requestBody.messages;
+        if (messages && messages[0]) {
+            const message = messages[0];
+            if (message && message.content == "Hello, are you working? Reply with 'Yes' if you can respond") {
+                return jsonResponse({"choices":[{"message":{"content":"Yes"}}]});
+            }
+        }
       }
-      let requestModel = null;
       
       if (subPath === '/chat/completions') {
           try {
-            if(request.method === 'POST') {
-                requestModel = requestBody.model;
-                if ((!requestModel || requestModel === "auto") && DEFAULT_MODELS[server.id]) {
-                  requestBody.model = requestModel = DEFAULT_MODELS[server.id];
-                }
-            } else {
+            if(!requestModel || requestModel === "auto") {
                 if (DEFAULT_MODELS[server.id]) {
-                    requestBody.model = requestModel = DEFAULT_MODELS[server.id]
+                    requestModel = DEFAULT_MODELS[server.id]
+                } else {
+                    requestModel = server.allowed_models && server.allowed_models[0];
                 }
             }
+            requestBody.model = requestModel
               
               // Validate model if allowlist exists
               if (server.allowed_models && server.allowed_models.length > 0) {
@@ -911,10 +949,6 @@ const RATE_LIMITS = {
             );
           }
 
-          let totalTokens = parseInt(response.headers.get('X-Total-Tokens') || "0");
-          if (totalTokens) {
-            totalTokens = totalTokens * 1000; // Convert to per-1k tokens
-          }
           let usage = {}
     
           // Track usage for chat completions
@@ -939,10 +973,8 @@ const RATE_LIMITS = {
                   }
                   newResponse.headers.set('X-Stream', 'true')   
                     if (rateCheck) {
-                        newResponse.headers.set("X-Ratelimit-Remaining-Requests", rateCheck.maxRequests);
-                        newResponse.headers.set("X-Ratelimit-Remaining-Tokens", rateCheck.maxTokens);
-                        newResponse.headers.set("X-Ratelimit-Limit-Requests", rateCheck.limitRequests);
-                        newResponse.headers.set("X-Ratelimit-Limit-Tokens", rateCheck.limitTokens);
+                        newResponse.headers.set("X-Ratelimit-Model-Factor", String(getModelFactor(requestBody.model)));
+                        updateResponsefromRateCheck(newResponse, rateCheck);
                     }
                   newResponse.headers.delete('set-cookie');
                   return newResponse;
@@ -963,18 +995,22 @@ const RATE_LIMITS = {
               }
           }
 
+        let totalTokens = parseInt(response.headers.get('X-Usage-Total-Tokens') || "0") || usage.total_tokens || 0;
+
         if ((subPath === '/chat/completions' && response.ok) || usage) {
-            totalTokens = totalTokens || usage.total_usage;
             ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, requestModel, totalTokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user));
             ctx.waitUntil(updateServerUsage(env, server, totalTokens, requestModel));
+            if (user) {
+                ctx.waitUntil(updateUserDailyUsage(env, user.id, totalTokens, `custom:${server.id}`, requestModel));
+            }
             
             // Update rate limit token usage
             const isCached = (response.headers.get('X-Cache') || usage.cache || 'MISS') === 'HIT';
             if (!userProvidedKey && !isCached) {
-                totalTokens = totalTokens || getModelTokens(requestModel, totalTokens);
-                ctx.waitUntil(updateAnonymousTokenUsage(env, clientIP, totalTokens, ctx));
+                const modelTotalTokens = getModelTokens(requestModel, totalTokens);
+                ctx.waitUntil(updateAnonymousTokenUsage(env, clientIP, modelTotalTokens, ctx));
                 if (user) {
-                    ctx.waitUntil(updateUserTokenUsage(env, user.id, totalTokens, ctx));
+                    ctx.waitUntil(updateUserTokenUsage(env, user.id, modelTotalTokens, ctx));
                 }
             }
         }
@@ -986,23 +1022,27 @@ const RATE_LIMITS = {
           newResponse.headers.set('X-Url', targetUrl);
           newResponse.headers.set('X-Server', server.id);
           newResponse.headers.set('X-Provider', server.label);
+          if (totalTokens) {
+            newResponse.headers.set('X-Usage-Total-Tokens', String(totalTokens))
+          }
+          if (request.method === "GET") {
+              ctx.waitUntil(setCachedResponse(request, newResponse.clone(), CACHE_HEADERS.MEDIUM, cacheKey, ctx));
+          }
           if (user) {
             newResponse.headers.set('X-User-Id', user.id)
             newResponse.headers.set('X-User-Tier', user.tier)
           }
-          if (totalTokens) {
-            newResponse.headers.set('X-Total-Tokens', String(totalTokens))
+          if (requestModel) {
+            newResponse.headers.set("X-Ratelimit-Model-Factor", String(getModelFactor(requestModel)));
           }
           if (rateCheck) {
-            newResponse.headers.set("X-Ratelimit-Remaining-Requests", rateCheck.maxRequests);
-            newResponse.headers.set("X-Ratelimit-Remaining-Tokens", rateCheck.maxTokens);
-            newResponse.headers.set("X-Ratelimit-Limit-Requests", rateCheck.limitRequests);
-            newResponse.headers.set("X-Ratelimit-Limit-Tokens", rateCheck.limitTokens);
+            updateResponsefromRateCheck(newResponse, rateCheck);
           }
           newResponse.headers.delete('set-cookie');
           return newResponse;
     
       } catch (e) {
+        throw e
           return jsonResponse({
               error: { message: `Failed to connect to server: ${e.message}` }
           }, 502);
@@ -1019,52 +1059,53 @@ const RATE_LIMITS = {
       let buffer = '';
       let usage = {};
       while(true) {
-              const { done, value } = await reader.read();
-              let lines = [];
-              if (!done) {
-                const text = decoder.decode(value, { stream: true });
-                buffer += text;
-    
-                // Look for usage in SSE data chunks
-                lines = buffer.split('\n');
-                buffer = lines.pop() || '';
-              } else {
-                if (buffer) {
-                    lines = buffer.split('\n');
-                }
-              }
-              for (const line of lines) {
-                  if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-                      try {
-                          const jsonStr = line.slice(6);
-                          const data = JSON.parse(jsonStr);
-                          if (data.usage) {
-                               usage = data.usage;
-                          }
-                          if (data.model) {
-                            model = data.model;
-                          }
-                      } catch (e) {
-                          // Ignore parse errors
-                      }
-                  }
-              }
-              if (done) {
-                ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${serverId}`, model, usage.total_tokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user));
-                ctx.waitUntil(updateServerUsage(env, server, usage.total_tokens, model));
-                
-                // Update rate limit token usage
-                const isCached = (response.headers.get('X-Cache') || usage.cache || 'MISS') === 'HIT';
-                if (!userProvidedKey && !isCached) {
-                    const totalTokens = getModelTokens(model, usage.total_tokens);
-                    ctx.waitUntil(updateAnonymousTokenUsage(env, clientIP, totalTokens, ctx));
-                    if (user) {
-                        ctx.waitUntil(updateUserTokenUsage(env, user.id, totalTokens, ctx));
-                    }
-                }
-                break;
-              }
+        const { done, value } = await reader.read();
+        let lines = [];
+        if (!done) {
+            const text = decoder.decode(value, { stream: true });
+            buffer += text;
+            // Look for usage in SSE data chunks
+            lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+        } else if (buffer) {
+            lines = buffer.split('\n');
         }
+        for (const line of lines) {
+            if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                try {
+                    const jsonStr = line.slice(6);
+                    const data = JSON.parse(jsonStr);
+                    if (data.usage) {
+                        usage = data.usage;
+                    }
+                    if (data.model) {
+                        model = data.model;
+                    }
+                } catch (e) {
+                    // Ignore parse errors
+                }
+            }
+        }
+        if (done) {
+            break;
+        }
+      }
+
+      ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${serverId}`, model, usage.total_tokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user));
+      ctx.waitUntil(updateServerUsage(env, server, usage.total_tokens, model));
+      if (user) {
+          ctx.waitUntil(updateUserDailyUsage(env, user.id, usage.total_tokens, `custom:${serverId}`, model));
+      }
+      
+      // Update rate limit token usage
+      const isCached = (response.headers.get('X-Cache') || usage.cache || 'MISS') === 'HIT';
+      if (!userProvidedKey && !isCached) {
+          const totalTokens = getModelTokens(model, usage.total_tokens);
+          ctx.waitUntil(updateAnonymousTokenUsage(env, clientIP, totalTokens, ctx));
+          if (user) {
+              ctx.waitUntil(updateUserTokenUsage(env, user.id, totalTokens, ctx));
+          }
+      }
     }
     
     function getFirstMessage(messages, fallback = '') {
@@ -1100,7 +1141,7 @@ const RATE_LIMITS = {
             clientIP,
             provider || 'unknown',
             model || 'unknown',
-            tokensUsed,
+            tokensUsed || 0,
             promptTokens || 0,
             completionTokens || 0,
             pathname || 'unknown',
@@ -1172,6 +1213,45 @@ const RATE_LIMITS = {
           console.error('Failed to update server usage:', e);
       }
     }
+
+    async function updateUserDailyUsage(env, userId, tokens, provider, model) {
+      if (!env.MEMBERS_BUCKET || !userId) return;
+
+      try {
+          const dateKey = new Date().toISOString().split("T")[0];
+          const usagePath = `usage/${userId}/${dateKey}.json`;
+
+          let usageData;
+          const existing = await env.MEMBERS_BUCKET.get(usagePath);
+          if (existing) {
+              usageData = await existing.json();
+          } else {
+              usageData = {
+                  date: dateKey,
+                  requests: 0,
+                  tokens: 0,
+                  providers: {},
+                  models: {}
+              };
+          }
+
+          usageData.requests += 1;
+          usageData.tokens += tokens || 0;
+
+          if (provider) {
+              usageData.providers[provider] = (usageData.providers[provider] || 0) + 1;
+          }
+          if (model) {
+              usageData.models[model] = (usageData.models[model] || 0) + 1;
+          }
+
+          await env.MEMBERS_BUCKET.put(usagePath, JSON.stringify(usageData, null, 2), {
+              httpMetadata: { contentType: "application/json" }
+          });
+      } catch (e) {
+          console.error('Failed to update user daily usage:', e);
+      }
+    }
     
     // ============================================
     // Helper Functions
@@ -1222,6 +1302,7 @@ const RATE_LIMITS = {
                     return fullServer;
                 }
             }
+            return server;
         }
       }
     
@@ -1248,7 +1329,7 @@ const RATE_LIMITS = {
     
       // Search through public servers index
         if (publicServers) {
-            const serverIndex = publicServers.find(s => s.label.toLowerCase().includes(label.toLowerCase()) && !BLOCKED_SERVERS.includes(s.id));
+            const serverIndex = publicServers.find(s => s.label.toLowerCase().includes(label.toLowerCase()));
             if (serverIndex) {
                 return await getServerById(env, serverIndex.id, user);
             }
@@ -1598,10 +1679,8 @@ const RATE_LIMITS = {
               newResponse.headers.set("X-Server", server.id);
               newResponse.headers.set("X-Url", queryUrl);
                 if (rateCheck) {
-                    newResponse.headers.set("X-Ratelimit-Remaining-Requests", rateCheck.maxRequests);
-                    newResponse.headers.set("X-Ratelimit-Remaining-Tokens", rateCheck.maxTokens);
-                    newResponse.headers.set("X-Ratelimit-Limit-Requests", rateCheck.limitRequests);
-                    newResponse.headers.set("X-Ratelimit-Limit-Tokens", rateCheck.limitTokens);
+                    newResponse.headers.set("X-Ratelimit-Model-Factor", String(getModelFactor(queryBody.model)));
+                    updateResponsefromRateCheck(newResponse, rateCheck);
                 }
               return newResponse;
           }
@@ -1638,7 +1717,7 @@ const RATE_LIMITS = {
           }
           
           const newResponse = new Response(data, {
-              headers: { 'Content-Type': 'text/plain', ...CORS_HEADERS }
+              headers: { 'Content-Type': 'text/plain; charset=UTF-8', ...CORS_HEADERS }
           });
           newResponse.headers.set("X-Provider", server.label);
           newResponse.headers.set("X-Server", server.id);
@@ -1655,12 +1734,15 @@ const RATE_LIMITS = {
 
           ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, requestModel, usage.total_tokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user));
           ctx.waitUntil(updateServerUsage(env, server, usage.total_tokens, requestModel));
+          if (user) {
+              ctx.waitUntil(updateUserDailyUsage(env, user.id, usage.total_tokens, `custom:${server.id}`, requestModel));
+          }
           
           // Update rate limit token usage
           if (!userProvidedKey && response.headers.get('X-Cache') !== 'HIT') {
             const totalTokens = getModelTokens(requestModel, usage.total_tokens);
             if (totalTokens) {
-                newResponse.headers.set('X-Total-Tokens', String(totalTokens))
+                newResponse.headers.set('X-Usage-Total-Tokens', String(totalTokens))
             }
             ctx.waitUntil(updateAnonymousTokenUsage(env, clientIP, totalTokens, ctx));
             if (user) {
@@ -1669,10 +1751,8 @@ const RATE_LIMITS = {
           }
 
           if (rateCheck) {
-            newResponse.headers.set("X-Ratelimit-Remaining-Requests", rateCheck.maxRequests);
-            newResponse.headers.set("X-Ratelimit-Remaining-Tokens", rateCheck.maxTokens);
-            newResponse.headers.set("X-Ratelimit-Limit-Requests", rateCheck.limitRequests);
-            newResponse.headers.set("X-Ratelimit-Limit-Tokens", rateCheck.limitTokens);
+            newResponse.headers.set("X-Ratelimit-Model-Factor", String(getModelFactor(requestModel)));
+            updateResponsefromRateCheck(newResponse, rateCheck);
           }
           
           return newResponse;
@@ -1714,6 +1794,13 @@ const RATE_LIMITS = {
     // ============================================
     // Rate Limiting Functions
     // ============================================
+
+    function updateResponsefromRateCheck(newResponse, rateCheck) {
+        newResponse.headers.set("X-Ratelimit-Remaining-Requests", String(rateCheck.maxRequests));
+        newResponse.headers.set("X-Ratelimit-Remaining-Tokens", String(rateCheck.maxTokens));
+        newResponse.headers.set("X-Ratelimit-Limit-Requests", String(rateCheck.limitRequests));
+        newResponse.headers.set("X-Ratelimit-Limit-Tokens", String(rateCheck.limitTokens));
+    }
     
     async function checkUserRateLimits(env, user, request) {
       const tier = user.tier || 'new';
@@ -1766,7 +1853,8 @@ const RATE_LIMITS = {
             window: window.name,
             limit: window.requestLimit,
             used: usage.requests,
-            retryAfter: Math.ceil((window.duration - (now - usage.timestamp)) / 1000)
+            retryAfter: Math.ceil((window.duration - (now - usage.timestamp)) / 1000),
+            maxTokens, maxRequests, limitTokens, limitRequests
           };
         }
         if (usage.tokens >= window.tokenLimit) {
@@ -1777,7 +1865,8 @@ const RATE_LIMITS = {
             window: window.name,
             limit: window.tokenLimit,
             used: usage.tokens,
-            retryAfter: Math.ceil((window.duration - (now - usage.timestamp)) / 1000)
+            retryAfter: Math.ceil((window.duration - (now - usage.timestamp)) / 1000),
+            maxTokens, maxRequests, limitTokens, limitRequests
           };
         }
       }
@@ -1835,7 +1924,8 @@ const RATE_LIMITS = {
             window: window.name,
             limit: window.requestLimit,
             used: usage.requests,
-            retryAfter: Math.ceil((window.duration - (now - usage.timestamp)) / 1000)
+            retryAfter: Math.ceil((window.duration - (now - usage.timestamp)) / 1000),
+            maxTokens, maxRequests, limitTokens, limitRequests
           };
         }
         if (usage.tokens >= window.tokenLimit) {
@@ -1845,7 +1935,8 @@ const RATE_LIMITS = {
             window: window.name,
             limit: window.tokenLimit,
             used: usage.tokens,
-            retryAfter: Math.ceil((window.duration - (now - usage.timestamp)) / 1000)
+            retryAfter: Math.ceil((window.duration - (now - usage.timestamp)) / 1000),
+            maxTokens, maxRequests, limitTokens, limitRequests
           };
         }
       }
@@ -1937,15 +2028,22 @@ const RATE_LIMITS = {
       }
     }
 
-    function getModelTokens(model, tokens) {
-        if (model.includes('opus')) {
-            return tokens * 5;
-        } else if (model.includes('sonnet')) {
-            return tokens * 3;
-        } else if (model.includes('gemini-3-pro')) {
-            return tokens * 2;
+    function getModelFactor(model) {
+        if (!model) {
+            return 1;
         }
-        return tokens;
+        if (model.includes('opus')) {
+            return 5;
+        } else if (model.includes('sonnet')) {
+            return 3;
+        } else if (model.includes('gemini-3-pro') || model.includes('model-router')) {
+            return 2;
+        }
+        return 1;
+    }
+
+    function getModelTokens(model, tokens) {
+        return getModelFactor(model) * tokens;
     }
   
     /**
@@ -2034,7 +2132,7 @@ const RATE_LIMITS = {
       }
     }
     
-    async function handleV1ChatCompletions(request, env, ctx, pathname, rateCheck) {
+    async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, rateCheck) {
       // Authenticate user (optional for public servers)
       const user = await authenticateRequest(request, env);
     
@@ -2095,7 +2193,7 @@ const RATE_LIMITS = {
       }
     
       // Now proxy to the selected server
-      return handleProxyToServer(request, env, ctx, selectedServer, '/chat/completions', user, pathname, null, rateCheck);
+      return handleProxyToServer(request, env, ctx, selectedServer, '/chat/completions', cacheKey, user, pathname, null, rateCheck);
     }
     
     async function handleV1Models(request, env) {

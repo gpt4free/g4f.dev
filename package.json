@@ -1,6 +1,6 @@
 {
   "name": "@gpt4free/g4f.dev",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Use the official GPT4Free.js client right in the browser—no backend needed",
   "type": "module",
   "exports": {
