@@ -333,6 +333,9 @@ class Client {
         if (response.headers.get('x-provider')) {
             data.provider = response.headers.get('x-provider');
         }
+        if (!data.model && response.headers.get('x-model')) {
+            data.model = response.headers.get('x-model');
+        }
         if (response.headers.get('x-server')) {
             data.server = response.headers.get('x-server');
         }
@@ -388,6 +391,9 @@ class Client {
                 }
                 if (response.headers.get('x-provider')) {
                     data.provider = response.headers.get('x-provider');
+                }
+                if (!data.model && response.headers.get('x-model')) {
+                    data.model = response.headers.get('x-model');
                 }
                 if (response.headers.get('x-server')) {
                     data.server = response.headers.get('x-server');
