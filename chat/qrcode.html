@@ -140,12 +140,6 @@
     <button id="generateQRCode">Generate QR Code</button>
     <button id="deleteQRCode" disabled>Delete QR Code</button>
 
-    <h2>QR Code</h2>
-    <button id="generateBackup" disabled>Create Backup</button>
-    <button id="importBackup" disabled>Import Backup</button>
-    <button id="showBackup" disabled>Show Backup</button>
-    <button id="deleteBackup" disabled>Delete Backup</button>
-
     <script type="module">
         let conversation_id = window.location.hash.replace("#", "");
         if (!conversation_id) {
@@ -352,104 +346,6 @@
         document.getElementById('startCamera').addEventListener('click', () => {
             startCamera();
         });
-
-        const conversations = {};
-        const backupIds = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            let key = localStorage.key(i);
-            if (key.startsWith("conversation:")) {
-                let conversation = localStorage.getItem(key);
-                conversation = JSON.parse(conversation);
-                delete conversation.items;
-                delete conversation.data;
-                delete conversation.system;
-                conversations[key] = conversation;
-            } else if (key.startsWith("bucket:")) {
-                conversations[key] = localStorage.getItem(key);
-            }
-        }
-        console.log("Conversations loaded:", conversations);
-
-        if (localStorage.getItem(`backup`)) {
-            document.getElementById('showBackup').removeAttribute('disabled');
-            document.getElementById('deleteBackup').removeAttribute('disabled');
-        }
-
-        document.getElementById('generateBackup').addEventListener('click', async () => {
-            if (!share_id) {
-                share_id = crypto.randomUUID();
-                localStorage.setItem(`backup`, share_id);
-            }
-            const url = `${framework.backendUrl}/backend-api/v2/chat/${encodeURIComponent(share_id)}`;
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {'content-type': 'application/json'},
-                body: JSON.stringify({id: share_id, updated: Date.now(), backup: conversations})
-            });
-            const share = `${window.location.origin}${window.location.pathname}#${encodeURIComponent(share_id)}`;
-            const qrcodeStatus = document.getElementById('qrcode-status');
-            if (response.status !== 200) {
-                qrcodeStatus.innerText = 'Error on backup: ' + response.statusText;
-                return;
-            }
-            Object.keys(conversations).forEach(key => {
-                if (key.startsWith("conversation:")) {
-                    let id = conversations.backup || key.replaceAll("conversation:", "");
-                    console.log("Saving conversation:", id, conversations[key]);
-                    const url = `${framework.backendUrl}/backend-api/v2/chat/${encodeURIComponent(id)}`;
-                    fetch(url, {
-                        method: 'POST',
-                        headers: {'content-type': 'application/json'},
-                        body: localStorage.getItem(key)
-                    });
-                }
-            });
-            backup = conversations;
-            showBackup();
-        });
-
-        document.getElementById('importBackup').addEventListener('click', async () => {
-            let count = 0;
-            if (backup) {
-                Object.keys(backup).forEach(key => {
-                    if (!localStorage.getItem(key)) {
-                        localStorage.setItem(key, JSON.stringify(backup[key]));
-                        count++;
-                    }
-                });
-            }
-            document.getElementById('importBackup').setAttribute('disabled', 'disabled');
-            qrcodeStatus.innerText = `${count || 0} conversations imported from backup.`;
-        });
-
-        document.getElementById('deleteBackup').addEventListener('click', async () => {
-            if (backup) {
-                Object.keys(backup).forEach(key => {
-                    if (key.startsWith("conversation:")) {
-                        let id = backup[key].backup || key.replace("conversation:", "");
-                        const url = `${framework.backendUrl}/backend-api/v2/files/${encodeURIComponent(id)}`;
-                        fetch(url, {
-                            method: 'DELETE',
-                        });
-                    }
-                });
-            }
-            if (share_id) {
-                localStorage.removeItem(`conversation:${share_id}`);
-                const delete_url = `${framework.backendUrl}/backend-api/v2/files/${encodeURIComponent(share_id)}`;
-                await fetch(delete_url, {
-                    method: 'DELETE'
-                });
-            }
-            localStorage.removeItem(`backup`);
-            document.getElementById('deleteBackup').setAttribute('disabled', 'disabled');
-            document.getElementById('importBackup').setAttribute('disabled', 'disabled');
-            document.getElementById("qrcode").innerHTML = '';
-            document.getElementById("qrcode").style.display = 'none';
-            qrcodeStatus.innerText = '';
-        });
-
-        document.getElementById('showBackup').addEventListener('click', showBackup);
     </script>
 </body>
 </html>
