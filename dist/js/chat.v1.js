@@ -1556,17 +1556,59 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 }
             });
         }
-        messages = messages.map((message) => {
+        // Helper function to solve bucket content
+        const solveBucketContent = async (item) => {
+            // Check if this is a media bucket (has url with /media/ path)
+            if (item.bucket_id && item.url && item.url.includes('/media/')) {
+                // For media buckets, add as image_url when schema is https
+                if (window.location.protocol === 'https:') {
+                    return {
+                        type: "image_url",
+                        image_url: {
+                            url: item.url
+                        }
+                    };
+                }
+                // For non-https, skip media content
+                return null;
+            }
+            // Check if this is a text bucket (has bucket_id but no media url)
+            if (item.bucket_id && !item.text) {
+                // Fetch plain text content from backend
+                try {
+                    const response = await fetch(`${framework.backendUrl}/backend-api/v2/files/${item.bucket_id}`);
+                    if (response.ok) {
+                        const text = await response.text();
+                        return {
+                            type: "text",
+                            text: text
+                        };
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch bucket content:", e);
+                }
+                return null;
+            }
+            // Regular text content
+            return {
+                type: "text",
+                text: item.text || ""
+            };
+        };
+        // Process messages with async bucket resolution
+        messages = await Promise.all(messages.map(async (message) => {
+            if (Array.isArray(message.content)) {
+                const resolvedContent = await Promise.all(message.content.map(solveBucketContent));
+                return {
+                    role: message.role,
+                    content: resolvedContent.filter(item => item !== null)
+                };
+            }
             return {
                 role: message.role,
-                content: Array.isArray(message.content) ? message.content.map((item) => {
-                    return {
-                        type: "text",
-                        text: item.text || ""
-                    }
-                }) : message.content
-            }
-        });
+                content: message.content
+            };
+        }));
     }
     if (messages.length > 0) {
         const last_message = messages[messages.length - 1];
