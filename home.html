@@ -275,7 +275,7 @@
             loginBtn.addEventListener("click", (e) => {
                 e.preventDefault();
                 const returnUrl = encodeURIComponent(location.origin + location.pathname);
-                window.location.href = `https://auth.gpt4free.workers.dev/members?redirect=${returnUrl}`;
+                window.location.href = `https://g4f.dev/members?redirect=${returnUrl}`;
             });
 
             // Hugging Face login button - use oauthLoginUrl for proper OAuth with state
