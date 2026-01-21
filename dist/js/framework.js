@@ -1,5 +1,6 @@
 const G4F_HOST = "https://g4f.dev";
 const G4F_WILDCARD = ".g4f.dev";
+const G4F_HOST_PASS = "https://pass.g4f.dev";
 const DB_NAME = 'chat-db';
 const STORE_NAME = 'conversations';
 const VERSION = 1;
@@ -49,7 +50,7 @@ if (window.location.protocol === "file:") {
 if (["https:", "http:"].includes(window.location.protocol)) {
     checkUrls.push(window.location.origin);
 }
-checkUrls.push(G4F_HOST);
+checkUrls.push(G4F_HOST_PASS);
 async function checkUrl(url, connectStatus) {
     let response;
     try {
