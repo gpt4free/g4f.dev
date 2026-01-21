@@ -553,6 +553,16 @@ class PollinationsAI extends Client {
                 this.baseUrl = 'https://gen.pollinations.ai/v1';
                 this.apiEndpoint = 'https://gen.pollinations.ai/v1/chat/completions';
                 this.extraHeaders['Authorization'] = `Bearer ${this.apiKey}`;
+                const userInfo = {
+                    tier: 'free',
+                    remainingRequests: 10,
+                    remainingTokens: d.balance * 1000,
+                    limitRequests: 10,
+                    limitTokens: 20 * 1000
+                };
+                if (typeof window !== "undefined") {
+                    window.dispatchEvent(new CustomEvent('userTierUpdate', { detail: userInfo }));
+                }
             }
             return d.balance;
         })
