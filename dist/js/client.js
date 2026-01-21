@@ -551,8 +551,8 @@ class PollinationsAI extends Client {
             if (d.balance > 0) {
                 this.apiKey = PUBLIC_KEY.join('');
                 this.baseUrl = 'https://gen.pollinations.ai/v1';
-                this.apiEndpoint = null;
-                this.headers['Authorization'] = `Bearer ${this.apiKey}`;
+                this.apiEndpoint = 'https://gen.pollinations.ai/v1/chat/completions';
+                this.extraHeaders['Authorization'] = `Bearer ${this.apiKey}`;
             }
             return d.balance;
         })

@@ -187,11 +187,16 @@ async function query(prompt, options={ json: false, cache: true }) {
     }
     let encodedParams = (new URLSearchParams(options)).toString();
     let secondPartyUrl = `https://g4f.dev/ai/auto/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
-    let response = await fetch(secondPartyUrl, { headers: localStorage.getItem("session_token") ? {
-        'Authorization': `Bearer ${localStorage.getItem("session_token")}`
-    } : {}});
-    window.captureUserTierHeaders?.(response.headers);
-    if (!response.ok) {
+    let response;
+    try {
+        response = await fetch(secondPartyUrl, { headers: localStorage.getItem("session_token") ? {
+            'Authorization': `Bearer ${localStorage.getItem("session_token")}`
+        } : {}});
+        window.captureUserTierHeaders?.(response.headers);
+    } catch (e) {
+        add_error(`Error fetching URL: \`${secondPartyUrl}\``, e);
+    }
+    if (!response || !response.ok) {
         const delay = parseInt(response.headers.get('Retry-After'), 10);
         if (delay > 0 && delay <= 60) {
             console.log(`Retrying after ${delay} seconds...`);
