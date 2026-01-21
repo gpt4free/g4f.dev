@@ -1213,7 +1213,8 @@
         import { oauthLoginUrl, oauthHandleRedirectIfPresent } from "@huggingface/hub";
 
         // API Configuration
-        const API_BASE = window.location.origin;
+        const API_BASE = 'https://auth.gpt4free.workers.dev';
+        const API_URL = 'https://api.gpt4free.workers.dev';
         const MEMBERS_API = `${API_BASE}/members/api`;
 
         // DOM Elements
@@ -1385,7 +1386,7 @@
             }
             
             // Update base URL
-            baseUrl.textContent = `${API_BASE}/v1`;
+            baseUrl.textContent = `${API_URL}/v1`;
             
             // Load usage stats from API
             await loadUsageStats(user);
@@ -1636,18 +1637,7 @@
                     localStorage.setItem('g4f_api_key', result.api_key);
                     showToast('API key generated successfully! Save it now - you won\'t see it again.');
                 } else {
-                    // Fallback to legacy genAK if worker not available
-                    const userId = user.id || user.username || user.name || 'user';
-                    const apiKey = await genAK(userId);
-                    
-                    if (apiKey) {
-                        apiKeyInput.value = apiKey;
-                        apiKeyInput.type = 'password';
-                        localStorage.setItem('g4f_api_key', apiKey);
-                        showToast('API key generated successfully!');
-                    } else {
-                        throw new Error('Failed to generate key');
-                    }
+                    throw new Error('Failed to generate key');
                 }
             } catch (error) {
                 console.error('Error generating API key:', error);
@@ -1699,37 +1689,6 @@
         baseUrl.style.cursor = 'pointer';
         baseUrl.title = 'Click to copy';
 
-        // Legacy genAK function (fallback)
-        async function genAK(userId) {
-            if (!window.JSEncrypt) {
-                throw new Error('JSEncrypt not loaded');
-            }
-            
-            const G4F_HOST = "https://g4f.dev";
-            const publicKeyData = await framework.getPublicKey(G4F_HOST);
-            
-            const encrypt = new JSEncrypt();
-            encrypt.setPublicKey(publicKeyData.public_key);
-            
-            const data = {
-                data: publicKeyData.data,
-                user: userId,
-                user_agent: navigator.userAgent,
-                timestamp: Date.now(),
-                referrer: document.referrer,
-                provider: localStorage.getItem('provider'),
-                model: localStorage.getItem('model')
-            };
-            
-            const encrypted = encrypt.encrypt(JSON.stringify(data));
-            if (!encrypted) {
-                throw new Error('Encryption failed');
-            }
-            
-            localStorage.setItem('Azure-api_key', encrypted);
-            return encrypted;
-        }
-
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
             // Connect to backend
@@ -1751,7 +1710,7 @@
         // Custom Servers Management
         // ============================================
         
-        const CUSTOM_API = `${API_BASE}/custom/api`;
+        const CUSTOM_API = `${API_URL}/custom/api`;
         
         // DOM Elements for servers
         const serversList = document.getElementById('serversList');
@@ -2312,7 +2271,7 @@
         }
         
         async function copyServerUrl(server) {
-            const url = `${API_BASE}/custom/${server.id}/chat/completions`;
+            const url = `${API_URL}/custom/${server.id}/chat/completions`;
             try {
                 await navigator.clipboard.writeText(url);
                 showToast('Server endpoint copied to clipboard!');

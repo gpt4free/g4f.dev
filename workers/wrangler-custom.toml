@@ -8,7 +8,7 @@ compatibility_date = "2024-01-01"
 # KV Namespace (shared with members worker for auth and server index)
 [[kv_namespaces]]
 binding = "MEMBERS_KV"
-id = "6c885eb6f17a49c6b6bca7f2e9f53e02"  # Same as members-worker
+id = "87b74eadf8124782a9b10dda75a872b6"
 
 # R2 Bucket for server data storage (shared with members worker)
 [[r2_buckets]]

@@ -149,12 +149,19 @@ async function handleListImageModels(request, env) {
 }
 
 /**
+ * Handle GET /image/models - List available image models
+ */
+async function handlePath(dir, path, request, env) {
+
+  return await fetch(`https://gen.pollinations.ai/${dir}/${path}`, request)
+}
+
+/**
  * Handle POST /v1/chat/completions - Chat completion
  */
 async function handleChatCompletion(request, env, ctx) {
   const body = await request.json();
   const model = resolveModel(body.model);
-  const stream = body.stream || false;
 
   // Extract API key if provided
   const authHeader = request.headers.get("Authorization");
@@ -189,23 +196,13 @@ async function handleChatCompletion(request, env, ctx) {
   });
 
   if (!response.ok) {
-    return new Response(JSON.stringify({
-      error: {
-        message: `Pollinations AI API error: ${response.status}`,
-        type: "api_error",
-        code: response.status
-      }
-    }), {
+    return new Response(response.body, {
       status: response.status,
       headers: { "Content-Type": "application/json" }
     });
   }
 
-  if (stream) {
-    return handlePollinationsStream(env, ctx, getClientIP(request), response, model);
-  } else {
-    return handlePollinationsNonStream(env, ctx, getClientIP(request), response, model);
-  }
+  return response;
 }
 
 /**
@@ -214,9 +211,11 @@ async function handleChatCompletion(request, env, ctx) {
 async function handleImageGeneration(request, env, ctx) {
   const body = await request.json();
   const prompt = body.prompt;
-  const model = body.model || "flux";
-  const size = body.size || "1024x1024";
+  delete body.prompt;
+  const size = body.size;
+  delete body.size
   const response_format = body.response_format || "url";
+  delete body.response_format;
 
   // Extract API key if provided
   const authHeader = request.headers.get("Authorization");
@@ -244,18 +243,20 @@ async function handleImageGeneration(request, env, ctx) {
     });
   }
 
-  // Parse size
-  const [width, height] = size.split('x').map(Number);
-
   // Build image URL
   const imageApiUrl = useGen ? POLLINATIONS_GEN_IMAGE_API : POLLINATIONS_IMAGE_API;
   let imageUrl = imageApiUrl.replace('{prompt}', encodeURIComponent(prompt));
   const params = new URLSearchParams();
-  params.append('width', width);
-  params.append('height', height);
-  params.append('model', model);
+  if (size) {
+    const [width, height] = size.split('x').map(Number);
+    params.append('width', width);
+    params.append('height', height);
+  }
   params.append('nologo', 'true');
-  params.append('seed', '10352102'); // Fixed seed for consistency
+  params.append('seed', '10352102');
+  for (const [key, value] of Object.entries(body)) {
+    params.append(key, String(value));
+  }
 
   imageUrl += '?' + params.toString();
 
@@ -266,35 +267,34 @@ async function handleImageGeneration(request, env, ctx) {
 
   try {
     const response = await fetch(imageUrl, { headers });
-    if (!response.ok) {
-      throw new Error(`Image generation failed: ${response.status}`);
+    if (!response.ok || response.headers.get("x-error-type")) {
+      throw new Error(`Image generation failed: ${response.headers.get("x-error-type") || response.status}`);
     }
 
     const imageBlob = await response.blob();
-
+    let newResponse;
     if (response_format === "b64_json") {
       const base64 = await blobToBase64(imageBlob);
-      return new Response(JSON.stringify({
+      newResponse = new Response(JSON.stringify({
         created: Math.floor(Date.now() / 1000),
         data: [{
           b64_json: base64.split(',')[1]
         }]
-      }), {
-        headers: { "Content-Type": "application/json" }
-      });
+      }), response);
     } else {
       // For URL format, we'd need to upload the image somewhere and return the URL
       // For now, return base64 as fallback
       const base64 = await blobToBase64(imageBlob);
-      return new Response(JSON.stringify({
+      const contentType = response.headers.get('Content-Type')
+      newResponse = new Response(JSON.stringify({
         created: Math.floor(Date.now() / 1000),
         data: [{
-          url: `data:image/png;base64,${base64.split(',')[1]}`
+          url: `data:${contentType};base64,${base64.split(',')[1]}`
         }]
-      }), {
-        headers: { "Content-Type": "application/json" }
-      });
+      }), response);
     }
+    newResponse.headers.set("Content-Type", "application/json");
+    return newResponse;
   } catch (error) {
     return new Response(JSON.stringify({
       error: {
@@ -307,75 +307,6 @@ async function handleImageGeneration(request, env, ctx) {
       headers: { "Content-Type": "application/json" }
     });
   }
-}
-
-/**
- * Handle streaming response from Pollinations
- */
-function handlePollinationsStream(env, ctx, clientIP, response, model) {
-  const { readable, writable } = new TransformStream();
-  const writer = writable.getWriter();
-  const encoder = new TextEncoder();
-
-  (async () => {
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let totalTokens = 0;
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          
-          try {
-            if (line.startsWith('data: ')) {
-              const data = JSON.parse(line.slice(6));
-              if (data.choices && data.choices[0] && data.choices[0].delta) {
-                totalTokens += data.choices[0].delta.content ? data.choices[0].delta.content.length : 0;
-              }
-              await writer.write(encoder.encode(`${line}\n\n`));
-            }
-          } catch (e) {
-            console.error("Parse error:", e);
-          }
-        }
-      }
-
-      // Send final [DONE]
-      await writer.write(encoder.encode("data: [DONE]\n\n"));
-    } catch (e) {
-      console.error("Stream error:", e);
-    } finally {
-      await writer.close();
-    }
-  })();
-
-  return new Response(readable, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "Connection": "keep-alive"
-    }
-  });
-}
-
-/**
- * Handle non-streaming response from Pollinations
- */
-async function handlePollinationsNonStream(env, ctx, clientIP, response, model) {
-  const data = await response.json();
-
-  return new Response(JSON.stringify(data), {
-    headers: { "Content-Type": "application/json" }
-  });
 }
 
 /**
@@ -421,8 +352,14 @@ export default {
 
     try {
       // Route requests
-      if (path.endsWith("/image/models") && request.method === "GET") {
-        response = await handleListImageModels(request, env);
+      if (path.includes("/image/") && request.method === "GET") {
+        response = await handlePath("image", path.split("/image/", 2)[1], request, env);
+      } else if (path.includes("/text/") && request.method === "GET") {
+        response = await handlePath("text", path.split("/text/", 2)[1], request, env);
+      } else if (path == "/api/usage" && request.method === "GET") {
+        response = await handlePath("api", "usage", request, env);
+      } else if (path.startsWith("/account/") && request.method === "GET") {
+        response = await handlePath("account", path.substring("/account/".length), request, env);
       } else if (path.endsWith("/models") && request.method === "GET") {
         response = await handleListModels(request, env);
       } else if (path.endsWith("/chat/completions") && request.method === "POST") {
@@ -465,12 +402,6 @@ export default {
     return addCorsHeaders(response);
   }
 };
-
-function getClientIP(request) {
-  return request.headers.get('cf-connecting-ip') || 
-         request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-         'unknown';
-}
 
 /**
  * Convert blob to base64 data URL

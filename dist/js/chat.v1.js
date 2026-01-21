@@ -194,7 +194,7 @@ async function loadVoiceModels() {
     if (!voiceSelect) return;
 
     try {
-        const response = await fetch('https://g4f.dev/api/audio/models');
+        const response = await fetch('https://api.gpt4free.workers.dev/api/audio/models');
         if (!response.ok) {
             throw new Error('Failed to fetch voice models');
         }
@@ -2769,14 +2769,14 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
     if (!customOptgroup) return;
     
     try {
-        const url = "https://g4f.dev/custom/api/servers";
+        const url = "https://api.gpt4free.workers.dev/custom/api/servers";
         const resp = await fetch(url, {
             headers: {'Authorization': `Bearer ${appStorage.getItem("session_token") || ""}`}
         });
         if (resp.status === 401) {
             appStorage.removeItem("session_token");
         }
-        const publicUrl = "https://g4f.dev/custom/api/servers/public";
+        const publicUrl = "https://api.gpt4free.workers.dev/custom/api/servers/public";
         const publicResp = await fetch(publicUrl);
         let data = await publicResp.json();
         data = data.servers;
@@ -5724,7 +5724,7 @@ async function handleToolCalls(toolCalls, messages, model, provider, message_id,
 }
 
 // Cloud Sync Functions
-const CLOUD_SYNC_API = "https://g4f.dev/members/api";
+const CLOUD_SYNC_API = "https://auth.gpt4free.workers.dev/members/api";
 
 async function checkCloudSyncSession() {
     const token = appStorage.getItem("session_token");

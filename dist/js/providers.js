@@ -59,7 +59,7 @@ async function loadProviders() {
 async function createClient(provider, options = {}) {
     if (provider.startsWith("custom:")) {
         const serverId = provider.substring(7);
-        options.baseUrl = `https://g4f.dev/custom/${serverId}`;
+        options.baseUrl = `https://api.gpt4free.workers.dev/custom/${serverId}`;
         options.apiKey = options.apiKey || (typeof window !== "undefined" ? window?.localStorage.getItem("session_token") : undefined);
         provider = "custom";
     }
