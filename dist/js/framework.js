@@ -196,7 +196,7 @@ async function query(prompt, options={ json: false, cache: true }) {
     } catch (e) {
         add_error(`Error fetching URL: \`${secondPartyUrl}\``, e);
     }
-    if (!response || !response.ok) {
+    if (response && !response.ok) {
         const delay = parseInt(response.headers.get('Retry-After'), 10);
         if (delay > 0 && delay <= 60) {
             console.log(`Retrying after ${delay} seconds...`);
@@ -207,7 +207,7 @@ async function query(prompt, options={ json: false, cache: true }) {
             window.captureUserTierHeaders?.(response.headers);
         }
     }
-    if (!response.ok) {
+    if (!response || !response.ok) {
         add_error(`Error ${response.status} with URL: \`${secondPartyUrl}\`\n ${await response.text()}`, true);
         let firstPartyUrl = `https://gen.pollinations.ai/text/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
         response = await fetch(firstPartyUrl, { headers: {"Authorization": `Bearer ${["pk", "_B9YJX5SBohhm2ePq"].join("")}`}});
