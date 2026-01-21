@@ -23,7 +23,7 @@ async function loadProviders() {
             .then(json => {
                 providers = json.providers || {};
                 defaultModels = json.defaultModels || {};
-                providerLocalStorage = json.providerLocalStorage || {};
+                window.providerLocalStorage = providerLocalStorage = json.providerLocalStorage || {};
                 providerClassMap = {
                     "default": Client,
                     "pollinations": Pollinations,
