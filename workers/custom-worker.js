@@ -88,7 +88,8 @@ const RATE_LIMITS = {
     'srv_mkolabu46aa55fc6f003': 'deepseek-v3.2', // ollama
     'srv_mkolylnsaec61b86b9c2': 'tngtech/deepseek-r1t2-chimera:free', // openrouter
     // 'srv_mjlq1ncq8a3f7fe0aea0': 'turbo',
-    'srv_mkol5tgcd33cc358ddbc': 'openai', // pollinations
+    'srv_mkol5tgcd33cc358ddbc': 'models/gemini-flash-latest', // gemini
+    'srv_mkoloq41e34074b6133e': 'openai', // pollinations
     'srv_mkomfko63371049b6da6': 'deepseek-v3.2:free' // api.airforce
    };
 
