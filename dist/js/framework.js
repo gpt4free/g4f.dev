@@ -1,6 +1,6 @@
 const G4F_HOST = "https://g4f.dev";
 const G4F_WILDCARD = ".g4f.dev";
-const G4F_HOST_PASS = "https://pass.g4f.dev";
+const G4F_HOST_PASS = "https://hurricane-toddler-sharing-mpg.trycloudflare.com";
 const DB_NAME = 'chat-db';
 const STORE_NAME = 'conversations';
 const VERSION = 1;
