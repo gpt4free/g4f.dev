@@ -4629,11 +4629,15 @@ async function get_recognition_language() {
         if (locale) {
             return locale;
         }
-        const prompt = 'Response the full locale in JSON. Example: {"locale": "en-US"} Language: ' + navigator.language
-        response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}?json=true`);
-        locale = (await response.json()).locale || navigator.language;
-        if (locale.includes("-")) {
-            appStorage.setItem(navigator.language, locale);
+        try {
+            const prompt = 'Response the full locale in JSON. Example: {"locale": "en-US"} Language: ' + navigator.language
+            response = await framework.query(prompt, true);
+            locale = (await response.json()).locale || navigator.language;
+            if (locale.includes("-")) {
+                appStorage.setItem(navigator.language, locale);
+            }
+        } catch (e) {
+            add_error(e, true);
         }
     }
     return locale;
