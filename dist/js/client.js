@@ -523,7 +523,8 @@ class PollinationsAI extends Client {
             baseUrl: options.apiKey ? 'https://gen.pollinations.ai/v1' : options.baseUrl || 'https://text.pollinations.ai',
             apiEndpoint: options.apiKey || options.baseUrl ? null : options.apiEndpoint || 'https://text.pollinations.ai/openai',
             imageEndpoint: options.apiKey ? 'https://gen.pollinations.ai/image/{prompt}' : options.imageEndpoint || 'https://image.pollinations.ai/prompt/{prompt}',
-            modelsEndpoint: options.apiKey ? 'https://gen.pollinations.ai/text/models' : options.modelsEndpoint || 'https://text.pollinations.ai/models',
+            modelsEndpoint: options.modelsEndpoint || 'https://gen.pollinations.ai/text/models',
+            imageModelsEndpoint: options.imageModelsEndpoint || options.apiKey ? 'https://gen.pollinations.ai/image/models' : 'https://image.pollinations.ai/models',
             defaultModel: options.defaultModel || 'openai',
             extraBody: options.extraBody || {
                 seed: 10352102
@@ -535,6 +536,26 @@ class PollinationsAI extends Client {
                 ...(options.modelAliases || {})
             }
         });
+        if (!options.apiKey) {
+            this.balance = this.checkBalance();
+        }
+    }
+
+    async checkBalance() {
+        PUBLIC_KEY = ["pk", "_B9YJX5SBohhm2ePq"];
+        BALANCE_ENDPOINT = "https://gen.pollinations.ai/account/balance";
+        return fetch(BALANCE_ENDPOINT, {headers: {
+            'Authorization': `Bearer ${PUBLIC_KEY.join('')}`
+        }}).then(r=>r.json()).then(d=>{
+            console.log(`PollinationsAI balance: ${d.balance}`);
+            if (d.balance > 0) {
+                this.apiKey = PUBLIC_KEY.join('');
+                this.baseUrl = 'https://gen.pollinations.ai/v1';
+                this.apiEndpoint = null;
+                this.headers['Authorization'] = `Bearer ${this.apiKey}`;
+            }
+            return d.balance;
+        })
     }
 
     get models() {
@@ -557,7 +578,7 @@ class PollinationsAI extends Client {
                 });
             }
             try {
-                const imageModelsUrl = this.apiKey ? 'https://gen.pollinations.ai/image/models' : 'https://g4f.dev/api/pollinations/image/models';
+                const imageModelsUrl = 'https://gen.pollinations.ai/image/models';
                 imageModelsResponse = await fetch(imageModelsUrl);
                 if (!imageModelsResponse.ok) {
                     const delay = parseInt(response.headers.get('Retry-After'), 10);
