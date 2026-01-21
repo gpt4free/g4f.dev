@@ -140,6 +140,13 @@
     </style>
     <link rel="stylesheet" href="dist/css/all.min.css">
     <script src="dist/js/framework.js" defer></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "@huggingface/hub": "https://cdn.jsdelivr.net/npm/@huggingface/hub@0.21.0/+esm"
+            }
+        }
+    </script>
 </head>
 <body class="translate">
     <iframe id="background" src="background.html"></iframe>
@@ -167,87 +174,126 @@
             <a href="chat/" class="button">Start Chat</a>
             <a href="#" class="button" id="login-btn">Login</a>
             <a href="#" class="button" id="hf-login-btn" style="background-color: #ff9d00;">
-                <i class="fa-brands fa-hubspot"></i> Hugging Face
+                🤗 Hugging Face
             </a>
         </div>
         <p id="user-status" class="hidden" style="margin-top: 15px; color: var(--colour-2);"></p>
         <a href="#" class="button hidden" id="logout-btn" style="max-width: 200px;">Logout</a>
-        <script>
-            document.addEventListener("DOMContentLoaded", (event) => {
-                localStorage.removeItem("backendUrl");
-                framework.connectToBackend(document.getElementById("connect_status"));
+        <script type="module">
+            import { oauthLoginUrl, oauthHandleRedirectIfPresent } from "@huggingface/hub";
 
-                const loginBtn = document.getElementById("login-btn");
-                const hfLoginBtn = document.getElementById("hf-login-btn");
-                const logoutBtn = document.getElementById("logout-btn");
-                const userStatus = document.getElementById("user-status");
+            // Define appStorage for consistent storage access
+            const appStorage = window.localStorage || {
+                setItem: (key, value) => self[key] = value,
+                getItem: (key) => self[key],
+                removeItem: (key) => delete self[key],
+                length: 0
+            };
 
-                // Check for API key in URL hash or query parameters (redirect back from members)
-                const urlParams = new URLSearchParams(window.location.search);
-                let apiKey = urlParams.get("session_token");
-                // Also check hash fragment for API key (starts with g4f_)
-                if (!apiKey && window.location.hash) {
-                    const hashValue = decodeURIComponent(window.location.hash.substring(1));
-                    if (hashValue.startsWith("g4f_") || hashValue.startsWith("gfs_")) {
-                        apiKey = hashValue;
-                    }
+            window.oauthConfig = {
+                clientId: '762e4f6f-2af6-437c-ad93-944cc17f9d23',
+                scopes: ['inference-api']
+            }
+
+            // Validate HuggingFace API key
+            async function validateHuggingFaceApiKey(apiKey) {
+                if (!apiKey) return false;
+                try {
+                    const response = await fetch("https://huggingface.co/api/whoami-v2", {
+                        headers: { "Authorization": `Bearer ${apiKey}` }
+                    });
+                    return response.ok;
+                } catch (e) {
+                    console.error("Failed to validate HuggingFace API key:", e);
+                    return false;
                 }
-                if (apiKey) {
-                    localStorage.setItem("session_token", apiKey);
-                    // Clean URL by removing the api_key parameter and hash
-                    window.history.replaceState({}, document.title, location.origin + location.pathname);
+            }
+
+            const loginBtn = document.getElementById("login-btn");
+            const hfLoginBtn = document.getElementById("hf-login-btn");
+            const logoutBtn = document.getElementById("logout-btn");
+            const userStatus = document.getElementById("user-status");
+
+            // Handle HuggingFace OAuth callback using the hub library
+            const oauthResult = await oauthHandleRedirectIfPresent();
+            if (oauthResult) {
+                appStorage.setItem("HuggingFace-api_key", oauthResult.accessToken);
+                appStorage.setItem("hf_code", oauthResult.accessToken);
+                console.log("HuggingFace OAuth successful");
+                // Clean URL
+                window.history.replaceState({}, document.title, location.origin + location.pathname);
+            }
+
+            localStorage.removeItem("backendUrl");
+            framework.connectToBackend(document.getElementById("connect_status"));
+
+            // Check for API key in URL hash or query parameters (redirect back from members)
+            const urlParams = new URLSearchParams(window.location.search);
+            let apiKey = urlParams.get("session_token");
+            // Also check hash fragment for API key (starts with g4f_)
+            if (!apiKey && window.location.hash) {
+                const hashValue = decodeURIComponent(window.location.hash.substring(1));
+                if (hashValue.startsWith("g4f_") || hashValue.startsWith("gfs_")) {
+                    apiKey = hashValue;
                 }
+            }
+            if (apiKey) {
+                appStorage.setItem("session_token", apiKey);
+                // Clean URL by removing the api_key parameter and hash
+                window.history.replaceState({}, document.title, location.origin + location.pathname);
+            }
 
-                // Check for Hugging Face OAuth callback (code parameter)
-                const hfCode = urlParams.get("code");
-                if (hfCode) {
-                    // Exchange code for token via backend or store directly
-                    localStorage.setItem("hf_code", hfCode);
-                    // Clean URL
-                    window.history.replaceState({}, document.title, location.origin + location.pathname);
+            // Check and validate HuggingFace API key on load
+            const hfApiKey = appStorage.getItem("HuggingFace-api_key");
+            if (hfApiKey) {
+                const isValid = await validateHuggingFaceApiKey(hfApiKey);
+                if (!isValid) {
+                    console.log("HuggingFace API key is invalid, removing from storage");
+                    appStorage.removeItem("HuggingFace-api_key");
+                    appStorage.removeItem("hf_code");
+                } else {
+                    console.log("HuggingFace API key validated successfully");
                 }
+            }
 
-                // Check if user is logged in
-                const storedApiKey = localStorage.getItem("session_token");
-                const storedHfCode = localStorage.getItem("hf_code");
-                if (storedApiKey || storedHfCode) {
-                    loginBtn.classList.add("hidden");
-                    hfLoginBtn.classList.add("hidden");
-                    logoutBtn.classList.remove("hidden");
-                    userStatus.classList.remove("hidden");
-                    if (storedHfCode) {
-                        userStatus.textContent = framework.translate("Logged in with Hugging Face");
-                    } else {
-                        userStatus.textContent = framework.translate("You are logged in");
-                    }
+            // Check if user is logged in
+            const storedApiKey = appStorage.getItem("session_token");
+            const storedHfCode = appStorage.getItem("hf_code");
+            if (storedApiKey || storedHfCode) {
+                loginBtn.classList.add("hidden");
+                hfLoginBtn.classList.add("hidden");
+                logoutBtn.classList.remove("hidden");
+                userStatus.classList.remove("hidden");
+                if (storedHfCode) {
+                    userStatus.textContent = framework.translate("Logged in with Hugging Face");
+                } else {
+                    userStatus.textContent = framework.translate("You are logged in");
                 }
+            }
 
-                // Login button - redirect to members with return URL
-                loginBtn.addEventListener("click", (e) => {
-                    e.preventDefault();
-                    const returnUrl = encodeURIComponent(location.origin + location.pathname);
-                    window.location.href = `https://g4f.dev/members?redirect=${returnUrl}`;
-                });
+            // Login button - redirect to members with return URL
+            loginBtn.addEventListener("click", (e) => {
+                e.preventDefault();
+                const returnUrl = encodeURIComponent(location.origin + location.pathname);
+                window.location.href = `https://g4f.dev/members?redirect=${returnUrl}`;
+            });
 
-                // Hugging Face login button - OAuth redirect
-                hfLoginBtn.addEventListener("click", (e) => {
-                    e.preventDefault();
-                    const redirectUri = encodeURIComponent(location.origin + location.pathname);
-                    const clientId = window.oauthConfig.clientId
-                    const scope = encodeURIComponent(window.oauthConfig.scopes.join(" "));
-                    window.location.href = `https://huggingface.co/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=code`;
-                });
+            // Hugging Face login button - use oauthLoginUrl for proper OAuth with state
+            hfLoginBtn.addEventListener("click", async (e) => {
+                e.preventDefault();
+                window.location.href = await oauthLoginUrl(window.oauthConfig);
+            });
 
-                // Logout button
-                logoutBtn.addEventListener("click", (e) => {
-                    e.preventDefault();
-                    localStorage.removeItem("session_token");
-                    localStorage.removeItem("hf_code");
-                    loginBtn.classList.remove("hidden");
-                    hfLoginBtn.classList.remove("hidden");
-                    logoutBtn.classList.add("hidden");
-                    userStatus.classList.add("hidden");
-                });
+            // Logout button
+            logoutBtn.addEventListener("click", (e) => {
+                e.preventDefault();
+                appStorage.removeItem("session_token");
+                appStorage.removeItem("hf_code");
+                appStorage.removeItem("HuggingFace-api_key");
+                loginBtn.classList.remove("hidden");
+                hfLoginBtn.classList.remove("hidden");
+                logoutBtn.classList.add("hidden");
+                userStatus.classList.add("hidden");
             });
         </script>
 

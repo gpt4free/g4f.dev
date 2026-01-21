@@ -14,7 +14,11 @@ async function loadProviders() {
     let data;
     if (typeof window !== "undefined" && window.fetch) {
         // Web: fetch providers.json
-        return fetch("https://g4f.dev/dist/js/providers.json")
+        let origin = "https://g4f.dev";
+        if (window.location.hostname === "gpt4free.github.io") {
+            origin = "";
+        }
+        return fetch(origin + "/dist/js/providers.json")
             .then(res => res.json())
             .then(json => {
                 providers = json.providers || {};
