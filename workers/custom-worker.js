@@ -82,14 +82,14 @@ const RATE_LIMITS = {
   }
 
   const DEFAULT_MODELS = {
-    'srv_mjnrrgu4065b7b4329f6': 'model-router3',
-    'srv_mjnrgebd823697f2976d': 'llama-3.3-70b-versatile',
-    'srv_mjnr7ksfae7dd0bd7972': 'deepseek-ai/deepseek-v3.2',
-    'srv_mjnrjfctcd025471c5b9': 'deepseek-v3.2',
-    'srv_mjnraxvsc0d2d71ec9e4': 'tngtech/deepseek-r1t2-chimera:free', // openrouter
-    'srv_mjlq1ncq8a3f7fe0aea0': 'turbo',
-    'srv_mjnathgq5829c76faa05': 'openai', // pollinations
-    'srv_mjovbs1p16a07136b8ad': 'deepseek-v3.2:free' // api.airforce
+    // 'srv_mjnrrgu4065b7b4329f6': 'model-router3',
+    'srv_mkom688d57c76d8a3542': 'llama-3.3-70b-versatile', // groq
+    'srv_mkombumpae45db46dcb8': 'deepseek-ai/deepseek-v3.2',
+    'srv_mkolabu46aa55fc6f003': 'deepseek-v3.2', // ollama
+    'srv_mkolylnsaec61b86b9c2': 'tngtech/deepseek-r1t2-chimera:free', // openrouter
+    // 'srv_mjlq1ncq8a3f7fe0aea0': 'turbo',
+    'srv_mkol5tgcd33cc358ddbc': 'openai', // pollinations
+    'srv_mkomfko63371049b6da6': 'deepseek-v3.2:free' // api.airforce
    };
 
    const BLOCKED_SERVERS = [

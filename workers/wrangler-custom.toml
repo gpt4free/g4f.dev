@@ -1,7 +1,7 @@
 # Wrangler configuration for G4F Custom Server Router Worker
 # See https://developers.cloudflare.com/workers/wrangler/configuration/
 
-name = "g4f-custom"
+name = "api"
 main = "custom-worker.js"
 compatibility_date = "2024-01-01"
 
