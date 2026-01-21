@@ -556,9 +556,9 @@ class PollinationsAI extends Client {
                 const userInfo = {
                     tier: 'free',
                     remainingRequests: 10,
-                    remainingTokens: d.balance * 1000,
+                    remainingTokens: d.balance,
                     limitRequests: 10,
-                    limitTokens: 20 * 1000
+                    limitTokens: 20
                 };
                 if (typeof window !== "undefined") {
                     window.dispatchEvent(new CustomEvent('userTierUpdate', { detail: userInfo }));
