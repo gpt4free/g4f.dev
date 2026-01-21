@@ -166,6 +166,9 @@
         <div class="button-container">
             <a href="chat/" class="button">Start Chat</a>
             <a href="#" class="button" id="login-btn">Login</a>
+            <a href="#" class="button" id="hf-login-btn" style="background-color: #ff9d00;">
+                <i class="fa-brands fa-hubspot"></i> Hugging Face
+            </a>
         </div>
         <p id="user-status" class="hidden" style="margin-top: 15px; color: var(--colour-2);"></p>
         <a href="#" class="button hidden" id="logout-btn" style="max-width: 200px;">Logout</a>
@@ -175,6 +178,7 @@
                 framework.connectToBackend(document.getElementById("connect_status"));
 
                 const loginBtn = document.getElementById("login-btn");
+                const hfLoginBtn = document.getElementById("hf-login-btn");
                 const logoutBtn = document.getElementById("logout-btn");
                 const userStatus = document.getElementById("user-status");
 
@@ -194,13 +198,28 @@
                     window.history.replaceState({}, document.title, location.origin + location.pathname);
                 }
 
+                // Check for Hugging Face OAuth callback (code parameter)
+                const hfCode = urlParams.get("code");
+                if (hfCode) {
+                    // Exchange code for token via backend or store directly
+                    localStorage.setItem("hf_code", hfCode);
+                    // Clean URL
+                    window.history.replaceState({}, document.title, location.origin + location.pathname);
+                }
+
                 // Check if user is logged in
                 const storedApiKey = localStorage.getItem("session_token");
-                if (storedApiKey) {
+                const storedHfCode = localStorage.getItem("hf_code");
+                if (storedApiKey || storedHfCode) {
                     loginBtn.classList.add("hidden");
+                    hfLoginBtn.classList.add("hidden");
                     logoutBtn.classList.remove("hidden");
                     userStatus.classList.remove("hidden");
-                    userStatus.textContent = framework.translate("You are logged in");
+                    if (storedHfCode) {
+                        userStatus.textContent = framework.translate("Logged in with Hugging Face");
+                    } else {
+                        userStatus.textContent = framework.translate("You are logged in");
+                    }
                 }
 
                 // Login button - redirect to members with return URL
@@ -210,11 +229,22 @@
                     window.location.href = `https://g4f.dev/members?redirect=${returnUrl}`;
                 });
 
+                // Hugging Face login button - OAuth redirect
+                hfLoginBtn.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    const redirectUri = encodeURIComponent(location.origin + location.pathname);
+                    const clientId = window.oauthConfig.clientId
+                    const scope = encodeURIComponent(window.oauthConfig.scopes.join(" "));
+                    window.location.href = `https://huggingface.co/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=code`;
+                });
+
                 // Logout button
                 logoutBtn.addEventListener("click", (e) => {
                     e.preventDefault();
                     localStorage.removeItem("session_token");
+                    localStorage.removeItem("hf_code");
                     loginBtn.classList.remove("hidden");
+                    hfLoginBtn.classList.remove("hidden");
                     logoutBtn.classList.add("hidden");
                     userStatus.classList.add("hidden");
                 });
@@ -246,5 +276,6 @@
         })();
     </script>
 <template>You are logged in</template>
+<template>Logged in with Hugging Face</template>
 </body>
 </html>
