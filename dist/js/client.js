@@ -114,7 +114,7 @@ class Client {
     constructor(options = {}) {
         if (!options.baseUrl && !options.apiEndpoint) {
             options.baseUrl = "https://api.gpt4free.workers.dev/api/auto";
-            options.apiEndpoint = "https://g4f.dev/ai/";
+            options.apiEndpoint = "https://api.gpt4free.workers.dev/ai/";
             options.sleep = 10000;
         }
         this.proxyManager = new CorsProxyManager();
