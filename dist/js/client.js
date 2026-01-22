@@ -542,7 +542,7 @@ class PollinationsAI extends Client {
     }
 
     async checkBalance() {
-        const PUBLIC_KEY = ["pk", "_B9YJX5SBohhm2ePq"];
+        const PUBLIC_KEY = ["pk", "_qYqyuR9tJOcWaKNQ"];
         const BALANCE_ENDPOINT = "https://gen.pollinations.ai/account/balance";
         return fetch(BALANCE_ENDPOINT, {headers: {
             'Authorization': `Bearer ${PUBLIC_KEY.join('')}`
