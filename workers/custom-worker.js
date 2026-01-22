@@ -93,16 +93,9 @@ const RATE_LIMITS = {
     'srv_mkomfko63371049b6da6': 'deepseek-v3.2:free' // api.airforce
    };
 
-   const BLOCKED_SERVERS = [
-    'srv_mk51doabb4aaef61129f',
-    'srv_mjygqsq6f735f5a0abb1',
-    'srv_mju9ak5fae1fd7738d36',
-    'srv_mk8ilfnc502a62f0e444',
-    'srv_mjvas3cw95a53a66a5ae',
-    'srv_mjvb4wujde2dac5d6bad',
-    'srv_mjns3wqp0976710869ad',
-    'srv_mk8spo5x513a26429132',
-   ];
+   const BLOCKED_SERVERS = [];
+
+   const GPT_AUDIO_VOICES = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer', 'coral', 'verse', 'ballad', 'ash', 'sage', 'marin', 'cedar', 'amuch', 'dan', 'elan', 'breeze', 'cove', 'ember', 'fathom', 'glimmer', 'harp', 'juniper', 'maple', 'orbit', 'vale'];
   
     export default {
       async fetch(request, env, ctx) {
@@ -112,6 +105,10 @@ const RATE_LIMITS = {
           // Handle CORS preflight
           if (request.method === "OPTIONS") {
               return new Response(null, { headers: CORS_HEADERS });
+          }
+
+          if (pathname == "/api/audio/models") {
+            return Response.json({data: [{id: 'gpt-audio', audio: true}, ...GPT_AUDIO_VOICES.map((voice)=>{return {id: voice, audio: true}})]}, {headers: ACCESS_CONTROL_ALLOW_ORIGIN});
           }
     
           try {

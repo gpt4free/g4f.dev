@@ -1862,8 +1862,7 @@
                 const result = await customApiRequest('/servers');
                 const servers = result.servers || [];
                 const existingServer = servers.find(s => 
-                    s.base_url === 'https://pollinations.g4f-dev.workers.dev' || 
-                    s.label.toLowerCase().includes('pollinations')
+                    s.base_url === 'https://pollinations.g4f-dev.workers.dev'
                 );
                 
                 const serverData = {

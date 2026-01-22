@@ -14,8 +14,7 @@
         "nvidia": {"baseUrl": "https://integrate.api.nvidia.com/v1", "backupUrl": "https://api.gpt4free.workers.dev/api/nvidia", "tags": "📟"},
         "ollama": {"baseUrl": "https://ollama.g4f-dev.workers.dev", "backupUrl": "https://api.gpt4free.workers.dev/api/ollama", "tags": "🦙", "sleep": 10000},
         "openrouter": {"baseUrl": "https://openrouter.ai/api/v1", "backupUrl": "https://api.gpt4free.workers.dev/api/openrouter", "tags": "👓"},
-        "puter": {"tags": "👓", "provider": "PuterJS"},
-        "worker": {"baseUrl": "https://api.gpt4free.workers.dev/api/worker", "backupUrl": "https://api.gpt4free.workers.dev/api/worker", "tags": "🎨", "sleep": 10000}
+        "puter": {"tags": "👓", "provider": "PuterJS"}
     },
     "defaultModels": {
         "pollinations": "openai",
