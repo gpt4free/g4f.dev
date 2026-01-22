@@ -251,7 +251,7 @@ const RATE_LIMITS = {
               
   
             // Route: /v1/models
-            if (pathname === "/v1/models" || pathname === "/custom/srv_mjncacwy529ad1e3c784/models") {
+            if (pathname === "/v1/models" || pathname === "/custom/srv_mkopytsj9b6425de1db8/models") {
                 return handleV1Models(request, env);
             }
   
@@ -273,7 +273,7 @@ const RATE_LIMITS = {
               }
             
             // Route: /v1/chat/completions
-            if (pathname === "/v1/chat/completions" || pathname === "/custom/srv_mjncacwy529ad1e3c784/chat/completions") {
+            if (pathname === "/v1/chat/completions" || pathname === "/custom/srv_mkopytsj9b6425de1db8/chat/completions") {
                 return handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, rateCheck);
             }
     
@@ -2230,25 +2230,25 @@ const RATE_LIMITS = {
       const publicServersIndex = await getPublicServers(env);
 
       // Collect all allowed models from all servers
-      const allModels = new Set();
+      const allModels = new Object();
   
       // Add models from private servers
       for (const server of privateServers) {
           if (server.allowed_models && server.allowed_models.length > 0) {
-              server.allowed_models.forEach(model => allModels.add(model));
+              server.allowed_models.forEach(model => (!allModels[model] ? allModels[model] = {id: model, owned_by: server.label, base_url: `/custom/${server.id}`} : null));
           }
       }
   
       // Add models from public servers
       for (const serverIndex of publicServersIndex) {
           if (serverIndex.allowed_models && serverIndex.allowed_models.length > 0) {
-              serverIndex.allowed_models.forEach(model => allModels.add(model));
+              serverIndex.allowed_models.forEach(model => (!allModels[model] ? allModels[model] = {id: model, owned_by: serverIndex.label, base_url: `/custom/${serverIndex.id}`} : null));
           }
       }
   
       // Return as array of objects
       return jsonResponse({
-          data: Array.from(allModels).map(m => ({ id: m }))
+          data: Array.from(Object.values(allModels))
       });
     }
     
