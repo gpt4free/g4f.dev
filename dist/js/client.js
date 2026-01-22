@@ -806,11 +806,8 @@ class Puter extends Client {
       return {
         list: async () => {
             const response = await fetch("https://api.puter.com/puterai/chat/models/");
-            let models = await response.json();
-            models = models.models;
-            const blockList = ["abuse", "costly", "fake", "model-fallback-test-1"];
-            models = models.filter((model) => model.startsWith("openrouter:") || !model.includes("/") && !blockList.includes(model));
-            return models.map(model => {
+            let data = await response.json();
+            return data.models.map(model => {
                 return {
                     id: model,
                     type: "chat"

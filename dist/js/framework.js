@@ -1,6 +1,6 @@
 const G4F_HOST = "https://g4f.dev";
 const G4F_WILDCARD = ".g4f.dev";
-const G4F_HOST_PASS = "https://hurricane-toddler-sharing-mpg.trycloudflare.com";
+const G4F_HOST_PASS = "https://dna-subjects-billing-scuba.trycloudflare.com";
 const DB_NAME = 'chat-db';
 const STORE_NAME = 'conversations';
 const VERSION = 1;
@@ -132,14 +132,14 @@ framework.translateElements = function (elements = null) {
     });
 }
 window.addEventListener('load', async () => {
+    if (!framework.backendUrl) {
+        await framework.connectToBackend();
+    }
     if (!document.body.classList.contains("translate")) {
         return;
     }
     if (!localStorage.getItem(framework.translationKey)) {
         try {
-            if (!framework.backendUrl) {
-                await framework.connectToBackend();
-            }
             if (await framework.translateAll()) {
                 window.location.reload();
             }

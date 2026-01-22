@@ -271,7 +271,7 @@ print(response)
         function getImage(key) {
           key = key || "";
           const img = new Image(40, 40);
-          const gen = 'https://g4f.dev';
+          const gen = 'https://prompt.gpt4free.workers.dev';
           img.src=gen+'/logo/' +
             key.replace(
               'MetaAIAccount', 'Facebook AI').replace(
@@ -473,8 +473,8 @@ print(response)
 
         // Function to load and render Core Providers (from API)
         async function loadCoreProviders() {
-            const providersUrl = "https://g4f.dev/backend-api/v2/providers";
-            const modelsUrl = "https://g4f.dev/backend-api/v2/models";
+            const providersUrl = `${framework.backendUrl}/backend-api/v2/providers`;
+            const modelsUrl = `${framework.backendUrl}/backend-api/v2/models`;
             const table = document.getElementById("core-providers-table");
             try {
                 const [providers, models] = await Promise.all([
