@@ -1547,7 +1547,7 @@
                             'Authorization': `Bearer ${pollinationsToken}`
                         }
                     });
-                    if (response.ok) {
+                    if (response.ok || response.status === 403) {
                         localStorage.setItem('PollinationsAI-api_key', pollinationsToken);
                         // Store token for creating/updating custom server after dashboard loads
                         localStorage.setItem('pollinations_pending_server', pollinationsToken);
@@ -1565,7 +1565,7 @@
                             'Authorization': `Bearer ${existingToken}`
                         }
                     });
-                    if (!response.ok) {
+                    if (!response.ok && response.status !== 403) {
                         localStorage.removeItem('PollinationsAI-api_key');
                     } else {
                         addPollinationsServerBtn.style.display = 'none';
