@@ -271,7 +271,7 @@ function render_reasoning(reasoning, final = false) {
     return `<div class="reasoning_body">
         <div class="reasoning_title">
            <strong>${reasoning.label ? reasoning.label :'Reasoning <i class="brain">🧠</i>'}: </strong>
-           ${typeof reasoning.status === 'string' || reasoning.status instanceof String ? framework.escape(reasoning.status) : '<i class="fas fa-spinner fa-spin"></i>'}
+           ${typeof reasoning.status === 'string' ? framework.escape(reasoning.status) : '<i class="fas fa-spinner fa-spin"></i>'}
         </div>
         ${inner_text}
     </div>`;
@@ -585,7 +585,7 @@ const register_message_buttons = async () => {
             const message_el = get_message_el(el);
             let audio;
             if (message_el.dataset.synthesize_url) {
-                console.log(message_el.dataset.synthesize_url)
+                el.classList.add("active");
                 if (message_el.dataset.synthesize_url.startsWith("https://api.gpt4free.workers.dev/ai/audio/")) {
                     const response = await fetch(message_el.dataset.synthesize_url, {
                         headers: appStorage.getItem("session_token") ? {
@@ -596,7 +596,6 @@ const register_message_buttons = async () => {
                     const object = await response.blob();
                     message_el.dataset.synthesize_url = URL.createObjectURL(object);
                 }
-                el.classList.add("active");
                 setTimeout(()=>el.classList.remove("active"), 2000);
                 const media_player = document.querySelector(".media-player");
                 if (!media_player.classList.contains("show")) {
@@ -704,15 +703,6 @@ const delete_conversations = async () => {
     // Delete all conversations
     const { store, done } = await withStore('readwrite');
     store.clear();
-    
-    // const remove_keys = [];
-    // for (let i = 0; i < appStorage.length; i++){
-    //     let key = appStorage.key(i);
-    //     if (key.startsWith("conversation:")) {
-    //         remove_keys.push(key);
-    //     }
-    // }
-    // remove_keys.forEach((key)=>appStorage.removeItem(key));
 
     hide_sidebar();
     await new_conversation();
@@ -723,8 +713,8 @@ const handle_ask = async (do_ask_gpt = true, message = null) => {
     await scroll_to_bottom();
 
     if (!message) {
-        message = userInput.value.trim();
-        if (!message) {
+        message = userInput.value;
+        if (!message.trim()) {
             return;
         }
         userInput.value = "";
@@ -748,6 +738,7 @@ const handle_ask = async (do_ask_gpt = true, message = null) => {
         connectToSSE(`${framework.backendUrl}/backend-api/v2/files/${bucket_id}/stream`, false, bucket_id); //Retrieve and refine
         return;
     }
+    message = message.trim();
     if (!message.length) {
         return;
     }
@@ -1244,7 +1235,6 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         }
         if (message.status || message.token || message.label) {
             let reasoning_body = content_map.inner.querySelector(".reasoning_body") || content_map.inner;
-            reasoning_body.classList.remove("reasoning_body");
             reasoning_body.innerHTML = render_reasoning(reasoning_storage[message_id]);
         }
     } else if (message.type == "parameters") {
