@@ -1416,10 +1416,10 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         let final_message  = null;
         content_map.update_timeouts.forEach((timeoutId)=>clearTimeout(timeoutId));
         content_map.update_timeouts = [];
-        if (!error_storage[message_id] && message_storage[message_id]) {
-            content_map.inner.innerHTML = renderer(message_storage[message_id]);
-            highlight(content_map.inner);
-        }
+        // if (!error_storage[message_id] && message_storage[message_id]) {
+        //     content_map.inner.innerHTML = renderer(message_storage[message_id]);
+        //     highlight(content_map.inner);
+        // }
         // Handle tool calls if any
         if (tool_calls_storage[message_id] && tool_calls_storage[message_id].length > 0 && mcpClient) {
             await handleToolCalls(tool_calls_storage[message_id], messages, model, provider, message_id, finish_message);
