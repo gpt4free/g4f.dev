@@ -3366,6 +3366,9 @@ function get_modelTags(model, add_vision = true) {
         if (name != "vision" || add_vision) {
             parts.push(model[name] ? ` ${text}` : "")
         }
+        if (!model[name] && model.type === name) {
+            parts.push(` ${text}`);
+        }
     }
     return parts.join("");
 }
