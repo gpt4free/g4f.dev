@@ -39,10 +39,128 @@ const CORS_HEADERS = {
     burstMultiplier: 2
   };
   
-  // Pro tier emails (manually granted)
-  const PRO_EMAILS = [
-    "heiner.loh789@gmail.com"
-  ];
+const ADMIN_USERS = {
+    discord: ["hlohaus789"],
+    github: [],
+    huggingface: []
+};
+
+/**
+ * Fetch all contributors from GitHub API (handles pagination using Link header)
+ * @param {Object} env - Environment variables containing GITHUB_TOKEN
+ * @returns {Promise<string[]>} List of contributor usernames
+ */
+async function fetchContributors(env) {
+    const contributors = [];
+    let nextUrl = "https://api.github.com/repos/xtekky/gpt4free/contributors?per_page=100";
+    
+    const headers = { "User-Agent": "G4F-Members-Worker" };
+    if (env.GITHUB_TOKEN) {
+        headers["Authorization"] = `Bearer ${env.GITHUB_TOKEN}`;
+    }
+    
+    try {
+        while (nextUrl) {
+            const response = await fetch(nextUrl, { headers });
+            
+            if (!response.ok) {
+                console.error(`Failed to fetch contributors: ${response.status}`);
+                if (contributors.length === 0) {
+                    return ["kirill670"];
+                }
+                break;
+            }
+            
+            const data = await response.json();
+            
+            if (Array.isArray(data) && data.length > 0) {
+                contributors.push(...data.map(user => user.login));
+            }
+            
+            // Parse Link header for next page
+            nextUrl = null;
+            const linkHeader = response.headers.get("Link");
+            if (linkHeader) {
+                const links = linkHeader.split(",");
+                for (const link of links) {
+                    const match = link.match(/<([^>]+)>;\s*rel="next"/);
+                    if (match) {
+                        nextUrl = match[1];
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Add additional contributor
+        if (!contributors.includes("kirill670")) {
+            contributors.push("kirill670");
+        }
+        
+        console.log(`Fetched ${contributors.length} contributors`);
+        return contributors;
+    } catch (error) {
+        console.error("Failed to fetch contributors:", error);
+        return contributors.length > 0 ? contributors : ["kirill670"];
+    }
+}
+
+/**
+ * Fetch sponsors from GitHub Sponsors API
+ * @returns {Promise<string[]>} List of sponsor usernames
+ */
+async function fetchSponsors() {
+    try {
+        const sponsorsUrl = "https://ghs.vercel.app/v3/sponsors/hlohaus";
+        const response = await fetch(sponsorsUrl);
+        if (!response.ok) return [];
+        const data = await response.json();
+        data.sponsors = data.sponsors || {};
+        data.sponsors.current = data.sponsors.current || [];
+        data.sponsors.past = data.sponsors.past || [];
+        return data.sponsors.past.map(user => user.username)
+            .concat(data.sponsors.current.map(user => user.username));
+    } catch (error) {
+        console.error("Failed to fetch sponsors:", error);
+        return [];
+    }
+}
+
+/**
+ * Calculate user tier based on admin status, contributor status, sponsor status, and account age
+ * @param {Object} userData - User data object
+ * @param {string[]} contributors - List of contributor usernames
+ * @param {string[]} sponsors - List of sponsor usernames
+ * @returns {string} User tier: "admin", "pro", "free", or "new"
+ */
+function calculateUserTier(userData, contributors, sponsors) {
+    // Check admin status
+    const adminList = ADMIN_USERS[userData.provider] || [];
+    if (adminList.includes(userData.username)) {
+        return "admin";
+    }
+    
+    // Check contributor status (GitHub only)
+    if (userData.provider === "github" && contributors.includes(userData.username)) {
+        return "pro";
+    }
+    
+    // Check sponsor status (GitHub only)
+    if (userData.provider === "github" && sponsors.includes(userData.username)) {
+        return "pro";
+    }
+    
+    // Check account age (> 24 hours = free tier)
+    if (userData.created_at) {
+        const created = new Date(userData.created_at);
+        const now = new Date();
+        if ((now - created) > 24 * 60 * 60 * 1000) {
+            return "free";
+        }
+    }
+    
+    return "new";
+}
   
   // Rate limits for different user tiers (tokens and requests per window)
   const USER_TIER_LIMITS = {
@@ -206,6 +324,88 @@ const CORS_HEADERS = {
         } catch (error) {
             console.error("Worker error:", error);
             return jsonResponse({ error: error.message || "Internal server error" }, 500);
+        }
+    },
+
+    /**
+     * Scheduled handler to update user tiers periodically
+     * Configure in wrangler.toml with cron trigger, e.g.:
+     * [triggers]
+     * crons = ["0 * * * *"]  # Run every hour
+     */
+    async scheduled(event, env, ctx) {
+        console.log("Starting scheduled tier update...");
+        
+        try {
+            // Fetch contributors and sponsors
+            const [contributors, sponsors] = await Promise.all([
+                fetchContributors(env),
+                fetchSponsors()
+            ]);
+            
+            console.log(`Fetched ${contributors.length} contributors and ${sponsors.length} sponsors`);
+            
+            // List all users from R2
+            const usersList = await env.MEMBERS_BUCKET.list({ prefix: "users/" });
+            let updatedCount = 0;
+            let errorCount = 0;
+            
+            for (const object of usersList.objects) {
+                try {
+                    // Skip non-JSON files
+                    if (!object.key.endsWith('.json')) continue;
+                    
+                    const userObject = await env.MEMBERS_BUCKET.get(object.key);
+                    if (!userObject) continue;
+                    
+                    const user = await userObject.json();
+                    const newTier = calculateUserTier(user, contributors, sponsors);
+                    
+                    // Only update if tier changed
+                    if (user.tier !== newTier) {
+                        const oldTier = user.tier;
+                        user.tier = newTier;
+                        user.updated_at = new Date().toISOString();
+                        
+                        // Save to R2
+                        await env.MEMBERS_BUCKET.put(
+                            object.key,
+                            JSON.stringify(user, null, 2),
+                            { httpMetadata: { contentType: "application/json" } }
+                        );
+                        
+                        // Update KV cache
+                        await env.MEMBERS_KV.put(
+                            `user:${user.id}`,
+                            JSON.stringify(user),
+                            { expirationTtl: 3600 }
+                        );
+                        
+                        // Update API key tier in KV
+                        for (const keyData of user.api_keys || []) {
+                            const keyInfo = await env.MEMBERS_KV.get(`api_key:${keyData.key_hash}`);
+                            if (keyInfo) {
+                                const parsed = JSON.parse(keyInfo);
+                                parsed.tier = newTier;
+                                await env.MEMBERS_KV.put(
+                                    `api_key:${keyData.key_hash}`,
+                                    JSON.stringify(parsed)
+                                );
+                            }
+                        }
+                        
+                        console.log(`Updated user ${user.username} (${user.provider}): ${oldTier} -> ${newTier}`);
+                        updatedCount++;
+                    }
+                } catch (userError) {
+                    console.error(`Error processing user ${object.key}:`, userError);
+                    errorCount++;
+                }
+            }
+            
+            console.log(`Scheduled tier update complete: ${updatedCount} users updated, ${errorCount} errors`);
+        } catch (error) {
+            console.error("Scheduled tier update failed:", error);
         }
     }
   };
@@ -545,29 +745,13 @@ const CORS_HEADERS = {
             user.access_token = userData.access_token;
             user.updated_at = now;
             user.last_login = now;
-            // Update tier if email is in PRO_EMAILS list
-            if (userData.email && PRO_EMAILS.includes(userData.email.toLowerCase())) {
-                user.tier = "pro";
-            }
-            // Auto-upgrade 'new' users to 'free' after 1 day
-            if (user.tier === "new" && user.created_at) {
-                const created = new Date(user.created_at);
-                const nowDate = new Date(now);
-                if ((nowDate - created) > 24 * 60 * 60 * 1000) {
-                    user.tier = "free";
-                }
-            }
+            // Tier is updated by scheduled handler, not on login
         }
     }
   
     if (!user) {
         // Create new user
         userId = generateUserId();
-        // Determine tier based on email
-        let tier = "new";
-        if (userData.email && PRO_EMAILS.includes(userData.email.toLowerCase())) {
-            tier = "pro";
-        }
         user = {
             id: userId,
             provider: userData.provider,
@@ -577,7 +761,7 @@ const CORS_HEADERS = {
             email: userData.email,
             avatar: userData.avatar,
             access_token: userData.access_token,
-            tier: tier,
+            tier: "new",  // Tier is updated by scheduled handler
             api_keys: [],
             created_at: now,
             updated_at: now,

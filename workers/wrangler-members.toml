@@ -1,7 +1,7 @@
 # Wrangler configuration for G4F Members Worker
 # See https://developers.cloudflare.com/workers/wrangler/configuration/
 
-name = "g4f-members"
+name = "auth"
 main = "members-worker.js"
 compatibility_date = "2024-01-01"
 
@@ -25,11 +25,16 @@ bucket_name = "g4f-members"  # Replace with actual bucket name
 # wrangler secret put DISCORD_CLIENT_SECRET
 # wrangler secret put HUGGINGFACE_CLIENT_ID
 # wrangler secret put HUGGINGFACE_CLIENT_SECRET
+# wrangler secret put GITHUB_TOKEN
 
 # Routes - configure these to match your domain
 routes = [
   { pattern = "g4f.dev/members/*", zone_name = "g4f.dev" }
 ]
+
+# Scheduled triggers for tier updates
+[triggers]
+crons = ["0 * * * *"]  # Run every hour
 
 # Development settings
 [dev]

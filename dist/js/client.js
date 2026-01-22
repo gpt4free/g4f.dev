@@ -542,17 +542,12 @@ class PollinationsAI extends Client {
     }
 
     async checkBalance() {
-        const PUBLIC_KEY = ["pk", "_B9YJX5SBohhm2ePq"];
-        const BALANCE_ENDPOINT = "https://gen.pollinations.ai/account/balance";
-        return fetch(BALANCE_ENDPOINT, {headers: {
-            'Authorization': `Bearer ${PUBLIC_KEY.join('')}`
-        }}).then(r=>r.json()).then(d=>{
+        const BALANCE_ENDPOINT = "https://api.gpt4free.workers.dev/api/pollinations/account/balance";
+        return fetch(BALANCE_ENDPOINT).then(r=>r.json()).then(d=>{
             console.log(`PollinationsAI balance: ${d.balance}`);
             if (d.balance > 0) {
-                this.apiKey = PUBLIC_KEY.join('');
-                this.baseUrl = 'https://gen.pollinations.ai/v1';
-                this.apiEndpoint = 'https://gen.pollinations.ai/v1/chat/completions';
-                this.extraHeaders['Authorization'] = `Bearer ${this.apiKey}`;
+                this.baseUrl = 'https://api.gpt4free.workers.dev/api/pollinations';
+                this.apiEndpoint = `${this.baseUrl}/chat/completions`;
                 const userInfo = {
                     tier: 'free',
                     remainingRequests: 10,

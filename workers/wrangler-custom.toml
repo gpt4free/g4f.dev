@@ -15,6 +15,10 @@ id = "87b74eadf8124782a9b10dda75a872b6"
 binding = "MEMBERS_BUCKET"
 bucket_name = "g4f-members"
 
+[[d1_databases]]
+binding = "USAGE_DB"
+database_id = "d48cfe96-5452-4995-aa2d-58c0ec60045f"
+
 # Environment variables (secrets should be set via wrangler secret put)
 [vars]
 API_KEY_SALT = ""  # Set via: wrangler secret put API_KEY_SALT

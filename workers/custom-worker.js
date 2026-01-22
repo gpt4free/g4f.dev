@@ -804,7 +804,8 @@ const RATE_LIMITS = {
       }
     
       try {
-          const response = await fetch(`${server.base_url}/models`, {
+          const targetUrl = server.base_url.includes('/chat/completions') ? server.base_url.replace('/chat/completions', '/models') : `${server.base_url}/models`;
+          const response = await fetch(targetUrl, {
               method: request.method,
               headers
           });
@@ -827,7 +828,7 @@ const RATE_LIMITS = {
           }
           newResponse.headers.set('X-Server', serverId);
           newResponse.headers.set('X-Provider', server.label);
-          newResponse.headers.set('X-Url', `${server.base_url}/models`);
+          newResponse.headers.set('X-Url', targetUrl);
           ctx.waitUntil(setCachedResponse(request, newResponse, CACHE_HEADERS.MEDIUM, cacheKey, ctx));
           return newResponse;
       } catch (e) {
@@ -927,7 +928,14 @@ const RATE_LIMITS = {
       }
     
       // Build target URL
-      const targetUrl = server.base_url.includes(subPath) ? server.base_url : `${server.base_url}${subPath}`;
+      let targetUrl;
+      if (server.base_url.includes(subPath)) {
+        targetUrl = server.base_url;
+      } else if (targetUrl.includes('/v1/chat/completions')) {
+        targetUrl = targetUrl.split('/v1/')[0] + subPath;
+      } else {
+        targetUrl = `${server.base_url}${subPath}`;
+      }
       const clientIP = getClientIP(request);
     
       try {
