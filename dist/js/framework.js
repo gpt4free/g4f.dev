@@ -181,6 +181,24 @@ framework.delete = async (bucketId) => {
         method: 'DELETE'
     });
 }
+const sanitizedConfig = ()=>{
+    return {
+        allowedTags: window?.sanitizeHtml?.defaults.allowedTags.concat(['img', 'iframe', 'audio', 'video', 'details', 'summary', 'div']),
+        allowedAttributes: {
+            a: [ 'href', 'title', 'target', 'rel', 'data-width', 'data-height', 'data-src' ],
+            i: [ 'class' ],
+            span: [ 'class' ],
+            code: [ 'class' ],
+            img: [ 'src', 'alt', 'width', 'height' ],
+            iframe: [ 'src', 'type', 'frameborder', 'allow', 'height', 'width' ],
+            audio: [ 'src', 'controls' ],
+            video: [ 'src', 'controls', 'loop', 'autoplay', 'muted' ],
+            div: [ 'class' ]
+        },
+        allowedIframeHostnames: ['www.youtube.com'],
+        allowedSchemes: [ 'http', 'https', 'data' ]
+    }
+};
 async function query(prompt, options={ json: false, cache: true }) {
     if (options === true || options === false) {
         options = { json: options, cache: true };
@@ -210,7 +228,7 @@ async function query(prompt, options={ json: false, cache: true }) {
     if (!response || !response.ok) {
         add_error(`Error ${response.status} with URL: \`${secondPartyUrl}\`\n ${await response.text()}`, true);
         let firstPartyUrl = `https://gen.pollinations.ai/text/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
-        response = await fetch(firstPartyUrl, { headers: {"Authorization": `Bearer ${["pk", "_B9YJX5SBohhm2ePq"].join("")}`}});
+        response = await fetch(firstPartyUrl, { headers: {"Authorization": `Bearer ${["pk", "_7X0QLj0xijSd0xj7"].join("")}`}});
         if (!response.ok) {
             add_error(`Error ${response.status} with URL: \`${firstPartyUrl}\`\n ${await response.text()}`, true);
             return;
@@ -260,21 +278,7 @@ const renderMarkdown = (content) => {
         .replaceAll('src="/thumbnail/', `src="${framework.backendUrl}/thumbnail/`)
         .replaceAll('href="/media/', `src="${framework.backendUrl}/media/`)
     if (window.sanitizeHtml) {
-        content = window.sanitizeHtml(content, {
-            allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'iframe', 'audio', 'video', 'details', 'summary']),
-            allowedAttributes: {
-                a: [ 'href', 'title', 'target', 'data-width', 'data-height', 'data-src' ],
-                i: [ 'class' ],
-                span: [ 'class' ],
-                code: [ 'class' ],
-                img: [ 'src', 'alt', 'width', 'height' ],
-                iframe: [ 'src', 'type', 'frameborder', 'allow', 'height', 'width' ],
-                audio: [ 'src', 'controls' ],
-                video: [ 'src', 'controls', 'loop', 'autoplay', 'muted' ],
-            },
-            allowedIframeHostnames: ['www.youtube.com'],
-            allowedSchemes: [ 'http', 'https', 'data' ]
-        });
+        content = window.sanitizeHtml(content, sanitizedConfig());
     }
     return content;
 };
@@ -372,6 +376,7 @@ framework.escape = escapeHtml;
 framework.getHeaders = getHeaders;
 framework.getPublicKey = getPublicKey;
 framework.nl2br = nl2br;
+framework.sanitizedConfig = sanitizedConfig;
 
 function openDB() {
   return new Promise((resolve, reject) => {

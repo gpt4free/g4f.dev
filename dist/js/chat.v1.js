@@ -530,11 +530,13 @@ async function showErrorPopup(errorMessage) {
         console.warn('Error fetching popup HTML:', error);
         hintsHtml = generateFallbackHints();
     }
+
+    const translatedResponse = framework.query(`Translate this document to (${navigator.language}):\n\`\`\`html\n${hintsHtml}\`\`\``)
     
     // Create popup
     const popup = document.createElement('div');
     popup.className = 'error-popup';
-    popup.innerHTML = `
+    const hintsTemplate = hintsHtml=>`
         <div class="error-popup-header">
             <h3>⚠️ Error Occurred</h3>
             <button class="error-popup-close" aria-label="Close">×</button>
@@ -544,6 +546,12 @@ async function showErrorPopup(errorMessage) {
             ${hintsHtml}
         </div>
     `;
+    popup.innerHTML = hintsTemplate(hintsHtml);
+
+    translatedResponse.then(r=>r.text())
+        .then(t=>framework.filterMarkdown(t, 'html', t))
+        .then(t=>window.sanitizeHtml(t, framework.sanitizedConfig()))
+        .then(h=>popup.innerHTML=hintsTemplate(h))
     
     // Safely set error message text content to prevent XSS
     const messageDiv = popup.querySelector('.error-popup-message');
@@ -565,46 +573,7 @@ async function showErrorPopup(errorMessage) {
 }
 
 function generateFallbackHints() {
-    return `
-        <div class="error-popup-hints">
-            <h4>💡 Try these alternative providers:</h4>
-            
-            <div class="partner-card">
-                <h5>🚀 API Airforce</h5>
-                <p>A reliable API provider with support for multiple AI models including GPT-4, Claude, and image generation.</p>
-                <a href="https://api.airforce/signup?ref=UGm6ufsOKTebcpkV" target="_blank" rel="noopener noreferrer">
-                    Visit API Airforce →
-                </a>
-            </div>
-            
-            <div class="partner-card">
-                <h5>🌸 Pollinations AI</h5>
-                <p>AI text and image generation platform. No API key required for basic usage, with premium features available.</p>
-                <a href="https://pollinations.ai" target="_blank" rel="noopener noreferrer">
-                    Visit Pollinations AI →
-                </a>
-                <a href="https://enter.pollinations.ai" target="_blank" rel="noopener noreferrer">
-                    Get API Key (Premium) →
-                </a>
-            </div>
-            
-            <div class="partner-card">
-                <h5>💬 Discord Community</h5>
-                <p>Get support from our community! Join our Discord server for help, tips, and discussions.</p>
-                <a href="https://discord.gg/qXA4Wf4Fsm" target="_blank" rel="noopener noreferrer">
-                    Join Support Discord →
-                </a>
-            </div>
-            
-            <div class="partner-card">
-                <h5>ℹ️ More Providers</h5>
-                <p>Check out our documentation for a complete list of available providers and their features.</p>
-                <a href="/docs/ready_to_use.html" target="_blank" rel="noopener noreferrer">
-                    View Documentation →
-                </a>
-            </div>
-        </div>
-    `;
+    return ``;
 }
 
 function closeErrorPopup() {
@@ -882,7 +851,7 @@ const handle_ask = async (do_ask_gpt = true, message = null) => {
             return;
         }
     }
-    
+
     await add_conversation(window.conversation_id);
     let message_index = await add_message(window.conversation_id, "user", message);
     let message_id = get_message_id();
