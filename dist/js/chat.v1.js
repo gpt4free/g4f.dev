@@ -484,7 +484,7 @@ function showNotification(message, type = 'success') {
     }, 10);
 }
 
-function showErrorPopup(errorMessage) {
+async function showErrorPopup(errorMessage) {
     // Only show popup occasionally (30% chance or first time)
     const HOUR_IN_MS = 3600000; // 1 hour in milliseconds
     const SHOW_PROBABILITY = 0.3; // 30% chance to show
@@ -515,6 +515,22 @@ function showErrorPopup(errorMessage) {
     overlay.className = 'error-popup-overlay';
     overlay.addEventListener('click', () => closeErrorPopup());
     
+    // Fetch popup content from HTML file
+    let hintsHtml = '';
+    try {
+        const response = await fetch('/chat/error-popup.html');
+        if (response.ok) {
+            hintsHtml = await response.text();
+        } else {
+            // Fallback if fetch fails
+            console.warn('Failed to load error popup HTML, using fallback');
+            hintsHtml = generateFallbackHints();
+        }
+    } catch (error) {
+        console.warn('Error fetching popup HTML:', error);
+        hintsHtml = generateFallbackHints();
+    }
+    
     // Create popup
     const popup = document.createElement('div');
     popup.className = 'error-popup';
@@ -525,42 +541,7 @@ function showErrorPopup(errorMessage) {
         </div>
         <div class="error-popup-body">
             <div class="error-popup-message"></div>
-            <div class="error-popup-hints">
-                <h4>💡 Try these alternative providers:</h4>
-                
-                <div class="partner-card">
-                    <h5>
-                        🚀 API Airforce
-                    </h5>
-                    <p>A reliable API provider with support for multiple AI models including GPT-4, Claude, and image generation.</p>
-                    <a href="https://api.airforce/v1" target="_blank" rel="noopener noreferrer">
-                        Visit API Airforce →
-                    </a>
-                </div>
-                
-                <div class="partner-card">
-                    <h5>
-                        🌸 Pollinations AI
-                    </h5>
-                    <p>AI text and image generation platform. No API key required for basic usage, with premium features available.</p>
-                    <a href="https://pollinations.ai" target="_blank" rel="noopener noreferrer">
-                        Visit Pollinations AI →
-                    </a>
-                    <a href="https://enter.pollinations.ai" target="_blank" rel="noopener noreferrer">
-                        Get API Key (Premium) →
-                    </a>
-                </div>
-                
-                <div class="partner-card">
-                    <h5>
-                        ℹ️ More Providers
-                    </h5>
-                    <p>Check out our documentation for a complete list of available providers and their features.</p>
-                    <a href="/docs/ready_to_use.html" target="_blank" rel="noopener noreferrer">
-                        View Documentation →
-                    </a>
-                </div>
-            </div>
+            ${hintsHtml}
         </div>
     `;
     
@@ -581,6 +562,49 @@ function showErrorPopup(errorMessage) {
         overlay.classList.add('show');
         popup.classList.add('show');
     }, 10);
+}
+
+function generateFallbackHints() {
+    return `
+        <div class="error-popup-hints">
+            <h4>💡 Try these alternative providers:</h4>
+            
+            <div class="partner-card">
+                <h5>🚀 API Airforce</h5>
+                <p>A reliable API provider with support for multiple AI models including GPT-4, Claude, and image generation.</p>
+                <a href="https://api.airforce/signup?ref=UGm6ufsOKTebcpkV" target="_blank" rel="noopener noreferrer">
+                    Visit API Airforce →
+                </a>
+            </div>
+            
+            <div class="partner-card">
+                <h5>🌸 Pollinations AI</h5>
+                <p>AI text and image generation platform. No API key required for basic usage, with premium features available.</p>
+                <a href="https://pollinations.ai" target="_blank" rel="noopener noreferrer">
+                    Visit Pollinations AI →
+                </a>
+                <a href="https://enter.pollinations.ai" target="_blank" rel="noopener noreferrer">
+                    Get API Key (Premium) →
+                </a>
+            </div>
+            
+            <div class="partner-card">
+                <h5>💬 Discord Community</h5>
+                <p>Get support from our community! Join our Discord server for help, tips, and discussions.</p>
+                <a href="https://discord.gg/qXA4Wf4Fsm" target="_blank" rel="noopener noreferrer">
+                    Join Support Discord →
+                </a>
+            </div>
+            
+            <div class="partner-card">
+                <h5>ℹ️ More Providers</h5>
+                <p>Check out our documentation for a complete list of available providers and their features.</p>
+                <a href="/docs/ready_to_use.html" target="_blank" rel="noopener noreferrer">
+                    View Documentation →
+                </a>
+            </div>
+        </div>
+    `;
 }
 
 function closeErrorPopup() {
@@ -1220,7 +1244,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${message.message}`);
         
         // Show error popup with partner hints for auth errors
-        showErrorPopup(message.message);
+        await showErrorPopup(message.message);
         
         let provider = provider_storage[message_id]?.name;
         let configEl = document.querySelector(`.settings .${provider}-api_key`);
@@ -1249,7 +1273,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${message.message}`);
         
         // Show error popup with partner hints
-        showErrorPopup(message.message);
+        await showErrorPopup(message.message);
         
         if (finish_message) {
             await finish_message();
