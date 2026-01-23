@@ -36,7 +36,7 @@ const slide_systemPrompt_icon = document.querySelector(".slide-header i");
 const optionElementsSelector = ".settings input, .settings textarea, .chat-body input, #model, #provider";
 
 const translationSnipptes = [
-    "with", "**An error occured:**", "Private Conversation", "New Conversation", "Regenerate", "Continue",
+    "with", "**An error occurred:**", "Private Conversation", "New Conversation", "Regenerate", "Continue",
     "Hello! How can I assist you today?", "words", "chars", "tokens", "{0} total tokens",
     "{0} Messages were imported", "{0} File(s) uploaded successfully",
     "{0} Conversations/Settings were imported successfully",
@@ -482,6 +482,144 @@ function showNotification(message, type = 'success') {
             }, 300);
         }, 2000);
     }, 10);
+}
+
+async function showErrorPopup(errorMessage) {
+    // Only show popup occasionally (30% chance or first time)
+    const HOUR_IN_MS = 3600000; // 1 hour in milliseconds
+    const SHOW_PROBABILITY = 0.3; // 30% chance to show
+    
+    const lastShown = localStorage.getItem('errorPopupLastShown');
+    const now = Date.now();
+    
+    // Show if: never shown before OR (more than 1 hour since last shown AND random chance)
+    const isFirstTime = !lastShown;
+    const hasEnoughTimePassed = lastShown && (now - parseInt(lastShown) > HOUR_IN_MS);
+    const shouldShow = isFirstTime || (hasEnoughTimePassed && Math.random() < SHOW_PROBABILITY);
+    
+    if (!shouldShow) {
+        return; // Don't show popup this time
+    }
+    
+    // Mark as shown
+    localStorage.setItem('errorPopupLastShown', now.toString());
+    
+    // Remove any existing error popup
+    const existingOverlay = document.querySelector('.error-popup-overlay');
+    const existingPopup = document.querySelector('.error-popup');
+    if (existingOverlay) existingOverlay.remove();
+    if (existingPopup) existingPopup.remove();
+
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'error-popup-overlay';
+    overlay.addEventListener('click', () => closeErrorPopup());
+    
+    // Fetch popup content from HTML file
+    let hintsHtml = '';
+    try {
+        const response = await fetch('/chat/error-popup.html');
+        if (response.ok) {
+            hintsHtml = await response.text();
+        } else {
+            // Fallback if fetch fails
+            console.warn('Failed to load error popup HTML, using fallback');
+            hintsHtml = generateFallbackHints();
+        }
+    } catch (error) {
+        console.warn('Error fetching popup HTML:', error);
+        hintsHtml = generateFallbackHints();
+    }
+    
+    // Create popup
+    const popup = document.createElement('div');
+    popup.className = 'error-popup';
+    popup.innerHTML = `
+        <div class="error-popup-header">
+            <h3>⚠️ Error Occurred</h3>
+            <button class="error-popup-close" aria-label="Close">×</button>
+        </div>
+        <div class="error-popup-body">
+            <div class="error-popup-message"></div>
+            ${hintsHtml}
+        </div>
+    `;
+    
+    // Safely set error message text content to prevent XSS
+    const messageDiv = popup.querySelector('.error-popup-message');
+    messageDiv.textContent = errorMessage;
+    
+    // Add close button event
+    const closeBtn = popup.querySelector('.error-popup-close');
+    closeBtn.addEventListener('click', () => closeErrorPopup());
+    
+    // Add to document
+    document.body.appendChild(overlay);
+    document.body.appendChild(popup);
+    
+    // Show with animation
+    setTimeout(() => {
+        overlay.classList.add('show');
+        popup.classList.add('show');
+    }, 10);
+}
+
+function generateFallbackHints() {
+    return `
+        <div class="error-popup-hints">
+            <h4>💡 Try these alternative providers:</h4>
+            
+            <div class="partner-card">
+                <h5>🚀 API Airforce</h5>
+                <p>A reliable API provider with support for multiple AI models including GPT-4, Claude, and image generation.</p>
+                <a href="https://api.airforce/signup?ref=UGm6ufsOKTebcpkV" target="_blank" rel="noopener noreferrer">
+                    Visit API Airforce →
+                </a>
+            </div>
+            
+            <div class="partner-card">
+                <h5>🌸 Pollinations AI</h5>
+                <p>AI text and image generation platform. No API key required for basic usage, with premium features available.</p>
+                <a href="https://pollinations.ai" target="_blank" rel="noopener noreferrer">
+                    Visit Pollinations AI →
+                </a>
+                <a href="https://enter.pollinations.ai" target="_blank" rel="noopener noreferrer">
+                    Get API Key (Premium) →
+                </a>
+            </div>
+            
+            <div class="partner-card">
+                <h5>💬 Discord Community</h5>
+                <p>Get support from our community! Join our Discord server for help, tips, and discussions.</p>
+                <a href="https://discord.gg/qXA4Wf4Fsm" target="_blank" rel="noopener noreferrer">
+                    Join Support Discord →
+                </a>
+            </div>
+            
+            <div class="partner-card">
+                <h5>ℹ️ More Providers</h5>
+                <p>Check out our documentation for a complete list of available providers and their features.</p>
+                <a href="/docs/ready_to_use.html" target="_blank" rel="noopener noreferrer">
+                    View Documentation →
+                </a>
+            </div>
+        </div>
+    `;
+}
+
+function closeErrorPopup() {
+    const overlay = document.querySelector('.error-popup-overlay');
+    const popup = document.querySelector('.error-popup');
+    
+    if (overlay) {
+        overlay.classList.remove('show');
+        setTimeout(() => overlay.remove(), 300);
+    }
+    
+    if (popup) {
+        popup.classList.remove('show');
+        setTimeout(() => popup.remove(), 300);
+    }
 }
 
 const register_message_buttons = async () => {
@@ -1103,7 +1241,11 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         await save_conversation(update_conversation(conversation));
     } else if (message.type == "auth") {
         error_storage[message_id] = message.message
-        content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occured:**')} ${message.message}`);
+        content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${message.message}`);
+        
+        // Show error popup with partner hints for auth errors
+        await showErrorPopup(message.message);
+        
         let provider = provider_storage[message_id]?.name;
         let configEl = document.querySelector(`.settings .${provider}-api_key`);
         if (configEl) {
@@ -1128,7 +1270,11 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         content_map.update_timeouts = [];
         error_storage[message_id] = message.message
         console.error(message.message);
-        content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occured:**')} ${message.message}`);
+        content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${message.message}`);
+        
+        // Show error popup with partner hints
+        await showErrorPopup(message.message);
+        
         if (finish_message) {
             await finish_message();
         }
@@ -1779,7 +1925,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             safe_remove_cancel_button();
             console.error(err);
             error_storage[message_id] = `${err?.error?.message || err}`;
-            content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occured:**')} ${error_storage[message_id]}`);
+            content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${error_storage[message_id]}`);
             await finish_message();
         }
         return;
@@ -3007,7 +3153,7 @@ function update_message(content_map, message_id, content=null) {
         }
         
         if (error_storage[message_id]) {
-            content += framework.markdown(`${framework.translate('**An error occured:**')} ${error_storage[message_id]}`);
+            content += framework.markdown(`${framework.translate('**An error occurred:**')} ${error_storage[message_id]}`);
         }
         
         // Use progressive rendering for large content
