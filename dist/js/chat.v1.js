@@ -484,6 +484,102 @@ function showNotification(message, type = 'success') {
     }, 10);
 }
 
+function showErrorPopup(errorMessage) {
+    // Remove any existing error popup
+    const existingOverlay = document.querySelector('.error-popup-overlay');
+    const existingPopup = document.querySelector('.error-popup');
+    if (existingOverlay) existingOverlay.remove();
+    if (existingPopup) existingPopup.remove();
+
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'error-popup-overlay';
+    overlay.addEventListener('click', () => closeErrorPopup());
+    
+    // Create popup
+    const popup = document.createElement('div');
+    popup.className = 'error-popup';
+    popup.innerHTML = `
+        <div class="error-popup-header">
+            <h3>⚠️ Error Occurred</h3>
+            <button class="error-popup-close" aria-label="Close">×</button>
+        </div>
+        <div class="error-popup-body">
+            <div class="error-popup-message">
+                ${errorMessage}
+            </div>
+            <div class="error-popup-hints">
+                <h4>💡 Try these alternative providers:</h4>
+                
+                <div class="partner-card">
+                    <h5>
+                        🚀 API Airforce
+                        <span class="partner-badge">Free</span>
+                    </h5>
+                    <p>A reliable free API provider with support for multiple AI models including GPT-4, Claude, and image generation.</p>
+                    <a href="https://api.airforce/v1" target="_blank" rel="noopener noreferrer">
+                        Visit API Airforce →
+                    </a>
+                </div>
+                
+                <div class="partner-card">
+                    <h5>
+                        🌸 Pollinations AI
+                        <span class="partner-badge">Free</span>
+                    </h5>
+                    <p>Free AI text and image generation platform. No API key required for basic usage, with premium features available.</p>
+                    <a href="https://pollinations.ai" target="_blank" rel="noopener noreferrer">
+                        Visit Pollinations AI →
+                    </a>
+                    <br>
+                    <a href="https://enter.pollinations.ai" target="_blank" rel="noopener noreferrer">
+                        Get API Key (Premium) →
+                    </a>
+                </div>
+                
+                <div class="partner-card">
+                    <h5>
+                        ℹ️ More Providers
+                    </h5>
+                    <p>Check out our documentation for a complete list of available providers and their features.</p>
+                    <a href="/docs/ready_to_use.html" target="_blank">
+                        View Documentation →
+                    </a>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add close button event
+    const closeBtn = popup.querySelector('.error-popup-close');
+    closeBtn.addEventListener('click', () => closeErrorPopup());
+    
+    // Add to document
+    document.body.appendChild(overlay);
+    document.body.appendChild(popup);
+    
+    // Show with animation
+    setTimeout(() => {
+        overlay.classList.add('show');
+        popup.classList.add('show');
+    }, 10);
+}
+
+function closeErrorPopup() {
+    const overlay = document.querySelector('.error-popup-overlay');
+    const popup = document.querySelector('.error-popup');
+    
+    if (overlay) {
+        overlay.classList.remove('show');
+        setTimeout(() => overlay.remove(), 300);
+    }
+    
+    if (popup) {
+        popup.classList.remove('show');
+        setTimeout(() => popup.remove(), 300);
+    }
+}
+
 const register_message_buttons = async () => {
     chatBody.querySelectorAll(".message .content .provider").forEach(async (el) => {
         if (el.dataset.click) {
@@ -1104,6 +1200,10 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
     } else if (message.type == "auth") {
         error_storage[message_id] = message.message
         content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occured:**')} ${message.message}`);
+        
+        // Show error popup with partner hints for auth errors
+        showErrorPopup(message.message);
+        
         let provider = provider_storage[message_id]?.name;
         let configEl = document.querySelector(`.settings .${provider}-api_key`);
         if (configEl) {
@@ -1129,6 +1229,10 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         error_storage[message_id] = message.message
         console.error(message.message);
         content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occured:**')} ${message.message}`);
+        
+        // Show error popup with partner hints
+        showErrorPopup(message.message);
+        
         if (finish_message) {
             await finish_message();
         }
