@@ -550,6 +550,10 @@ async function showErrorPopup(errorMessage) {
         // Safely set error message text content to prevent XSS
         const messageDiv = popup.querySelector('.error-popup-message');
         messageDiv.textContent = errorMessage;
+
+        // Add close button event
+        const closeBtn = popup.querySelector('.error-popup-close');
+        closeBtn.addEventListener('click', () => closeErrorPopup());
     }
     popup.innerHTML = hintsTemplate(hintsHtml);
     updateErrorMessage();
@@ -559,9 +563,6 @@ async function showErrorPopup(errorMessage) {
         .then(t=>window.sanitizeHtml(t, framework.sanitizedConfig()))
         .then(t=>(popup.innerHTML=hintsTemplate(t)) && updateErrorMessage())
     
-    // Add close button event
-    const closeBtn = popup.querySelector('.error-popup-close');
-    closeBtn.addEventListener('click', () => closeErrorPopup());
     
     // Add to document
     document.body.appendChild(overlay);
