@@ -486,16 +486,23 @@ function showNotification(message, type = 'success') {
 
 function showErrorPopup(errorMessage) {
     // Only show popup occasionally (30% chance or first time)
+    const HOUR_IN_MS = 3600000; // 1 hour in milliseconds
+    const SHOW_PROBABILITY = 0.3; // 30% chance to show
+    
     const lastShown = localStorage.getItem('errorPopupLastShown');
     const now = Date.now();
-    const showProbability = 0.3; // 30% chance to show
     
-    // Show if: never shown before OR more than 1 hour since last shown AND random chance
-    if (!lastShown || (now - parseInt(lastShown) > 3600000 && Math.random() < showProbability)) {
-        localStorage.setItem('errorPopupLastShown', now.toString());
-    } else {
+    // Show if: never shown before OR (more than 1 hour since last shown AND random chance)
+    const isFirstTime = !lastShown;
+    const hasEnoughTimePassed = lastShown && (now - parseInt(lastShown) > HOUR_IN_MS);
+    const shouldShow = isFirstTime || (hasEnoughTimePassed && Math.random() < SHOW_PROBABILITY);
+    
+    if (!shouldShow) {
         return; // Don't show popup this time
     }
+    
+    // Mark as shown
+    localStorage.setItem('errorPopupLastShown', now.toString());
     
     // Remove any existing error popup
     const existingOverlay = document.querySelector('.error-popup-overlay');
