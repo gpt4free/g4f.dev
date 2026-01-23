@@ -852,7 +852,7 @@ const handle_ask = async (do_ask_gpt = true, message = null) => {
 
     if (!message) {
         message = userInput.value;
-        if (!message.trim()) {
+        if (!message) {
             return;
         }
         userInput.value = "";
@@ -1904,9 +1904,10 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                             }
                         }
                         
-                        if (choice?.delta?.reasoning || choice?.delta?.reasoning_content) {
-                            await add_message_chunk({type: "reasoning", token: choice?.delta?.reasoning || choice?.delta?.reasoning_content}, message_id);
-                        } else {
+                        if (choice?.delta?.reasoning) {
+                            await add_message_chunk({type: "reasoning", token: choice?.delta?.reasoning}, message_id);
+                        }
+                        if (choice?.delta?.content) {
                             const delta = choice?.delta?.content || '';
                             const processedDelta = delta.replaceAll("/media/", framework.backendUrl + "/media/")
                                                          .replaceAll("/thumbnail/", framework.backendUrl + "/thumbnail/");
@@ -1922,8 +1923,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             }
             await finish_message();
         } catch (err) {
+            add_error(err, true);
             safe_remove_cancel_button();
-            console.error(err);
             error_storage[message_id] = `${err?.error?.message || err}`;
             content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${error_storage[message_id]}`);
             await finish_message();
@@ -1983,7 +1984,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             ...extraBody
         }, Object.values(image_storage), message_id, finish_message);
     } catch (e) {
-        console.error(e);
+        add_error(e, true);
     }
 };
 
@@ -4128,35 +4129,39 @@ function connectToSSE(url, do_refine, bucket_id) {
 }
 
 async function upload_files(fileInput) {
-    const bucket_id = generateUUID();
-    paperclip.classList.add("blink");
+    try {
+        const bucket_id = generateUUID();
+        paperclip.classList.add("blink");
 
-    const formData = new FormData();
-    Array.from(fileInput.files).forEach(file => {
-        formData.append('files', file);
-    });
-    const response = await fetch(framework.backendUrl + "/backend-api/v2/files/" + bucket_id, {
-        method: 'POST',
-        body: formData
-    });
-    const result = await response.json()
-    const count = result.files.length + result.media.length;
-    inputCount.innerText = framework.translate('{0} File(s) uploaded successfully').replace('{0}', count);
-    if (result.files.length > 0) {
-        let do_refine = document.getElementById("refine")?.checked;
-        connectToSSE(`${framework.backendUrl}/backend-api/v2/files/${bucket_id}/stream`, do_refine, bucket_id);
-    } else {
-        paperclip.classList.remove("blink");
-        fileInput.value = "";
-    }
-    if (result.media) {
-        const media = [];
-        result.media.forEach((part)=> {
-            part = part.name ? part : {name: part};
-            const url = `${framework.backendUrl}/files/${bucket_id}/media/${part.name}`;
-            media.push({bucket_id: bucket_id, url: url, ...part});
+        const formData = new FormData();
+        Array.from(fileInput.files).forEach(file => {
+            formData.append('files', file);
         });
-        await handle_ask(false, media);
+        const response = await fetch(framework.backendUrl + "/backend-api/v2/files/" + bucket_id, {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json()
+        const count = result.files.length + result.media.length;
+        inputCount.innerText = framework.translate('{0} File(s) uploaded successfully').replace('{0}', count);
+        if (result.files.length > 0) {
+            let do_refine = document.getElementById("refine")?.checked;
+            connectToSSE(`${framework.backendUrl}/backend-api/v2/files/${bucket_id}/stream`, do_refine, bucket_id);
+        } else {
+            paperclip.classList.remove("blink");
+            fileInput.value = "";
+        }
+        if (result.media) {
+            const media = [];
+            result.media.forEach((part)=> {
+                part = part.name ? part : {name: part};
+                const url = `${framework.backendUrl}/files/${bucket_id}/media/${part.name}`;
+                media.push({bucket_id: bucket_id, url: url, ...part});
+            });
+            await handle_ask(false, media);
+        }
+    } catch(e) {
+        add_error(e, true);
     }
 }
 
@@ -5823,7 +5828,8 @@ async function handleToolCalls(toolCalls, messages, model, provider, message_id,
                     const choice = chunk.choices[0];
                     if (choice?.delta?.reasoning) {
                         await add_message_chunk({type: "reasoning", content: choice?.delta?.reasoning}, message_id);
-                    } else {
+                    }
+                    if (choice?.delta?.content) {
                         const delta = choice?.delta?.content || '';
                         const processedDelta = delta.replaceAll("/media/", framework.backendUrl + "/media/")
                                                 .replaceAll("/thumbnail/", framework.backendUrl + "/thumbnail/");
