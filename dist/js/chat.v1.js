@@ -45,7 +45,7 @@ const translationSnipptes = [
     "Get API key", "Uploading files...", "Invalid link", "Loading...", "Live Providers", "Custom Providers",
     "Search Off", "Search On", "Recognition On", "Recognition Off", "Delete Conversation",
     "Favorite Models:", "Stop Recording", "Record Audio", "Upload Audio", "No Title", "1 Copy",
-    "Delete all conversations?"
+    "Delete all conversations?", "Error Occurred"
 ];
 
 let login_urls_storage = {
@@ -538,7 +538,7 @@ async function showErrorPopup(errorMessage) {
     popup.className = 'error-popup';
     const hintsTemplate = hintsHtml=>`
         <div class="error-popup-header">
-            <h3>⚠️ Error Occurred</h3>
+            <h3>⚠️ ${framework.translate('Error Occurred')}</h3>
             <button class="error-popup-close" aria-label="Close">×</button>
         </div>
         <div class="error-popup-body">
@@ -546,16 +546,18 @@ async function showErrorPopup(errorMessage) {
             ${hintsHtml}
         </div>
     `;
+    const updateErrorMessage = ()=>{
+        // Safely set error message text content to prevent XSS
+        const messageDiv = popup.querySelector('.error-popup-message');
+        messageDiv.textContent = errorMessage;
+    }
     popup.innerHTML = hintsTemplate(hintsHtml);
+    updateErrorMessage();
 
     translatedResponse.then(r=>r.text())
         .then(t=>framework.filterMarkdown(t, 'html', t))
         .then(t=>window.sanitizeHtml(t, framework.sanitizedConfig()))
-        .then(h=>popup.innerHTML=hintsTemplate(h))
-    
-    // Safely set error message text content to prevent XSS
-    const messageDiv = popup.querySelector('.error-popup-message');
-    messageDiv.textContent = errorMessage;
+        .then(t=>(popup.innerHTML=hintsTemplate(t)) && updateErrorMessage())
     
     // Add close button event
     const closeBtn = popup.querySelector('.error-popup-close');
