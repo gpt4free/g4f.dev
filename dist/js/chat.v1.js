@@ -876,11 +876,13 @@ const handle_ask = async (do_ask_gpt = true, message = null) => {
         connectToSSE(`${framework.backendUrl}/backend-api/v2/files/${bucket_id}/stream`, false, bucket_id); //Retrieve and refine
         return;
     }
-    message = message.trim();
-    if (!message.length) {
-        return;
+    if (!Array.isArray(message)) {
+        message = message.trim();
+        if (!message.length) {
+            return;
+        }
     }
-
+    
     await add_conversation(window.conversation_id);
     let message_index = await add_message(window.conversation_id, "user", message);
     let message_id = get_message_id();
