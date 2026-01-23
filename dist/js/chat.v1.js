@@ -485,6 +485,18 @@ function showNotification(message, type = 'success') {
 }
 
 function showErrorPopup(errorMessage) {
+    // Only show popup occasionally (30% chance or first time)
+    const lastShown = localStorage.getItem('errorPopupLastShown');
+    const now = Date.now();
+    const showProbability = 0.3; // 30% chance to show
+    
+    // Show if: never shown before OR more than 1 hour since last shown AND random chance
+    if (!lastShown || (now - parseInt(lastShown) > 3600000 && Math.random() < showProbability)) {
+        localStorage.setItem('errorPopupLastShown', now.toString());
+    } else {
+        return; // Don't show popup this time
+    }
+    
     // Remove any existing error popup
     const existingOverlay = document.querySelector('.error-popup-overlay');
     const existingPopup = document.querySelector('.error-popup');
@@ -512,9 +524,8 @@ function showErrorPopup(errorMessage) {
                 <div class="partner-card">
                     <h5>
                         🚀 API Airforce
-                        <span class="partner-badge">Free</span>
                     </h5>
-                    <p>A reliable free API provider with support for multiple AI models including GPT-4, Claude, and image generation.</p>
+                    <p>A reliable API provider with support for multiple AI models including GPT-4, Claude, and image generation.</p>
                     <a href="https://api.airforce/v1" target="_blank" rel="noopener noreferrer">
                         Visit API Airforce →
                     </a>
@@ -523,9 +534,8 @@ function showErrorPopup(errorMessage) {
                 <div class="partner-card">
                     <h5>
                         🌸 Pollinations AI
-                        <span class="partner-badge">Free</span>
                     </h5>
-                    <p>Free AI text and image generation platform. No API key required for basic usage, with premium features available.</p>
+                    <p>AI text and image generation platform. No API key required for basic usage, with premium features available.</p>
                     <a href="https://pollinations.ai" target="_blank" rel="noopener noreferrer">
                         Visit Pollinations AI →
                     </a>
