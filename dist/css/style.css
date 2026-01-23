@@ -2854,6 +2854,8 @@ form textarea {
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    margin-right: 15px;
+    margin-bottom: 5px;
 }
 
 .partner-card a:hover {

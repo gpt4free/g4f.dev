@@ -529,7 +529,6 @@ function showErrorPopup(errorMessage) {
                     <a href="https://pollinations.ai" target="_blank" rel="noopener noreferrer">
                         Visit Pollinations AI →
                     </a>
-                    <br>
                     <a href="https://enter.pollinations.ai" target="_blank" rel="noopener noreferrer">
                         Get API Key (Premium) →
                     </a>
@@ -540,7 +539,7 @@ function showErrorPopup(errorMessage) {
                         ℹ️ More Providers
                     </h5>
                     <p>Check out our documentation for a complete list of available providers and their features.</p>
-                    <a href="/docs/ready_to_use.html" target="_blank">
+                    <a href="/docs/ready_to_use.html" target="_blank" rel="noopener noreferrer">
                         View Documentation →
                     </a>
                 </div>
