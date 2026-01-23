@@ -36,7 +36,7 @@ const slide_systemPrompt_icon = document.querySelector(".slide-header i");
 const optionElementsSelector = ".settings input, .settings textarea, .chat-body input, #model, #provider";
 
 const translationSnipptes = [
-    "with", "**An error occured:**", "Private Conversation", "New Conversation", "Regenerate", "Continue",
+    "with", "**An error occurred:**", "Private Conversation", "New Conversation", "Regenerate", "Continue",
     "Hello! How can I assist you today?", "words", "chars", "tokens", "{0} total tokens",
     "{0} Messages were imported", "{0} File(s) uploaded successfully",
     "{0} Conversations/Settings were imported successfully",
@@ -505,9 +505,7 @@ function showErrorPopup(errorMessage) {
             <button class="error-popup-close" aria-label="Close">×</button>
         </div>
         <div class="error-popup-body">
-            <div class="error-popup-message">
-                ${errorMessage}
-            </div>
+            <div class="error-popup-message"></div>
             <div class="error-popup-hints">
                 <h4>💡 Try these alternative providers:</h4>
                 
@@ -549,6 +547,10 @@ function showErrorPopup(errorMessage) {
             </div>
         </div>
     `;
+    
+    // Safely set error message text content to prevent XSS
+    const messageDiv = popup.querySelector('.error-popup-message');
+    messageDiv.textContent = errorMessage;
     
     // Add close button event
     const closeBtn = popup.querySelector('.error-popup-close');
@@ -1199,7 +1201,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         await save_conversation(update_conversation(conversation));
     } else if (message.type == "auth") {
         error_storage[message_id] = message.message
-        content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occured:**')} ${message.message}`);
+        content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${message.message}`);
         
         // Show error popup with partner hints for auth errors
         showErrorPopup(message.message);
@@ -1228,7 +1230,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         content_map.update_timeouts = [];
         error_storage[message_id] = message.message
         console.error(message.message);
-        content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occured:**')} ${message.message}`);
+        content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${message.message}`);
         
         // Show error popup with partner hints
         showErrorPopup(message.message);
@@ -1883,7 +1885,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             safe_remove_cancel_button();
             console.error(err);
             error_storage[message_id] = `${err?.error?.message || err}`;
-            content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occured:**')} ${error_storage[message_id]}`);
+            content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${error_storage[message_id]}`);
             await finish_message();
         }
         return;
@@ -3111,7 +3113,7 @@ function update_message(content_map, message_id, content=null) {
         }
         
         if (error_storage[message_id]) {
-            content += framework.markdown(`${framework.translate('**An error occured:**')} ${error_storage[message_id]}`);
+            content += framework.markdown(`${framework.translate('**An error occurred:**')} ${error_storage[message_id]}`);
         }
         
         // Use progressive rendering for large content
