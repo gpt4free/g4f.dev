@@ -98,8 +98,8 @@ PYTHON_CMD=$(command -v python3 || command -v python)
 # Check if g4f is installed
 if ! $PYTHON_CMD -c "import g4f" 2>/dev/null; then
     info "g4f is not installed. Installing now..."
-    if ! pip install g4f; then
-        error_exit "Failed to install g4f. Please install manually: pip install g4f"
+    if ! $PYTHON_CMD -m pip install g4f; then
+        error_exit "Failed to install g4f. Please install manually: $PYTHON_CMD -m pip install g4f"
     fi
     success "g4f installed successfully"
 else
@@ -160,11 +160,20 @@ fi
 if [ "$MCP_TRANSPORT" = "http" ]; then
     info "Starting MCP server in HTTP mode..."
     
+    # Verify g4f.mcp module exists
+    if ! $PYTHON_CMD -c "import g4f.mcp" 2>/dev/null; then
+        error_exit "g4f.mcp module not found. Please ensure g4f is properly installed."
+    fi
+    
     # Check if server is already running
     if lsof -Pi :$MCP_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
         info "MCP server already running on port $MCP_PORT"
     else
-        nohup $PYTHON_CMD -m g4f.mcp --http --port $MCP_PORT --host $MCP_HOST > mcp-server.log 2>&1 &
+        # Start MCP server with error handling
+        if ! nohup $PYTHON_CMD -m g4f.mcp --http --port $MCP_PORT --host $MCP_HOST > mcp-server.log 2>&1 & then
+            error_exit "Failed to start MCP server command. Check that g4f is properly installed."
+        fi
+        
         MCP_PID=$!
         echo $MCP_PID > mcp-server.pid
         
