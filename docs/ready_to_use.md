@@ -13,7 +13,7 @@
 | [https://g4f.space/api/pollinations](https://g4f.space/api/pollinations/models) | none required | Proxy for pollinations.ai |
 | [https://g4f.space/api/nvidia](https://g4f.space/api/nvidia/models) | none required | Use Nvidia provider |
 | [https://g4f.space/api/gemini](https://g4f.space/api/gemini/models) | none required | Hosted Gemini provider |
-| [https://g4f.dev/v1](https://g4f.dev/v1/models) | required | Hosted instance, many models, get key from [g4f.dev/api_key](https://g4f.dev/api_key.html) |
+| [https://g4f.space/v1](https://g4f.space/v1/models) | required | Hosted instance, many models, get key from [g4f.dev/api_key](https://g4f.dev/api_key.html) |
 
 ### Also Supported API Routes:
 - **Nvidia**: https://integrate.api.nvidia.com/v1
@@ -45,7 +45,7 @@ See the full [Providers Documentation](/docs/providers/) for detailed usage guid
   - https://localhost:1337/v1
 - If you want a free or public provider, you can use one of the g4f.dev endpoints (e.g., groq, ollama, pollinations.ai, nvidia, grok).
 - If you want Azure-backed usage or hosted instances, use:
-  - https://g4f.dev/v1 (requires API key)
+  - https://g4f.space/v1 (requires API key)
 
 ### API usage basics
 - **Endpoints**: All chat-style interactions use the chat completions endpoint at `{base_url}/chat/completions`
