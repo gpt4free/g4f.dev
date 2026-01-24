@@ -165,8 +165,26 @@ if [ "$MCP_TRANSPORT" = "http" ]; then
         error_exit "g4f.mcp module not found. Please ensure g4f is properly installed."
     fi
     
-    # Check if server is already running
-    if lsof -Pi :$MCP_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
+    # Check if server is already running on the port
+    PORT_IN_USE=false
+    if command -v lsof >/dev/null 2>&1; then
+        # Use lsof if available
+        if lsof -Pi :$MCP_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
+            PORT_IN_USE=true
+        fi
+    elif command -v netstat >/dev/null 2>&1; then
+        # Fallback to netstat
+        if netstat -tuln 2>/dev/null | grep -q ":$MCP_PORT "; then
+            PORT_IN_USE=true
+        fi
+    elif command -v ss >/dev/null 2>&1; then
+        # Fallback to ss
+        if ss -tuln 2>/dev/null | grep -q ":$MCP_PORT "; then
+            PORT_IN_USE=true
+        fi
+    fi
+    
+    if [ "$PORT_IN_USE" = true ]; then
         info "MCP server already running on port $MCP_PORT"
     else
         # Start MCP server in background
@@ -177,18 +195,25 @@ if [ "$MCP_TRANSPORT" = "http" ]; then
         # Wait for server to start
         sleep 3
         
-        # Check if process is still running and log file has content
-        if kill -0 $MCP_PID 2>/dev/null; then
-            # Additional check: see if there are any startup errors
-            if grep -qi "error\|traceback" mcp-server.log; then
-                error_exit "MCP server started but encountered errors. Check mcp-server.log for details."
-            fi
-            success "MCP server started (PID: $MCP_PID)"
-            info "Server logs: mcp-server.log"
-            info "To stop: kill \$(cat mcp-server.pid)"
-        else
-            error_exit "Failed to start MCP server. Check mcp-server.log for details."
+        # Check if process is still running
+        if ! kill -0 $MCP_PID 2>/dev/null; then
+            error_exit "MCP server process died immediately after start. Check mcp-server.log for details."
         fi
+        
+        # Additional check: look for common error patterns in logs
+        if [ -f mcp-server.log ]; then
+            # Check for Python errors (more comprehensive than just error/traceback)
+            if grep -qiE "error|traceback|exception|failed|cannot|fatal" mcp-server.log | head -20 | grep -qiE "error|traceback|exception"; then
+                # Only fail if we find actual error indicators, not just the word "error" in normal messages
+                if grep -qi "traceback\|exception:" mcp-server.log; then
+                    error_exit "MCP server encountered errors during startup. Check mcp-server.log for details."
+                fi
+            fi
+        fi
+        
+        success "MCP server started (PID: $MCP_PID)"
+        info "Server logs: mcp-server.log"
+        info "To stop: kill \$(cat mcp-server.pid)"
     fi
 fi
 

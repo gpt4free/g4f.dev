@@ -73,7 +73,7 @@
         }
       },
       "setup": [
-        "Start the MCP server: g4f mcp --http --port 8765",
+        "Start the MCP server: python3 -m g4f.mcp --http --port 8765",
         "Configure Open WebUI to use HTTP transport as shown above"
       ]
     },
