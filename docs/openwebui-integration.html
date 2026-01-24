@@ -3,28 +3,28 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>GPT4Free Documentation Hub</title>
+    <title>OpenWeb UI - G4F Integration Guide | GPT4Free Documentation</title>
 
-    <meta name="description" content="GPT4Free documentation for GPT4Free Documentation Hub. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
-    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, GPT4Free Documentation Hub" />
+    <meta name="description" content="GPT4Free documentation for OpenWeb UI - G4F Integration Guide. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
+    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, OpenWeb UI - G4F Integration Guide" />
     <meta name="author" content="GPT4Free Team" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="article" />
-    <meta property="og:title" content="GPT4Free Documentation Hub" />
-    <meta property="og:description" content="GPT4Free documentation for GPT4Free Documentation Hub. Free AI endpoints, examples, and comprehensive guides." />
-    <meta property="og:url" content="https://g4f.dev/docs/" />
+    <meta property="og:title" content="OpenWeb UI - G4F Integration Guide | GPT4Free Documentation" />
+    <meta property="og:description" content="GPT4Free documentation for OpenWeb UI - G4F Integration Guide. Free AI endpoints, examples, and comprehensive guides." />
+    <meta property="og:url" content="https://g4f.dev/docs/openwebui-integration.html" />
     <meta property="og:site_name" content="GPT4Free Documentation" />
     <meta property="og:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="GPT4Free Documentation Hub | GPT4Free Documentation" />
-    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for GPT4Free Documentation Hub." />
+    <meta name="twitter:title" content="OpenWeb UI - G4F Integration Guide | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for OpenWeb UI - G4F Integration Guide." />
     <meta name="twitter:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
 
     <!-- Canonical -->
-    <link rel="canonical" href="https://g4f.dev/docs/" />
+    <link rel="canonical" href="https://g4f.dev/docs/openwebui-integration.html" />
 
     <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png" />
@@ -154,6 +154,7 @@
             padding: 0;
             color: var(--fgColor-default, var(--color-fg-default))
         }
+
         /* Table styling */
         .markdown-body table {
             border-collapse: collapse;
@@ -373,8 +374,8 @@
     {
       "@context": "https://schema.org",
       "@type": "TechArticle",
-      "headline": "GPT4Free Documentation Hub",
-      "description": "GPT4Free documentation for GPT4Free Documentation Hub. Complete guides, examples, and API reference for free AI endpoints.",
+      "headline": "OpenWeb UI - G4F Integration Guide",
+      "description": "GPT4Free documentation for OpenWeb UI - G4F Integration Guide. Complete guides, examples, and API reference for free AI endpoints.",
       "author": {
         "@type": "Organization",
         "@id": "https://g4f.dev/#organization",
@@ -391,7 +392,7 @@
       },
       "mainEntityOfPage": {
         "@type": "WebPage",
-        "@id": "https://g4f.dev/docs/"
+        "@id": "https://g4f.dev/docs/openwebui-integration.html"
       },
       "datePublished": "2024-01-01T00:00:00Z",
       "dateModified": "2024-01-01T00:00:00Z",
@@ -408,9 +409,10 @@
             <!-- Translation Button -->
             <button id="translate-toggle">🌐 Translate Page</button>
             <div id="google_translate_element" style="display:none;"></div>
-
             <h2>Contents</h2>
-            <ul id="toc-list"></ul>
+            <ul id="toc-list">
+                <!-- Table of contents will be generated here -->
+            </ul>
             <hr style="margin: 1.5rem 0; opacity: 0.3;">
             <ul>
                 <li><a href="/docs/" aria-label="Return to documentation home">📚 Documentation Hub</a></li>
@@ -419,139 +421,11 @@
         </nav>
 
         <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
-<h2>GPT4Free Documentation Hub</h2>
-<p>
-<img src="https://g4f.dev/docs/images/pico.jpeg" alt="Welcome to the official docs for **GPT4Free** – free and convenient AI endpoints you can use directly in your apps, scripts, and even right in your browser.
-Here you’ll find a clear overview, quick examples, and entry points to deeper docs for every major feature."/>
-</p>
-<hr>
-<h2>Installation &amp; Setup</h2>
-<p>For full install guides—choose your method:</p>
-<ul>
-<li><a href="git.html">Git Install</a></li>
-<li><a href="docker.html">Docker</a></li>
-<li><a href="requirements.html">Requirements</a></li>
-</ul>
-<p>For rapid starts, you can use either <strong>Python</strong> or <strong>JavaScript</strong> (web).</p>
-<hr>
-<h2>Getting Started</h2>
-<h3>📝 Text Generation</h3>
-<p>Python example for chat completion (with and without web search):</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>()
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4.1"</span>,  <span class="pl-c"># Try "gpt-4o", "deepseek-v3", etc.</span>
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello"</span>}],
-    <span class="pl-s1">web_search</span><span class="pl-c1">=</span><span class="pl-c1">False</span>
-)
-<span class="pl-en">print</span>(<span class="pl-s1">response</span>.<span class="pl-c1">choices</span>[<span class="pl-c1">0</span>].<span class="pl-c1">message</span>.<span class="pl-c1">content</span>)</pre></div>
-<p><strong>Output:</strong></p>
-<pre class="notranslate"><code class="notranslate">Hello! How can I assist you today?
-</code></pre>
-<hr>
-<h3>🎨  Image Generation</h3>
-<p>Generate images with a single call (returns URLs or base64):</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
-
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>()
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">images</span>.<span class="pl-c1">generate</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"flux"</span>,  <span class="pl-c"># Other models: 'dalle-3', 'gpt-image', etc.</span>
-    <span class="pl-s1">prompt</span><span class="pl-c1">=</span><span class="pl-s">"a white siamese cat"</span>,
-    <span class="pl-s1">response_format</span><span class="pl-c1">=</span><span class="pl-s">"url"</span>
-)
-<span class="pl-en">print</span>(<span class="pl-s">f"Generated image URL: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">url</span><span class="pl-kos">}</span></span>"</span>)</pre></div>
-<p><a href="client.html">More Python client info →</a></p>
-<p><a href="async_client.html">and Async client →</a></p>
-<hr>
-<h3>🧙‍♂️ Using GPT4Free.js</h3>
-<p>Use the <strong>official JS client</strong> right in the browser—no backend needed.</p>
-<p>For text generation:</p>
-<div class="highlight highlight-text-html-basic"><pre class="notranslate"><span class="pl-kos">&lt;</span><span class="pl-ent">script</span> <span class="pl-c1">type</span>="<span class="pl-s">module</span>"<span class="pl-kos">&gt;</span>
-    <span class="pl-k">import</span> <span class="pl-v">Client</span> <span class="pl-k">from</span> <span class="pl-s">'https://g4f.dev/dist/js/client.js'</span><span class="pl-kos">;</span>
-
-    <span class="pl-k">const</span> <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">Client</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-k">const</span> <span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span><span class="pl-kos">.</span><span class="pl-c1">chat</span><span class="pl-kos">.</span><span class="pl-c1">completions</span><span class="pl-kos">.</span><span class="pl-en">create</span><span class="pl-kos">(</span><span class="pl-kos">{</span>
-        <span class="pl-c1">model</span>: <span class="pl-s">'gpt-4.1'</span><span class="pl-kos">,</span>  <span class="pl-c">// Or "gpt-4o", "deepseek-v3"</span>
-        <span class="pl-c1">messages</span>: <span class="pl-kos">[</span><span class="pl-kos">{</span> <span class="pl-c1">role</span>: <span class="pl-s">'user'</span><span class="pl-kos">,</span> <span class="pl-c1">content</span>: <span class="pl-s">'Explain quantum computing'</span> <span class="pl-kos">}</span><span class="pl-kos">]</span>
-    <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">log</span><span class="pl-kos">(</span><span class="pl-s1">result</span><span class="pl-kos">.</span><span class="pl-c1">choices</span><span class="pl-kos">[</span><span class="pl-c1">0</span><span class="pl-kos">]</span><span class="pl-kos">.</span><span class="pl-c1">message</span><span class="pl-kos">.</span><span class="pl-c1">content</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-<span class="pl-kos">&lt;/</span><span class="pl-ent">script</span><span class="pl-kos">&gt;</span></pre></div>
-<p>And for image generation:</p>
-<div class="highlight highlight-text-html-basic"><pre class="notranslate"><span class="pl-kos">&lt;</span><span class="pl-ent">script</span> <span class="pl-c1">type</span>="<span class="pl-s">module</span>"<span class="pl-kos">&gt;</span>
-    <span class="pl-k">import</span> <span class="pl-v">Client</span> <span class="pl-k">from</span> <span class="pl-s">'https://g4f.dev/dist/js/client.js'</span><span class="pl-kos">;</span>
-
-    <span class="pl-k">const</span> <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">Client</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-k">const</span> <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span><span class="pl-kos">.</span><span class="pl-c1">images</span><span class="pl-kos">.</span><span class="pl-en">generate</span><span class="pl-kos">(</span><span class="pl-kos">{</span>
-        <span class="pl-c1">model</span>: <span class="pl-s">"flux"</span><span class="pl-kos">,</span> <span class="pl-c">// Or "dalle-3", "gpt-image"</span>
-        <span class="pl-c1">prompt</span>: <span class="pl-s">"a white siamese cat"</span>
-    <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-k">const</span> <span class="pl-s1">imageUrl</span> <span class="pl-c1">=</span> <span class="pl-s1">response</span><span class="pl-kos">.</span><span class="pl-c1">data</span><span class="pl-kos">[</span><span class="pl-c1">0</span><span class="pl-kos">]</span><span class="pl-kos">.</span><span class="pl-c1">url</span><span class="pl-kos">;</span>
-    <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">log</span><span class="pl-kos">(</span><span class="pl-s">`Generated Image URL: <span class="pl-s1"><span class="pl-kos">${</span><span class="pl-s1">imageUrl</span><span class="pl-kos">}</span></span>`</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-c">// Example: document.body.innerHTML += `&lt;img src="${imageUrl}" /&gt;`;</span>
-<span class="pl-kos">&lt;/</span><span class="pl-ent">script</span><span class="pl-kos">&gt;</span></pre></div>
-<p><a href="client_js.html">See more JS client usage →</a></p>
-<h3>💻 Using CLI Client</h3>
-<p>Examples</p>
-<ol>
-<li>
-<p><strong>Text generation</strong>:</p>
-<div class="highlight highlight-source-shell"><pre class="notranslate">g4f client <span class="pl-s"><span class="pl-pds">"</span>Explain quantum computing in simple terms<span class="pl-pds">"</span></span></pre></div>
-</li>
-<li>
-<p><strong>Image description</strong>:</p>
-<div class="highlight highlight-source-shell"><pre class="notranslate">g4f client image.jpg <span class="pl-s"><span class="pl-pds">"</span>Describe this image<span class="pl-pds">"</span></span></pre></div>
-</li>
-<li>
-<p><strong>Image generation</strong> (with supported models):</p>
-<div class="highlight highlight-source-shell"><pre class="notranslate">g4f client -m flux -O output.jpg <span class="pl-s"><span class="pl-pds">"</span>A futuristic cityscape<span class="pl-pds">"</span></span></pre></div>
-</li>
-</ol>
-<p><a href="client_cli.html">CLI Client documentation →</a></p>
-<hr>
-<h2>Deep Dives</h2>
-<ul>
-<li><a href="ready_to_use.html">API endpoints and usage</a> *<strong>new</strong></li>
-<li><a href="https://g4f.dev/docs/providers-and-models.html" rel="nofollow">Available Providers &amp; Models</a></li>
-<li><a href="selecting_a_provider.html">Selecting a Provider</a></li>
-<li><a href="providers/">Provider Documentation</a></li>
-<li><a href="/api-docs">API docs (full spec)</a></li>
-<li><a href="file.html">File API Documentation (Files and Documents)</a></li>
-<li><a href="media.html">Media Documentation (Audio, Image and Video)</a></li>
-<li><a href="vision.html">Vision Support (Image Upload)</a></li>
-<li><a href="image_editing.html">Image Editing &amp; Variation</a></li>
-<li><a href="config.html">Authentication, Configuration Guide (.har and cookies)</a></li>
-<li><a href="guides/create_provider.html">Advanced: Create your own Provider</a></li>
-<li><a href="pydantic_ai.html">Integrations: LangChain, PydanticAI</a></li>
-<li><a href="openwebui-integration.html">OpenWeb UI Integration</a> <em><strong>new</strong></em></li>
-<li><a href="mcp-integration.html">MCP Server Integration</a>, <a href="mcp-usage-guide.html">MCP Usage Guide</a></li>
-<li><a href="gui.html">GUI/WebUI</a>, <a href="guides/phone.html">Phone</a>, <a href="backend_api_documentation.html">Backend API</a></li>
-<li><a href="https://github.com/gpt4free/g4f.dev/issues">Troubleshooting</a></li>
-</ul>
-<hr>
-<h2>Community &amp; Links</h2>
-<ul>
-<li>
-<p><strong>Open Source:</strong> <a href="https://github.com/gpt4free/g4f.dev">GitHub: gpt4free/g4f.dev</a></p>
-</li>
-<li>
-<p><strong>Contribute &amp; Report Bugs:</strong> PRs &amp; issues are welcome!</p>
-</li>
-<li>
-<p><strong>Project Website:</strong> <a href="https://g4f.dev/" rel="nofollow">https://g4f.dev/</a></p>
-</li>
-<li>
-<p><strong>Pollinations AI:</strong><br>
-<a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/8341e031ba5b4186aa7bc75b70faa0377efea43c4eed1b880b6ce81ec0e74af5/68747470733a2f2f696d6167652e706f6c6c696e6174696f6e732e61692f70726f6d70742f4372656174652b612b6c6f676f2b666f722b506f6c6c696e6174696f6e732b41492b666561747572696e672b616e2b61627374726163742b666c6f7765722b626c6f6f6d696e672b6469676974616c2b706574616c732b676c6f77696e672b63656e7465722b667574757269737469632b666f6e742b506f6c6c696e6174696f6e732b41493f77696474683d353132266865696768743d323536266e6f6c6f676f3d74727565"><img src="https://camo.githubusercontent.com/8341e031ba5b4186aa7bc75b70faa0377efea43c4eed1b880b6ce81ec0e74af5/68747470733a2f2f696d6167652e706f6c6c696e6174696f6e732e61692f70726f6d70742f4372656174652b612b6c6f676f2b666f722b506f6c6c696e6174696f6e732b41492b666561747572696e672b616e2b61627374726163742b666c6f7765722b626c6f6f6d696e672b6469676974616c2b706574616c732b676c6f77696e672b63656e7465722b667574757269737469632b666f6e742b506f6c6c696e6174696f6e732b41493f77696474683d353132266865696768743d323536266e6f6c6f676f3d74727565" height="80" data-canonical-src="https://image.pollinations.ai/prompt/Create+a+logo+for+Pollinations+AI+featuring+an+abstract+flower+blooming+digital+petals+glowing+center+futuristic+font+Pollinations+AI?width=512&amp;height=256&amp;nologo=true" style="max-width: 100%; height: auto; max-height: 80px;"></a></p>
-<p><a href="https://github.com/pollinations/pollinations">GitHub: pollinations/pollinations</a></p>
-</li>
-</ul>
-<hr>
-<p>GPT4Free and g4f.dev are continuously improving. Have fun building, and let the bots do the heavy lifting for you!</p>
-<p><a href="https://github.com/xtekky/gpt4free">← Back to GPT4Free GitHub</a></p>
-</main>
+            <div><h1>OpenWeb UI - G4F Integration Guide</h1></p><p>This guide explains how to integrate the g4f (GPT4Free) service with Open WebUI, enabling you to use g4f's providers, models, and MCP server tools.</p><p><h2>Overview</h2></p><p>G4F provides multiple integration points with Open WebUI:</p><p>1. <strong>MCP Server Integration</strong> - Access to web search, web scraping, and image generation tools<br>2. <strong>Custom Provider Configuration</strong> - Use g4f as an OpenAI-compatible API endpoint<br>3. <strong>Live Provider Support</strong> - Direct access to multiple AI providers through g4f<br>4. <strong>Conversation Context Management</strong> - Proper handling of chat history and context</p><p>For detailed conversation context handling, see <a href="review/context.md">Chat Conversation Context Guide</a>.</p><p><h2>Integration Methods</h2></p><p><h3>Method 1: MCP Server Integration (Recommended)</h3></p><p>The Model Context Protocol (MCP) server allows Open WebUI to access g4f tools like web search, scraping, and image generation.</p><p>#<h3>Setup MCP Server</h3></p><p>1. <strong>Start the g4f MCP Server</strong>:</p><p>   Using stdio transport (default):<br>   ```bash<br>   python -m g4f.mcp<br>   ```</p><p>   Or using HTTP transport:<br>   ```bash<br>   g4f mcp --http --port 8765 --host 0.0.0.0<br>   ```</p><p>2. <strong>Configure Open WebUI</strong>:</p><p>   Add to Open WebUI's MCP configuration file:</p><p>   <strong>For stdio mode</strong> (`~/.config/openwebui/mcp-config.json` or similar):<br>   ```json<br>   {<br>     "mcpServers": {<br>       "g4f": {<br>         "command": "python",<br>         "args": ["-m", "g4f.mcp"],<br>         "description": "GPT4Free tools for web search, scraping, and image generation"<br>       }<br>     }<br>   }<br>   ```</p><p>   <strong>For HTTP mode</strong>:<br>   ```json<br>   {<br>     "mcpServers": {<br>       "g4f": {<br>         "url": "http://localhost:8765/mcp",<br>         "transport": "http",<br>         "description": "GPT4Free tools for web search, scraping, and image generation"<br>       }<br>     }<br>   }<br>   ```</p><p>#<h3>Available MCP Tools</h3></p><p>Once configured, Open WebUI will have access to these tools:</p><p>- <strong>web_search</strong> - Search the web using DuckDuckGo<br>  ```json<br>  {<br>    "query": "latest AI developments",<br>    "max_results": 5<br>  }<br>  ```</p><p>- <strong>web_scrape</strong> - Extract and clean text from web pages<br>  ```json<br>  {<br>    "url": "https://example.com/article",<br>    "max_words": 1000<br>  }<br>  ```</p><p>- <strong>image_generation</strong> - Generate images from text prompts<br>  ```json<br>  {<br>    "prompt": "A serene mountain landscape at sunset",<br>    "width": 1024,<br>    "height": 1024<br>  }<br>  ```</p><p>For more details, see <a href="mcp-usage-guide.md">MCP Usage Guide</a>.</p><p><h3>Method 2: Custom Provider (OpenAI-Compatible API)</h3></p><p>Use g4f as a custom OpenAI-compatible provider in Open WebUI.</p><p>#<h3>Backend URL Configuration</h3></p><p>1. <strong>Using g4f.space API</strong> (hosted service):</p><p>   In Open WebUI settings, add a new custom provider:<br>   - <strong>Name</strong>: G4F<br>   - <strong>Base URL</strong>: `https://g4f.space/api`<br>   - <strong>API Key</strong>: Not required (or use a dummy value)<br>   - <strong>Model</strong>: `auto` or specific model like `gpt-4o-mini`</p><p>2. <strong>Using Local g4f Backend</strong>:</p><p>   If running g4f backend locally:<br>   - <strong>Base URL</strong>: `http://localhost:1337/v1` (adjust port as needed)<br>   - <strong>API Key</strong>: Not required<br>   - <strong>Model</strong>: Any supported model</p><p>#<h3>Provider Types</h3></p><p>G4F supports multiple provider types that can be configured in Open WebUI:</p><p>##<h3>Live Providers</h3></p><p>Direct access to third-party AI services:</p><p>| Provider | Base URL | Tags | Notes |<br>|----------|----------|------|-------|<br>| <strong>api.airforce</strong> | `https://api.airforce/v1` | 🎨 👓 | Images, Vision |<br>| <strong>pollinations</strong> | `https://pollinations.ai` | 🎨 👓 | Images, Vision |<br>| <strong>gemini</strong> | `https://generativelanguage.googleapis.com/v1beta/openai` | 👓 | Vision |<br>| <strong>groq</strong> | `https://api.groq.com/openai/v1` | - | Fast inference |<br>| <strong>nvidia</strong> | `https://integrate.api.nvidia.com/v1` | 📟 | High performance |<br>| <strong>ollama</strong> | `https://ollama.g4f-dev.workers.dev` | 🦙 | Local models |<br>| <strong>openrouter</strong> | `https://openrouter.ai/api/v1` | 👓 | Multiple models |<br>| <strong>deepinfra</strong> | Default | 🎨 👓 | Images, Vision |</p><p>##<h3>Custom Provider</h3></p><p>Configure any OpenAI-compatible endpoint:</p><p>```json<br>{<br>  "provider": "custom",<br>  "baseUrl": "http://your-custom-endpoint/v1",<br>  "apiKey": "your-api-key",<br>  "model": "your-model-name"<br>}<br>```</p><p>##<h3>Backend URL Provider</h3></p><p>Use g4f's centralized API gateway:</p><p>```json<br>{<br>  "provider": "default",<br>  "baseUrl": "https://g4f.space/api/{model}",<br>  "backupUrl": "https://g4f.space/api/{model}",<br>  "model": "auto"<br>}<br>```</p><p>The `{model}` placeholder is automatically replaced with the selected model.</p><p><h3>Method 3: Direct Model Selection</h3></p><p>Open WebUI can directly use g4f models by configuring the provider endpoints.</p><p>#<h3>Default Models by Provider</h3></p><p>```json<br>{<br>  "pollinations": "openai",<br>  "azure": "model-router3",<br>  "gemini": "models/gemini-2.5-flash",<br>  "openrouter": "openai/gpt-oss-120b:free",<br>  "nvidia": "deepseek-ai/deepseek-v3.2",<br>  "ollama": "deepseek-v3.2",<br>  "groq": "openai/gpt-oss-120b",<br>  "puter": "gpt-5.2-chat-latest"<br>}<br>```</p><p><h2>Configuration Examples</h2></p><p><h3>Complete Open WebUI Configuration</h3></p><p>Example Open WebUI configuration with g4f integration:</p><p>```json<br>{<br>  "models": [<br>    {<br>      "id": "g4f-auto",<br>      "name": "G4F Auto",<br>      "provider": "g4f",<br>      "baseUrl": "https://g4f.space/api",<br>      "apiKey": "not-required"<br>    },<br>    {<br>      "id": "g4f-gemini",<br>      "name": "G4F Gemini 2.5 Flash",<br>      "provider": "g4f",<br>      "baseUrl": "https://g4f.space/api/gemini",<br>      "apiKey": "not-required",<br>      "model": "models/gemini-2.5-flash"<br>    }<br>  ],<br>  "mcpServers": {<br>    "g4f": {<br>      "command": "python",<br>      "args": ["-m", "g4f.mcp"],<br>      "description": "GPT4Free MCP server with web search, scraping, and image generation"<br>    }<br>  }<br>}<br>```</p><p><h3>Environment Variables</h3></p><p>If needed, configure these environment variables for Open WebUI:</p><p>```bash<br><h1>For custom g4f backend</h1><br>export OPENAI_API_BASE_URL=https://g4f.space/api<br>export OPENAI_API_KEY=not-required</p><p><h1>For MCP server</h1><br>export G4F_MCP_PORT=8765<br>```</p><p><h2>API Endpoints</h2></p><p>When using g4f as a backend, the following endpoints are available:</p><p><h3>Models and Providers</h3></p><p>- `GET /backend-api/v2/models` - List all available models<br>- `GET /backend-api/v2/models/<provider>` - List models for specific provider<br>- `GET /backend-api/v2/providers` - List all providers</p><p><h3>Conversation</h3></p><p>- `POST /backend-api/v2/conversation` - Create/continue conversation<br>- `GET /backend-api/v2/create` - Quick conversation creation</p><p>For complete API documentation, see <a href="backend_api_documentation.md">Backend API Documentation</a>.</p><p><h2>Conversation Context Management</h2></p><p>G4F handles conversation context in two ways:</p><p><h3>1. Message History (Most Providers)</h3></p><p>Most providers use the standard OpenAI message format:</p><p>```python<br>messages = [<br>    {"role": "system", "content": "You are a helpful assistant."},<br>    {"role": "user", "content": "Hello!"},<br>    {"role": "assistant", "content": "Hi! How can I help you?"},<br>    {"role": "user", "content": "What's the weather?"}<br>]<br>```</p><p>Open WebUI automatically manages this history.</p><p><h3>2. Conversation Objects (OpenaiAccount)</h3></p><p>Some providers use conversation IDs:</p><p>```python<br>{<br>    "messages": [{"role": "user", "content": "Hello"}],<br>    "conversation": "conv_abc123"  <h1>Returned from previous response</h1><br>}<br>```</p><p>For detailed examples, see <a href="review/context.md">Chat Conversation Context Guide</a>.</p><p><h2>Features</h2></p><p><h3>Supported Capabilities</h3></p><p>- ✅ Text generation<br>- ✅ Streaming responses<br>- ✅ Multi-turn conversations<br>- ✅ System prompts<br>- ✅ Vision models (👓 tagged providers)<br>- ✅ Image generation (🎨 tagged providers)<br>- ✅ Audio models (🎧 tagged providers)<br>- ✅ Web search via MCP<br>- ✅ Web scraping via MCP<br>- ✅ Tool calling</p><p><h3>Rate Limiting</h3></p><p>Some providers have rate limiting configured (via `sleep` parameter):</p><p>- `api.airforce`: 60 seconds<br>- `master`: 10 seconds<br>- `audio`, `azure`, `ollama`: 10 seconds</p><p><h2>Troubleshooting</h2></p><p><h3>MCP Server Not Connecting</h3></p><p>1. Verify the MCP server is running:<br>   ```bash<br>   python -m g4f.mcp --http --port 8765<br>   curl -X POST http://localhost:8765/mcp \<br>     -H "Content-Type: application/json" \<br>     -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'<br>   ```</p><p>2. Check Open WebUI MCP configuration path<br>3. Ensure CORS is enabled if using HTTP mode</p><p><h3>API Connection Issues</h3></p><p>1. Verify the base URL is correct<br>2. Check if the provider is rate-limited (check console logs)<br>3. Try the backup URL if available<br>4. Test with curl:<br>   ```bash<br>   curl -X POST https://g4f.space/api/chat/completions \<br>     -H "Content-Type: application/json" \<br>     -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}]}'<br>   ```</p><p><h3>Models Not Appearing</h3></p><p>1. Check provider configuration in Open WebUI<br>2. Verify API endpoint is accessible<br>3. Review Open WebUI logs for errors</p><p><h2>Security Considerations</h2></p><p>- <strong>API Keys</strong>: Most g4f providers don't require API keys, but some do (check `providerLocalStorage` in providers.json)<br>- <strong>CORS</strong>: Required for browser-based MCP clients<br>- <strong>Rate Limiting</strong>: Respect provider rate limits to avoid blocks<br>- <strong>Local vs Hosted</strong>: Consider privacy when choosing between local and hosted options</p><p><h2>Advanced Configuration</h2></p><p><h3>Custom Provider with API Key</h3></p><p>```json<br>{<br>  "id": "g4f-openrouter",<br>  "name": "G4F via OpenRouter",<br>  "provider": "g4f",<br>  "baseUrl": "https://openrouter.ai/api/v1",<br>  "apiKey": "your-openrouter-api-key",<br>  "model": "openai/gpt-oss-120b:free"<br>}<br>```</p><p><h3>Multiple Provider Fallback</h3></p><p>Configure multiple providers with fallback:</p><p>```json<br>{<br>  "providers": [<br>    {<br>      "baseUrl": "https://g4f.space/api/gemini",<br>      "model": "models/gemini-2.5-flash",<br>      "priority": 1<br>    },<br>    {<br>      "baseUrl": "https://g4f.space/api/groq",<br>      "model": "openai/gpt-oss-120b",<br>      "priority": 2<br>    }<br>  ]<br>}<br>```</p><p><h2>Related Documentation</h2></p><p>- <a href="mcp-integration.md">MCP Integration</a> - Detailed MCP implementation<br>- <a href="mcp-usage-guide.md">MCP Usage Guide</a> - How to use MCP server<br>- <a href="review/context.md">Chat Conversation Context Guide</a> - Context handling<br>- <a href="backend_api_documentation.md">Backend API Documentation</a> - API reference<br>- <a href="client_js.md">Client JavaScript</a> - Browser client usage</p><p><h2>Examples</h2></p><p><h3>Complete Open WebUI Setup Script</h3></p><p>```bash<br>#!/bin/bash<br><h1>Setup g4f integration with Open WebUI</h1></p><p><h1>1. Install g4f (if not already installed)</h1><br>pip install g4f</p><p><h1>2. Start MCP server in background</h1><br>nohup python -m g4f.mcp --http --port 8765 > mcp.log 2>&1 &</p><p><h1>3. Create Open WebUI config directory</h1><br>mkdir -p ~/.config/openwebui</p><p><h1>4. Write MCP configuration</h1><br>cat > ~/.config/openwebui/mcp-config.json << EOF<br>{<br>  "mcpServers": {<br>    "g4f": {<br>      "url": "http://localhost:8765/mcp",<br>      "transport": "http",<br>      "description": "GPT4Free MCP server"<br>    }<br>  }<br>}<br>EOF</p><p><h1>5. Start Open WebUI with g4f provider</h1><br>docker run -d -p 3000:8080 \<br>  -e OPENAI_API_BASE_URL=https://g4f.space/api \<br>  -e OPENAI_API_KEY=not-required \<br>  -v ~/.config/openwebui:/app/backend/data \<br>  --name open-webui \<br>  ghcr.io/open-webui/open-webui:main</p><p>echo "Setup complete! Open WebUI available at http://localhost:3000"<br>echo "MCP server running on http://localhost:8765"<br>```</p><p><h3>Testing the Integration</h3></p><p>```bash<br><h1>Test MCP server</h1><br>curl -X POST http://localhost:8765/mcp \<br>  -H "Content-Type: application/json" \<br>  -d '{<br>    "jsonrpc": "2.0",<br>    "id": 1,<br>    "method": "tools/call",<br>    "params": {<br>      "name": "web_search",<br>      "arguments": {<br>        "query": "latest AI news",<br>        "max_results": 3<br>      }<br>    }<br>  }'</p><p><h1>Test API endpoint</h1><br>curl -X POST https://g4f.space/api/chat/completions \<br>  -H "Content-Type: application/json" \<br>  -d '{<br>    "model": "auto",<br>    "messages": [<br>      {"role": "user", "content": "Hello, how are you?"}<br>    ],<br>    "stream": false<br>  }'<br>```</p><p><h2>Support</h2></p><p>For issues and questions:</p><p>- GitHub Issues: <a href="https://github.com/gpt4free/g4f.dev/issues">gpt4free/g4f.dev</a><br>- Documentation: <a href="https://g4f.dev/docs">g4f.dev/docs</a><br>- MCP Protocol: <a href="https://modelcontextprotocol.io">modelcontextprotocol.io</a><br></div>
+        </main>
     </div>
 
+    
     <script>
         // Toggle Translation Widget
         document.getElementById("translate-toggle").addEventListener("click", function() {
@@ -606,7 +480,7 @@ Here you’ll find a clear overview, quick examples, and entry points to deeper 
                 
                 li.appendChild(a);
                 tocList.appendChild(li);
-        });
+            });
         }
 
         // Smooth scrolling for anchor links
