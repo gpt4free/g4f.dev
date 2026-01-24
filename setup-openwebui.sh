@@ -13,6 +13,8 @@
 #   --port PORT      MCP server port (default: 8765)
 #   --host HOST      MCP server host (default: 0.0.0.0)
 #   --docker         Setup for Docker-based Open WebUI
+#   --patches        Install integration patches for OpenWeb UI
+#   --openwebui PATH Path to Open WebUI installation directory
 #   --help           Show this help message
 #
 
@@ -23,6 +25,8 @@ MCP_TRANSPORT="stdio"
 MCP_PORT="8765"
 MCP_HOST="0.0.0.0"
 DOCKER_MODE=false
+INSTALL_PATCHES=false
+OPENWEBUI_PATH=""
 
 # Colors for output
 RED='\033[0;31m'
@@ -70,8 +74,16 @@ while [[ $# -gt 0 ]]; do
             DOCKER_MODE=true
             shift
             ;;
+        --patches)
+            INSTALL_PATCHES=true
+            shift
+            ;;
+        --openwebui)
+            OPENWEBUI_PATH="$2"
+            shift 2
+            ;;
         --help)
-            head -n 20 "$0" | tail -n 15
+            head -n 20 "$0" | tail -n 17
             exit 0
             ;;
         *)
@@ -212,6 +224,92 @@ if [ "$MCP_TRANSPORT" = "http" ]; then
         info "Server logs: mcp-server.log"
         info "To stop: kill \$(cat mcp-server.pid)"
     fi
+fi
+
+# Install patches if requested
+if [ "$INSTALL_PATCHES" = true ]; then
+    echo ""
+    info "Installing OpenWeb UI integration patches..."
+    
+    # Determine OpenWeb UI path
+    if [ -z "$OPENWEBUI_PATH" ]; then
+        # Try to find OpenWeb UI installation
+        POSSIBLE_PATHS=(
+            "/opt/open-webui"
+            "/usr/local/lib/open-webui"
+            "$HOME/.local/share/open-webui"
+            "/app"  # Docker path
+        )
+        
+        for path in "${POSSIBLE_PATHS[@]}"; do
+            if [ -d "$path" ]; then
+                OPENWEBUI_PATH="$path"
+                break
+            fi
+        done
+        
+        if [ -z "$OPENWEBUI_PATH" ]; then
+            info "OpenWeb UI path not auto-detected. Patches will be copied to current directory."
+            info "Use --openwebui /path/to/open-webui to specify path."
+            OPENWEBUI_PATH="./openwebui-patches"
+            mkdir -p "$OPENWEBUI_PATH"
+        fi
+    fi
+    
+    # Check if patches exist
+    if [ ! -f "openwebui_provider_hook.py" ]; then
+        error_exit "Patch files not found. Run this script from the g4f.dev directory."
+    fi
+    
+    # Create patches directory
+    PATCHES_DIR="$OPENWEBUI_PATH/g4f-patches"
+    mkdir -p "$PATCHES_DIR"
+    
+    # Copy patch files
+    cp openwebui_provider_hook.py "$PATCHES_DIR/" 2>/dev/null || info "Provider hook already exists"
+    cp openwebui_context_patch.py "$PATCHES_DIR/" 2>/dev/null || info "Context patch already exists"
+    cp openwebui_selector_component.js "$PATCHES_DIR/" 2>/dev/null || info "UI component already exists"
+    cp openwebui-config.json "$PATCHES_DIR/" 2>/dev/null || info "Config already exists"
+    
+    success "Patches copied to: $PATCHES_DIR"
+    
+    # Create integration instructions
+    cat > "$PATCHES_DIR/INSTALL.txt" << 'EOF'
+OpenWeb UI Integration Patches for g4f
+
+To integrate these patches:
+
+1. Backend Integration (Python):
+   - Copy openwebui_provider_hook.py to backend/apps/webui/
+   - Copy openwebui_context_patch.py to backend/apps/webui/
+   - Add imports to your main application file
+   - Create API endpoints (see OPENWEBUI_PATCHES.md)
+
+2. Frontend Integration (JavaScript):
+   - Copy openwebui_selector_component.js to src/lib/components/g4f/
+   - Import and use in your chat settings component
+   - Add <div id="g4f-provider-selector"></div> to your UI
+
+3. Configuration:
+   - Copy openwebui-config.json to static/ or backend/data/
+   - Ensure it's accessible via HTTP
+
+See OPENWEBUI_PATCHES.md for detailed installation instructions.
+EOF
+    
+    success "Installation guide created: $PATCHES_DIR/INSTALL.txt"
+    
+    echo ""
+    info "Patch Installation Summary:"
+    echo "  Location: $PATCHES_DIR"
+    echo "  Files:"
+    echo "    - openwebui_provider_hook.py (Provider & Model Hook)"
+    echo "    - openwebui_context_patch.py (Context Management)"
+    echo "    - openwebui_selector_component.js (UI Component)"
+    echo "    - openwebui-config.json (Configuration)"
+    echo "    - INSTALL.txt (Installation Guide)"
+    echo ""
+    info "See OPENWEBUI_PATCHES.md for integration instructions"
 fi
 
 echo ""
