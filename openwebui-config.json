@@ -1,0 +1,256 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "title": "OpenWeb UI - G4F Integration Configuration",
+  "description": "Default configuration for integrating g4f (GPT4Free) with Open WebUI. This configuration enables MCP server tools (web search, web scraping, image generation) and provides access to multiple AI providers through g4f.",
+  "version": "1.0.0",
+  
+  "openwebui": {
+    "models": [
+      {
+        "id": "g4f-auto",
+        "name": "G4F Auto (Best Available)",
+        "provider": "g4f",
+        "baseUrl": "https://g4f.space/api",
+        "apiKey": "not-required",
+        "description": "Automatically selects the best available model from g4f providers"
+      },
+      {
+        "id": "g4f-gemini-flash",
+        "name": "G4F Gemini 2.5 Flash",
+        "provider": "g4f",
+        "baseUrl": "https://g4f.space/api/gemini",
+        "apiKey": "not-required",
+        "model": "models/gemini-2.5-flash",
+        "description": "Google Gemini 2.5 Flash via g4f (Vision support)"
+      },
+      {
+        "id": "g4f-deepseek",
+        "name": "G4F DeepSeek V3.2",
+        "provider": "g4f",
+        "baseUrl": "https://g4f.space/api/nvidia",
+        "apiKey": "not-required",
+        "model": "deepseek-ai/deepseek-v3.2",
+        "description": "DeepSeek V3.2 via g4f/nvidia"
+      },
+      {
+        "id": "g4f-groq",
+        "name": "G4F Groq (Fast)",
+        "provider": "g4f",
+        "baseUrl": "https://g4f.space/api/groq",
+        "apiKey": "not-required",
+        "model": "openai/gpt-oss-120b",
+        "description": "Fast inference via Groq through g4f"
+      }
+    ],
+    
+    "mcpServers": {
+      "g4f": {
+        "command": "python",
+        "args": ["-m", "g4f.mcp"],
+        "description": "GPT4Free MCP server - Provides web search, web scraping, and image generation tools",
+        "enabled": true,
+        "env": {}
+      }
+    },
+    
+    "settings": {
+      "defaultProvider": "g4f",
+      "defaultModel": "g4f-auto",
+      "streamResponses": true,
+      "enableMCP": true
+    }
+  },
+  
+  "alternativeConfigurations": {
+    "httpMcpServer": {
+      "description": "Use HTTP transport for MCP server instead of stdio",
+      "mcpServers": {
+        "g4f": {
+          "url": "http://localhost:8765/mcp",
+          "transport": "http",
+          "description": "GPT4Free MCP server via HTTP",
+          "enabled": true
+        }
+      },
+      "setup": [
+        "Start the MCP server: g4f mcp --http --port 8765",
+        "Configure Open WebUI to use HTTP transport as shown above"
+      ]
+    },
+    
+    "localBackend": {
+      "description": "Use local g4f backend instead of g4f.space",
+      "models": [
+        {
+          "id": "g4f-local",
+          "name": "G4F Local Backend",
+          "provider": "g4f-local",
+          "baseUrl": "http://localhost:1337/v1",
+          "apiKey": "not-required",
+          "model": "auto"
+        }
+      ],
+      "setup": [
+        "Start local g4f backend: g4f api",
+        "Configure model to use http://localhost:1337/v1 as base URL"
+      ]
+    },
+    
+    "customProviders": {
+      "description": "Add custom providers with API keys",
+      "examples": [
+        {
+          "id": "g4f-openrouter",
+          "name": "G4F via OpenRouter",
+          "provider": "g4f",
+          "baseUrl": "https://openrouter.ai/api/v1",
+          "apiKey": "your-openrouter-api-key",
+          "model": "openai/gpt-oss-120b:free"
+        },
+        {
+          "id": "g4f-groq-api",
+          "name": "G4F Groq (with API key)",
+          "provider": "g4f",
+          "baseUrl": "https://api.groq.com/openai/v1",
+          "apiKey": "your-groq-api-key",
+          "model": "llama-3.1-70b-versatile"
+        }
+      ]
+    }
+  },
+  
+  "providerCapabilities": {
+    "pollinations": {
+      "tags": ["🎨 Images", "👓 Vision"],
+      "models": ["openai"],
+      "rateLimit": null
+    },
+    "api.airforce": {
+      "tags": ["🎨 Images", "👓 Vision"],
+      "baseUrl": "https://api.airforce/v1",
+      "rateLimit": "60s"
+    },
+    "gemini": {
+      "tags": ["👓 Vision"],
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "backupUrl": "https://g4f.space/api/gemini",
+      "models": ["models/gemini-2.5-flash"]
+    },
+    "groq": {
+      "tags": ["Fast"],
+      "baseUrl": "https://api.groq.com/openai/v1",
+      "backupUrl": "https://g4f.space/api/groq"
+    },
+    "nvidia": {
+      "tags": ["📟 High Performance"],
+      "baseUrl": "https://integrate.api.nvidia.com/v1",
+      "backupUrl": "https://g4f.space/api/nvidia",
+      "models": ["deepseek-ai/deepseek-v3.2"]
+    },
+    "ollama": {
+      "tags": ["🦙 Local"],
+      "baseUrl": "https://ollama.g4f-dev.workers.dev",
+      "backupUrl": "https://g4f.space/api/ollama",
+      "models": ["deepseek-v3.2"],
+      "rateLimit": "10s"
+    },
+    "openrouter": {
+      "tags": ["👓 Vision", "Multiple Models"],
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "backupUrl": "https://g4f.space/api/openrouter",
+      "models": ["openai/gpt-oss-120b:free"]
+    }
+  },
+  
+  "tools": {
+    "web_search": {
+      "name": "web_search",
+      "description": "Search the web using DuckDuckGo",
+      "server": "g4f",
+      "parameters": {
+        "query": {
+          "type": "string",
+          "required": true,
+          "description": "Search query"
+        },
+        "max_results": {
+          "type": "integer",
+          "default": 5,
+          "description": "Maximum number of results"
+        }
+      }
+    },
+    "web_scrape": {
+      "name": "web_scrape",
+      "description": "Extract text content from a web page",
+      "server": "g4f",
+      "parameters": {
+        "url": {
+          "type": "string",
+          "required": true,
+          "description": "URL to scrape"
+        },
+        "max_words": {
+          "type": "integer",
+          "default": 1000,
+          "description": "Maximum words to extract"
+        }
+      }
+    },
+    "image_generation": {
+      "name": "image_generation",
+      "description": "Generate images from text prompts",
+      "server": "g4f",
+      "parameters": {
+        "prompt": {
+          "type": "string",
+          "required": true,
+          "description": "Image description"
+        },
+        "model": {
+          "type": "string",
+          "default": "flux",
+          "description": "Image model to use"
+        },
+        "width": {
+          "type": "integer",
+          "default": 1024,
+          "description": "Image width"
+        },
+        "height": {
+          "type": "integer",
+          "default": 1024,
+          "description": "Image height"
+        }
+      }
+    }
+  },
+  
+  "installation": {
+    "prerequisites": [
+      "Python 3.8 or higher",
+      "g4f package: pip install g4f",
+      "Open WebUI installed"
+    ],
+    "steps": [
+      "1. Install g4f: pip install g4f",
+      "2. Copy this configuration to your Open WebUI config directory",
+      "3. Start MCP server: python -m g4f.mcp (or g4f mcp --http --port 8765)",
+      "4. Restart Open WebUI to load the configuration",
+      "5. Verify models and tools are available in Open WebUI settings"
+    ]
+  },
+  
+  "documentation": {
+    "main": "https://g4f.dev/docs/openwebui-integration.html",
+    "mcp": "https://g4f.dev/docs/mcp-integration.html",
+    "context": "https://g4f.dev/docs/review/context.html",
+    "api": "https://g4f.dev/docs/backend_api_documentation.html"
+  },
+  
+  "support": {
+    "github": "https://github.com/gpt4free/g4f.dev",
+    "issues": "https://github.com/gpt4free/g4f.dev/issues",
+    "website": "https://g4f.dev"
+  }
+}

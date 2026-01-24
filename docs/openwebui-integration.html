@@ -421,7 +421,525 @@
         </nav>
 
         <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
-            <div><h1>OpenWeb UI - G4F Integration Guide</h1></p><p>This guide explains how to integrate the g4f (GPT4Free) service with Open WebUI, enabling you to use g4f's providers, models, and MCP server tools.</p><p><h2>Overview</h2></p><p>G4F provides multiple integration points with Open WebUI:</p><p>1. <strong>MCP Server Integration</strong> - Access to web search, web scraping, and image generation tools<br>2. <strong>Custom Provider Configuration</strong> - Use g4f as an OpenAI-compatible API endpoint<br>3. <strong>Live Provider Support</strong> - Direct access to multiple AI providers through g4f<br>4. <strong>Conversation Context Management</strong> - Proper handling of chat history and context</p><p>For detailed conversation context handling, see <a href="review/context.md">Chat Conversation Context Guide</a>.</p><p><h2>Integration Methods</h2></p><p><h3>Method 1: MCP Server Integration (Recommended)</h3></p><p>The Model Context Protocol (MCP) server allows Open WebUI to access g4f tools like web search, scraping, and image generation.</p><p>#<h3>Setup MCP Server</h3></p><p>1. <strong>Start the g4f MCP Server</strong>:</p><p>   Using stdio transport (default):<br>   ```bash<br>   python -m g4f.mcp<br>   ```</p><p>   Or using HTTP transport:<br>   ```bash<br>   g4f mcp --http --port 8765 --host 0.0.0.0<br>   ```</p><p>2. <strong>Configure Open WebUI</strong>:</p><p>   Add to Open WebUI's MCP configuration file:</p><p>   <strong>For stdio mode</strong> (`~/.config/openwebui/mcp-config.json` or similar):<br>   ```json<br>   {<br>     "mcpServers": {<br>       "g4f": {<br>         "command": "python",<br>         "args": ["-m", "g4f.mcp"],<br>         "description": "GPT4Free tools for web search, scraping, and image generation"<br>       }<br>     }<br>   }<br>   ```</p><p>   <strong>For HTTP mode</strong>:<br>   ```json<br>   {<br>     "mcpServers": {<br>       "g4f": {<br>         "url": "http://localhost:8765/mcp",<br>         "transport": "http",<br>         "description": "GPT4Free tools for web search, scraping, and image generation"<br>       }<br>     }<br>   }<br>   ```</p><p>#<h3>Available MCP Tools</h3></p><p>Once configured, Open WebUI will have access to these tools:</p><p>- <strong>web_search</strong> - Search the web using DuckDuckGo<br>  ```json<br>  {<br>    "query": "latest AI developments",<br>    "max_results": 5<br>  }<br>  ```</p><p>- <strong>web_scrape</strong> - Extract and clean text from web pages<br>  ```json<br>  {<br>    "url": "https://example.com/article",<br>    "max_words": 1000<br>  }<br>  ```</p><p>- <strong>image_generation</strong> - Generate images from text prompts<br>  ```json<br>  {<br>    "prompt": "A serene mountain landscape at sunset",<br>    "width": 1024,<br>    "height": 1024<br>  }<br>  ```</p><p>For more details, see <a href="mcp-usage-guide.md">MCP Usage Guide</a>.</p><p><h3>Method 2: Custom Provider (OpenAI-Compatible API)</h3></p><p>Use g4f as a custom OpenAI-compatible provider in Open WebUI.</p><p>#<h3>Backend URL Configuration</h3></p><p>1. <strong>Using g4f.space API</strong> (hosted service):</p><p>   In Open WebUI settings, add a new custom provider:<br>   - <strong>Name</strong>: G4F<br>   - <strong>Base URL</strong>: `https://g4f.space/api`<br>   - <strong>API Key</strong>: Not required (or use a dummy value)<br>   - <strong>Model</strong>: `auto` or specific model like `gpt-4o-mini`</p><p>2. <strong>Using Local g4f Backend</strong>:</p><p>   If running g4f backend locally:<br>   - <strong>Base URL</strong>: `http://localhost:1337/v1` (adjust port as needed)<br>   - <strong>API Key</strong>: Not required<br>   - <strong>Model</strong>: Any supported model</p><p>#<h3>Provider Types</h3></p><p>G4F supports multiple provider types that can be configured in Open WebUI:</p><p>##<h3>Live Providers</h3></p><p>Direct access to third-party AI services:</p><p>| Provider | Base URL | Tags | Notes |<br>|----------|----------|------|-------|<br>| <strong>api.airforce</strong> | `https://api.airforce/v1` | 🎨 👓 | Images, Vision |<br>| <strong>pollinations</strong> | `https://pollinations.ai` | 🎨 👓 | Images, Vision |<br>| <strong>gemini</strong> | `https://generativelanguage.googleapis.com/v1beta/openai` | 👓 | Vision |<br>| <strong>groq</strong> | `https://api.groq.com/openai/v1` | - | Fast inference |<br>| <strong>nvidia</strong> | `https://integrate.api.nvidia.com/v1` | 📟 | High performance |<br>| <strong>ollama</strong> | `https://ollama.g4f-dev.workers.dev` | 🦙 | Local models |<br>| <strong>openrouter</strong> | `https://openrouter.ai/api/v1` | 👓 | Multiple models |<br>| <strong>deepinfra</strong> | Default | 🎨 👓 | Images, Vision |</p><p>##<h3>Custom Provider</h3></p><p>Configure any OpenAI-compatible endpoint:</p><p>```json<br>{<br>  "provider": "custom",<br>  "baseUrl": "http://your-custom-endpoint/v1",<br>  "apiKey": "your-api-key",<br>  "model": "your-model-name"<br>}<br>```</p><p>##<h3>Backend URL Provider</h3></p><p>Use g4f's centralized API gateway:</p><p>```json<br>{<br>  "provider": "default",<br>  "baseUrl": "https://g4f.space/api/{model}",<br>  "backupUrl": "https://g4f.space/api/{model}",<br>  "model": "auto"<br>}<br>```</p><p>The `{model}` placeholder is automatically replaced with the selected model.</p><p><h3>Method 3: Direct Model Selection</h3></p><p>Open WebUI can directly use g4f models by configuring the provider endpoints.</p><p>#<h3>Default Models by Provider</h3></p><p>```json<br>{<br>  "pollinations": "openai",<br>  "azure": "model-router3",<br>  "gemini": "models/gemini-2.5-flash",<br>  "openrouter": "openai/gpt-oss-120b:free",<br>  "nvidia": "deepseek-ai/deepseek-v3.2",<br>  "ollama": "deepseek-v3.2",<br>  "groq": "openai/gpt-oss-120b",<br>  "puter": "gpt-5.2-chat-latest"<br>}<br>```</p><p><h2>Configuration Examples</h2></p><p><h3>Complete Open WebUI Configuration</h3></p><p>Example Open WebUI configuration with g4f integration:</p><p>```json<br>{<br>  "models": [<br>    {<br>      "id": "g4f-auto",<br>      "name": "G4F Auto",<br>      "provider": "g4f",<br>      "baseUrl": "https://g4f.space/api",<br>      "apiKey": "not-required"<br>    },<br>    {<br>      "id": "g4f-gemini",<br>      "name": "G4F Gemini 2.5 Flash",<br>      "provider": "g4f",<br>      "baseUrl": "https://g4f.space/api/gemini",<br>      "apiKey": "not-required",<br>      "model": "models/gemini-2.5-flash"<br>    }<br>  ],<br>  "mcpServers": {<br>    "g4f": {<br>      "command": "python",<br>      "args": ["-m", "g4f.mcp"],<br>      "description": "GPT4Free MCP server with web search, scraping, and image generation"<br>    }<br>  }<br>}<br>```</p><p><h3>Environment Variables</h3></p><p>If needed, configure these environment variables for Open WebUI:</p><p>```bash<br><h1>For custom g4f backend</h1><br>export OPENAI_API_BASE_URL=https://g4f.space/api<br>export OPENAI_API_KEY=not-required</p><p><h1>For MCP server</h1><br>export G4F_MCP_PORT=8765<br>```</p><p><h2>API Endpoints</h2></p><p>When using g4f as a backend, the following endpoints are available:</p><p><h3>Models and Providers</h3></p><p>- `GET /backend-api/v2/models` - List all available models<br>- `GET /backend-api/v2/models/<provider>` - List models for specific provider<br>- `GET /backend-api/v2/providers` - List all providers</p><p><h3>Conversation</h3></p><p>- `POST /backend-api/v2/conversation` - Create/continue conversation<br>- `GET /backend-api/v2/create` - Quick conversation creation</p><p>For complete API documentation, see <a href="backend_api_documentation.md">Backend API Documentation</a>.</p><p><h2>Conversation Context Management</h2></p><p>G4F handles conversation context in two ways:</p><p><h3>1. Message History (Most Providers)</h3></p><p>Most providers use the standard OpenAI message format:</p><p>```python<br>messages = [<br>    {"role": "system", "content": "You are a helpful assistant."},<br>    {"role": "user", "content": "Hello!"},<br>    {"role": "assistant", "content": "Hi! How can I help you?"},<br>    {"role": "user", "content": "What's the weather?"}<br>]<br>```</p><p>Open WebUI automatically manages this history.</p><p><h3>2. Conversation Objects (OpenaiAccount)</h3></p><p>Some providers use conversation IDs:</p><p>```python<br>{<br>    "messages": [{"role": "user", "content": "Hello"}],<br>    "conversation": "conv_abc123"  <h1>Returned from previous response</h1><br>}<br>```</p><p>For detailed examples, see <a href="review/context.md">Chat Conversation Context Guide</a>.</p><p><h2>Features</h2></p><p><h3>Supported Capabilities</h3></p><p>- ✅ Text generation<br>- ✅ Streaming responses<br>- ✅ Multi-turn conversations<br>- ✅ System prompts<br>- ✅ Vision models (👓 tagged providers)<br>- ✅ Image generation (🎨 tagged providers)<br>- ✅ Audio models (🎧 tagged providers)<br>- ✅ Web search via MCP<br>- ✅ Web scraping via MCP<br>- ✅ Tool calling</p><p><h3>Rate Limiting</h3></p><p>Some providers have rate limiting configured (via `sleep` parameter):</p><p>- `api.airforce`: 60 seconds<br>- `master`: 10 seconds<br>- `audio`, `azure`, `ollama`: 10 seconds</p><p><h2>Troubleshooting</h2></p><p><h3>MCP Server Not Connecting</h3></p><p>1. Verify the MCP server is running:<br>   ```bash<br>   python -m g4f.mcp --http --port 8765<br>   curl -X POST http://localhost:8765/mcp \<br>     -H "Content-Type: application/json" \<br>     -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'<br>   ```</p><p>2. Check Open WebUI MCP configuration path<br>3. Ensure CORS is enabled if using HTTP mode</p><p><h3>API Connection Issues</h3></p><p>1. Verify the base URL is correct<br>2. Check if the provider is rate-limited (check console logs)<br>3. Try the backup URL if available<br>4. Test with curl:<br>   ```bash<br>   curl -X POST https://g4f.space/api/chat/completions \<br>     -H "Content-Type: application/json" \<br>     -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}]}'<br>   ```</p><p><h3>Models Not Appearing</h3></p><p>1. Check provider configuration in Open WebUI<br>2. Verify API endpoint is accessible<br>3. Review Open WebUI logs for errors</p><p><h2>Security Considerations</h2></p><p>- <strong>API Keys</strong>: Most g4f providers don't require API keys, but some do (check `providerLocalStorage` in providers.json)<br>- <strong>CORS</strong>: Required for browser-based MCP clients<br>- <strong>Rate Limiting</strong>: Respect provider rate limits to avoid blocks<br>- <strong>Local vs Hosted</strong>: Consider privacy when choosing between local and hosted options</p><p><h2>Advanced Configuration</h2></p><p><h3>Custom Provider with API Key</h3></p><p>```json<br>{<br>  "id": "g4f-openrouter",<br>  "name": "G4F via OpenRouter",<br>  "provider": "g4f",<br>  "baseUrl": "https://openrouter.ai/api/v1",<br>  "apiKey": "your-openrouter-api-key",<br>  "model": "openai/gpt-oss-120b:free"<br>}<br>```</p><p><h3>Multiple Provider Fallback</h3></p><p>Configure multiple providers with fallback:</p><p>```json<br>{<br>  "providers": [<br>    {<br>      "baseUrl": "https://g4f.space/api/gemini",<br>      "model": "models/gemini-2.5-flash",<br>      "priority": 1<br>    },<br>    {<br>      "baseUrl": "https://g4f.space/api/groq",<br>      "model": "openai/gpt-oss-120b",<br>      "priority": 2<br>    }<br>  ]<br>}<br>```</p><p><h2>Related Documentation</h2></p><p>- <a href="mcp-integration.md">MCP Integration</a> - Detailed MCP implementation<br>- <a href="mcp-usage-guide.md">MCP Usage Guide</a> - How to use MCP server<br>- <a href="review/context.md">Chat Conversation Context Guide</a> - Context handling<br>- <a href="backend_api_documentation.md">Backend API Documentation</a> - API reference<br>- <a href="client_js.md">Client JavaScript</a> - Browser client usage</p><p><h2>Examples</h2></p><p><h3>Complete Open WebUI Setup Script</h3></p><p>```bash<br>#!/bin/bash<br><h1>Setup g4f integration with Open WebUI</h1></p><p><h1>1. Install g4f (if not already installed)</h1><br>pip install g4f</p><p><h1>2. Start MCP server in background</h1><br>nohup python -m g4f.mcp --http --port 8765 > mcp.log 2>&1 &</p><p><h1>3. Create Open WebUI config directory</h1><br>mkdir -p ~/.config/openwebui</p><p><h1>4. Write MCP configuration</h1><br>cat > ~/.config/openwebui/mcp-config.json << EOF<br>{<br>  "mcpServers": {<br>    "g4f": {<br>      "url": "http://localhost:8765/mcp",<br>      "transport": "http",<br>      "description": "GPT4Free MCP server"<br>    }<br>  }<br>}<br>EOF</p><p><h1>5. Start Open WebUI with g4f provider</h1><br>docker run -d -p 3000:8080 \<br>  -e OPENAI_API_BASE_URL=https://g4f.space/api \<br>  -e OPENAI_API_KEY=not-required \<br>  -v ~/.config/openwebui:/app/backend/data \<br>  --name open-webui \<br>  ghcr.io/open-webui/open-webui:main</p><p>echo "Setup complete! Open WebUI available at http://localhost:3000"<br>echo "MCP server running on http://localhost:8765"<br>```</p><p><h3>Testing the Integration</h3></p><p>```bash<br><h1>Test MCP server</h1><br>curl -X POST http://localhost:8765/mcp \<br>  -H "Content-Type: application/json" \<br>  -d '{<br>    "jsonrpc": "2.0",<br>    "id": 1,<br>    "method": "tools/call",<br>    "params": {<br>      "name": "web_search",<br>      "arguments": {<br>        "query": "latest AI news",<br>        "max_results": 3<br>      }<br>    }<br>  }'</p><p><h1>Test API endpoint</h1><br>curl -X POST https://g4f.space/api/chat/completions \<br>  -H "Content-Type: application/json" \<br>  -d '{<br>    "model": "auto",<br>    "messages": [<br>      {"role": "user", "content": "Hello, how are you?"}<br>    ],<br>    "stream": false<br>  }'<br>```</p><p><h2>Support</h2></p><p>For issues and questions:</p><p>- GitHub Issues: <a href="https://github.com/gpt4free/g4f.dev/issues">gpt4free/g4f.dev</a><br>- Documentation: <a href="https://g4f.dev/docs">g4f.dev/docs</a><br>- MCP Protocol: <a href="https://modelcontextprotocol.io">modelcontextprotocol.io</a><br></div>
+            <h1>OpenWeb UI - G4F Integration Guide</h1>
+<br>
+<p>This guide explains how to integrate the g4f (GPT4Free) service with Open WebUI, enabling you to use g4f's providers, models, and MCP server tools.</p>
+<br>
+<h2>Quick Start</h2>
+<br>
+<p>For automated setup, use the provided setup script and configuration:</p>
+<br>
+<pre><code class="language-bash">
+# Clone or download the repository
+git clone https://github.com/gpt4free/g4f.dev.git
+cd g4f.dev
+
+# Run the setup script
+./setup-openwebui.sh
+
+# Or for HTTP mode:
+./setup-openwebui.sh --http --port 8765
+</code></pre>
+<br>
+<p>The setup script will:</p>
+<ul>
+<li>Install g4f if not already installed</li>
+<li>Create MCP configuration for Open WebUI</li>
+<li>Start the MCP server (if using HTTP mode)</li>
+<li>Provide next steps for configuring Open WebUI</li>
+</ul>
+<br>
+<p><strong>Configuration files:</strong></p>
+<ul>
+<li>`openwebui-config.json` - Complete configuration with all providers and models</li>
+<li>`setup-openwebui.sh` - Automated setup script</li>
+</ul>
+<br>
+<h2>Overview</h2>
+<br>
+<p>G4F provides multiple integration points with Open WebUI:</p>
+<br>
+<p>1. <strong>MCP Server Integration</strong> - Access to web search, web scraping, and image generation tools</p>
+<p>2. <strong>Custom Provider Configuration</strong> - Use g4f as an OpenAI-compatible API endpoint</p>
+<p>3. <strong>Live Provider Support</strong> - Direct access to multiple AI providers through g4f</p>
+<p>4. <strong>Conversation Context Management</strong> - Proper handling of chat history and context</p>
+<br>
+<p>For detailed conversation context handling, see <a href="review/context.md">Chat Conversation Context Guide</a>.</p>
+<br>
+<h2>Integration Methods</h2>
+<br>
+<h3>Method 1: MCP Server Integration (Recommended)</h3>
+<br>
+<p>The Model Context Protocol (MCP) server allows Open WebUI to access g4f tools like web search, scraping, and image generation.</p>
+<br>
+<p>#### Setup MCP Server</p>
+<br>
+<p>1. <strong>Start the g4f MCP Server</strong>:</p>
+<br>
+<p>   Using stdio transport (default):</p>
+<pre><code class="language-bash">
+   python -m g4f.mcp
+</code></pre>
+<br>
+<p>   Or using HTTP transport:</p>
+<pre><code class="language-bash">
+   g4f mcp --http --port 8765 --host 0.0.0.0
+</code></pre>
+<br>
+<p>2. <strong>Configure Open WebUI</strong>:</p>
+<br>
+<p>   Add to Open WebUI's MCP configuration file:</p>
+<br>
+<p>   <strong>For stdio mode</strong> (<code>~/.config/openwebui/mcp-config.json</code> or similar):</p>
+<pre><code class="language-json">
+   {
+     "mcpServers": {
+       "g4f": {
+         "command": "python",
+         "args": ["-m", "g4f.mcp"],
+         "description": "GPT4Free tools for web search, scraping, and image generation"
+       }
+     }
+   }
+</code></pre>
+<br>
+<p>   <strong>For HTTP mode</strong>:</p>
+<pre><code class="language-json">
+   {
+     "mcpServers": {
+       "g4f": {
+         "url": "http://localhost:8765/mcp",
+         "transport": "http",
+         "description": "GPT4Free tools for web search, scraping, and image generation"
+       }
+     }
+   }
+</code></pre>
+<br>
+<p>#### Available MCP Tools</p>
+<br>
+<p>Once configured, Open WebUI will have access to these tools:</p>
+<br>
+<ul>
+<li>**web_search** - Search the web using DuckDuckGo</li>
+<pre><code class="language-json">
+  {
+    "query": "latest AI developments",
+    "max_results": 5
+  }
+</code></pre>
+<br>
+<ul>
+<li>**web_scrape** - Extract and clean text from web pages</li>
+<pre><code class="language-json">
+  {
+    "url": "https://example.com/article",
+    "max_words": 1000
+  }
+</code></pre>
+<br>
+<ul>
+<li>**image_generation** - Generate images from text prompts</li>
+<pre><code class="language-json">
+  {
+    "prompt": "A serene mountain landscape at sunset",
+    "width": 1024,
+    "height": 1024
+  }
+</code></pre>
+<br>
+<p>For more details, see <a href="mcp-usage-guide.md">MCP Usage Guide</a>.</p>
+<br>
+<h3>Method 2: Custom Provider (OpenAI-Compatible API)</h3>
+<br>
+<p>Use g4f as a custom OpenAI-compatible provider in Open WebUI.</p>
+<br>
+<p>#### Backend URL Configuration</p>
+<br>
+<p>1. <strong>Using g4f.space API</strong> (hosted service):</p>
+<br>
+<p>   In Open WebUI settings, add a new custom provider:</p>
+<ul>
+<li>**Name**: G4F</li>
+<li>**Base URL**: `https://g4f.space/api`</li>
+<li>**API Key**: Not required (or use a dummy value)</li>
+<li>**Model**: `auto` or specific model like `gpt-4o-mini`</li>
+</ul>
+<br>
+<p>2. <strong>Using Local g4f Backend</strong>:</p>
+<br>
+<p>   If running g4f backend locally:</p>
+<ul>
+<li>**Base URL**: `http://localhost:1337/v1` (adjust port as needed)</li>
+<li>**API Key**: Not required</li>
+<li>**Model**: Any supported model</li>
+</ul>
+<br>
+<p>#### Provider Types</p>
+<br>
+<p>G4F supports multiple provider types that can be configured in Open WebUI:</p>
+<br>
+<p>##### Live Providers</p>
+<br>
+<p>Direct access to third-party AI services:</p>
+<br>
+<p>| Provider | Base URL | Tags | Notes |</p>
+<p>|----------|----------|------|-------|</p>
+<p>| <strong>api.airforce</strong> | <code>https://api.airforce/v1</code> | 🎨 👓 | Images, Vision |</p>
+<p>| <strong>pollinations</strong> | <code>https://pollinations.ai</code> | 🎨 👓 | Images, Vision |</p>
+<p>| <strong>gemini</strong> | <code>https://generativelanguage.googleapis.com/v1beta/openai</code> | 👓 | Vision |</p>
+<p>| <strong>groq</strong> | <code>https://api.groq.com/openai/v1</code> | - | Fast inference |</p>
+<p>| <strong>nvidia</strong> | <code>https://integrate.api.nvidia.com/v1</code> | 📟 | High performance |</p>
+<p>| <strong>ollama</strong> | <code>https://ollama.g4f-dev.workers.dev</code> | 🦙 | Local models |</p>
+<p>| <strong>openrouter</strong> | <code>https://openrouter.ai/api/v1</code> | 👓 | Multiple models |</p>
+<p>| <strong>deepinfra</strong> | Default | 🎨 👓 | Images, Vision |</p>
+<br>
+<p>##### Custom Provider</p>
+<br>
+<p>Configure any OpenAI-compatible endpoint:</p>
+<br>
+<pre><code class="language-json">
+{
+  "provider": "custom",
+  "baseUrl": "http://your-custom-endpoint/v1",
+  "apiKey": "your-api-key",
+  "model": "your-model-name"
+}
+</code></pre>
+<br>
+<p>##### Backend URL Provider</p>
+<br>
+<p>Use g4f's centralized API gateway:</p>
+<br>
+<pre><code class="language-json">
+{
+  "provider": "default",
+  "baseUrl": "https://g4f.space/api/{model}",
+  "backupUrl": "https://g4f.space/api/{model}",
+  "model": "auto"
+}
+</code></pre>
+<br>
+<p>The <code>{model}</code> placeholder is automatically replaced with the selected model.</p>
+<br>
+<h3>Method 3: Direct Model Selection</h3>
+<br>
+<p>Open WebUI can directly use g4f models by configuring the provider endpoints.</p>
+<br>
+<p>#### Default Models by Provider</p>
+<br>
+<pre><code class="language-json">
+{
+  "pollinations": "openai",
+  "azure": "model-router3",
+  "gemini": "models/gemini-2.5-flash",
+  "openrouter": "openai/gpt-oss-120b:free",
+  "nvidia": "deepseek-ai/deepseek-v3.2",
+  "ollama": "deepseek-v3.2",
+  "groq": "openai/gpt-oss-120b",
+  "puter": "gpt-5.2-chat-latest"
+}
+</code></pre>
+<br>
+<h2>Configuration Examples</h2>
+<br>
+<h3>Complete Open WebUI Configuration</h3>
+<br>
+<p>Example Open WebUI configuration with g4f integration:</p>
+<br>
+<pre><code class="language-json">
+{
+  "models": [
+    {
+      "id": "g4f-auto",
+      "name": "G4F Auto",
+      "provider": "g4f",
+      "baseUrl": "https://g4f.space/api",
+      "apiKey": "not-required"
+    },
+    {
+      "id": "g4f-gemini",
+      "name": "G4F Gemini 2.5 Flash",
+      "provider": "g4f",
+      "baseUrl": "https://g4f.space/api/gemini",
+      "apiKey": "not-required",
+      "model": "models/gemini-2.5-flash"
+    }
+  ],
+  "mcpServers": {
+    "g4f": {
+      "command": "python",
+      "args": ["-m", "g4f.mcp"],
+      "description": "GPT4Free MCP server with web search, scraping, and image generation"
+    }
+  }
+}
+</code></pre>
+<br>
+<h3>Environment Variables</h3>
+<br>
+<p>If needed, configure these environment variables for Open WebUI:</p>
+<br>
+<pre><code class="language-bash">
+# For custom g4f backend
+export OPENAI_API_BASE_URL=https://g4f.space/api
+export OPENAI_API_KEY=not-required
+
+# For MCP server
+export G4F_MCP_PORT=8765
+</code></pre>
+<br>
+<h2>API Endpoints</h2>
+<br>
+<p>When using g4f as a backend, the following endpoints are available:</p>
+<br>
+<h3>Models and Providers</h3>
+<br>
+<ul>
+<li>`GET /backend-api/v2/models` - List all available models</li>
+<li>`GET /backend-api/v2/models/<provider>` - List models for specific provider</li>
+<li>`GET /backend-api/v2/providers` - List all providers</li>
+</ul>
+<br>
+<h3>Conversation</h3>
+<br>
+<ul>
+<li>`POST /backend-api/v2/conversation` - Create/continue conversation</li>
+<li>`GET /backend-api/v2/create` - Quick conversation creation</li>
+</ul>
+<br>
+<p>For complete API documentation, see <a href="backend_api_documentation.md">Backend API Documentation</a>.</p>
+<br>
+<h2>Conversation Context Management</h2>
+<br>
+<p>G4F handles conversation context in two ways:</p>
+<br>
+<h3>1. Message History (Most Providers)</h3>
+<br>
+<p>Most providers use the standard OpenAI message format:</p>
+<br>
+<pre><code class="language-python">
+messages = [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "Hello!"},
+    {"role": "assistant", "content": "Hi! How can I help you?"},
+    {"role": "user", "content": "What's the weather?"}
+]
+</code></pre>
+<br>
+<p>Open WebUI automatically manages this history.</p>
+<br>
+<h3>2. Conversation Objects (OpenaiAccount)</h3>
+<br>
+<p>Some providers use conversation IDs:</p>
+<br>
+<pre><code class="language-python">
+{
+    "messages": [{"role": "user", "content": "Hello"}],
+    "conversation": "conv_abc123"  # Returned from previous response
+}
+</code></pre>
+<br>
+<p>For detailed examples, see <a href="review/context.md">Chat Conversation Context Guide</a>.</p>
+<br>
+<h2>Features</h2>
+<br>
+<h3>Supported Capabilities</h3>
+<br>
+<ul>
+<li>✅ Text generation</li>
+<li>✅ Streaming responses</li>
+<li>✅ Multi-turn conversations</li>
+<li>✅ System prompts</li>
+<li>✅ Vision models (👓 tagged providers)</li>
+<li>✅ Image generation (🎨 tagged providers)</li>
+<li>✅ Audio models (🎧 tagged providers)</li>
+<li>✅ Web search via MCP</li>
+<li>✅ Web scraping via MCP</li>
+<li>✅ Tool calling</li>
+</ul>
+<br>
+<h3>Rate Limiting</h3>
+<br>
+<p>Some providers have rate limiting configured (via <code>sleep</code> parameter):</p>
+<br>
+<ul>
+<li>`api.airforce`: 60 seconds</li>
+<li>`master`: 10 seconds</li>
+<li>`audio`, `azure`, `ollama`: 10 seconds</li>
+</ul>
+<br>
+<h2>Troubleshooting</h2>
+<br>
+<h3>MCP Server Not Connecting</h3>
+<br>
+<p>1. Verify the MCP server is running:</p>
+<pre><code class="language-bash">
+   python -m g4f.mcp --http --port 8765
+   curl -X POST http://localhost:8765/mcp \
+     -H "Content-Type: application/json" \
+     -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+</code></pre>
+<br>
+<p>2. Check Open WebUI MCP configuration path</p>
+<p>3. Ensure CORS is enabled if using HTTP mode</p>
+<br>
+<h3>API Connection Issues</h3>
+<br>
+<p>1. Verify the base URL is correct</p>
+<p>2. Check if the provider is rate-limited (check console logs)</p>
+<p>3. Try the backup URL if available</p>
+<p>4. Test with curl:</p>
+<pre><code class="language-bash">
+   curl -X POST https://g4f.space/api/chat/completions \
+     -H "Content-Type: application/json" \
+     -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}]}'
+</code></pre>
+<br>
+<h3>Models Not Appearing</h3>
+<br>
+<p>1. Check provider configuration in Open WebUI</p>
+<p>2. Verify API endpoint is accessible</p>
+<p>3. Review Open WebUI logs for errors</p>
+<br>
+<h2>Security Considerations</h2>
+<br>
+<ul>
+<li>**API Keys**: Most g4f providers don't require API keys, but some do (check `providerLocalStorage` in providers.json)</li>
+<li>**CORS**: Required for browser-based MCP clients</li>
+<li>**Rate Limiting**: Respect provider rate limits to avoid blocks</li>
+<li>**Local vs Hosted**: Consider privacy when choosing between local and hosted options</li>
+</ul>
+<br>
+<h2>Advanced Configuration</h2>
+<br>
+<h3>Custom Provider with API Key</h3>
+<br>
+<pre><code class="language-json">
+{
+  "id": "g4f-openrouter",
+  "name": "G4F via OpenRouter",
+  "provider": "g4f",
+  "baseUrl": "https://openrouter.ai/api/v1",
+  "apiKey": "your-openrouter-api-key",
+  "model": "openai/gpt-oss-120b:free"
+}
+</code></pre>
+<br>
+<h3>Multiple Provider Fallback</h3>
+<br>
+<p>Configure multiple providers with fallback:</p>
+<br>
+<pre><code class="language-json">
+{
+  "providers": [
+    {
+      "baseUrl": "https://g4f.space/api/gemini",
+      "model": "models/gemini-2.5-flash",
+      "priority": 1
+    },
+    {
+      "baseUrl": "https://g4f.space/api/groq",
+      "model": "openai/gpt-oss-120b",
+      "priority": 2
+    }
+  ]
+}
+</code></pre>
+<br>
+<h2>Related Documentation</h2>
+<br>
+<ul>
+<li>[MCP Integration](mcp-integration.md) - Detailed MCP implementation</li>
+<li>[MCP Usage Guide](mcp-usage-guide.md) - How to use MCP server</li>
+<li>[Chat Conversation Context Guide](review/context.md) - Context handling</li>
+<li>[Backend API Documentation](backend_api_documentation.md) - API reference</li>
+<li>[Client JavaScript](client_js.md) - Browser client usage</li>
+</ul>
+<br>
+<h2>Examples</h2>
+<br>
+<h3>Complete Open WebUI Setup Script</h3>
+<br>
+<pre><code class="language-bash">
+#!/bin/bash
+# Setup g4f integration with Open WebUI
+
+# 1. Install g4f (if not already installed)
+pip install g4f
+
+# 2. Start MCP server in background
+nohup python -m g4f.mcp --http --port 8765 > mcp.log 2>&1 &
+
+# 3. Create Open WebUI config directory
+mkdir -p ~/.config/openwebui
+
+# 4. Write MCP configuration
+cat > ~/.config/openwebui/mcp-config.json << EOF
+{
+  "mcpServers": {
+    "g4f": {
+      "url": "http://localhost:8765/mcp",
+      "transport": "http",
+      "description": "GPT4Free MCP server"
+    }
+  }
+}
+EOF
+
+# 5. Start Open WebUI with g4f provider
+docker run -d -p 3000:8080 \
+  -e OPENAI_API_BASE_URL=https://g4f.space/api \
+  -e OPENAI_API_KEY=not-required \
+  -v ~/.config/openwebui:/app/backend/data \
+  --name open-webui \
+  ghcr.io/open-webui/open-webui:main
+
+echo "Setup complete! Open WebUI available at http://localhost:3000"
+echo "MCP server running on http://localhost:8765"
+</code></pre>
+<br>
+<h3>Testing the Integration</h3>
+<br>
+<pre><code class="language-bash">
+# Test MCP server
+curl -X POST http://localhost:8765/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "web_search",
+      "arguments": {
+        "query": "latest AI news",
+        "max_results": 3
+      }
+    }
+  }'
+
+# Test API endpoint
+curl -X POST https://g4f.space/api/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "auto",
+    "messages": [
+      {"role": "user", "content": "Hello, how are you?"}
+    ],
+    "stream": false
+  }'
+</code></pre>
+<br>
+<h2>Support</h2>
+<br>
+<p>For issues and questions:</p>
+<br>
+<ul>
+<li>GitHub Issues: [gpt4free/g4f.dev](https://github.com/gpt4free/g4f.dev/issues)</li>
+<li>Documentation: [g4f.dev/docs](https://g4f.dev/docs)</li>
+<li>MCP Protocol: [modelcontextprotocol.io](https://modelcontextprotocol.io)</li>
+</ul>
+<br>
         </main>
     </div>
 

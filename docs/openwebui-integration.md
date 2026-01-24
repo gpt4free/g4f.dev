@@ -2,6 +2,32 @@
 
 This guide explains how to integrate the g4f (GPT4Free) service with Open WebUI, enabling you to use g4f's providers, models, and MCP server tools.
 
+## Quick Start
+
+For automated setup, use the provided setup script and configuration:
+
+```bash
+# Clone or download the repository
+git clone https://github.com/gpt4free/g4f.dev.git
+cd g4f.dev
+
+# Run the setup script
+./setup-openwebui.sh
+
+# Or for HTTP mode:
+./setup-openwebui.sh --http --port 8765
+```
+
+The setup script will:
+- Install g4f if not already installed
+- Create MCP configuration for Open WebUI
+- Start the MCP server (if using HTTP mode)
+- Provide next steps for configuring Open WebUI
+
+**Configuration files:**
+- `openwebui-config.json` - Complete configuration with all providers and models
+- `setup-openwebui.sh` - Automated setup script
+
 ## Overview
 
 G4F provides multiple integration points with Open WebUI:
