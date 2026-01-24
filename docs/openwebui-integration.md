@@ -422,10 +422,10 @@ Configure multiple providers with fallback:
 # Setup g4f integration with Open WebUI
 
 # 1. Install g4f (if not already installed)
-pip install g4f
+python3 -m pip install g4f
 
 # 2. Start MCP server in background
-nohup python -m g4f.mcp --http --port 8765 > mcp.log 2>&1 &
+nohup python3 -m g4f.mcp --http --port 8765 > mcp.log 2>&1 &
 
 # 3. Create Open WebUI config directory
 mkdir -p ~/.config/openwebui

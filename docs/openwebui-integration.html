@@ -495,13 +495,15 @@ cd g4f.dev
    {
      "mcpServers": {
        "g4f": {
-         "command": "python",
+         "command": "python3",
          "args": ["-m", "g4f.mcp"],
          "description": "GPT4Free tools for web search, scraping, and image generation"
        }
      }
    }
 </code></pre>
+<br>
+<p>   <strong>Note:</strong> Use <code>python3</code> or <code>python</code> depending on your system. The setup script automatically detects the correct command.</p>
 <br>
 <p>   <strong>For HTTP mode</strong>:</p>
 <pre><code class="language-json">
@@ -668,7 +670,7 @@ cd g4f.dev
   ],
   "mcpServers": {
     "g4f": {
-      "command": "python",
+      "command": "python3",
       "args": ["-m", "g4f.mcp"],
       "description": "GPT4Free MCP server with web search, scraping, and image generation"
     }
@@ -866,10 +868,10 @@ messages = [
 # Setup g4f integration with Open WebUI
 
 # 1. Install g4f (if not already installed)
-pip install g4f
+python3 -m pip install g4f
 
 # 2. Start MCP server in background
-nohup python -m g4f.mcp --http --port 8765 > mcp.log 2>&1 &
+nohup python3 -m g4f.mcp --http --port 8765 > mcp.log 2>&1 &
 
 # 3. Create Open WebUI config directory
 mkdir -p ~/.config/openwebui
