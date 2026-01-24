@@ -68,13 +68,15 @@ The Model Context Protocol (MCP) server allows Open WebUI to access g4f tools li
    {
      "mcpServers": {
        "g4f": {
-         "command": "python",
+         "command": "python3",
          "args": ["-m", "g4f.mcp"],
          "description": "GPT4Free tools for web search, scraping, and image generation"
        }
      }
    }
    ```
+   
+   **Note:** Use `python3` or `python` depending on your system. The setup script automatically detects the correct command.
 
    **For HTTP mode**:
    ```json
@@ -234,7 +236,7 @@ Example Open WebUI configuration with g4f integration:
   ],
   "mcpServers": {
     "g4f": {
-      "command": "python",
+      "command": "python3",
       "args": ["-m", "g4f.mcp"],
       "description": "GPT4Free MCP server with web search, scraping, and image generation"
     }

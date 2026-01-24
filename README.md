@@ -64,7 +64,7 @@ With MCP server (stdio mode):
 {
   "mcpServers": {
     "g4f": {
-      "command": "python",
+      "command": "python3",
       "args": ["-m", "g4f.mcp"]
     }
   }

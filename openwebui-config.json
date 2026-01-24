@@ -45,11 +45,12 @@
     
     "mcpServers": {
       "g4f": {
-        "command": "python",
+        "command": "python3",
         "args": ["-m", "g4f.mcp"],
         "description": "GPT4Free MCP server - Provides web search, web scraping, and image generation tools",
         "enabled": true,
-        "env": {}
+        "env": {},
+        "alternativeCommand": "python"
       }
     },
     
