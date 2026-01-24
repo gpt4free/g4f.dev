@@ -34,7 +34,11 @@ class G4FProviderHook:
             if path.exists():
                 return str(path)
         
-        raise FileNotFoundError("openwebui-config.json not found")
+        # Show searched paths in error message
+        searched = "\n  - ".join(str(p) for p in possible_paths)
+        raise FileNotFoundError(
+            f"openwebui-config.json not found. Searched paths:\n  - {searched}"
+        )
     
     def _load_config(self) -> Dict[str, Any]:
         """Load the configuration file"""

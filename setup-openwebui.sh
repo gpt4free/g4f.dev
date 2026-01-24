@@ -266,10 +266,29 @@ if [ "$INSTALL_PATCHES" = true ]; then
     mkdir -p "$PATCHES_DIR"
     
     # Copy patch files
-    cp openwebui_provider_hook.py "$PATCHES_DIR/" 2>/dev/null || info "Provider hook already exists"
-    cp openwebui_context_patch.py "$PATCHES_DIR/" 2>/dev/null || info "Context patch already exists"
-    cp openwebui_selector_component.js "$PATCHES_DIR/" 2>/dev/null || info "UI component already exists"
-    cp openwebui-config.json "$PATCHES_DIR/" 2>/dev/null || info "Config already exists"
+    if cp openwebui_provider_hook.py "$PATCHES_DIR/" 2>/dev/null; then
+        success "Copied provider hook"
+    else
+        info "Provider hook already exists or copy failed"
+    fi
+    
+    if cp openwebui_context_patch.py "$PATCHES_DIR/" 2>/dev/null; then
+        success "Copied context patch"
+    else
+        info "Context patch already exists or copy failed"
+    fi
+    
+    if cp openwebui_selector_component.js "$PATCHES_DIR/" 2>/dev/null; then
+        success "Copied UI component"
+    else
+        info "UI component already exists or copy failed"
+    fi
+    
+    if cp openwebui-config.json "$PATCHES_DIR/" 2>/dev/null; then
+        success "Copied configuration"
+    else
+        info "Configuration already exists or copy failed"
+    fi
     
     success "Patches copied to: $PATCHES_DIR"
     

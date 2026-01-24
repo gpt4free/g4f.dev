@@ -266,6 +266,11 @@ class ContextManager:
         """
         try:
             data = json.loads(json_str)
+        except json.JSONDecodeError as e:
+            print(f"Failed to parse JSON: {e}")
+            return None
+        
+        try:
             conversation = Conversation(
                 id=data["id"],
                 provider=data.get("provider", "g4f"),
@@ -287,7 +292,8 @@ class ContextManager:
             
             self.conversations[conversation.id] = conversation
             return conversation
-        except Exception:
+        except (KeyError, ValueError) as e:
+            print(f"Failed to import conversation: missing or invalid field - {e}")
             return None
 
 

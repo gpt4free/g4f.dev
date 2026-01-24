@@ -26,8 +26,18 @@ class G4FProviderSelector {
         // Load from openwebui-config.json or API endpoint
         try {
             const response = await fetch('/openwebui-config.json');
-            const config = await response.json();
             
+            if (!response.ok) {
+                if (response.status === 404) {
+                    console.warn('Configuration file not found at /openwebui-config.json');
+                } else {
+                    console.error(`Failed to load configuration: HTTP ${response.status}`);
+                }
+                this.loadDefaultConfiguration();
+                return;
+            }
+            
+            const config = await response.json();
             this.providers = this.parseProviders(config.providerCapabilities || {});
             this.models = config.openwebui?.models || [];
         } catch (error) {
