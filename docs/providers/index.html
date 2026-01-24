@@ -380,7 +380,9 @@
         }
 
         #providers a {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
             padding: 0.6rem 1.2rem;
             background: rgba(139, 61, 255, 0.1);
             color: var(--text-secondary);
@@ -390,6 +392,12 @@
             font-weight: 500;
             transition: all 0.3s ease;
             border: 1px solid transparent;
+        }
+
+        #providers a img {
+            width: 18px;
+            height: 18px;
+            border-radius: 3px;
         }
 
         #providers a:hover {
@@ -432,16 +440,17 @@
 
         .provider-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
             gap: 1rem;
-            max-width: 600px;
+            max-width: 900px;
             margin: 0 auto;
         }
 
         .provider-grid a {
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
+            gap: 0.6rem;
             padding: 1rem;
             background: rgba(139, 61, 255, 0.1);
             border: 1px solid rgba(139, 61, 255, 0.2);
@@ -450,6 +459,12 @@
             text-decoration: none;
             font-weight: 500;
             transition: all 0.3s ease;
+        }
+
+        .provider-grid a img {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
         }
 
         .provider-grid a:hover {
@@ -513,7 +528,10 @@
     <script>
         function loadMarkdown(event) {
             event.preventDefault();
-            const url = event.target.getAttribute('href');
+            // Handle clicks on child elements (like img) by finding the parent anchor
+            const target = event.target.closest('a');
+            if (!target) return;
+            const url = target.getAttribute('href');
             
             // Update active tab state
             document.querySelectorAll('#providers a').forEach(a => {
@@ -554,26 +572,42 @@
         </nav>
         <div class="content-wrapper">
             <nav id="providers" aria-label="Providers navigation" role="navigation">
-                <a href="https://g4f.dev/docs/providers/gemini.md" onclick="loadMarkdown(event)">Gemini</a>
-                <a href="https://g4f.dev/docs/providers/huggingface.md" onclick="loadMarkdown(event)">HuggingFace</a>
-                <a href="https://g4f.dev/docs/providers/ollama.md" onclick="loadMarkdown(event)">Ollama</a>
-                <a href="https://g4f.dev/docs/providers/openai.md" onclick="loadMarkdown(event)">OpenAI</a>
-                <a href="https://g4f.dev/docs/providers/perplexity.md" onclick="loadMarkdown(event)">Perplexity</a>
-                <a href="https://g4f.dev/docs/providers/pollinations.md" onclick="loadMarkdown(event)">Pollinations</a>
-                <a href="https://g4f.dev/docs/providers/puter.md" onclick="loadMarkdown(event)">Puter</a>
+                <a href="https://g4f.dev/docs/providers/anthropic.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://anthropic.com&size=32" alt="">Anthropic</a>
+                <a href="https://g4f.dev/docs/providers/api-airforce.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://api.airforce&size=32" alt="">Api.Airforce</a>
+                <a href="https://g4f.dev/docs/providers/deepinfra.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://deepinfra.com&size=32" alt="">DeepInfra</a>
+                <a href="https://g4f.dev/docs/providers/gemini.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://gemini.google.com&size=32" alt="">Gemini</a>
+                <a href="https://g4f.dev/docs/providers/groq.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://groq.com&size=32" alt="">Groq</a>
+                <a href="https://g4f.dev/docs/providers/huggingface.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://huggingface.co&size=32" alt="">HuggingFace</a>
+                <a href="https://g4f.dev/docs/providers/nvidia.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://nvidia.com&size=32" alt="">NVIDIA</a>
+                <a href="https://g4f.dev/docs/providers/ollama.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://ollama.com&size=32" alt="">Ollama</a>
+                <a href="https://g4f.dev/docs/providers/openai.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://openai.com&size=32" alt="">OpenAI</a>
+                <a href="https://g4f.dev/docs/providers/openrouter.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://openrouter.ai&size=32" alt="">OpenRouter</a>
+                <a href="https://g4f.dev/docs/providers/perplexity.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://perplexity.ai&size=32" alt="">Perplexity</a>
+                <a href="https://g4f.dev/docs/providers/pollinations.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://pollinations.ai&size=32" alt="">Pollinations</a>
+                <a href="https://g4f.dev/docs/providers/puter.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://puter.com&size=32" alt="">Puter</a>
+                <a href="https://g4f.dev/docs/providers/together.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://together.ai&size=32" alt="">Together</a>
+                <a href="https://g4f.dev/docs/providers/yupp.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://yupp.ai&size=32" alt="">Yupp</a>
             </nav>
             <main role="main" class="entry-content markdown-body" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
                 <div class="welcome-message">
                     <h1>🤖 AI Providers</h1>
                     <p>Select a provider above to view its documentation and usage examples.</p>
                     <div class="provider-grid">
-                        <a href="https://g4f.dev/docs/providers/gemini.md" onclick="loadMarkdown(event)">Gemini</a>
-                        <a href="https://g4f.dev/docs/providers/huggingface.md" onclick="loadMarkdown(event)">HuggingFace</a>
-                        <a href="https://g4f.dev/docs/providers/ollama.md" onclick="loadMarkdown(event)">Ollama</a>
-                        <a href="https://g4f.dev/docs/providers/openai.md" onclick="loadMarkdown(event)">OpenAI</a>
-                        <a href="https://g4f.dev/docs/providers/perplexity.md" onclick="loadMarkdown(event)">Perplexity</a>
-                        <a href="https://g4f.dev/docs/providers/pollinations.md" onclick="loadMarkdown(event)">Pollinations</a>
-                        <a href="https://g4f.dev/docs/providers/puter.md" onclick="loadMarkdown(event)">Puter</a>
+                        <a href="https://g4f.dev/docs/providers/anthropic.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://anthropic.com&size=32" alt="">Anthropic</a>
+                        <a href="https://g4f.dev/docs/providers/api-airforce.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://api.airforce&size=32" alt="">Api.Airforce</a>
+                        <a href="https://g4f.dev/docs/providers/deepinfra.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://deepinfra.com&size=32" alt="">DeepInfra</a>
+                        <a href="https://g4f.dev/docs/providers/gemini.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://gemini.google.com&size=32" alt="">Gemini</a>
+                        <a href="https://g4f.dev/docs/providers/groq.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://groq.com&size=32" alt="">Groq</a>
+                        <a href="https://g4f.dev/docs/providers/huggingface.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://huggingface.co&size=32" alt="">HuggingFace</a>
+                        <a href="https://g4f.dev/docs/providers/nvidia.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://nvidia.com&size=32" alt="">NVIDIA</a>
+                        <a href="https://g4f.dev/docs/providers/ollama.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://ollama.com&size=32" alt="">Ollama</a>
+                        <a href="https://g4f.dev/docs/providers/openai.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://openai.com&size=32" alt="">OpenAI</a>
+                        <a href="https://g4f.dev/docs/providers/openrouter.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://openrouter.ai&size=32" alt="">OpenRouter</a>
+                        <a href="https://g4f.dev/docs/providers/perplexity.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://perplexity.ai&size=32" alt="">Perplexity</a>
+                        <a href="https://g4f.dev/docs/providers/pollinations.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://pollinations.ai&size=32" alt="">Pollinations</a>
+                        <a href="https://g4f.dev/docs/providers/puter.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://puter.com&size=32" alt="">Puter</a>
+                        <a href="https://g4f.dev/docs/providers/together.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://together.ai&size=32" alt="">Together</a>
+                        <a href="https://g4f.dev/docs/providers/yupp.md" onclick="loadMarkdown(event)"><img src="https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://yupp.ai&size=32" alt="">Yupp</a>
                     </div>
                 </div>
             </main>
