@@ -7,6 +7,7 @@ Run large language models locally with Ollama.
 - **Ollama**: Must be installed and running locally ([Download Ollama](https://ollama.ai))
 - **API Key**: Not required for local usage
 - **Default URL**: `http://localhost:11434`
+- **Proxy URL**: `http://g4f.space/api/ollama`
 
 ## Setup
 
@@ -48,12 +49,12 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-### JavaScript
+### JavaScript (Remote Models)
 
 ```javascript
-import { createClient } from '@gpt4free/g4f.dev/providers';
+import { Client } from '@gpt4free/g4f.dev';
 
-const client = await createClient("ollama");
+const client = new Client({ baseUrl: 'https://g4f.space/api/ollama'});
 
 const response = await client.chat.completions.create({
     model: "llama3",

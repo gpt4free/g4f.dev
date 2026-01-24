@@ -13,8 +13,9 @@ Free AI inference API with text and image generation capabilities.
 |------|-----|
 | Text API | `https://text.pollinations.ai/openai` |
 | Image API | `https://image.pollinations.ai/prompt/{prompt}` |
-| Proxy | `https://g4f.space/pollinations` |
-| Models | `https://gen.pollinations.ai/v1/models` |
+| Proxy | `https://g4f.space/api/pollinations` |
+| Text Models | `https://gen.pollinations.ai/text/models` |
+| Image & Video Models | `https://gen.pollinations.ai/image/models` |
 
 ## Features
 
