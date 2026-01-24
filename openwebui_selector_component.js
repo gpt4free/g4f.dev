@@ -29,7 +29,13 @@ class G4FProviderSelector {
             
             if (!response.ok) {
                 if (response.status === 404) {
-                    console.warn('Configuration file not found at /openwebui-config.json');
+                    console.warn(
+                        'Configuration file not found at /openwebui-config.json\n' +
+                        'To fix this:\n' +
+                        '1. Copy openwebui-config.json to your web root, or\n' +
+                        '2. Run: ./setup-openwebui.sh --patches, or\n' +
+                        '3. Download from: https://github.com/gpt4free/g4f.dev/blob/main/openwebui-config.json'
+                    );
                 } else {
                     console.error(`Failed to load configuration: HTTP ${response.status}`);
                 }

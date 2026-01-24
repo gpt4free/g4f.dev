@@ -37,7 +37,11 @@ class G4FProviderHook:
         # Show searched paths in error message
         searched = "\n  - ".join(str(p) for p in possible_paths)
         raise FileNotFoundError(
-            f"openwebui-config.json not found. Searched paths:\n  - {searched}"
+            f"openwebui-config.json not found. Searched paths:\n  - {searched}\n\n"
+            f"To fix this:\n"
+            f"1. Copy openwebui-config.json to one of the paths above, or\n"
+            f"2. Pass config_path parameter when creating G4FProviderHook, or\n"
+            f"3. Download from: https://github.com/gpt4free/g4f.dev/blob/main/openwebui-config.json"
         )
     
     def _load_config(self) -> Dict[str, Any]:

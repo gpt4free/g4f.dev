@@ -7,6 +7,10 @@ from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, field
 from datetime import datetime
 import json
+import logging
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -267,7 +271,7 @@ class ContextManager:
         try:
             data = json.loads(json_str)
         except json.JSONDecodeError as e:
-            print(f"Failed to parse JSON: {e}")
+            logger.error(f"Failed to parse JSON: {e}")
             return None
         
         try:
@@ -293,7 +297,7 @@ class ContextManager:
             self.conversations[conversation.id] = conversation
             return conversation
         except (KeyError, ValueError) as e:
-            print(f"Failed to import conversation: missing or invalid field - {e}")
+            logger.error(f"Failed to import conversation: missing or invalid field - {e}")
             return None
 
 
