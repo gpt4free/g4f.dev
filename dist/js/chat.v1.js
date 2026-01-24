@@ -5598,7 +5598,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function initializeMCPUI() {
     // Add default server if none exist
     if (mcpClient.servers.length === 0) {
-        mcpClient.addServer({ name: 'Default', url: 'https://mcp.g4f.dev' });
+        mcpClient.addServer({ name: 'Default', url: 'https://mcp.g4f.space' });
     }
 
     // Render servers list
