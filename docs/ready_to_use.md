@@ -13,7 +13,7 @@
 | [https://g4f.space/api/pollinations](https://g4f.space/api/pollinations/models) | none required | Proxy for pollinations.ai |
 | [https://g4f.space/api/nvidia](https://g4f.space/api/nvidia/models) | none required | Use Nvidia provider |
 | [https://g4f.space/api/gemini](https://g4f.space/api/gemini/models) | none required | Hosted Gemini provider |
-| [https://g4f.dev/v1](https://g4f.dev/v1/models) | required | Hosted instance, many models, get key from [g4f.space/api_key](https://g4f.space/api_key.html) |
+| [https://g4f.dev/v1](https://g4f.dev/v1/models) | required | Hosted instance, many models, get key from [g4f.dev/api_key](https://g4f.dev/api_key.html) |
 
 ### Also Supported API Routes:
 - **Nvidia**: https://integrate.api.nvidia.com/v1
@@ -129,7 +129,7 @@ print(response.choices[0].message.content)
 ```
 
 ### Notes and quick tips
-- **API Key Changes**: The /v1 endpoint requires an API key. Retrieve it from [g4f.space/api_key.html](https://g4f.space/api_key.html).
+- **API Key Changes**: The /v1 endpoint requires an API key. Retrieve it from [g4f.dev/api_key.html](https://g4f.dev/api_key.html).
 - **Hosted Instance URL**: Updated from host.g4f.dev/v1 to g4f.dev/v1
 - The examples assume a chat-style completions API where you pass messages and receive a response containing the assistant's content.
 - The base_url is always the URL without the trailing /models segment
