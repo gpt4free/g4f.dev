@@ -229,13 +229,13 @@
   "installation": {
     "prerequisites": [
       "Python 3.8 or higher",
-      "g4f package: pip install g4f",
+      "g4f package: python3 -m pip install g4f",
       "Open WebUI installed"
     ],
     "steps": [
-      "1. Install g4f: pip install g4f",
+      "1. Install g4f: python3 -m pip install g4f",
       "2. Copy this configuration to your Open WebUI config directory",
-      "3. Start MCP server: python -m g4f.mcp (or g4f mcp --http --port 8765)",
+      "3. Start MCP server: python3 -m g4f.mcp (or python3 -m g4f.mcp --http --port 8765)",
       "4. Restart Open WebUI to load the configuration",
       "5. Verify models and tools are available in Open WebUI settings"
     ]

@@ -51,12 +51,12 @@ The Model Context Protocol (MCP) server allows Open WebUI to access g4f tools li
 
    Using stdio transport (default):
    ```bash
-   python -m g4f.mcp
+   python3 -m g4f.mcp
    ```
 
    Or using HTTP transport:
    ```bash
-   g4f mcp --http --port 8765 --host 0.0.0.0
+   python3 -m g4f.mcp --http --port 8765 --host 0.0.0.0
    ```
 
 2. **Configure Open WebUI**:
@@ -335,7 +335,7 @@ Some providers have rate limiting configured (via `sleep` parameter):
 
 1. Verify the MCP server is running:
    ```bash
-   python -m g4f.mcp --http --port 8765
+   python3 -m g4f.mcp --http --port 8765
    curl -X POST http://localhost:8765/mcp \
      -H "Content-Type: application/json" \
      -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'

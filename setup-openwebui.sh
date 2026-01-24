@@ -202,12 +202,9 @@ if [ "$MCP_TRANSPORT" = "http" ]; then
         
         # Additional check: look for common error patterns in logs
         if [ -f mcp-server.log ]; then
-            # Check for Python errors (more comprehensive than just error/traceback)
-            if grep -qiE "error|traceback|exception|failed|cannot|fatal" mcp-server.log | head -20 | grep -qiE "error|traceback|exception"; then
-                # Only fail if we find actual error indicators, not just the word "error" in normal messages
-                if grep -qi "traceback\|exception:" mcp-server.log; then
-                    error_exit "MCP server encountered errors during startup. Check mcp-server.log for details."
-                fi
+            # Check for Python errors - only fail on serious indicators
+            if grep -qi "traceback\|exception:" mcp-server.log; then
+                error_exit "MCP server encountered errors during startup. Check mcp-server.log for details."
             fi
         fi
         
