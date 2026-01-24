@@ -12,7 +12,7 @@ Google's Gemini AI models via the Generative Language API.
 | Type | URL |
 |------|-----|
 | BaseURL | `https://generativelanguage.googleapis.com/v1beta/openai` |
-| Proxy | `https://g4f.dev/api/gemini` |
+| Proxy | `https://g4f.space/api/gemini` |
 
 ## Available Models
 

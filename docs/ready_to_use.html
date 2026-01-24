@@ -443,34 +443,34 @@
 <td>use it locally</td>
 </tr>
 <tr>
-<td><a href="https://g4f.dev/api/groq/models" rel="nofollow">https://g4f.dev/api/groq</a></td>
+<td><a href="https://g4f.space/api/groq/models" rel="nofollow">https://g4f.space/api/groq</a></td>
 <td>none required</td>
 <td>Use Groq provider</td>
 </tr>
 <tr>
-<td><a href="https://g4f.dev/api/ollama/models" rel="nofollow">https://g4f.dev/api/ollama</a></td>
+<td><a href="https://g4f.space/api/ollama/models" rel="nofollow">https://g4f.space/api/ollama</a></td>
 <td>none required</td>
 <td>Use Ollama provider</td>
 </tr>
 <tr>
-<td><a href="https://g4f.dev/api/pollinations/models" rel="nofollow">https://g4f.dev/api/pollinations.</a></td>
+<td><a href="https://g4f.space/api/pollinations/models" rel="nofollow">https://g4f.space/api/pollinations.</a></td>
 <td>none required</td>
 <td>Proxy for pollinations.ai</td>
 </tr>
 <tr>
-<td><a href="https://g4f.dev/api/nvidia/models" rel="nofollow">https://g4f.dev/api/nvidia</a></td>
+<td><a href="https://g4f.space/api/nvidia/models" rel="nofollow">https://g4f.space/api/nvidia</a></td>
 <td>none required</td>
 <td>Use Nvidia provider</td>
 </tr>
 <tr>
-<td><a href="https://g4f.dev/ai/gemini" rel="nofollow">https://g4f.dev/api/gemini</a></td>
+<td><a href="https://g4f.space/gemini" rel="nofollow">https://g4f.space/api/gemini</a></td>
 <td>none required</td>
 <td>Hosted Gemini provider</td>
 </tr>
 <tr>
 <td><a href="https://g4f.dev/v1/models" rel="nofollow">https://g4f.dev/v1</a></td>
 <td>required</td>
-<td>Hosted instance, many models, get key from <a href="https://g4f.dev/api_key.html" rel="nofollow">g4f.dev/api_key</a></td>
+<td>Hosted instance, many models, get key from <a href="https://g4f.space/api_key.html" rel="nofollow">g4f.space/api_key</a></td>
 </tr>
 </tbody>
 </table></markdown-accessiblity-table>
@@ -486,7 +486,7 @@
 <li><strong>TypeGPT</strong>: <a href="https://typegpt.ai/api" rel="nofollow">https://typegpt.ai/api</a></li>
 <li><strong>Grok</strong>: <a href="https://api.grok.com/v1" rel="nofollow">https://api.grok.com/v1</a></li>
 <li><strong>ApiAirforce</strong>: <a href="https://api.airforce/v1" rel="nofollow">https://api.airforce/v1</a></li>
-<li><strong>Auto Provider &amp; Model Selection</strong>: <a href="https://g4f.dev/api/auto" rel="nofollow">https://g4f.dev/api/auto</a></li>
+<li><strong>Auto Provider &amp; Model Selection</strong>: <a href="https://g4f.space/api/auto" rel="nofollow">https://g4f.space/api/auto</a></li>
 </ul>
 <h3>Individual clients available for:</h3>
 <ul>
@@ -563,7 +563,7 @@
 
 <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">OpenAI</span>(
     <span class="pl-s1">api_key</span><span class="pl-c1">=</span><span class="pl-s">"secret"</span>,  <span class="pl-c">#  A API key is required; set 'secrect' for "none required api_key" providers</span>
-    <span class="pl-s1">base_url</span><span class="pl-c1">=</span><span class="pl-s">"https://g4f.dev/api/gpt-oss-120b"</span>  <span class="pl-c"># replace with the chosen base_url</span>
+    <span class="pl-s1">base_url</span><span class="pl-c1">=</span><span class="pl-s">"https://g4f.space/api/gpt-oss-120b"</span>  <span class="pl-c"># replace with the chosen base_url</span>
 )
 
 <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>(
@@ -580,7 +580,7 @@
     <span class="pl-k">import</span> <span class="pl-v">Client</span> <span class="pl-k">from</span> <span class="pl-s">'https://g4f.dev/dist/js/client.js'</span><span class="pl-kos">;</span>
 
     <span class="pl-c">// Initialize a client with a base URL and optional API key</span>
-    <span class="pl-k">const</span> <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">Client</span><span class="pl-kos">(</span><span class="pl-kos">{</span> <span class="pl-c1">baseUrl</span>: <span class="pl-s">'https://g4f.dev/api/grok'</span><span class="pl-kos">,</span> <span class="pl-c1">apiKey</span>: <span class="pl-s">'secret'</span> <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
+    <span class="pl-k">const</span> <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">Client</span><span class="pl-kos">(</span><span class="pl-kos">{</span> <span class="pl-c1">baseUrl</span>: <span class="pl-s">'https://g4f.space/api/grok'</span><span class="pl-kos">,</span> <span class="pl-c1">apiKey</span>: <span class="pl-s">'secret'</span> <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
 
     <span class="pl-k">const</span> <span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span><span class="pl-kos">.</span><span class="pl-c1">chat</span><span class="pl-kos">.</span><span class="pl-c1">completions</span><span class="pl-kos">.</span><span class="pl-en">create</span><span class="pl-kos">(</span><span class="pl-kos">{</span>
         <span class="pl-c1">model</span>: <span class="pl-s">'grok-4-fast-non-reasoning'</span><span class="pl-kos">,</span>
@@ -592,7 +592,7 @@
 <span class="pl-kos">&lt;/</span><span class="pl-ent">script</span><span class="pl-kos">&gt;</span></pre></div>
 <h3>Notes and quick tips</h3>
 <ul>
-<li><strong>API Key Changes</strong>: The /v1 endpoint requires an API key. Retrieve it from <a href="https://g4f.dev/api_key.html" rel="nofollow">g4f.dev/api_key.html</a>.</li>
+<li><strong>API Key Changes</strong>: The /v1 endpoint requires an API key. Retrieve it from <a href="https://g4f.space/api_key.html" rel="nofollow">g4f.space/api_key.html</a>.</li>
 <li><strong>Hosted Instance URL</strong>: Updated from host.g4f.dev/v1 to g4f.dev/v1</li>
 <li>The examples assume a chat-style completions API where you pass messages and receive a response containing the assistant's content.</li>
 <li>The base_url is always the URL without the trailing /models segment</li>

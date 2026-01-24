@@ -8,12 +8,12 @@
 | Base URLs | API key | Notes |
 | --- | --- | --- |
 | [https://localhost:1337/v1](https://localhost:1337/v1/models) | none required | use it locally |
-| [https://g4f.dev/api/groq](https://g4f.dev/api/groq/models) | none required | Use Groq provider |
-| [https://g4f.dev/api/ollama](https://g4f.dev/api/ollama/models) | none required | Use Ollama provider |
-| [https://g4f.dev/api/pollinations.](https://g4f.dev/api/pollinations/models) | none required | Proxy for pollinations.ai |
-| [https://g4f.dev/api/nvidia](https://g4f.dev/api/nvidia/models) | none required | Use Nvidia provider |
-| [https://g4f.dev/api/gemini](https://g4f.dev/api/gemini/models) | none required | Hosted Gemini provider |
-| [https://g4f.dev/v1](https://g4f.dev/v1/models) | required | Hosted instance, many models, get key from [g4f.dev/api_key](https://g4f.dev/api_key.html) |
+| [https://g4f.space/api/groq](https://g4f.space/api/groq/models) | none required | Use Groq provider |
+| [https://g4f.space/api/ollama](https://g4f.space/api/ollama/models) | none required | Use Ollama provider |
+| [https://g4f.space/api/pollinations](https://g4f.space/api/pollinations/models) | none required | Proxy for pollinations.ai |
+| [https://g4f.space/api/nvidia](https://g4f.space/api/nvidia/models) | none required | Use Nvidia provider |
+| [https://g4f.space/api/gemini](https://g4f.space/api/gemini/models) | none required | Hosted Gemini provider |
+| [https://g4f.dev/v1](https://g4f.dev/v1/models) | required | Hosted instance, many models, get key from [g4f.space/api_key](https://g4f.space/api_key.html) |
 
 ### Also Supported API Routes:
 - **Nvidia**: https://integrate.api.nvidia.com/v1
@@ -26,7 +26,7 @@
 - **TypeGPT**: https://typegpt.ai/api
 - **Grok**: https://api.grok.com/v1
 - **ApiAirforce**: https://api.airforce/v1
-- **Auto Provider & Model Selection**: https://g4f.dev/api/auto
+- **Auto Provider & Model Selection**: https://g4f.space/api/auto
 
 ### Individual clients available for:
 - [Pollinations AI](providers/pollinations.md)
@@ -94,7 +94,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key="secret",  #  A API key is required; set 'secrect' for "none required api_key" providers
-    base_url="https://g4f.dev/api/gpt-oss-120b"  # replace with the chosen base_url
+    base_url="https://g4f.space/api/gpt-oss-120b"  # replace with the chosen base_url
 )
 
 response = client.chat.completions.create(
@@ -113,7 +113,7 @@ print(response.choices[0].message.content)
     import Client from 'https://g4f.dev/dist/js/client.js';
 
     // Initialize a client with a base URL and optional API key
-    const client = new Client({ baseUrl: 'https://g4f.dev/api/grok', apiKey: 'secret' });
+    const client = new Client({ baseUrl: 'https://g4f.space/api/grok', apiKey: 'secret' });
 
     const result = await client.chat.completions.create({
         model: 'grok-4-fast-non-reasoning',
@@ -126,7 +126,7 @@ print(response.choices[0].message.content)
 ```
 
 ### Notes and quick tips
-- **API Key Changes**: The /v1 endpoint requires an API key. Retrieve it from [g4f.dev/api_key.html](https://g4f.dev/api_key.html).
+- **API Key Changes**: The /v1 endpoint requires an API key. Retrieve it from [g4f.space/api_key.html](https://g4f.space/api_key.html).
 - **Hosted Instance URL**: Updated from host.g4f.dev/v1 to g4f.dev/v1
 - The examples assume a chat-style completions API where you pass messages and receive a response containing the assistant's content.
 - The base_url is always the URL without the trailing /models segment

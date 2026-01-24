@@ -11,7 +11,7 @@ Access thousands of open-source models via HuggingFace's Inference API.
 
 | Type | URL |
 |------|-----|
-| Proxy | `https://g4f.dev/api/huggingface` |
+| Proxy | `https://g4f.space/api/huggingface` |
 
 ## Available Models
 

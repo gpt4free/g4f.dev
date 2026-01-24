@@ -11,7 +11,7 @@ Access Perplexity AI's search-augmented language models.
 
 | Type | URL |
 |------|-----|
-| Proxy | `https://g4f.dev/api/perplexity` |
+| Proxy | `https://g4f.space/api/perplexity` |
 
 ## Features
 

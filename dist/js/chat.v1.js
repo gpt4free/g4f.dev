@@ -194,7 +194,7 @@ async function loadVoiceModels() {
     if (!voiceSelect) return;
 
     try {
-        const response = await fetch('https://api.gpt4free.workers.dev/api/audio/models');
+        const response = await fetch('https://g4f.space/api/audio/models');
         if (!response.ok) {
             throw new Error('Failed to fetch voice models');
         }
@@ -251,7 +251,7 @@ async function playVoicePreview(voice) {
     }
     
     const previewText = 'Hello, how are you?';
-    const audioUrl = `https://api.gpt4free.workers.dev/ai/audio/${encodeURIComponent(previewText)}?voice=${encodeURIComponent(voice)}`;
+    const audioUrl = `https://g4f.space/ai/audio/${encodeURIComponent(previewText)}?voice=${encodeURIComponent(voice)}`;
     const response = await fetch(audioUrl, {
         headers: appStorage.getItem("session_token") ? {
             'Authorization': `Bearer ${appStorage.getItem("session_token")}`
@@ -696,7 +696,7 @@ const register_message_buttons = async () => {
             let audio;
             if (message_el.dataset.synthesize_url) {
                 el.classList.add("active");
-                if (message_el.dataset.synthesize_url.startsWith("https://api.gpt4free.workers.dev/ai/audio/")) {
+                if (message_el.dataset.synthesize_url.startsWith("https://g4f.space/ai/audio/")) {
                     const response = await fetch(message_el.dataset.synthesize_url, {
                         headers: appStorage.getItem("session_token") ? {
                             'Authorization': `Bearer ${appStorage.getItem("session_token")}`
@@ -2283,7 +2283,7 @@ const load_conversation = async (conversation, append = false) => {
             if (!framework.backendUrl || appStorage.getItem("voice")) {
                 // synthesize_params = (new URLSearchParams({input: filter_message(text), voice: appStorage.getItem("voice") || "alloy"})).toString();
                 // synthesize_url = `https://www.openai.fm/api/generate?${synthesize_params}`;
-                synthesize_url = `https://api.gpt4free.workers.dev/ai/audio/${encodeURIComponent(filter_message(text))}?voice=${encodeURIComponent(appStorage.getItem("voice") || "alloy")}`;
+                synthesize_url = `https://g4f.space/ai/audio/${encodeURIComponent(filter_message(text))}?voice=${encodeURIComponent(appStorage.getItem("voice") || "alloy")}`;
             } else {
                 if (item.synthesize) {
                     synthesize_params = item.synthesize.data
@@ -2880,14 +2880,14 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
     if (!customOptgroup) return;
     
     try {
-        const url = "https://api.gpt4free.workers.dev/custom/api/servers";
+        const url = "https://g4f.space/custom/api/servers";
         const resp = await fetch(url, {
             headers: {'Authorization': `Bearer ${appStorage.getItem("session_token") || ""}`}
         });
         if (resp.status === 401) {
             appStorage.removeItem("session_token");
         }
-        const publicUrl = "https://api.gpt4free.workers.dev/custom/api/servers/public";
+        const publicUrl = "https://g4f.space/custom/api/servers/public";
         const publicResp = await fetch(publicUrl);
         let data = await publicResp.json();
         data = data.servers;
@@ -3309,7 +3309,7 @@ async function load_follow_up_questions(messages, new_response) {
     const new_messages = [{role: "assistant", content: new_response}, {role: "user", content: prompt}];
     console.log("Loading follow up questions with messages:", new_messages);
     try {
-        const response = await fetch("https://api.gpt4free.workers.dev/ai/?json=true", {
+        const response = await fetch("https://g4f.space/ai/?json=true", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

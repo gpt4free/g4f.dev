@@ -4,7 +4,7 @@ import Client from '@gpt4free/g4f.dev';
 // Update this URL based on your deployment:
 // - Local: http://localhost:8787
 // - Deployed: https://perplexity.gpt4free.workers.dev
-const WORKER_URL = process.env.WORKER_URL || "https://g4f.dev/api/azure";
+const WORKER_URL = process.env.WORKER_URL || "https://g4f.space/api/azure";
 
 // Create a client pointing to the Perplexity worker
 const client = new Client({

@@ -11,7 +11,7 @@ Access AI models through Puter's cloud platform.
 
 | Type | URL |
 |------|-----|
-| Proxy | `https://g4f.dev/api/puter` |
+| Proxy | `https://g4f.space/api/puter` |
 
 ## Notes
 

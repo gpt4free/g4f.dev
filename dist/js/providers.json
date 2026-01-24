@@ -1,19 +1,19 @@
 {
     "providers": {
-        "default": {"baseUrl": "https://api.gpt4free.workers.dev/api/{model}", "backupUrl": "https://api.gpt4free.workers.dev/api/{model}", "tags": "", "defaultModel": "auto"},
+        "default": {"baseUrl": "https://g4f.space/api/{model}", "backupUrl": "https://g4f.space/api/{model}", "tags": "", "defaultModel": "auto"},
         "pollinations": {"label": "pollinations.ai", "tags": "🎨 👓", "provider": "PollinationsAI"},
         "api.airforce": {"baseUrl": "https://api.airforce/v1", "tags": "🎨 👓", "sleep": 60000},
-        "master": {"label": "master by api.airforce", "baseUrl": "https://api.gpt4free.workers.dev/api/api.airforce", "tags": "🎨 👓", "sleep": 10000},
-        "audio": {"label": "audio by g4f.dev", "baseUrl": "https://api.gpt4free.workers.dev/api/audio", "backupUrl": "https://api.gpt4free.workers.dev/api/audio", "tags": "🎧", "sleep": 10000},
-        "azure": {"label": "azure by g4f.dev", "baseUrl": "https://api.gpt4free.workers.dev/api/azure", "backupUrl": "https://api.gpt4free.workers.dev/api/azure", "tags": "👓", "sleep": 10000},
+        "master": {"label": "master by api.airforce", "baseUrl": "https://g4f.space/api/api.airforce", "tags": "🎨 👓", "sleep": 10000},
+        "audio": {"label": "audio by g4f.dev", "baseUrl": "https://g4f.space/api/audio", "backupUrl": "https://g4f.space/api/audio", "tags": "🎧", "sleep": 10000},
+        "azure": {"label": "azure by g4f.dev", "baseUrl": "https://g4f.space/api/azure", "backupUrl": "https://g4f.space/api/azure", "tags": "👓", "sleep": 10000},
         "custom": {"tags": ""},
         "deepinfra": {"tags": "🎨 👓"},
-        "gemini": {"baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai", "backupUrl": "https://api.gpt4free.workers.dev/api/gemini", "tags": "👓"},
-        "groq": {"baseUrl": "https://api.groq.com/openai/v1", "backupUrl": "https://api.gpt4free.workers.dev/api/groq", "tags": ""},
+        "gemini": {"baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai", "backupUrl": "https://g4f.space/api/gemini", "tags": "👓"},
+        "groq": {"baseUrl": "https://api.groq.com/openai/v1", "backupUrl": "https://g4f.space/api/groq", "tags": ""},
         "huggingface": {"tags": "🤗", "provider": "HuggingFace"},
-        "nvidia": {"baseUrl": "https://integrate.api.nvidia.com/v1", "backupUrl": "https://api.gpt4free.workers.dev/api/nvidia", "tags": "📟"},
-        "ollama": {"baseUrl": "https://ollama.g4f-dev.workers.dev", "backupUrl": "https://api.gpt4free.workers.dev/api/ollama", "tags": "🦙", "sleep": 10000},
-        "openrouter": {"baseUrl": "https://openrouter.ai/api/v1", "backupUrl": "https://api.gpt4free.workers.dev/api/openrouter", "tags": "👓"},
+        "nvidia": {"baseUrl": "https://integrate.api.nvidia.com/v1", "backupUrl": "https://g4f.space/api/nvidia", "tags": "📟"},
+        "ollama": {"baseUrl": "https://ollama.g4f-dev.workers.dev", "backupUrl": "https://g4f.space/api/ollama", "tags": "🦙", "sleep": 10000},
+        "openrouter": {"baseUrl": "https://openrouter.ai/api/v1", "backupUrl": "https://g4f.space/api/openrouter", "tags": "👓"},
         "puter": {"tags": "👓", "provider": "PuterJS"}
     },
     "defaultModels": {

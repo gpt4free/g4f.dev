@@ -113,8 +113,8 @@ const toBase64 = file => new Promise((resolve, reject) => {
 class Client {
     constructor(options = {}) {
         if (!options.baseUrl && !options.apiEndpoint) {
-            options.baseUrl = "https://api.gpt4free.workers.dev/api/auto";
-            options.apiEndpoint = "https://api.gpt4free.workers.dev/ai/";
+            options.baseUrl = "https://g4f.space/api/auto";
+            options.apiEndpoint = "https://g4f.space/ai/";
             options.sleep = 10000;
         }
         this.proxyManager = new CorsProxyManager();
@@ -542,11 +542,11 @@ class PollinationsAI extends Client {
     }
 
     async checkBalance() {
-        const BALANCE_ENDPOINT = "https://api.gpt4free.workers.dev/api/pollinations/account/balance";
+        const BALANCE_ENDPOINT = "https://g4f.space/api/pollinations/account/balance";
         return fetch(BALANCE_ENDPOINT).then(r=>r.json()).then(d=>{
             console.log(`PollinationsAI balance: ${d.balance}`);
             if (d.balance > 0) {
-                this.baseUrl = 'https://api.gpt4free.workers.dev/api/pollinations';
+                this.baseUrl = 'https://g4f.space/api/pollinations';
                 this.apiEndpoint = `${this.baseUrl}/chat/completions`;
                 const userInfo = {
                     tier: 'free',

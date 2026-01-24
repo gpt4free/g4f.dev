@@ -204,7 +204,7 @@ async function query(prompt, options={ json: false, cache: true }) {
         options = { json: options, cache: true };
     }
     let encodedParams = (new URLSearchParams(options)).toString();
-    let secondPartyUrl = `https://api.gpt4free.workers.dev/ai/auto/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
+    let secondPartyUrl = `https://g4f.space/ai/auto/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
     let response;
     try {
         response = await fetch(secondPartyUrl, { headers: localStorage.getItem("session_token") ? {
