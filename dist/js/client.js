@@ -838,15 +838,10 @@ class Puter extends Client {
         for await (const item of await this.puter.ai.chat(messages, false, options)) {
           item.model = model;
           this.logCallback && this.logCallback({response: item, type: 'chat'});
-          if (item.choices == undefined && item.text !== undefined) {
-            yield {
-                ...item,
-                get choices() {
-                    return [{delta: {content: item.text}}];
-                }
-            };
-          } else {
-            yield item
+          if (item.text) {
+            item.choices = [{delta: {content: item.text}}]
+          } else if (item.reasoning) {
+            item.choices = [{delta: {reasoning: item.reasoning}}]
           }
         }
     }

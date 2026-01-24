@@ -4383,22 +4383,24 @@ function get_api_key_by_provider(provider) {
         if (["custom"].includes(provider)) {
             return appStorage.getItem("Custom-api_key");
         }
-        // Custom providers from API don't need API key (handled by the server)
         if (provider.startsWith("custom:")) {
-            return null;
+            return appStorage.getItem("session_token");
         }
-        if (provider == "AnyProvider") {
+        if (provider === "AnyProvider") {
             return {
-                "PollinationsAI": appStorage.getItem("PollinationsAI-api_key"),
+                "PollinationsAI": get_api_key_by_provider("PollinationsAI"),
                 "HuggingFace": appStorage.getItem("HuggingFace-api_key"),
                 "Together": appStorage.getItem("Together-api_key"),
-                "GeminiPro": appStorage.getItem("GeminiPro-api_key"),
+                "GeminiPro": get_api_key_by_provider("GeminiPro"),
                 "OpenRouter": appStorage.getItem("OpenRouter-api_key"),
-                "Groq": appStorage.getItem("Groq-api_key"),
+                "OpenRouterFree": get_api_key_by_provider("OpenRouterFree"),
+                "Groq": get_api_key_by_provider("Groq"),
                 "DeepInfra": appStorage.getItem("DeepInfra-api_key"),
                 "Replicate": appStorage.getItem("Replicate-api_key"),
                 "PuterJS": appStorage.getItem("puter.auth.token"),
-                "Azure": appStorage.getItem("Azure-api_key"),
+                "Azure": get_api_key_by_provider("Azure"),
+                "Nvidia": get_api_key_by_provider("Nvidia"),
+                "Ollama": get_api_key_by_provider("Ollama"),
             }
         }
         api_key = document.querySelector(`.${provider}-api_key`)?.id || null;
