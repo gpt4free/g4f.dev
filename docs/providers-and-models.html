@@ -758,6 +758,7 @@ print(response)
                 if (key === 'default') continue;
                 const option = document.createElement('option');
                 option.value = key;
+                option.dataset.baseUrl = p.backupUrl || '';
                 option.textContent = `${key}${p.label ? ` (${p.label})` : ''} ${p.tags || ''}`;
                 providerSelect.appendChild(option);
             }
@@ -843,7 +844,6 @@ print(response)
                             const option = document.createElement('option');
                             option.value = m.id;
                             option.textContent = m.id;
-                            option.dataset.baseUrl = m.backupUrl || '';
                             modelSelect.appendChild(option);
                         });
                         if (modelsList.length > 0) {
@@ -933,7 +933,7 @@ console.log(result.choices[0].message.content);`;
             document.getElementById('code-javascript-content').textContent = jsCode;
             
             // cURL code
-            let baseUrl = modelSelect.value ? modelSelect.options[modelSelect.selectedIndex].dataset.baseUrl || 'https://g4f.space/api/auto' : 'https://g4f.space/api/auto';
+            let baseUrl = providerSelect.value ? providerSelect.options[providerSelect.selectedIndex].dataset.baseUrl || 'https://g4f.space/api/auto' : 'https://g4f.space/api/auto';
             if (provider && !provider.startsWith('core:') && provider !== 'default') {
                 baseUrl = `https://g4f.space/api/${provider}`;
             } else if (provider.startsWith('core:')) {
