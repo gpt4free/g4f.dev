@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenWeb UI - G4F Integration Guide | GPT4Free Documentation</title>
+
+    <meta name="description" content="GPT4Free documentation for OpenWeb UI - G4F Integration Guide. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
+    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, OpenWeb UI - G4F Integration Guide" />
+    <meta name="author" content="GPT4Free Team" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="OpenWeb UI - G4F Integration Guide | GPT4Free Documentation" />
+    <meta property="og:description" content="GPT4Free documentation for OpenWeb UI - G4F Integration Guide. Free AI endpoints, examples, and comprehensive guides." />
+    <meta property="og:url" content="https://g4f.dev/docs/openwebui-integration.html" />
+    <meta property="og:site_name" content="GPT4Free Documentation" />
+    <meta property="og:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="OpenWeb UI - G4F Integration Guide | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for OpenWeb UI - G4F Integration Guide." />
+    <meta name="twitter:image" content="https://g4f.dev/dist/img/apple-touch-icon.png" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://g4f.dev/docs/openwebui-integration.html" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/favicon-16x16.png" />
+    <link rel="manifest" href="/dist/img/site.webmanifest" />
+
+    <!-- GitHub Primer CSS & styles -->
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
+
+    
+    <style>
+        :root {
+            --accent: #8b3dff;
+            --background: #16101b;
+            --text-primary: #ddd;
+            --text-secondary: #9b7dff;
+            --card-bg: #1e152e;
+            --border-color: #333;
+            --hover-color: #a67eff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--background);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            max-width: 100%;
+            margin: 0;
+            padding: 2rem;
+            gap: 3rem;
+            min-height: calc(100vh - 4rem);
+        }
+
+        /* Enhanced main content styling */
+        main {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            overflow-wrap: break-word;
+            position: relative;
+        }
+
+        /* Typography improvements */
+        .markdown-body h1 {
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 0.5rem;
+        }
+
+        .markdown-body h2 {
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body h3 {
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body p {
+            margin-bottom: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        /* Enhanced link styling */
+        .markdown-body a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .markdown-body a:hover,
+        .markdown-body a:focus {
+            color: var(--hover-color);
+            outline: none;
+            text-decoration: underline;
+            text-shadow: 0 0 8px rgba(139, 61, 255, 0.3);
+        }
+
+        /* Enhanced code block styling */
+        .markdown-body pre {
+            border-radius: 12px;
+            padding: 1.5rem !important;
+            font-size: 0.95rem !important;
+            overflow-x: auto;
+            max-height: 500px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.4);
+            color: #fff;
+            border: 1px solid #3d2a5c;
+            position: relative;
+        }
+
+
+        .markdown-body code {
+            font-family: 'SF Mono', 'Cascadia Code', 'Roboto Mono', Consolas, Liberation Mono, Menlo, monospace;
+            background: rgba(139, 61, 255, 0.1);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            color: #e6ccff;
+            font-size: 0.9em;
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+            color: var(--fgColor-default, var(--color-fg-default))
+        }
+
+        /* Table styling */
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 2rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .markdown-body table th,
+        .markdown-body table td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        .markdown-body table th {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .markdown-body table tr:nth-child(even) {
+            background: rgba(139, 61, 255, 0.05);
+        }
+
+        .markdown-body table tr {
+            background-color: transparent;
+        }
+
+        /* List styling */
+        .markdown-body ul, 
+        .markdown-body ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        .markdown-body li {
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        /* Blockquote styling */
+        .markdown-body blockquote {
+            border-left: 4px solid var(--accent);
+            background: rgba(139, 61, 255, 0.1);
+            margin: 2rem 0;
+            padding: 1rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* HR styling */
+        .markdown-body hr {
+            border: none;
+            border-top: 2px solid var(--accent);
+            margin: 3rem 0;
+            opacity: 0.6;
+        }
+
+        /* Sticky table of contents */
+        nav#toc {
+            flex: 0 0 280px;
+            position: sticky;
+            top: 2rem;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid rgba(139, 61, 255, 0.2);
+        }
+
+        nav#toc h2 {
+            font-size: 1.4rem;
+            margin: 0 0 1.5rem 0;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        nav#toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        nav#toc li {
+            margin-bottom: 0.8rem;
+        }
+
+        nav#toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: block;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        nav#toc a:hover, 
+        nav#toc a:focus {
+            background: rgba(139, 61, 255, 0.1);
+            color: var(--hover-color);
+            text-decoration: none;
+            transform: translateX(4px);
+        }
+
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 2rem;
+            }
+
+            nav#toc {
+                position: relative;
+                max-height: none;
+                order: -1;
+                flex: none;
+            }
+
+            .markdown-body h1 {
+                font-size: 2.2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            main {
+                padding: 1.5rem;
+            }
+
+            .markdown-body h1 {
+                font-size: 1.8rem;
+            }
+
+            .markdown-body pre {
+                padding: 1rem !important;
+                font-size: 0.85rem !important;
+            }
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Focus indicators */
+        *:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* Print styles */
+        @media print {
+            .container {
+                display: block;
+            }
+            
+            nav#toc {
+                display: none;
+            }
+            
+            main {
+                box-shadow: none;
+                background: white;
+                color: black;
+            }
+        }
+
+        /* Loading animation for syntax highlighting */
+        .highlight-loading {
+            position: relative;
+            opacity: 0.7;
+        }
+
+        .highlight-loading::after {
+            content: 'Loading syntax highlighting...';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Translate Button Style */
+        #translate-toggle {
+            display: block;
+            background: var(--accent);
+            color: #fff;
+            text-align: center;
+            padding: 0.5rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            border: none;
+        }
+        #google_translate_element {
+            margin-bottom: 1rem;
+        }
+    </style>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "OpenWeb UI - G4F Integration Guide",
+      "description": "GPT4Free documentation for OpenWeb UI - G4F Integration Guide. Complete guides, examples, and API reference for free AI endpoints.",
+      "author": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization",
+        "name": "GPT4Free",
+        "url": "https://g4f.dev",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://g4f.dev/dist/img/apple-touch-icon.png"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://g4f.dev/docs/openwebui-integration.html"
+      },
+      "datePublished": "2024-01-01T00:00:00Z",
+      "dateModified": "2024-01-01T00:00:00Z",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "keywords": "GPT4Free, AI documentation, free AI API, code generation",
+      "articleSection": "Documentation"
+    }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="toc" aria-label="Table of contents" role="navigation">
+            <!-- Translation Button -->
+            <button id="translate-toggle">🌐 Translate Page</button>
+            <div id="google_translate_element" style="display:none;"></div>
+            <h2>Contents</h2>
+            <ul id="toc-list">
+                <!-- Table of contents will be generated here -->
+            </ul>
+            <hr style="margin: 1.5rem 0; opacity: 0.3;">
+            <ul>
+                <li><a href="/docs/" aria-label="Return to documentation home">📚 Documentation Hub</a></li>
+                <li><a href="/" aria-label="Return to main site">🏠 G4F Home</a></li>
+            </ul>
+        </nav>
+
+        <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
+            <h1>OpenWeb UI - G4F Integration Guide</h1>
+<br>
+<p>This guide explains how to integrate the g4f (GPT4Free) service with Open WebUI, enabling you to use g4f's providers, models, and MCP server tools.</p>
+<br>
+<h2>Quick Start</h2>
+<br>
+<p>For automated setup, use the provided setup script and configuration:</p>
+<br>
+<pre><code class="language-bash">
+# Clone or download the repository
+git clone https://github.com/gpt4free/g4f.dev.git
+cd g4f.dev
+
+# Run the setup script
+./setup-openwebui.sh
+
+# Or for HTTP mode:
+./setup-openwebui.sh --http --port 8765
+</code></pre>
+<br>
+<p>The setup script will:</p>
+<ul>
+<li>Install g4f if not already installed</li>
+<li>Create MCP configuration for Open WebUI</li>
+<li>Start the MCP server (if using HTTP mode)</li>
+<li>Provide next steps for configuring Open WebUI</li>
+</ul>
+<br>
+<p><strong>Configuration files:</strong></p>
+<ul>
+<li>`openwebui-config.json` - Complete configuration with all providers and models</li>
+<li>`setup-openwebui.sh` - Automated setup script</li>
+</ul>
+<br>
+<h2>Overview</h2>
+<br>
+<p>G4F provides multiple integration points with Open WebUI:</p>
+<br>
+<p>1. <strong>MCP Server Integration</strong> - Access to web search, web scraping, and image generation tools</p>
+<p>2. <strong>Custom Provider Configuration</strong> - Use g4f as an OpenAI-compatible API endpoint</p>
+<p>3. <strong>Live Provider Support</strong> - Direct access to multiple AI providers through g4f</p>
+<p>4. <strong>Conversation Context Management</strong> - Proper handling of chat history and context</p>
+<br>
+<p>For detailed conversation context handling, see <a href="review/context.md">Chat Conversation Context Guide</a>.</p>
+<br>
+<h2>Integration Methods</h2>
+<br>
+<h3>Method 1: MCP Server Integration (Recommended)</h3>
+<br>
+<p>The Model Context Protocol (MCP) server allows Open WebUI to access g4f tools like web search, scraping, and image generation.</p>
+<br>
+<p>#### Setup MCP Server</p>
+<br>
+<p>1. <strong>Start the g4f MCP Server</strong>:</p>
+<br>
+<p>   Using stdio transport (default):</p>
+<pre><code class="language-bash">
+   python -m g4f.mcp
+</code></pre>
+<br>
+<p>   Or using HTTP transport:</p>
+<pre><code class="language-bash">
+   g4f mcp --http --port 8765 --host 0.0.0.0
+</code></pre>
+<br>
+<p>2. <strong>Configure Open WebUI</strong>:</p>
+<br>
+<p>   Add to Open WebUI's MCP configuration file:</p>
+<br>
+<p>   <strong>For stdio mode</strong> (<code>~/.config/openwebui/mcp-config.json</code> or similar):</p>
+<pre><code class="language-json">
+   {
+     "mcpServers": {
+       "g4f": {
+         "command": "python3",
+         "args": ["-m", "g4f.mcp"],
+         "description": "GPT4Free tools for web search, scraping, and image generation"
+       }
+     }
+   }
+</code></pre>
+<br>
+<p>   <strong>Note:</strong> Use <code>python3</code> or <code>python</code> depending on your system. The setup script automatically detects the correct command.</p>
+<br>
+<p>   <strong>For HTTP mode</strong>:</p>
+<pre><code class="language-json">
+   {
+     "mcpServers": {
+       "g4f": {
+         "url": "http://localhost:8765/mcp",
+         "transport": "http",
+         "description": "GPT4Free tools for web search, scraping, and image generation"
+       }
+     }
+   }
+</code></pre>
+<br>
+<p>#### Available MCP Tools</p>
+<br>
+<p>Once configured, Open WebUI will have access to these tools:</p>
+<br>
+<ul>
+<li>**web_search** - Search the web using DuckDuckGo</li>
+<pre><code class="language-json">
+  {
+    "query": "latest AI developments",
+    "max_results": 5
+  }
+</code></pre>
+<br>
+<ul>
+<li>**web_scrape** - Extract and clean text from web pages</li>
+<pre><code class="language-json">
+  {
+    "url": "https://example.com/article",
+    "max_words": 1000
+  }
+</code></pre>
+<br>
+<ul>
+<li>**image_generation** - Generate images from text prompts</li>
+<pre><code class="language-json">
+  {
+    "prompt": "A serene mountain landscape at sunset",
+    "width": 1024,
+    "height": 1024
+  }
+</code></pre>
+<br>
+<p>For more details, see <a href="mcp-usage-guide.md">MCP Usage Guide</a>.</p>
+<br>
+<h3>Method 2: Custom Provider (OpenAI-Compatible API)</h3>
+<br>
+<p>Use g4f as a custom OpenAI-compatible provider in Open WebUI.</p>
+<br>
+<p>#### Backend URL Configuration</p>
+<br>
+<p>1. <strong>Using g4f.space API</strong> (hosted service):</p>
+<br>
+<p>   In Open WebUI settings, add a new custom provider:</p>
+<ul>
+<li>**Name**: G4F</li>
+<li>**Base URL**: `https://g4f.space/api`</li>
+<li>**API Key**: Not required (or use a dummy value)</li>
+<li>**Model**: `auto` or specific model like `gpt-4o-mini`</li>
+</ul>
+<br>
+<p>2. <strong>Using Local g4f Backend</strong>:</p>
+<br>
+<p>   If running g4f backend locally:</p>
+<ul>
+<li>**Base URL**: `http://localhost:1337/v1` (adjust port as needed)</li>
+<li>**API Key**: Not required</li>
+<li>**Model**: Any supported model</li>
+</ul>
+<br>
+<p>#### Provider Types</p>
+<br>
+<p>G4F supports multiple provider types that can be configured in Open WebUI:</p>
+<br>
+<p>##### Live Providers</p>
+<br>
+<p>Direct access to third-party AI services:</p>
+<br>
+<p>| Provider | Base URL | Tags | Notes |</p>
+<p>|----------|----------|------|-------|</p>
+<p>| <strong>api.airforce</strong> | <code>https://api.airforce/v1</code> | 🎨 👓 | Images, Vision |</p>
+<p>| <strong>pollinations</strong> | <code>https://pollinations.ai</code> | 🎨 👓 | Images, Vision |</p>
+<p>| <strong>gemini</strong> | <code>https://generativelanguage.googleapis.com/v1beta/openai</code> | 👓 | Vision |</p>
+<p>| <strong>groq</strong> | <code>https://api.groq.com/openai/v1</code> | - | Fast inference |</p>
+<p>| <strong>nvidia</strong> | <code>https://integrate.api.nvidia.com/v1</code> | 📟 | High performance |</p>
+<p>| <strong>ollama</strong> | <code>https://ollama.g4f-dev.workers.dev</code> | 🦙 | Local models |</p>
+<p>| <strong>openrouter</strong> | <code>https://openrouter.ai/api/v1</code> | 👓 | Multiple models |</p>
+<p>| <strong>deepinfra</strong> | Default | 🎨 👓 | Images, Vision |</p>
+<br>
+<p>##### Custom Provider</p>
+<br>
+<p>Configure any OpenAI-compatible endpoint:</p>
+<br>
+<pre><code class="language-json">
+{
+  "provider": "custom",
+  "baseUrl": "http://your-custom-endpoint/v1",
+  "apiKey": "your-api-key",
+  "model": "your-model-name"
+}
+</code></pre>
+<br>
+<p>##### Backend URL Provider</p>
+<br>
+<p>Use g4f's centralized API gateway:</p>
+<br>
+<pre><code class="language-json">
+{
+  "provider": "default",
+  "baseUrl": "https://g4f.space/api/{model}",
+  "backupUrl": "https://g4f.space/api/{model}",
+  "model": "auto"
+}
+</code></pre>
+<br>
+<p>The <code>{model}</code> placeholder is automatically replaced with the selected model.</p>
+<br>
+<h3>Method 3: Direct Model Selection</h3>
+<br>
+<p>Open WebUI can directly use g4f models by configuring the provider endpoints.</p>
+<br>
+<p>#### Default Models by Provider</p>
+<br>
+<pre><code class="language-json">
+{
+  "pollinations": "openai",
+  "azure": "model-router3",
+  "gemini": "models/gemini-2.5-flash",
+  "openrouter": "openai/gpt-oss-120b:free",
+  "nvidia": "deepseek-ai/deepseek-v3.2",
+  "ollama": "deepseek-v3.2",
+  "groq": "openai/gpt-oss-120b",
+  "puter": "gpt-5.2-chat-latest"
+}
+</code></pre>
+<br>
+<h2>Configuration Examples</h2>
+<br>
+<h3>Complete Open WebUI Configuration</h3>
+<br>
+<p>Example Open WebUI configuration with g4f integration:</p>
+<br>
+<pre><code class="language-json">
+{
+  "models": [
+    {
+      "id": "g4f-auto",
+      "name": "G4F Auto",
+      "provider": "g4f",
+      "baseUrl": "https://g4f.space/api",
+      "apiKey": "not-required"
+    },
+    {
+      "id": "g4f-gemini",
+      "name": "G4F Gemini 2.5 Flash",
+      "provider": "g4f",
+      "baseUrl": "https://g4f.space/api/gemini",
+      "apiKey": "not-required",
+      "model": "models/gemini-2.5-flash"
+    }
+  ],
+  "mcpServers": {
+    "g4f": {
+      "command": "python3",
+      "args": ["-m", "g4f.mcp"],
+      "description": "GPT4Free MCP server with web search, scraping, and image generation"
+    }
+  }
+}
+</code></pre>
+<br>
+<h3>Environment Variables</h3>
+<br>
+<p>If needed, configure these environment variables for Open WebUI:</p>
+<br>
+<pre><code class="language-bash">
+# For custom g4f backend
+export OPENAI_API_BASE_URL=https://g4f.space/api
+export OPENAI_API_KEY=not-required
+
+# For MCP server
+export G4F_MCP_PORT=8765
+</code></pre>
+<br>
+<h2>API Endpoints</h2>
+<br>
+<p>When using g4f as a backend, the following endpoints are available:</p>
+<br>
+<h3>Models and Providers</h3>
+<br>
+<ul>
+<li>`GET /backend-api/v2/models` - List all available models</li>
+<li>`GET /backend-api/v2/models/<provider>` - List models for specific provider</li>
+<li>`GET /backend-api/v2/providers` - List all providers</li>
+</ul>
+<br>
+<h3>Conversation</h3>
+<br>
+<ul>
+<li>`POST /backend-api/v2/conversation` - Create/continue conversation</li>
+<li>`GET /backend-api/v2/create` - Quick conversation creation</li>
+</ul>
+<br>
+<p>For complete API documentation, see <a href="backend_api_documentation.md">Backend API Documentation</a>.</p>
+<br>
+<h2>Conversation Context Management</h2>
+<br>
+<p>G4F handles conversation context in two ways:</p>
+<br>
+<h3>1. Message History (Most Providers)</h3>
+<br>
+<p>Most providers use the standard OpenAI message format:</p>
+<br>
+<pre><code class="language-python">
+messages = [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "Hello!"},
+    {"role": "assistant", "content": "Hi! How can I help you?"},
+    {"role": "user", "content": "What's the weather?"}
+]
+</code></pre>
+<br>
+<p>Open WebUI automatically manages this history.</p>
+<br>
+<h3>2. Conversation Objects (OpenaiAccount)</h3>
+<br>
+<p>Some providers use conversation IDs:</p>
+<br>
+<pre><code class="language-python">
+{
+    "messages": [{"role": "user", "content": "Hello"}],
+    "conversation": "conv_abc123"  # Returned from previous response
+}
+</code></pre>
+<br>
+<p>For detailed examples, see <a href="review/context.md">Chat Conversation Context Guide</a>.</p>
+<br>
+<h2>Features</h2>
+<br>
+<h3>Supported Capabilities</h3>
+<br>
+<ul>
+<li>✅ Text generation</li>
+<li>✅ Streaming responses</li>
+<li>✅ Multi-turn conversations</li>
+<li>✅ System prompts</li>
+<li>✅ Vision models (👓 tagged providers)</li>
+<li>✅ Image generation (🎨 tagged providers)</li>
+<li>✅ Audio models (🎧 tagged providers)</li>
+<li>✅ Web search via MCP</li>
+<li>✅ Web scraping via MCP</li>
+<li>✅ Tool calling</li>
+</ul>
+<br>
+<h3>Rate Limiting</h3>
+<br>
+<p>Some providers have rate limiting configured (via <code>sleep</code> parameter):</p>
+<br>
+<ul>
+<li>`api.airforce`: 60 seconds</li>
+<li>`master`: 10 seconds</li>
+<li>`audio`, `azure`, `ollama`: 10 seconds</li>
+</ul>
+<br>
+<h2>Troubleshooting</h2>
+<br>
+<h3>MCP Server Not Connecting</h3>
+<br>
+<p>1. Verify the MCP server is running:</p>
+<pre><code class="language-bash">
+   python -m g4f.mcp --http --port 8765
+   curl -X POST http://localhost:8765/mcp \
+     -H "Content-Type: application/json" \
+     -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+</code></pre>
+<br>
+<p>2. Check Open WebUI MCP configuration path</p>
+<p>3. Ensure CORS is enabled if using HTTP mode</p>
+<br>
+<h3>API Connection Issues</h3>
+<br>
+<p>1. Verify the base URL is correct</p>
+<p>2. Check if the provider is rate-limited (check console logs)</p>
+<p>3. Try the backup URL if available</p>
+<p>4. Test with curl:</p>
+<pre><code class="language-bash">
+   curl -X POST https://g4f.space/api/chat/completions \
+     -H "Content-Type: application/json" \
+     -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}]}'
+</code></pre>
+<br>
+<h3>Models Not Appearing</h3>
+<br>
+<p>1. Check provider configuration in Open WebUI</p>
+<p>2. Verify API endpoint is accessible</p>
+<p>3. Review Open WebUI logs for errors</p>
+<br>
+<h2>Security Considerations</h2>
+<br>
+<ul>
+<li>**API Keys**: Most g4f providers don't require API keys, but some do (check `providerLocalStorage` in providers.json)</li>
+<li>**CORS**: Required for browser-based MCP clients</li>
+<li>**Rate Limiting**: Respect provider rate limits to avoid blocks</li>
+<li>**Local vs Hosted**: Consider privacy when choosing between local and hosted options</li>
+</ul>
+<br>
+<h2>Advanced Configuration</h2>
+<br>
+<h3>Custom Provider with API Key</h3>
+<br>
+<pre><code class="language-json">
+{
+  "id": "g4f-openrouter",
+  "name": "G4F via OpenRouter",
+  "provider": "g4f",
+  "baseUrl": "https://openrouter.ai/api/v1",
+  "apiKey": "your-openrouter-api-key",
+  "model": "openai/gpt-oss-120b:free"
+}
+</code></pre>
+<br>
+<h3>Multiple Provider Fallback</h3>
+<br>
+<p>Configure multiple providers with fallback:</p>
+<br>
+<pre><code class="language-json">
+{
+  "providers": [
+    {
+      "baseUrl": "https://g4f.space/api/gemini",
+      "model": "models/gemini-2.5-flash",
+      "priority": 1
+    },
+    {
+      "baseUrl": "https://g4f.space/api/groq",
+      "model": "openai/gpt-oss-120b",
+      "priority": 2
+    }
+  ]
+}
+</code></pre>
+<br>
+<h2>Related Documentation</h2>
+<br>
+<ul>
+<li>[MCP Integration](mcp-integration.md) - Detailed MCP implementation</li>
+<li>[MCP Usage Guide](mcp-usage-guide.md) - How to use MCP server</li>
+<li>[Chat Conversation Context Guide](review/context.md) - Context handling</li>
+<li>[Backend API Documentation](backend_api_documentation.md) - API reference</li>
+<li>[Client JavaScript](client_js.md) - Browser client usage</li>
+</ul>
+<br>
+<h2>Examples</h2>
+<br>
+<h3>Complete Open WebUI Setup Script</h3>
+<br>
+<pre><code class="language-bash">
+#!/bin/bash
+# Setup g4f integration with Open WebUI
+
+# 1. Install g4f (if not already installed)
+python3 -m pip install g4f
+
+# 2. Start MCP server in background
+nohup python3 -m g4f.mcp --http --port 8765 > mcp.log 2>&1 &
+
+# 3. Create Open WebUI config directory
+mkdir -p ~/.config/openwebui
+
+# 4. Write MCP configuration
+cat > ~/.config/openwebui/mcp-config.json << EOF
+{
+  "mcpServers": {
+    "g4f": {
+      "url": "http://localhost:8765/mcp",
+      "transport": "http",
+      "description": "GPT4Free MCP server"
+    }
+  }
+}
+EOF
+
+# 5. Start Open WebUI with g4f provider
+docker run -d -p 3000:8080 \
+  -e OPENAI_API_BASE_URL=https://g4f.space/api \
+  -e OPENAI_API_KEY=not-required \
+  -v ~/.config/openwebui:/app/backend/data \
+  --name open-webui \
+  ghcr.io/open-webui/open-webui:main
+
+echo "Setup complete! Open WebUI available at http://localhost:3000"
+echo "MCP server running on http://localhost:8765"
+</code></pre>
+<br>
+<h3>Testing the Integration</h3>
+<br>
+<pre><code class="language-bash">
+# Test MCP server
+curl -X POST http://localhost:8765/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "web_search",
+      "arguments": {
+        "query": "latest AI news",
+        "max_results": 3
+      }
+    }
+  }'
+
+# Test API endpoint
+curl -X POST https://g4f.space/api/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "auto",
+    "messages": [
+      {"role": "user", "content": "Hello, how are you?"}
+    ],
+    "stream": false
+  }'
+</code></pre>
+<br>
+<h2>Support</h2>
+<br>
+<p>For issues and questions:</p>
+<br>
+<ul>
+<li>GitHub Issues: [gpt4free/g4f.dev](https://github.com/gpt4free/g4f.dev/issues)</li>
+<li>Documentation: [g4f.dev/docs](https://g4f.dev/docs)</li>
+<li>MCP Protocol: [modelcontextprotocol.io](https://modelcontextprotocol.io)</li>
+</ul>
+<br>
+        </main>
+    </div>
+
+    
+    <script>
+        // Toggle Translation Widget
+        document.getElementById("translate-toggle").addEventListener("click", function() {
+            const el = document.getElementById("google_translate_element");
+            el.style.display = (el.style.display === "none") ? "block" : "none";
+        });
+
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'en',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+            }, 'google_translate_element');
+        }
+    </script>
+    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+    <script>
+        // Enhanced syntax highlighting with error handling
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // Generate table of contents
+                generateTableOfContents();
+            } catch (error) {
+                console.error('Error generating table of contents:', error);
+            }
+        });
+
+        function generateTableOfContents() {
+            const headings = document.querySelectorAll('main h2, main h3');
+            const tocList = document.getElementById('toc-list');
+            
+            if (!tocList || headings.length === 0) return;
+            
+            tocList.innerHTML = '';
+            
+            headings.forEach(function(heading, index) {
+                const id = heading.id || `heading-${index}`;
+                if (!heading.id) {
+                    heading.id = id;
+                }
+                
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `#${id}`;
+                a.textContent = heading.textContent;
+                a.setAttribute('aria-label', `Jump to ${heading.textContent}`);
+                
+                if (heading.tagName === 'H3') {
+                    li.style.marginLeft = '1rem';
+                    li.style.fontSize = '0.9em';
+                }
+                
+                li.appendChild(a);
+                tocList.appendChild(li);
+            });
+        }
+
+        // Smooth scrolling for anchor links
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
+                e.preventDefault();
+                const target = document.querySelector(e.target.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }
+        });
+
+        // Add copy button to code blocks
+        document.querySelectorAll('pre code, .highlight pre').forEach(function(block) {
+            const button = document.createElement('button');
+            button.textContent = 'Copy';
+            button.className = 'copy-button';
+            button.style.cssText = `
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background: rgba(139, 61, 255, 0.8);
+                color: white;
+                border: none;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.8rem;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            const pre = block.parentElement;
+            pre.style.position = 'relative';
+            pre.appendChild(button);
+            
+            pre.addEventListener('mouseenter', function() {
+                button.style.opacity = '1';
+            });
+            
+            pre.addEventListener('mouseleave', function() {
+                button.style.opacity = '0';
+            });
+            
+            button.addEventListener('click', function() {
+                navigator.clipboard.writeText(block.textContent).then(function() {
+                    button.textContent = 'Copied!';
+                    setTimeout(function() {
+                        button.textContent = 'Copy';
+                    }, 2000);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -135,6 +135,8 @@ Examples
 - [Authentication, Configuration Guide (.har and cookies)](config.md)
 - [Advanced: Create your own Provider](guides/create_provider.md)
 - [Integrations: LangChain, PydanticAI](pydantic_ai.md)
+- [OpenWeb UI Integration](openwebui-integration.md) ***new**
+- [MCP Server Integration](mcp-integration.md), [MCP Usage Guide](mcp-usage-guide.md)
 - [GUI/WebUI](gui.md), [Phone](guides/phone.md), [Backend API](backend_api_documentation.md)
 - [Troubleshooting](https://github.com/gpt4free/g4f.dev/issues)
 
