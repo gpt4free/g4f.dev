@@ -938,7 +938,7 @@ console.log(result.choices[0].message.content);`;
             if (provider && !provider.startsWith('core:') && provider !== 'default' && !baseUrl) {
                 baseUrl = `https://g4f.space/api/${provider}`;
             } else if (provider.startsWith('core:')) {
-                baseUrl = `https://localhost:8080/api/${provider}`;
+                baseUrl = `https://localhost:8080/api/${displayProvider}`;
             } else if (!baseUrl) {
                 baseUrl = 'https://g4f.space/api/auto';
             }
