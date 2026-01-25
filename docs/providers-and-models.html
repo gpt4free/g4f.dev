@@ -755,6 +755,7 @@ print(response)
             // Populate provider dropdown
             providerSelect.innerHTML = '<option value="">Auto (Best Available)</option>';
             for (const [key, p] of Object.entries(jsProviders)) {
+                if (key === 'default') continue;
                 const option = document.createElement('option');
                 option.value = key;
                 option.textContent = `${key}${p.label ? ` (${p.label})` : ''} ${p.tags || ''}`;
@@ -833,21 +834,21 @@ print(response)
                         modelSelect.value = providerModels[0];
                         window.selectedModel = providerModels[0];
                     }
-                } else if (value && window.selectorProviders[value]) {
+                } else if (value && window.selectorProviders[value] && value !== 'default') {
                     try {
                         const client = await createClient(value);
                         const modelsList = await client.models.list();
-                        const models = modelsList.map(m => m.id);
                         modelSelect.innerHTML = '<option value="">Select a model</option>';
-                        models.forEach(m => {
+                        modelsList.forEach(m => {
                             const option = document.createElement('option');
-                            option.value = m;
-                            option.textContent = m;
+                            option.value = m.id;
+                            option.textContent = m.id;
+                            option.dataset.baseUrl = m.backupUrl || '';
                             modelSelect.appendChild(option);
                         });
-                        if (models.length > 0) {
-                            modelSelect.value = models[0];
-                            window.selectedModel = models[0];
+                        if (modelsList.length > 0) {
+                            modelSelect.value = modelsList[0].id;
+                            window.selectedModel = modelsList[0].id;
                         }
                     } catch (e) {
                         modelSelect.innerHTML = '<option value="">Error loading models</option>';
@@ -887,7 +888,7 @@ response = client.chat.completions.create(
     messages=[{"role": "user", "content": "Hello!"}],
 )
 print(response.choices[0].message.content)`;
-            } else if (provider) {
+            } else if (provider && provider !== 'default') {
                 pythonCode = `from g4f.client import ClientFactory
 
 client = ClientFactory.create_client("${provider}")
@@ -910,7 +911,7 @@ print(response.choices[0].message.content)`;
             
             // JavaScript code
             let jsCode;
-            if (provider) {
+            if (provider && provider !== 'default') {
                 jsCode = `import { createClient } from 'https://g4f.dev/dist/js/providers.js';
 
 const client = createClient("${displayProvider}");
@@ -922,7 +923,7 @@ console.log(result.choices[0].message.content);`;
             } else {
                 jsCode = `import { createClient } from 'https://g4f.dev/dist/js/providers.js';
 
-const client = createClient();
+const client = createClient("default");
 const result = await client.chat.completions.create({
     model: '${model}',
     messages: [{ role: 'user', content: 'Hello!' }]
@@ -932,11 +933,11 @@ console.log(result.choices[0].message.content);`;
             document.getElementById('code-javascript-content').textContent = jsCode;
             
             // cURL code
-            let baseUrl = 'https://g4f.space/v1';
-            if (provider && !provider.startsWith('core:')) {
+            let baseUrl = modelSelect.value ? modelSelect.options[modelSelect.selectedIndex].dataset.baseUrl || 'https://g4f.space/api/auto' : 'https://g4f.space/api/auto';
+            if (provider && !provider.startsWith('core:') && provider !== 'default') {
                 baseUrl = `https://g4f.space/api/${provider}`;
             } else if (provider.startsWith('core:')) {
-                baseUrl = `https://g4f.space/v1`;
+                baseUrl = `https://localhost:8080/api/${provider}`;
             }
             const curlCode = `curl ${baseUrl}/chat/completions \\
   -H "Content-Type: application/json" \\
