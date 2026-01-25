@@ -8,7 +8,16 @@ if (typeof window === "undefined") {
 let providers = {};
 let defaultModels = {};
 let providerLocalStorage = {};
-let providerClassMap = {};
+let providerClassMap = {
+    "default": Client,
+    "pollinations": Pollinations,
+    "nectar": Pollinations,
+    "audio": Audio,
+    "deepinfra": DeepInfra,
+    "huggingface": HuggingFace,
+    "puter": Puter,
+    "worker": Worker,
+};
 
 async function loadProviders() {
     let data;
@@ -24,16 +33,6 @@ async function loadProviders() {
                 providers = json.providers || {};
                 defaultModels = json.defaultModels || {};
                 window.providerLocalStorage = providerLocalStorage = json.providerLocalStorage || {};
-                providerClassMap = {
-                    "default": Client,
-                    "pollinations": Pollinations,
-                    "nectar": Pollinations,
-                    "audio": Audio,
-                    "deepinfra": DeepInfra,
-                    "huggingface": HuggingFace,
-                    "puter": Puter,
-                    "worker": Worker,
-                };
                 return providers;
             });
     } else {
@@ -42,16 +41,6 @@ async function loadProviders() {
         providers = data.providers || {};
         defaultModels = data.defaultModels || {};
         providerLocalStorage = data.providerLocalStorage || {};
-        providerClassMap = {
-            "default": Client,
-            "pollinations": Pollinations,
-            "nectar": Pollinations,
-            "audio": Audio,
-            "deepinfra": DeepInfra,
-            "huggingface": HuggingFace,
-            "puter": Puter,
-            "worker": Worker,
-        };
     }
     return providers;
 }
@@ -67,8 +56,10 @@ async function createClient(provider, options = {}) {
         providers = await loadProviders();
     }
     if (!providers[provider]) {
-        return new Client({ baseUrl: `/api/${provider}` });
-        throw new Error(`Provider "${provider}" not found.`);
+        options.baseUrl = options.baseUrl || `https://g4f.space/api/${provider}`;
+        options.apiKey = options.apiKey || (typeof window !== "undefined" ? window?.localStorage.getItem("session_token") : undefined);
+        options.sleep = options.sleep || 10000; // 10 seconds delay to avoid rate limiting
+        return new Client(options);
     }
     const { class: ClientClass = (providerClassMap[provider] || Client), backupUrl, localStorageApiKey, tags, ...config } = providers[provider];
 
