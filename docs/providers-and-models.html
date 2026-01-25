@@ -743,9 +743,10 @@ print(response)
             }
         }
 
+        const providerSelect = document.getElementById('select-provider');
+
         // Initialize Provider/Model Selector
         async function initSelector() {
-            const providerSelect = document.getElementById('select-provider');
             const modelSelect = document.getElementById('select-model');
             
             // Load JS providers for selector
@@ -804,7 +805,7 @@ print(response)
                 if (value) {
                     infoBox.style.display = 'flex';
                     const displayKey = value.replace('core:', '');
-                    logoImg.src = `https://g4f.space/logo/${displayKey}`;
+                    logoImg.src = getImage(displayKey).src;
                     nameSpan.textContent = displayKey;
                     
                     // Get tags
@@ -933,11 +934,13 @@ console.log(result.choices[0].message.content);`;
             document.getElementById('code-javascript-content').textContent = jsCode;
             
             // cURL code
-            let baseUrl = providerSelect.value ? providerSelect.options[providerSelect.selectedIndex].dataset.baseUrl || 'https://g4f.space/api/auto' : 'https://g4f.space/api/auto';
-            if (provider && !provider.startsWith('core:') && provider !== 'default') {
+            let baseUrl = providerSelect.value ? providerSelect.options[providerSelect.selectedIndex].dataset.baseUrl : null;
+            if (provider && !provider.startsWith('core:') && provider !== 'default' && !baseUrl) {
                 baseUrl = `https://g4f.space/api/${provider}`;
             } else if (provider.startsWith('core:')) {
                 baseUrl = `https://localhost:8080/api/${provider}`;
+            } else if (!baseUrl) {
+                baseUrl = 'https://g4f.space/api/auto';
             }
             const curlCode = `curl ${baseUrl}/chat/completions \\
   -H "Content-Type: application/json" \\
