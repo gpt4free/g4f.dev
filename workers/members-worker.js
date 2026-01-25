@@ -45,6 +45,8 @@ const ADMIN_USERS = {
     huggingface: []
 };
 
+const EXTRA_SPONSORS = ["Screenmax1234", "kirill670"];
+
 /**
  * Fetch all contributors from GitHub API (handles pagination using Link header)
  * @param {Object} env - Environment variables containing GITHUB_TOKEN
@@ -93,15 +95,17 @@ async function fetchContributors(env) {
         }
         
         // Add additional contributor
-        if (!contributors.includes("kirill670")) {
-            contributors.push("kirill670");
-        }
+        EXTRA_SPONSORS.forEach(sponsor => {
+            if (!contributors.includes(sponsor)) {
+                contributors.push(sponsor);
+            }
+        });
         
         console.log(`Fetched ${contributors.length} contributors`);
         return contributors;
     } catch (error) {
         console.error("Failed to fetch contributors:", error);
-        return contributors.length > 0 ? contributors : ["kirill670"];
+        return contributors.length > 0 ? contributors : EXTRA_SPONSORS;
     }
 }
 
