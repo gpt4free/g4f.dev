@@ -1,0 +1,4310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Speech Assistant for Mute People</title>
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --primary-hover: #4f46e5;
+            --secondary-color: #8b5cf6;
+            --dark-color: #1e1b4b;
+            --light-color: #f8fafc;
+            --success-color: #22c55e;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --accent-gradient: linear-gradient(135deg, #6366f1, #8b5cf6);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: rgba(99, 102, 241, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            font-size: 2rem;
+        }
+
+        .subtitle {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .input-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-label {
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .text-input {
+            flex: 1;
+            min-height: 200px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1.25rem;
+            color: white;
+            font-size: 1.25rem;
+            resize: none;
+            transition: all 0.3s ease;
+            line-height: 1.6;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .text-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .char-count {
+            text-align: right;
+            font-size: 0.85rem;
+            opacity: 0.6;
+            margin-top: 0.5rem;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            min-width: 160px;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: var(--accent-gradient);
+            color: white;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #dc2626;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-icon {
+            font-size: 1.3rem;
+        }
+
+        .quick-phrases {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .phrase-category {
+            margin-bottom: 0.5rem;
+        }
+
+        .phrase-category-title {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .phrases-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .phrase-btn {
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: white;
+            padding: 0.6rem 1rem;
+            border-radius: 25px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .phrase-btn:hover {
+            background: rgba(99, 102, 241, 0.4);
+            transform: scale(1.05);
+        }
+
+        .phrase-btn:active {
+            transform: scale(0.98);
+        }
+
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 1rem;
+            border-radius: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            font-size: 1rem;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--success-color);
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.speaking {
+            background: var(--warning-color);
+            animation: pulse-fast 0.5s infinite;
+        }
+
+        .status-indicator.error {
+            background: var(--danger-color);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes pulse-fast {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.2); }
+        }
+
+        .history-section {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0.75rem 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .history-item:hover {
+            background: rgba(99, 102, 241, 0.2);
+        }
+
+        .history-text {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-time {
+            font-size: 0.8rem;
+            opacity: 0.5;
+        }
+
+        .history-play {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 5px;
+        }
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .setting-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            width: 100px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        select {
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 0.5rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        select option {
+            background: #1e1b4b;
+        }
+
+        .empty-history {
+            text-align: center;
+            opacity: 0.5;
+            padding: 1rem;
+        }
+
+        /* Accessibility */
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            margin: -1px;
+            padding: 0;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+
+        /* Large text mode for visibility */
+        .large-mode .text-input {
+            font-size: 1.5rem;
+        }
+
+        .large-mode .phrase-btn {
+            font-size: 1.1rem;
+            padding: 0.8rem 1.2rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            main {
+                padding: 1rem;
+            }
+
+            .text-input {
+                min-height: 150px;
+                font-size: 1.1rem;
+            }
+
+            .btn {
+                padding: 0.8rem 1.5rem;
+                font-size: 1rem;
+                min-width: 140px;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+
+        /* Audio visualizer */
+        .audio-visualizer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 40px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .audio-visualizer.active {
+            opacity: 1;
+        }
+
+        .visualizer-bar {
+            width: 6px;
+            background: var(--primary-color);
+            border-radius: 3px;
+            animation: visualize 0.5s ease-in-out infinite;
+        }
+
+        .visualizer-bar:nth-child(1) { animation-delay: 0s; }
+        .visualizer-bar:nth-child(2) { animation-delay: 0.1s; }
+        .visualizer-bar:nth-child(3) { animation-delay: 0.2s; }
+        .visualizer-bar:nth-child(4) { animation-delay: 0.3s; }
+        .visualizer-bar:nth-child(5) { animation-delay: 0.4s; }
+
+        @keyframes visualize {
+            0%, 100% { height: 10px; }
+            50% { height: 35px; }
+        }
+
+        .keyboard-hint {
+            font-size: 0.8rem;
+            opacity: 0.6;
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+
+        /* Emoji Picker Styles */
+        .emoji-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .emoji-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .emoji-tab {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 20px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .emoji-tab:hover {
+            background: rgba(99, 102, 241, 0.3);
+        }
+
+        .emoji-tab.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .emoji-grid-container {
+            max-height: 250px;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .emoji-grid-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .emoji-grid-container::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+
+        .emoji-grid-container::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.5);
+            border-radius: 4px;
+        }
+
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+            gap: 0.5rem;
+        }
+
+        .emoji-btn {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 0.5rem;
+            font-size: 1.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .emoji-btn:hover {
+            background: rgba(99, 102, 241, 0.3);
+            transform: scale(1.15);
+            border-color: var(--primary-color);
+        }
+
+        .emoji-btn:active {
+            transform: scale(0.95);
+        }
+
+        .emoji-category-panel {
+            display: none;
+        }
+
+        .emoji-category-panel.active {
+            display: block;
+        }
+
+        .emoji-search {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .emoji-search:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .emoji-search::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .large-mode .emoji-btn {
+            font-size: 2.2rem;
+        }
+
+        /* Language Selector */
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .language-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .language-selector label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .language-select {
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 0.4rem 0.6rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .language-select option {
+            background: #1e1b4b;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <span class="logo-icon">🗣️</span>
+            <div>
+                <div data-i18n="appTitle">Speech Assistant</div>
+                <div class="subtitle" data-i18n="appSubtitle">Communication Aid for Everyone</div>
+            </div>
+        </div>
+        <div class="header-controls">
+            <div class="language-selector">
+                <label for="languageSelect">🌐</label>
+                <select id="languageSelect" class="language-select" onchange="changeLanguage(this.value)">
+                    <option value="en">English</option>
+                    <option value="de">Deutsch</option>
+                    <option value="fr">Français</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <input type="checkbox" id="largeMode" onchange="toggleLargeMode()">
+                <label for="largeMode" class="setting-label" data-i18n="largeText">Large Text</label>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Main Input Section -->
+        <div class="card input-section">
+            <label class="input-label" for="textInput">
+                <span>✏️</span>
+                <span data-i18n="typeLabel">Type what you want to say</span>
+            </label>
+            <textarea 
+                id="textInput" 
+                class="text-input" 
+                data-i18n-placeholder="inputPlaceholder"
+                placeholder="Type your message here and press Enter or click Speak to have it spoken aloud..."
+                autofocus
+            ></textarea>
+            <div class="char-count"><span id="charCount">0</span> <span data-i18n="characters">characters</span></div>
+            <div class="keyboard-hint" data-i18n-html="keyboardHint">Press <strong>Enter</strong> to speak, <strong>Shift+Enter</strong> for new line</div>
+        </div>
+
+        <!-- Controls -->
+        <div class="card">
+            <div class="controls">
+                <button class="btn btn-primary" id="speakBtn" onclick="speakText()">
+                    <span class="btn-icon">🔊</span>
+                    <span data-i18n="speak">Speak</span>
+                </button>
+                <button class="btn btn-secondary" id="stopBtn" onclick="stopSpeaking()" disabled>
+                    <span class="btn-icon">⏹️</span>
+                    <span data-i18n="stop">Stop</span>
+                </button>
+                <button class="btn btn-secondary" onclick="clearText()">
+                    <span class="btn-icon">🗑️</span>
+                    <span data-i18n="clear">Clear</span>
+                </button>
+                <button class="btn btn-secondary" onclick="repeatLast()">
+                    <span class="btn-icon">🔁</span>
+                    <span data-i18n="repeat">Repeat</span>
+                </button>
+            </div>
+            
+            <div class="audio-visualizer" id="visualizer">
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div class="card">
+            <div class="status-bar">
+                <div class="status-indicator" id="statusIndicator"></div>
+                <span id="statusText" data-i18n="readyToSpeak">Ready to speak</span>
+            </div>
+        </div>
+
+        <!-- Quick Phrases -->
+        <div class="card quick-phrases" id="quickPhrasesSection">
+            <label class="input-label">
+                <span>⚡</span>
+                <span data-i18n="quickPhrases">Quick Phrases</span>
+            </label>
+            
+            <div class="phrase-category">
+                <div class="phrase-category-title">👋 <span data-i18n="greetings">Greetings</span></div>
+                <div class="phrases-grid" id="greetings-grid"></div>
+            </div>
+
+            <div class="phrase-category">
+                <div class="phrase-category-title">🙏 <span data-i18n="commonResponses">Common Responses</span></div>
+                <div class="phrases-grid" id="responses-grid"></div>
+            </div>
+
+            <div class="phrase-category">
+                <div class="phrase-category-title">❓ <span data-i18n="questionsRequests">Questions & Requests</span></div>
+                <div class="phrases-grid" id="questions-grid"></div>
+            </div>
+
+            <div class="phrase-category">
+                <div class="phrase-category-title">🚨 <span data-i18n="urgent">Urgent</span></div>
+                <div class="phrases-grid" id="urgent-grid"></div>
+            </div>
+        </div>
+
+        <!-- Emoji Picker -->
+        <div class="card emoji-section">
+            <label class="input-label">
+                <span>😀</span>
+                <span data-i18n="quickEmoji">Quick Emoji Speech</span>
+            </label>
+            
+            <input type="text" class="emoji-search" id="emojiSearch" data-i18n-placeholder="searchEmojis" placeholder="Search emojis..." oninput="filterEmojis(this.value)">
+            
+            <div class="emoji-tabs" id="emojiTabs">
+                <button class="emoji-tab active" onclick="showEmojiCategory('smileys')" title="Smileys & Emotion">😀</button>
+                <button class="emoji-tab" onclick="showEmojiCategory('people')" title="People & Body">👋</button>
+                <button class="emoji-tab" onclick="showEmojiCategory('animals')" title="Animals & Nature">🐶</button>
+                <button class="emoji-tab" onclick="showEmojiCategory('food')" title="Food & Drink">🍕</button>
+                <button class="emoji-tab" onclick="showEmojiCategory('activities')" title="Activities">⚽</button>
+                <button class="emoji-tab" onclick="showEmojiCategory('travel')" title="Travel & Places">🚗</button>
+                <button class="emoji-tab" onclick="showEmojiCategory('objects')" title="Objects">💡</button>
+                <button class="emoji-tab" onclick="showEmojiCategory('symbols')" title="Symbols">❤️</button>
+                <button class="emoji-tab" onclick="showEmojiCategory('flags')" title="Flags">🏳️</button>
+            </div>
+            
+            <div class="emoji-grid-container">
+                <div class="emoji-category-panel active" id="emoji-smileys"></div>
+                <div class="emoji-category-panel" id="emoji-people"></div>
+                <div class="emoji-category-panel" id="emoji-animals"></div>
+                <div class="emoji-category-panel" id="emoji-food"></div>
+                <div class="emoji-category-panel" id="emoji-activities"></div>
+                <div class="emoji-category-panel" id="emoji-travel"></div>
+                <div class="emoji-category-panel" id="emoji-objects"></div>
+                <div class="emoji-category-panel" id="emoji-symbols"></div>
+                <div class="emoji-category-panel" id="emoji-flags"></div>
+                <div class="emoji-category-panel" id="emoji-search-results"></div>
+            </div>
+        </div>
+
+        <!-- History -->
+        <div class="card">
+            <label class="input-label">
+                <span>📜</span>
+                <span data-i18n="recentMessages">Recent Messages</span>
+            </label>
+            <div class="history-section" id="historySection">
+                <div class="history-list" id="historyList">
+                    <div class="empty-history" data-i18n="noMessages">No messages yet. Start typing to build your history.</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Configuration
+        const SPEECH_API_BASE = 'https://mcp.g4f.space/backend-api/v2/synthesize/Gemini?text=';
+        
+        // State
+        let currentAudio = null;
+        let history = [];
+        let lastSpokenText = '';
+        let currentLanguage = 'en';
+
+        // Translations
+        const translations = {
+            en: {
+                appTitle: 'Speech Assistant',
+                appSubtitle: 'Communication Aid for Everyone',
+                largeText: 'Large Text',
+                typeLabel: 'Type what you want to say',
+                inputPlaceholder: 'Type your message here and press Enter or click Speak to have it spoken aloud...',
+                characters: 'characters',
+                keyboardHint: 'Press <strong>Enter</strong> to speak, <strong>Shift+Enter</strong> for new line',
+                speak: 'Speak',
+                stop: 'Stop',
+                clear: 'Clear',
+                repeat: 'Repeat',
+                readyToSpeak: 'Ready to speak',
+                speaking: 'Speaking...',
+                errorAudio: 'Error playing audio. Please try again.',
+                errorGenerate: 'Failed to generate speech. Please try again.',
+                enterText: 'Please enter some text to speak',
+                noRepeat: 'No previous message to repeat',
+                quickPhrases: 'Quick Phrases',
+                greetings: 'Greetings',
+                commonResponses: 'Common Responses',
+                questionsRequests: 'Questions & Requests',
+                urgent: 'Urgent',
+                quickEmoji: 'Quick Emoji Speech',
+                searchEmojis: 'Search emojis...',
+                recentMessages: 'Recent Messages',
+                noMessages: 'No messages yet. Start typing to build your history.',
+                noEmojis: 'No emojis found'
+            },
+            de: {
+                appTitle: 'Sprach-Assistent',
+                appSubtitle: 'Kommunikationshilfe für Alle',
+                largeText: 'Große Schrift',
+                typeLabel: 'Schreiben Sie, was Sie sagen möchten',
+                inputPlaceholder: 'Geben Sie hier Ihre Nachricht ein und drücken Sie Enter oder klicken Sie auf Sprechen...',
+                characters: 'Zeichen',
+                keyboardHint: 'Drücken Sie <strong>Enter</strong> zum Sprechen, <strong>Umschalt+Enter</strong> für neue Zeile',
+                speak: 'Sprechen',
+                stop: 'Stopp',
+                clear: 'Löschen',
+                repeat: 'Wiederholen',
+                readyToSpeak: 'Bereit zum Sprechen',
+                speaking: 'Spricht...',
+                errorAudio: 'Fehler beim Abspielen. Bitte erneut versuchen.',
+                errorGenerate: 'Sprachgenerierung fehlgeschlagen. Bitte erneut versuchen.',
+                enterText: 'Bitte geben Sie einen Text ein',
+                noRepeat: 'Keine vorherige Nachricht zum Wiederholen',
+                quickPhrases: 'Schnelle Phrasen',
+                greetings: 'Begrüßungen',
+                commonResponses: 'Häufige Antworten',
+                questionsRequests: 'Fragen & Bitten',
+                urgent: 'Dringend',
+                quickEmoji: 'Schnelle Emoji-Sprache',
+                searchEmojis: 'Emojis suchen...',
+                recentMessages: 'Letzte Nachrichten',
+                noMessages: 'Noch keine Nachrichten. Beginnen Sie zu tippen.',
+                noEmojis: 'Keine Emojis gefunden'
+            },
+            fr: {
+                appTitle: 'Assistant Vocal',
+                appSubtitle: 'Aide à la Communication pour Tous',
+                largeText: 'Grand Texte',
+                typeLabel: 'Tapez ce que vous voulez dire',
+                inputPlaceholder: 'Tapez votre message ici et appuyez sur Entrée ou cliquez sur Parler...',
+                characters: 'caractères',
+                keyboardHint: 'Appuyez sur <strong>Entrée</strong> pour parler, <strong>Maj+Entrée</strong> pour nouvelle ligne',
+                speak: 'Parler',
+                stop: 'Arrêter',
+                clear: 'Effacer',
+                repeat: 'Répéter',
+                readyToSpeak: 'Prêt à parler',
+                speaking: 'En cours...',
+                errorAudio: 'Erreur de lecture audio. Veuillez réessayer.',
+                errorGenerate: 'Échec de la génération vocale. Veuillez réessayer.',
+                enterText: 'Veuillez entrer du texte à prononcer',
+                noRepeat: 'Aucun message précédent à répéter',
+                quickPhrases: 'Phrases Rapides',
+                greetings: 'Salutations',
+                commonResponses: 'Réponses Courantes',
+                questionsRequests: 'Questions & Demandes',
+                urgent: 'Urgent',
+                quickEmoji: 'Emoji Vocal Rapide',
+                searchEmojis: 'Rechercher des emojis...',
+                recentMessages: 'Messages Récents',
+                noMessages: 'Pas encore de messages. Commencez à taper.',
+                noEmojis: 'Aucun emoji trouvé'
+            }
+        };
+
+        // Quick Phrases data by language
+        const phrasesData = {
+            en: {
+                greetings: [
+                    'Hello!',
+                    'Hi, how are you?',
+                    'Good morning!',
+                    'Good afternoon!',
+                    'Goodbye!',
+                    'Nice to meet you!'
+                ],
+                responses: [
+                    'Yes',
+                    'No',
+                    'Thank you!',
+                    "You're welcome!",
+                    'Please',
+                    'Sorry',
+                    'Excuse me',
+                    'I understand',
+                    "I don't understand"
+                ],
+                questions: [
+                    'Can you help me?',
+                    'Where is the bathroom?',
+                    'What time is it?',
+                    'How much does this cost?',
+                    'Can you repeat that?',
+                    'Please wait a moment',
+                    'I need help'
+                ],
+                urgent: [
+                    'I need a doctor!',
+                    'Please call emergency services!',
+                    'I am not feeling well',
+                    'This is urgent!'
+                ]
+            },
+            de: {
+                greetings: [
+                    'Hallo!',
+                    'Wie geht es Ihnen?',
+                    'Guten Morgen!',
+                    'Guten Tag!',
+                    'Auf Wiedersehen!',
+                    'Freut mich, Sie kennenzulernen!'
+                ],
+                responses: [
+                    'Ja',
+                    'Nein',
+                    'Danke!',
+                    'Bitte schön!',
+                    'Bitte',
+                    'Entschuldigung',
+                    'Verzeihung',
+                    'Ich verstehe',
+                    'Ich verstehe nicht'
+                ],
+                questions: [
+                    'Können Sie mir helfen?',
+                    'Wo ist die Toilette?',
+                    'Wie spät ist es?',
+                    'Wie viel kostet das?',
+                    'Können Sie das wiederholen?',
+                    'Bitte warten Sie einen Moment',
+                    'Ich brauche Hilfe'
+                ],
+                urgent: [
+                    'Ich brauche einen Arzt!',
+                    'Bitte rufen Sie den Notdienst!',
+                    'Mir geht es nicht gut',
+                    'Das ist dringend!'
+                ]
+            },
+            fr: {
+                greetings: [
+                    'Bonjour!',
+                    'Comment allez-vous?',
+                    'Bon matin!',
+                    'Bon après-midi!',
+                    'Au revoir!',
+                    'Enchanté de vous rencontrer!'
+                ],
+                responses: [
+                    'Oui',
+                    'Non',
+                    'Merci!',
+                    'De rien!',
+                    "S'il vous plaît",
+                    'Pardon',
+                    'Excusez-moi',
+                    'Je comprends',
+                    'Je ne comprends pas'
+                ],
+                questions: [
+                    'Pouvez-vous m\'aider?',
+                    'Où sont les toilettes?',
+                    'Quelle heure est-il?',
+                    'Combien ça coûte?',
+                    'Pouvez-vous répéter?',
+                    'Veuillez patienter un moment',
+                    "J'ai besoin d'aide"
+                ],
+                urgent: [
+                    "J'ai besoin d'un médecin!",
+                    'Appelez les urgences!',
+                    'Je ne me sens pas bien',
+                    "C'est urgent!"
+                ]
+            }
+        };
+
+        // Translation functions
+        function t(key) {
+            return translations[currentLanguage][key] || translations['en'][key] || key;
+        }
+
+        function changeLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('speechAssistantLanguage', lang);
+            applyTranslations();
+            renderPhrases();
+            renderHistory();
+            initializeEmojis(); // Re-render emojis with translated names
+        }
+
+        function applyTranslations() {
+            // Update text content
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                el.textContent = t(key);
+            });
+
+            // Update HTML content (for elements with HTML like keyboard hint)
+            document.querySelectorAll('[data-i18n-html]').forEach(el => {
+                const key = el.getAttribute('data-i18n-html');
+                el.innerHTML = t(key);
+            });
+
+            // Update placeholders
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                el.placeholder = t(key);
+            });
+
+            // Update document title
+            document.title = t('appTitle') + ' - G4F';
+        }
+
+        function renderPhrases() {
+            const phrases = phrasesData[currentLanguage];
+            
+            // Greetings
+            document.getElementById('greetings-grid').innerHTML = phrases.greetings.map(phrase => 
+                `<button class="phrase-btn" onclick="speakPhrase('${phrase.replace(/'/g, "\\'")}')"> ${phrase}</button>`
+            ).join('');
+
+            // Responses
+            document.getElementById('responses-grid').innerHTML = phrases.responses.map(phrase => 
+                `<button class="phrase-btn" onclick="speakPhrase('${phrase.replace(/'/g, "\\'")}')"> ${phrase}</button>`
+            ).join('');
+
+            // Questions
+            document.getElementById('questions-grid').innerHTML = phrases.questions.map(phrase => 
+                `<button class="phrase-btn" onclick="speakPhrase('${phrase.replace(/'/g, "\\'")}')"> ${phrase}</button>`
+            ).join('');
+
+            // Urgent
+            document.getElementById('urgent-grid').innerHTML = phrases.urgent.map(phrase => 
+                `<button class="phrase-btn" onclick="speakPhrase('${phrase.replace(/'/g, "\\'")}')"> ${phrase}</button>`
+            ).join('');
+        }
+
+        function loadSavedLanguage() {
+            const saved = localStorage.getItem('speechAssistantLanguage');
+            if (saved && translations[saved]) {
+                currentLanguage = saved;
+                document.getElementById('languageSelect').value = saved;
+            }
+            applyTranslations();
+            renderPhrases();
+        }
+        
+        // DOM Elements
+        const textInput = document.getElementById('textInput');
+        const charCount = document.getElementById('charCount');
+        const speakBtn = document.getElementById('speakBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const visualizer = document.getElementById('visualizer');
+        const historyList = document.getElementById('historyList');
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSavedLanguage();
+            loadHistory();
+            textInput.focus();
+        });
+        
+        // Character count
+        textInput.addEventListener('input', () => {
+            charCount.textContent = textInput.value.length;
+        });
+        
+        // Keyboard shortcuts
+        textInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                speakText();
+            }
+        });
+        
+        // Main speak function
+        async function speakText() {
+            const text = textInput.value.trim();
+            if (!text) {
+                setStatus('error', t('enterText'));
+                return;
+            }
+            
+            await speak(text);
+            textInput.value = '';
+            charCount.textContent = '0';
+            textInput.focus();
+        }
+        
+        // Speak a quick phrase
+        async function speakPhrase(text) {
+            await speak(text);
+        }
+        
+        // Core speak function using the API
+        async function speak(text) {
+            if (!text) return;
+            
+            // Stop any currently playing audio
+            stopSpeaking();
+            
+            lastSpokenText = text;
+            addToHistory(text);
+            
+            setStatus('speaking', t('speaking'));
+            speakBtn.disabled = true;
+            stopBtn.disabled = false;
+            visualizer.classList.add('active');
+            
+            try {
+                const encodedText = encodeURIComponent(text);
+                const audioUrl = `${SPEECH_API_BASE}${encodedText}`;
+                
+                currentAudio = new Audio(audioUrl);
+                
+                currentAudio.onended = () => {
+                    finishSpeaking();
+                };
+                
+                currentAudio.onerror = (e) => {
+                    console.error('Audio error:', e);
+                    setStatus('error', t('errorAudio'));
+                    finishSpeaking();
+                };
+                
+                await currentAudio.play();
+                
+            } catch (error) {
+                console.error('Speech error:', error);
+                setStatus('error', t('errorGenerate'));
+                finishSpeaking();
+            }
+        }
+        
+        // Stop speaking
+        function stopSpeaking() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio = null;
+            }
+            finishSpeaking();
+        }
+        
+        // Finish speaking state
+        function finishSpeaking() {
+            speakBtn.disabled = false;
+            stopBtn.disabled = true;
+            visualizer.classList.remove('active');
+            if (statusIndicator.classList.contains('speaking')) {
+                setStatus('ready', t('readyToSpeak'));
+            }
+        }
+        
+        // Repeat last message
+        function repeatLast() {
+            if (lastSpokenText) {
+                speak(lastSpokenText);
+            } else {
+                setStatus('error', t('noRepeat'));
+            }
+        }
+        
+        // Clear text input
+        function clearText() {
+            textInput.value = '';
+            charCount.textContent = '0';
+            textInput.focus();
+        }
+        
+        // Set status indicator
+        function setStatus(status, message) {
+            statusIndicator.className = 'status-indicator';
+            if (status === 'speaking') {
+                statusIndicator.classList.add('speaking');
+            } else if (status === 'error') {
+                statusIndicator.classList.add('error');
+            }
+            statusText.textContent = message;
+            
+            // Clear error status after 3 seconds
+            if (status === 'error') {
+                setTimeout(() => {
+                    if (statusIndicator.classList.contains('error')) {
+                        setStatus('ready', 'Ready to speak');
+                    }
+                }, 3000);
+            }
+        }
+        
+        // History management
+        function addToHistory(text) {
+            const timestamp = new Date().toLocaleTimeString();
+            history.unshift({ text, timestamp });
+            
+            // Keep only last 20 items
+            if (history.length > 20) {
+                history.pop();
+            }
+            
+            saveHistory();
+            renderHistory();
+        }
+        
+        function renderHistory() {
+            if (history.length === 0) {
+                historyList.innerHTML = `<div class="empty-history">${t('noMessages')}</div>`;
+                return;
+            }
+            
+            historyList.innerHTML = history.map((item, index) => `
+                <div class="history-item" onclick="speak('${escapeHtml(item.text).replace(/'/g, "\\'")}')">
+                    <button class="history-play" title="Play">▶</button>
+                    <span class="history-text">${escapeHtml(item.text)}</span>
+                    <span class="history-time">${item.timestamp}</span>
+                </div>
+            `).join('');
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function saveHistory() {
+            try {
+                localStorage.setItem('speechAssistantHistory', JSON.stringify(history));
+            } catch (e) {
+                console.warn('Could not save history:', e);
+            }
+        }
+        
+        function loadHistory() {
+            try {
+                const saved = localStorage.getItem('speechAssistantHistory');
+                if (saved) {
+                    history = JSON.parse(saved);
+                    renderHistory();
+                }
+            } catch (e) {
+                console.warn('Could not load history:', e);
+            }
+        }
+        
+        // Large text mode toggle
+        function toggleLargeMode() {
+            document.body.classList.toggle('large-mode');
+        }
+
+        // Emoji data with names for search and speech
+        const emojiData = {
+            smileys: [
+                { emoji: '😀', name: 'grinning face' },
+                { emoji: '😃', name: 'grinning face with big eyes' },
+                { emoji: '😄', name: 'grinning face with smiling eyes' },
+                { emoji: '😁', name: 'beaming face with smiling eyes' },
+                { emoji: '😆', name: 'grinning squinting face' },
+                { emoji: '😅', name: 'grinning face with sweat' },
+                { emoji: '🤣', name: 'rolling on the floor laughing' },
+                { emoji: '😂', name: 'face with tears of joy' },
+                { emoji: '🙂', name: 'slightly smiling face' },
+                { emoji: '🙃', name: 'upside down face' },
+                { emoji: '😉', name: 'winking face' },
+                { emoji: '😊', name: 'smiling face with smiling eyes' },
+                { emoji: '😇', name: 'smiling face with halo' },
+                { emoji: '🥰', name: 'smiling face with hearts' },
+                { emoji: '😍', name: 'smiling face with heart eyes' },
+                { emoji: '🤩', name: 'star struck' },
+                { emoji: '😘', name: 'face blowing a kiss' },
+                { emoji: '😗', name: 'kissing face' },
+                { emoji: '😚', name: 'kissing face with closed eyes' },
+                { emoji: '😙', name: 'kissing face with smiling eyes' },
+                { emoji: '🥲', name: 'smiling face with tear' },
+                { emoji: '😋', name: 'face savoring food' },
+                { emoji: '😛', name: 'face with tongue' },
+                { emoji: '😜', name: 'winking face with tongue' },
+                { emoji: '🤪', name: 'zany face' },
+                { emoji: '😝', name: 'squinting face with tongue' },
+                { emoji: '🤑', name: 'money mouth face' },
+                { emoji: '🤗', name: 'hugging face' },
+                { emoji: '🤭', name: 'face with hand over mouth' },
+                { emoji: '🤫', name: 'shushing face' },
+                { emoji: '🤔', name: 'thinking face' },
+                { emoji: '🤐', name: 'zipper mouth face' },
+                { emoji: '🤨', name: 'face with raised eyebrow' },
+                { emoji: '😐', name: 'neutral face' },
+                { emoji: '😑', name: 'expressionless face' },
+                { emoji: '😶', name: 'face without mouth' },
+                { emoji: '😏', name: 'smirking face' },
+                { emoji: '😒', name: 'unamused face' },
+                { emoji: '🙄', name: 'face with rolling eyes' },
+                { emoji: '😬', name: 'grimacing face' },
+                { emoji: '🤥', name: 'lying face' },
+                { emoji: '😌', name: 'relieved face' },
+                { emoji: '😔', name: 'pensive face' },
+                { emoji: '😪', name: 'sleepy face' },
+                { emoji: '🤤', name: 'drooling face' },
+                { emoji: '😴', name: 'sleeping face' },
+                { emoji: '😷', name: 'face with medical mask' },
+                { emoji: '🤒', name: 'face with thermometer' },
+                { emoji: '🤕', name: 'face with head bandage' },
+                { emoji: '🤢', name: 'nauseated face' },
+                { emoji: '🤮', name: 'face vomiting' },
+                { emoji: '🤧', name: 'sneezing face' },
+                { emoji: '🥵', name: 'hot face' },
+                { emoji: '🥶', name: 'cold face' },
+                { emoji: '🥴', name: 'woozy face' },
+                { emoji: '😵', name: 'dizzy face' },
+                { emoji: '🤯', name: 'exploding head' },
+                { emoji: '🤠', name: 'cowboy hat face' },
+                { emoji: '🥳', name: 'partying face' },
+                { emoji: '🥸', name: 'disguised face' },
+                { emoji: '😎', name: 'smiling face with sunglasses' },
+                { emoji: '🤓', name: 'nerd face' },
+                { emoji: '🧐', name: 'face with monocle' },
+                { emoji: '😕', name: 'confused face' },
+                { emoji: '😟', name: 'worried face' },
+                { emoji: '🙁', name: 'slightly frowning face' },
+                { emoji: '😮', name: 'face with open mouth' },
+                { emoji: '😯', name: 'hushed face' },
+                { emoji: '😲', name: 'astonished face' },
+                { emoji: '😳', name: 'flushed face' },
+                { emoji: '🥺', name: 'pleading face' },
+                { emoji: '😦', name: 'frowning face with open mouth' },
+                { emoji: '😧', name: 'anguished face' },
+                { emoji: '😨', name: 'fearful face' },
+                { emoji: '😰', name: 'anxious face with sweat' },
+                { emoji: '😥', name: 'sad but relieved face' },
+                { emoji: '😢', name: 'crying face' },
+                { emoji: '😭', name: 'loudly crying face' },
+                { emoji: '😱', name: 'face screaming in fear' },
+                { emoji: '😖', name: 'confounded face' },
+                { emoji: '😣', name: 'persevering face' },
+                { emoji: '😞', name: 'disappointed face' },
+                { emoji: '😓', name: 'downcast face with sweat' },
+                { emoji: '😩', name: 'weary face' },
+                { emoji: '😫', name: 'tired face' },
+                { emoji: '🥱', name: 'yawning face' },
+                { emoji: '😤', name: 'face with steam from nose' },
+                { emoji: '😡', name: 'pouting face' },
+                { emoji: '😠', name: 'angry face' },
+                { emoji: '🤬', name: 'face with symbols on mouth' },
+                { emoji: '😈', name: 'smiling face with horns' },
+                { emoji: '👿', name: 'angry face with horns' },
+                { emoji: '💀', name: 'skull' },
+                { emoji: '☠️', name: 'skull and crossbones' },
+                { emoji: '💩', name: 'pile of poo' },
+                { emoji: '🤡', name: 'clown face' },
+                { emoji: '👹', name: 'ogre' },
+                { emoji: '👺', name: 'goblin' },
+                { emoji: '👻', name: 'ghost' },
+                { emoji: '👽', name: 'alien' },
+                { emoji: '👾', name: 'alien monster' },
+                { emoji: '🤖', name: 'robot' }
+            ],
+            people: [
+                { emoji: '👋', name: 'waving hand' },
+                { emoji: '🤚', name: 'raised back of hand' },
+                { emoji: '🖐️', name: 'hand with fingers splayed' },
+                { emoji: '✋', name: 'raised hand' },
+                { emoji: '🖖', name: 'vulcan salute' },
+                { emoji: '👌', name: 'OK hand' },
+                { emoji: '🤌', name: 'pinched fingers' },
+                { emoji: '🤏', name: 'pinching hand' },
+                { emoji: '✌️', name: 'victory hand' },
+                { emoji: '🤞', name: 'crossed fingers' },
+                { emoji: '🤟', name: 'love you gesture' },
+                { emoji: '🤘', name: 'sign of the horns' },
+                { emoji: '🤙', name: 'call me hand' },
+                { emoji: '👈', name: 'backhand index pointing left' },
+                { emoji: '👉', name: 'backhand index pointing right' },
+                { emoji: '👆', name: 'backhand index pointing up' },
+                { emoji: '🖕', name: 'middle finger' },
+                { emoji: '👇', name: 'backhand index pointing down' },
+                { emoji: '☝️', name: 'index pointing up' },
+                { emoji: '👍', name: 'thumbs up' },
+                { emoji: '👎', name: 'thumbs down' },
+                { emoji: '✊', name: 'raised fist' },
+                { emoji: '👊', name: 'oncoming fist' },
+                { emoji: '🤛', name: 'left facing fist' },
+                { emoji: '🤜', name: 'right facing fist' },
+                { emoji: '👏', name: 'clapping hands' },
+                { emoji: '🙌', name: 'raising hands' },
+                { emoji: '👐', name: 'open hands' },
+                { emoji: '🤲', name: 'palms up together' },
+                { emoji: '🤝', name: 'handshake' },
+                { emoji: '🙏', name: 'folded hands' },
+                { emoji: '✍️', name: 'writing hand' },
+                { emoji: '💪', name: 'flexed biceps' },
+                { emoji: '🦾', name: 'mechanical arm' },
+                { emoji: '🦿', name: 'mechanical leg' },
+                { emoji: '🦵', name: 'leg' },
+                { emoji: '🦶', name: 'foot' },
+                { emoji: '👂', name: 'ear' },
+                { emoji: '🦻', name: 'ear with hearing aid' },
+                { emoji: '👃', name: 'nose' },
+                { emoji: '🧠', name: 'brain' },
+                { emoji: '👀', name: 'eyes' },
+                { emoji: '👁️', name: 'eye' },
+                { emoji: '👅', name: 'tongue' },
+                { emoji: '👄', name: 'mouth' },
+                { emoji: '👶', name: 'baby' },
+                { emoji: '🧒', name: 'child' },
+                { emoji: '👦', name: 'boy' },
+                { emoji: '👧', name: 'girl' },
+                { emoji: '🧑', name: 'person' },
+                { emoji: '👱', name: 'person with blond hair' },
+                { emoji: '👨', name: 'man' },
+                { emoji: '🧔', name: 'man with beard' },
+                { emoji: '👩', name: 'woman' },
+                { emoji: '🧓', name: 'older person' },
+                { emoji: '👴', name: 'old man' },
+                { emoji: '👵', name: 'old woman' },
+                { emoji: '👮', name: 'police officer' },
+                { emoji: '👷', name: 'construction worker' },
+                { emoji: '💂', name: 'guard' },
+                { emoji: '🕵️', name: 'detective' },
+                { emoji: '👩‍⚕️', name: 'health worker' },
+                { emoji: '👨‍🍳', name: 'cook' },
+                { emoji: '👩‍🎓', name: 'student' },
+                { emoji: '👨‍🏫', name: 'teacher' },
+                { emoji: '👩‍💻', name: 'technologist' },
+                { emoji: '🧑‍🚀', name: 'astronaut' },
+                { emoji: '👼', name: 'baby angel' },
+                { emoji: '🎅', name: 'Santa Claus' },
+                { emoji: '🤶', name: 'Mrs. Claus' },
+                { emoji: '🦸', name: 'superhero' },
+                { emoji: '🦹', name: 'supervillain' },
+                { emoji: '🧙', name: 'mage' },
+                { emoji: '🧚', name: 'fairy' },
+                { emoji: '🧛', name: 'vampire' },
+                { emoji: '🧜', name: 'merperson' },
+                { emoji: '🧝', name: 'elf' },
+                { emoji: '🧞', name: 'genie' },
+                { emoji: '🧟', name: 'zombie' },
+                { emoji: '💆', name: 'person getting massage' },
+                { emoji: '💇', name: 'person getting haircut' },
+                { emoji: '🚶', name: 'person walking' },
+                { emoji: '🧍', name: 'person standing' },
+                { emoji: '🧎', name: 'person kneeling' },
+                { emoji: '🏃', name: 'person running' },
+                { emoji: '💃', name: 'woman dancing' },
+                { emoji: '🕺', name: 'man dancing' },
+                { emoji: '👯', name: 'people with bunny ears' },
+                { emoji: '🧖', name: 'person in steamy room' },
+                { emoji: '👫', name: 'woman and man holding hands' },
+                { emoji: '👬', name: 'men holding hands' },
+                { emoji: '👭', name: 'women holding hands' },
+                { emoji: '💏', name: 'kiss' },
+                { emoji: '💑', name: 'couple with heart' },
+                { emoji: '👪', name: 'family' }
+            ],
+            animals: [
+                { emoji: '🐶', name: 'dog face' },
+                { emoji: '🐕', name: 'dog' },
+                { emoji: '🦮', name: 'guide dog' },
+                { emoji: '🐕‍🦺', name: 'service dog' },
+                { emoji: '🐩', name: 'poodle' },
+                { emoji: '🐺', name: 'wolf' },
+                { emoji: '🦊', name: 'fox' },
+                { emoji: '🦝', name: 'raccoon' },
+                { emoji: '🐱', name: 'cat face' },
+                { emoji: '🐈', name: 'cat' },
+                { emoji: '🦁', name: 'lion' },
+                { emoji: '🐯', name: 'tiger face' },
+                { emoji: '🐅', name: 'tiger' },
+                { emoji: '🐆', name: 'leopard' },
+                { emoji: '🐴', name: 'horse face' },
+                { emoji: '🐎', name: 'horse' },
+                { emoji: '🦄', name: 'unicorn' },
+                { emoji: '🦓', name: 'zebra' },
+                { emoji: '🦌', name: 'deer' },
+                { emoji: '🦬', name: 'bison' },
+                { emoji: '🐮', name: 'cow face' },
+                { emoji: '🐂', name: 'ox' },
+                { emoji: '🐃', name: 'water buffalo' },
+                { emoji: '🐄', name: 'cow' },
+                { emoji: '🐷', name: 'pig face' },
+                { emoji: '🐖', name: 'pig' },
+                { emoji: '🐗', name: 'boar' },
+                { emoji: '🐽', name: 'pig nose' },
+                { emoji: '🐏', name: 'ram' },
+                { emoji: '🐑', name: 'ewe' },
+                { emoji: '🐐', name: 'goat' },
+                { emoji: '🐪', name: 'camel' },
+                { emoji: '🐫', name: 'two hump camel' },
+                { emoji: '🦙', name: 'llama' },
+                { emoji: '🦒', name: 'giraffe' },
+                { emoji: '🐘', name: 'elephant' },
+                { emoji: '🦣', name: 'mammoth' },
+                { emoji: '🦏', name: 'rhinoceros' },
+                { emoji: '🦛', name: 'hippopotamus' },
+                { emoji: '🐭', name: 'mouse face' },
+                { emoji: '🐁', name: 'mouse' },
+                { emoji: '🐀', name: 'rat' },
+                { emoji: '🐹', name: 'hamster' },
+                { emoji: '🐰', name: 'rabbit face' },
+                { emoji: '🐇', name: 'rabbit' },
+                { emoji: '🐿️', name: 'chipmunk' },
+                { emoji: '🦫', name: 'beaver' },
+                { emoji: '🦔', name: 'hedgehog' },
+                { emoji: '🦇', name: 'bat' },
+                { emoji: '🐻', name: 'bear' },
+                { emoji: '🐻‍❄️', name: 'polar bear' },
+                { emoji: '🐨', name: 'koala' },
+                { emoji: '🐼', name: 'panda' },
+                { emoji: '🦥', name: 'sloth' },
+                { emoji: '🦦', name: 'otter' },
+                { emoji: '🦨', name: 'skunk' },
+                { emoji: '🦘', name: 'kangaroo' },
+                { emoji: '🦡', name: 'badger' },
+                { emoji: '🐾', name: 'paw prints' },
+                { emoji: '🦃', name: 'turkey' },
+                { emoji: '🐔', name: 'chicken' },
+                { emoji: '🐓', name: 'rooster' },
+                { emoji: '🐣', name: 'hatching chick' },
+                { emoji: '🐤', name: 'baby chick' },
+                { emoji: '🐥', name: 'front facing baby chick' },
+                { emoji: '🐦', name: 'bird' },
+                { emoji: '🐧', name: 'penguin' },
+                { emoji: '🕊️', name: 'dove' },
+                { emoji: '🦅', name: 'eagle' },
+                { emoji: '🦆', name: 'duck' },
+                { emoji: '🦢', name: 'swan' },
+                { emoji: '🦉', name: 'owl' },
+                { emoji: '🦤', name: 'dodo' },
+                { emoji: '🦩', name: 'flamingo' },
+                { emoji: '🦚', name: 'peacock' },
+                { emoji: '🦜', name: 'parrot' },
+                { emoji: '🐸', name: 'frog' },
+                { emoji: '🐊', name: 'crocodile' },
+                { emoji: '🐢', name: 'turtle' },
+                { emoji: '🦎', name: 'lizard' },
+                { emoji: '🐍', name: 'snake' },
+                { emoji: '🐲', name: 'dragon face' },
+                { emoji: '🐉', name: 'dragon' },
+                { emoji: '🦕', name: 'sauropod' },
+                { emoji: '🦖', name: 'T-Rex' },
+                { emoji: '🐳', name: 'spouting whale' },
+                { emoji: '🐋', name: 'whale' },
+                { emoji: '🐬', name: 'dolphin' },
+                { emoji: '🦭', name: 'seal' },
+                { emoji: '🐟', name: 'fish' },
+                { emoji: '🐠', name: 'tropical fish' },
+                { emoji: '🐡', name: 'blowfish' },
+                { emoji: '🦈', name: 'shark' },
+                { emoji: '🐙', name: 'octopus' },
+                { emoji: '🐚', name: 'spiral shell' },
+                { emoji: '🐌', name: 'snail' },
+                { emoji: '🦋', name: 'butterfly' },
+                { emoji: '🐛', name: 'bug' },
+                { emoji: '🐜', name: 'ant' },
+                { emoji: '🐝', name: 'honeybee' },
+                { emoji: '🪲', name: 'beetle' },
+                { emoji: '🐞', name: 'lady beetle' },
+                { emoji: '🦗', name: 'cricket' },
+                { emoji: '🪳', name: 'cockroach' },
+                { emoji: '🕷️', name: 'spider' },
+                { emoji: '🕸️', name: 'spider web' },
+                { emoji: '🦂', name: 'scorpion' },
+                { emoji: '🦟', name: 'mosquito' },
+                { emoji: '🪰', name: 'fly' },
+                { emoji: '🪱', name: 'worm' },
+                { emoji: '🌸', name: 'cherry blossom' },
+                { emoji: '💮', name: 'white flower' },
+                { emoji: '🌹', name: 'rose' },
+                { emoji: '🥀', name: 'wilted flower' },
+                { emoji: '🌺', name: 'hibiscus' },
+                { emoji: '🌻', name: 'sunflower' },
+                { emoji: '🌼', name: 'blossom' },
+                { emoji: '🌷', name: 'tulip' },
+                { emoji: '🌱', name: 'seedling' },
+                { emoji: '🌲', name: 'evergreen tree' },
+                { emoji: '🌳', name: 'deciduous tree' },
+                { emoji: '🌴', name: 'palm tree' },
+                { emoji: '🌵', name: 'cactus' },
+                { emoji: '🌾', name: 'sheaf of rice' },
+                { emoji: '🌿', name: 'herb' },
+                { emoji: '☘️', name: 'shamrock' },
+                { emoji: '🍀', name: 'four leaf clover' },
+                { emoji: '🍁', name: 'maple leaf' },
+                { emoji: '🍂', name: 'fallen leaf' },
+                { emoji: '🍃', name: 'leaf fluttering in wind' }
+            ],
+            food: [
+                { emoji: '🍇', name: 'grapes' },
+                { emoji: '🍈', name: 'melon' },
+                { emoji: '🍉', name: 'watermelon' },
+                { emoji: '🍊', name: 'tangerine' },
+                { emoji: '🍋', name: 'lemon' },
+                { emoji: '🍌', name: 'banana' },
+                { emoji: '🍍', name: 'pineapple' },
+                { emoji: '🥭', name: 'mango' },
+                { emoji: '🍎', name: 'red apple' },
+                { emoji: '🍏', name: 'green apple' },
+                { emoji: '🍐', name: 'pear' },
+                { emoji: '🍑', name: 'peach' },
+                { emoji: '🍒', name: 'cherries' },
+                { emoji: '🍓', name: 'strawberry' },
+                { emoji: '🫐', name: 'blueberries' },
+                { emoji: '🥝', name: 'kiwi fruit' },
+                { emoji: '🍅', name: 'tomato' },
+                { emoji: '🫒', name: 'olive' },
+                { emoji: '🥥', name: 'coconut' },
+                { emoji: '🥑', name: 'avocado' },
+                { emoji: '🍆', name: 'eggplant' },
+                { emoji: '🥔', name: 'potato' },
+                { emoji: '🥕', name: 'carrot' },
+                { emoji: '🌽', name: 'ear of corn' },
+                { emoji: '🌶️', name: 'hot pepper' },
+                { emoji: '🫑', name: 'bell pepper' },
+                { emoji: '🥒', name: 'cucumber' },
+                { emoji: '🥬', name: 'leafy green' },
+                { emoji: '🥦', name: 'broccoli' },
+                { emoji: '🧄', name: 'garlic' },
+                { emoji: '🧅', name: 'onion' },
+                { emoji: '🍄', name: 'mushroom' },
+                { emoji: '🥜', name: 'peanuts' },
+                { emoji: '🌰', name: 'chestnut' },
+                { emoji: '🍞', name: 'bread' },
+                { emoji: '🥐', name: 'croissant' },
+                { emoji: '🥖', name: 'baguette bread' },
+                { emoji: '🫓', name: 'flatbread' },
+                { emoji: '🥨', name: 'pretzel' },
+                { emoji: '🥯', name: 'bagel' },
+                { emoji: '🥞', name: 'pancakes' },
+                { emoji: '🧇', name: 'waffle' },
+                { emoji: '🧀', name: 'cheese wedge' },
+                { emoji: '🍖', name: 'meat on bone' },
+                { emoji: '🍗', name: 'poultry leg' },
+                { emoji: '🥩', name: 'cut of meat' },
+                { emoji: '🥓', name: 'bacon' },
+                { emoji: '🍔', name: 'hamburger' },
+                { emoji: '🍟', name: 'french fries' },
+                { emoji: '🍕', name: 'pizza' },
+                { emoji: '🌭', name: 'hot dog' },
+                { emoji: '🥪', name: 'sandwich' },
+                { emoji: '🌮', name: 'taco' },
+                { emoji: '🌯', name: 'burrito' },
+                { emoji: '🫔', name: 'tamale' },
+                { emoji: '🥙', name: 'stuffed flatbread' },
+                { emoji: '🧆', name: 'falafel' },
+                { emoji: '🥚', name: 'egg' },
+                { emoji: '🍳', name: 'cooking' },
+                { emoji: '🥘', name: 'shallow pan of food' },
+                { emoji: '🍲', name: 'pot of food' },
+                { emoji: '🫕', name: 'fondue' },
+                { emoji: '🥣', name: 'bowl with spoon' },
+                { emoji: '🥗', name: 'green salad' },
+                { emoji: '🍿', name: 'popcorn' },
+                { emoji: '🧈', name: 'butter' },
+                { emoji: '🧂', name: 'salt' },
+                { emoji: '🥫', name: 'canned food' },
+                { emoji: '🍱', name: 'bento box' },
+                { emoji: '🍘', name: 'rice cracker' },
+                { emoji: '🍙', name: 'rice ball' },
+                { emoji: '🍚', name: 'cooked rice' },
+                { emoji: '🍛', name: 'curry rice' },
+                { emoji: '🍜', name: 'steaming bowl' },
+                { emoji: '🍝', name: 'spaghetti' },
+                { emoji: '🍠', name: 'roasted sweet potato' },
+                { emoji: '🍢', name: 'oden' },
+                { emoji: '🍣', name: 'sushi' },
+                { emoji: '🍤', name: 'fried shrimp' },
+                { emoji: '🍥', name: 'fish cake with swirl' },
+                { emoji: '🥮', name: 'moon cake' },
+                { emoji: '🍡', name: 'dango' },
+                { emoji: '🥟', name: 'dumpling' },
+                { emoji: '🥠', name: 'fortune cookie' },
+                { emoji: '🥡', name: 'takeout box' },
+                { emoji: '🦀', name: 'crab' },
+                { emoji: '🦞', name: 'lobster' },
+                { emoji: '🦐', name: 'shrimp' },
+                { emoji: '🦑', name: 'squid' },
+                { emoji: '🦪', name: 'oyster' },
+                { emoji: '🍦', name: 'soft ice cream' },
+                { emoji: '🍧', name: 'shaved ice' },
+                { emoji: '🍨', name: 'ice cream' },
+                { emoji: '🍩', name: 'doughnut' },
+                { emoji: '🍪', name: 'cookie' },
+                { emoji: '🎂', name: 'birthday cake' },
+                { emoji: '🍰', name: 'shortcake' },
+                { emoji: '🧁', name: 'cupcake' },
+                { emoji: '🥧', name: 'pie' },
+                { emoji: '🍫', name: 'chocolate bar' },
+                { emoji: '🍬', name: 'candy' },
+                { emoji: '🍭', name: 'lollipop' },
+                { emoji: '🍮', name: 'custard' },
+                { emoji: '🍯', name: 'honey pot' },
+                { emoji: '🍼', name: 'baby bottle' },
+                { emoji: '🥛', name: 'glass of milk' },
+                { emoji: '☕', name: 'hot beverage' },
+                { emoji: '🫖', name: 'teapot' },
+                { emoji: '🍵', name: 'teacup without handle' },
+                { emoji: '🍶', name: 'sake' },
+                { emoji: '🍾', name: 'bottle with popping cork' },
+                { emoji: '🍷', name: 'wine glass' },
+                { emoji: '🍸', name: 'cocktail glass' },
+                { emoji: '🍹', name: 'tropical drink' },
+                { emoji: '🍺', name: 'beer mug' },
+                { emoji: '🍻', name: 'clinking beer mugs' },
+                { emoji: '🥂', name: 'clinking glasses' },
+                { emoji: '🥃', name: 'tumbler glass' },
+                { emoji: '🥤', name: 'cup with straw' },
+                { emoji: '🧋', name: 'bubble tea' },
+                { emoji: '🧃', name: 'beverage box' },
+                { emoji: '🧉', name: 'mate' },
+                { emoji: '🧊', name: 'ice' },
+                { emoji: '🥢', name: 'chopsticks' },
+                { emoji: '🍽️', name: 'fork and knife with plate' },
+                { emoji: '🍴', name: 'fork and knife' },
+                { emoji: '🥄', name: 'spoon' }
+            ],
+            activities: [
+                { emoji: '⚽', name: 'soccer ball' },
+                { emoji: '🏀', name: 'basketball' },
+                { emoji: '🏈', name: 'american football' },
+                { emoji: '⚾', name: 'baseball' },
+                { emoji: '🥎', name: 'softball' },
+                { emoji: '🎾', name: 'tennis' },
+                { emoji: '🏐', name: 'volleyball' },
+                { emoji: '🏉', name: 'rugby football' },
+                { emoji: '🥏', name: 'flying disc' },
+                { emoji: '🎱', name: 'pool 8 ball' },
+                { emoji: '🪀', name: 'yo-yo' },
+                { emoji: '🏓', name: 'ping pong' },
+                { emoji: '🏸', name: 'badminton' },
+                { emoji: '🏒', name: 'ice hockey' },
+                { emoji: '🏑', name: 'field hockey' },
+                { emoji: '🥍', name: 'lacrosse' },
+                { emoji: '🏏', name: 'cricket game' },
+                { emoji: '🪃', name: 'boomerang' },
+                { emoji: '🥅', name: 'goal net' },
+                { emoji: '⛳', name: 'in hole' },
+                { emoji: '🪁', name: 'kite' },
+                { emoji: '🏹', name: 'bow and arrow' },
+                { emoji: '🎣', name: 'fishing pole' },
+                { emoji: '🤿', name: 'diving mask' },
+                { emoji: '🥊', name: 'boxing glove' },
+                { emoji: '🥋', name: 'martial arts uniform' },
+                { emoji: '🎽', name: 'running shirt' },
+                { emoji: '🛹', name: 'skateboard' },
+                { emoji: '🛼', name: 'roller skate' },
+                { emoji: '🛷', name: 'sled' },
+                { emoji: '⛸️', name: 'ice skate' },
+                { emoji: '🥌', name: 'curling stone' },
+                { emoji: '🎿', name: 'skis' },
+                { emoji: '⛷️', name: 'skier' },
+                { emoji: '🏂', name: 'snowboarder' },
+                { emoji: '🪂', name: 'parachute' },
+                { emoji: '🏋️', name: 'person lifting weights' },
+                { emoji: '🤼', name: 'people wrestling' },
+                { emoji: '🤸', name: 'person cartwheeling' },
+                { emoji: '⛹️', name: 'person bouncing ball' },
+                { emoji: '🤺', name: 'person fencing' },
+                { emoji: '🤾', name: 'person playing handball' },
+                { emoji: '🏌️', name: 'person golfing' },
+                { emoji: '🏇', name: 'horse racing' },
+                { emoji: '🧘', name: 'person in lotus position' },
+                { emoji: '🏄', name: 'person surfing' },
+                { emoji: '🏊', name: 'person swimming' },
+                { emoji: '🤽', name: 'person playing water polo' },
+                { emoji: '🚣', name: 'person rowing boat' },
+                { emoji: '🧗', name: 'person climbing' },
+                { emoji: '🚵', name: 'person mountain biking' },
+                { emoji: '🚴', name: 'person biking' },
+                { emoji: '🏆', name: 'trophy' },
+                { emoji: '🥇', name: 'first place medal' },
+                { emoji: '🥈', name: 'second place medal' },
+                { emoji: '🥉', name: 'third place medal' },
+                { emoji: '🏅', name: 'sports medal' },
+                { emoji: '🎖️', name: 'military medal' },
+                { emoji: '🏵️', name: 'rosette' },
+                { emoji: '🎗️', name: 'reminder ribbon' },
+                { emoji: '🎫', name: 'ticket' },
+                { emoji: '🎟️', name: 'admission tickets' },
+                { emoji: '🎪', name: 'circus tent' },
+                { emoji: '🤹', name: 'person juggling' },
+                { emoji: '🎭', name: 'performing arts' },
+                { emoji: '🩰', name: 'ballet shoes' },
+                { emoji: '🎨', name: 'artist palette' },
+                { emoji: '🎬', name: 'clapper board' },
+                { emoji: '🎤', name: 'microphone' },
+                { emoji: '🎧', name: 'headphone' },
+                { emoji: '🎼', name: 'musical score' },
+                { emoji: '🎹', name: 'musical keyboard' },
+                { emoji: '🥁', name: 'drum' },
+                { emoji: '🪘', name: 'long drum' },
+                { emoji: '🎷', name: 'saxophone' },
+                { emoji: '🎺', name: 'trumpet' },
+                { emoji: '🎸', name: 'guitar' },
+                { emoji: '🪕', name: 'banjo' },
+                { emoji: '🎻', name: 'violin' },
+                { emoji: '🎲', name: 'game die' },
+                { emoji: '♟️', name: 'chess pawn' },
+                { emoji: '🎯', name: 'direct hit' },
+                { emoji: '🎳', name: 'bowling' },
+                { emoji: '🎮', name: 'video game' },
+                { emoji: '🎰', name: 'slot machine' },
+                { emoji: '🧩', name: 'puzzle piece' }
+            ],
+            travel: [
+                { emoji: '🚗', name: 'automobile' },
+                { emoji: '🚕', name: 'taxi' },
+                { emoji: '🚙', name: 'sport utility vehicle' },
+                { emoji: '🚌', name: 'bus' },
+                { emoji: '🚎', name: 'trolleybus' },
+                { emoji: '🏎️', name: 'racing car' },
+                { emoji: '🚓', name: 'police car' },
+                { emoji: '🚑', name: 'ambulance' },
+                { emoji: '🚒', name: 'fire engine' },
+                { emoji: '🚐', name: 'minibus' },
+                { emoji: '🛻', name: 'pickup truck' },
+                { emoji: '🚚', name: 'delivery truck' },
+                { emoji: '🚛', name: 'articulated lorry' },
+                { emoji: '🚜', name: 'tractor' },
+                { emoji: '🏍️', name: 'motorcycle' },
+                { emoji: '🛵', name: 'motor scooter' },
+                { emoji: '🚲', name: 'bicycle' },
+                { emoji: '🛴', name: 'kick scooter' },
+                { emoji: '🚨', name: 'police car light' },
+                { emoji: '🚔', name: 'oncoming police car' },
+                { emoji: '🚍', name: 'oncoming bus' },
+                { emoji: '🚘', name: 'oncoming automobile' },
+                { emoji: '🚖', name: 'oncoming taxi' },
+                { emoji: '🚡', name: 'aerial tramway' },
+                { emoji: '🚠', name: 'mountain cableway' },
+                { emoji: '🚟', name: 'suspension railway' },
+                { emoji: '🚃', name: 'railway car' },
+                { emoji: '🚋', name: 'tram car' },
+                { emoji: '🚞', name: 'mountain railway' },
+                { emoji: '🚝', name: 'monorail' },
+                { emoji: '🚄', name: 'high speed train' },
+                { emoji: '🚅', name: 'bullet train' },
+                { emoji: '🚈', name: 'light rail' },
+                { emoji: '🚂', name: 'locomotive' },
+                { emoji: '🚆', name: 'train' },
+                { emoji: '🚇', name: 'metro' },
+                { emoji: '🚊', name: 'tram' },
+                { emoji: '🚉', name: 'station' },
+                { emoji: '✈️', name: 'airplane' },
+                { emoji: '🛫', name: 'airplane departure' },
+                { emoji: '🛬', name: 'airplane arrival' },
+                { emoji: '🛩️', name: 'small airplane' },
+                { emoji: '💺', name: 'seat' },
+                { emoji: '🛰️', name: 'satellite' },
+                { emoji: '🚀', name: 'rocket' },
+                { emoji: '🛸', name: 'flying saucer' },
+                { emoji: '🚁', name: 'helicopter' },
+                { emoji: '🛶', name: 'canoe' },
+                { emoji: '⛵', name: 'sailboat' },
+                { emoji: '🚤', name: 'speedboat' },
+                { emoji: '🛥️', name: 'motor boat' },
+                { emoji: '🛳️', name: 'passenger ship' },
+                { emoji: '⛴️', name: 'ferry' },
+                { emoji: '🚢', name: 'ship' },
+                { emoji: '⚓', name: 'anchor' },
+                { emoji: '🪝', name: 'hook' },
+                { emoji: '⛽', name: 'fuel pump' },
+                { emoji: '🚧', name: 'construction' },
+                { emoji: '🚦', name: 'vertical traffic light' },
+                { emoji: '🚥', name: 'horizontal traffic light' },
+                { emoji: '🚏', name: 'bus stop' },
+                { emoji: '🗺️', name: 'world map' },
+                { emoji: '🗿', name: 'moai' },
+                { emoji: '🗽', name: 'Statue of Liberty' },
+                { emoji: '🗼', name: 'Tokyo tower' },
+                { emoji: '🏰', name: 'castle' },
+                { emoji: '🏯', name: 'Japanese castle' },
+                { emoji: '🏟️', name: 'stadium' },
+                { emoji: '🎡', name: 'ferris wheel' },
+                { emoji: '🎢', name: 'roller coaster' },
+                { emoji: '🎠', name: 'carousel horse' },
+                { emoji: '⛲', name: 'fountain' },
+                { emoji: '⛱️', name: 'umbrella on ground' },
+                { emoji: '🏖️', name: 'beach with umbrella' },
+                { emoji: '🏝️', name: 'desert island' },
+                { emoji: '🏜️', name: 'desert' },
+                { emoji: '🌋', name: 'volcano' },
+                { emoji: '⛰️', name: 'mountain' },
+                { emoji: '🏔️', name: 'snow capped mountain' },
+                { emoji: '🗻', name: 'mount fuji' },
+                { emoji: '🏕️', name: 'camping' },
+                { emoji: '⛺', name: 'tent' },
+                { emoji: '🏠', name: 'house' },
+                { emoji: '🏡', name: 'house with garden' },
+                { emoji: '🏘️', name: 'houses' },
+                { emoji: '🏚️', name: 'derelict house' },
+                { emoji: '🏗️', name: 'building construction' },
+                { emoji: '🏢', name: 'office building' },
+                { emoji: '🏬', name: 'department store' },
+                { emoji: '🏣', name: 'Japanese post office' },
+                { emoji: '🏤', name: 'post office' },
+                { emoji: '🏥', name: 'hospital' },
+                { emoji: '🏦', name: 'bank' },
+                { emoji: '🏨', name: 'hotel' },
+                { emoji: '🏩', name: 'love hotel' },
+                { emoji: '🏪', name: 'convenience store' },
+                { emoji: '🏫', name: 'school' },
+                { emoji: '💒', name: 'wedding' },
+                { emoji: '🏛️', name: 'classical building' },
+                { emoji: '⛪', name: 'church' },
+                { emoji: '🕌', name: 'mosque' },
+                { emoji: '🛕', name: 'hindu temple' },
+                { emoji: '🕍', name: 'synagogue' },
+                { emoji: '⛩️', name: 'shinto shrine' },
+                { emoji: '🕋', name: 'kaaba' },
+                { emoji: '🌅', name: 'sunrise' },
+                { emoji: '🌄', name: 'sunrise over mountains' },
+                { emoji: '🌇', name: 'sunset' },
+                { emoji: '🌆', name: 'cityscape at dusk' },
+                { emoji: '🌃', name: 'night with stars' },
+                { emoji: '🌉', name: 'bridge at night' },
+                { emoji: '🌁', name: 'foggy' },
+                { emoji: '🌌', name: 'milky way' },
+                { emoji: '🌠', name: 'shooting star' },
+                { emoji: '🎆', name: 'fireworks' },
+                { emoji: '🎇', name: 'sparkler' }
+            ],
+            objects: [
+                { emoji: '⌚', name: 'watch' },
+                { emoji: '📱', name: 'mobile phone' },
+                { emoji: '📲', name: 'mobile phone with arrow' },
+                { emoji: '💻', name: 'laptop' },
+                { emoji: '⌨️', name: 'keyboard' },
+                { emoji: '🖥️', name: 'desktop computer' },
+                { emoji: '🖨️', name: 'printer' },
+                { emoji: '🖱️', name: 'computer mouse' },
+                { emoji: '🖲️', name: 'trackball' },
+                { emoji: '💽', name: 'computer disk' },
+                { emoji: '💾', name: 'floppy disk' },
+                { emoji: '💿', name: 'optical disk' },
+                { emoji: '📀', name: 'dvd' },
+                { emoji: '🧮', name: 'abacus' },
+                { emoji: '🎥', name: 'movie camera' },
+                { emoji: '🎞️', name: 'film frames' },
+                { emoji: '📽️', name: 'film projector' },
+                { emoji: '🎬', name: 'clapper board' },
+                { emoji: '📺', name: 'television' },
+                { emoji: '📷', name: 'camera' },
+                { emoji: '📸', name: 'camera with flash' },
+                { emoji: '📹', name: 'video camera' },
+                { emoji: '📼', name: 'videocassette' },
+                { emoji: '🔍', name: 'magnifying glass tilted left' },
+                { emoji: '🔎', name: 'magnifying glass tilted right' },
+                { emoji: '🕯️', name: 'candle' },
+                { emoji: '💡', name: 'light bulb' },
+                { emoji: '🔦', name: 'flashlight' },
+                { emoji: '🏮', name: 'red paper lantern' },
+                { emoji: '🪔', name: 'diya lamp' },
+                { emoji: '📔', name: 'notebook with decorative cover' },
+                { emoji: '📕', name: 'closed book' },
+                { emoji: '📖', name: 'open book' },
+                { emoji: '📗', name: 'green book' },
+                { emoji: '📘', name: 'blue book' },
+                { emoji: '📙', name: 'orange book' },
+                { emoji: '📚', name: 'books' },
+                { emoji: '📓', name: 'notebook' },
+                { emoji: '📒', name: 'ledger' },
+                { emoji: '📃', name: 'page with curl' },
+                { emoji: '📜', name: 'scroll' },
+                { emoji: '📄', name: 'page facing up' },
+                { emoji: '📰', name: 'newspaper' },
+                { emoji: '🗞️', name: 'rolled up newspaper' },
+                { emoji: '📑', name: 'bookmark tabs' },
+                { emoji: '🔖', name: 'bookmark' },
+                { emoji: '🏷️', name: 'label' },
+                { emoji: '💰', name: 'money bag' },
+                { emoji: '🪙', name: 'coin' },
+                { emoji: '💴', name: 'yen banknote' },
+                { emoji: '💵', name: 'dollar banknote' },
+                { emoji: '💶', name: 'euro banknote' },
+                { emoji: '💷', name: 'pound banknote' },
+                { emoji: '💸', name: 'money with wings' },
+                { emoji: '💳', name: 'credit card' },
+                { emoji: '🧾', name: 'receipt' },
+                { emoji: '💹', name: 'chart increasing with yen' },
+                { emoji: '✉️', name: 'envelope' },
+                { emoji: '📧', name: 'e-mail' },
+                { emoji: '📨', name: 'incoming envelope' },
+                { emoji: '📩', name: 'envelope with arrow' },
+                { emoji: '📤', name: 'outbox tray' },
+                { emoji: '📥', name: 'inbox tray' },
+                { emoji: '📦', name: 'package' },
+                { emoji: '📫', name: 'closed mailbox with raised flag' },
+                { emoji: '📪', name: 'closed mailbox with lowered flag' },
+                { emoji: '📬', name: 'open mailbox with raised flag' },
+                { emoji: '📭', name: 'open mailbox with lowered flag' },
+                { emoji: '📮', name: 'postbox' },
+                { emoji: '🗳️', name: 'ballot box with ballot' },
+                { emoji: '✏️', name: 'pencil' },
+                { emoji: '✒️', name: 'black nib' },
+                { emoji: '🖋️', name: 'fountain pen' },
+                { emoji: '🖊️', name: 'pen' },
+                { emoji: '🖌️', name: 'paintbrush' },
+                { emoji: '🖍️', name: 'crayon' },
+                { emoji: '📝', name: 'memo' },
+                { emoji: '💼', name: 'briefcase' },
+                { emoji: '📁', name: 'file folder' },
+                { emoji: '📂', name: 'open file folder' },
+                { emoji: '🗂️', name: 'card index dividers' },
+                { emoji: '📅', name: 'calendar' },
+                { emoji: '📆', name: 'tear off calendar' },
+                { emoji: '🗒️', name: 'spiral notepad' },
+                { emoji: '🗓️', name: 'spiral calendar' },
+                { emoji: '📇', name: 'card index' },
+                { emoji: '📈', name: 'chart increasing' },
+                { emoji: '📉', name: 'chart decreasing' },
+                { emoji: '📊', name: 'bar chart' },
+                { emoji: '📋', name: 'clipboard' },
+                { emoji: '📌', name: 'pushpin' },
+                { emoji: '📍', name: 'round pushpin' },
+                { emoji: '📎', name: 'paperclip' },
+                { emoji: '🖇️', name: 'linked paperclips' },
+                { emoji: '📏', name: 'straight ruler' },
+                { emoji: '📐', name: 'triangular ruler' },
+                { emoji: '✂️', name: 'scissors' },
+                { emoji: '🗃️', name: 'card file box' },
+                { emoji: '🗄️', name: 'file cabinet' },
+                { emoji: '🗑️', name: 'wastebasket' },
+                { emoji: '🔒', name: 'locked' },
+                { emoji: '🔓', name: 'unlocked' },
+                { emoji: '🔏', name: 'locked with pen' },
+                { emoji: '🔐', name: 'locked with key' },
+                { emoji: '🔑', name: 'key' },
+                { emoji: '🗝️', name: 'old key' },
+                { emoji: '🔨', name: 'hammer' },
+                { emoji: '🪓', name: 'axe' },
+                { emoji: '⛏️', name: 'pick' },
+                { emoji: '⚒️', name: 'hammer and pick' },
+                { emoji: '🛠️', name: 'hammer and wrench' },
+                { emoji: '🗡️', name: 'dagger' },
+                { emoji: '⚔️', name: 'crossed swords' },
+                { emoji: '🔫', name: 'pistol' },
+                { emoji: '🪃', name: 'boomerang' },
+                { emoji: '🛡️', name: 'shield' },
+                { emoji: '🪚', name: 'carpentry saw' },
+                { emoji: '🔧', name: 'wrench' },
+                { emoji: '🪛', name: 'screwdriver' },
+                { emoji: '🔩', name: 'nut and bolt' },
+                { emoji: '⚙️', name: 'gear' },
+                { emoji: '🗜️', name: 'clamp' },
+                { emoji: '⚖️', name: 'balance scale' },
+                { emoji: '🦯', name: 'white cane' },
+                { emoji: '🔗', name: 'link' },
+                { emoji: '⛓️', name: 'chains' },
+                { emoji: '🪝', name: 'hook' },
+                { emoji: '🧰', name: 'toolbox' },
+                { emoji: '🧲', name: 'magnet' },
+                { emoji: '🪜', name: 'ladder' },
+                { emoji: '⚗️', name: 'alembic' },
+                { emoji: '🧪', name: 'test tube' },
+                { emoji: '🧫', name: 'petri dish' },
+                { emoji: '🧬', name: 'dna' },
+                { emoji: '🔬', name: 'microscope' },
+                { emoji: '🔭', name: 'telescope' },
+                { emoji: '📡', name: 'satellite antenna' }
+            ],
+            symbols: [
+                { emoji: '❤️', name: 'red heart' },
+                { emoji: '🧡', name: 'orange heart' },
+                { emoji: '💛', name: 'yellow heart' },
+                { emoji: '💚', name: 'green heart' },
+                { emoji: '💙', name: 'blue heart' },
+                { emoji: '💜', name: 'purple heart' },
+                { emoji: '🖤', name: 'black heart' },
+                { emoji: '🤍', name: 'white heart' },
+                { emoji: '🤎', name: 'brown heart' },
+                { emoji: '💔', name: 'broken heart' },
+                { emoji: '❣️', name: 'heart exclamation' },
+                { emoji: '💕', name: 'two hearts' },
+                { emoji: '💞', name: 'revolving hearts' },
+                { emoji: '💓', name: 'beating heart' },
+                { emoji: '💗', name: 'growing heart' },
+                { emoji: '💖', name: 'sparkling heart' },
+                { emoji: '💘', name: 'heart with arrow' },
+                { emoji: '💝', name: 'heart with ribbon' },
+                { emoji: '💟', name: 'heart decoration' },
+                { emoji: '☮️', name: 'peace symbol' },
+                { emoji: '✝️', name: 'latin cross' },
+                { emoji: '☪️', name: 'star and crescent' },
+                { emoji: '🕉️', name: 'om' },
+                { emoji: '☸️', name: 'wheel of dharma' },
+                { emoji: '✡️', name: 'star of david' },
+                { emoji: '🔯', name: 'dotted six pointed star' },
+                { emoji: '🕎', name: 'menorah' },
+                { emoji: '☯️', name: 'yin yang' },
+                { emoji: '☦️', name: 'orthodox cross' },
+                { emoji: '🛐', name: 'place of worship' },
+                { emoji: '⛎', name: 'ophiuchus' },
+                { emoji: '♈', name: 'aries' },
+                { emoji: '♉', name: 'taurus' },
+                { emoji: '♊', name: 'gemini' },
+                { emoji: '♋', name: 'cancer' },
+                { emoji: '♌', name: 'leo' },
+                { emoji: '♍', name: 'virgo' },
+                { emoji: '♎', name: 'libra' },
+                { emoji: '♏', name: 'scorpio' },
+                { emoji: '♐', name: 'sagittarius' },
+                { emoji: '♑', name: 'capricorn' },
+                { emoji: '♒', name: 'aquarius' },
+                { emoji: '♓', name: 'pisces' },
+                { emoji: '🆔', name: 'ID button' },
+                { emoji: '⚛️', name: 'atom symbol' },
+                { emoji: '🉑', name: 'Japanese acceptable button' },
+                { emoji: '☢️', name: 'radioactive' },
+                { emoji: '☣️', name: 'biohazard' },
+                { emoji: '📴', name: 'mobile phone off' },
+                { emoji: '📳', name: 'vibration mode' },
+                { emoji: '🈶', name: 'Japanese not free of charge button' },
+                { emoji: '🈚', name: 'Japanese free of charge button' },
+                { emoji: '🈸', name: 'Japanese application button' },
+                { emoji: '🈺', name: 'Japanese open for business button' },
+                { emoji: '🈷️', name: 'Japanese monthly amount button' },
+                { emoji: '✴️', name: 'eight pointed star' },
+                { emoji: '🆚', name: 'VS button' },
+                { emoji: '💮', name: 'white flower' },
+                { emoji: '🉐', name: 'Japanese bargain button' },
+                { emoji: '㊙️', name: 'Japanese secret button' },
+                { emoji: '㊗️', name: 'Japanese congratulations button' },
+                { emoji: '🈴', name: 'Japanese passing grade button' },
+                { emoji: '🈵', name: 'Japanese no vacancy button' },
+                { emoji: '🈹', name: 'Japanese discount button' },
+                { emoji: '🈲', name: 'Japanese prohibited button' },
+                { emoji: '🅰️', name: 'A button blood type' },
+                { emoji: '🅱️', name: 'B button blood type' },
+                { emoji: '🆎', name: 'AB button blood type' },
+                { emoji: '🆑', name: 'CL button' },
+                { emoji: '🅾️', name: 'O button blood type' },
+                { emoji: '🆘', name: 'SOS button' },
+                { emoji: '❌', name: 'cross mark' },
+                { emoji: '⭕', name: 'hollow red' },
+                { emoji: '🛑', name: 'stop sign' },
+                { emoji: '⛔', name: 'no entry' },
+                { emoji: '📛', name: 'name badge' },
+                { emoji: '🚫', name: 'prohibited' },
+                { emoji: '💯', name: 'hundred points' },
+                { emoji: '💢', name: 'anger symbol' },
+                { emoji: '♨️', name: 'hot springs' },
+                { emoji: '🚷', name: 'no pedestrians' },
+                { emoji: '🚯', name: 'no littering' },
+                { emoji: '🚳', name: 'no bicycles' },
+                { emoji: '🚱', name: 'non potable water' },
+                { emoji: '🔞', name: 'no one under eighteen' },
+                { emoji: '📵', name: 'no mobile phones' },
+                { emoji: '🚭', name: 'no smoking' },
+                { emoji: '❗', name: 'exclamation mark' },
+                { emoji: '❕', name: 'white exclamation mark' },
+                { emoji: '❓', name: 'question mark' },
+                { emoji: '❔', name: 'white question mark' },
+                { emoji: '‼️', name: 'double exclamation mark' },
+                { emoji: '⁉️', name: 'exclamation question mark' },
+                { emoji: '🔅', name: 'dim button' },
+                { emoji: '🔆', name: 'bright button' },
+                { emoji: '〽️', name: 'part alternation mark' },
+                { emoji: '⚠️', name: 'warning' },
+                { emoji: '🚸', name: 'children crossing' },
+                { emoji: '🔱', name: 'trident emblem' },
+                { emoji: '⚜️', name: 'fleur de lis' },
+                { emoji: '🔰', name: 'Japanese symbol for beginner' },
+                { emoji: '♻️', name: 'recycling symbol' },
+                { emoji: '✅', name: 'check mark button' },
+                { emoji: '🈯', name: 'Japanese reserved button' },
+                { emoji: '💹', name: 'chart increasing with yen' },
+                { emoji: '❇️', name: 'sparkle' },
+                { emoji: '✳️', name: 'eight spoked asterisk' },
+                { emoji: '❎', name: 'cross mark button' },
+                { emoji: '🌐', name: 'globe with meridians' },
+                { emoji: '💠', name: 'diamond with a dot' },
+                { emoji: 'Ⓜ️', name: 'circled M' },
+                { emoji: '🌀', name: 'cyclone' },
+                { emoji: '💤', name: 'zzz' },
+                { emoji: '🏧', name: 'ATM sign' },
+                { emoji: '🚾', name: 'water closet' },
+                { emoji: '♿', name: 'wheelchair symbol' },
+                { emoji: '🅿️', name: 'P button' },
+                { emoji: '🛗', name: 'elevator' },
+                { emoji: '🈳', name: 'Japanese vacancy button' },
+                { emoji: '🈂️', name: 'Japanese service charge button' },
+                { emoji: '🛂', name: 'passport control' },
+                { emoji: '🛃', name: 'customs' },
+                { emoji: '🛄', name: 'baggage claim' },
+                { emoji: '🛅', name: 'left luggage' },
+                { emoji: '🚹', name: 'mens room' },
+                { emoji: '🚺', name: 'womens room' },
+                { emoji: '🚼', name: 'baby symbol' },
+                { emoji: '⚧️', name: 'transgender symbol' },
+                { emoji: '🚻', name: 'restroom' },
+                { emoji: '🚮', name: 'litter in bin sign' },
+                { emoji: '🎦', name: 'cinema' },
+                { emoji: '📶', name: 'antenna bars' },
+                { emoji: '🈁', name: 'Japanese here button' },
+                { emoji: '🔣', name: 'input symbols' },
+                { emoji: 'ℹ️', name: 'information' },
+                { emoji: '🔤', name: 'input latin letters' },
+                { emoji: '🔡', name: 'input latin lowercase' },
+                { emoji: '🔠', name: 'input latin uppercase' },
+                { emoji: '🆖', name: 'NG button' },
+                { emoji: '🆗', name: 'OK button' },
+                { emoji: '🆙', name: 'UP button' },
+                { emoji: '🆒', name: 'COOL button' },
+                { emoji: '🆕', name: 'NEW button' },
+                { emoji: '🆓', name: 'FREE button' },
+                { emoji: '0️⃣', name: 'keycap zero' },
+                { emoji: '1️⃣', name: 'keycap one' },
+                { emoji: '2️⃣', name: 'keycap two' },
+                { emoji: '3️⃣', name: 'keycap three' },
+                { emoji: '4️⃣', name: 'keycap four' },
+                { emoji: '5️⃣', name: 'keycap five' },
+                { emoji: '6️⃣', name: 'keycap six' },
+                { emoji: '7️⃣', name: 'keycap seven' },
+                { emoji: '8️⃣', name: 'keycap eight' },
+                { emoji: '9️⃣', name: 'keycap nine' },
+                { emoji: '🔟', name: 'keycap ten' },
+                { emoji: '🔢', name: 'input numbers' },
+                { emoji: '#️⃣', name: 'keycap hash' },
+                { emoji: '*️⃣', name: 'keycap asterisk' },
+                { emoji: '⏏️', name: 'eject button' },
+                { emoji: '▶️', name: 'play button' },
+                { emoji: '⏸️', name: 'pause button' },
+                { emoji: '⏯️', name: 'play or pause button' },
+                { emoji: '⏹️', name: 'stop button' },
+                { emoji: '⏺️', name: 'record button' },
+                { emoji: '⏭️', name: 'next track button' },
+                { emoji: '⏮️', name: 'last track button' },
+                { emoji: '⏩', name: 'fast forward button' },
+                { emoji: '⏪', name: 'fast reverse button' },
+                { emoji: '⏫', name: 'fast up button' },
+                { emoji: '⏬', name: 'fast down button' },
+                { emoji: '◀️', name: 'reverse button' },
+                { emoji: '🔼', name: 'upwards button' },
+                { emoji: '🔽', name: 'downwards button' },
+                { emoji: '➡️', name: 'right arrow' },
+                { emoji: '⬅️', name: 'left arrow' },
+                { emoji: '⬆️', name: 'up arrow' },
+                { emoji: '⬇️', name: 'down arrow' },
+                { emoji: '↗️', name: 'up right arrow' },
+                { emoji: '↘️', name: 'down right arrow' },
+                { emoji: '↙️', name: 'down left arrow' },
+                { emoji: '↖️', name: 'up left arrow' },
+                { emoji: '↕️', name: 'up down arrow' },
+                { emoji: '↔️', name: 'left right arrow' },
+                { emoji: '↪️', name: 'left arrow curving right' },
+                { emoji: '↩️', name: 'right arrow curving left' },
+                { emoji: '⤴️', name: 'right arrow curving up' },
+                { emoji: '⤵️', name: 'right arrow curving down' },
+                { emoji: '🔀', name: 'shuffle tracks button' },
+                { emoji: '🔁', name: 'repeat button' },
+                { emoji: '🔂', name: 'repeat single button' },
+                { emoji: '🔄', name: 'counterclockwise arrows button' },
+                { emoji: '🔃', name: 'clockwise vertical arrows' },
+                { emoji: '🎵', name: 'musical note' },
+                { emoji: '🎶', name: 'musical notes' },
+                { emoji: '➕', name: 'plus sign' },
+                { emoji: '➖', name: 'minus sign' },
+                { emoji: '➗', name: 'division sign' },
+                { emoji: '✖️', name: 'multiplication sign' },
+                { emoji: '♾️', name: 'infinity' },
+                { emoji: '💲', name: 'heavy dollar sign' },
+                { emoji: '💱', name: 'currency exchange' },
+                { emoji: '™️', name: 'trade mark' },
+                { emoji: '©️', name: 'copyright' },
+                { emoji: '®️', name: 'registered' },
+                { emoji: '〰️', name: 'wavy dash' },
+                { emoji: '➰', name: 'curly loop' },
+                { emoji: '➿', name: 'double curly loop' },
+                { emoji: '🔚', name: 'END arrow' },
+                { emoji: '🔙', name: 'BACK arrow' },
+                { emoji: '🔛', name: 'ON arrow' },
+                { emoji: '🔝', name: 'TOP arrow' },
+                { emoji: '🔜', name: 'SOON arrow' },
+                { emoji: '✔️', name: 'check mark' },
+                { emoji: '☑️', name: 'check box with check' },
+                { emoji: '🔘', name: 'radio button' },
+                { emoji: '🔴', name: 'red' },
+                { emoji: '🟠', name: 'orange' },
+                { emoji: '🟡', name: 'yellow' },
+                { emoji: '🟢', name: 'green' },
+                { emoji: '🔵', name: 'blue' },
+                { emoji: '🟣', name: 'purple' },
+                { emoji: '🟤', name: 'brown' },
+                { emoji: '⚫', name: 'black' },
+                { emoji: '⚪', name: 'white' },
+                { emoji: '🟥', name: 'red square' },
+                { emoji: '🟧', name: 'orange square' },
+                { emoji: '🟨', name: 'yellow square' },
+                { emoji: '🟩', name: 'green square' },
+                { emoji: '🟦', name: 'blue square' },
+                { emoji: '🟪', name: 'purple square' },
+                { emoji: '🟫', name: 'brown square' },
+                { emoji: '⬛', name: 'black large square' },
+                { emoji: '⬜', name: 'white large square' },
+                { emoji: '◼️', name: 'black medium square' },
+                { emoji: '◻️', name: 'white medium square' },
+                { emoji: '◾', name: 'black medium small square' },
+                { emoji: '◽', name: 'white medium small square' },
+                { emoji: '▪️', name: 'black small square' },
+                { emoji: '▫️', name: 'white small square' },
+                { emoji: '🔶', name: 'large orange diamond' },
+                { emoji: '🔷', name: 'large blue diamond' },
+                { emoji: '🔸', name: 'small orange diamond' },
+                { emoji: '🔹', name: 'small blue diamond' },
+                { emoji: '🔺', name: 'red triangle pointed up' },
+                { emoji: '🔻', name: 'red triangle pointed down' },
+                { emoji: '💎', name: 'gem stone' },
+                { emoji: '🔲', name: 'black square button' },
+                { emoji: '🔳', name: 'white square button' },
+                { emoji: '🔈', name: 'speaker low volume' },
+                { emoji: '🔉', name: 'speaker medium volume' },
+                { emoji: '🔊', name: 'speaker high volume' },
+                { emoji: '🔇', name: 'muted speaker' },
+                { emoji: '📣', name: 'megaphone' },
+                { emoji: '📢', name: 'loudspeaker' },
+                { emoji: '🔔', name: 'bell' },
+                { emoji: '🔕', name: 'bell with slash' },
+                { emoji: '🃏', name: 'joker' },
+                { emoji: '🀄', name: 'mahjong red dragon' },
+                { emoji: '♠️', name: 'spade suit' },
+                { emoji: '♣️', name: 'club suit' },
+                { emoji: '♥️', name: 'heart suit' },
+                { emoji: '♦️', name: 'diamond suit' },
+                { emoji: '🎴', name: 'flower playing cards' },
+                { emoji: '🗨️', name: 'left speech bubble' },
+                { emoji: '💬', name: 'speech balloon' },
+                { emoji: '👁️‍🗨️', name: 'eye in speech bubble' },
+                { emoji: '🗯️', name: 'right anger bubble' },
+                { emoji: '💭', name: 'thought balloon' },
+                { emoji: '🕐', name: 'one oclock' },
+                { emoji: '🕑', name: 'two oclock' },
+                { emoji: '🕒', name: 'three oclock' },
+                { emoji: '🕓', name: 'four oclock' },
+                { emoji: '🕔', name: 'five oclock' },
+                { emoji: '🕕', name: 'six oclock' },
+                { emoji: '🕖', name: 'seven oclock' },
+                { emoji: '🕗', name: 'eight oclock' },
+                { emoji: '🕘', name: 'nine oclock' },
+                { emoji: '🕙', name: 'ten oclock' },
+                { emoji: '🕚', name: 'eleven oclock' },
+                { emoji: '🕛', name: 'twelve oclock' }
+            ],
+            flags: [
+                { emoji: '🏳️', name: 'white flag' },
+                { emoji: '🏴', name: 'black flag' },
+                { emoji: '🏁', name: 'chequered flag' },
+                { emoji: '🚩', name: 'triangular flag' },
+                { emoji: '🏳️‍🌈', name: 'rainbow flag' },
+                { emoji: '🏳️‍⚧️', name: 'transgender flag' },
+                { emoji: '🏴‍☠️', name: 'pirate flag' },
+                { emoji: '🇦🇫', name: 'Afghanistan' },
+                { emoji: '🇦🇱', name: 'Albania' },
+                { emoji: '🇩🇿', name: 'Algeria' },
+                { emoji: '🇦🇷', name: 'Argentina' },
+                { emoji: '🇦🇺', name: 'Australia' },
+                { emoji: '🇦🇹', name: 'Austria' },
+                { emoji: '🇧🇪', name: 'Belgium' },
+                { emoji: '🇧🇷', name: 'Brazil' },
+                { emoji: '🇨🇦', name: 'Canada' },
+                { emoji: '🇨🇳', name: 'China' },
+                { emoji: '🇨🇴', name: 'Colombia' },
+                { emoji: '🇭🇷', name: 'Croatia' },
+                { emoji: '🇨🇺', name: 'Cuba' },
+                { emoji: '🇨🇿', name: 'Czechia' },
+                { emoji: '🇩🇰', name: 'Denmark' },
+                { emoji: '🇪🇬', name: 'Egypt' },
+                { emoji: '🇫🇮', name: 'Finland' },
+                { emoji: '🇫🇷', name: 'France' },
+                { emoji: '🇩🇪', name: 'Germany' },
+                { emoji: '🇬🇷', name: 'Greece' },
+                { emoji: '🇭🇺', name: 'Hungary' },
+                { emoji: '🇮🇸', name: 'Iceland' },
+                { emoji: '🇮🇳', name: 'India' },
+                { emoji: '🇮🇩', name: 'Indonesia' },
+                { emoji: '🇮🇪', name: 'Ireland' },
+                { emoji: '🇮🇱', name: 'Israel' },
+                { emoji: '🇮🇹', name: 'Italy' },
+                { emoji: '🇯🇵', name: 'Japan' },
+                { emoji: '🇰🇷', name: 'South Korea' },
+                { emoji: '🇲🇽', name: 'Mexico' },
+                { emoji: '🇳🇱', name: 'Netherlands' },
+                { emoji: '🇳🇿', name: 'New Zealand' },
+                { emoji: '🇳🇴', name: 'Norway' },
+                { emoji: '🇵🇰', name: 'Pakistan' },
+                { emoji: '🇵🇭', name: 'Philippines' },
+                { emoji: '🇵🇱', name: 'Poland' },
+                { emoji: '🇵🇹', name: 'Portugal' },
+                { emoji: '🇷🇴', name: 'Romania' },
+                { emoji: '🇷🇺', name: 'Russia' },
+                { emoji: '🇸🇦', name: 'Saudi Arabia' },
+                { emoji: '🇸🇬', name: 'Singapore' },
+                { emoji: '🇿🇦', name: 'South Africa' },
+                { emoji: '🇪🇸', name: 'Spain' },
+                { emoji: '🇸🇪', name: 'Sweden' },
+                { emoji: '🇨🇭', name: 'Switzerland' },
+                { emoji: '🇹🇭', name: 'Thailand' },
+                { emoji: '🇹🇷', name: 'Turkey' },
+                { emoji: '🇺🇦', name: 'Ukraine' },
+                { emoji: '🇦🇪', name: 'United Arab Emirates' },
+                { emoji: '🇬🇧', name: 'United Kingdom' },
+                { emoji: '🇺🇸', name: 'United States' },
+                { emoji: '🇻🇳', name: 'Vietnam' }
+            ]
+        };
+
+        // Emoji translations - maps English names to German and French
+        const emojiTranslations = {
+            de: {
+                // Smileys
+                'grinning face': 'Grinsen',
+                'grinning face with big eyes': 'Grinsen mit großen Augen',
+                'grinning face with smiling eyes': 'Grinsen mit lächelnden Augen',
+                'beaming face with smiling eyes': 'strahlend mit lächelnden Augen',
+                'grinning squinting face': 'Grinsen mit zusammengekniffenen Augen',
+                'grinning face with sweat': 'Grinsen mit Schweiß',
+                'rolling on the floor laughing': 'sich vor Lachen auf dem Boden wälzen',
+                'face with tears of joy': 'Freudentränen',
+                'slightly smiling face': 'leicht lächelnd',
+                'upside down face': 'umgedreht',
+                'winking face': 'Zwinkern',
+                'smiling face with smiling eyes': 'Lächeln mit lächelnden Augen',
+                'smiling face with halo': 'Lächeln mit Heiligenschein',
+                'smiling face with hearts': 'Lächeln mit Herzen',
+                'smiling face with heart eyes': 'Lächeln mit Herzaugen',
+                'star struck': 'begeistert',
+                'face blowing a kiss': 'Kusshand',
+                'kissing face': 'Kuss',
+                'kissing face with closed eyes': 'Kuss mit geschlossenen Augen',
+                'kissing face with smiling eyes': 'Kuss mit lächelnden Augen',
+                'smiling face with tear': 'Lächeln mit Träne',
+                'face savoring food': 'genießend',
+                'face with tongue': 'Zunge raus',
+                'winking face with tongue': 'Zwinkern mit Zunge',
+                'zany face': 'verrückt',
+                'squinting face with tongue': 'Augen zu mit Zunge',
+                'money mouth face': 'Geldmund',
+                'hugging face': 'Umarmung',
+                'face with hand over mouth': 'Hand vor Mund',
+                'shushing face': 'psst',
+                'thinking face': 'nachdenklich',
+                'zipper mouth face': 'Reißverschlussmund',
+                'face with raised eyebrow': 'hochgezogene Augenbraue',
+                'neutral face': 'neutral',
+                'expressionless face': 'ausdruckslos',
+                'face without mouth': 'ohne Mund',
+                'smirking face': 'Schmunzeln',
+                'unamused face': 'unbeeindruckt',
+                'face with rolling eyes': 'Augen rollend',
+                'grimacing face': 'Grimasse',
+                'lying face': 'lügend',
+                'relieved face': 'erleichtert',
+                'pensive face': 'nachdenklich',
+                'sleepy face': 'schläfrig',
+                'drooling face': 'sabbernd',
+                'sleeping face': 'schlafend',
+                'face with medical mask': 'mit Maske',
+                'face with thermometer': 'mit Thermometer',
+                'face with head bandage': 'mit Kopfverband',
+                'nauseated face': 'angewidert',
+                'face vomiting': 'übergebend',
+                'sneezing face': 'niesend',
+                'hot face': 'heiß',
+                'cold face': 'kalt',
+                'woozy face': 'benommen',
+                'dizzy face': 'schwindlig',
+                'exploding head': 'explodierender Kopf',
+                'cowboy hat face': 'Cowboy',
+                'partying face': 'feiernd',
+                'disguised face': 'verkleidet',
+                'smiling face with sunglasses': 'cool mit Sonnenbrille',
+                'nerd face': 'Streber',
+                'face with monocle': 'mit Monokel',
+                'confused face': 'verwirrt',
+                'worried face': 'besorgt',
+                'slightly frowning face': 'leicht stirnrunzelnd',
+                'face with open mouth': 'Mund offen',
+                'hushed face': 'still',
+                'astonished face': 'erstaunt',
+                'flushed face': 'errötet',
+                'pleading face': 'flehend',
+                'frowning face with open mouth': 'stirnrunzelnd mit offenem Mund',
+                'anguished face': 'gequält',
+                'fearful face': 'ängstlich',
+                'anxious face with sweat': 'ängstlich mit Schweiß',
+                'sad but relieved face': 'traurig aber erleichtert',
+                'crying face': 'weinend',
+                'loudly crying face': 'laut weinend',
+                'face screaming in fear': 'vor Angst schreiend',
+                'confounded face': 'verblüfft',
+                'persevering face': 'ausdauernd',
+                'disappointed face': 'enttäuscht',
+                'downcast face with sweat': 'niedergeschlagen mit Schweiß',
+                'weary face': 'müde',
+                'tired face': 'erschöpft',
+                'yawning face': 'gähnend',
+                'face with steam from nose': 'Dampf aus der Nase',
+                'pouting face': 'schmollend',
+                'angry face': 'wütend',
+                'face with symbols on mouth': 'fluchend',
+                'smiling face with horns': 'Lächeln mit Hörnern',
+                'angry face with horns': 'wütend mit Hörnern',
+                'skull': 'Schädel',
+                'skull and crossbones': 'Totenkopf mit gekreuzten Knochen',
+                'pile of poo': 'Kothaufen',
+                'clown face': 'Clown',
+                'ogre': 'Oger',
+                'goblin': 'Kobold',
+                'ghost': 'Geist',
+                'alien': 'Außerirdischer',
+                'alien monster': 'Außerirdisches Monster',
+                'robot': 'Roboter',
+                // People & Body
+                'waving hand': 'winkende Hand',
+                'raised back of hand': 'erhobene Handrückseite',
+                'hand with fingers splayed': 'Hand mit gespreizten Fingern',
+                'raised hand': 'erhobene Hand',
+                'vulcan salute': 'Vulkanier Gruß',
+                'OK hand': 'OK Hand',
+                'pinched fingers': 'zusammengedrückte Finger',
+                'pinching hand': 'kneifende Hand',
+                'victory hand': 'Siegeszeichen',
+                'crossed fingers': 'gekreuzte Finger',
+                'love you gesture': 'Ich liebe dich Geste',
+                'sign of the horns': 'Teufelsgruß',
+                'call me hand': 'Ruf mich an Hand',
+                'backhand index pointing left': 'nach links zeigender Zeigefinger',
+                'backhand index pointing right': 'nach rechts zeigender Zeigefinger',
+                'backhand index pointing up': 'nach oben zeigender Zeigefinger',
+                'middle finger': 'Mittelfinger',
+                'backhand index pointing down': 'nach unten zeigender Zeigefinger',
+                'index pointing up': 'nach oben zeigender Zeigefinger',
+                'thumbs up': 'Daumen hoch',
+                'thumbs down': 'Daumen runter',
+                'raised fist': 'erhobene Faust',
+                'oncoming fist': 'herankommende Faust',
+                'left facing fist': 'nach links gerichtete Faust',
+                'right facing fist': 'nach rechts gerichtete Faust',
+                'clapping hands': 'klatschende Hände',
+                'raising hands': 'erhobene Hände',
+                'open hands': 'offene Hände',
+                'palms up together': 'Handflächen nach oben zusammen',
+                'handshake': 'Händedruck',
+                'folded hands': 'gefaltete Hände',
+                'writing hand': 'schreibende Hand',
+                'flexed biceps': 'angespannter Bizeps',
+                'mechanical arm': 'mechanischer Arm',
+                'mechanical leg': 'mechanisches Bein',
+                'leg': 'Bein',
+                'foot': 'Fuß',
+                'ear': 'Ohr',
+                'ear with hearing aid': 'Ohr mit Hörgerät',
+                'nose': 'Nase',
+                'brain': 'Gehirn',
+                'eyes': 'Augen',
+                'eye': 'Auge',
+                'tongue': 'Zunge',
+                'mouth': 'Mund',
+                'baby': 'Baby',
+                'child': 'Kind',
+                'boy': 'Junge',
+                'girl': 'Mädchen',
+                'person': 'Person',
+                'person with blond hair': 'Person mit blonden Haaren',
+                'man': 'Mann',
+                'man with beard': 'Mann mit Bart',
+                'woman': 'Frau',
+                'older person': 'ältere Person',
+                'old man': 'alter Mann',
+                'old woman': 'alte Frau',
+                'police officer': 'Polizist',
+                'construction worker': 'Bauarbeiter',
+                'guard': 'Wachmann',
+                'detective': 'Detektiv',
+                'health worker': 'Gesundheitsarbeiter',
+                'cook': 'Koch',
+                'student': 'Student',
+                'teacher': 'Lehrer',
+                'technologist': 'Technologe',
+                'astronaut': 'Astronaut',
+                'baby angel': 'Baby Engel',
+                'Santa Claus': 'Weihnachtsmann',
+                'Mrs. Claus': 'Frau Weihnachtsmann',
+                'superhero': 'Superheld',
+                'supervillain': 'Superschurke',
+                'mage': 'Magier',
+                'fairy': 'Fee',
+                'vampire': 'Vampir',
+                'merperson': 'Meerjungfrau',
+                'elf': 'Elf',
+                'genie': 'Flaschengeist',
+                'zombie': 'Zombie',
+                'person getting massage': 'Person bei Massage',
+                'person getting haircut': 'Person beim Haarschnitt',
+                'person walking': 'gehende Person',
+                'person standing': 'stehende Person',
+                'person kneeling': 'kniende Person',
+                'person running': 'laufende Person',
+                'woman dancing': 'tanzende Frau',
+                'man dancing': 'tanzender Mann',
+                'people with bunny ears': 'Menschen mit Hasenohren',
+                'person in steamy room': 'Person im Dampfbad',
+                'woman and man holding hands': 'Frau und Mann Händchen haltend',
+                'men holding hands': 'Männer Händchen haltend',
+                'women holding hands': 'Frauen Händchen haltend',
+                'kiss': 'Kuss',
+                'couple with heart': 'Paar mit Herz',
+                'family': 'Familie',
+                // Animals
+                'dog face': 'Hunde',
+                'dog': 'Hund',
+                'guide dog': 'Blindenhund',
+                'service dog': 'Diensthund',
+                'poodle': 'Pudel',
+                'wolf': 'Wolf',
+                'fox': 'Fuchs',
+                'raccoon': 'Waschbär',
+                'cat face': 'Katzen',
+                'cat': 'Katze',
+                'lion': 'Löwe',
+                'tiger face': 'Tiger',
+                'tiger': 'Tiger',
+                'leopard': 'Leopard',
+                'horse face': 'Pferde',
+                'horse': 'Pferd',
+                'unicorn': 'Einhorn',
+                'zebra': 'Zebra',
+                'deer': 'Hirsch',
+                'bison': 'Bison',
+                'cow face': 'Kuh',
+                'ox': 'Ochse',
+                'water buffalo': 'Wasserbüffel',
+                'cow': 'Kuh',
+                'pig face': 'Schweine',
+                'pig': 'Schwein',
+                'boar': 'Wildschwein',
+                'pig nose': 'Schweinenase',
+                'ram': 'Widder',
+                'ewe': 'Schaf',
+                'goat': 'Ziege',
+                'camel': 'Kamel',
+                'two hump camel': 'Trampeltier',
+                'llama': 'Lama',
+                'giraffe': 'Giraffe',
+                'elephant': 'Elefant',
+                'mammoth': 'Mammut',
+                'rhinoceros': 'Nashorn',
+                'hippopotamus': 'Nilpferd',
+                'mouse face': 'Maus',
+                'mouse': 'Maus',
+                'rat': 'Ratte',
+                'hamster': 'Hamster',
+                'rabbit face': 'Hasen',
+                'rabbit': 'Hase',
+                'chipmunk': 'Streifenhörnchen',
+                'beaver': 'Biber',
+                'hedgehog': 'Igel',
+                'bat': 'Fledermaus',
+                'bear': 'Bär',
+                'polar bear': 'Eisbär',
+                'koala': 'Koala',
+                'panda': 'Panda',
+                'sloth': 'Faultier',
+                'otter': 'Otter',
+                'skunk': 'Stinktier',
+                'kangaroo': 'Känguru',
+                'badger': 'Dachs',
+                'paw prints': 'Pfotenabdrücke',
+                'turkey': 'Truthahn',
+                'chicken': 'Huhn',
+                'rooster': 'Hahn',
+                'hatching chick': 'schlüpfendes Küken',
+                'baby chick': 'Küken',
+                'front facing baby chick': 'Küken von vorne',
+                'bird': 'Vogel',
+                'penguin': 'Pinguin',
+                'dove': 'Taube',
+                'eagle': 'Adler',
+                'duck': 'Ente',
+                'swan': 'Schwan',
+                'owl': 'Eule',
+                'dodo': 'Dodo',
+                'flamingo': 'Flamingo',
+                'peacock': 'Pfau',
+                'parrot': 'Papagei',
+                'frog': 'Frosch',
+                'crocodile': 'Krokodil',
+                'turtle': 'Schildkröte',
+                'lizard': 'Eidechse',
+                'snake': 'Schlange',
+                'dragon face': 'Drachen',
+                'dragon': 'Drache',
+                'sauropod': 'Sauropode',
+                'T-Rex': 'T-Rex',
+                'spouting whale': 'spritzender Wal',
+                'whale': 'Wal',
+                'dolphin': 'Delfin',
+                'seal': 'Robbe',
+                'fish': 'Fisch',
+                'tropical fish': 'tropischer Fisch',
+                'blowfish': 'Kugelfisch',
+                'shark': 'Hai',
+                'octopus': 'Oktopus',
+                'spiral shell': 'Spiralmuschel',
+                'snail': 'Schnecke',
+                'butterfly': 'Schmetterling',
+                'bug': 'Käfer',
+                'ant': 'Ameise',
+                'honeybee': 'Honigbiene',
+                'beetle': 'Käfer',
+                'lady beetle': 'Marienkäfer',
+                'cricket': 'Grille',
+                'cockroach': 'Kakerlake',
+                'spider': 'Spinne',
+                'spider web': 'Spinnennetz',
+                'scorpion': 'Skorpion',
+                'mosquito': 'Mücke',
+                'fly': 'Fliege',
+                'worm': 'Wurm',
+                'cherry blossom': 'Kirschblüte',
+                'white flower': 'weiße Blume',
+                'rose': 'Rose',
+                'wilted flower': 'verwelkte Blume',
+                'hibiscus': 'Hibiskus',
+                'sunflower': 'Sonnenblume',
+                'blossom': 'Blüte',
+                'tulip': 'Tulpe',
+                'seedling': 'Setzling',
+                'evergreen tree': 'Nadelbaum',
+                'deciduous tree': 'Laubbaum',
+                'palm tree': 'Palme',
+                'cactus': 'Kaktus',
+                'sheaf of rice': 'Reisbündel',
+                'herb': 'Kräuter',
+                'shamrock': 'Kleeblatt',
+                'four leaf clover': 'vierblättriges Kleeblatt',
+                'maple leaf': 'Ahornblatt',
+                'fallen leaf': 'gefallenes Blatt',
+                'leaf fluttering in wind': 'im Wind flatterndes Blatt',
+                // Food
+                'grapes': 'Trauben',
+                'melon': 'Melone',
+                'watermelon': 'Wassermelone',
+                'tangerine': 'Mandarine',
+                'lemon': 'Zitrone',
+                'banana': 'Banane',
+                'pineapple': 'Ananas',
+                'mango': 'Mango',
+                'red apple': 'roter Apfel',
+                'green apple': 'grüner Apfel',
+                'pear': 'Birne',
+                'peach': 'Pfirsich',
+                'cherries': 'Kirschen',
+                'strawberry': 'Erdbeere',
+                'blueberries': 'Blaubeeren',
+                'kiwi fruit': 'Kiwi',
+                'tomato': 'Tomate',
+                'olive': 'Olive',
+                'coconut': 'Kokosnuss',
+                'avocado': 'Avocado',
+                'eggplant': 'Aubergine',
+                'potato': 'Kartoffel',
+                'carrot': 'Karotte',
+                'ear of corn': 'Maiskolben',
+                'hot pepper': 'scharfe Paprika',
+                'bell pepper': 'Paprika',
+                'cucumber': 'Gurke',
+                'leafy green': 'Blattgemüse',
+                'broccoli': 'Brokkoli',
+                'garlic': 'Knoblauch',
+                'onion': 'Zwiebel',
+                'mushroom': 'Pilz',
+                'peanuts': 'Erdnüsse',
+                'chestnut': 'Kastanie',
+                'bread': 'Brot',
+                'croissant': 'Croissant',
+                'baguette bread': 'Baguette',
+                'flatbread': 'Fladenbrot',
+                'pretzel': 'Brezel',
+                'bagel': 'Bagel',
+                'pancakes': 'Pfannkuchen',
+                'waffle': 'Waffel',
+                'cheese wedge': 'Käse',
+                'meat on bone': 'Fleisch am Knochen',
+                'poultry leg': 'Hähnchenschenkel',
+                'cut of meat': 'Fleischstück',
+                'bacon': 'Speck',
+                'hamburger': 'Hamburger',
+                'french fries': 'Pommes',
+                'pizza': 'Pizza',
+                'hot dog': 'Hot Dog',
+                'sandwich': 'Sandwich',
+                'taco': 'Taco',
+                'burrito': 'Burrito',
+                'tamale': 'Tamale',
+                'stuffed flatbread': 'gefülltes Fladenbrot',
+                'falafel': 'Falafel',
+                'egg': 'Ei',
+                'cooking': 'Kochen',
+                'shallow pan of food': 'Bratpfanne mit Essen',
+                'pot of food': 'Kochtopf',
+                'fondue': 'Fondue',
+                'bowl with spoon': 'Schüssel mit Löffel',
+                'green salad': 'grüner Salat',
+                'popcorn': 'Popcorn',
+                'butter': 'Butter',
+                'salt': 'Salz',
+                'canned food': 'Konservendose',
+                'bento box': 'Bento Box',
+                'rice cracker': 'Reiscracker',
+                'rice ball': 'Reisbällchen',
+                'cooked rice': 'gekochter Reis',
+                'curry rice': 'Curry Reis',
+                'steaming bowl': 'dampfende Schüssel',
+                'spaghetti': 'Spaghetti',
+                'roasted sweet potato': 'geröstete Süßkartoffel',
+                'oden': 'Oden',
+                'sushi': 'Sushi',
+                'fried shrimp': 'gebratene Garnele',
+                'fish cake with swirl': 'Fischkuchen',
+                'moon cake': 'Mondkuchen',
+                'dango': 'Dango',
+                'dumpling': 'Knödel',
+                'fortune cookie': 'Glückskeks',
+                'takeout box': 'Mitnahmebox',
+                'crab': 'Krabbe',
+                'lobster': 'Hummer',
+                'shrimp': 'Garnele',
+                'squid': 'Tintenfisch',
+                'oyster': 'Auster',
+                'soft ice cream': 'Softeis',
+                'shaved ice': 'Crushed Ice',
+                'ice cream': 'Eiscreme',
+                'doughnut': 'Donut',
+                'cookie': 'Keks',
+                'birthday cake': 'Geburtstagstorte',
+                'shortcake': 'Sahnetorte',
+                'cupcake': 'Cupcake',
+                'pie': 'Kuchen',
+                'chocolate bar': 'Schokoladenriegel',
+                'candy': 'Bonbon',
+                'lollipop': 'Lutscher',
+                'custard': 'Pudding',
+                'honey pot': 'Honigtopf',
+                'baby bottle': 'Babyflasche',
+                'glass of milk': 'Glas Milch',
+                'hot beverage': 'heißes Getränk',
+                'teapot': 'Teekanne',
+                'teacup without handle': 'Teetasse ohne Henkel',
+                'sake': 'Sake',
+                'bottle with popping cork': 'Flasche mit knallendem Korken',
+                'wine glass': 'Weinglas',
+                'cocktail glass': 'Cocktailglas',
+                'tropical drink': 'tropischer Drink',
+                'beer mug': 'Bierkrug',
+                'clinking beer mugs': 'anstoßende Bierkrüge',
+                'clinking glasses': 'anstoßende Gläser',
+                'tumbler glass': 'Whiskyglas',
+                'cup with straw': 'Becher mit Strohhalm',
+                'bubble tea': 'Bubble Tea',
+                'beverage box': 'Getränkekarton',
+                'mate': 'Mate',
+                'ice': 'Eis',
+                'chopsticks': 'Stäbchen',
+                'fork and knife with plate': 'Gabel und Messer mit Teller',
+                'fork and knife': 'Gabel und Messer',
+                'spoon': 'Löffel',
+                // Activities
+                'soccer ball': 'Fußball',
+                'basketball': 'Basketball',
+                'american football': 'American Football',
+                'baseball': 'Baseball',
+                'softball': 'Softball',
+                'tennis': 'Tennis',
+                'volleyball': 'Volleyball',
+                'rugby football': 'Rugby',
+                'flying disc': 'Frisbee',
+                'pool 8 ball': 'Billardkugel',
+                'yo-yo': 'Jo-Jo',
+                'ping pong': 'Tischtennis',
+                'badminton': 'Badminton',
+                'ice hockey': 'Eishockey',
+                'field hockey': 'Feldhockey',
+                'lacrosse': 'Lacrosse',
+                'cricket game': 'Cricket',
+                'boomerang': 'Bumerang',
+                'goal net': 'Tornetz',
+                'in hole': 'Fahne im Loch',
+                'kite': 'Drachen',
+                'bow and arrow': 'Pfeil und Bogen',
+                'fishing pole': 'Angelrute',
+                'diving mask': 'Tauchermaske',
+                'boxing glove': 'Boxhandschuh',
+                'martial arts uniform': 'Kampfsportuniform',
+                'running shirt': 'Laufshirt',
+                'skateboard': 'Skateboard',
+                'roller skate': 'Rollschuh',
+                'sled': 'Schlitten',
+                'ice skate': 'Schlittschuh',
+                'curling stone': 'Curlingstein',
+                'skis': 'Skier',
+                'skier': 'Skifahrer',
+                'snowboarder': 'Snowboarder',
+                'parachute': 'Fallschirm',
+                'person lifting weights': 'Person beim Gewichtheben',
+                'people wrestling': 'Ringer',
+                'person cartwheeling': 'Person beim Radschlagen',
+                'person bouncing ball': 'Person beim Ballspielen',
+                'person fencing': 'Person beim Fechten',
+                'person playing handball': 'Person beim Handball',
+                'person golfing': 'Person beim Golfen',
+                'horse racing': 'Pferderennen',
+                'person in lotus position': 'Person im Lotussitz',
+                'person surfing': 'Person beim Surfen',
+                'person swimming': 'Person beim Schwimmen',
+                'person playing water polo': 'Person beim Wasserball',
+                'person rowing boat': 'Person beim Rudern',
+                'person climbing': 'Person beim Klettern',
+                'person mountain biking': 'Person beim Mountainbiken',
+                'person biking': 'Person beim Radfahren',
+                'trophy': 'Pokal',
+                'first place medal': 'Goldmedaille',
+                'second place medal': 'Silbermedaille',
+                'third place medal': 'Bronzemedaille',
+                'sports medal': 'Sportmedaille',
+                'military medal': 'Militärmedaille',
+                'rosette': 'Rosette',
+                'reminder ribbon': 'Erinnerungsschleife',
+                'ticket': 'Ticket',
+                'admission tickets': 'Eintrittskarten',
+                'circus tent': 'Zirkuszelt',
+                'person juggling': 'Person beim Jonglieren',
+                'performing arts': 'darstellende Künste',
+                'ballet shoes': 'Ballettschuhe',
+                'artist palette': 'Künstlerpalette',
+                'clapper board': 'Filmklappe',
+                'microphone': 'Mikrofon',
+                'headphone': 'Kopfhörer',
+                'musical score': 'Notenheft',
+                'musical keyboard': 'Keyboard',
+                'drum': 'Trommel',
+                'long drum': 'lange Trommel',
+                'saxophone': 'Saxophon',
+                'trumpet': 'Trompete',
+                'guitar': 'Gitarre',
+                'banjo': 'Banjo',
+                'violin': 'Geige',
+                'game die': 'Spielwürfel',
+                'chess pawn': 'Schachbauer',
+                'direct hit': 'Volltreffer',
+                'bowling': 'Bowling',
+                'video game': 'Videospiel',
+                'slot machine': 'Spielautomat',
+                'puzzle piece': 'Puzzleteil',
+                // Travel
+                'automobile': 'Auto',
+                'taxi': 'Taxi',
+                'sport utility vehicle': 'Geländewagen',
+                'bus': 'Bus',
+                'trolleybus': 'Oberleitungsbus',
+                'racing car': 'Rennwagen',
+                'police car': 'Polizeiauto',
+                'ambulance': 'Krankenwagen',
+                'fire engine': 'Feuerwehrauto',
+                'minibus': 'Kleinbus',
+                'pickup truck': 'Pickup',
+                'delivery truck': 'Lieferwagen',
+                'articulated lorry': 'Sattelschlepper',
+                'tractor': 'Traktor',
+                'motorcycle': 'Motorrad',
+                'motor scooter': 'Motorroller',
+                'bicycle': 'Fahrrad',
+                'kick scooter': 'Tretroller',
+                'police car light': 'Polizeilicht',
+                'oncoming police car': 'entgegenkommendes Polizeiauto',
+                'oncoming bus': 'entgegenkommender Bus',
+                'oncoming automobile': 'entgegenkommendes Auto',
+                'oncoming taxi': 'entgegenkommendes Taxi',
+                'aerial tramway': 'Seilbahn',
+                'mountain cableway': 'Bergbahn',
+                'suspension railway': 'Schwebebahn',
+                'railway car': 'Eisenbahnwagen',
+                'tram car': 'Straßenbahn',
+                'mountain railway': 'Bergbahn',
+                'monorail': 'Einschienenbahn',
+                'high speed train': 'Hochgeschwindigkeitszug',
+                'bullet train': 'Schnellzug',
+                'light rail': 'Stadtbahn',
+                'locomotive': 'Lokomotive',
+                'train': 'Zug',
+                'metro': 'U-Bahn',
+                'tram': 'Straßenbahn',
+                'station': 'Bahnhof',
+                'airplane': 'Flugzeug',
+                'airplane departure': 'Abflug',
+                'airplane arrival': 'Ankunft',
+                'small airplane': 'kleines Flugzeug',
+                'seat': 'Sitz',
+                'satellite': 'Satellit',
+                'rocket': 'Rakete',
+                'flying saucer': 'fliegende Untertasse',
+                'helicopter': 'Hubschrauber',
+                'canoe': 'Kanu',
+                'sailboat': 'Segelboot',
+                'speedboat': 'Schnellboot',
+                'motor boat': 'Motorboot',
+                'passenger ship': 'Passagierschiff',
+                'ferry': 'Fähre',
+                'ship': 'Schiff',
+                'anchor': 'Anker',
+                'hook': 'Haken',
+                'fuel pump': 'Zapfsäule',
+                'construction': 'Baustelle',
+                'vertical traffic light': 'vertikale Ampel',
+                'horizontal traffic light': 'horizontale Ampel',
+                'bus stop': 'Bushaltestelle',
+                'world map': 'Weltkarte',
+                'moai': 'Moai',
+                'Statue of Liberty': 'Freiheitsstatue',
+                'Tokyo tower': 'Tokyo Tower',
+                'castle': 'Schloss',
+                'Japanese castle': 'japanisches Schloss',
+                'stadium': 'Stadion',
+                'ferris wheel': 'Riesenrad',
+                'roller coaster': 'Achterbahn',
+                'carousel horse': 'Karussellpferd',
+                'fountain': 'Brunnen',
+                'umbrella on ground': 'Sonnenschirm',
+                'beach with umbrella': 'Strand mit Sonnenschirm',
+                'desert island': 'einsame Insel',
+                'desert': 'Wüste',
+                'volcano': 'Vulkan',
+                'mountain': 'Berg',
+                'snow capped mountain': 'schneebedeckter Berg',
+                'mount fuji': 'Berg Fuji',
+                'camping': 'Camping',
+                'tent': 'Zelt',
+                'house': 'Haus',
+                'house with garden': 'Haus mit Garten',
+                'houses': 'Häuser',
+                'derelict house': 'verfallenes Haus',
+                'building construction': 'Gebäudebau',
+                'office building': 'Bürogebäude',
+                'department store': 'Kaufhaus',
+                'Japanese post office': 'japanische Post',
+                'post office': 'Postamt',
+                'hospital': 'Krankenhaus',
+                'bank': 'Bank',
+                'hotel': 'Hotel',
+                'love hotel': 'Stundenhotel',
+                'convenience store': 'Supermarkt',
+                'school': 'Schule',
+                'wedding': 'Hochzeit',
+                'classical building': 'klassisches Gebäude',
+                'church': 'Kirche',
+                'mosque': 'Moschee',
+                'hindu temple': 'Hindu Tempel',
+                'synagogue': 'Synagoge',
+                'shinto shrine': 'Shinto Schrein',
+                'kaaba': 'Kaaba',
+                'sunrise': 'Sonnenaufgang',
+                'sunrise over mountains': 'Sonnenaufgang über Bergen',
+                'sunset': 'Sonnenuntergang',
+                'cityscape at dusk': 'Stadtbild in der Dämmerung',
+                'night with stars': 'Nacht mit Sternen',
+                'bridge at night': 'Brücke bei Nacht',
+                'foggy': 'neblig',
+                'milky way': 'Milchstraße',
+                'shooting star': 'Sternschnuppe',
+                'fireworks': 'Feuerwerk',
+                'sparkler': 'Wunderkerze',
+                // Objects
+                'watch': 'Uhr',
+                'mobile phone': 'Handy',
+                'mobile phone with arrow': 'Handy mit Pfeil',
+                'laptop': 'Laptop',
+                'keyboard': 'Tastatur',
+                'desktop computer': 'Desktop Computer',
+                'printer': 'Drucker',
+                'computer mouse': 'Computermaus',
+                'trackball': 'Trackball',
+                'computer disk': 'Computerfestplatte',
+                'floppy disk': 'Diskette',
+                'optical disk': 'CD',
+                'dvd': 'DVD',
+                'abacus': 'Abakus',
+                'movie camera': 'Filmkamera',
+                'film frames': 'Filmstreifen',
+                'film projector': 'Filmprojektor',
+                'television': 'Fernseher',
+                'camera': 'Kamera',
+                'camera with flash': 'Kamera mit Blitz',
+                'video camera': 'Videokamera',
+                'videocassette': 'Videokassette',
+                'magnifying glass tilted left': 'Lupe nach links geneigt',
+                'magnifying glass tilted right': 'Lupe nach rechts geneigt',
+                'candle': 'Kerze',
+                'light bulb': 'Glühbirne',
+                'flashlight': 'Taschenlampe',
+                'red paper lantern': 'rote Papierlaterne',
+                'diya lamp': 'Öllampe',
+                'notebook with decorative cover': 'Notizbuch mit dekorativem Einband',
+                'closed book': 'geschlossenes Buch',
+                'open book': 'offenes Buch',
+                'green book': 'grünes Buch',
+                'blue book': 'blaues Buch',
+                'orange book': 'oranges Buch',
+                'books': 'Bücher',
+                'notebook': 'Notizbuch',
+                'ledger': 'Kassenbuch',
+                'page with curl': 'Seite mit Eselsecke',
+                'scroll': 'Schriftrolle',
+                'page facing up': 'Seite nach oben',
+                'newspaper': 'Zeitung',
+                'rolled up newspaper': 'aufgerollte Zeitung',
+                'bookmark tabs': 'Lesezeichen',
+                'bookmark': 'Lesezeichen',
+                'label': 'Etikett',
+                'money bag': 'Geldsack',
+                'coin': 'Münze',
+                'yen banknote': 'Yen Schein',
+                'dollar banknote': 'Dollar Schein',
+                'euro banknote': 'Euro Schein',
+                'pound banknote': 'Pfund Schein',
+                'money with wings': 'Geld mit Flügeln',
+                'credit card': 'Kreditkarte',
+                'receipt': 'Quittung',
+                'chart increasing with yen': 'steigendes Diagramm mit Yen',
+                'envelope': 'Briefumschlag',
+                'e-mail': 'E-Mail',
+                'incoming envelope': 'eingehender Umschlag',
+                'envelope with arrow': 'Umschlag mit Pfeil',
+                'outbox tray': 'Postausgang',
+                'inbox tray': 'Posteingang',
+                'package': 'Paket',
+                'closed mailbox with raised flag': 'geschlossener Briefkasten mit Fahne',
+                'closed mailbox with lowered flag': 'geschlossener Briefkasten',
+                'open mailbox with raised flag': 'offener Briefkasten mit Fahne',
+                'open mailbox with lowered flag': 'offener Briefkasten',
+                'postbox': 'Briefkasten',
+                'ballot box with ballot': 'Wahlurne',
+                'pencil': 'Bleistift',
+                'black nib': 'schwarze Feder',
+                'fountain pen': 'Füllfederhalter',
+                'pen': 'Kugelschreiber',
+                'paintbrush': 'Pinsel',
+                'crayon': 'Buntstift',
+                'memo': 'Notiz',
+                'briefcase': 'Aktentasche',
+                'file folder': 'Ordner',
+                'open file folder': 'offener Ordner',
+                'card index dividers': 'Karteikarten Trenner',
+                'calendar': 'Kalender',
+                'tear off calendar': 'Abreißkalender',
+                'spiral notepad': 'Spiralblock',
+                'spiral calendar': 'Spiralkalender',
+                'card index': 'Kartei',
+                'chart increasing': 'steigendes Diagramm',
+                'chart decreasing': 'fallendes Diagramm',
+                'bar chart': 'Balkendiagramm',
+                'clipboard': 'Klemmbrett',
+                'pushpin': 'Pinnnadel',
+                'round pushpin': 'runde Pinnnadel',
+                'paperclip': 'Büroklammer',
+                'linked paperclips': 'verbundene Büroklammern',
+                'straight ruler': 'Lineal',
+                'triangular ruler': 'Geodreieck',
+                'scissors': 'Schere',
+                'card file box': 'Karteikasten',
+                'file cabinet': 'Aktenschrank',
+                'wastebasket': 'Papierkorb',
+                'locked': 'gesperrt',
+                'unlocked': 'entsperrt',
+                'locked with pen': 'gesperrt mit Stift',
+                'locked with key': 'gesperrt mit Schlüssel',
+                'key': 'Schlüssel',
+                'old key': 'alter Schlüssel',
+                'hammer': 'Hammer',
+                'axe': 'Axt',
+                'pick': 'Spitzhacke',
+                'hammer and pick': 'Hammer und Spitzhacke',
+                'hammer and wrench': 'Hammer und Schraubenschlüssel',
+                'dagger': 'Dolch',
+                'crossed swords': 'gekreuzte Schwerter',
+                'pistol': 'Pistole',
+                'shield': 'Schild',
+                'carpentry saw': 'Säge',
+                'wrench': 'Schraubenschlüssel',
+                'screwdriver': 'Schraubenzieher',
+                'nut and bolt': 'Mutter und Schraube',
+                'gear': 'Zahnrad',
+                'clamp': 'Klemme',
+                'balance scale': 'Waage',
+                'white cane': 'Blindenstock',
+                'link': 'Link',
+                'chains': 'Ketten',
+                'toolbox': 'Werkzeugkasten',
+                'magnet': 'Magnet',
+                'ladder': 'Leiter',
+                'alembic': 'Destillierkolben',
+                'test tube': 'Reagenzglas',
+                'petri dish': 'Petrischale',
+                'dna': 'DNA',
+                'microscope': 'Mikroskop',
+                'telescope': 'Teleskop',
+                'satellite antenna': 'Satellitenschüssel',
+                // Symbols
+                'red heart': 'rotes Herz',
+                'orange heart': 'oranges Herz',
+                'yellow heart': 'gelbes Herz',
+                'green heart': 'grünes Herz',
+                'blue heart': 'blaues Herz',
+                'purple heart': 'lila Herz',
+                'black heart': 'schwarzes Herz',
+                'white heart': 'weißes Herz',
+                'brown heart': 'braunes Herz',
+                'broken heart': 'gebrochenes Herz',
+                'heart exclamation': 'Herz Ausrufezeichen',
+                'two hearts': 'zwei Herzen',
+                'revolving hearts': 'kreisende Herzen',
+                'beating heart': 'schlagendes Herz',
+                'growing heart': 'wachsendes Herz',
+                'sparkling heart': 'funkelndes Herz',
+                'heart with arrow': 'Herz mit Pfeil',
+                'heart with ribbon': 'Herz mit Schleife',
+                'heart decoration': 'Herz Dekoration',
+                'peace symbol': 'Friedenssymbol',
+                'latin cross': 'lateinisches Kreuz',
+                'star and crescent': 'Stern und Halbmond',
+                'om': 'Om',
+                'wheel of dharma': 'Rad des Dharma',
+                'star of david': 'Davidstern',
+                'dotted six pointed star': 'gepunkteter sechszackiger Stern',
+                'menorah': 'Menora',
+                'yin yang': 'Yin Yang',
+                'orthodox cross': 'orthodoxes Kreuz',
+                'place of worship': 'Gebetsstätte',
+                'check mark': 'Häkchen',
+                'cross mark': 'Kreuz',
+                'question mark': 'Fragezeichen',
+                'exclamation mark': 'Ausrufezeichen',
+                'warning': 'Warnung',
+                'musical note': 'Musiknote',
+                'musical notes': 'Musiknoten',
+                'plus sign': 'Pluszeichen',
+                'minus sign': 'Minuszeichen',
+                'infinity': 'Unendlichkeit',
+                // Flags
+                'white flag': 'weiße Flagge',
+                'black flag': 'schwarze Flagge',
+                'chequered flag': 'Zielflagge',
+                'triangular flag': 'dreieckige Flagge',
+                'rainbow flag': 'Regenbogenflagge',
+                'transgender flag': 'Transgender Flagge',
+                'pirate flag': 'Piratenflagge',
+                'Afghanistan': 'Afghanistan',
+                'Albania': 'Albanien',
+                'Algeria': 'Algerien',
+                'Argentina': 'Argentinien',
+                'Australia': 'Australien',
+                'Austria': 'Österreich',
+                'Belgium': 'Belgien',
+                'Brazil': 'Brasilien',
+                'Canada': 'Kanada',
+                'China': 'China',
+                'Colombia': 'Kolumbien',
+                'Croatia': 'Kroatien',
+                'Cuba': 'Kuba',
+                'Czechia': 'Tschechien',
+                'Denmark': 'Dänemark',
+                'Egypt': 'Ägypten',
+                'Finland': 'Finnland',
+                'France': 'Frankreich',
+                'Germany': 'Deutschland',
+                'Greece': 'Griechenland',
+                'Hungary': 'Ungarn',
+                'Iceland': 'Island',
+                'India': 'Indien',
+                'Indonesia': 'Indonesien',
+                'Ireland': 'Irland',
+                'Israel': 'Israel',
+                'Italy': 'Italien',
+                'Japan': 'Japan',
+                'South Korea': 'Südkorea',
+                'Mexico': 'Mexiko',
+                'Netherlands': 'Niederlande',
+                'New Zealand': 'Neuseeland',
+                'Norway': 'Norwegen',
+                'Pakistan': 'Pakistan',
+                'Philippines': 'Philippinen',
+                'Poland': 'Polen',
+                'Portugal': 'Portugal',
+                'Romania': 'Rumänien',
+                'Russia': 'Russland',
+                'Saudi Arabia': 'Saudi-Arabien',
+                'Singapore': 'Singapur',
+                'South Africa': 'Südafrika',
+                'Spain': 'Spanien',
+                'Sweden': 'Schweden',
+                'Switzerland': 'Schweiz',
+                'Thailand': 'Thailand',
+                'Turkey': 'Türkei',
+                'Ukraine': 'Ukraine',
+                'United Arab Emirates': 'Vereinigte Arabische Emirate',
+                'United Kingdom': 'Vereinigtes Königreich',
+                'United States': 'Vereinigte Staaten',
+                'Vietnam': 'Vietnam'
+            },
+            fr: {
+                // Smileys
+                'grinning face': 'visage souriant',
+                'grinning face with big eyes': 'visage souriant avec grands yeux',
+                'grinning face with smiling eyes': 'visage souriant avec yeux souriants',
+                'beaming face with smiling eyes': 'visage rayonnant avec yeux souriants',
+                'grinning squinting face': 'visage souriant aux yeux plissés',
+                'grinning face with sweat': 'visage souriant avec sueur',
+                'rolling on the floor laughing': 'se rouler par terre de rire',
+                'face with tears of joy': 'visage avec larmes de joie',
+                'slightly smiling face': 'visage légèrement souriant',
+                'upside down face': 'visage à l\'envers',
+                'winking face': 'visage qui fait un clin d\'oeil',
+                'smiling face with smiling eyes': 'visage souriant avec yeux souriants',
+                'smiling face with halo': 'visage souriant avec auréole',
+                'smiling face with hearts': 'visage souriant avec coeurs',
+                'smiling face with heart eyes': 'visage souriant avec yeux en coeur',
+                'star struck': 'ébloui',
+                'face blowing a kiss': 'visage envoyant un baiser',
+                'kissing face': 'visage qui embrasse',
+                'kissing face with closed eyes': 'visage qui embrasse avec yeux fermés',
+                'kissing face with smiling eyes': 'visage qui embrasse avec yeux souriants',
+                'smiling face with tear': 'visage souriant avec larme',
+                'face savoring food': 'visage savourant de la nourriture',
+                'face with tongue': 'visage avec langue',
+                'winking face with tongue': 'visage clin d\'oeil avec langue',
+                'zany face': 'visage farfelu',
+                'squinting face with tongue': 'visage plissé avec langue',
+                'money mouth face': 'visage bouche d\'argent',
+                'hugging face': 'visage qui fait un câlin',
+                'face with hand over mouth': 'visage avec main sur la bouche',
+                'shushing face': 'visage faisant chut',
+                'thinking face': 'visage pensif',
+                'zipper mouth face': 'visage bouche zippée',
+                'face with raised eyebrow': 'visage avec sourcil levé',
+                'neutral face': 'visage neutre',
+                'expressionless face': 'visage inexpressif',
+                'face without mouth': 'visage sans bouche',
+                'smirking face': 'visage narquois',
+                'unamused face': 'visage pas amusé',
+                'face with rolling eyes': 'visage aux yeux levés au ciel',
+                'grimacing face': 'visage grimaçant',
+                'lying face': 'visage menteur',
+                'relieved face': 'visage soulagé',
+                'pensive face': 'visage pensif',
+                'sleepy face': 'visage endormi',
+                'drooling face': 'visage qui bave',
+                'sleeping face': 'visage qui dort',
+                'face with medical mask': 'visage avec masque médical',
+                'face with thermometer': 'visage avec thermomètre',
+                'face with head bandage': 'visage avec bandage',
+                'nauseated face': 'visage nauséeux',
+                'face vomiting': 'visage qui vomit',
+                'sneezing face': 'visage qui éternue',
+                'hot face': 'visage chaud',
+                'cold face': 'visage froid',
+                'woozy face': 'visage étourdi',
+                'dizzy face': 'visage qui a le vertige',
+                'exploding head': 'tête qui explose',
+                'cowboy hat face': 'visage de cowboy',
+                'partying face': 'visage qui fait la fête',
+                'disguised face': 'visage déguisé',
+                'smiling face with sunglasses': 'visage souriant avec lunettes de soleil',
+                'nerd face': 'visage de geek',
+                'face with monocle': 'visage avec monocle',
+                'confused face': 'visage confus',
+                'worried face': 'visage inquiet',
+                'slightly frowning face': 'visage légèrement renfrogné',
+                'face with open mouth': 'visage bouche ouverte',
+                'hushed face': 'visage stupéfait',
+                'astonished face': 'visage étonné',
+                'flushed face': 'visage rougissant',
+                'pleading face': 'visage suppliant',
+                'frowning face with open mouth': 'visage renfrogné bouche ouverte',
+                'anguished face': 'visage angoissé',
+                'fearful face': 'visage effrayé',
+                'anxious face with sweat': 'visage anxieux avec sueur',
+                'sad but relieved face': 'visage triste mais soulagé',
+                'crying face': 'visage qui pleure',
+                'loudly crying face': 'visage qui pleure fort',
+                'face screaming in fear': 'visage criant de peur',
+                'confounded face': 'visage confondu',
+                'persevering face': 'visage persévérant',
+                'disappointed face': 'visage déçu',
+                'downcast face with sweat': 'visage abattu avec sueur',
+                'weary face': 'visage fatigué',
+                'tired face': 'visage épuisé',
+                'yawning face': 'visage qui bâille',
+                'face with steam from nose': 'visage avec vapeur du nez',
+                'pouting face': 'visage boudeur',
+                'angry face': 'visage en colère',
+                'face with symbols on mouth': 'visage avec symboles sur la bouche',
+                'smiling face with horns': 'visage souriant avec cornes',
+                'angry face with horns': 'visage en colère avec cornes',
+                'skull': 'crâne',
+                'skull and crossbones': 'crâne et os croisés',
+                'pile of poo': 'tas de caca',
+                'clown face': 'visage de clown',
+                'ogre': 'ogre',
+                'goblin': 'gobelin',
+                'ghost': 'fantôme',
+                'alien': 'extraterrestre',
+                'alien monster': 'monstre extraterrestre',
+                'robot': 'robot',
+                // People & Body
+                'waving hand': 'main qui fait coucou',
+                'raised back of hand': 'dos de main levé',
+                'hand with fingers splayed': 'main avec doigts écartés',
+                'raised hand': 'main levée',
+                'vulcan salute': 'salut vulcain',
+                'OK hand': 'main OK',
+                'pinched fingers': 'doigts pincés',
+                'pinching hand': 'main qui pince',
+                'victory hand': 'signe de victoire',
+                'crossed fingers': 'doigts croisés',
+                'love you gesture': 'geste je t\'aime',
+                'sign of the horns': 'signe des cornes',
+                'call me hand': 'main appelle-moi',
+                'backhand index pointing left': 'index pointant à gauche',
+                'backhand index pointing right': 'index pointant à droite',
+                'backhand index pointing up': 'index pointant vers le haut',
+                'middle finger': 'majeur',
+                'backhand index pointing down': 'index pointant vers le bas',
+                'index pointing up': 'index pointant vers le haut',
+                'thumbs up': 'pouce en l\'air',
+                'thumbs down': 'pouce vers le bas',
+                'raised fist': 'poing levé',
+                'oncoming fist': 'poing qui arrive',
+                'left facing fist': 'poing vers la gauche',
+                'right facing fist': 'poing vers la droite',
+                'clapping hands': 'mains qui applaudissent',
+                'raising hands': 'mains levées',
+                'open hands': 'mains ouvertes',
+                'palms up together': 'paumes vers le haut ensemble',
+                'handshake': 'poignée de main',
+                'folded hands': 'mains jointes',
+                'writing hand': 'main qui écrit',
+                'flexed biceps': 'biceps fléchi',
+                'mechanical arm': 'bras mécanique',
+                'mechanical leg': 'jambe mécanique',
+                'leg': 'jambe',
+                'foot': 'pied',
+                'ear': 'oreille',
+                'ear with hearing aid': 'oreille avec appareil auditif',
+                'nose': 'nez',
+                'brain': 'cerveau',
+                'eyes': 'yeux',
+                'eye': 'oeil',
+                'tongue': 'langue',
+                'mouth': 'bouche',
+                'baby': 'bébé',
+                'child': 'enfant',
+                'boy': 'garçon',
+                'girl': 'fille',
+                'person': 'personne',
+                'person with blond hair': 'personne aux cheveux blonds',
+                'man': 'homme',
+                'man with beard': 'homme avec barbe',
+                'woman': 'femme',
+                'older person': 'personne âgée',
+                'old man': 'vieil homme',
+                'old woman': 'vieille femme',
+                'police officer': 'policier',
+                'construction worker': 'ouvrier du bâtiment',
+                'guard': 'garde',
+                'detective': 'détective',
+                'health worker': 'professionnel de santé',
+                'cook': 'cuisinier',
+                'student': 'étudiant',
+                'teacher': 'professeur',
+                'technologist': 'technologue',
+                'astronaut': 'astronaute',
+                'baby angel': 'bébé ange',
+                'Santa Claus': 'Père Noël',
+                'Mrs. Claus': 'Mère Noël',
+                'superhero': 'super-héros',
+                'supervillain': 'super-vilain',
+                'mage': 'mage',
+                'fairy': 'fée',
+                'vampire': 'vampire',
+                'merperson': 'sirène',
+                'elf': 'elfe',
+                'genie': 'génie',
+                'zombie': 'zombie',
+                'person getting massage': 'personne se faisant masser',
+                'person getting haircut': 'personne se faisant couper les cheveux',
+                'person walking': 'personne qui marche',
+                'person standing': 'personne debout',
+                'person kneeling': 'personne à genoux',
+                'person running': 'personne qui court',
+                'woman dancing': 'femme qui danse',
+                'man dancing': 'homme qui danse',
+                'people with bunny ears': 'personnes avec oreilles de lapin',
+                'person in steamy room': 'personne dans sauna',
+                'woman and man holding hands': 'femme et homme main dans la main',
+                'men holding hands': 'hommes main dans la main',
+                'women holding hands': 'femmes main dans la main',
+                'kiss': 'bisou',
+                'couple with heart': 'couple avec coeur',
+                'family': 'famille',
+                // Animals
+                'dog face': 'tête de chien',
+                'dog': 'chien',
+                'guide dog': 'chien guide',
+                'service dog': 'chien d\'assistance',
+                'poodle': 'caniche',
+                'wolf': 'loup',
+                'fox': 'renard',
+                'raccoon': 'raton laveur',
+                'cat face': 'tête de chat',
+                'cat': 'chat',
+                'lion': 'lion',
+                'tiger face': 'tête de tigre',
+                'tiger': 'tigre',
+                'leopard': 'léopard',
+                'horse face': 'tête de cheval',
+                'horse': 'cheval',
+                'unicorn': 'licorne',
+                'zebra': 'zèbre',
+                'deer': 'cerf',
+                'bison': 'bison',
+                'cow face': 'tête de vache',
+                'ox': 'boeuf',
+                'water buffalo': 'buffle d\'eau',
+                'cow': 'vache',
+                'pig face': 'tête de cochon',
+                'pig': 'cochon',
+                'boar': 'sanglier',
+                'pig nose': 'nez de cochon',
+                'ram': 'bélier',
+                'ewe': 'brebis',
+                'goat': 'chèvre',
+                'camel': 'chameau',
+                'two hump camel': 'chameau à deux bosses',
+                'llama': 'lama',
+                'giraffe': 'girafe',
+                'elephant': 'éléphant',
+                'mammoth': 'mammouth',
+                'rhinoceros': 'rhinocéros',
+                'hippopotamus': 'hippopotame',
+                'mouse face': 'tête de souris',
+                'mouse': 'souris',
+                'rat': 'rat',
+                'hamster': 'hamster',
+                'rabbit face': 'tête de lapin',
+                'rabbit': 'lapin',
+                'chipmunk': 'tamia',
+                'beaver': 'castor',
+                'hedgehog': 'hérisson',
+                'bat': 'chauve-souris',
+                'bear': 'ours',
+                'polar bear': 'ours polaire',
+                'koala': 'koala',
+                'panda': 'panda',
+                'sloth': 'paresseux',
+                'otter': 'loutre',
+                'skunk': 'moufette',
+                'kangaroo': 'kangourou',
+                'badger': 'blaireau',
+                'paw prints': 'empreintes de pattes',
+                'turkey': 'dinde',
+                'chicken': 'poulet',
+                'rooster': 'coq',
+                'hatching chick': 'poussin qui éclot',
+                'baby chick': 'poussin',
+                'front facing baby chick': 'poussin de face',
+                'bird': 'oiseau',
+                'penguin': 'pingouin',
+                'dove': 'colombe',
+                'eagle': 'aigle',
+                'duck': 'canard',
+                'swan': 'cygne',
+                'owl': 'hibou',
+                'dodo': 'dodo',
+                'flamingo': 'flamant rose',
+                'peacock': 'paon',
+                'parrot': 'perroquet',
+                'frog': 'grenouille',
+                'crocodile': 'crocodile',
+                'turtle': 'tortue',
+                'lizard': 'lézard',
+                'snake': 'serpent',
+                'dragon face': 'tête de dragon',
+                'dragon': 'dragon',
+                'sauropod': 'sauropode',
+                'T-Rex': 'T-Rex',
+                'spouting whale': 'baleine qui souffle',
+                'whale': 'baleine',
+                'dolphin': 'dauphin',
+                'seal': 'phoque',
+                'fish': 'poisson',
+                'tropical fish': 'poisson tropical',
+                'blowfish': 'poisson-globe',
+                'shark': 'requin',
+                'octopus': 'pieuvre',
+                'spiral shell': 'coquillage spiral',
+                'snail': 'escargot',
+                'butterfly': 'papillon',
+                'bug': 'insecte',
+                'ant': 'fourmi',
+                'honeybee': 'abeille',
+                'beetle': 'scarabée',
+                'lady beetle': 'coccinelle',
+                'cricket': 'grillon',
+                'cockroach': 'cafard',
+                'spider': 'araignée',
+                'spider web': 'toile d\'araignée',
+                'scorpion': 'scorpion',
+                'mosquito': 'moustique',
+                'fly': 'mouche',
+                'worm': 'ver',
+                'cherry blossom': 'fleur de cerisier',
+                'white flower': 'fleur blanche',
+                'rose': 'rose',
+                'wilted flower': 'fleur fanée',
+                'hibiscus': 'hibiscus',
+                'sunflower': 'tournesol',
+                'blossom': 'fleur',
+                'tulip': 'tulipe',
+                'seedling': 'pousse',
+                'evergreen tree': 'arbre persistant',
+                'deciduous tree': 'arbre à feuilles caduques',
+                'palm tree': 'palmier',
+                'cactus': 'cactus',
+                'sheaf of rice': 'gerbe de riz',
+                'herb': 'herbe',
+                'shamrock': 'trèfle',
+                'four leaf clover': 'trèfle à quatre feuilles',
+                'maple leaf': 'feuille d\'érable',
+                'fallen leaf': 'feuille morte',
+                'leaf fluttering in wind': 'feuille dans le vent',
+                // Food
+                'grapes': 'raisins',
+                'melon': 'melon',
+                'watermelon': 'pastèque',
+                'tangerine': 'mandarine',
+                'lemon': 'citron',
+                'banana': 'banane',
+                'pineapple': 'ananas',
+                'mango': 'mangue',
+                'red apple': 'pomme rouge',
+                'green apple': 'pomme verte',
+                'pear': 'poire',
+                'peach': 'pêche',
+                'cherries': 'cerises',
+                'strawberry': 'fraise',
+                'blueberries': 'myrtilles',
+                'kiwi fruit': 'kiwi',
+                'tomato': 'tomate',
+                'olive': 'olive',
+                'coconut': 'noix de coco',
+                'avocado': 'avocat',
+                'eggplant': 'aubergine',
+                'potato': 'pomme de terre',
+                'carrot': 'carotte',
+                'ear of corn': 'épi de maïs',
+                'hot pepper': 'piment',
+                'bell pepper': 'poivron',
+                'cucumber': 'concombre',
+                'leafy green': 'légume vert à feuilles',
+                'broccoli': 'brocoli',
+                'garlic': 'ail',
+                'onion': 'oignon',
+                'mushroom': 'champignon',
+                'peanuts': 'cacahuètes',
+                'chestnut': 'châtaigne',
+                'bread': 'pain',
+                'croissant': 'croissant',
+                'baguette bread': 'baguette',
+                'flatbread': 'pain plat',
+                'pretzel': 'bretzel',
+                'bagel': 'bagel',
+                'pancakes': 'crêpes',
+                'waffle': 'gaufre',
+                'cheese wedge': 'fromage',
+                'meat on bone': 'viande sur l\'os',
+                'poultry leg': 'cuisse de poulet',
+                'cut of meat': 'morceau de viande',
+                'bacon': 'bacon',
+                'hamburger': 'hamburger',
+                'french fries': 'frites',
+                'pizza': 'pizza',
+                'hot dog': 'hot-dog',
+                'sandwich': 'sandwich',
+                'taco': 'taco',
+                'burrito': 'burrito',
+                'tamale': 'tamale',
+                'stuffed flatbread': 'pain fourré',
+                'falafel': 'falafel',
+                'egg': 'oeuf',
+                'cooking': 'cuisine',
+                'shallow pan of food': 'poêle avec nourriture',
+                'pot of food': 'marmite',
+                'fondue': 'fondue',
+                'bowl with spoon': 'bol avec cuillère',
+                'green salad': 'salade verte',
+                'popcorn': 'popcorn',
+                'butter': 'beurre',
+                'salt': 'sel',
+                'canned food': 'conserve',
+                'bento box': 'bento',
+                'rice cracker': 'galette de riz',
+                'rice ball': 'boule de riz',
+                'cooked rice': 'riz cuit',
+                'curry rice': 'riz au curry',
+                'steaming bowl': 'bol fumant',
+                'spaghetti': 'spaghetti',
+                'roasted sweet potato': 'patate douce rôtie',
+                'oden': 'oden',
+                'sushi': 'sushi',
+                'fried shrimp': 'crevette frite',
+                'fish cake with swirl': 'gâteau de poisson',
+                'moon cake': 'gâteau de lune',
+                'dango': 'dango',
+                'dumpling': 'ravioli',
+                'fortune cookie': 'biscuit chinois',
+                'takeout box': 'boîte à emporter',
+                'crab': 'crabe',
+                'lobster': 'homard',
+                'shrimp': 'crevette',
+                'squid': 'calmar',
+                'oyster': 'huître',
+                'soft ice cream': 'glace italienne',
+                'shaved ice': 'glace pilée',
+                'ice cream': 'crème glacée',
+                'doughnut': 'beignet',
+                'cookie': 'biscuit',
+                'birthday cake': 'gâteau d\'anniversaire',
+                'shortcake': 'fraisier',
+                'cupcake': 'cupcake',
+                'pie': 'tarte',
+                'chocolate bar': 'barre de chocolat',
+                'candy': 'bonbon',
+                'lollipop': 'sucette',
+                'custard': 'crème',
+                'honey pot': 'pot de miel',
+                'baby bottle': 'biberon',
+                'glass of milk': 'verre de lait',
+                'hot beverage': 'boisson chaude',
+                'teapot': 'théière',
+                'teacup without handle': 'tasse à thé sans anse',
+                'sake': 'saké',
+                'bottle with popping cork': 'bouteille de champagne',
+                'wine glass': 'verre de vin',
+                'cocktail glass': 'verre à cocktail',
+                'tropical drink': 'boisson tropicale',
+                'beer mug': 'chope de bière',
+                'clinking beer mugs': 'chopes qui trinquent',
+                'clinking glasses': 'verres qui trinquent',
+                'tumbler glass': 'verre à whisky',
+                'cup with straw': 'gobelet avec paille',
+                'bubble tea': 'bubble tea',
+                'beverage box': 'brique de boisson',
+                'mate': 'maté',
+                'ice': 'glaçon',
+                'chopsticks': 'baguettes',
+                'fork and knife with plate': 'fourchette et couteau avec assiette',
+                'fork and knife': 'fourchette et couteau',
+                'spoon': 'cuillère',
+                // Activities
+                'soccer ball': 'ballon de football',
+                'basketball': 'basketball',
+                'american football': 'football américain',
+                'baseball': 'baseball',
+                'softball': 'softball',
+                'tennis': 'tennis',
+                'volleyball': 'volleyball',
+                'rugby football': 'rugby',
+                'flying disc': 'frisbee',
+                'pool 8 ball': 'boule de billard',
+                'yo-yo': 'yo-yo',
+                'ping pong': 'ping-pong',
+                'badminton': 'badminton',
+                'ice hockey': 'hockey sur glace',
+                'field hockey': 'hockey sur gazon',
+                'lacrosse': 'crosse',
+                'cricket game': 'cricket',
+                'boomerang': 'boomerang',
+                'goal net': 'filet de but',
+                'in hole': 'drapeau dans le trou',
+                'kite': 'cerf-volant',
+                'bow and arrow': 'arc et flèche',
+                'fishing pole': 'canne à pêche',
+                'diving mask': 'masque de plongée',
+                'boxing glove': 'gant de boxe',
+                'martial arts uniform': 'tenue d\'arts martiaux',
+                'running shirt': 'maillot de course',
+                'skateboard': 'skateboard',
+                'roller skate': 'patin à roulettes',
+                'sled': 'luge',
+                'ice skate': 'patin à glace',
+                'curling stone': 'pierre de curling',
+                'skis': 'skis',
+                'skier': 'skieur',
+                'snowboarder': 'snowboardeur',
+                'parachute': 'parachute',
+                'person lifting weights': 'personne soulevant des poids',
+                'people wrestling': 'lutteurs',
+                'person cartwheeling': 'personne faisant la roue',
+                'person bouncing ball': 'personne dribblant',
+                'person fencing': 'personne faisant de l\'escrime',
+                'person playing handball': 'personne jouant au handball',
+                'person golfing': 'personne jouant au golf',
+                'horse racing': 'course de chevaux',
+                'person in lotus position': 'personne en position du lotus',
+                'person surfing': 'personne surfant',
+                'person swimming': 'personne nageant',
+                'person playing water polo': 'personne jouant au water-polo',
+                'person rowing boat': 'personne ramant',
+                'person climbing': 'personne escaladant',
+                'person mountain biking': 'personne faisant du VTT',
+                'person biking': 'personne à vélo',
+                'trophy': 'trophée',
+                'first place medal': 'médaille d\'or',
+                'second place medal': 'médaille d\'argent',
+                'third place medal': 'médaille de bronze',
+                'sports medal': 'médaille sportive',
+                'military medal': 'médaille militaire',
+                'rosette': 'rosette',
+                'reminder ribbon': 'ruban de sensibilisation',
+                'ticket': 'ticket',
+                'admission tickets': 'billets d\'entrée',
+                'circus tent': 'chapiteau de cirque',
+                'person juggling': 'personne jonglant',
+                'performing arts': 'arts du spectacle',
+                'ballet shoes': 'chaussons de ballet',
+                'artist palette': 'palette d\'artiste',
+                'clapper board': 'clap de cinéma',
+                'microphone': 'microphone',
+                'headphone': 'casque audio',
+                'musical score': 'partition musicale',
+                'musical keyboard': 'clavier musical',
+                'drum': 'tambour',
+                'long drum': 'tambour long',
+                'saxophone': 'saxophone',
+                'trumpet': 'trompette',
+                'guitar': 'guitare',
+                'banjo': 'banjo',
+                'violin': 'violon',
+                'game die': 'dé à jouer',
+                'chess pawn': 'pion d\'échecs',
+                'direct hit': 'dans le mille',
+                'bowling': 'bowling',
+                'video game': 'jeu vidéo',
+                'slot machine': 'machine à sous',
+                'puzzle piece': 'pièce de puzzle',
+                // Travel
+                'automobile': 'voiture',
+                'taxi': 'taxi',
+                'sport utility vehicle': 'SUV',
+                'bus': 'bus',
+                'trolleybus': 'trolleybus',
+                'racing car': 'voiture de course',
+                'police car': 'voiture de police',
+                'ambulance': 'ambulance',
+                'fire engine': 'camion de pompiers',
+                'minibus': 'minibus',
+                'pickup truck': 'pickup',
+                'delivery truck': 'camion de livraison',
+                'articulated lorry': 'semi-remorque',
+                'tractor': 'tracteur',
+                'motorcycle': 'moto',
+                'motor scooter': 'scooter',
+                'bicycle': 'vélo',
+                'kick scooter': 'trottinette',
+                'police car light': 'gyrophare de police',
+                'oncoming police car': 'voiture de police qui arrive',
+                'oncoming bus': 'bus qui arrive',
+                'oncoming automobile': 'voiture qui arrive',
+                'oncoming taxi': 'taxi qui arrive',
+                'aerial tramway': 'téléphérique',
+                'mountain cableway': 'téléphérique de montagne',
+                'suspension railway': 'train suspendu',
+                'railway car': 'wagon',
+                'tram car': 'tramway',
+                'mountain railway': 'train de montagne',
+                'monorail': 'monorail',
+                'high speed train': 'TGV',
+                'bullet train': 'train à grande vitesse',
+                'light rail': 'métro léger',
+                'locomotive': 'locomotive',
+                'train': 'train',
+                'metro': 'métro',
+                'tram': 'tramway',
+                'station': 'gare',
+                'airplane': 'avion',
+                'airplane departure': 'décollage',
+                'airplane arrival': 'atterrissage',
+                'small airplane': 'petit avion',
+                'seat': 'siège',
+                'satellite': 'satellite',
+                'rocket': 'fusée',
+                'flying saucer': 'soucoupe volante',
+                'helicopter': 'hélicoptère',
+                'canoe': 'canoë',
+                'sailboat': 'voilier',
+                'speedboat': 'hors-bord',
+                'motor boat': 'bateau à moteur',
+                'passenger ship': 'paquebot',
+                'ferry': 'ferry',
+                'ship': 'navire',
+                'anchor': 'ancre',
+                'hook': 'crochet',
+                'fuel pump': 'pompe à essence',
+                'construction': 'travaux',
+                'vertical traffic light': 'feu de circulation vertical',
+                'horizontal traffic light': 'feu de circulation horizontal',
+                'bus stop': 'arrêt de bus',
+                'world map': 'carte du monde',
+                'moai': 'moaï',
+                'Statue of Liberty': 'Statue de la Liberté',
+                'Tokyo tower': 'Tour de Tokyo',
+                'castle': 'château',
+                'Japanese castle': 'château japonais',
+                'stadium': 'stade',
+                'ferris wheel': 'grande roue',
+                'roller coaster': 'montagnes russes',
+                'carousel horse': 'cheval de manège',
+                'fountain': 'fontaine',
+                'umbrella on ground': 'parasol au sol',
+                'beach with umbrella': 'plage avec parasol',
+                'desert island': 'île déserte',
+                'desert': 'désert',
+                'volcano': 'volcan',
+                'mountain': 'montagne',
+                'snow capped mountain': 'montagne enneigée',
+                'mount fuji': 'mont Fuji',
+                'camping': 'camping',
+                'tent': 'tente',
+                'house': 'maison',
+                'house with garden': 'maison avec jardin',
+                'houses': 'maisons',
+                'derelict house': 'maison abandonnée',
+                'building construction': 'construction de bâtiment',
+                'office building': 'immeuble de bureaux',
+                'department store': 'grand magasin',
+                'Japanese post office': 'poste japonaise',
+                'post office': 'bureau de poste',
+                'hospital': 'hôpital',
+                'bank': 'banque',
+                'hotel': 'hôtel',
+                'love hotel': 'hôtel de passe',
+                'convenience store': 'supérette',
+                'school': 'école',
+                'wedding': 'mariage',
+                'classical building': 'bâtiment classique',
+                'church': 'église',
+                'mosque': 'mosquée',
+                'hindu temple': 'temple hindou',
+                'synagogue': 'synagogue',
+                'shinto shrine': 'sanctuaire shinto',
+                'kaaba': 'Kaaba',
+                'sunrise': 'lever de soleil',
+                'sunrise over mountains': 'lever de soleil sur les montagnes',
+                'sunset': 'coucher de soleil',
+                'cityscape at dusk': 'paysage urbain au crépuscule',
+                'night with stars': 'nuit étoilée',
+                'bridge at night': 'pont de nuit',
+                'foggy': 'brumeux',
+                'milky way': 'Voie lactée',
+                'shooting star': 'étoile filante',
+                'fireworks': 'feux d\'artifice',
+                'sparkler': 'cierge magique',
+                // Objects
+                'watch': 'montre',
+                'mobile phone': 'téléphone portable',
+                'mobile phone with arrow': 'téléphone avec flèche',
+                'laptop': 'ordinateur portable',
+                'keyboard': 'clavier',
+                'desktop computer': 'ordinateur de bureau',
+                'printer': 'imprimante',
+                'computer mouse': 'souris d\'ordinateur',
+                'trackball': 'trackball',
+                'computer disk': 'disque dur',
+                'floppy disk': 'disquette',
+                'optical disk': 'CD',
+                'dvd': 'DVD',
+                'abacus': 'boulier',
+                'movie camera': 'caméra de cinéma',
+                'film frames': 'pellicule de film',
+                'film projector': 'projecteur de film',
+                'television': 'télévision',
+                'camera': 'appareil photo',
+                'camera with flash': 'appareil photo avec flash',
+                'video camera': 'caméscope',
+                'videocassette': 'cassette vidéo',
+                'magnifying glass tilted left': 'loupe inclinée à gauche',
+                'magnifying glass tilted right': 'loupe inclinée à droite',
+                'candle': 'bougie',
+                'light bulb': 'ampoule',
+                'flashlight': 'lampe de poche',
+                'red paper lantern': 'lanterne rouge',
+                'diya lamp': 'lampe diya',
+                'notebook with decorative cover': 'carnet décoré',
+                'closed book': 'livre fermé',
+                'open book': 'livre ouvert',
+                'green book': 'livre vert',
+                'blue book': 'livre bleu',
+                'orange book': 'livre orange',
+                'books': 'livres',
+                'notebook': 'carnet',
+                'ledger': 'registre',
+                'page with curl': 'page cornée',
+                'scroll': 'parchemin',
+                'page facing up': 'page vers le haut',
+                'newspaper': 'journal',
+                'rolled up newspaper': 'journal roulé',
+                'bookmark tabs': 'onglets de signet',
+                'bookmark': 'marque-page',
+                'label': 'étiquette',
+                'money bag': 'sac d\'argent',
+                'coin': 'pièce de monnaie',
+                'yen banknote': 'billet en yen',
+                'dollar banknote': 'billet en dollar',
+                'euro banknote': 'billet en euro',
+                'pound banknote': 'billet en livre',
+                'money with wings': 'argent avec ailes',
+                'credit card': 'carte de crédit',
+                'receipt': 'reçu',
+                'chart increasing with yen': 'graphique en hausse avec yen',
+                'envelope': 'enveloppe',
+                'e-mail': 'e-mail',
+                'incoming envelope': 'enveloppe entrante',
+                'envelope with arrow': 'enveloppe avec flèche',
+                'outbox tray': 'boîte d\'envoi',
+                'inbox tray': 'boîte de réception',
+                'package': 'colis',
+                'closed mailbox with raised flag': 'boîte aux lettres fermée avec drapeau levé',
+                'closed mailbox with lowered flag': 'boîte aux lettres fermée',
+                'open mailbox with raised flag': 'boîte aux lettres ouverte avec drapeau levé',
+                'open mailbox with lowered flag': 'boîte aux lettres ouverte',
+                'postbox': 'boîte aux lettres',
+                'ballot box with ballot': 'urne avec bulletin',
+                'pencil': 'crayon',
+                'black nib': 'plume noire',
+                'fountain pen': 'stylo plume',
+                'pen': 'stylo',
+                'paintbrush': 'pinceau',
+                'crayon': 'crayon de couleur',
+                'memo': 'mémo',
+                'briefcase': 'mallette',
+                'file folder': 'dossier',
+                'open file folder': 'dossier ouvert',
+                'card index dividers': 'intercalaires',
+                'calendar': 'calendrier',
+                'tear off calendar': 'calendrier à effeuiller',
+                'spiral notepad': 'bloc-notes à spirale',
+                'spiral calendar': 'calendrier à spirale',
+                'card index': 'fichier',
+                'chart increasing': 'graphique en hausse',
+                'chart decreasing': 'graphique en baisse',
+                'bar chart': 'diagramme à barres',
+                'clipboard': 'presse-papiers',
+                'pushpin': 'punaise',
+                'round pushpin': 'punaise ronde',
+                'paperclip': 'trombone',
+                'linked paperclips': 'trombones liés',
+                'straight ruler': 'règle',
+                'triangular ruler': 'équerre',
+                'scissors': 'ciseaux',
+                'card file box': 'boîte à fiches',
+                'file cabinet': 'classeur',
+                'wastebasket': 'corbeille',
+                'locked': 'verrouillé',
+                'unlocked': 'déverrouillé',
+                'locked with pen': 'verrouillé avec stylo',
+                'locked with key': 'verrouillé avec clé',
+                'key': 'clé',
+                'old key': 'vieille clé',
+                'hammer': 'marteau',
+                'axe': 'hache',
+                'pick': 'pioche',
+                'hammer and pick': 'marteau et pioche',
+                'hammer and wrench': 'marteau et clé',
+                'dagger': 'poignard',
+                'crossed swords': 'épées croisées',
+                'pistol': 'pistolet',
+                'shield': 'bouclier',
+                'carpentry saw': 'scie',
+                'wrench': 'clé à molette',
+                'screwdriver': 'tournevis',
+                'nut and bolt': 'écrou et boulon',
+                'gear': 'engrenage',
+                'clamp': 'serre-joint',
+                'balance scale': 'balance',
+                'white cane': 'canne blanche',
+                'link': 'lien',
+                'chains': 'chaînes',
+                'toolbox': 'boîte à outils',
+                'magnet': 'aimant',
+                'ladder': 'échelle',
+                'alembic': 'alambic',
+                'test tube': 'tube à essai',
+                'petri dish': 'boîte de Pétri',
+                'dna': 'ADN',
+                'microscope': 'microscope',
+                'telescope': 'télescope',
+                'satellite antenna': 'antenne satellite',
+                // Symbols
+                'red heart': 'coeur rouge',
+                'orange heart': 'coeur orange',
+                'yellow heart': 'coeur jaune',
+                'green heart': 'coeur vert',
+                'blue heart': 'coeur bleu',
+                'purple heart': 'coeur violet',
+                'black heart': 'coeur noir',
+                'white heart': 'coeur blanc',
+                'brown heart': 'coeur marron',
+                'broken heart': 'coeur brisé',
+                'heart exclamation': 'exclamation coeur',
+                'two hearts': 'deux coeurs',
+                'revolving hearts': 'coeurs qui tournent',
+                'beating heart': 'coeur qui bat',
+                'growing heart': 'coeur qui grandit',
+                'sparkling heart': 'coeur étincelant',
+                'heart with arrow': 'coeur avec flèche',
+                'heart with ribbon': 'coeur avec ruban',
+                'heart decoration': 'décoration coeur',
+                'peace symbol': 'symbole de paix',
+                'latin cross': 'croix latine',
+                'star and crescent': 'étoile et croissant',
+                'om': 'om',
+                'wheel of dharma': 'roue du dharma',
+                'star of david': 'étoile de David',
+                'dotted six pointed star': 'étoile à six branches pointillée',
+                'menorah': 'ménorah',
+                'yin yang': 'yin yang',
+                'orthodox cross': 'croix orthodoxe',
+                'place of worship': 'lieu de culte',
+                'check mark': 'coche',
+                'cross mark': 'croix',
+                'question mark': 'point d\'interrogation',
+                'exclamation mark': 'point d\'exclamation',
+                'warning': 'avertissement',
+                'musical note': 'note de musique',
+                'musical notes': 'notes de musique',
+                'plus sign': 'signe plus',
+                'minus sign': 'signe moins',
+                'infinity': 'infini',
+                // Flags
+                'white flag': 'drapeau blanc',
+                'black flag': 'drapeau noir',
+                'chequered flag': 'drapeau à damier',
+                'triangular flag': 'drapeau triangulaire',
+                'rainbow flag': 'drapeau arc-en-ciel',
+                'transgender flag': 'drapeau transgenre',
+                'pirate flag': 'drapeau pirate',
+                'Afghanistan': 'drapeau Afghanistan',
+                'Albania': 'drapeau Albanie',
+                'Algeria': 'drapeau Algérie',
+                'Argentina': 'drapeau Argentine',
+                'Australia': 'drapeau Australie',
+                'Austria': 'drapeau Autriche',
+                'Belgium': 'drapeau Belgique',
+                'Brazil': 'drapeau Brésil',
+                'Canada': 'drapeau Canada',
+                'China': 'drapeau Chine',
+                'Colombia': 'drapeau Colombie',
+                'Croatia': 'drapeau Croatie',
+                'Cuba': 'drapeau Cuba',
+                'Czechia': 'drapeau Tchéquie',
+                'Denmark': 'drapeau Danemark',
+                'Egypt': 'drapeau Égypte',
+                'Finland': 'drapeau Finlande',
+                'France': 'drapeau France',
+                'Germany': 'drapeau Allemagne',
+                'Greece': 'drapeau Grèce',
+                'Hungary': 'drapeau Hongrie',
+                'Iceland': 'drapeau Islande',
+                'India': 'drapeau Inde',
+                'Indonesia': 'drapeau Indonésie',
+                'Ireland': 'drapeau Irlande',
+                'Israel': 'drapeau Israël',
+                'Italy': 'drapeau Italie',
+                'Japan': 'drapeau Japon',
+                'South Korea': 'drapeau Corée du Sud',
+                'Mexico': 'drapeau Mexique',
+                'Netherlands': 'drapeau Pays-Bas',
+                'New Zealand': 'drapeau Nouvelle-Zélande',
+                'Norway': 'drapeau Norvège',
+                'Pakistan': 'drapeau Pakistan',
+                'Philippines': 'drapeau Philippines',
+                'Poland': 'drapeau Pologne',
+                'Portugal': 'drapeau Portugal',
+                'Romania': 'drapeau Roumanie',
+                'Russia': 'drapeau Russie',
+                'Saudi Arabia': 'drapeau Arabie Saoudite',
+                'Singapore': 'drapeau Singapour',
+                'South Africa': 'drapeau Afrique du Sud',
+                'Spain': 'drapeau Espagne',
+                'Sweden': 'drapeau Suède',
+                'Switzerland': 'drapeau Suisse',
+                'Thailand': 'drapeau Thaïlande',
+                'Turkey': 'drapeau Turquie',
+                'Ukraine': 'drapeau Ukraine',
+                'United Arab Emirates': 'drapeau Émirats Arabes Unis',
+                'United Kingdom': 'drapeau Royaume-Uni',
+                'United States': 'drapeau États-Unis',
+                'Vietnam': 'drapeau Vietnam'
+            }
+        };
+
+        // Get translated emoji name
+        function getEmojiName(englishName) {
+            if (currentLanguage === 'en') {
+                return englishName;
+            }
+            return emojiTranslations[currentLanguage]?.[englishName] || englishName;
+        }
+
+        // Initialize emoji grids
+        function initializeEmojis() {
+            Object.keys(emojiData).forEach(category => {
+                const container = document.getElementById(`emoji-${category}`);
+                if (container) {
+                    container.innerHTML = createEmojiGrid(emojiData[category]);
+                }
+            });
+        }
+
+        function createEmojiGrid(emojis) {
+            return `<div class="emoji-grid">${emojis.map(item => {
+                const translatedName = getEmojiName(item.name);
+                return `<button class="emoji-btn" onclick="speakEmoji('${item.name.replace(/'/g, "\\'")}')"
+                    title="${translatedName}">${item.emoji}</button>`;
+            }).join('')}</div>`;
+        }
+
+        function speakEmoji(englishName) {
+            const translatedName = getEmojiName(englishName);
+            speak(translatedName);
+        }
+
+        function showEmojiCategory(category) {
+            // Update tabs
+            document.querySelectorAll('.emoji-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update panels
+            document.querySelectorAll('.emoji-category-panel').forEach(panel => panel.classList.remove('active'));
+            document.getElementById(`emoji-${category}`).classList.add('active');
+            
+            // Clear search
+            document.getElementById('emojiSearch').value = '';
+        }
+
+        function filterEmojis(query) {
+            const searchResults = document.getElementById('emoji-search-results');
+            
+            if (!query.trim()) {
+                // Show first category if search is cleared
+                searchResults.classList.remove('active');
+                document.getElementById('emoji-smileys').classList.add('active');
+                document.querySelectorAll('.emoji-tab').forEach((tab, idx) => {
+                    tab.classList.toggle('active', idx === 0);
+                });
+                return;
+            }
+            
+            // Hide all category panels and tabs
+            document.querySelectorAll('.emoji-category-panel').forEach(panel => panel.classList.remove('active'));
+            document.querySelectorAll('.emoji-tab').forEach(tab => tab.classList.remove('active'));
+            
+            // Search all emojis in both English and translated names
+            const results = [];
+            const lowerQuery = query.toLowerCase();
+            Object.values(emojiData).forEach(category => {
+                category.forEach(item => {
+                    const translatedName = getEmojiName(item.name).toLowerCase();
+                    if (item.name.toLowerCase().includes(lowerQuery) || translatedName.includes(lowerQuery)) {
+                        results.push(item);
+                    }
+                });
+            });
+            
+            // Show results
+            searchResults.innerHTML = results.length > 0 
+                ? createEmojiGrid(results)
+                : `<div class="empty-history">${t('noEmojis')}</div>`;
+            searchResults.classList.add('active');
+        }
+
+        // Initialize emojis on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeEmojis();
+        });
+    </script>
+</body>
+</html>
