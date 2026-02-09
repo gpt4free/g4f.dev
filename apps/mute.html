@@ -776,7 +776,8 @@
 
     <script>
         // Configuration
-        const SPEECH_API_BASE = 'https://mcp.g4f.space/backend-api/v2/synthesize/Gemini?text=';
+        const SPEECH_API_BASE = 'https://pass.g4f.space/backend-api/v2/synthesize/Gemini?text=';
+        const SPEECH_API_FALLBACK = 'https://g4f.space/ai/audio/';
         
         // State
         let currentAudio = null;
@@ -1132,18 +1133,55 @@
                     finishSpeaking();
                 };
                 
-                currentAudio.onerror = (e) => {
-                    console.error('Audio error:', e);
-                    setStatus('error', t('errorAudio'));
-                    finishSpeaking();
+                currentAudio.onerror = async (e) => {
+                    console.error('Primary API audio error, trying fallback:', e);
+                    try {
+                        const fallbackUrl = `${SPEECH_API_FALLBACK}${encodedText}`;
+                        currentAudio = new Audio(fallbackUrl);
+                        
+                        currentAudio.onended = () => {
+                            finishSpeaking();
+                        };
+                        
+                        currentAudio.onerror = (e2) => {
+                            console.error('Fallback API audio error:', e2);
+                            setStatus('error', t('errorAudio'));
+                            finishSpeaking();
+                        };
+                        
+                        await currentAudio.play();
+                    } catch (fallbackError) {
+                        console.error('Fallback speech error:', fallbackError);
+                        setStatus('error', t('errorAudio'));
+                        finishSpeaking();
+                    }
                 };
                 
                 await currentAudio.play();
                 
             } catch (error) {
-                console.error('Speech error:', error);
-                setStatus('error', t('errorGenerate'));
-                finishSpeaking();
+                console.error('Primary speech error, trying fallback:', error);
+                try {
+                    const encodedText = encodeURIComponent(text);
+                    const fallbackUrl = `${SPEECH_API_FALLBACK}${encodedText}`;
+                    currentAudio = new Audio(fallbackUrl);
+                    
+                    currentAudio.onended = () => {
+                        finishSpeaking();
+                    };
+                    
+                    currentAudio.onerror = (e) => {
+                        console.error('Fallback API audio error:', e);
+                        setStatus('error', t('errorAudio'));
+                        finishSpeaking();
+                    };
+                    
+                    await currentAudio.play();
+                } catch (fallbackError) {
+                    console.error('Fallback speech error:', fallbackError);
+                    setStatus('error', t('errorGenerate'));
+                    finishSpeaking();
+                }
             }
         }
         
