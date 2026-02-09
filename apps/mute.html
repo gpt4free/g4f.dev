@@ -1123,46 +1123,10 @@
             stopBtn.disabled = false;
             visualizer.classList.add('active');
             
-            try {
-                const encodedText = encodeURIComponent(text);
-                const audioUrl = `${SPEECH_API_BASE}${encodedText}`;
-                
-                currentAudio = new Audio(audioUrl);
-                
-                currentAudio.onended = () => {
-                    finishSpeaking();
-                };
-                
-                currentAudio.onerror = async (e) => {
-                    console.error('Primary API audio error, trying fallback:', e);
-                    try {
-                        const fallbackUrl = `${SPEECH_API_FALLBACK}${encodedText}`;
-                        currentAudio = new Audio(fallbackUrl);
-                        
-                        currentAudio.onended = () => {
-                            finishSpeaking();
-                        };
-                        
-                        currentAudio.onerror = (e2) => {
-                            console.error('Fallback API audio error:', e2);
-                            setStatus('error', t('errorAudio'));
-                            finishSpeaking();
-                        };
-                        
-                        await currentAudio.play();
-                    } catch (fallbackError) {
-                        console.error('Fallback speech error:', fallbackError);
-                        setStatus('error', t('errorAudio'));
-                        finishSpeaking();
-                    }
-                };
-                
-                await currentAudio.play();
-                
-            } catch (error) {
-                console.error('Primary speech error, trying fallback:', error);
+            const encodedText = encodeURIComponent(text);
+            
+            async function tryFallback() {
                 try {
-                    const encodedText = encodeURIComponent(text);
                     const fallbackUrl = `${SPEECH_API_FALLBACK}${encodedText}`;
                     currentAudio = new Audio(fallbackUrl);
                     
@@ -1182,6 +1146,28 @@
                     setStatus('error', t('errorGenerate'));
                     finishSpeaking();
                 }
+            }
+            
+            try {
+                const audioUrl = `${SPEECH_API_BASE}${encodedText}`;
+                
+                currentAudio = new Audio(audioUrl);
+                
+                currentAudio.onended = () => {
+                    finishSpeaking();
+                };
+                
+                currentAudio.onerror = (e) => {
+                    console.error('Primary API audio error, trying fallback:', e);
+                    tryFallback();
+                };
+                
+                await currentAudio.play();
+                
+            } catch (error) {
+                console.error('Primary speech error, trying fallback:', error);
+                currentAudio.onerror = null; // Prevent double fallback
+                tryFallback();
             }
         }
         
