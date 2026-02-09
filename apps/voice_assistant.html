@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Voice Assistant - Speech to Text & Text to Speech</title>
+    <style>
+        :root {
+            --primary-color: #10b981;
+            --primary-hover: #059669;
+            --secondary-color: #06b6d4;
+            --dark-color: #0f172a;
+            --light-color: #f8fafc;
+            --success-color: #22c55e;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --accent-gradient: linear-gradient(135deg, #10b981, #06b6d4);
+            --record-color: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: rgba(16, 185, 129, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            font-size: 2.5rem;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title .icon {
+            font-size: 1.8rem;
+        }
+
+        /* Record Button */
+        .record-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+        }
+
+        .record-btn {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: none;
+            background: var(--accent-gradient);
+            color: white;
+            font-size: 2.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 30px rgba(16, 185, 129, 0.4);
+            position: relative;
+        }
+
+        .record-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 12px 50px rgba(16, 185, 129, 0.5);
+        }
+
+        .record-btn:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .record-btn.recording {
+            background: var(--record-color);
+            box-shadow: 0 8px 40px rgba(239, 68, 68, 0.5);
+            animation: pulse-record 1s infinite;
+        }
+
+        .record-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        @keyframes pulse-record {
+            0%, 100% { transform: scale(1); box-shadow: 0 6px 30px rgba(239, 68, 68, 0.5); }
+            50% { transform: scale(1.03); box-shadow: 0 8px 40px rgba(239, 68, 68, 0.7); }
+        }
+
+        .record-label {
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .record-hint {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            text-align: center;
+        }
+
+        /* Audio Visualizer */
+        .audio-visualizer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 40px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .audio-visualizer.active {
+            opacity: 1;
+        }
+
+        .visualizer-bar {
+            width: 5px;
+            background: var(--primary-color);
+            border-radius: 3px;
+            animation: visualize 0.5s ease-in-out infinite;
+        }
+
+        .audio-visualizer.recording .visualizer-bar {
+            background: var(--record-color);
+        }
+
+        .visualizer-bar:nth-child(1) { animation-delay: 0s; }
+        .visualizer-bar:nth-child(2) { animation-delay: 0.1s; }
+        .visualizer-bar:nth-child(3) { animation-delay: 0.2s; }
+        .visualizer-bar:nth-child(4) { animation-delay: 0.3s; }
+        .visualizer-bar:nth-child(5) { animation-delay: 0.4s; }
+        .visualizer-bar:nth-child(6) { animation-delay: 0.5s; }
+        .visualizer-bar:nth-child(7) { animation-delay: 0.6s; }
+
+        @keyframes visualize {
+            0%, 100% { height: 10px; }
+            50% { height: 35px; }
+        }
+
+        /* Text Area */
+        .text-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .text-output {
+            width: 100%;
+            min-height: 180px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1.25rem;
+            color: white;
+            font-size: 1.4rem;
+            resize: vertical;
+            transition: all 0.3s ease;
+            line-height: 1.6;
+        }
+
+        .text-output:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .text-output::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .text-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 1.2rem 2.5rem;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s ease;
+            min-width: 160px;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: var(--accent-gradient);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #dc2626;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-icon {
+            font-size: 1.5rem;
+        }
+
+        /* Status */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            background: rgba(0, 0, 0, 0.2);
+            font-size: 1.1rem;
+        }
+
+        .status-indicator {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--success-color);
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.recording {
+            background: var(--record-color);
+            animation: pulse-fast 0.5s infinite;
+        }
+
+        .status-indicator.processing {
+            background: var(--warning-color);
+            animation: pulse-fast 0.5s infinite;
+        }
+
+        .status-indicator.speaking {
+            background: var(--secondary-color);
+            animation: pulse-fast 0.5s infinite;
+        }
+
+        .status-indicator.error {
+            background: var(--danger-color);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes pulse-fast {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.3); }
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: center;
+        }
+
+        .quick-btn {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: white;
+            padding: 0.8rem 1.2rem;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quick-btn:hover {
+            background: rgba(16, 185, 129, 0.4);
+            transform: scale(1.05);
+        }
+
+        .quick-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* History */
+        .history-section {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 1rem 1.25rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .history-item:hover {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .history-icon {
+            font-size: 1.5rem;
+        }
+
+        .history-text {
+            flex: 1;
+            font-size: 1.1rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-time {
+            font-size: 0.85rem;
+            opacity: 0.5;
+        }
+
+        .history-play {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            font-size: 1.4rem;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .history-play:hover {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .empty-history {
+            text-align: center;
+            opacity: 0.5;
+            padding: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        /* Settings */
+        .settings-row {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .setting-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        select {
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 0.6rem 0.8rem;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        select option {
+            background: #1e293b;
+        }
+
+        /* Large mode */
+        .large-mode .text-output {
+            font-size: 1.8rem;
+        }
+
+        .large-mode .btn {
+            font-size: 1.4rem;
+            padding: 1.4rem 3rem;
+        }
+
+        .large-mode .quick-btn {
+            font-size: 1.3rem;
+            padding: 1rem 1.5rem;
+        }
+
+        .large-mode .record-btn {
+            width: 150px;
+            height: 150px;
+            font-size: 3.5rem;
+        }
+
+        .large-mode .record-label {
+            font-size: 1.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            main {
+                padding: 0.75rem;
+                gap: 1rem;
+            }
+
+            .card {
+                padding: 1rem;
+                border-radius: 16px;
+            }
+
+            .record-section {
+                padding: 1rem;
+                gap: 0.75rem;
+            }
+
+            .record-btn {
+                width: 100px;
+                height: 100px;
+                font-size: 2.5rem;
+            }
+
+            .record-label {
+                font-size: 1rem;
+            }
+
+            .record-hint {
+                font-size: 0.8rem;
+            }
+
+            .section-title {
+                font-size: 1.1rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .text-output {
+                min-height: 120px;
+                font-size: 1.1rem;
+                padding: 1rem;
+            }
+
+            .btn {
+                padding: 0.9rem 1.2rem;
+                font-size: 1rem;
+                min-width: 100px;
+            }
+
+            .text-controls {
+                gap: 0.75rem;
+            }
+
+            .quick-btn {
+                padding: 0.6rem 1rem;
+                font-size: 0.95rem;
+            }
+
+            .status-bar {
+                padding: 0.75rem 1rem;
+                font-size: 0.95rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header {
+                padding: 0.75rem 1rem;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .logo {
+                font-size: 1.2rem;
+            }
+
+            .logo-icon {
+                font-size: 2rem;
+            }
+
+            .header-controls {
+                gap: 1rem;
+            }
+
+            .record-btn {
+                width: 90px;
+                height: 90px;
+                font-size: 2.2rem;
+            }
+
+            .text-controls {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .quick-actions {
+                gap: 0.5rem;
+            }
+
+            .quick-btn {
+                padding: 0.5rem 0.8rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Loading spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Header controls */
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .language-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .language-selector label {
+            font-size: 1.2rem;
+        }
+
+        .language-select {
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 0.5rem 0.7rem;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .checkbox-container input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+    </style>
+    <script src="../dist/js/recorder.js"></script>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <span class="logo-icon">🎙️</span>
+            <div>
+                <div data-i18n="appTitle">Voice Assistant</div>
+                <div class="subtitle" data-i18n="appSubtitle">Speak to write, write to speak</div>
+            </div>
+        </div>
+        <div class="header-controls">
+            <div class="language-selector">
+                <label for="languageSelect">🌐</label>
+                <select id="languageSelect" class="language-select" onchange="changeLanguage(this.value)">
+                    <option value="en">English</option>
+                    <option value="de">Deutsch</option>
+                    <option value="fr">Français</option>
+                    <option value="es">Español</option>
+                </select>
+            </div>
+            <div class="checkbox-container">
+                <input type="checkbox" id="largeMode" onchange="toggleLargeMode()">
+                <label for="largeMode" class="setting-label" data-i18n="largeText">Large Text</label>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Record Section - Big prominent button -->
+        <div class="card record-section">
+            <div class="section-title">
+                <span class="icon">🎤</span>
+                <span data-i18n="recordTitle">Record Your Voice</span>
+            </div>
+            
+            <button class="record-btn" id="recordBtn" onclick="toggleRecording()">
+                🎤
+            </button>
+            
+            <div class="record-label" id="recordLabel" data-i18n="tapToRecord">Tap to Record</div>
+            <div class="record-hint" id="recordHint" data-i18n="recordHint">Your voice will be converted to text</div>
+            
+            <div class="audio-visualizer" id="visualizer">
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div class="card">
+            <div class="status-bar">
+                <div class="status-indicator" id="statusIndicator"></div>
+                <span id="statusText" data-i18n="ready">Ready</span>
+            </div>
+        </div>
+
+        <!-- Text Output Section -->
+        <div class="card text-section">
+            <div class="section-title">
+                <span class="icon">📝</span>
+                <span data-i18n="textTitle">Your Text</span>
+            </div>
+            
+            <textarea 
+                id="textOutput" 
+                class="text-output" 
+                data-i18n-placeholder="textPlaceholder"
+                placeholder="Your spoken words will appear here, or type text to have it spoken..."
+            ></textarea>
+            
+            <div class="text-controls">
+                <button class="btn btn-primary" id="speakBtn" onclick="speakText()">
+                    <span class="btn-icon">🔊</span>
+                    <span data-i18n="speak">Speak Text</span>
+                </button>
+                <button class="btn btn-secondary" id="stopBtn" onclick="stopSpeaking()" disabled>
+                    <span class="btn-icon">⏹️</span>
+                    <span data-i18n="stop">Stop</span>
+                </button>
+                <button class="btn btn-secondary" onclick="clearText()">
+                    <span class="btn-icon">🗑️</span>
+                    <span data-i18n="clear">Clear</span>
+                </button>
+                <button class="btn btn-secondary" onclick="copyText()">
+                    <span class="btn-icon">📋</span>
+                    <span data-i18n="copy">Copy</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Phrases -->
+        <div class="card">
+            <div class="section-title">
+                <span class="icon">⚡</span>
+                <span data-i18n="quickPhrases">Quick Phrases</span>
+            </div>
+            <div class="quick-actions" id="quickPhrases"></div>
+        </div>
+
+        <!-- History -->
+        <div class="card">
+            <div class="section-title">
+                <span class="icon">📜</span>
+                <span data-i18n="history">History</span>
+            </div>
+            <div class="history-section">
+                <div class="history-list" id="historyList">
+                    <div class="empty-history" data-i18n="noHistory">No history yet. Start recording or speaking!</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // API Configuration
+        const SPEECH_TO_TEXT_API = 'https://g4f.space/api/audio/chat/completions';
+        const TEXT_TO_SPEECH_API = 'https://g4f.space/ai/audio/';
+        const TEXT_TO_SPEECH_FALLBACK = 'https://pass.g4f.space/backend-api/v2/synthesize/Gemini?text=';
+
+        // State
+        let recorder = null;
+        let stream = null;
+        let isRecording = false;
+        let currentAudio = null;
+        let history = [];
+        let currentLanguage = 'en';
+
+        // Translations
+        const translations = {
+            en: {
+                appTitle: 'Voice Assistant',
+                appSubtitle: 'Speak to write, write to speak',
+                largeText: 'Large Text',
+                recordTitle: 'Record Your Voice',
+                tapToRecord: 'Tap to Record',
+                tapToStop: 'Tap to Stop',
+                recordHint: 'Your voice will be converted to text',
+                recording: 'Recording...',
+                ready: 'Ready',
+                processing: 'Converting speech to text...',
+                speaking: 'Speaking...',
+                textTitle: 'Your Text',
+                textPlaceholder: 'Your spoken words will appear here, or type text to have it spoken...',
+                speak: 'Speak Text',
+                stop: 'Stop',
+                clear: 'Clear',
+                copy: 'Copy',
+                copied: 'Copied!',
+                quickPhrases: 'Quick Phrases',
+                history: 'History',
+                noHistory: 'No history yet. Start recording or speaking!',
+                errorMic: 'Could not access microphone. Please allow microphone access.',
+                errorSpeech: 'Could not convert speech to text. Please try again.',
+                errorSpeak: 'Could not play audio. Please try again.',
+                enterText: 'Please enter or record some text first',
+                fromVoice: 'From voice',
+                spoken: 'Spoken'
+            },
+            de: {
+                appTitle: 'Sprach-Assistent',
+                appSubtitle: 'Sprechen um zu schreiben, schreiben um zu sprechen',
+                largeText: 'Große Schrift',
+                recordTitle: 'Stimme aufnehmen',
+                tapToRecord: 'Antippen zum Aufnehmen',
+                tapToStop: 'Antippen zum Stoppen',
+                recordHint: 'Ihre Stimme wird in Text umgewandelt',
+                recording: 'Aufnahme...',
+                ready: 'Bereit',
+                processing: 'Sprache wird in Text umgewandelt...',
+                speaking: 'Spricht...',
+                textTitle: 'Ihr Text',
+                textPlaceholder: 'Ihre gesprochenen Worte erscheinen hier, oder geben Sie Text ein...',
+                speak: 'Text sprechen',
+                stop: 'Stopp',
+                clear: 'Löschen',
+                copy: 'Kopieren',
+                copied: 'Kopiert!',
+                quickPhrases: 'Schnelle Phrasen',
+                history: 'Verlauf',
+                noHistory: 'Noch kein Verlauf. Starten Sie eine Aufnahme!',
+                errorMic: 'Mikrofon nicht zugänglich. Bitte erlauben Sie den Zugriff.',
+                errorSpeech: 'Sprache konnte nicht in Text umgewandelt werden.',
+                errorSpeak: 'Audio konnte nicht abgespielt werden.',
+                enterText: 'Bitte geben Sie zuerst Text ein oder nehmen Sie auf',
+                fromVoice: 'Aus Sprache',
+                spoken: 'Gesprochen'
+            },
+            fr: {
+                appTitle: 'Assistant Vocal',
+                appSubtitle: 'Parlez pour écrire, écrivez pour parler',
+                largeText: 'Grand Texte',
+                recordTitle: 'Enregistrez Votre Voix',
+                tapToRecord: 'Appuyez pour Enregistrer',
+                tapToStop: 'Appuyez pour Arrêter',
+                recordHint: 'Votre voix sera convertie en texte',
+                recording: 'Enregistrement...',
+                ready: 'Prêt',
+                processing: 'Conversion de la parole en texte...',
+                speaking: 'Parle...',
+                textTitle: 'Votre Texte',
+                textPlaceholder: 'Vos paroles apparaîtront ici, ou tapez du texte à prononcer...',
+                speak: 'Lire le Texte',
+                stop: 'Arrêter',
+                clear: 'Effacer',
+                copy: 'Copier',
+                copied: 'Copié!',
+                quickPhrases: 'Phrases Rapides',
+                history: 'Historique',
+                noHistory: "Pas encore d'historique. Commencez à enregistrer!",
+                errorMic: "Impossible d'accéder au microphone. Veuillez autoriser l'accès.",
+                errorSpeech: 'Impossible de convertir la parole en texte.',
+                errorSpeak: "Impossible de lire l'audio.",
+                enterText: "Veuillez d'abord entrer ou enregistrer du texte",
+                fromVoice: 'De la voix',
+                spoken: 'Prononcé'
+            },
+            es: {
+                appTitle: 'Asistente de Voz',
+                appSubtitle: 'Habla para escribir, escribe para hablar',
+                largeText: 'Texto Grande',
+                recordTitle: 'Graba Tu Voz',
+                tapToRecord: 'Toca para Grabar',
+                tapToStop: 'Toca para Parar',
+                recordHint: 'Tu voz se convertirá en texto',
+                recording: 'Grabando...',
+                ready: 'Listo',
+                processing: 'Convirtiendo voz a texto...',
+                speaking: 'Hablando...',
+                textTitle: 'Tu Texto',
+                textPlaceholder: 'Tus palabras habladas aparecerán aquí, o escribe texto para que se hable...',
+                speak: 'Hablar Texto',
+                stop: 'Parar',
+                clear: 'Borrar',
+                copy: 'Copiar',
+                copied: '¡Copiado!',
+                quickPhrases: 'Frases Rápidas',
+                history: 'Historial',
+                noHistory: 'Sin historial aún. ¡Empieza a grabar!',
+                errorMic: 'No se pudo acceder al micrófono. Por favor permite el acceso.',
+                errorSpeech: 'No se pudo convertir la voz a texto.',
+                errorSpeak: 'No se pudo reproducir el audio.',
+                enterText: 'Por favor ingresa o graba algún texto primero',
+                fromVoice: 'De voz',
+                spoken: 'Hablado'
+            }
+        };
+
+        // Quick phrases by language
+        const phrasesData = {
+            en: ['Hello!', 'Thank you', 'Yes', 'No', 'Please help me', 'I need help', 'Where is...?', 'How much?'],
+            de: ['Hallo!', 'Danke', 'Ja', 'Nein', 'Bitte helfen Sie mir', 'Ich brauche Hilfe', 'Wo ist...?', 'Wie viel?'],
+            fr: ['Bonjour!', 'Merci', 'Oui', 'Non', "Aidez-moi s'il vous plaît", "J'ai besoin d'aide", 'Où est...?', 'Combien?'],
+            es: ['¡Hola!', 'Gracias', 'Sí', 'No', 'Por favor ayúdame', 'Necesito ayuda', '¿Dónde está...?', '¿Cuánto?']
+        };
+
+        // DOM Elements
+        const recordBtn = document.getElementById('recordBtn');
+        const recordLabel = document.getElementById('recordLabel');
+        const recordHint = document.getElementById('recordHint');
+        const visualizer = document.getElementById('visualizer');
+        const textOutput = document.getElementById('textOutput');
+        const speakBtn = document.getElementById('speakBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const historyList = document.getElementById('historyList');
+        const quickPhrases = document.getElementById('quickPhrases');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSavedLanguage();
+            loadHistory();
+            renderQuickPhrases();
+            applyTranslations();
+        });
+
+        // Translation helper
+        function t(key) {
+            return translations[currentLanguage]?.[key] || translations['en'][key] || key;
+        }
+
+        function changeLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('voiceAssistantLanguage', lang);
+            applyTranslations();
+            renderQuickPhrases();
+        }
+
+        function applyTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                el.textContent = t(key);
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                el.placeholder = t(key);
+            });
+            document.title = t('appTitle') + ' - G4F';
+        }
+
+        function loadSavedLanguage() {
+            const saved = localStorage.getItem('voiceAssistantLanguage');
+            if (saved && translations[saved]) {
+                currentLanguage = saved;
+                document.getElementById('languageSelect').value = saved;
+            }
+        }
+
+        function toggleLargeMode() {
+            document.body.classList.toggle('large-mode', document.getElementById('largeMode').checked);
+        }
+
+        // Recording functions
+        async function toggleRecording() {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+
+        async function startRecording() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                recorder = new Recorder(stream);
+                recorder.start();
+                
+                isRecording = true;
+                recordBtn.classList.add('recording');
+                recordBtn.innerHTML = '⏹️';
+                recordLabel.textContent = t('tapToStop');
+                visualizer.classList.add('active', 'recording');
+                setStatus('recording', t('recording'));
+                
+            } catch (error) {
+                console.error('Microphone error:', error);
+                setStatus('error', t('errorMic'));
+            }
+        }
+
+        async function stopRecording() {
+            if (!recorder) return;
+            
+            recorder.stop();
+            isRecording = false;
+            
+            recordBtn.classList.remove('recording');
+            recordBtn.innerHTML = '🎤';
+            recordLabel.textContent = t('tapToRecord');
+            visualizer.classList.remove('active', 'recording');
+            
+            // Stop all tracks
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            
+            // Process the audio
+            if (recorder.wavBlob) {
+                setStatus('processing', t('processing'));
+                await processAudio(recorder.wavBlob);
+            }
+            
+            recorder = null;
+        }
+
+        async function processAudio(audioBlob) {
+            try {
+                // Convert blob to base64
+                const reader = new FileReader();
+                const base64Promise = new Promise((resolve, reject) => {
+                    reader.onloadend = () => {
+                        const base64 = reader.result.split(',')[1];
+                        resolve(base64);
+                    };
+                    reader.onerror = reject;
+                });
+                reader.readAsDataURL(audioBlob);
+                const base64Audio = await base64Promise;
+
+                // Send to API
+                const response = await fetch(SPEECH_TO_TEXT_API, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-audio',
+                        messages: [{
+                            role: 'user',
+                            content: [
+                                {
+                                    type: 'text',
+                                    text: 'Transcribe the following audio. Return only the transcribed text without any additional commentary or explanation.'
+                                },
+                                {
+                                    type: 'input_audio',
+                                    input_audio: {
+                                        data: base64Audio,
+                                        format: 'wav'
+                                    }
+                                }
+                            ]
+                        }]
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('API request failed');
+                }
+
+                const data = await response.json();
+                
+                // Extract text from response
+                let transcribedText = '';
+                if (data.choices && data.choices[0] && data.choices[0].message) {
+                    transcribedText = data.choices[0].message.content || '';
+                }
+
+                if (transcribedText) {
+                    textOutput.value = transcribedText;
+                    addToHistory(transcribedText, 'voice');
+                    setStatus('ready', t('ready'));
+                } else {
+                    setStatus('error', t('errorSpeech'));
+                }
+
+            } catch (error) {
+                console.error('Speech to text error:', error);
+                setStatus('error', t('errorSpeech'));
+            }
+        }
+
+        // Text to Speech functions
+        async function speakText() {
+            const text = textOutput.value.trim();
+            if (!text) {
+                setStatus('error', t('enterText'));
+                return;
+            }
+
+            stopSpeaking();
+            
+            setStatus('speaking', t('speaking'));
+            speakBtn.disabled = true;
+            stopBtn.disabled = false;
+            visualizer.classList.add('active');
+
+            const encodedText = encodeURIComponent(text);
+
+            try {
+                // Try primary API first
+                const audioUrl = `${TEXT_TO_SPEECH_FALLBACK}${encodedText}`;
+                currentAudio = new Audio(audioUrl);
+
+                currentAudio.onended = () => {
+                    finishSpeaking();
+                    addToHistory(text, 'spoken');
+                };
+
+                currentAudio.onerror = async () => {
+                    // Try fallback
+                    try {
+                        const fallbackUrl = `${TEXT_TO_SPEECH_API}${encodedText}`;
+                        currentAudio = new Audio(fallbackUrl);
+                        currentAudio.onended = () => {
+                            finishSpeaking();
+                            addToHistory(text, 'spoken');
+                        };
+                        currentAudio.onerror = () => {
+                            setStatus('error', t('errorSpeak'));
+                            finishSpeaking();
+                        };
+                        await currentAudio.play();
+                    } catch (e) {
+                        setStatus('error', t('errorSpeak'));
+                        finishSpeaking();
+                    }
+                };
+
+                await currentAudio.play();
+
+            } catch (error) {
+                console.error('Text to speech error:', error);
+                setStatus('error', t('errorSpeak'));
+                finishSpeaking();
+            }
+        }
+
+        function stopSpeaking() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio = null;
+            }
+            finishSpeaking();
+        }
+
+        function finishSpeaking() {
+            speakBtn.disabled = false;
+            stopBtn.disabled = true;
+            visualizer.classList.remove('active');
+            if (statusIndicator.classList.contains('speaking')) {
+                setStatus('ready', t('ready'));
+            }
+        }
+
+        function clearText() {
+            textOutput.value = '';
+            textOutput.focus();
+        }
+
+        async function copyText() {
+            const text = textOutput.value.trim();
+            if (text) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    const originalText = statusText.textContent;
+                    setStatus('ready', t('copied'));
+                    setTimeout(() => {
+                        if (statusText.textContent === t('copied')) {
+                            setStatus('ready', t('ready'));
+                        }
+                    }, 2000);
+                } catch (e) {
+                    console.error('Copy failed:', e);
+                }
+            }
+        }
+
+        // Quick phrases
+        function renderQuickPhrases() {
+            const phrases = phrasesData[currentLanguage] || phrasesData['en'];
+            quickPhrases.innerHTML = phrases.map(phrase => 
+                `<button class="quick-btn" onclick="useQuickPhrase('${phrase.replace(/'/g, "\\'")}')">
+                    ${phrase}
+                </button>`
+            ).join('');
+        }
+
+        function useQuickPhrase(phrase) {
+            textOutput.value = phrase;
+            speakText();
+        }
+
+        // Status
+        function setStatus(type, message) {
+            statusIndicator.className = 'status-indicator';
+            if (type !== 'ready') {
+                statusIndicator.classList.add(type);
+            }
+            statusText.textContent = message;
+        }
+
+        // History
+        function loadHistory() {
+            const saved = localStorage.getItem('voiceAssistantHistory');
+            if (saved) {
+                try {
+                    history = JSON.parse(saved);
+                    renderHistory();
+                } catch (e) {
+                    history = [];
+                }
+            }
+        }
+
+        function addToHistory(text, type) {
+            const item = {
+                text: text,
+                type: type,
+                time: new Date().toLocaleTimeString()
+            };
+            history.unshift(item);
+            if (history.length > 20) {
+                history = history.slice(0, 20);
+            }
+            localStorage.setItem('voiceAssistantHistory', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            if (history.length === 0) {
+                historyList.innerHTML = `<div class="empty-history">${t('noHistory')}</div>`;
+                return;
+            }
+
+            historyList.innerHTML = history.map((item, index) => `
+                <div class="history-item" onclick="loadHistoryItem(${index})">
+                    <span class="history-icon">${item.type === 'voice' ? '🎤' : '🔊'}</span>
+                    <span class="history-text">${escapeHtml(item.text)}</span>
+                    <span class="history-time">${item.time}</span>
+                    <button class="history-play" onclick="event.stopPropagation(); playHistoryItem(${index})" title="Play">
+                        ▶️
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function loadHistoryItem(index) {
+            textOutput.value = history[index].text;
+        }
+
+        function playHistoryItem(index) {
+            textOutput.value = history[index].text;
+            speakText();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
