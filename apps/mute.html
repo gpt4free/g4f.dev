@@ -3,7 +3,65 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Speech Assistant for Mute People</title>
+    <title>Speech Assistant for Mute People - Free Text to Speech App | G4F</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Free speech assistant app for mute and non-verbal individuals. Convert text to natural speech instantly. Features quick phrases, emoji speech, multi-language support, and accessibility-focused design." />
+    <meta name="keywords" content="speech assistant, text to speech, mute communication, AAC app, augmentative communication, non-verbal communication, TTS, accessibility, free speech app, communication aid" />
+    <meta name="author" content="G4F" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://g4f.dev/apps/mute.html" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://g4f.dev/apps/mute.html" />
+    <meta property="og:title" content="Speech Assistant for Mute People - Free Text to Speech App" />
+    <meta property="og:description" content="Free speech assistant app for mute and non-verbal individuals. Convert text to natural speech instantly with quick phrases, emoji support, and multi-language options." />
+    <meta property="og:image" content="https://g4f.dev/images/speech-assistant-og.png" />
+    <meta property="og:site_name" content="G4F Apps" />
+    <meta property="og:locale" content="en_US" />
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://g4f.dev/apps/mute.html" />
+    <meta name="twitter:title" content="Speech Assistant for Mute People - Free Text to Speech App" />
+    <meta name="twitter:description" content="Free speech assistant app for mute and non-verbal individuals. Convert text to natural speech instantly." />
+    <meta name="twitter:image" content="https://g4f.dev/images/speech-assistant-og.png" />
+    
+    <!-- Additional Meta Tags -->
+    <meta name="theme-color" content="#6366f1" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Speech Assistant" />
+    <meta name="application-name" content="Speech Assistant" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Speech Assistant for Mute People",
+        "description": "Free speech assistant app for mute and non-verbal individuals. Convert text to natural speech instantly.",
+        "url": "https://g4f.dev/apps/mute.html",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "featureList": ["Text to Speech", "Quick Phrases", "Emoji Speech", "Multi-language Support", "Accessibility Features"],
+        "accessibilityFeature": ["highContrastDisplay", "largePrint", "alternativeText"],
+        "accessibilityHazard": "none",
+        "author": {
+            "@type": "Organization",
+            "name": "G4F",
+            "url": "https://g4f.dev"
+        }
+    }
+    </script>
+    
     <style>
         :root {
             --primary-color: #6366f1;
@@ -399,29 +457,380 @@
             padding: 0.8rem 1.2rem;
         }
 
-        /* Responsive */
+        .large-mode .btn {
+            font-size: 1.2rem;
+            padding: 1.1rem 2.2rem;
+        }
+
+        .large-mode .input-label {
+            font-size: 1.25rem;
+        }
+
+        .large-mode .status-bar {
+            font-size: 1.1rem;
+        }
+
+        /* Large mode on mobile */
         @media (max-width: 768px) {
+            .large-mode .text-input {
+                font-size: 1.3rem;
+            }
+
+            .large-mode .phrase-btn {
+                font-size: 1rem;
+                padding: 0.7rem 1rem;
+            }
+
+            .large-mode .btn {
+                font-size: 1.1rem;
+                padding: 0.9rem 1.8rem;
+            }
+
+            .large-mode .emoji-btn {
+                font-size: 2rem;
+            }
+        }
+
+        /* Responsive - Tablet */
+        @media (max-width: 900px) {
+            main {
+                padding: 1.5rem;
+                gap: 1.25rem;
+            }
+
+            .card {
+                padding: 1.25rem;
+                border-radius: 16px;
+            }
+
+            .emoji-grid {
+                grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+            }
+        }
+
+        /* Responsive - Mobile */
+        @media (max-width: 768px) {
+            header {
+                padding: 0.75rem 1rem;
+                flex-wrap: wrap;
+                gap: 0.75rem;
+            }
+
+            .logo {
+                font-size: 1.25rem;
+                gap: 8px;
+            }
+
+            .logo-icon {
+                font-size: 1.6rem;
+            }
+
+            .subtitle {
+                font-size: 0.7rem;
+            }
+
+            .header-controls {
+                gap: 1rem;
+                flex-wrap: wrap;
+            }
+
+            .language-select {
+                padding: 0.35rem 0.5rem;
+                font-size: 0.85rem;
+            }
+
+            .setting-label {
+                font-size: 0.85rem;
+            }
+
             main {
                 padding: 1rem;
+                gap: 1rem;
+            }
+
+            .card {
+                padding: 1rem;
+                border-radius: 14px;
+            }
+
+            .input-label {
+                font-size: 1rem;
+                margin-bottom: 0.5rem;
             }
 
             .text-input {
                 min-height: 150px;
                 font-size: 1.1rem;
+                padding: 1rem;
+                border-radius: 12px;
+            }
+
+            .char-count {
+                font-size: 0.8rem;
+            }
+
+            .keyboard-hint {
+                font-size: 0.75rem;
             }
 
             .btn {
                 padding: 0.8rem 1.5rem;
                 font-size: 1rem;
                 min-width: 140px;
+                border-radius: 40px;
             }
 
             .controls {
                 flex-direction: column;
+                gap: 0.75rem;
             }
 
             .btn {
                 width: 100%;
+            }
+
+            .status-bar {
+                padding: 0.75rem;
+                font-size: 0.9rem;
+                border-radius: 12px;
+            }
+
+            .phrase-category-title {
+                font-size: 0.85rem;
+            }
+
+            .phrase-btn {
+                padding: 0.5rem 0.8rem;
+                font-size: 0.85rem;
+            }
+
+            .phrases-grid {
+                gap: 0.4rem;
+            }
+
+            .emoji-tabs {
+                gap: 0.35rem;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding-bottom: 0.5rem;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+
+            .emoji-tabs::-webkit-scrollbar {
+                display: none;
+            }
+
+            .emoji-tab {
+                padding: 0.4rem 0.6rem;
+                font-size: 1rem;
+                flex-shrink: 0;
+            }
+
+            .emoji-grid {
+                grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+                gap: 0.4rem;
+            }
+
+            .emoji-btn {
+                font-size: 1.5rem;
+                padding: 0.4rem;
+                border-radius: 10px;
+            }
+
+            .emoji-grid-container {
+                max-height: 200px;
+            }
+
+            .emoji-search {
+                padding: 0.6rem 0.8rem;
+                font-size: 0.9rem;
+                border-radius: 10px;
+                margin-bottom: 0.75rem;
+            }
+
+            .history-section {
+                max-height: 150px;
+            }
+
+            .history-item {
+                padding: 0.6rem 0.8rem;
+                border-radius: 8px;
+            }
+
+            .history-text {
+                font-size: 0.9rem;
+            }
+
+            .history-time {
+                font-size: 0.75rem;
+            }
+
+            .settings-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+
+            .slider {
+                width: 80px;
+            }
+
+            select {
+                padding: 0.4rem;
+                font-size: 0.85rem;
+            }
+        }
+
+        /* Responsive - Small Mobile */
+        @media (max-width: 480px) {
+            header {
+                padding: 0.6rem 0.75rem;
+            }
+
+            .logo {
+                font-size: 1.1rem;
+                gap: 6px;
+            }
+
+            .logo-icon {
+                font-size: 1.4rem;
+            }
+
+            .subtitle {
+                font-size: 0.65rem;
+            }
+
+            .header-controls {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            main {
+                padding: 0.75rem;
+                gap: 0.75rem;
+            }
+
+            .card {
+                padding: 0.85rem;
+                border-radius: 12px;
+            }
+
+            .input-label {
+                font-size: 0.95rem;
+            }
+
+            .text-input {
+                min-height: 120px;
+                font-size: 1rem;
+                padding: 0.85rem;
+                border-radius: 10px;
+            }
+
+            .btn {
+                padding: 0.7rem 1.2rem;
+                font-size: 0.95rem;
+                border-radius: 35px;
+            }
+
+            .btn-icon {
+                font-size: 1.1rem;
+            }
+
+            .phrase-btn {
+                padding: 0.45rem 0.7rem;
+                font-size: 0.8rem;
+                border-radius: 20px;
+            }
+
+            .emoji-grid {
+                grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+            }
+
+            .emoji-btn {
+                font-size: 1.3rem;
+            }
+
+            .emoji-grid-container {
+                max-height: 180px;
+            }
+
+            .status-bar {
+                padding: 0.6rem;
+                font-size: 0.85rem;
+            }
+
+            .status-indicator {
+                width: 10px;
+                height: 10px;
+            }
+        }
+
+        /* Landscape mode adjustments */
+        @media (max-height: 500px) and (orientation: landscape) {
+            main {
+                padding: 0.5rem 1rem;
+                gap: 0.5rem;
+            }
+
+            .card {
+                padding: 0.75rem;
+            }
+
+            .text-input {
+                min-height: 80px;
+            }
+
+            .controls {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .btn {
+                width: auto;
+                flex: 1;
+                min-width: 100px;
+            }
+
+            .emoji-grid-container {
+                max-height: 120px;
+            }
+
+            .history-section {
+                max-height: 100px;
+            }
+        }
+
+        /* Touch-friendly tap targets */
+        @media (hover: none) and (pointer: coarse) {
+            .btn {
+                min-height: 48px;
+            }
+
+            .phrase-btn {
+                min-height: 44px;
+            }
+
+            .emoji-btn {
+                min-width: 44px;
+                min-height: 44px;
+            }
+
+            .emoji-tab {
+                min-width: 44px;
+                min-height: 44px;
+            }
+
+            .history-item {
+                min-height: 48px;
+            }
+
+            .history-play {
+                min-width: 44px;
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
         }
 
