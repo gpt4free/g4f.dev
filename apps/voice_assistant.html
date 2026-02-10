@@ -1179,7 +1179,7 @@
                 currentAudio.onerror = async () => {
                     // Try fallback
                     try {
-                        const fallbackUrl = `${TEXT_TO_SPEECH_API}${encodedText}`;
+                        const fallbackUrl = `${TEXT_TO_SPEECH_API}${encodedText}?language=${currentLanguage}`;
                         currentAudio = new Audio(fallbackUrl);
                         currentAudio.onended = () => {
                             finishSpeaking();

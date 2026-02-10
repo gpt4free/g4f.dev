@@ -1,6 +1,3 @@
-var __defProp = Object.defineProperty;
-var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
-
 // custom-worker.js
 var RATE_LIMITS = {
   // Token limits
@@ -316,7 +313,6 @@ async function authenticateRequest(request, env) {
   }
   return null;
 }
-__name(authenticateRequest, "authenticateRequest");
 async function getUser(env, userId) {
   if (env.MEMBERS_KV) {
     const cached = await env.MEMBERS_KV.get(`user:${userId}`);
@@ -336,7 +332,6 @@ async function getUser(env, userId) {
   }
   return null;
 }
-__name(getUser, "getUser");
 async function saveUser(env, user) {
   if (env.MEMBERS_BUCKET) {
     await env.MEMBERS_BUCKET.put(
@@ -349,7 +344,6 @@ async function saveUser(env, user) {
     await env.MEMBERS_KV.put(`user:${user.id}`, JSON.stringify(user), { expirationTtl: 3600 });
   }
 }
-__name(saveUser, "saveUser");
 async function handleListServers(request, env) {
   const user = await authenticateRequest(request, env);
   if (!user) {
@@ -369,7 +363,6 @@ async function handleListServers(request, env) {
   }));
   return jsonResponse({ servers: safeServers });
 }
-__name(handleListServers, "handleListServers");
 async function handleCreateServer(request, env) {
   const user = await authenticateRequest(request, env);
   if (!user) {
@@ -437,7 +430,6 @@ async function handleCreateServer(request, env) {
     server: safeServer
   });
 }
-__name(handleCreateServer, "handleCreateServer");
 async function handleUpdateServer(request, env) {
   const user = await authenticateRequest(request, env);
   if (!user) {
@@ -490,7 +482,6 @@ async function handleUpdateServer(request, env) {
     server: safeServer
   });
 }
-__name(handleUpdateServer, "handleUpdateServer");
 async function handleDeleteServer(request, env) {
   const user = await authenticateRequest(request, env);
   if (!user) {
@@ -526,7 +517,6 @@ async function handleDeleteServer(request, env) {
   await saveUser(env, user);
   return jsonResponse({ message: "Server deleted successfully" });
 }
-__name(handleDeleteServer, "handleDeleteServer");
 async function handleGetServerUsage(request, env) {
   const user = await authenticateRequest(request, env);
   if (!user) {
@@ -567,7 +557,6 @@ async function handleGetServerUsage(request, env) {
     history
   });
 }
-__name(handleGetServerUsage, "handleGetServerUsage");
 async function getPublicServers(env) {
   let publicServers = [];
   if (env.MEMBERS_KV) {
@@ -578,7 +567,6 @@ async function getPublicServers(env) {
   }
   return publicServers;
 }
-__name(getPublicServers, "getPublicServers");
 async function handleListPublicServers(request, env) {
   const publicServers = await getPublicServers(env);
   const safeServers = publicServers.map((s) => ({
@@ -591,7 +579,6 @@ async function handleListPublicServers(request, env) {
   }));
   return jsonResponse({ servers: safeServers });
 }
-__name(handleListPublicServers, "handleListPublicServers");
 async function handleGetServerModels(request, env, serverId) {
   const user = await authenticateRequest(request, env);
   const server = await getServerById(env, serverId, user);
@@ -619,7 +606,6 @@ async function handleGetServerModels(request, env, serverId) {
   }
   return jsonResponse({ data: [] });
 }
-__name(handleGetServerModels, "handleGetServerModels");
 async function handleModels(request, env, ctx, serverId, user, server, cacheKey) {
   if (!server) {
     return jsonResponse({ error: "Server not found" }, 404);
@@ -666,7 +652,6 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey)
     return jsonResponse({ error: `Failed to connect to server: ${e.message}` }, 502);
   }
 }
-__name(handleModels, "handleModels");
 async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user = null, pathname = null, userProvidedKey = null, rateCheck = null) {
   if (!server) {
     return jsonResponse({ error: "Server not found" }, 404);
@@ -869,7 +854,6 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     }, 502);
   }
 }
-__name(handleProxyToServer, "handleProxyToServer");
 async function createUsageTrackingStream(response, env, ctx, server, serverId, clientIP, model, firstMessage, user, pathname, userProvidedKey) {
   const reader = response.clone().body.getReader();
   const decoder = new TextDecoder();
@@ -919,7 +903,6 @@ async function createUsageTrackingStream(response, env, ctx, server, serverId, c
     }
   }
 }
-__name(createUsageTrackingStream, "createUsageTrackingStream");
 function getFirstMessage(messages, fallback = "") {
   if (!messages || !Array.isArray(messages)) {
     return fallback || "";
@@ -932,11 +915,9 @@ function getFirstMessage(messages, fallback = "") {
   }
   return fallback || "";
 }
-__name(getFirstMessage, "getFirstMessage");
 function getClientIP(request) {
   return request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 }
-__name(getClientIP, "getClientIP");
 async function persistUsageToDb(env, clientIP, provider, model, tokensUsed, promptTokens, completionTokens, pathname = null, firstMessage = null, userInfo = null) {
   if (!env.USAGE_DB) return;
   try {
@@ -961,7 +942,6 @@ async function persistUsageToDb(env, clientIP, provider, model, tokensUsed, prom
     console.error("Failed to persist usage:", e);
   }
 }
-__name(persistUsageToDb, "persistUsageToDb");
 async function updateServerUsage(env, server, tokens, model) {
   if (!env.MEMBERS_BUCKET || !server.owner_id) return;
   try {
@@ -1001,7 +981,6 @@ async function updateServerUsage(env, server, tokens, model) {
     console.error("Failed to update server usage:", e);
   }
 }
-__name(updateServerUsage, "updateServerUsage");
 async function updateUserDailyUsage(env, userId, tokens, provider, model) {
   if (!env.MEMBERS_BUCKET || !userId) return;
   try {
@@ -1035,7 +1014,6 @@ async function updateUserDailyUsage(env, userId, tokens, provider, model) {
     console.error("Failed to update user daily usage:", e);
   }
 }
-__name(updateUserDailyUsage, "updateUserDailyUsage");
 async function getServerById(env, serverId, user = null) {
   if (user && user.custom_servers) {
     const ownedServer = user.custom_servers.find((s) => s.id === serverId);
@@ -1071,7 +1049,6 @@ async function getServerById(env, serverId, user = null) {
   }
   return null;
 }
-__name(getServerById, "getServerById");
 async function getServerByLabel(env, label, user = null) {
   if (user && user.custom_servers) {
     const ownedServer = user.custom_servers.find((s) => s.label.toLowerCase().includes(label.toLowerCase()));
@@ -1088,7 +1065,6 @@ async function getServerByLabel(env, label, user = null) {
   }
   return null;
 }
-__name(getServerByLabel, "getServerByLabel");
 async function updatePublicServerIndex(env, server, ownerId, action) {
   if (!env.MEMBERS_KV) return;
   let servers = await getPublicServers(env);
@@ -1111,21 +1087,18 @@ async function updatePublicServerIndex(env, server, ownerId, action) {
   await env.MEMBERS_KV.put("public_servers_index", JSON.stringify(servers));
   await env.MEMBERS_KV.delete(`server:${server.id}`);
 }
-__name(updatePublicServerIndex, "updatePublicServerIndex");
 function getRandomApiKey(apiKeysStr) {
   if (!apiKeysStr) return null;
   const keys = apiKeysStr.split("\n").map((k) => k.trim()).filter((k) => k && !k.startsWith("#"));
   if (keys.length === 0) return null;
   return keys[Math.floor(Math.random() * keys.length)];
 }
-__name(getRandomApiKey, "getRandomApiKey");
 function generateServerId() {
   const timestamp = Date.now().toString(36);
   const randomPart = crypto.getRandomValues(new Uint8Array(6));
   const randomStr = Array.from(randomPart, (byte) => byte.toString(16).padStart(2, "0")).join("");
   return `srv_${timestamp}${randomStr}`;
 }
-__name(generateServerId, "generateServerId");
 async function validateServer(baseUrl, apiKeysStr) {
   const apiKey = getRandomApiKey(apiKeysStr);
   const headers = {
@@ -1253,7 +1226,6 @@ async function validateServer(baseUrl, apiKeysStr) {
     details: { baseUrl }
   };
 }
-__name(validateServer, "validateServer");
 async function hashString(str) {
   const encoder = new TextEncoder();
   const data = encoder.encode(str);
@@ -1261,7 +1233,6 @@ async function hashString(str) {
   const hashArray = new Uint8Array(hashBuffer);
   return Array.from(hashArray, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
-__name(hashString, "hashString");
 async function handleCustomAiRoute(request, pathname, cacheKey, rateCheck, env, ctx) {
   const user = await authenticateRequest(request, env);
   const url = new URL(request.url);
@@ -1300,7 +1271,8 @@ async function handleCustomAiRoute(request, pathname, cacheKey, rateCheck, env, 
     let instructions = url.searchParams.get("instructions");
     if (!instructions) {
       if (serverLabel === "audio") {
-        query = `Repeat the content between the delimiters exactly as written. Output only that content, with no extra words before or after.
+        const language = url.searchParams.get("language") || "en";
+        query = `Repeat the content between the delimiters exactly as written. Output only that content, with no extra words before or after. Language: ${language}
 
 <<<
 ${prompt}
@@ -1502,13 +1474,11 @@ ${prompt}
     }, 502);
   }
 }
-__name(handleCustomAiRoute, "handleCustomAiRoute");
 async function getRandomPublicServer(env) {
   const servers = Object.keys(DEFAULT_MODELS);
   const serverId = servers[Math.floor(Math.random() * servers.length)];
   return await getServerById(env, serverId);
 }
-__name(getRandomPublicServer, "getRandomPublicServer");
 function base64toBlob(base64Data) {
   const byteCharacters = atob(base64Data);
   const byteNumbers = new Array(byteCharacters.length);
@@ -1518,7 +1488,6 @@ function base64toBlob(base64Data) {
   const byteArray = new Uint8Array(byteNumbers);
   return byteArray;
 }
-__name(base64toBlob, "base64toBlob");
 function filterMarkdown(text, type, fallback) {
   const codeBlockRegex = /```(?:json|javascript|js)?\s*([\s\S]*?)```/gi;
   const matches = [...text.matchAll(codeBlockRegex)];
@@ -1527,14 +1496,12 @@ function filterMarkdown(text, type, fallback) {
   }
   return fallback;
 }
-__name(filterMarkdown, "filterMarkdown");
 function updateResponsefromRateCheck(newResponse, rateCheck) {
   newResponse.headers.set("X-Ratelimit-Remaining-Requests", String(rateCheck.maxRequests));
   newResponse.headers.set("X-Ratelimit-Remaining-Tokens", String(rateCheck.maxTokens));
   newResponse.headers.set("X-Ratelimit-Limit-Requests", String(rateCheck.limitRequests));
   newResponse.headers.set("X-Ratelimit-Limit-Tokens", String(rateCheck.limitTokens));
 }
-__name(updateResponsefromRateCheck, "updateResponsefromRateCheck");
 async function checkUserRateLimits(env, user, request) {
   const tier = user.tier || "new";
   const limits = USER_TIER_LIMITS[tier] || USER_TIER_LIMITS.new;
@@ -1604,7 +1571,6 @@ async function checkUserRateLimits(env, user, request) {
   }
   return { allowed: true, maxTokens, maxRequests, limitTokens, limitRequests };
 }
-__name(checkUserRateLimits, "checkUserRateLimits");
 async function checkAnonymousRateLimits(env, request) {
   const clientIP = getClientIP(request);
   const now = Date.now();
@@ -1670,7 +1636,6 @@ async function checkAnonymousRateLimits(env, request) {
   }
   return { allowed: true, maxTokens, maxRequests, limitTokens, limitRequests };
 }
-__name(checkAnonymousRateLimits, "checkAnonymousRateLimits");
 async function updateUserRateLimit(env, userId, ctx) {
   if (!env.MEMBERS_KV) return;
   const now = Date.now();
@@ -1698,7 +1663,6 @@ async function updateUserRateLimit(env, userId, ctx) {
     await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
   }
 }
-__name(updateUserRateLimit, "updateUserRateLimit");
 async function updateAnonymousRateLimit(env, clientIP, ctx) {
   if (!env.MEMBERS_KV) return;
   const now = Date.now();
@@ -1726,7 +1690,6 @@ async function updateAnonymousRateLimit(env, clientIP, ctx) {
     await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
   }
 }
-__name(updateAnonymousRateLimit, "updateAnonymousRateLimit");
 function getModelFactor(model) {
   if (!model) {
     return 1;
@@ -1740,11 +1703,9 @@ function getModelFactor(model) {
   }
   return 1;
 }
-__name(getModelFactor, "getModelFactor");
 function getModelTokens(model, tokens) {
   return getModelFactor(model) * tokens;
 }
-__name(getModelTokens, "getModelTokens");
 async function updateUserTokenUsage(env, userId, tokens, ctx) {
   if (!env.MEMBERS_KV || !tokens) return;
   const now = Date.now();
@@ -1772,7 +1733,6 @@ async function updateUserTokenUsage(env, userId, tokens, ctx) {
     await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
   }
 }
-__name(updateUserTokenUsage, "updateUserTokenUsage");
 async function updateAnonymousTokenUsage(env, clientIP, tokens, ctx) {
   if (!env.MEMBERS_KV || !tokens) return;
   const now = Date.now();
@@ -1800,7 +1760,6 @@ async function updateAnonymousTokenUsage(env, clientIP, tokens, ctx) {
     await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
   }
 }
-__name(updateAnonymousTokenUsage, "updateAnonymousTokenUsage");
 async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, rateCheck) {
   const user = await authenticateRequest(request, env);
   let requestBody;
@@ -1845,7 +1804,6 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, ra
   }
   return handleProxyToServer(request, env, ctx, selectedServer, "/chat/completions", cacheKey, user, pathname, null, rateCheck);
 }
-__name(handleV1ChatCompletions, "handleV1ChatCompletions");
 async function handleV1Models(request, env) {
   const user = await authenticateRequest(request, env);
   let privateServers = [];
@@ -1868,7 +1826,6 @@ async function handleV1Models(request, env) {
     data: Array.from(Object.values(allModels))
   });
 }
-__name(handleV1Models, "handleV1Models");
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -1878,7 +1835,6 @@ function jsonResponse(data, status = 200) {
     }
   });
 }
-__name(jsonResponse, "jsonResponse");
 function generateCacheKey(request, extra = "") {
   const url = new URL(request.url);
   const pathname = url.pathname;
@@ -1886,7 +1842,6 @@ function generateCacheKey(request, extra = "") {
   const method = request.method;
   return `${method}:${pathname}${searchParams ? "?" + searchParams : ""}${extra ? ":" + extra : ""}`;
 }
-__name(generateCacheKey, "generateCacheKey");
 async function getCachedResponse(request, cacheKey = null) {
   try {
     const key = cacheKey || generateCacheKey(request);
@@ -1899,7 +1854,6 @@ async function getCachedResponse(request, cacheKey = null) {
     return null;
   }
 }
-__name(getCachedResponse, "getCachedResponse");
 async function setCachedResponse(request, response, cacheControl, cacheKey = null, ctx = null) {
   if (!response.ok) return;
   try {
@@ -1920,7 +1874,6 @@ async function setCachedResponse(request, response, cacheControl, cacheKey = nul
     console.error("Cache write error:", e);
   }
 }
-__name(setCachedResponse, "setCachedResponse");
 export {
   custom_worker_default as default
 };

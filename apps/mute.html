@@ -1536,7 +1536,7 @@
             
             async function tryFallback() {
                 try {
-                    const fallbackUrl = `${SPEECH_API_FALLBACK}${encodedText}`;
+                    const fallbackUrl = `${SPEECH_API_FALLBACK}${encodedText}?language=${currentLanguage}`;
                     currentAudio = new Audio(fallbackUrl);
                     
                     currentAudio.onended = () => {
