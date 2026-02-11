@@ -140,7 +140,7 @@ try {
     const lastConnect = parseInt(localStorage.getItem('lastConnectToBackend') || '0', 10);
     const oneHour = 60 * 60 * 1000;
     if (!framework.backendUrl || (Date.now() - lastConnect) > oneHour) {
-        await framework.connectToBackend();
+        framework.connectToBackend();
         localStorage.setItem('lastConnectToBackend', Date.now().toString());
     }
 } catch (e) {

@@ -10,7 +10,7 @@ var RATE_LIMITS = {
   requests: {
     perMinute: 5,
     perHour: 50,
-    perDay: 500
+    perDay: 200
   },
   // Window durations in milliseconds
   windows: {
@@ -91,7 +91,7 @@ var DEFAULT_MODELS = {
   "srv_mks0cusg6010f87029ea": "model-router3",
   // azure
 };
-var BLOCKED_SERVERS = [];
+var BLOCKED_SERVERS = ["srv_mkrzs4lg75588992eb03"];
 var GPT_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "marin", "cedar", "amuch", "dan", "elan", "breeze", "cove", "ember", "fathom", "glimmer", "harp", "juniper", "maple", "orbit", "vale"];
 var custom_worker_default = {
   async fetch(request, env, ctx) {
@@ -283,6 +283,20 @@ var custom_worker_default = {
     } catch (error) {
       console.error("Custom worker error:", error);
       return jsonResponse({ error: error.message || "Internal server error" }, 500);
+    }
+  },
+  async scheduled(event, env, ctx) {
+    // Delete usage logs older than 14 days
+    if (env.USAGE_DB) {
+      try {
+        const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+        const result = await env.USAGE_DB.prepare(
+          `DELETE FROM usage_logs WHERE timestamp < ?`
+        ).bind(fourteenDaysAgo).run();
+        console.log(`Cron cleanup: Deleted ${result.meta?.changes || 0} usage logs older than 14 days`);
+      } catch (e) {
+        console.error("Failed to cleanup old usage logs:", e);
+      }
     }
   }
 };
@@ -783,6 +797,8 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     if (subPath === "/chat/completions" && response.ok) {
       const contentType2 = response.headers.get("content-type") || "";
       if (requestBody.stream || contentType2.includes("text/event-stream")) {
+        const geoLocation = request.headers.get("cf-ipcountry") || request.cf?.country || null;
+        const userAgent = request.headers.get("user-agent") || null;
         ctx.waitUntil(createUsageTrackingStream(
           response,
           env,
@@ -794,7 +810,9 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
           firstMessage,
           user,
           pathname,
-          userProvidedKey
+          userProvidedKey,
+          geoLocation,
+          userAgent
         ));
         const newResponse2 = new Response(response.body, response);
         for (const [key, value] of Object.entries(CORS_HEADERS)) {
@@ -831,7 +849,9 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     }
     let totalTokens = parseInt(response.headers.get("X-Usage-Total-Tokens") || "0") || usage.total_tokens || 0;
     if (subPath === "/chat/completions" && response.ok || usage) {
-      ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, requestModel, totalTokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user));
+      const geoLocation = request.headers.get("cf-ipcountry") || request.cf?.country || null;
+      const userAgent = request.headers.get("user-agent") || null;
+      ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, requestModel, totalTokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
       ctx.waitUntil(updateServerUsage(env, server, totalTokens, requestModel));
       if (user) {
         ctx.waitUntil(updateUserDailyUsage(env, user.id, totalTokens, `custom:${server.id}`, requestModel));
@@ -878,7 +898,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     }, 502);
   }
 }
-async function createUsageTrackingStream(response, env, ctx, server, serverId, clientIP, model, firstMessage, user, pathname, userProvidedKey) {
+async function createUsageTrackingStream(response, env, ctx, server, serverId, clientIP, model, firstMessage, user, pathname, userProvidedKey, geoLocation, userAgent) {
   const reader = response.clone().body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -913,7 +933,7 @@ async function createUsageTrackingStream(response, env, ctx, server, serverId, c
       break;
     }
   }
-  ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${serverId}`, model, usage.total_tokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user));
+  ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${serverId}`, model, usage.total_tokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
   ctx.waitUntil(updateServerUsage(env, server, usage.total_tokens, model));
   if (user) {
     ctx.waitUntil(updateUserDailyUsage(env, user.id, usage.total_tokens, `custom:${serverId}`, model));
@@ -942,12 +962,12 @@ function getFirstMessage(messages, fallback = "") {
 function getClientIP(request) {
   return request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 }
-async function persistUsageToDb(env, clientIP, provider, model, tokensUsed, promptTokens, completionTokens, pathname = null, firstMessage = null, userInfo = null) {
+async function persistUsageToDb(env, clientIP, provider, model, tokensUsed, promptTokens, completionTokens, pathname = null, firstMessage = null, userInfo = null, geoLocation = null, userAgent = null) {
   if (!env.USAGE_DB) return;
   try {
     await env.USAGE_DB.prepare(
-      `INSERT INTO usage_logs (ip, provider, model, tokens_total, tokens_prompt, tokens_completion, pathname, first_message, user_id, user_tier, username, timestamp) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO usage_logs (ip, provider, model, tokens_total, tokens_prompt, tokens_completion, pathname, first_message, user_id, user_tier, username, geo_location, user_agent, timestamp) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       clientIP,
       provider || "unknown",
@@ -956,10 +976,11 @@ async function persistUsageToDb(env, clientIP, provider, model, tokensUsed, prom
       promptTokens || 0,
       completionTokens || 0,
       pathname || "unknown",
-      firstMessage ? firstMessage.substring(0, 500) : null,
-      userInfo?.user_id || userInfo?.id || null,
+      firstMessage ? firstMessage.substring(0, 5000) : null,      userInfo?.user_id || userInfo?.id || null,
       userInfo?.tier || null,
       userInfo?.username || null,
+      geoLocation || null,
+      userAgent ? userAgent.substring(0, 500) : null,
       (/* @__PURE__ */ new Date()).toISOString()
     ).run();
   } catch (e) {
@@ -1471,9 +1492,11 @@ ${prompt}
       ctx.waitUntil(setCachedResponse(request, newResponse, CACHE_HEADERS.LONG, cacheKey, ctx));
     }
     const clientIP = getClientIP(request);
+    const geoLocation = request.headers.get("cf-ipcountry") || request.cf?.country || null;
+    const userAgent = request.headers.get("user-agent") || null;
     const requestModel = data.model || queryBody.model;
     const firstMessage = prompt || getFirstMessage(queryBody.messages);
-    ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, requestModel, usage.total_tokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user));
+    ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, requestModel, usage.total_tokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
     ctx.waitUntil(updateServerUsage(env, server, usage.total_tokens, requestModel));
     if (user) {
       ctx.waitUntil(updateUserDailyUsage(env, user.id, usage.total_tokens, `custom:${server.id}`, requestModel));
