@@ -549,6 +549,45 @@
             font-size: 1.5rem;
         }
 
+        .large-mode .status-bar {
+            font-size: 1.2rem;
+        }
+
+        .large-mode .section-title {
+            font-size: 1.5rem;
+        }
+
+        /* Large mode on mobile */
+        @media (max-width: 768px) {
+            .large-mode .text-output {
+                font-size: 1.4rem;
+            }
+
+            .large-mode .btn {
+                font-size: 1.2rem;
+                padding: 1rem 2rem;
+            }
+
+            .large-mode .quick-btn {
+                font-size: 1.1rem;
+                padding: 0.8rem 1.2rem;
+            }
+
+            .large-mode .record-btn {
+                width: 120px;
+                height: 120px;
+                font-size: 3rem;
+            }
+
+            .large-mode .record-label {
+                font-size: 1.3rem;
+            }
+
+            .large-mode .status-bar {
+                font-size: 1.1rem;
+            }
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             main {
@@ -628,6 +667,8 @@
             }
 
             .header-controls {
+                width: 100%;
+                justify-content: space-between;
                 gap: 1rem;
             }
 
@@ -1149,6 +1190,26 @@
             }
         }
 
+        async function tryFallback(text) {
+            try {
+                const encodedText = encodeURIComponent(text);
+                const fallbackUrl = `${TEXT_TO_SPEECH_API}${encodedText}?language=${currentLanguage}`;
+                currentAudio = new Audio(fallbackUrl);
+                currentAudio.onended = () => {
+                    finishSpeaking();
+                    addToHistory(text, 'spoken');
+                };
+                currentAudio.onerror = () => {
+                    setStatus('error', t('errorSpeak'));
+                    finishSpeaking();
+                };
+                await currentAudio.play();
+            } catch (e) {
+                setStatus('error', t('errorSpeak'));
+                finishSpeaking();
+            }
+        }
+
         // Text to Speech functions
         async function speakText() {
             const text = textOutput.value.trim();
@@ -1164,39 +1225,27 @@
             stopBtn.disabled = false;
             visualizer.classList.add('active');
 
-            const encodedText = encodeURIComponent(text);
-
             try {
-                // Try primary API first
-                const audioUrl = `${TEXT_TO_SPEECH_FALLBACK}${encodedText}`;
-                currentAudio = new Audio(audioUrl);
+                if (!['Ja', 'Nein', 'Danke', 'Danke!', 'Hallo!', 'Wie viel?'].includes(text)) {
+                    // Try primary API first
+                    const encodedText = encodeURIComponent(text);
+                    const audioUrl = `${TEXT_TO_SPEECH_FALLBACK}${encodedText}`;
+                    currentAudio = new Audio(audioUrl);
 
-                currentAudio.onended = () => {
-                    finishSpeaking();
-                    addToHistory(text, 'spoken');
-                };
-
-                currentAudio.onerror = async () => {
-                    // Try fallback
-                    try {
-                        const fallbackUrl = `${TEXT_TO_SPEECH_API}${encodedText}?language=${currentLanguage}`;
-                        currentAudio = new Audio(fallbackUrl);
-                        currentAudio.onended = () => {
-                            finishSpeaking();
-                            addToHistory(text, 'spoken');
-                        };
-                        currentAudio.onerror = () => {
-                            setStatus('error', t('errorSpeak'));
-                            finishSpeaking();
-                        };
-                        await currentAudio.play();
-                    } catch (e) {
-                        setStatus('error', t('errorSpeak'));
+                    currentAudio.onended = () => {
                         finishSpeaking();
-                    }
-                };
+                        addToHistory(text, 'spoken');
+                    };
+                    currentAudio.onerror = async () => {
+                        // Try fallback
+                        await tryFallback(text);
+                    };
 
-                await currentAudio.play();
+                    await currentAudio.play();
+                } else {
+                    await tryFallback(text);
+                }
+
 
             } catch (error) {
                 console.error('Text to speech error:', error);

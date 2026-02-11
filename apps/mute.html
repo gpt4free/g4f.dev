@@ -1536,7 +1536,8 @@
             
             async function tryFallback() {
                 try {
-                    const fallbackUrl = `${SPEECH_API_FALLBACK}${encodedText}?language=${currentLanguage}`;
+                    const language = currentLanguage === 'de' ? 'de-DE' : currentLanguage;
+                    const fallbackUrl = `${SPEECH_API_FALLBACK}${encodedText}?language=${language}`;
                     currentAudio = new Audio(fallbackUrl);
                     
                     currentAudio.onended = () => {
@@ -1558,21 +1559,25 @@
             }
             
             try {
-                const audioUrl = `${SPEECH_API_BASE}${encodedText}`;
-                
-                currentAudio = new Audio(audioUrl);
-                
-                currentAudio.onended = () => {
-                    finishSpeaking();
-                };
-                
-                currentAudio.onerror = (e) => {
-                    console.error('Primary API audio error, trying fallback:', e);
-                    tryFallback();
-                };
-                
-                await currentAudio.play();
-                
+                if (!['Ja', 'Nein', 'Danke', 'Danke!', 'Hallo!', 'Wie viel?', 'Ich brauche einen Arzt!', 'Wo ist die Toilette?', 'feiernd', 'Kothaufen', 'wütend mit Hörnern', 'Hunde', 'Hund'].includes(text)) {
+                    const encodedText = encodeURIComponent(text);
+                    const audioUrl = `${SPEECH_API_BASE}${encodedText}`;
+                    
+                    currentAudio = new Audio(audioUrl);
+                    
+                    currentAudio.onended = () => {
+                        finishSpeaking();
+                    };
+                    
+                    currentAudio.onerror = (e) => {
+                        console.error('Primary API audio error, trying fallback:', e);
+                        tryFallback();
+                    };
+                    
+                    await currentAudio.play();
+                } else {
+                    await tryFallback();
+                }
             } catch (error) {
                 console.error('Primary speech error, trying fallback:', error);
                 currentAudio.onerror = null; // Prevent double fallback
