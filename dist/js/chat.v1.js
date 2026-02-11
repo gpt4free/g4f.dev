@@ -49,6 +49,7 @@ const translationSnipptes = [
 ];
 
 let login_urls_storage = {
+    "ApiAirforce": ["Api.Airforce", "https://panel.api.airforce/dashboard", []],
     "HuggingFace": ["HuggingFace", "https://huggingface.co/settings/tokens", ["HuggingFaceMedia"]],
     "PollinationsAI": ["Pollinations AI", "https://enter.pollinations.ai", []],
     "PuterJS": ["Puter.js", "https://discord.gg/qXA4Wf4Fsm", []],
