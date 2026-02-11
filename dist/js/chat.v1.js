@@ -4378,6 +4378,21 @@ async function read_response(response, message_id, provider, finish_message) {
 function get_api_key_by_provider(provider) {
     let api_key = null;
     if (provider) {
+        if (provider === "custom:srv_mkrzs4lg75588992eb03") {
+            return appStorage.getItem("Custom-api_key");
+        }
+        if (provider === "custom:srv_mkslnbmha177b2d2971f") {
+            return appStorage.getItem("puter.auth.token");
+        }
+        if (provider === "custom:srv_mkozmel868dab43dfcc7") {
+            return appStorage.getItem("LMArena-api_key");
+        }
+        if (provider === "custom:srv_ml2kr1wn9b1fb453079a") {
+            return appStorage.getItem("DeepInfra-api_key");
+        }
+        if (provider === "custom:srv_mkomfko63371049b6da6") {
+            return appStorage.getItem("ApiAirforce-api_key");
+        }
         if (["Azure"].includes(provider)) {
             return appStorage.getItem("session_token");
         }
