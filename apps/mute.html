@@ -1580,8 +1580,6 @@
                 }
             } catch (error) {
                 console.error('Primary speech error, trying fallback:', error);
-                currentAudio.onerror = null; // Prevent double fallback
-                //tryFallback();
             }
         }
         

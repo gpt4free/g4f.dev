@@ -16,29 +16,39 @@ var RATE_LIMITS = {
   windows: {
     minute: 60 * 1e3,
     hour: 60 * 60 * 1e3,
-    day: 24 * 60 * 60 * 1e3
+    day: 24 * 60 * 60 * 1e3,
+    twelveDays: 12 * 24 * 60 * 60 * 1e3
+  },
+  // Day-based limits (number of days with activity allowed in window)
+  days: {
+    perTwelveDays: 3
   }
 };
 var USER_TIER_LIMITS = {
   new: {
     tokens: { perMinute: 1e5, perHour: 3e5, perDay: 1e6 },
-    requests: { perMinute: 10, perHour: 100, perDay: 1e3 }
+    requests: { perMinute: 10, perHour: 100, perDay: 1e3 },
+    days: { perTwelveDays: 3 }
   },
   free: {
     tokens: { perMinute: 2e5, perHour: 1e6, perDay: 5e6 },
-    requests: { perMinute: 20, perHour: 200, perDay: 2e3 }
+    requests: { perMinute: 20, perHour: 200, perDay: 2e3 },
+    days: { perTwelveDays: 3 }
   },
   sponsor: {
     tokens: { perMinute: 5e5, perHour: 25e5, perDay: 1e7 },
-    requests: { perMinute: 50, perHour: 500, perDay: 5e3 }
+    requests: { perMinute: 50, perHour: 500, perDay: 5e3 },
+    days: { perTwelveDays: 12 }
   },
   pro: {
     tokens: { perMinute: 1e6, perHour: 5e6, perDay: 2e7 },
-    requests: { perMinute: 100, perHour: 1e3, perDay: 1e4 }
+    requests: { perMinute: 100, perHour: 1e3, perDay: 1e4 },
+    days: { perTwelveDays: 12 }
   },
   admin: {
     tokens: { perMinute: 1e6, perHour: 5e6, perDay: 2e7 },
-    requests: { perMinute: 100, perHour: 1e3, perDay: 1e4 }
+    requests: { perMinute: 100, perHour: 1e3, perDay: 1e4 },
+    days: { perTwelveDays: 12 }
   }
 };
 var CACHE_HEADERS = {
@@ -63,7 +73,6 @@ var ACCESS_CONTROL_ALLOW_ORIGIN = {
   "Access-Control-Allow-Origin": "*"
 };
 var DEFAULT_MODELS = {
-  // 'srv_mjnrrgu4065b7b4329f6': 'model-router3',
   "srv_mkom688d57c76d8a3542": "llama-3.3-70b-versatile",
   // groq
   "srv_mkombumpae45db46dcb8": "deepseek-ai/deepseek-v3.2",
@@ -112,8 +121,15 @@ var custom_worker_default = {
         if (user) {
           rateCheck = await checkUserRateLimits(env, user, request);
           if (!rateCheck.allowed) {
-            const windowLabels = { minute: "per minute", hour: "per hour", day: "per day" };
-            const message = rateCheck.reason === "tokens" ? `Token limit (${rateCheck.limit.toLocaleString()} ${windowLabels[rateCheck.window]}) exceeded for ${rateCheck.tier} tier. Used: ${rateCheck.used.toLocaleString()} tokens.` : `Request limit (${rateCheck.limit} ${windowLabels[rateCheck.window]}) exceeded for ${rateCheck.tier} tier. Made: ${rateCheck.used} requests.`;
+            const windowLabels = { minute: "per minute", hour: "per hour", day: "per day", twelveDays: "per 12 days" };
+            let message;
+            if (rateCheck.reason === "tokens") {
+              message = `Token limit (${rateCheck.limit.toLocaleString()} ${windowLabels[rateCheck.window]}) exceeded for ${rateCheck.tier} tier. Used: ${rateCheck.used.toLocaleString()} tokens.`;
+            } else if (rateCheck.reason === "days") {
+              message = `Active day limit (${rateCheck.limit} days ${windowLabels[rateCheck.window]}) exceeded for ${rateCheck.tier} tier. Used: ${rateCheck.used} active days. Upgrade to sponsor/pro tier for unlimited daily access.`;
+            } else {
+              message = `Request limit (${rateCheck.limit} ${windowLabels[rateCheck.window]}) exceeded for ${rateCheck.tier} tier. Made: ${rateCheck.used} requests.`;
+            }
             const newResponse = Response.json({
               error: {
                 message,
@@ -131,8 +147,15 @@ var custom_worker_default = {
         } else {
           rateCheck = await checkAnonymousRateLimits(env, request);
           if (!rateCheck.allowed) {
-            const windowLabels = { minute: "per minute", hour: "per hour", day: "per day" };
-            const message = rateCheck.reason === "tokens" ? `Token limit (${rateCheck.limit.toLocaleString()} ${windowLabels[rateCheck.window]}) exceeded. Used: ${rateCheck.used.toLocaleString()} tokens. Sign up at g4f.dev/members.html for higher limits.` : `Request limit (${rateCheck.limit} ${windowLabels[rateCheck.window]}) exceeded. Made: ${rateCheck.used} requests. Sign up at g4f.dev/members.html for higher limits.`;
+            const windowLabels = { minute: "per minute", hour: "per hour", day: "per day", twelveDays: "per 12 days" };
+            let message;
+            if (rateCheck.reason === "tokens") {
+              message = `Token limit (${rateCheck.limit.toLocaleString()} ${windowLabels[rateCheck.window]}) exceeded. Used: ${rateCheck.used.toLocaleString()} tokens. Sign up at g4f.dev/members.html for higher limits.`;
+            } else if (rateCheck.reason === "days") {
+              message = `Active day limit (${rateCheck.limit} days ${windowLabels[rateCheck.window]}) exceeded. Used: ${rateCheck.used} active days. Sign up at g4f.dev/members.html for unlimited daily access.`;
+            } else {
+              message = `Request limit (${rateCheck.limit} ${windowLabels[rateCheck.window]}) exceeded. Made: ${rateCheck.used} requests. Sign up at g4f.dev/members.html for higher limits.`;
+            }
             const newResponse = Response.json({
               error: {
                 message,
@@ -711,13 +734,14 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     }
   }
   const apiKey = getRandomApiKey(server.api_keys);
+  const tokens = apiKey ? apiKey.split(/\s+/) : [];
   const proxyHeaders = {
     "Content-Type": request.headers.get("Content-Type") || "application/json"
   };
   if (userProvidedKey) {
-    proxyHeaders["Authorization"] = userProvidedKey.includes("Bearer") ? userProvidedKey : `Bearer ${userProvidedKey}`;
+    proxyHeaders["Authorization"] = `Bearer ${tokens.length > 1 ? tokens[0] + ' ' : ''}${userProvidedKey}`;
   } else if (apiKey) {
-    proxyHeaders["Authorization"] = apiKey.includes("Bearer") ? apiKey : `Bearer ${apiKey}`;
+    proxyHeaders["Authorization"] = `Bearer ${apiKey}`;
   }
   let targetUrl;
   if (server.base_url.includes(subPath)) {
@@ -1271,7 +1295,8 @@ async function handleCustomAiRoute(request, pathname, cacheKey, rateCheck, env, 
     let instructions = url.searchParams.get("instructions");
     if (!instructions) {
       if (serverLabel === "audio") {
-        const language = url.searchParams.get("language") || "en";
+        let language = url.searchParams.get("language") || "en";
+        language = language === 'de' ? 'de-DE' : language;
         query = `Repeat the content between the delimiters exactly as written. Output only that content, with no extra words before or after. Language: ${language}
 
 <<<
@@ -1634,6 +1659,37 @@ async function checkAnonymousRateLimits(env, request) {
       };
     }
   }
+  // Check 12-day window rate limit (3 active days per 12 days)
+  const dayLimit = RATE_LIMITS.days.perTwelveDays;
+  const twelveDayKey = `rate_limit_ip:${clientIP}:twelveDays`;
+  const twelveDayStored = await env.MEMBERS_KV.get(twelveDayKey);
+  const twelveDayUsage = twelveDayStored ? JSON.parse(twelveDayStored) : { activeDays: [], timestamp: now };
+  // Clean up days older than 12 days
+  const twelveDaysAgo = now - RATE_LIMITS.windows.twelveDays;
+  twelveDayUsage.activeDays = twelveDayUsage.activeDays.filter(dayTimestamp => dayTimestamp > twelveDaysAgo);
+  // Get today's date (start of day in UTC)
+  const todayStart = new Date(now).setUTCHours(0, 0, 0, 0);
+  const isNewDay = !twelveDayUsage.activeDays.some(dayTimestamp => {
+    const dayStart = new Date(dayTimestamp).setUTCHours(0, 0, 0, 0);
+    return dayStart === todayStart;
+  });
+  if (isNewDay && twelveDayUsage.activeDays.length >= dayLimit) {
+    // Find the oldest active day to calculate retry time
+    const oldestDay = Math.min(...twelveDayUsage.activeDays);
+    const retryAfter = Math.ceil((oldestDay + RATE_LIMITS.windows.twelveDays - now) / 1e3);
+    return {
+      allowed: false,
+      reason: "days",
+      window: "twelveDays",
+      limit: dayLimit,
+      used: twelveDayUsage.activeDays.length,
+      retryAfter,
+      maxTokens,
+      maxRequests,
+      limitTokens,
+      limitRequests
+    };
+  }
   return { allowed: true, maxTokens, maxRequests, limitTokens, limitRequests };
 }
 async function updateUserRateLimit(env, userId, ctx) {
@@ -1689,6 +1745,31 @@ async function updateAnonymousRateLimit(env, clientIP, ctx) {
     const ttl = Math.max(60, Math.ceil((window.duration - elapsed) / 1e3) + 60);
     await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
   }
+  // Update 12-day active days tracking
+  const twelveDayKey = `rate_limit_ip:${clientIP}:twelveDays`;
+  const twelveDayDataStr = await env.MEMBERS_KV.get(twelveDayKey);
+  let twelveDayData;
+  if (twelveDayDataStr) {
+    twelveDayData = JSON.parse(twelveDayDataStr);
+  } else {
+    twelveDayData = { activeDays: [], timestamp: now };
+  }
+  // Clean up days older than 12 days
+  const twelveDaysAgo = now - RATE_LIMITS.windows.twelveDays;
+  twelveDayData.activeDays = twelveDayData.activeDays.filter(dayTimestamp => dayTimestamp > twelveDaysAgo);
+  // Get today's date (start of day in UTC)
+  const todayStart = new Date(now).setUTCHours(0, 0, 0, 0);
+  const isTodayRecorded = twelveDayData.activeDays.some(dayTimestamp => {
+    const dayStart = new Date(dayTimestamp).setUTCHours(0, 0, 0, 0);
+    return dayStart === todayStart;
+  });
+  if (!isTodayRecorded) {
+    twelveDayData.activeDays.push(now);
+  }
+  twelveDayData.timestamp = now;
+  // TTL of 12 days + 1 day buffer
+  const twelveDayTtl = Math.ceil(RATE_LIMITS.windows.twelveDays / 1e3) + 86400;
+  await env.MEMBERS_KV.put(twelveDayKey, JSON.stringify(twelveDayData), { expirationTtl: twelveDayTtl });
 }
 function getModelFactor(model) {
   if (!model) {
@@ -1877,4 +1958,3 @@ async function setCachedResponse(request, response, cacheControl, cacheKey = nul
 export {
   custom_worker_default as default
 };
-//# sourceMappingURL=custom-worker.js.map

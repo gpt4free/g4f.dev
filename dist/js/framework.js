@@ -42,6 +42,7 @@ if (window.location.origin === G4F_HOST || window.location.origin.endsWith(G4F_W
     }
 }
 window.framework = {}
+
 const checkUrls = [];
 if (window.location.protocol === "file:") {
     checkUrls.push("http://localhost:1337");
@@ -51,6 +52,7 @@ if (["https:", "http:"].includes(window.location.protocol)) {
     checkUrls.push(window.location.origin);
 }
 checkUrls.push(G4F_HOST_PASS);
+
 async function checkUrl(url, connectStatus) {
     let response;
     try {
@@ -61,13 +63,15 @@ async function checkUrl(url, connectStatus) {
     }
     if (response.ok) {
         connectStatus ? connectStatus.innerText = url : null;
-        localStorage.setItem("backendUrl", url);
+        localStorage.setItem('backendUrl', url);
         framework.backendUrl = url;
         return true;
     }
     return false;
 }
-framework.backendUrl = localStorage.getItem('backendUrl') || "";
+
+framework.backendUrl = localStorage.getItem('backendUrl') || '';
+
 framework.connectToBackend = async (connectStatus) => {
     for (const url of checkUrls) {
         if(await checkUrl(url, connectStatus)) {
@@ -78,10 +82,11 @@ framework.connectToBackend = async (connectStatus) => {
         if(await checkUrl(framework.backendUrl, connectStatus)) {
             return;
         }
-        localStorage.removeItem("backendUrl");
+        localStorage.removeItem('backendUrl');
         framework.backendUrl = "";
     }
 };
+
 let newTranslations = [];
 framework.translate = (text) => {
     const stripText = text.trim();
@@ -131,10 +136,17 @@ framework.translateElements = function (elements = null) {
         }
     });
 }
-window.addEventListener('load', async () => {
-    if (!framework.backendUrl) {
+try {
+    const lastConnect = parseInt(localStorage.getItem('lastConnectToBackend') || '0', 10);
+    const oneHour = 60 * 60 * 1000;
+    if (!framework.backendUrl || (Date.now() - lastConnect) > oneHour) {
         await framework.connectToBackend();
+        localStorage.setItem('lastConnectToBackend', Date.now().toString());
     }
+} catch (e) {
+    add_error(e, true);
+}
+window.addEventListener('load', async () => {
     if (!document.body.classList.contains("translate")) {
         return;
     }
@@ -157,8 +169,9 @@ framework.translateAll = async () =>{
         allTranslations[key] = "";
     }
     const jsonTranslations = "\n\n```json\n" + JSON.stringify(allTranslations, null, 4) + "\n```";
-    const jsonLanguage = "`" + navigator.language + "`";
-    const prompt = `Translate the following text snippets in a JSON object to ${jsonLanguage} (iso code): ${jsonTranslations}`;
+    const languageName = navigator.language === "de" ? 'de-DE' : navigator.language === "es" ? 'es-ES' : navigator.language;
+    const jsonLanguage = "`" + languageName + "`";
+    const prompt = `Translate the following text snippets in a JSON object to ${jsonLanguage}: ${jsonTranslations} (iso-code)`;
     response = await query(prompt, true);
     let translations = await response.json();
     if (translations[navigator.language] && typeof translations[navigator.language] === 'object' && Object.keys(translations[navigator.language]).length > 0) {
