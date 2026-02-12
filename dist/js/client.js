@@ -843,6 +843,7 @@ class Puter extends Client {
           } else if (item.reasoning) {
             item.choices = [{delta: {reasoning: item.reasoning}}]
           }
+          yield item;
         }
     }
 }
