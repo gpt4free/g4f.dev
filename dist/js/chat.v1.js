@@ -5970,7 +5970,7 @@ function handleCloudSyncCallback() {
         url.searchParams.delete("user");
         url.searchParams.delete("settings");
         url.hash = "";
-        window.history.replaceState({}, document.title, url.pathname + url.search + (hashParts.length > 1 && !(hashParts[1].startsWith("g4f_") || hashParts[1].startsWith("gfs_")) ? "#" + hashParts[1] : ""));
+        window.history.replaceState({}, document.title, url.pathname + url.search + (hashParts.length > 1 && !(hashParts[1].startsWith("g4f_") || hashParts[1].startsWith("gfs_")) ? "#" + hashParts[1] : "#"));
         
         // Open settings to cloud sync tab if requested
         if (openSettings && typeof open_settings === "function") {
