@@ -5896,13 +5896,14 @@ async function checkCloudSyncSession() {
         return;
     }
     try {
-        const response = await fetch(`${CLOUD_SYNC_API}/user`, {
+        const url = token.startsWith("g4f_") ? `${CLOUD_SYNC_API}/members/api/keys/validate` : `${CLOUD_SYNC_API}/user`;
+        const response = await fetch(url, {
             headers: { "Authorization": `Bearer ${token}` }
         });
         if (response.ok) {
             const data = await response.json();
-            if (data.user) {
-                showCloudSyncLoggedIn(data.user);
+            if (data.user || data.username) {
+                showCloudSyncLoggedIn(data.user || {name: data.username, tier: data.tier});
                 return;
             } else {
                 appStorage.removeItem("session_token");
