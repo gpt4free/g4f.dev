@@ -5896,7 +5896,7 @@ async function checkCloudSyncSession() {
         return;
     }
     try {
-        const url = token.startsWith("g4f_") ? `${CLOUD_SYNC_API}/members/api/keys/validate` : `${CLOUD_SYNC_API}/user`;
+        const url = token.startsWith("g4f_") ? `${CLOUD_SYNC_API}/keys/validate` : `${CLOUD_SYNC_API}/user`;
         const response = await fetch(url, {
             headers: { "Authorization": `Bearer ${token}` }
         });
