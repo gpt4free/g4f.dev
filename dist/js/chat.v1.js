@@ -5940,8 +5940,9 @@ function handleCloudSyncCallback() {
     let token = urlParams.get("session_token");
     
     // Also check hash fragment for session token (starts with g4f_ or gfs_)
-    if (!token && window.location.hash) {
-        const hashValue = decodeURIComponent(window.location.hash.substring(1));
+    const hashParts = window.location.hash.split("#");
+    if (!token && hashParts.length > 1) {
+        const hashValue = decodeURIComponent(hashParts[hashParts.length - 1]);
         if (hashValue.startsWith("g4f_") || hashValue.startsWith("gfs_")) {
             token = hashValue;
         }
@@ -5969,7 +5970,7 @@ function handleCloudSyncCallback() {
         url.searchParams.delete("user");
         url.searchParams.delete("settings");
         url.hash = "";
-        window.history.replaceState({}, document.title, url.pathname + url.search);
+        window.history.replaceState({}, document.title, url.pathname + url.search + (hashParts.length > 1 ? "#" + hashParts[1] : ""));
         
         // Open settings to cloud sync tab if requested
         if (openSettings && typeof open_settings === "function") {
@@ -6105,9 +6106,8 @@ handleCloudSyncCallback();
 checkCloudSyncSession();
 
 // Redirect to members login page
-function cloudSyncLoginRedirect(openSettings = false) {
+function cloudSyncLoginRedirect() {
     const returnUrl = encodeURIComponent(window.location.href);
-    const settingsParam = openSettings ? "&settings=true" : "";
     window.location.href = `https://g4f.dev/members?redirect=${returnUrl}${settingsParam}`;
 }
 
