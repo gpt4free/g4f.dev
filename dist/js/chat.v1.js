@@ -45,7 +45,7 @@ const translationSnipptes = [
     "Get API key", "Uploading files...", "Invalid link", "Loading...", "Live Providers", "Custom Providers",
     "Search Off", "Search On", "Recognition On", "Recognition Off", "Delete Conversation",
     "Favorite Models:", "Stop Recording", "Record Audio", "Upload Audio", "No Title", "1 Copy",
-    "Delete all conversations?", "Error Occurred"
+    "Delete all conversations?", "Error Occurred", "Remaining:"
 ];
 
 let login_urls_storage = {
@@ -4542,10 +4542,36 @@ async function load_provider_models(provider=null, search=null) {
         models = JSON.parse(models);
         set_provider_models(models, provider);
     }
-    models = await api('models', provider);
-    if (models) {
-        set_provider_models(models, provider);
-        appStorage.setItem(`${provider}:models`, JSON.stringify(models));
+    async function get_quota(provider) {
+        const url = `${framework.backendUrl}/backend-api/v2/quota/${provider}`;
+        return await fetch(url, {
+            method: 'GET'
+        }).then(response => response.ok ? response.json() : undefined);
+    }
+    const [new_models, quota] = await Promise.all([api('models', provider), get_quota(provider)]);
+    new_models.map((model) => {
+        if (quota?.buckets) {
+            const percent = (quota.buckets.filter((bucket) => bucket.modelId == model.model).pop()?.remainingFraction || 0) * 100;
+            model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
+        } else if (quota?.models) {
+            const percent = (quota.models[model.model]?.quotaInfo?.remainingFraction || 0) * 100;
+            model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
+        } else if (quota?.quota_snapshots) {
+            function is_premium(model) {
+                return model.includes("claude") || model.includes("gemini") || (model != "gpt-5-mini" && model.includes("gpt-5")) || model.includes("grok");
+            }
+            if (is_premium(model.model)) {
+                const percent = Math.max(0, quota.quota_snapshots?.premium_interactions?.percent_remaining || 0);
+                model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
+            } else {
+                const percent = Math.max(0, quota.quota_snapshots?.chat?.percent_remaining || 0);
+                model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
+            }
+        }
+    });
+    if (new_models) {
+        set_provider_models(new_models, provider);
+        appStorage.setItem(`${provider}:models`, JSON.stringify(new_models));
     }
 };
 if (providerSelect) {
