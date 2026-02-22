@@ -50,13 +50,12 @@ class CorsProxyManager {
  */
 function extractRetryDelay(message) {
     // Regular expression to match "Try again in X seconds" where X can be integer or decimal
-    const regex = /(Try again in ([0-9.]+) seconds?|Retry after ([0-9.]+))/i;
+    const regex = /(Try again in ([0-9.]+) seconds?|Retry after ([0-9.]+)|Please retry in ([0-9.]+)s)/i;
     const match = message.match(regex);
     
-    if (match && (match[2] || match[3])) {
-        // Convert the matched string to a number
-        const delay = parseFloat(match[2] || match[3]);
-        return isNaN(delay) ? null : delay;
+    const delay = parseFloat(match[2] || match[3] || match[4] || '0');
+    if (delay > 0) {
+        return delay;
     }
     
     return null;
@@ -210,11 +209,12 @@ class Client {
                 await this._sleep();
                 let response = await fetch(this.apiEndpoint.replace('{model}', orginalModel), requestOptions);
                 if (response.status === 429) {
-                    console.error("Error during completion, retrying without custom endpoint:", response);
                     const delay = parseInt(response.headers.get('Retry-After'), 10) || extractRetryDelay(await response.text()) || this.sleep / 1000 || 10;
-                    console.log(`Retrying after ${delay} seconds...`);
-                    await new Promise(resolve => setTimeout(resolve, delay * 1000));
-                    response = await fetch(this.apiEndpoint.replace('{model}', orginalModel), requestOptions);
+                    if (delay > 0 && delay <= 30) {
+                        console.log(`Retrying after ${delay} seconds...`);
+                        await new Promise(resolve => setTimeout(resolve, delay * 1000));
+                        response = await fetch(this.apiEndpoint.replace('{model}', orginalModel), requestOptions);
+                    }
                 }
                 if (params.stream) {
                     return this._streamCompletion(response);
@@ -491,7 +491,7 @@ class Client {
         captureUserTierHeaders(response.headers);
         if (!response.ok) {
             const delay = parseInt(response.headers.get('Retry-After'), 10) || extractRetryDelay(await response.clone().text()) || this.sleep / 1000;
-            if (delay > 0) {
+            if (delay > 0 && delay <= 30) {
                 console.log(`Retrying after ${delay} seconds...`);
                 await new Promise(resolve => setTimeout(resolve, delay * 1000));
                 response = await fetch(imageEndpoint, requestOptions);
@@ -610,7 +610,13 @@ class PollinationsAI extends Client {
                     model.id = model.name;
                     model.label = model.aliases && model.aliases.length > 0 ? model.aliases[0] : (this.swapAliases[model.name]  || model.name);
                     this.modelAliases[model.label] = model.name;
-                    model.type = model.type || 'chat';
+                    model.type = model.type || 'chat';      
+                    if (model.input_modalities && model.input_modalities.includes('image')) {
+                        model.vision = true;
+                    }
+                    if (model.input_modalities && model.input_modalities.includes('audio')) {
+                        model.audio = true;
+                    }
                     return model
                 }),
                 ...imageModelsResponse.map(model => {
