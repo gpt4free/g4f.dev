@@ -28,12 +28,12 @@ var USER_TIER_LIMITS = {
   new: {
     tokens: { perMinute: 1e5, perHour: 3e5, perDay: 1e6 },
     requests: { perMinute: 10, perHour: 100, perDay: 1e3 },
-    days: { perTwelveDays: 3 }
+    days: { perTwelveDays: 12 }
   },
   free: {
     tokens: { perMinute: 2e5, perHour: 1e6, perDay: 5e6 },
     requests: { perMinute: 20, perHour: 200, perDay: 2e3 },
-    days: { perTwelveDays: 3 }
+    days: { perTwelveDays: 12 }
   },
   sponsor: {
     tokens: { perMinute: 5e5, perHour: 25e5, perDay: 1e7 },
@@ -77,11 +77,12 @@ var DEFAULT_MODELS = {
   // groq
   "srv_mkombumpae45db46dcb8": "deepseek-ai/deepseek-v3.2",
   // nvidia
-  "srv_mkolabu46aa55fc6f003": "deepseek-v3.2",
+  // "srv_mkolabu46aa55fc6f003": "deepseek-v3.2",
   // ollama
   "srv_mkolylnsaec61b86b9c2": "tngtech/deepseek-r1t2-chimera:free",
   // openrouter
   // 'srv_mjlq1ncq8a3f7fe0aea0': 'turbo',
+  // perplexity
   "srv_mkol5tgcd33cc358ddbc": "models/gemini-flash-latest",
   // gemini
   "srv_mkoloq41e34074b6133e": "openai",
@@ -99,6 +100,9 @@ var custom_worker_default = {
     const pathname = url.pathname;
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS });
+    }
+    if (pathname === "/") {
+      return Response.redirect("https://g4f.dev", 302);
     }
     if (pathname == "/api/audio/models") {
       return Response.json({ data: [{ id: "gpt-audio", audio: true }, ...GPT_AUDIO_VOICES.map((voice) => {
@@ -172,7 +176,7 @@ var custom_worker_default = {
           }
         }
       const cacheKey = url.toString();
-      if (request.method === "GET" && (pathname.startsWith("/ai/") || pathname.endsWith("/models") || pathname.endsWith("/chat/completions"))) {
+      if (request.method === "GET") {
         const cachedResponse = await getCachedResponse(request, cacheKey);
         if (cachedResponse) {
           const newResponse = new Response(cachedResponse.body, cachedResponse);
@@ -344,9 +348,6 @@ async function authenticateRequest(request, env) {
         return await getUser(env, session.user_id);
       }
     }
-  }
-  const userId = request.headers.get("X-User-Id");
-  if (userId && env.MEMBERS_BUCKET) {
   }
   return null;
 }
@@ -671,7 +672,7 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey)
       }
     }
     const newResponse = new Response(JSON.stringify(data), response);
-    for (const [key, value] of Object.entries(CORS_HEADERS)) {
+    for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
       newResponse.headers.set(key, value);
     }
     newResponse.headers.set("X-Server", serverId);
@@ -701,6 +702,12 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     try {
       const messages = requestBody.messages;
       if (messages) {
+        // Block known spam/abuse patterns
+        for (const msg of messages) {
+          if (msg && typeof msg.content === "string" && msg.content.includes("Ты — SEO-ассистент и генератор поисковых запросов.")) {
+            return jsonResponse({ error: { message: "Request blocked", type: "blocked_content" } }, 403);
+          }
+        }
         const message = messages[messages.length - 1];
         if (message && typeof message.content === "string") {
           if (message.content === "Server?") {
@@ -815,7 +822,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
           userAgent
         ));
         const newResponse2 = new Response(response.body, response);
-        for (const [key, value] of Object.entries(CORS_HEADERS)) {
+        for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
           newResponse2.headers.set(key, value);
         }
         newResponse2.headers.set("X-Url", targetUrl);
@@ -866,7 +873,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       }
     }
     const newResponse = new Response(response.body, response);
-    for (const [key, value] of Object.entries(CORS_HEADERS)) {
+    for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
       newResponse.headers.set(key, value);
     }
     newResponse.headers.set("X-Url", targetUrl);
@@ -877,7 +884,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       newResponse.headers.set("X-Usage-Total-Tokens", String(totalTokens));
     }
     if (request.method === "GET") {
-      ctx.waitUntil(setCachedResponse(request, newResponse.clone(), CACHE_HEADERS.MEDIUM, cacheKey, ctx));
+      ctx.waitUntil(setCachedResponse(request, newResponse.clone(), CACHE_HEADERS.SHORT, cacheKey, ctx));
     }
     if (user) {
       newResponse.headers.set("X-User-Id", user.id);
@@ -1428,7 +1435,7 @@ ${prompt}
             }
           });
           const newResponse2 = new Response(textStream, {
-            headers: { "Content-Type": "text/plain; charset=UTF-8", ...CORS_HEADERS }
+            headers: { "Content-Type": "text/plain; charset=UTF-8", ...ACCESS_CONTROL_ALLOW_ORIGIN }
           });
           newResponse2.headers.set("X-Provider", server.label);
           if (queryBody.model) newResponse2.headers.set("X-Model", queryBody.model);
@@ -1443,7 +1450,7 @@ ${prompt}
         }
       }
       const newResponse2 = new Response(response.body, response);
-      for (const [key, value] of Object.entries(CORS_HEADERS)) {
+      for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
         newResponse2.headers.set(key, value);
       }
       newResponse2.headers.set("X-Provider", server.label);
@@ -1482,7 +1489,7 @@ ${prompt}
       return jsonResponse({ error: { message: data || "Empty response" } }, 500);
     }
     const newResponse = new Response(data, {
-      headers: { "Content-Type": "text/plain; charset=UTF-8", ...CORS_HEADERS }
+      headers: { "Content-Type": "text/plain; charset=UTF-8", ...ACCESS_CONTROL_ALLOW_ORIGIN }
     });
     newResponse.headers.set("X-Provider", server.label);
     if (queryBody.model) newResponse.headers.set("X-Model", queryBody.model);
@@ -1876,21 +1883,26 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, ra
   if (!model) {
     return jsonResponse({ error: "Model is required" }, 400);
   }
-  let privateServers = [];
-  if (user && user.custom_servers) {
-    privateServers = user.custom_servers.filter((s) => !s.is_public);
-  }
-  const publicServersIndex = await getPublicServers(env);
   let selectedServer = null;
-  for (const server of privateServers) {
-    if (server.allowed_models && server.allowed_models.length > 0) {
-      if (server.allowed_models.includes(model)) {
-        selectedServer = server;
-        break;
+  if (model === "auto") {
+    selectedServer = await getRandomPublicServer(env);
+  }
+  if (!selectedServer) {
+    let privateServers = [];
+    if (user && user.custom_servers) {
+      privateServers = user.custom_servers.filter((s) => !s.is_public);
+    }
+    for (const server of privateServers) {
+      if (server.allowed_models && server.allowed_models.length > 0) {
+        if (server.allowed_models.includes(model)) {
+          selectedServer = server;
+          break;
+        }
       }
     }
   }
   if (!selectedServer) {
+    const publicServersIndex = await getPublicServers(env);
     for (const serverIndex of publicServersIndex) {
       const owner = await getUser(env, serverIndex.owner_id);
       if (!owner) continue;
@@ -1899,6 +1911,7 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, ra
       if (fullServer.allowed_models && fullServer.allowed_models.length > 0) {
         if (fullServer.allowed_models.includes(model)) {
           selectedServer = fullServer;
+          break;
         }
       }
     }
@@ -1935,7 +1948,7 @@ function jsonResponse(data, status = 200) {
     status,
     headers: {
       "Content-Type": "application/json",
-      ...CORS_HEADERS
+      ...ACCESS_CONTROL_ALLOW_ORIGIN
     }
   });
 }

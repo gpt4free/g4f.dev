@@ -4478,17 +4478,18 @@ function set_favorite_providers() {
 
 function set_quota_info(models, quota) {
     models.map((model) => {
+        const model_id = model.model || model.id;
         if (quota?.buckets) {
-            const percent = (quota.buckets.filter((bucket) => bucket.modelId == model.model).pop()?.remainingFraction || 0) * 100;
+            const percent = (quota.buckets.filter((bucket) => bucket.modelId == model_id).pop()?.remainingFraction || 0) * 100;
             model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
         } else if (quota?.models) {
-            const percent = (quota.models[model.model]?.quotaInfo?.remainingFraction || 0) * 100;
+            const percent = (quota.models[model_id]?.quotaInfo?.remainingFraction || 0) * 100;
             model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
         } else if (quota?.quota_snapshots) {
             function is_premium(model) {
                 return model.includes("claude") || model.includes("gemini") || (model != "gpt-5-mini" && model.includes("gpt-5")) || model.includes("grok");
             }
-            if (is_premium(model.model)) {
+            if (is_premium(model_id)) {
                 const percent = Math.max(0, quota.quota_snapshots?.premium_interactions?.percent_remaining || 0);
                 model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
             } else {
