@@ -559,7 +559,7 @@ class PollinationsAI extends Client {
                     window.dispatchEvent(new CustomEvent('userTierUpdate', { detail: userInfo }));
                 }
             }
-            return d.balance;
+            return d;
         })
     }
 

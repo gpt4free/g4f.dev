@@ -1618,9 +1618,9 @@ function calculateUserTier(userData, contributors, sponsors) {
         user.updated_at = new Date().toISOString();
         await saveUser(env, user);
   
-        // Redirect to external URL with the API key
-        const redirectUrl = `${(new URL(externalRedirectUrl)).toString()}#${encodeURIComponent(apiKey)}`;
         
+        const redirectUrl = new URL(externalRedirectUrl);
+        redirectUrl.searchParams.set("session_token", apiKey);
         return Response.redirect(redirectUrl.toString(), 302);
     } catch (error) {
         console.error("Failed to generate temp API key:", error);

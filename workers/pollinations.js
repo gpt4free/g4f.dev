@@ -21,10 +21,7 @@ const POLLINATIONS_GEN_IMAGE_MODELS_API = "https://gen.pollinations.ai/image/mod
 const MODEL_ALIASES = {
   "openai": "openai",
   "deepseek": "deepseek",
-  "flux": "flux",
-  "turbo": "sdxl-turbo",
-  "gptimage": "gpt-image",
-  "kontext": "flux-kontext"
+  "flux": "flux"
 };
 
 /**
@@ -63,8 +60,9 @@ async function handleListModels(request, env) {
         models.push({
           id: model.name || model,
           object: "model",
-          created: Math.floor(Date.now() / 1000),
-          owned_by: "pollinations"
+          created: 0,
+          owned_by: "pollinations",
+          ...(model.name ? model : {})
         });
       }
     }
@@ -80,10 +78,11 @@ async function handleListModels(request, env) {
         models.push({
           id: modelName,
           object: "model",
-          created: Math.floor(Date.now() / 1000),
+          created: 0,
           owned_by: "pollinations",
           image: !isVideo,
-          video: isVideo
+          video: isVideo,
+          ...(model.name ? model : {})
         });
       }
     }
@@ -362,6 +361,8 @@ export default {
         response = await handlePath("account", path.substring("/account/".length), request, env);
       } else if (path.endsWith("/models") && request.method === "GET") {
         response = await handleListModels(request, env);
+      } else if (path.endsWith("/quota") && request.method === "GET") {
+        response = await handlePath("account", "balance", request, env);
       } else if (path.endsWith("/chat/completions") && request.method === "POST") {
         response = await handleChatCompletion(request, env, ctx);
       } else if (path.endsWith("/images/generations") && request.method === "POST") {

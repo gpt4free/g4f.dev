@@ -60,7 +60,8 @@ const modelTags = {
     "image-edit": "🎨",
     vision: "👓",
     audio: "🎧",
-    video: "🎥"
+    video: "🎥",
+    paid_only: "💎",
 }
 
 document.addEventListener("DOMContentLoaded", (event) => {
@@ -4475,6 +4476,31 @@ function set_favorite_providers() {
     providerSelect.appendChild(optgroup);
 }
 
+function set_quota_info(models, quota) {
+    models.map((model) => {
+        if (quota?.buckets) {
+            const percent = (quota.buckets.filter((bucket) => bucket.modelId == model.model).pop()?.remainingFraction || 0) * 100;
+            model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
+        } else if (quota?.models) {
+            const percent = (quota.models[model.model]?.quotaInfo?.remainingFraction || 0) * 100;
+            model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
+        } else if (quota?.quota_snapshots) {
+            function is_premium(model) {
+                return model.includes("claude") || model.includes("gemini") || (model != "gpt-5-mini" && model.includes("gpt-5")) || model.includes("grok");
+            }
+            if (is_premium(model.model)) {
+                const percent = Math.max(0, quota.quota_snapshots?.premium_interactions?.percent_remaining || 0);
+                model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
+            } else {
+                const percent = Math.max(0, quota.quota_snapshots?.chat?.percent_remaining || 0);
+                model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
+            }
+        }
+    });
+    if (quota && quota.hasOwnProperty("balance")) {
+        models[0].label += ` (${framework.translate("Balance:")} ${quota.balance} Pollen)`;
+    }
+}
 async function load_provider_models(provider=null, search=null) {
     if (!provider) {
         provider = providerSelect.value;
@@ -4544,32 +4570,12 @@ async function load_provider_models(provider=null, search=null) {
     }
     async function get_quota(provider) {
         const url = `${framework.backendUrl}/backend-api/v2/quota/${provider}`;
-        return await fetch(url, {
-            method: 'GET'
-        }).then(response => response.ok ? response.json() : undefined);
+        response = await fetch(url, { method: 'GET' });
+        return response.ok ? response.json() : undefined;
     }
     const [new_models, quota] = await Promise.all([api('models', provider), get_quota(provider)]);
-    new_models.map((model) => {
-        if (quota?.buckets) {
-            const percent = (quota.buckets.filter((bucket) => bucket.modelId == model.model).pop()?.remainingFraction || 0) * 100;
-            model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
-        } else if (quota?.models) {
-            const percent = (quota.models[model.model]?.quotaInfo?.remainingFraction || 0) * 100;
-            model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
-        } else if (quota?.quota_snapshots) {
-            function is_premium(model) {
-                return model.includes("claude") || model.includes("gemini") || (model != "gpt-5-mini" && model.includes("gpt-5")) || model.includes("grok");
-            }
-            if (is_premium(model.model)) {
-                const percent = Math.max(0, quota.quota_snapshots?.premium_interactions?.percent_remaining || 0);
-                model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
-            } else {
-                const percent = Math.max(0, quota.quota_snapshots?.chat?.percent_remaining || 0);
-                model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
-            }
-        }
-    });
     if (new_models) {
+        set_quota_info(new_models, quota);
         set_provider_models(new_models, provider);
         appStorage.setItem(`${provider}:models`, JSON.stringify(new_models));
     }
@@ -5524,9 +5530,19 @@ async function initClient() {
 }
 
 async function loadClientModels() {
+    async function get_quota() {
+        if (client && client.balance !== undefined) {
+            return await client.balance;
+        }
+        // first try the new public API endpoint; fall back to legacy backend-api if unavailable
+        const  url = `${client.baseUrl}/quota`;
+        response = await fetch(url, { method: 'GET' });
+        return response.ok ? response.json() : undefined;
+    }
     modelSelect.innerHTML = `<option value="" disabled selected>${framework.translate("Loading...")}</option>`;
     try {
-        const models = await client.models.list();
+        const [models, quota] = await Promise.all([client.models.list(), get_quota()]);
+        set_quota_info(models, quota);
         modelSelect.innerHTML = '';
         models.forEach(model => {
             if (window.isValidModel && !isValidModel(model)) {
