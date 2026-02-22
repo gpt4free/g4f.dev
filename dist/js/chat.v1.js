@@ -4449,6 +4449,9 @@ function set_favorite_models(provider) {
         const value_option = modelSelect.querySelector(`option[value="${key}"]`)
         if (value_option) {
             const option = value_option.cloneNode(true);
+            if (typeof option.dataset.remaining === 'undefined' || option.dataset.remaining) {
+                option.selected = true;
+            }
             optgroup.appendChild(option);
             if (optgroup.childElementCount > 5) {
                 delete selected[optgroup.firstChild.value];
@@ -4458,7 +4461,6 @@ function set_favorite_models(provider) {
     });
     favorites[provider] = selected;
     appStorage.setItem("favorites", JSON.stringify(favorites));
-    optgroup.lastChild?.setAttribute("selected", "selected");
     modelSelect.appendChild(optgroup);
 }
 
@@ -4478,9 +4480,9 @@ function set_favorite_providers() {
 
 function set_quota_info(models, quota) {
     let default_model = null;
-    models.map((model) => {
+    models.forEach((model) => {
         const model_id = model.model || model.id;
-        let percent = 0;
+        let percent = undefined;
         if (quota?.buckets) {
             percent = (quota.buckets.filter((bucket) => bucket.modelId == model_id).pop()?.remainingFraction || 0) * 100;
             model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
@@ -4499,14 +4501,28 @@ function set_quota_info(models, quota) {
                 model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
             }
         }
+        if (percent !== undefined && percent < 10) {
+            model.label += ` ⚠️`;
+        }
+        model.remaining_percent = percent;
         if (!default_model && percent >= 10) {
             default_model = model_id;
-            models.map((model) => delete model.default);
+            models.forEach((model) => delete model.default);
             model.default = true;
         }
     });
     if (quota && quota.hasOwnProperty("balance")) {
-        models[0].label += ` (${framework.translate("Balance:")} ${quota.balance} Pollen)`;
+        models[0].label += ` (${framework.translate("Balance:")} ${quota.balance.toFixed(2).replace(".00", "")} Pollen)`;
+    }
+    if (!default_model &&client && client.defaultModel) {
+        default_model = client.defaultModel;
+        models.forEach((model) => {
+            if ((model.model || model.id) == default_model) {
+                model.default = true;
+            } else {
+                delete model.default;
+            }
+        });
     }
 }
 async function load_provider_models(provider=null, search=null) {
@@ -4534,7 +4550,6 @@ async function load_provider_models(provider=null, search=null) {
     }
     function set_provider_models(models, provider) {
         modelSelect.innerHTML = '';
-        let defaultIndex = 0;
         function add_options(group, models, search) {
             models.forEach((model, i) => {
                 if (!model.models) {
@@ -4548,9 +4563,12 @@ async function load_provider_models(provider=null, search=null) {
                     if (model.audio) {
                         option.dataset.audio = "true";
                     }
+                    if (model.remaining_percent !== undefined) {
+                        option.dataset.remaining = model.remaining_percent;
+                    }
                     group.appendChild(option);
                     if (model.default) {
-                        defaultIndex = i;
+                        option.selected = true;
                     }
                 } else {
                     let optgroup = document.createElement('optgroup');
@@ -4565,7 +4583,6 @@ async function load_provider_models(provider=null, search=null) {
         }
         if (Array.isArray(models)) {
             add_options(modelSelect, models, search);
-            modelSelect.selectedIndex = defaultIndex;
             if (models.length > 2) {
                 set_favorite_models(provider);
             }
@@ -4618,7 +4635,6 @@ modelSelect.addEventListener("change", () => {
     console.log("Selected model:", modelSelect.value, selectedOption);
     if (!selected[modelSelect.value]) {
         const option = selectedOption.cloneNode(true);
-        option.selected = true;
         const optgroup = modelSelect.querySelector('optgroup:last-child');
         if (optgroup) {
             optgroup.appendChild(option);
@@ -5565,7 +5581,7 @@ async function loadClientModels() {
             if (model.audio) {
                 opt.dataset.audio = model.audio;
             }
-            if (model.id === client.defaultModel) opt.selected = true;
+            if (model.default) opt.selected = true;
             modelSelect.appendChild(opt);
         });
         if (models.length > 2) {
