@@ -61,7 +61,7 @@ const modelTags = {
     vision: "👓",
     audio: "🎧",
     video: "🎥",
-    paid_only: "💎",
+    paid_only: "💰",
 }
 
 document.addEventListener("DOMContentLoaded", (event) => {
@@ -4449,7 +4449,7 @@ function set_favorite_models(provider) {
         const value_option = modelSelect.querySelector(`option[value="${key}"]`)
         if (value_option) {
             const option = value_option.cloneNode(true);
-            if (typeof option.dataset.remaining === 'undefined' || option.dataset.remaining) {
+            if (typeof option.dataset.remaining === 'undefined' || option.dataset.remaining > 0) {
                 option.selected = true;
             }
             optgroup.appendChild(option);
@@ -4484,6 +4484,9 @@ function set_quota_info(models, quota) {
         const model_id = model.model || model.id;
         let percent = undefined;
         if (quota?.buckets) {
+            if (!["gemini-3-pro-preview"].includes(default_model)) {
+                default_model = null; // Use last model with enough quota as default instead of the first one
+            }
             percent = (quota.buckets.filter((bucket) => bucket.modelId == model_id).pop()?.remainingFraction || 0) * 100;
             model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
         } else if (quota?.models) {
@@ -4500,9 +4503,13 @@ function set_quota_info(models, quota) {
                 percent = Math.max(0, quota.quota_snapshots?.chat?.percent_remaining || 0);
                 model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
             }
+        } else {
+            return;
         }
         if (percent !== undefined && percent < 10) {
             model.label += ` ⚠️`;
+        } else {
+            model.label += ` ✅`;
         }
         model.remaining_percent = percent;
         if (!default_model && percent >= 10) {
@@ -4548,9 +4555,12 @@ async function load_provider_models(provider=null, search=null) {
     if (await initClient()) {
         return;
     }
-    function set_provider_models(models, provider) {
+    function set_provider_models(models, provider, quota=null) {
         modelSelect.innerHTML = '';
         function add_options(group, models, search) {
+            if (quota) {
+                set_quota_info(models, quota);
+            }
             models.forEach((model, i) => {
                 if (!model.models) {
                     let option = document.createElement('option');
@@ -4600,8 +4610,7 @@ async function load_provider_models(provider=null, search=null) {
     }
     const [new_models, quota] = await Promise.all([api('models', provider), get_quota(provider)]);
     if (new_models) {
-        set_quota_info(new_models, quota);
-        set_provider_models(new_models, provider);
+        set_provider_models(new_models, provider, quota);
         appStorage.setItem(`${provider}:models`, JSON.stringify(new_models));
     }
 };
