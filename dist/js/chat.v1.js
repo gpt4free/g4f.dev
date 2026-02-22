@@ -45,7 +45,7 @@ const translationSnipptes = [
     "Get API key", "Uploading files...", "Invalid link", "Loading...", "Live Providers", "Custom Providers",
     "Search Off", "Search On", "Recognition On", "Recognition Off", "Delete Conversation",
     "Favorite Models:", "Stop Recording", "Record Audio", "Upload Audio", "No Title", "1 Copy",
-    "Delete all conversations?", "Error Occurred", "Remaining:"
+    "Delete all conversations?", "Error Occurred", "Remaining:", "Balance:"
 ];
 
 let login_urls_storage = {
@@ -4477,25 +4477,32 @@ function set_favorite_providers() {
 }
 
 function set_quota_info(models, quota) {
+    let default_model = null;
     models.map((model) => {
         const model_id = model.model || model.id;
+        let percent = 0;
         if (quota?.buckets) {
-            const percent = (quota.buckets.filter((bucket) => bucket.modelId == model_id).pop()?.remainingFraction || 0) * 100;
+            percent = (quota.buckets.filter((bucket) => bucket.modelId == model_id).pop()?.remainingFraction || 0) * 100;
             model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
         } else if (quota?.models) {
-            const percent = (quota.models[model_id]?.quotaInfo?.remainingFraction || 0) * 100;
+            percent = (quota.models[model_id]?.quotaInfo?.remainingFraction || 0) * 100;
             model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
         } else if (quota?.quota_snapshots) {
             function is_premium(model) {
                 return model.includes("claude") || model.includes("gemini") || (model != "gpt-5-mini" && model.includes("gpt-5")) || model.includes("grok");
             }
             if (is_premium(model_id)) {
-                const percent = Math.max(0, quota.quota_snapshots?.premium_interactions?.percent_remaining || 0);
+                percent = Math.max(0, quota.quota_snapshots?.premium_interactions?.percent_remaining || 0);
                 model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
             } else {
-                const percent = Math.max(0, quota.quota_snapshots?.chat?.percent_remaining || 0);
+                percent = Math.max(0, quota.quota_snapshots?.chat?.percent_remaining || 0);
                 model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
             }
+        }
+        if (!default_model && percent >= 10) {
+            default_model = model_id;
+            models.map((model) => delete model.default);
+            model.default = true;
         }
     });
     if (quota && quota.hasOwnProperty("balance")) {
