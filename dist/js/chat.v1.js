@@ -1242,8 +1242,6 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         console.error(message.message)
         await api("log", {...message, provider: provider_storage[message_id]});
     } else if (message.type == "error") {
-        content_map.update_timeouts.forEach((timeoutId)=>clearTimeout(timeoutId));
-        content_map.update_timeouts = [];
         error_storage[message_id] = message.message
         console.error(message.message);
         content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${message.message}`);
@@ -1327,7 +1325,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
     } else if (message.type == "title") {
         title_storage[message_id] = message.title;
     } else if (message.type == "login") {
-        update_message(content_map, message_id, framework.markdown(message.login));
+        content_map.inner.innerHTML = framework.markdown(message.login + ' <span class="cursor"></span>');
     } else if (message.type == "finish") {
         finish_storage[message_id] = message.finish;
     } else if (message.type == "variant") {
@@ -1470,7 +1468,7 @@ const toUrl = async (file)=>{
 const ask_gpt = async (message_id, message_index = -1, regenerate = false, provider = null, model = null, action = null, message = null) => {
     if (!model && !provider) {
         model = get_selected_model();
-        provider = get_selected_provider();
+        provider = providerSelect?.value;
     }
     const is_youtube = provider == "YouTube";
     let conversation = await get_conversation(window.conversation_id);
@@ -1508,7 +1506,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
     if (message_index == -1) {
         chatBody.appendChild(message_el);
     } else {
-        parent_message = chatBody.querySelector(`.message[data-index="${message_index}"]`);
+        const parent_message = chatBody.querySelector(`.message[data-index="${message_index}"]`);
         if (!parent_message) {
             return;
         }
@@ -1521,17 +1519,14 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         content: content_el,
         inner: content_el.querySelector('.content_inner'),
         count: content_el.querySelector('.count'),
-        update_timeouts: [],
         message_index: message_index,
     }
     async function finish_message() {
         let final_message  = null;
-        content_map.update_timeouts.forEach((timeoutId)=>clearTimeout(timeoutId));
-        content_map.update_timeouts = [];
-        // if (!error_storage[message_id] && message_storage[message_id]) {
-        //     content_map.inner.innerHTML = renderer(message_storage[message_id]);
-        //     highlight(content_map.inner);
-        // }
+        if (!error_storage[message_id] && message_storage[message_id]) {
+            content_map.inner.innerHTML = renderer(message_storage[message_id]);
+            highlight(content_map.inner);
+        }
         // Handle tool calls if any
         if (tool_calls_storage[message_id] && tool_calls_storage[message_id].length > 0 && mcpClient) {
             await handleToolCalls(tool_calls_storage[message_id], messages, model, provider, message_id, finish_message);
@@ -1634,6 +1629,11 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                         }
                     }
                     delete content_data_storage[message_id];
+                    if (client) {
+                        loadClientModels();
+                    } else {
+                        refresh_models(providerSelect?.value);
+                    }
                 }
             } catch (e) {
                 add_error("Failed to load the conversation:", e);
@@ -3097,61 +3097,6 @@ function count_words_and_tokens(text, model, completion_tokens, prompt_tokens) {
     text = filter_message(text);
     return `(${count_words(text)} ${framework.translate('words')}, ${count_chars(text)} ${framework.translate('chars')}, ${completion_tokens ? completion_tokens : count_tokens(model, text, prompt_tokens)} ${framework.translate('tokens')})`;
 }
-
-function update_message(content_map, message_id, content=null) {
-    // Clear previous timeouts
-    content_map.update_timeouts.forEach(timeoutId => clearTimeout(timeoutId));
-    content_map.update_timeouts = [];
-    
-    // Create new timeout
-    content_map.update_timeouts.push(setTimeout(() => {
-        // Existing function body
-        if (!content) {
-            if (reasoning_storage[message_id] && message_storage[message_id]) {
-                content = render_reasoning(reasoning_storage[message_id], true) + framework.markdown(message_storage[message_id]);
-            } else if (reasoning_storage[message_id]) {
-                content = render_reasoning(reasoning_storage[message_id]);
-            } else {
-                content = framework.markdown(message_storage[message_id]);
-            }
-            
-            // Find last element for cursor placement
-            let lastElement, lastIndex = null;
-            for (element of ['</p>', '</code></pre>', '</p>\n</li>\n</ol>', '</li>\n</ol>', '</li>\n</ul>']) {
-                const index = content.lastIndexOf(element)
-                if (index - element.length > lastIndex) {
-                    lastElement = element;
-                    lastIndex = index;
-                }
-            }
-            if (lastIndex) {
-                content = content.substring(0, lastIndex) + '<span class="cursor"></span>' + lastElement;
-            }
-        }
-        
-        if (error_storage[message_id]) {
-            content += framework.markdown(`${framework.translate('**An error occurred:**')} ${error_storage[message_id]}`);
-        }
-        
-        // Use progressive rendering for large content
-        if (content.length > 10000) {
-            //renderLargeMessage(content_map.inner, content);
-            content_map.inner.innerHTML = content;
-        } else {
-            content_map.inner.innerHTML = content;
-        }
-
-        if (countTokensEnabled) {
-            content_map.count.innerText = count_words_and_tokens(
-                (reasoning_storage[message_id] ? reasoning_storage[message_id].text : "")
-                + message_storage[message_id],
-                provider_storage[message_id]?.model);
-        }
-        
-        highlight(content_map.inner);
-    }, 100));
-};
-
 function renderLargeMessage(container, content, chunkSize = 50) {
     if (content.length <= chunkSize * 100) {
         container.innerHTML = content;
@@ -4214,10 +4159,6 @@ function get_selected_model() {
     return model?.value ? model.value : null;
 }
 
-function get_selected_provider() {
-    return providerSelect ? providerSelect.value : 'pollinations';
-}
-
 async function api(ressource, args=null, files=null, message_id=null, finish_message=null) {
     if (window?.pywebview) {
         if (args !== null) {
@@ -4536,10 +4477,69 @@ function set_quota_info(models, quota) {
         });
     }
 }
-async function load_provider_models(provider=null, search=null) {
-    const is_loading = !!provider;
+function set_provider_models(models, provider, quota=null) {
+    console.log("Setting models for provider:", provider, models);
+    modelSelect.innerHTML = '';
+    function add_options(group, models, search) {
+        if (quota) {
+            set_quota_info(models, quota);
+        }
+        models.forEach((model, i) => {
+            if (!model.models) {
+                let option = document.createElement('option');
+                option.value = model.model;
+                option.dataset.label = model.model;
+                option.text = model.label + (model.count > 1 ? ` (${model.count}+)` : "") + get_modelTags(model);
+                if (model.audio) {
+                    option.dataset.audio = "true";
+                }
+                if (model.remaining_percent !== undefined) {
+                    option.dataset.remaining = model.remaining_percent;
+                }
+                group.appendChild(option);
+                if (model.default) {
+                    option.selected = true;
+                }
+            } else {
+                let optgroup = document.createElement('optgroup');
+                optgroup.label = model.group;
+                add_options(optgroup, model.models, search);
+                if (optgroup.childElementCount == 0) {
+                    return;
+                }
+                modelSelect.appendChild(optgroup);
+            }
+        });
+    }
+    if (Array.isArray(models)) {
+        add_options(modelSelect, models, search);
+        if (models.length > 2) {
+            set_favorite_models(provider);
+        }
+    }
+}
+async function refresh_models(provider) {
+    let models = appStorage.getItem(`${provider}:models`);
+    if (models) {
+        models = JSON.parse(models);
+        set_provider_models(models, provider);
+    }
+    async function get_quota(provider) {
+        const url = `${framework.backendUrl}/backend-api/v2/quota/${provider}`;
+        const api_key = get_api_key_by_provider(provider);
+        response = await fetch(url, { method: 'GET', headers: api_key ? {"Authorization": `Bearer ${api_key}`} : {} });
+        return response.ok ? response.json() : undefined;
+    }
+    const [new_models, quota] = await Promise.all([api('models', provider), get_quota(provider)]);
+    if (new_models) {
+        set_provider_models(new_models, provider, quota);
+        appStorage.setItem(`${provider}:models`, JSON.stringify(new_models));
+    }
+}
+async function load_provider_models(provider=null) {
+    const isLoading = !!provider;
     if (!provider) {
-        provider = providerSelect.value;
+        provider = providerSelect?.value;
     }
     if (!provider) {
         modelSelect.classList.add("hidden");
@@ -4548,7 +4548,7 @@ async function load_provider_models(provider=null, search=null) {
     modelSelect.innerHTML = '';
     modelSelect.name = `model[${provider}]`;
     modelSelect.classList.remove("hidden");
-    if (!is_loading && ["PuterJS", "puter"].includes(provider) && !appStorage.getItem("puter.auth.token") && window.Puter) {
+    if (!isLoading && ["PuterJS", "puter"].includes(provider) && !appStorage.getItem("puter.auth.token") && window.Puter) {
         try {
             await (new window.Puter()).signIn().then((res) => {
                 console.log('PuterJS signed in:', res);
@@ -4560,68 +4560,12 @@ async function load_provider_models(provider=null, search=null) {
     if (await initClient()) {
         return;
     }
-    function set_provider_models(models, provider, quota=null) {
-        modelSelect.innerHTML = '';
-        function add_options(group, models, search) {
-            if (quota) {
-                set_quota_info(models, quota);
-            }
-            models.forEach((model, i) => {
-                if (!model.models) {
-                    let option = document.createElement('option');
-                    option.value = model.model;
-                    option.dataset.label = model.model;
-                    option.text = model.label + (model.count > 1 ? ` (${model.count}+)` : "") + get_modelTags(model);
-                    if (search && !option.text.includes(search)) {
-                        return;
-                    }
-                    if (model.audio) {
-                        option.dataset.audio = "true";
-                    }
-                    if (model.remaining_percent !== undefined) {
-                        option.dataset.remaining = model.remaining_percent;
-                    }
-                    group.appendChild(option);
-                    if (model.default) {
-                        option.selected = true;
-                    }
-                } else {
-                    let optgroup = document.createElement('optgroup');
-                    optgroup.label = model.group;
-                    add_options(optgroup, model.models, search);
-                    if (optgroup.childElementCount == 0) {
-                        return;
-                    }
-                    modelSelect.appendChild(optgroup);
-                }
-            });
-        }
-        if (Array.isArray(models)) {
-            add_options(modelSelect, models, search);
-            if (models.length > 2) {
-                set_favorite_models(provider);
-            }
-        }
-    }
-    let models = appStorage.getItem(`${provider}:models`);
-    if (models) {
-        models = JSON.parse(models);
-        set_provider_models(models, provider);
-    }
-    async function get_quota(provider) {
-        const url = `${framework.backendUrl}/backend-api/v2/quota/${provider}`;
-        response = await fetch(url, { method: 'GET', headers: {"Authorization": `Bearer ${get_api_key_by_provider(provider)}`} });
-        return response.ok ? response.json() : undefined;
-    }
-    const [new_models, quota] = await Promise.all([api('models', provider), get_quota(provider)]);
-    if (new_models) {
-        set_provider_models(new_models, provider, quota);
-        appStorage.setItem(`${provider}:models`, JSON.stringify(new_models));
-    }
+    console.log("Loading models for provider:", provider);
+    await refresh_models(provider);
 };
 if (providerSelect) {
-    providerSelect.addEventListener("change", () => {
-        load_provider_models()
+    providerSelect.addEventListener("change", async () => {
+        await load_provider_models()
         const favorites = appStorage.getItem("favorite_providers") ? JSON.parse(appStorage.getItem("favorite_providers")) : {};
         const selected = providerSelect.options[providerSelect.selectedIndex];
         console.log("Selected provider:", providerSelect.value, selected);
@@ -4644,7 +4588,7 @@ if (providerSelect) {
 }
 modelSelect.addEventListener("change", () => {
     const favorites = appStorage.getItem("favorites") ? JSON.parse(appStorage.getItem("favorites")) : {};
-    const selected = favorites[get_selected_provider()] || {};
+    const selected = favorites[providerSelect?.value] || {};
     const selectedOption = modelSelect.options[modelSelect.selectedIndex];
     console.log("Selected model:", modelSelect.value, selectedOption);
     if (!selected[modelSelect.value]) {
@@ -4661,7 +4605,7 @@ modelSelect.addEventListener("change", () => {
     const selected_values = selected[modelSelect.value] ? selected[modelSelect.value] + 1 : 1;
     delete selected[modelSelect.value];
     selected[modelSelect.value] = selected_values;
-    favorites[get_selected_provider()] = selected;
+    favorites[providerSelect?.value] = selected;
     appStorage.setItem("favorites", JSON.stringify(favorites));
 });
 document.getElementById("model_edit")?.addEventListener("click", () => {
@@ -4736,11 +4680,7 @@ document.addEventListener('click', (e) => {
 });
 
 document.getElementById("pin").addEventListener("click", async () => {
-    const pin_container = document.getElementById("pin_container");
-    let selected_provider = providerSelect.options[providerSelect.selectedIndex];
-    selected_provider = selected_provider.value ? selected_provider : null;
-    const selected_model = get_selected_model();
-    add_pinned(selected_provider, selected_model);
+    add_pinned(providerSelect?.value, get_selected_model());
 });
 
 (async () => {
@@ -5550,7 +5490,7 @@ async function initClient() {
             count += 1;
         }
     }
-    const provider = get_selected_provider();
+    const provider = providerSelect?.value;
     const apiKey = get_api_key_by_provider(provider);
     const options = apiKey ? { apiKey } : {};
     if (appStorage.getItem("debugMode") == "true") {
@@ -5593,7 +5533,7 @@ async function loadClientModels() {
             modelSelect.appendChild(opt);
         });
         if (models.length > 2) {
-            set_favorite_models(get_selected_provider());
+            set_favorite_models(providerSelect?.value);
         }
     } catch (err) {
         console.error('Model load failed:', err);
