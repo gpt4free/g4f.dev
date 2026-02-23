@@ -7,19 +7,20 @@
         "audio": {"label": "audio by g4f.dev", "baseUrl": "https://g4f.space/api/audio", "backupUrl": "https://g4f.space/api/audio", "tags": "🎧", "sleep": 10000},
         "azure": {"label": "azure by g4f.dev", "baseUrl": "https://g4f.space/api/azure", "backupUrl": "https://g4f.space/api/azure", "tags": "👓", "sleep": 10000},
         "custom": {"tags": ""},
-        "deepinfra": {"tags": "🎨 👓"},
+        "deepinfra": {"tags": "🎨 👓", "modelsEndpoint": "https://api.deepinfra.com/models/featured"},
         "gemini": {"baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai", "backupUrl": "https://g4f.space/api/gemini-v1beta", "tags": "👓"},
         "groq": {"baseUrl": "https://api.groq.com/openai/v1", "backupUrl": "https://g4f.space/api/groq", "tags": ""},
         "huggingface": {"tags": "🤗", "provider": "HuggingFace"},
         "nvidia": {"baseUrl": "https://integrate.api.nvidia.com/v1", "backupUrl": "https://g4f.space/api/nvidia", "tags": "📟"},
         "ollama": {"baseUrl": "https://ollama.g4f-dev.workers.dev", "backupUrl": "https://g4f.space/api/ollama", "tags": "🦙", "sleep": 10000},
         "openrouter": {"baseUrl": "https://openrouter.ai/api/v1", "backupUrl": "https://g4f.space/api/openrouter", "tags": "👓"},
-        "puter": {"tags": "👓", "provider": "PuterJS"}
+        "puter": {"tags": "👓", "provider": "PuterJS"},
+        "perplexity": {"baseUrl": "https://perplexity.g4f-dev.workers.dev", "tags": "🔎"}
     },
     "defaultModels": {
         "pollinations": "openai-fast",
         "azure": "model-router3",
-        "gemini": "models/gemini-2.5-flash",
+        "gemini": "models/gemini-3-flash-preview",
         "openrouter": "openai/gpt-oss-120b:free",
         "nvidia": "deepseek-ai/deepseek-v3.2",
         "ollama": "deepseek-v3.2",
