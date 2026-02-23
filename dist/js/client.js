@@ -53,7 +53,7 @@ function extractRetryDelay(message) {
     const regex = /(Try again in ([0-9.]+) seconds?|Retry after ([0-9.]+)|Please retry in ([0-9.]+)s)/i;
     const match = message.match(regex);
     
-    const delay = parseFloat(match[2] || match[3] || match[4] || '0');
+    const delay = match ? parseFloat(match[2] || match[3] || match[4] || '0') : 0;
     if (delay > 0) {
         return delay;
     }
