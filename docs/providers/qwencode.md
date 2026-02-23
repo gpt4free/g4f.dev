@@ -26,13 +26,13 @@ Use the dedicated CLI tool for authentication:
 pip install -e .
 
 # Login (opens browser automatically)
-g4f-qwencode login
+g4f auth qwencode
 
 # Check authentication status
-g4f-qwencode status
+g4f auth qwencode status
 
 # Remove saved credentials
-g4f-qwencode logout
+g4f auth qwencode logout
 ```
 
 ### Python Login
@@ -162,21 +162,21 @@ print("Assistant:", response.choices[0].message.content)
 
 Run the login command:
 ```bash
-g4f-qwencode login
+g4f auth qwencode
 ```
 
 ### "Token expired" / "Refresh failed" Error
 
 Tokens are automatically refreshed. If refresh fails, run login again:
 ```bash
-g4f-qwencode logout
-g4f-qwencode login
+g4f auth qwencode logout
+g4f auth qwencode
 ```
 
 ### Device Code Flow Times Out
 
 The device code flow has a timeout (default 30 minutes). If it times out:
-1. Run login again: `g4f-qwencode login`
+1. Run login again: `g4f auth qwencode`
 2. Complete the browser authorization promptly
 
 ## Notes

@@ -31,19 +31,19 @@ Use the dedicated CLI tool for authentication:
 pip install -e .
 
 # Login with browser (recommended)
-g4f-antigravity login
+g4f auth antigravity login
 
 # Login without auto-opening browser (manual URL copy)
-g4f-antigravity login --no-browser
+g4f auth antigravity login --no-browser
 
 # Login with specific project ID
-g4f-antigravity login --project-id YOUR_PROJECT_ID
+g4f auth antigravity login --project-id YOUR_PROJECT_ID
 
 # Check authentication status
-g4f-antigravity status
+g4f auth antigravity status
 
 # Remove saved credentials
-g4f-antigravity logout
+g4f auth antigravity logout
 ```
 
 ### Python Login
@@ -156,22 +156,22 @@ print(response.choices[0].message.content)
 
 Run the login command:
 ```bash
-g4f-antigravity login
+g4f auth antigravity login
 ```
 
 ### "Token expired" Error
 
 Tokens are automatically refreshed. If refresh fails, run login again:
 ```bash
-g4f-antigravity logout
-g4f-antigravity login
+g4f auth antigravity logout
+g4f auth antigravity login
 ```
 
 ### Port 51121 Already in Use
 
 The OAuth callback server uses port 51121. If it's in use:
 ```bash
-g4f-antigravity login --no-browser
+g4f auth antigravity login --no-browser
 ```
 Then manually copy the redirect URL.
 

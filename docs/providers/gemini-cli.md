@@ -31,16 +31,16 @@ Use the dedicated CLI tool for authentication:
 pip install -e .
 
 # Login with browser (recommended)
-g4f-geminicli login
+g4f auth gemini-cli login
 
 # Login without auto-opening browser (manual URL copy)
-g4f-geminicli login --no-browser
+g4f auth gemini-cli login --no-browser
 
 # Check authentication status
-g4f-geminicli status
+g4f auth gemini-cli status
 
 # Remove saved credentials
-g4f-geminicli logout
+g4f auth gemini-cli logout
 ```
 
 ### Python Login
@@ -200,29 +200,29 @@ print(response.choices[0].message.content)
 
 Run the login command:
 ```bash
-g4f-geminicli login
+g4f auth gemini-cli login
 ```
 
 ### "Token expired" Error
 
 Tokens are automatically refreshed. If refresh fails, run login again:
 ```bash
-g4f-geminicli logout
-g4f-geminicli login
+g4f auth gemini-cli logout
+g4f auth gemini-cli login
 ```
 
 ### Port 51122 Already in Use
 
 The OAuth callback server uses port 51122. If it's in use:
 ```bash
-g4f-geminicli login --no-browser
+g4f auth gemini-cli login --no-browser
 ```
 Then manually copy the redirect URL.
 
 ### "GCP_SERVICE_ACCOUNT not set" Error
 
 Either:
-1. Run `g4f-geminicli login` to create credential file
+1. Run `g4f auth gemini-cli login` to create credential file
 2. Or set the environment variable with valid credentials
 
 ## Notes
