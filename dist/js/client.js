@@ -243,7 +243,7 @@ class Client {
           data = data.data || data.result || data.models || data;
           data = data.map((model) => {
             if (!model.id || this.useModelName) {
-                model.id = model.name;
+                model.id = model.name || model.model_name;
             }
             model.label = model.id.replace('models/', '');
             if (!model.type) {
@@ -275,8 +275,10 @@ class Client {
                 model.type = "image";
               }
             }
-            if (model.type === 'text') {
+            if (model.type === 'text' || model.type === 'text-generation') {
                 model.type = 'chat';
+            } else if (model.type === 'text-to-image') {
+                model.type = 'image';
             }
             return model;
           });
