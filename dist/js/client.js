@@ -121,6 +121,7 @@ class Client {
         this.apiEndpoint = options.apiEndpoint || `${this.baseUrl}/chat/completions`;
         this.imageEndpoint = options.imageEndpoint || `${this.baseUrl}/images/generations`;
         this.modelsEndpoint = options.modelsEndpoint || `${this.baseUrl}/models`;
+        this.quotaEndpoint = options.quotaEndpoint || `${this.baseUrl}/quota`;
         this.defaultModel = options.defaultModel;
         this.useModelName = options.useModelName || false;
         this.apiKey = options.apiKey;
@@ -321,6 +322,14 @@ class Client {
             throw new Error(`Status ${response.status}: ${errorBody}`);
         }
         return {data: [{url: await toBase64(await response.blob())}]};
+    }
+
+    async getQuota() {
+        const response = await fetch(this.quotaEndpoint, {
+            method: 'GET',
+            headers: this.apiKey ? { "Authorization": `Bearer ${this.apiKey}` } : {}
+        });
+        return response.ok ? response.json() : undefined;
     }
 
     async _regularCompletion(response) {
@@ -541,6 +550,12 @@ class PollinationsAI extends Client {
         }
     }
 
+    async getQuota() {
+        if (this.balance !== undefined) {
+            return await this.balance;
+        }
+    }
+
     async checkBalance() {
         const BALANCE_ENDPOINT = "https://g4f.space/api/pollinations/account/balance";
         return fetch(BALANCE_ENDPOINT).then(r=>r.json()).then(d=>{
@@ -757,6 +772,7 @@ class Puter extends Client {
     constructor(options = {}) {
         super({});
         this.baseUrl = options.baseUrl || null;
+        this.quotaEndpoint = options.quotaEndpoint || 'https://api.puter.com/metering/usage';
         this.extraHeaders = {
             "content-type": "application/json",
             ...(options.extraHeaders || {})
@@ -808,14 +824,32 @@ class Puter extends Client {
         list: async () => {
             const response = await fetch("https://api.puter.com/puterai/chat/models/");
             let data = await response.json();
+            data.models = data.models.filter(model => !model.includes("claude-3-5") && !model.includes("claude-3-7"));
             return data.models.map(model => {
                 return {
                     id: model,
-                    type: "chat"
+                    type: "chat",
+                    label: model.startsWith("openrouter:") ? model : model.split(':').slice(-1).join(':')
                 };
             });
         }
       };
+    }
+
+    async signIn(options = {attempt_temp_user_creation: true}) {
+        this.puter = this.puter || await this._injectPuter();
+        return this.puter.auth.signIn(options).then((res) => {
+            console.log('PuterJS signed in:', res);
+            return res;
+        });
+    }
+
+    async getQuota() {
+        this.apiKey = localStorage.getItem("puter.auth.token");
+        if (!this.apiKey) {
+            throw new Error('Puter requires an API key to check quota. Please set the "puter.auth.token" in localStorage.');
+        }
+        return super.getQuota();
     }
 
     async _injectPuter() {

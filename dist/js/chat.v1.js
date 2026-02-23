@@ -4503,6 +4503,10 @@ function set_quota_info(models, quota) {
                 percent = Math.max(0, quota.quota_snapshots?.chat?.percent_remaining || 0);
                 model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
             }
+        } else if (quota?.allowanceInfo?.remaining) {
+            percent = (quota.allowanceInfo.remaining / quota.allowanceInfo.monthUsageAllowance) * 100;
+            const total = (quota?.allowanceInfo?.remaining || 0) / 1e8;
+            model.label += ` (${framework.translate("Remaining:")} $${total.toFixed(2)})`;
         } else {
             return;
         }
@@ -4533,6 +4537,7 @@ function set_quota_info(models, quota) {
     }
 }
 async function load_provider_models(provider=null, search=null) {
+    const is_loading = !!provider;
     if (!provider) {
         provider = providerSelect.value;
     }
@@ -4543,9 +4548,9 @@ async function load_provider_models(provider=null, search=null) {
     modelSelect.innerHTML = '';
     modelSelect.name = `model[${provider}]`;
     modelSelect.classList.remove("hidden");
-    if (provider == "PuterJS" && !appStorage.getItem("puter.auth.token") && window.Puter) {
+    if (!is_loading && ["PuterJS", "puter"].includes(provider) && !appStorage.getItem("puter.auth.token") && window.Puter) {
         try {
-            await (await (new window.Puter()).puter).auth.signIn({attempt_temp_user_creation: true}).then((res) => {
+            await (new window.Puter()).signIn().then((res) => {
                 console.log('PuterJS signed in:', res);
             });
         } catch (error) {
@@ -4605,7 +4610,7 @@ async function load_provider_models(provider=null, search=null) {
     }
     async function get_quota(provider) {
         const url = `${framework.backendUrl}/backend-api/v2/quota/${provider}`;
-        response = await fetch(url, { method: 'GET' });
+        response = await fetch(url, { method: 'GET', headers: {"Authorization": `Bearer ${get_api_key_by_provider(provider)}`} });
         return response.ok ? response.json() : undefined;
     }
     const [new_models, quota] = await Promise.all([api('models', provider), get_quota(provider)]);
@@ -5563,18 +5568,9 @@ async function initClient() {
 }
 
 async function loadClientModels() {
-    async function get_quota() {
-        if (client && client.balance !== undefined) {
-            return await client.balance;
-        }
-        // first try the new public API endpoint; fall back to legacy backend-api if unavailable
-        const  url = `${client.baseUrl}/quota`;
-        response = await fetch(url, { method: 'GET' });
-        return response.ok ? response.json() : undefined;
-    }
     modelSelect.innerHTML = `<option value="" disabled selected>${framework.translate("Loading...")}</option>`;
     try {
-        const [models, quota] = await Promise.all([client.models.list(), get_quota()]);
+        const [models, quota] = await Promise.all([client.models.list(), client.getQuota().catch(() => undefined)]);
         set_quota_info(models, quota);
         modelSelect.innerHTML = '';
         models.forEach(model => {
@@ -5589,6 +5585,9 @@ async function loadClientModels() {
             }
             if (model.audio) {
                 opt.dataset.audio = model.audio;
+            }
+            if (model.remaining_percent !== undefined) {
+                opt.dataset.remaining = model.remaining_percent;
             }
             if (model.default) opt.selected = true;
             modelSelect.appendChild(opt);

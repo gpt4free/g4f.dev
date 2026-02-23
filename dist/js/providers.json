@@ -17,7 +17,7 @@
         "puter": {"tags": "👓", "provider": "PuterJS"}
     },
     "defaultModels": {
-        "pollinations": "openai",
+        "pollinations": "openai-fast",
         "azure": "model-router3",
         "gemini": "models/gemini-2.5-flash",
         "openrouter": "openai/gpt-oss-120b:free",
@@ -25,7 +25,7 @@
         "ollama": "deepseek-v3.2",
         "groq": "openai/gpt-oss-120b",
         "gpt4free.pro": "deepseek-ai/deepseek-v3.2",
-        "puter": "gpt-5.2-chat-latest",
+        "puter": "anthropic:anthropic/claude-sonnet-4-6",
         "perplexity": "turbo"
     },
     "providerLocalStorage": {
