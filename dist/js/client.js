@@ -280,8 +280,12 @@ class Client {
             } else if (model.type === 'text-to-image') {
                 model.type = 'image';
             }
+            const inputModalities = model.input_modalities || model.architecture?.input_modalities || [];
+            if (inputModalities.includes('image')) {
+                model.vision = true;
+            }
             if (model.tags) {
-                model.tags = model.tags.filter(tag => tag !== 'featured');
+                model.tags = model.tags.filter(tag => !['featured', 'openai'].includes(tag));
             }
             return model;
           });

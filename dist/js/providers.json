@@ -21,7 +21,7 @@
         "pollinations": "openai-fast",
         "azure": "model-router3",
         "gemini": "models/gemini-3-flash-preview",
-        "openrouter": "openai/gpt-oss-120b:free",
+        "openrouter": "openrouter/free",
         "nvidia": "deepseek-ai/deepseek-v3.2",
         "ollama": "deepseek-v3.2",
         "groq": "openai/gpt-oss-120b",
