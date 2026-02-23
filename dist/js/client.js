@@ -280,6 +280,9 @@ class Client {
             } else if (model.type === 'text-to-image') {
                 model.type = 'image';
             }
+            if (model.tags) {
+                model.tags = model.tags.filter(tag => tag !== 'featured');
+            }
             return model;
           });
           return data;
