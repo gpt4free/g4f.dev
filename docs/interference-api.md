@@ -51,6 +51,14 @@ python -m g4f.api.run
 python -m g4f.cli api --bind "0.0.0.0:2400" 
 ```
 
+**(Advanced) Custom cookies directory:**
+```bash
+# override default (~/.config/g4f/cookies/)
+python -m g4f.cli api --cookies-dir /path/to/har_and_cookies
+```
+
+You can also see a full list of CLI options by running `g4f api --help`.
+
 ## Using the Interference API
 
 ### Basic Usage
