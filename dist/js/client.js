@@ -245,7 +245,7 @@ class Client {
             if (!model.id || this.useModelName) {
                 model.id = model.name || model.model_name;
             }
-            model.label = model.id.replace('models/', '');
+            model.label = (model.label || model.id).replace('models/', '');
             if (!model.type) {
               if (model.task?.name === "Text Generation") {
                 model.type = 'chat';

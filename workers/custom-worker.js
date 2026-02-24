@@ -79,17 +79,17 @@ var DEFAULT_MODELS = {
   // nvidia
   // "srv_mkolabu46aa55fc6f003": "deepseek-v3.2",
   // ollama
-  "srv_mkolylnsaec61b86b9c2": "tngtech/deepseek-r1t2-chimera:free",
+  "srv_mkolylnsaec61b86b9c2": "openrouter/free",
   // openrouter
   // 'srv_mjlq1ncq8a3f7fe0aea0': 'turbo',
   // perplexity
   "srv_mkol5tgcd33cc358ddbc": "models/gemini-flash-latest",
   // gemini
-  "srv_mkoloq41e34074b6133e": "openai",
+  "srv_mkoloq41e34074b6133e": "openai-fast",
   // pollinations
   // "srv_mkomfko63371049b6da6": "deepseek-v3.2:free"
   // api.airforce
-  "srv_mks0cusg6010f87029ea": "model-router3",
+  // "srv_mks0cusg6010f87029ea": "model-router3",
   // azure
 };
 var BLOCKED_SERVERS = ["srv_mkrzs4lg75588992eb03"];
@@ -231,7 +231,15 @@ var custom_worker_default = {
       }
       if (pathname.match(/^\/api\/[^/]+\/models$/)) {
         const label = pathname.split("/")[2];
-        const server = await getServerByLabel(env, label, user);
+        let server;
+        // support serverId:model prefix to directly specify by ID
+        const prefixMatch = /^([^:]+):/.exec(label);
+        if (prefixMatch) {
+          server = await getServerById(env, prefixMatch[1], user);
+        }
+        if (!server) {
+          server = await getServerByLabel(env, label, user);
+        }
         if (!server) {
           return jsonResponse({ error: "Server not found" }, 404);
         }
@@ -254,7 +262,14 @@ var custom_worker_default = {
         if (label === "auto") {
           server = await getRandomPublicServer(env);
         } else {
-          server = await getServerByLabel(env, label, user);
+          // honor prefix serverId:model if given
+          const prefixMatch = /^([^:]+):/.exec(label);
+          if (prefixMatch) {
+            server = await getServerById(env, prefixMatch[1], user);
+          }
+          if (!server) {
+            server = await getServerByLabel(env, label, user);
+          }
         }
         if (!server) {
           return jsonResponse({ error: `Server by label '${label}' not found`, servers: await getPublicServers(env) }, 404);
@@ -690,14 +705,13 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey)
     return jsonResponse({ error: `Failed to connect to server: ${e.message}` }, 502);
   }
 }
-async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user = null, pathname = null, userProvidedKey = null, rateCheck = null) {
+async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user = null, pathname = null, userProvidedKey = null, rateCheck = null, requestBody = {}) {
   if (!server) {
     return jsonResponse({ error: "Server not found" }, 404);
   }
-  let requestBody = {};
   let requestModel = null;
   if (request.method === "POST") {
-    requestBody = await request.clone().json();
+    requestBody = requestBody || await request.clone().json();
     requestModel = requestBody.model;
     try {
       const messages = requestBody.messages;
@@ -848,7 +862,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
             usage = data.usage;
           }
           if (data.model) {
-            requestModel = data.model;
+            // requestModel = data.model;
           }
         } catch (e) {
         }
@@ -1021,7 +1035,8 @@ async function updateServerUsage(env, server, tokens, model) {
     dailyUsage.requests += 1;
     dailyUsage.tokens += tokens;
     if (model) {
-      dailyUsage.models[model] = (dailyUsage.models[model] || 0) + 1;
+      dailyUsage.newModels = dailyUsage.newModels || {};
+      dailyUsage.newModels[model] = (dailyUsage.newModels[model] || 0) + 1;
     }
     await env.MEMBERS_BUCKET.put(usagePath, JSON.stringify(dailyUsage, null, 2), {
       httpMetadata: { contentType: "application/json" }
@@ -1029,6 +1044,8 @@ async function updateServerUsage(env, server, tokens, model) {
     if (userServer.is_public) {
       await updatePublicServerIndex(env, userServer, server.owner_id, "update");
     }
+    // invalidate models cache so next /v1/models reflects new counts
+    // modelsCacheTime = 0;
   } catch (e) {
     console.error("Failed to update server usage:", e);
   }
@@ -1503,13 +1520,13 @@ ${prompt}
     const userAgent = request.headers.get("user-agent") || null;
     const requestModel = data.model || queryBody.model;
     const firstMessage = prompt || getFirstMessage(queryBody.messages);
-    ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, requestModel, usage.total_tokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
-    ctx.waitUntil(updateServerUsage(env, server, usage.total_tokens, requestModel));
+    ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, queryBody.model, usage.total_tokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
+    ctx.waitUntil(updateServerUsage(env, server, usage.total_tokens, queryBody.model));
     if (user) {
-      ctx.waitUntil(updateUserDailyUsage(env, user.id, usage.total_tokens, `custom:${server.id}`, requestModel));
+      ctx.waitUntil(updateUserDailyUsage(env, user.id, usage.total_tokens, `custom:${server.id}`, queryBody.model));
     }
     if (!userProvidedKey && response.headers.get("X-Cache") !== "HIT") {
-      const totalTokens = getModelTokens(requestModel, usage.total_tokens);
+      const totalTokens = getModelTokens(queryBody.model, usage.total_tokens);
       if (totalTokens) {
         newResponse.headers.set("X-Usage-Total-Tokens", String(totalTokens));
       }
@@ -1879,14 +1896,37 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, ra
   } catch (e) {
     return jsonResponse({ error: "Invalid JSON" }, 400);
   }
-  const model = requestBody.model;
+
+  let model = requestBody.model;
   if (!model) {
     return jsonResponse({ error: "Model is required" }, 400);
   }
+
+  // parse prefix syntax serverId:modelName if provided
+  let serverFromPrefix = null;
+  let modelName = model;
+  const prefixMatch = /^([^:]+):(.+)$/.exec(model);
+  if (prefixMatch) {
+    const serverId = prefixMatch[1];
+    modelName = prefixMatch[2];
+    const maybe = await getServerById(env, serverId, user);
+    if (maybe) {
+      serverFromPrefix = maybe;
+      model = modelName; // override for later checks
+      requestBody.model = modelName;
+    }
+  }
+
   let selectedServer = null;
   if (model === "auto") {
     selectedServer = await getRandomPublicServer(env);
   }
+
+  // if prefix identified a server use it exclusively
+  if (!selectedServer && serverFromPrefix) {
+    selectedServer = serverFromPrefix;
+  }
+
   if (!selectedServer) {
     let privateServers = [];
     if (user && user.custom_servers) {
@@ -1919,29 +1959,117 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, ra
   if (!selectedServer) {
     return jsonResponse({ error: `No server found that supports model '${model}'` }, 404);
   }
-  return handleProxyToServer(request, env, ctx, selectedServer, "/chat/completions", cacheKey, user, pathname, null, rateCheck);
+
+  // // if we changed the model name (due to prefix) rewrite the request body
+  // if (serverFromPrefix && model !== requestBody.model) {
+  //   request = new Request(request.url, {
+  //     method: request.method,
+  //     headers: request.headers,
+  //     body: JSON.stringify(requestBody)
+  //   });
+  // }
+
+  return handleProxyToServer(request, env, ctx, selectedServer, "/chat/completions", cacheKey, user, pathname, null, rateCheck, requestBody);
 }
+// helper that reads usage files and returns a map of models used on a given server
+// with the total request count for each model
+async function getModelsFromStats(env, server) {
+  const modelCounts = {};
+  if (!env.MEMBERS_BUCKET || !server || !server.owner_id) return modelCounts;
+  try {
+    const prefix = `custom_servers/${server.owner_id}/${server.id}/usage/`;
+    const list = await env.MEMBERS_BUCKET.list({ prefix });
+    if (list && list.objects) {
+      for (const entry of list.objects) {
+        try {
+          const rec = await env.MEMBERS_BUCKET.get(entry.key);
+          if (!rec) continue;
+          const json = await rec.json();
+          if (json && json.newModels) {
+            for (const [m, cnt] of Object.entries(json.newModels)) {
+              modelCounts[m] = (modelCounts[m] || 0) + (cnt || 0);
+            }
+          }
+        } catch (e) {
+          // ignore individual read errors
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Failed to retrieve stats for server", server.id, e);
+  }
+  return modelCounts;
+}
+
+// simple in‑memory cache for /v1/models responses
+let modelsCache = null;
+let modelsCacheTime = 0;
+
 async function handleV1Models(request, env) {
+  const now = Date.now();
+
+  // return cached result if recent
+  if (modelsCache && now - modelsCacheTime < 60_000) {
+    return jsonResponse(modelsCache.payload);
+  }
+
   const user = await authenticateRequest(request, env);
   let privateServers = [];
   if (user && user.custom_servers) {
     privateServers = user.custom_servers.filter((s) => !s.is_public);
   }
   const publicServersIndex = await getPublicServers(env);
-  const allModels = new Object();
+  const allModels = {};
+
+  // include allowed models for each owned/private server (use server prefix)
   for (const server of privateServers) {
     if (server.allowed_models && server.allowed_models.length > 0) {
-      server.allowed_models.forEach((model) => !allModels[model] ? allModels[model] = { id: model, owned_by: server.label, base_url: `/custom/${server.id}` } : null);
+      server.allowed_models.forEach((model) => {
+        const key = `${server.id}:${model}`;
+        if (!allModels[key]) {
+          allModels[key] = { id: key, label: `${server.label}:${model}`, base_url: `/custom/${server.id}`, requests: 0 };
+        }
+      });
     }
   }
+
+  // same logic for public servers index (prefix allowed models)
   for (const serverIndex of publicServersIndex) {
     if (serverIndex.allowed_models && serverIndex.allowed_models.length > 0) {
-      serverIndex.allowed_models.forEach((model) => !allModels[model] ? allModels[model] = { id: model, owned_by: serverIndex.label, base_url: `/custom/${serverIndex.id}` } : null);
+      serverIndex.allowed_models.forEach((model) => {
+        const key = `${serverIndex.id}:${model}`;
+        if (!allModels[key]) {
+          allModels[key] = { id: key, label: `${serverIndex.label}:${model}`, base_url: `/custom/${serverIndex.id}`, requests: 0 };
+        }
+      });
     }
   }
-  return jsonResponse({
-    data: Array.from(Object.values(allModels))
-  });
+
+  // aggregate stats if bucket available
+  if (env.MEMBERS_BUCKET) {
+    const serversToCheck = [...privateServers, ...publicServersIndex.map(s => ({ id: s.id, label: s.label, owner_id: s.owner_id }))];
+    const statsPromises = serversToCheck.map(s => getModelsFromStats(env, s).then(m => ({server: s, map: m})).catch(() => ({server: s, map: {}})));
+    const statsResults = await Promise.all(statsPromises);
+    for (const { server, map } of statsResults) {
+      for (const [m, cnt] of Object.entries(map)) {
+        const key = `${server.id}:${m}`;
+        if (!allModels[key]) {
+          allModels[key] = { id: key, label: `${server.label}:${m}`, base_url: `/custom/${server.id}`, requests: cnt };
+        } else {
+          allModels[key].requests = (allModels[key].requests || 0) + cnt;
+        }
+      }
+    }
+  }
+
+  // convert and sort
+  const result = Array.from(Object.values(allModels));
+  result.sort((a, b) => (b.requests || 0) - (a.requests || 0));
+
+  const payload = { data: result };
+  modelsCache = { payload };
+  modelsCacheTime = now;
+  return jsonResponse(payload);
 }
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
