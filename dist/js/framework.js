@@ -290,6 +290,8 @@ const renderMarkdown = (content) => {
         .replaceAll('src="/media/', `src="${framework.backendUrl}/media/`)
         .replaceAll('src="/thumbnail/', `src="${framework.backendUrl}/thumbnail/`)
         .replaceAll('href="/media/', `src="${framework.backendUrl}/media/`)
+        .replaceAll('<think>', `<details><summary>${framework.translate('Reasoning')}</summary>`)
+        .replaceAll('</think>', '</details>')
     if (window.sanitizeHtml) {
         content = window.sanitizeHtml(content, sanitizedConfig());
     }

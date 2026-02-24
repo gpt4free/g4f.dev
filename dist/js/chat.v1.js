@@ -45,7 +45,7 @@ const translationSnipptes = [
     "Get API key", "Uploading files...", "Invalid link", "Loading...", "Live Providers", "Custom Providers",
     "Search Off", "Search On", "Recognition On", "Recognition Off", "Delete Conversation",
     "Favorite Models:", "Stop Recording", "Record Audio", "Upload Audio", "No Title", "1 Copy",
-    "Delete all conversations?", "Error Occurred", "Remaining:", "Balance:"
+    "Delete all conversations?", "Error Occurred", "Remaining:", "Balance:", "Reasoning",
 ];
 
 let login_urls_storage = {
@@ -272,7 +272,7 @@ function render_reasoning(reasoning, final = false) {
     </div>` : "";
     return `<div class="reasoning_body">
         <div class="reasoning_title">
-           <strong>${reasoning.label ? reasoning.label :'Reasoning <i class="brain">🧠</i>'}: </strong>
+           <strong>${reasoning.label ? reasoning.label : framework.translate('Reasoning') + ' <i class="brain">🧠</i>'}: </strong>
            ${typeof reasoning.status === 'string' ? framework.escape(reasoning.status) : '<i class="fas fa-spinner fa-spin"></i>'}
         </div>
         ${inner_text}
@@ -280,7 +280,7 @@ function render_reasoning(reasoning, final = false) {
 }
 
 function render_reasoning_text(reasoning) {
-    return `${reasoning.label ? reasoning.label :'Reasoning 🧠'}: ${reasoning.status}\n\n${reasoning.text}\n\n`;
+    return `${reasoning.label ? reasoning.label : framework.translate('Reasoning') + ' 🧠'}: ${reasoning.status}\n\n${reasoning.text}\n\n`;
 }
 
 function filter_message(text) {
