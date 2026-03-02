@@ -16,19 +16,21 @@
 } */
 
 :root {
-    --colour-1: #000000;
+    --colour-1: #0d0d14;
     --colour-2: #ccc;
-    --colour-3: #e4d4ff;
+    --colour-3: #e8d8ff;
     --colour-4: #f0f0f0;
-    --colour-5: #181818;
-    --colour-6: #242424;
+    --colour-5: #1a1525;
+    --colour-6: #242430;
 
     --accent: #8b3dff;
-    --blur-bg: #16101b66;
-    --blur-border: #84719040;
+    --accent-hover: #9d56ff;
+    --accent-glow: rgba(139, 61, 255, 0.25);
+    --blur-bg: #16101b80;
+    --blur-border: #8471904d;
     --user-input: #ac87bb;
     --conversations: #c7a2ff;
-    --conversations-hover: #c7a2ff4d;
+    --conversations-hover: #c7a2ff26;
     --scrollbar: var(--colour-3);
     --scrollbar-thumb: var(--blur-bg);
     --button-hover: var(--colour-5);
@@ -38,11 +40,16 @@
     --blur: 35vw; /* Half of 70vw */
     --opacity: 0.3;
     --gradient: rgba(22, 16, 27, 0.4); /* Transparent dark color */
-    --background: #16101b; /* Background color */
+    --background: #0f0b17; /* Background color */
     --font-1: "Inter", sans-serif;
     --section-gap: 25px;
     --inner-gap: 15px;
-    --border-radius-1: 8px;
+    --border-radius-1: 10px;
+    --border-radius-2: 16px;
+    --input-bg: #1a1525;
+    --user-msg-bg: rgba(139, 61, 255, 0.15);
+    --user-msg-border: rgba(139, 61, 255, 0.3);
+    --transition-speed: 0.2s;
 }
 
 * {
@@ -109,6 +116,19 @@ body:not(.white) a:visited{
     background-color: var(--blur-bg);
     border-radius: var(--border-radius-1);
     border: 1px solid var(--blur-border);
+    transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+/* Special styling for the main textarea input */
+#userInput.box {
+    border-radius: var(--border-radius-2);
+    background-color: var(--input-bg);
+}
+
+#userInput.box:focus {
+    border-color: rgba(139, 61, 255, 0.5);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+    outline: none;
 }
 
 .liquid {
@@ -247,8 +267,14 @@ body.liquid:not(.no-animations):not(.white) {
     align-items: center;
     user-select: none;
     justify-content: space-between;
-    border: 1px dashed var(--conversations);
+    border: 1px solid transparent;
     border-radius: var(--border-radius-1);
+    transition: background-color var(--transition-speed) ease, border-color var(--transition-speed) ease;
+}
+
+.sidebar .convo:hover {
+    background-color: var(--conversations-hover);
+    border-color: var(--conversations);
 }
 
 .sidebar .convo .left {
@@ -322,6 +348,7 @@ body.liquid:not(.no-animations):not(.white) {
     flex-direction: column;
     gap: var(--section-gap);
     padding: var(--inner-gap) var(--section-gap);
+    border-radius: var(--border-radius-1);
 }
 
 .message.print {
@@ -341,12 +368,12 @@ body.liquid:not(.no-animations):not(.white) {
 }
 
 .message:last-child {
-    animation: 0.6s show_message;
+    animation: 0.5s show_message;
 }
 
 @keyframes show_message {
     from {
-        transform: translateY(10px);
+        transform: translateY(8px);
         opacity: 0;
     }
 }
@@ -361,8 +388,8 @@ body.liquid:not(.no-animations):not(.white) {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: 8px;
-    outline: 1px solid var(--blur-border);
+    border-radius: 50%;
+    outline: 2px solid var(--user-msg-border);
 }
 
 .message .user:after {
@@ -386,7 +413,7 @@ body.liquid:not(.no-animations):not(.white) {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: 8px;
+    border-radius: 50%;
     outline: 1px solid var(--blur-border);
 }
 
@@ -413,7 +440,7 @@ body.liquid:not(.no-animations):not(.white) {
 .message .content_inner a:link,
 .message .content_inner a:visited{
     font-size: 15px;
-    line-height: 1.3;
+    line-height: 1.6;
 }
 .message .content_inner pre{
     white-space: pre-wrap;
@@ -631,21 +658,29 @@ body.liquid:not(.no-animations):not(.white) {
 .media-select {
     display: flex;
     flex-direction: row;
+    gap: 4px;
+    padding: 4px 0;
 }
 
 .media-select label, .media-select img, .media-select button {
     display: flex;
-    gap: 18px;
+    gap: 10px;
     align-items: center;
     cursor: pointer;
     user-select: none;
-    color: var(--colour-1);
-    background: var(--media-select);
-    border: 1px solid var(--colour-1);
-    transition: all 0.2s ease;
+    color: var(--colour-3);
+    background: var(--blur-bg);
+    border: 1px solid var(--blur-border);
+    transition: all var(--transition-speed) ease;
     width: auto;
-    height: 60px;
-    margin: 2px;
+    height: 44px;
+    margin: 0;
+    border-radius: var(--border-radius-1);
+}
+
+.media-select label:hover, .media-select button:hover {
+    background: var(--conversations-hover);
+    border-color: var(--conversations);
 }
 
 .media-select .capture-audio, .media-select .add-link {
@@ -653,11 +688,11 @@ body.liquid:not(.no-animations):not(.white) {
 }
 
 .media-select .add-link {
-    padding: 20px 10px;
+    padding: 14px 10px;
 }
 
 .media-select label, .media-select button {
-    padding: 20px 12px;
+    padding: 14px 12px;
     border-radius: var(--border-radius-1);
 }
 
@@ -676,18 +711,20 @@ body.liquid:not(.no-animations):not(.white) {
 .new_convo {
     padding: 8px 12px;
     display: flex;
-    gap: 18px;
+    gap: 12px;
     align-items: center;
     cursor: pointer;
     user-select: none;
     background: transparent;
-    border: 1px solid var(--conversations);
+    border: 1px solid var(--blur-border);
     border-radius: var(--border-radius-1);
-    transition: all 0.2s ease;
+    transition: all var(--transition-speed) ease;
 }
 
 .new_convo:hover {
-    box-shadow: inset 0px 0px 20px var(--conversations-hover);
+    background-color: var(--conversations-hover);
+    border-color: var(--conversations);
+    box-shadow: 0 0 12px var(--conversations-hover);
 }
 
 .new_convo span {
@@ -1074,6 +1111,10 @@ form input:checked+label:after {
     justify-content: left;
     width: 100%;
     margin-bottom: 4px;
+    gap: 4px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 4px 4px 2px;
 }
 
 .field {
@@ -1088,7 +1129,7 @@ form input:checked+label:after {
 }
 
 select, #model-search {
-    border-radius: 8px;
+    border-radius: var(--border-radius-1);
     backdrop-filter: blur(20px);
     cursor: pointer;
     background-color: var(--colour-1);
@@ -1101,6 +1142,12 @@ select, #model-search {
     padding: 8px 16px;
     appearance: none;
     width: 132px;
+    transition: border-color var(--transition-speed), background-color var(--transition-speed);
+}
+
+select:focus, #model-search:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
 .slider {
@@ -1127,13 +1174,14 @@ select, #model-search {
 }
 
 .chat-buttons button, button.regenerate_button, button.continue_button, button.options_button {
-    border-radius: 8px;
+    border-radius: var(--border-radius-1);
     backdrop-filter: blur(20px);
     cursor: pointer;
     background-color: var(--colour-1);
     border: 1px solid var(--blur-border);
     color: var(--colour-3);
     padding: 8px;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
 }
 
 button.regenerate_button, button.continue_button, button.options_button {
@@ -1274,19 +1322,33 @@ select:hover,
 
 .input-area {
     display: flex;
+    position: relative;
+}
+
+.input-area .box {
+    border-radius: var(--border-radius-2);
+    border: 1px solid var(--blur-border);
+    background-color: var(--input-bg);
+    transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.input-area .box:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 .info {
     padding: 8px 12px;
     display: flex;
-    gap: 18px;
+    gap: 12px;
     align-items: center;
     user-select: none;
     background: transparent;
     border-radius: var(--border-radius-1);
     width: 100%;
     cursor: default;
-    border: 1px dashed var(--conversations)
+    border: 1px solid var(--blur-border);
+    font-size: 12px;
 }
 
 .bottom_buttons {
@@ -1302,14 +1364,20 @@ select:hover,
 .bottom_buttons button, .mem0 button {
     padding: 8px 12px;
     display: flex;
-    gap: 18px;
+    gap: 12px;
     align-items: center;
     cursor: pointer;
     user-select: none;
     background: transparent;
-    border: 1px solid var(--conversations);
+    border: 1px solid var(--blur-border);
     border-radius: var(--border-radius-1);
     width: 100%;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
+}
+
+.bottom_buttons button:hover, .mem0 button:hover {
+    background-color: var(--conversations-hover);
+    border-color: var(--conversations);
 }
 
 .mem0 button {
@@ -1407,12 +1475,11 @@ ul {
 }
 
 .sidebar-header {
-    padding: 12px 0;
-    margin-bottom: 12px;
+    padding: 0 0 12px 0;
+    margin-bottom: 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 0 10px 0;
     border-bottom: 1px solid var(--blur-border);
 }
 
@@ -1514,8 +1581,9 @@ ul {
 }
 
 .sidebar-logo {
-    font-size: 16px;
-    font-weight: 500;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
 }
 
 .mobile-sidebar-toggle {
@@ -1545,7 +1613,7 @@ ul {
 }
 @media screen and (max-width: 990px) {
     .sidebar {
-        width: 300px;
+        width: 280px;
         max-width: none;
     }
 
@@ -1570,7 +1638,7 @@ ul {
 }
 
 .sidebar.shown {
-    width: 400px;
+    width: 320px;
 }
 
 .sidebar-container {
@@ -1890,13 +1958,17 @@ form textarea {
 }
 
 #userInput {
-    height: 106px;
+    height: 56px;
+    min-height: 56px;
     flex: 1;
-    padding: 10px 30px;
+    padding: 16px 36px 16px 42px;
     color: var(--colour-3);
     outline: none;
-    font-size: 14px;
+    font-size: 15px;
     width: calc(100% - 88px);
+    resize: none;
+    line-height: 1.5;
+    transition: height 0.15s ease;
 }
 
 .hidden, i.hidden, input.hidden, .chat-container.hidden {
@@ -1954,10 +2026,11 @@ form textarea {
     overflow: hidden;
 }
 .chat-top-panel {
-    padding: 12px 15px;
+    padding: 10px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid var(--blur-border);
 }
 
 .chat-logo {
@@ -2015,8 +2088,8 @@ form textarea {
 
 @media only screen and (min-width: 40em) {
     .sidebar {
-        width: 300px;
-        margin-right: 10px;
+        width: 280px;
+        margin-right: 0;
     }
 }
 .chat-body {
@@ -2024,12 +2097,13 @@ form textarea {
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    padding-top: 10px;
+    padding: 8px 16px 0;
 }
 .chat-footer {
     display: flex;
-    padding: 4px 0;
+    padding: 8px 12px 12px;
     flex-direction: column;
+    gap: 6px;
 }
 .chat-footer input {
     flex: 1;
@@ -2044,14 +2118,25 @@ form textarea {
     flex-direction: column;
 }
 .chat-footer .send-buttons button {
+    background: var(--accent);
+    color: white;
+    padding: 10px 18px;
+    margin: 0 2px 0 4px;
+    border-radius: var(--border-radius-1);
+    cursor: pointer;
+    border: 1px solid transparent;
+    box-shadow: 0 2px 8px var(--accent-glow);
+    font-weight: 500;
+    transition: background-color var(--transition-speed), transform var(--transition-speed), box-shadow var(--transition-speed);
+}
+.chat-footer .send-buttons button:last-child {
+    background: var(--accent);
+}
+.chat-footer .send-buttons button#addButton {
     background: var(--blur-bg);
     color: var(--colour-3);
-    padding: 12px 15px;
-    margin: 0 2px 0 4px;
-    border-radius: 5px;
-    cursor: pointer;
-    border: 1px dashed var(--conversations);
-    box-shadow: 1px 1px 1px 0px rgba(0,0,0,0.75);
+    border: 1px solid var(--blur-border);
+    box-shadow: none;
 }
 .suggestions {
     display: flex;
@@ -2062,11 +2147,13 @@ form textarea {
 .suggestions .suggestion {
     background: var(--blur-bg);
     color: var(--colour-3);
-    padding: 10px;
+    padding: 8px 14px;
     margin: 0 2px 0 4px;
-    border-radius: 5px;
+    border-radius: 20px;
     cursor: pointer;
-    border: 1px dashed var(--conversations);
+    border: 1px solid var(--blur-border);
+    font-size: 13px;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
 }
 .white .chat-footer .send-buttons button, .white .suggestions .suggestion {
     border-style: solid;
@@ -2076,6 +2163,15 @@ form textarea {
     border-style: solid;
     box-shadow: none;
     background-color: var(--button-hover);
+}
+.chat-footer .send-buttons button#sendButton:hover {
+    background-color: var(--accent-hover);
+    box-shadow: 0 4px 12px var(--accent-glow);
+    transform: translateY(-1px);
+}
+.chat-footer .send-buttons button#addButton:hover {
+    background-color: var(--button-hover);
+    border-color: var(--accent);
 }
 
 .settings-top-bar, .log-top-bar {
@@ -2185,6 +2281,7 @@ form textarea {
 
 .sidebar {
     border: 1px solid var(--blur-border);
+    background-color: rgba(13, 13, 20, 0.6);
 }
 
 .sidebar.minimized {
@@ -2268,7 +2365,7 @@ form textarea {
 /* Default state for desktop: sidebar shown */
 @media only screen and (min-width: 40em) {
     .sidebar {
-        width: 300px;
+        width: 280px;
     }
     
     /* Hide new_convo_icon on desktop */
@@ -2296,11 +2393,11 @@ form textarea {
 /* Ensure sidebar is shown by default on desktop */
 @media only screen and (min-width: 40em) {
     .sidebar {
-        width: 300px;
+        width: 280px;
     }
     
     .sidebar:not(.minimized) {
-        width: 300px;
+        width: 280px;
     }
 }
 
@@ -3067,4 +3164,186 @@ form textarea {
 .mcp-tool-item:hover {
   background: var(--background-light);
   border-left-color: var(--button);
+}
+
+/* ========================================
+   MODERN UI ENHANCEMENTS
+   ======================================== */
+
+/* User message distinction using :has() CSS selector */
+.message:has(> .user) {
+    background-color: var(--user-msg-bg);
+    border: 1px solid var(--user-msg-border);
+    border-radius: var(--border-radius-2);
+    margin: 4px 8px 4px 24px;
+}
+
+/* Assistant message subtle distinction */
+.message:has(> .assistant) {
+    border-left: 2px solid transparent;
+    transition: border-left-color 0.3s;
+    margin: 4px 0;
+}
+
+.message:has(> .assistant):hover {
+    border-left-color: var(--blur-border);
+}
+
+/* Improved scrollbar styling */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--blur-border);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+}
+
+/* Improved user-input area container */
+.user-input.box {
+    border-radius: var(--border-radius-2) !important;
+    border-color: var(--blur-border) !important;
+    background-color: var(--input-bg) !important;
+    transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.user-input.box:focus-within {
+    border-color: rgba(139, 61, 255, 0.5) !important;
+    box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+/* Sidebar logo styling */
+.sidebar-logo {
+    font-size: 16px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--conversations));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Active conversation indicator */
+.sidebar .convo.active {
+    background-color: var(--conversations-hover);
+    border-color: var(--conversations);
+}
+
+/* Improved model/provider selector hover */
+select:hover, #model-search:hover {
+    border-color: var(--conversations);
+    background-color: var(--colour-5);
+}
+
+/* Stop generating / regenerate button improvements */
+.stop_generating button, .chat-toolbar .regenerate button {
+    border-radius: var(--border-radius-1);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* Better search button active state */
+#search.active {
+    outline: 2px solid var(--accent);
+    background-color: var(--accent-glow) !important;
+}
+
+/* Improved code blocks */
+.hljs {
+    padding: 16px;
+    line-height: 1.5;
+    font-size: 14px;
+}
+
+/* Chat body padding for better readability */
+.chat-body {
+    padding: 8px 0;
+}
+
+/* Sidebar header logo gradient */
+.sidebar-header .sidebar-logo {
+    letter-spacing: 0.5px;
+}
+
+/* Tier badge improvements */
+.user-tier-info .tier-badge {
+    font-size: 13px;
+}
+
+/* Input area inner icons */
+.file-label, .micro-label, .code {
+    opacity: 0.7;
+    transition: opacity var(--transition-speed), color var(--transition-speed);
+}
+
+.file-label:hover, .micro-label:hover, .code:hover {
+    opacity: 1;
+}
+
+/* Mobile sidebar overlay */
+@media only screen and (max-width: 640px) {
+    .sidebar.shown::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: -1;
+        backdrop-filter: blur(4px);
+    }
+}
+
+/* Improved send button appearance */
+#sendButton {
+    background: var(--accent) !important;
+    color: white !important;
+    border: 1px solid transparent !important;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+#sendButton:hover {
+    background: var(--accent-hover) !important;
+    box-shadow: 0 4px 14px var(--accent-glow) !important;
+    transform: translateY(-1px);
+}
+
+#addButton {
+    background: var(--blur-bg) !important;
+    color: var(--colour-3) !important;
+    border: 1px solid var(--blur-border) !important;
+}
+
+/* Improved chat toolbar buttons */
+.chat-toolbar .regenerate button, 
+.stop_generating button {
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 14px;
+}
+
+/* Settings content improvements */
+.settings .paper {
+    background-color: rgba(13, 13, 20, 0.6);
+}
+
+/* Toggle switch improvement */
+.settings label.toogle,
+form label.toogle {
+    border-radius: 20px;
+}
+
+/* Improved sidebar conversations list */
+.sidebar .conversations {
+    padding: 4px 0;
+    gap: 4px;
+    display: flex;
+    flex-direction: column;
 }
