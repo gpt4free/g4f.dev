@@ -2769,6 +2769,10 @@ form textarea {
     .field {
         padding-right: 4px;
     }
+
+    .chat-buttons .field {
+        padding: 0;
+    }
 }
 
 /* 4. Fix for message layout in portrait mobile view */
@@ -3245,7 +3249,6 @@ form textarea {
 /* Improved model/provider selector hover */
 select:hover, #model-search:hover {
     border-color: var(--conversations);
-    background-color: var(--colour-5);
 }
 
 /* Stop generating / regenerate button improvements */
