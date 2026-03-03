@@ -73,13 +73,13 @@ var ACCESS_CONTROL_ALLOW_ORIGIN = {
   "Access-Control-Allow-Origin": "*"
 };
 var DEFAULT_MODELS = {
-  "srv_mkom688d57c76d8a3542": "llama-3.3-70b-versatile",
+  "srv_mkom688d57c76d8a3542": "moonshotai/kimi-k2-instruct-0905",
   // groq
   "srv_mkombumpae45db46dcb8": "deepseek-ai/deepseek-v3.2",
   // nvidia
   // "srv_mkolabu46aa55fc6f003": "deepseek-v3.2",
   // ollama
-  "srv_mkolylnsaec61b86b9c2": "openrouter/free",
+  "srv_mm0u9cua212491d78695": "openrouter/free",
   // openrouter
   // 'srv_mjlq1ncq8a3f7fe0aea0': 'turbo',
   // perplexity
@@ -92,7 +92,13 @@ var DEFAULT_MODELS = {
   // "srv_mks0cusg6010f87029ea": "model-router3",
   // azure
 };
-var BLOCKED_SERVERS = ["srv_mkrzs4lg75588992eb03"];
+var BLOCKED_SERVERS = ["srv_mkrzs4lg75588992eb03", "srv_mm4b22wq6142dcde995b"];
+// organizations (from Cloudflare `asOrganization`) that should be blocked
+// when the request is anonymous (no user/session or API key provided).
+var BLOCKED_ORGS = [
+  "Oracle Public Cloud",
+  "Oracle Corporation"
+];
 var GPT_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "marin", "cedar", "amuch", "dan", "elan", "breeze", "cove", "ember", "fathom", "glimmer", "harp", "juniper", "maple", "orbit", "vale"];
 var custom_worker_default = {
   async fetch(request, env, ctx) {
@@ -119,6 +125,17 @@ var custom_worker_default = {
       if (authHeader && authHeader.startsWith("Bearer ")) {
         const tokens = authHeader.substring(7).split(/\s+/);
         userProvidedKey = tokens.find((t) => t && !t.startsWith("g4f_") && !t.startsWith("gfs_"));
+      }
+      // block anonymous requests originating from certain cloud providers
+      // (Cloudflare sets `request.cf.asOrganization` for the source ASN/org).
+      const org = request.cf?.asOrganization || null;
+      if (!user && !userProvidedKey && org && BLOCKED_ORGS.includes(org)) {
+        return jsonResponse({
+          error: {
+            message: "Access from cloud provider blocked. Sign up at g4f.dev/members.html for access from cloud.",
+            type: "authentication_required"
+          }
+        }, 403);
       }
       let rateCheck;
       if (!userProvidedKey && !pathname.endsWith("/models") && !pathname.startsWith("/custom/api/"))
@@ -821,7 +838,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     if (subPath === "/chat/completions" && response.ok) {
       const contentType2 = response.headers.get("content-type") || "";
       if (requestBody.stream || contentType2.includes("text/event-stream")) {
-        const geoLocation = request.cf.asOrganization || request.cf?.country || null;
+        const geoLocation = request.cf?.asOrganization || request.cf?.country || null;
         const userAgent = request.headers.get("user-agent") || null;
         ctx.waitUntil(createUsageTrackingStream(
           response,
@@ -873,7 +890,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     }
     let totalTokens = parseInt(response.headers.get("X-Usage-Total-Tokens") || "0") || usage.total_tokens || 0;
     if (subPath === "/chat/completions" && response.ok || usage) {
-      const geoLocation = request.headers.get("cf-ipcountry") || request.cf?.country || null;
+      const geoLocation = request.cf?.asOrganization || request.cf?.country || null;
       const userAgent = request.headers.get("user-agent") || null;
       ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, requestModel, totalTokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
       if (totalTokens) {
@@ -918,7 +935,6 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     newResponse.headers.delete("set-cookie");
     return newResponse;
   } catch (e) {
-    throw e;
     return jsonResponse({
       error: { message: `Failed to connect to server: ${e.message}` }
     }, 502);
@@ -1521,7 +1537,7 @@ ${prompt}
       ctx.waitUntil(setCachedResponse(request, newResponse, CACHE_HEADERS.LONG, cacheKey, ctx));
     }
     const clientIP = getClientIP(request);
-    const geoLocation = request.headers.get("cf-ipcountry") || request.cf?.country || null;
+    const geoLocation = request.cf?.asOrganization || request.cf?.country || null;
     const userAgent = request.headers.get("user-agent") || null;
     const requestModel = data.model || queryBody.model;
     const firstMessage = prompt || getFirstMessage(queryBody.messages);
