@@ -329,7 +329,17 @@ function createStreamChunk(data, model) {
     delta.role = data.message.role;
   }
   if (data.message?.tool_calls) {
-    delta.tool_calls = data.message.tool_calls;
+    delta.tool_calls = data.message.tool_calls.map((tc, index) => ({
+      index: index,
+      id: tc.id || `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${index}`,
+      type: "function",
+      function: {
+        name: tc.function?.name || tc.name,
+        arguments: typeof tc.function?.arguments === "string"
+          ? tc.function.arguments
+          : JSON.stringify(tc.function?.arguments || tc.arguments || {})
+      }
+    }));
   }
 
   // Determine finish_reason
@@ -368,7 +378,7 @@ function createCompletionResponse(env, ctx, clientIP, model, content, thinkingCo
   // Include tool_calls if present
   if (toolCalls && toolCalls.length > 0) {
     message.tool_calls = toolCalls.map((tc, index) => ({
-      id: tc.id || `call_${Date.now()}_${index}`,
+      id: tc.id || `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${index}`,
       type: "function",
       function: {
         name: tc.function?.name || tc.name,
