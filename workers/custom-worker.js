@@ -144,7 +144,7 @@ var custom_worker_default = {
                 used: rateCheck.used,
                 retry_after: rateCheck.retryAfter
               }
-            }, { status: 429, headers: { "Retry-After": rateCheck.retryAfter.toString(), ...ACCESS_CONTROL_ALLOW_ORIGIN } });
+            }, { status: 429, headers: { "Retry-After": rateCheck.retryAfter.toString(), ...CORS_HEADERS } });
             updateResponsefromRateCheck(newResponse, rateCheck);
             return newResponse;
           }
@@ -170,7 +170,7 @@ var custom_worker_default = {
                 retry_after: rateCheck.retryAfter,
                 upgrade_url: "https://g4f.dev/members.html"
               }
-            }, { status: 429, headers: { "Retry-After": rateCheck.retryAfter.toString(), ...ACCESS_CONTROL_ALLOW_ORIGIN } });
+            }, { status: 429, headers: { "Retry-After": rateCheck.retryAfter.toString(), ...CORS_HEADERS } });
             updateResponsefromRateCheck(newResponse, rateCheck);
             return newResponse;
           }
@@ -705,14 +705,14 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey)
     return jsonResponse({ error: `Failed to connect to server: ${e.message}` }, 502);
   }
 }
-async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user = null, pathname = null, userProvidedKey = null, rateCheck = null, requestBody = {}) {
+async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user = null, pathname = null, userProvidedKey = null, rateCheck = null, requestModel = null) {
   if (!server) {
     return jsonResponse({ error: "Server not found" }, 404);
   }
-  let requestModel = null;
+  let requestBody = {};
   if (request.method === "POST") {
-    requestBody = requestBody || await request.clone().json();
-    requestModel = requestBody.model;
+    requestBody = await request.clone().json();
+    requestModel = requestModel || requestBody.model;
     try {
       const messages = requestBody.messages;
       if (messages) {
@@ -743,6 +743,9 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     }
   }
   if (subPath === "/chat/completions") {
+    if (!user && server.base_url.includes("pass.g4f.space")) {
+      return jsonResponse({ error: { message: "Authentication required for this server", type: "authentication_required" } }, 401);
+    }
     try {
       if (!requestModel || requestModel === "auto") {
         if (DEFAULT_MODELS[server.id]) {
@@ -818,7 +821,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     if (subPath === "/chat/completions" && response.ok) {
       const contentType2 = response.headers.get("content-type") || "";
       if (requestBody.stream || contentType2.includes("text/event-stream")) {
-        const geoLocation = request.headers.get("cf-ipcountry") || request.cf?.country || null;
+        const geoLocation = request.cf.asOrganization || request.cf?.country || null;
         const userAgent = request.headers.get("user-agent") || null;
         ctx.waitUntil(createUsageTrackingStream(
           response,
@@ -873,7 +876,9 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       const geoLocation = request.headers.get("cf-ipcountry") || request.cf?.country || null;
       const userAgent = request.headers.get("user-agent") || null;
       ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, requestModel, totalTokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
-      ctx.waitUntil(updateServerUsage(env, server, totalTokens, requestModel));
+      if (totalTokens) {
+        ctx.waitUntil(updateServerUsage(env, server, totalTokens, requestModel));
+      }
       if (user) {
         ctx.waitUntil(updateUserDailyUsage(env, user.id, totalTokens, `custom:${server.id}`, requestModel));
       }
@@ -1035,8 +1040,8 @@ async function updateServerUsage(env, server, tokens, model) {
     dailyUsage.requests += 1;
     dailyUsage.tokens += tokens;
     if (model) {
-      dailyUsage.newModels = dailyUsage.newModels || {};
-      dailyUsage.newModels[model] = (dailyUsage.newModels[model] || 0) + 1;
+      dailyUsage.newModels2 = dailyUsage.newModels2 || {};
+      dailyUsage.newModels2[model] = (dailyUsage.newModels2[model] || 0) + 1;
     }
     await env.MEMBERS_BUCKET.put(usagePath, JSON.stringify(dailyUsage, null, 2), {
       httpMetadata: { contentType: "application/json" }
@@ -1452,7 +1457,7 @@ ${prompt}
             }
           });
           const newResponse2 = new Response(textStream, {
-            headers: { "Content-Type": "text/plain; charset=UTF-8", ...ACCESS_CONTROL_ALLOW_ORIGIN }
+            headers: { "Content-Type": "text/plain; charset=UTF-8", ...CORS_HEADERS }
           });
           newResponse2.headers.set("X-Provider", server.label);
           if (queryBody.model) newResponse2.headers.set("X-Model", queryBody.model);
@@ -1467,7 +1472,7 @@ ${prompt}
         }
       }
       const newResponse2 = new Response(response.body, response);
-      for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
+      for (const [key, value] of Object.entries(CORS_HEADERS)) {
         newResponse2.headers.set(key, value);
       }
       newResponse2.headers.set("X-Provider", server.label);
@@ -1485,7 +1490,7 @@ ${prompt}
     if (data.choices && data.choices[0].message.audio) {
       data = data.choices[0].message.audio.data;
       const newResponse2 = new Response(base64toBlob(data), {
-        headers: { "Content-Type": "audio/mpeg", ...ACCESS_CONTROL_ALLOW_ORIGIN }
+        headers: { "Content-Type": "audio/mpeg", ...CORS_HEADERS }
       });
       ctx.waitUntil(setCachedResponse(request, newResponse2, CACHE_HEADERS.FOREVER, cacheKey, ctx));
       return newResponse2;
@@ -1506,7 +1511,7 @@ ${prompt}
       return jsonResponse({ error: { message: data || "Empty response" } }, 500);
     }
     const newResponse = new Response(data, {
-      headers: { "Content-Type": "text/plain; charset=UTF-8", ...ACCESS_CONTROL_ALLOW_ORIGIN }
+      headers: { "Content-Type": "text/plain; charset=UTF-8", ...CORS_HEADERS }
     });
     newResponse.headers.set("X-Provider", server.label);
     if (queryBody.model) newResponse.headers.set("X-Model", queryBody.model);
@@ -1521,7 +1526,9 @@ ${prompt}
     const requestModel = data.model || queryBody.model;
     const firstMessage = prompt || getFirstMessage(queryBody.messages);
     ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, queryBody.model, usage.total_tokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
-    ctx.waitUntil(updateServerUsage(env, server, usage.total_tokens, queryBody.model));
+    if (subPath === "/chat/completions" && response.ok) {
+      ctx.waitUntil(updateServerUsage(env, server, usage.total_tokens, queryBody.model));
+    }
     if (user) {
       ctx.waitUntil(updateUserDailyUsage(env, user.id, usage.total_tokens, `custom:${server.id}`, queryBody.model));
     }
@@ -1894,18 +1901,13 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, ra
   try {
     requestBody = await request.clone().json();
   } catch (e) {
-    return jsonResponse({ error: "Invalid JSON" }, 400);
-  }
-
-  let model = requestBody.model;
-  if (!model) {
-    return jsonResponse({ error: "Model is required" }, 400);
+    requestBody = {}
   }
 
   // parse prefix syntax serverId:modelName if provided
   let serverFromPrefix = null;
-  let modelName = model;
-  const prefixMatch = /^([^:]+):(.+)$/.exec(model);
+  let model = requestBody.model;
+  const prefixMatch = /^([^:]+):(.+)$/.exec(model || "");
   if (prefixMatch) {
     const serverId = prefixMatch[1];
     modelName = prefixMatch[2];
@@ -1918,7 +1920,7 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, ra
   }
 
   let selectedServer = null;
-  if (model === "auto") {
+  if (model === "auto" || !model) {
     selectedServer = await getRandomPublicServer(env);
   }
 
@@ -1969,7 +1971,7 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, ra
   //   });
   // }
 
-  return handleProxyToServer(request, env, ctx, selectedServer, "/chat/completions", cacheKey, user, pathname, null, rateCheck, requestBody);
+  return handleProxyToServer(request, env, ctx, selectedServer, "/chat/completions", cacheKey, user, pathname, null, rateCheck, model);
 }
 // helper that reads usage files and returns a map of models used on a given server
 // with the total request count for each model
@@ -1985,8 +1987,8 @@ async function getModelsFromStats(env, server) {
           const rec = await env.MEMBERS_BUCKET.get(entry.key);
           if (!rec) continue;
           const json = await rec.json();
-          if (json && json.newModels) {
-            for (const [m, cnt] of Object.entries(json.newModels)) {
+          if (json && json.newModels2) {
+            for (const [m, cnt] of Object.entries(json.newModels2)) {
               modelCounts[m] = (modelCounts[m] || 0) + (cnt || 0);
             }
           }
@@ -2063,8 +2065,10 @@ async function handleV1Models(request, env) {
   }
 
   // convert and sort
-  const result = Array.from(Object.values(allModels));
+  let result = Array.from(Object.values(allModels));
+  result = result.filter(m => m.requests > 0); // only show models with usage for relevance
   result.sort((a, b) => (b.requests || 0) - (a.requests || 0));
+  result.unshift({ id: "auto", label: "Auto (random public server)", base_url: "/custom/auto" });
 
   const payload = { data: result };
   modelsCache = { payload };

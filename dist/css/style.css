@@ -242,6 +242,10 @@ body.liquid:not(.no-animations):not(.white) {
     color: var(--colour-1);
 }
 
+.white .sidebar-container {
+    background-color: var(--colour-1);
+}
+
 .new_version a {
     color: var(--colour-4);
     text-decoration: underline;
@@ -342,7 +346,7 @@ body.liquid:not(.no-animations):not(.white) {
 }
 
 .message {
-    width: 100%;
+    width: auto;
     overflow-wrap: break-word;
     display: flex;
     flex-direction: column;
@@ -1776,6 +1780,7 @@ ul {
     --button-hover: var(--colour-4);
     --background: transparent;
     --media-select: var(--colour-3);
+    --input-bg: #ffffff;
 }
 
 .white .message .assistant .fa-xmark {
@@ -1958,8 +1963,8 @@ form textarea {
 }
 
 #userInput {
-    height: 56px;
-    min-height: 56px;
+    height: 106px;
+    min-height: 106px;
     flex: 1;
     padding: 16px 36px 16px 42px;
     color: var(--colour-3);
@@ -2819,7 +2824,7 @@ form textarea {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0.9);
-    background: var(--background);
+    background: var(--input-bg);
     border: 2px solid #F44336;
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
@@ -3175,7 +3180,7 @@ form textarea {
     background-color: var(--user-msg-bg);
     border: 1px solid var(--user-msg-border);
     border-radius: var(--border-radius-2);
-    margin: 4px 8px 4px 24px;
+    margin: 4px 0px 4px 24px;
 }
 
 /* Assistant message subtle distinction */
@@ -3327,11 +3332,6 @@ select:hover, #model-search:hover {
     font-size: 13px;
     font-weight: 500;
     padding: 6px 14px;
-}
-
-/* Settings content improvements */
-.settings .paper {
-    background-color: rgba(13, 13, 20, 0.6);
 }
 
 /* Toggle switch improvement */

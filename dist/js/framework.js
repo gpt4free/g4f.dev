@@ -244,7 +244,7 @@ async function query(prompt, options={ json: false, cache: true }) {
         response = await fetch(firstPartyUrl, { headers: {"Authorization": `Bearer ${["pk", "_7X0QLj0xijSd0xj7"].join("")}`}});
         if (!response.ok) {
             add_error(`Error ${response.status} with URL: \`${firstPartyUrl}\`\n ${await response.text()}`, true);
-            return;
+            return response;
         }
     }
     return response;
