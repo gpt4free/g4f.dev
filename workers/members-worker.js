@@ -41,11 +41,11 @@ const CORS_HEADERS = {
   
 const ADMIN_USERS = {
     discord: ["hlohaus789"],
-    github: [],
+    github: ["hlohaus"],
     huggingface: []
 };
 
-const EXTRA_SPONSORS = ["Screenmax1234", "kirill670"];
+const EXTRA_CONTRIBUTERS = ["Screenmax1234", "kirill670", "georgedorn"];
 
 /**
  * Fetch all contributors from GitHub API (handles pagination using Link header)
@@ -68,7 +68,7 @@ async function fetchContributors(env) {
             if (!response.ok) {
                 console.error(`Failed to fetch contributors: ${response.status}`);
                 if (contributors.length === 0) {
-                    return ["kirill670"];
+                    return EXTRA_CONTRIBUTERS;
                 }
                 break;
             }
@@ -95,7 +95,7 @@ async function fetchContributors(env) {
         }
         
         // Add additional contributor
-        EXTRA_SPONSORS.forEach(sponsor => {
+        EXTRA_CONTRIBUTERS.forEach(sponsor => {
             if (!contributors.includes(sponsor)) {
                 contributors.push(sponsor);
             }
@@ -105,7 +105,7 @@ async function fetchContributors(env) {
         return contributors;
     } catch (error) {
         console.error("Failed to fetch contributors:", error);
-        return contributors.length > 0 ? contributors : EXTRA_SPONSORS;
+        return contributors.length > 0 ? contributors : EXTRA_CONTRIBUTERS;
     }
 }
 

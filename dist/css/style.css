@@ -1304,9 +1304,6 @@ select:hover,
     select, #model-search {
         width: 200px;
     }
-    .field {
-        padding-right: 8px
-    }
     .message {
         flex-direction: row;
     }
