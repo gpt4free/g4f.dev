@@ -2757,6 +2757,7 @@ form textarea {
     .chat-buttons {
         flex-wrap: wrap;
         justify-content: center;
+        padding: 0;
     }
 
     select, #model-search {
