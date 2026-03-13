@@ -1222,7 +1222,7 @@ select:hover,
     background-color: var(--button-hover);
 }
 
-#provider option:disabled[value], #model option:disabled[value] {
+#provider option:disabled[value] {
     display: none;
 }
 

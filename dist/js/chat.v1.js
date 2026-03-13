@@ -45,7 +45,7 @@ const translationSnipptes = [
     "Get API key", "Uploading files...", "Invalid link", "Loading...", "Live Providers", "Custom Providers",
     "Search Off", "Search On", "Recognition On", "Recognition Off", "Delete Conversation",
     "Favorite Models:", "Stop Recording", "Record Audio", "Upload Audio", "No Title", "1 Copy",
-    "Delete all conversations?", "Error Occurred", "Remaining:", "Balance:", "Reasoning",
+    "Delete all conversations?", "Error Occurred", "Remaining:", "Balance:", "Reasoning", "Credits:"
 ];
 
 let login_urls_storage = {
@@ -4420,20 +4420,23 @@ function set_favorite_providers() {
 }
 
 function set_quota_info(models, quota) {
+    if (!quota) {
+        return;
+    }
     let default_model = null;
     models.forEach((model) => {
         const model_id = model.model || model.id;
         let percent = undefined;
-        if (quota?.buckets) {
+        if (quota.buckets) {
             if (!["gemini-3-pro-preview"].includes(default_model)) {
                 default_model = null; // Use last model with enough quota as default instead of the first one
             }
             percent = (quota.buckets.filter((bucket) => bucket.modelId == model_id).pop()?.remainingFraction || 0) * 100;
             model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
-        } else if (quota?.models) {
+        } else if (quota.models) {
             percent = (quota.models[model_id]?.quotaInfo?.remainingFraction || 0) * 100;
             model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
-        } else if (quota?.quota_snapshots) {
+        } else if (quota.quota_snapshots) {
             function is_premium(model) {
                 return model.includes("claude") || model.includes("gemini") || (model != "gpt-5-mini" && model.includes("gpt-5")) || model.includes("grok");
             }
@@ -4444,7 +4447,7 @@ function set_quota_info(models, quota) {
                 percent = Math.max(0, quota.quota_snapshots?.chat?.percent_remaining || 0);
                 model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
             }
-        } else if (quota?.allowanceInfo?.remaining) {
+        } else if (quota.allowanceInfo?.remaining) {
             percent = (quota.allowanceInfo.remaining / quota.allowanceInfo.monthUsageAllowance) * 100;
             const total = (quota?.allowanceInfo?.remaining || 0) / 1e8;
             model.label += ` (${framework.translate("Remaining:")} $${total.toFixed(2)})`;
@@ -4463,10 +4466,31 @@ function set_quota_info(models, quota) {
             model.default = true;
         }
     });
-    if (quota && quota.hasOwnProperty("balance")) {
-        models[0].label += ` (${framework.translate("Balance:")} ${quota.balance.toFixed(2).replace(".00", "")} Pollen)`;
+    if (quota && quota.hasOwnProperty("balance")) {            
+        let credits_info = `${framework.translate("Balance:")} ${quota.balance.toFixed(2).replace(".00", "")} Pollen`;
+        if (quota.balance > 0) {
+            credits_info += " ✅";
+        } else {
+            credits_info += " ⚠️";
+        }
+        if (models.length > 10) {
+            models.unshift({model: "credits_info", label: credits_info, disabled: true});
+        }
     }
-    if (!default_model &&client && client.defaultModel) {
+    if (quota.credits) {
+        const percent = (quota.credits.remaining / quota.credits.total) * 100;
+        let credits_info = `${framework.translate("Credits:")} ${quota.credits.remaining}, ${framework.translate("Remaining:")} ${percent.toFixed(2)}%`;
+        if (percent >= 10) {
+            credits_info += " ✅";
+        } else {
+            credits_info += " ⚠️";
+        }
+        models.unshift({model: "credits_info", label: credits_info, disabled: true});
+        if (models.length > 10) {
+            models.push({model: "credits_info_end", label: credits_info, disabled: true});
+        }
+    }
+    if (!default_model && client && client.defaultModel) {
         default_model = client.defaultModel;
         models.forEach((model) => {
             if ((model.model || model.id) == default_model) {
@@ -4499,6 +4523,9 @@ function set_provider_models(models, provider, quota=null) {
                 group.appendChild(option);
                 if (model.default) {
                     option.selected = true;
+                }
+                if (model.disabled) {
+                    option.disabled = true;
                 }
             } else {
                 let optgroup = document.createElement('optgroup');
