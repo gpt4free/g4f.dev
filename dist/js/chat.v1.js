@@ -5556,7 +5556,12 @@ async function loadClientModels() {
             if (model.remaining_percent !== undefined) {
                 opt.dataset.remaining = model.remaining_percent;
             }
-            if (model.default) opt.selected = true;
+            if (model.default) {
+                opt.selected = true;
+            }
+            if (model.disabled) {
+                opt.disabled = true;
+            }
             modelSelect.appendChild(opt);
         });
         if (models.length > 2) {
