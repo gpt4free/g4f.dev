@@ -32,6 +32,7 @@ const paperclip         = document.querySelector(".user-input .fa-paperclip");
 const userInputHeight   = document.getElementById("userInput-height");
 const hide_systemPrompt = document.getElementById("hide-systemPrompt")
 const slide_systemPrompt_icon = document.querySelector(".slide-header i");
+const temperatureInput  = document.getElementById("temperature");
 
 const optionElementsSelector = ".settings input, .settings textarea, .chat-body input, #model, #provider";
 
@@ -1827,6 +1828,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     messages,
                     stream: true,
                     signal: controller_storage[message_id].signal,
+                    ...(get_temperature() !== undefined ? { temperature: get_temperature() } : {}),
                     ...(mcpTools && mcpTools.length > 0 ? { tools: mcpTools } : {}),
                     ...(conversation.data ? { conversation: conversation.data[provider] } : {})
                 });
@@ -1956,6 +1958,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             api_base: apiBase,
             ignored: ignored,
             aspect_ratio: aspectRatio,
+            ...(get_temperature() !== undefined ? { temperature: get_temperature() } : {}),
             ...(mcpTools && mcpTools.length > 0 ? { tools: mcpTools } : {}),
             ...extraBody
         }, Object.values(image_storage), message_id, finish_message);
@@ -4157,6 +4160,13 @@ function get_selected_model() {
         model = modelSelect.options[modelSelect.selectedIndex];
     }
     return model?.value ? model.value : null;
+}
+
+function get_temperature() {
+    if (!temperatureInput) return undefined;
+    const val = parseFloat(temperatureInput.value);
+    if (isNaN(val)) return undefined;
+    return Math.min(2, Math.max(0, val));
 }
 
 async function api(ressource, args=null, files=null, message_id=null, finish_message=null) {

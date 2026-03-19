@@ -1226,6 +1226,36 @@ select:hover,
     display: none;
 }
 
+#temperature {
+    border-radius: var(--border-radius-1);
+    backdrop-filter: blur(20px);
+    cursor: pointer;
+    background-color: var(--colour-1);
+    border: 1px solid var(--blur-border);
+    color: var(--colour-3);
+    display: block;
+    outline: none;
+    padding: 8px 6px;
+    width: 68px;
+    transition: border-color var(--transition-speed), background-color var(--transition-speed);
+    text-align: center;
+    -moz-appearance: textfield;
+}
+
+#temperature::-webkit-inner-spin-button,
+#temperature::-webkit-outer-spin-button {
+    opacity: 0.6;
+}
+
+#temperature:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+#temperature:hover {
+    background-color: var(--button-hover);
+}
+
 #chatPrompt{
     min-height: 59px;
     height: 59px;

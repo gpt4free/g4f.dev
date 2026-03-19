@@ -384,6 +384,20 @@
                         </select>
                         <small id="providerHelp" class="sr-only">Select AI provider for conversations.</small>
                     </div>
+                    <div class="field temperature-field">
+                        <label for="temperature">Temperature (0.0–2.0):</label>
+                        <input
+                          type="number"
+                          id="temperature"
+                          name="temperature"
+                          min="0"
+                          max="2"
+                          step="0.1"
+                          value="1.0"
+                          aria-describedby="temperatureHelp"
+                        />
+                        <small id="temperatureHelp">Controls randomness: 0 = deterministic, 2 = very creative.</small>
+                    </div>
                     <div class="field">
                         <button id="pin" type="button" aria-label="Pin conversation">
                             <i class="fa-solid fa-thumbtack" aria-hidden="true"></i>
