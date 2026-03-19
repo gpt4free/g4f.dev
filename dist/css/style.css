@@ -1626,7 +1626,7 @@ ul {
     .chat-buttons {
         align-items: flex-start;
         flex-wrap: wrap;
-        padding-left: 4px;
+        padding-left: 0;
     }
 
     #chatPrompt {
