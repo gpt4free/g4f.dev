@@ -1115,7 +1115,6 @@ form input:checked+label:after {
     justify-content: left;
     width: 100%;
     margin-bottom: 4px;
-    gap: 4px;
     flex-wrap: nowrap;
     overflow-x: auto;
     padding: 4px 4px 2px;
