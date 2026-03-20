@@ -439,7 +439,60 @@ function register_message_images() {
     });
 }
 
-function showNotification(message, type = 'success') {
+function showToast(message, type = 'info', duration = 2000) {
+    showNotification(message, type, duration);
+    // duration currently controlled by showNotification animation, but we keep param compatibility.
+}
+
+function showOAuthCodePrompt(userCode, verificationUri) {
+    const existingPrompt = document.getElementById('oauth-code-prompt');
+    if (existingPrompt) existingPrompt.remove();
+
+    const prompt = document.createElement('div');
+    prompt.id = 'oauth-code-prompt';
+    prompt.style.position = 'fixed';
+    prompt.style.bottom = '20px';
+    prompt.style.left = '20px';
+    prompt.style.zIndex = '10000';
+    prompt.style.backgroundColor = '#111';
+    prompt.style.color = '#fff';
+    prompt.style.padding = '12px';
+    prompt.style.borderRadius = '8px';
+    prompt.style.boxShadow = '0 8px 20px rgba(0,0,0,0.5)';
+    prompt.style.minWidth = '300px';
+
+    prompt.innerHTML = `
+        <div style="font-weight:700; margin-bottom:8px;">GitHub Copilot Login</div>
+        <div style="margin-bottom:6px;">Enter this code at GitHub:</div>
+        <div id="oauth-user-code" style="font-size:1.2rem; font-weight:700; letter-spacing:0.1em; background:#222; padding:8px; border-radius:4px; word-break:break-all;">${framework.escape(userCode)}</div>
+        <div style="display:flex; gap:6px; margin-top:8px;">
+            <button id="oauth-copy-code" style="flex:1; padding:8px; background:#2563eb; border:none; color:#fff; border-radius:4px; cursor:pointer;">Copy code</button>
+            <button id="oauth-open-url" style="flex:1; padding:8px; background:#059669; border:none; color:#fff; border-radius:4px; cursor:pointer;">Open GitHub</button>
+        </div>
+        <div style="text-align:right; margin-top:8px;"><button id="oauth-close" style="color:#aaa; background:transparent; border:none; cursor:pointer;">Close</button></div>
+    `;
+
+    document.body.appendChild(prompt);
+
+    prompt.querySelector('#oauth-copy-code').addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(userCode);
+            showNotification('Code copied to clipboard', 'success');
+        } catch (copyErr) {
+            showNotification('Copy failed', 'error');
+        }
+    });
+
+    prompt.querySelector('#oauth-open-url').addEventListener('click', () => {
+        window.open(verificationUri, '_blank');
+    });
+
+    prompt.querySelector('#oauth-close').addEventListener('click', () => {
+        prompt.remove();
+    });
+}
+
+function showNotification(message, type = 'success', duration = 2000) {
     // Check if notification container exists, create if not
     let container = document.getElementById('notification-container');
     if (!container) {
@@ -458,7 +511,7 @@ function showNotification(message, type = 'success') {
     notification.style.padding = '10px 20px';
     notification.style.marginTop = '10px';
     notification.style.borderRadius = '4px';
-    notification.style.backgroundColor = type === 'success' ? '#4CAF50' : '#F44336';
+    notification.style.backgroundColor = type === 'success' ? '#4CAF50' : (type === 'info' ? '#2196F3' : '#F44336');
     notification.style.color = 'white';
     notification.style.opacity = '0';
     notification.style.transform = 'translateY(20px)';
@@ -482,7 +535,7 @@ function showNotification(message, type = 'success') {
                     document.body.removeChild(container);
                 }
             }, 300);
-        }, 2000);
+        }, duration);
     }, 10);
 }
 
@@ -3453,14 +3506,14 @@ async function load_providers(providers, provider_options, providersListContaine
 
         if (provider.parent && provider.name != "PuterJS") {
             if (!login_urls_storage[provider.parent]) {
-                login_urls_storage[provider.parent] = [provider.label, provider.login_url, [provider.name], provider.auth];
+                login_urls_storage[provider.parent] = [provider.label, provider.login_url, [provider.name], provider.auth, provider.login];
             } else {
                 login_urls_storage[provider.parent][2].push(provider.name);
             }
         } else if (provider.login_url) {
             const name = provider.parent || provider.name;
             if (!login_urls_storage[name]) {
-                login_urls_storage[name] = [provider.label, provider.login_url, [name, provider.name], provider.auth];
+                login_urls_storage[name] = [provider.label, provider.login_url, [name, provider.name], provider.auth, provider.login];
             } else {
                 login_urls_storage[name][0] = provider.label;
                 login_urls_storage[name][1] = provider.login_url;
@@ -3542,7 +3595,7 @@ async function load_providers(providers, provider_options, providersListContaine
     loadModels(providers);
 }
 function load_provider_login_urls(providersListContainer) {
-    for (let [name, [label, login_url, childs, auth]] of Object.entries(login_urls_storage)) {
+    for (let [name, [label, login_url, childs, auth, interactive_login]] of Object.entries(login_urls_storage)) {
         if (!login_url) {
             continue;
         }
@@ -3551,12 +3604,84 @@ function load_provider_login_urls(providersListContainer) {
         childs = childs.map((child) => `${child}-api_key`).join(" ");
         const placeholder = `placeholder="${name == "HuggingSpace" ? "zerogpu_token" : "api_key"}"`;
         const input_id = name == "PuterJS" ? "puter.auth.token" : `${name}-api_key`;
+        let oauthButton = "";
+        
+        // Add OAuth button for providers that support it (server-side endpoint)
+        if (interactive_login) {
+            oauthButton = `<button class="oauth-btn" data-provider="${name}" data-login-url="/backend-api/v2/oauth/${name}" title="Login with OAuth">${framework.translate('OAuth Login')}</button>`;
+        }
+        
         providerBox.innerHTML = `
             <label for="${input_id}" class="label" title="">${label}:</label>
+        ` + (oauthButton || `
             <input type="text" id="${input_id}" name="${name}[api_key]" class="${childs}" ${placeholder} autocomplete="off"/>
-        ` + (login_url ? `<a href="${login_url}" target="_blank" title="Login to ${label}">${framework.translate('Get API key')}</a>` : "");
-        if (auth) {
-            providerBox.querySelector("input").addEventListener("input", (event) => {
+        ` + (login_url ? `<a href="${login_url}" target="_blank" title="Login to ${label}">${framework.translate('Get API key')}</a>` : ""));
+        
+        // Add OAuth button event listener
+        if (oauthButton) {
+            providerBox.querySelector(".oauth-btn").addEventListener("click", async (event) => {
+                const provider = event.target.dataset.provider;
+                event.target.disabled = true;
+                event.target.textContent = "Authenticating...";
+                try {
+                    const loginUrl = event.target.dataset.loginUrl || `/backend-api/v2/oauth/${provider}`;
+                    const response = await fetch(loginUrl, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ action: "start" })
+                    });
+                    const result = await response.json();
+
+                    if (result.status === "pending" && result.user_code && result.verification_uri) {
+                        showOAuthCodePrompt(result.user_code, result.verification_uri);
+                        showToast("GitHub Copilot authorization started. Click Open GitHub and enter the code.", "info", 10000);
+
+                        // Poll for completion
+                        let pollResult;
+                        const maxPollAttempts = 45;
+                        let pollAttempts = 0;
+                        while (pollAttempts < maxPollAttempts) {
+                            pollAttempts += 1;
+                            await new Promise(resolve => setTimeout(resolve, result.interval ? result.interval * 1000 : 5000));
+                            const pollResponse = await fetch(loginUrl, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ action: "poll", device_code: result.device_code })
+                            });
+                            pollResult = await pollResponse.json();
+
+                            if (pollResult.status === "success") {
+                                showToast("OAuth authentication successful!", "success");
+                                await load_providers(providers, {}, providersListContainer, null);
+                                break;
+                            }
+                            if (pollResult.status !== "pending") {
+                                showToast(`OAuth failed: ${pollResult.error?.message || pollResult.message || "Unknown error"}`, "error");
+                                break;
+                            }
+                        }
+
+                        if (pollAttempts >= maxPollAttempts) {
+                            showToast("OAuth poll timed out. Please retry.", "error");
+                        }
+
+                    } else if (result.status === "success") {
+                        showToast("OAuth authentication successful!", "success");
+                        await load_providers(providers, {}, providersListContainer, null);
+                    } else {
+                        showToast(`OAuth failed: ${result.error?.message || result.message || "Unknown error"}`, "error");
+                    }
+                } catch (error) {
+                    showToast(`OAuth error: ${error.message}`, "error");
+                } finally {
+                    event.target.disabled = false;
+                    event.target.textContent = framework.translate('OAuth Login');
+                }
+            });
+        } else if (auth) {
+            providerBox.querySelector("input")?.addEventListener("input", (event) => {
                 const input = document.getElementById(`Provider${name}`);
                 input.checked = !!event.target.value;
                 load_provider_option(input, name);

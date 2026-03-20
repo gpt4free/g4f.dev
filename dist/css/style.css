@@ -1564,6 +1564,33 @@ ul {
     font-size: 12px;
 }
 
+.oauth-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: var(--blur-bg);
+    border: 1px solid var(--blur-border);
+    border-radius: 6px;
+    color: var(--colour-3);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    margin-left: 8px;
+}
+
+.oauth-btn:hover {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.oauth-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .user-tier-info[data-tier="pro"] .tier-badge i {
     color: #f0c040;
 }
