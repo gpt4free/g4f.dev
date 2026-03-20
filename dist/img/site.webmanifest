@@ -3,12 +3,12 @@
     "short_name": "G4F",
     "icons": [
         {
-            "src": "/dist/img/android-chrome-192x192.png",
+            "src": "/dist/img/g4f-192x192.png",
             "sizes": "192x192",
             "type": "image/png"
         },
         {
-            "src": "/dist/img/android-chrome-512x512.png",
+            "src": "/dist/img/g4f-512x512.png",
             "sizes": "512x512",
             "type": "image/png"
         }

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6e48aa"/>
+      <stop offset="100%" style="stop-color:#4776E6"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#1a1a2e" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Circle background -->
+  <circle cx="256" cy="256" r="240" fill="url(#bgGrad)" filter="url(#shadow)"/>
+
+  <!-- Subtle inner ring -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
+
+  <!-- G4F Text -->
+  <text x="250" y="328" font-family="Arial,Helvetica,sans-serif" font-size="194" font-weight="900" fill="#f8f9fa" text-anchor="middle" letter-spacing="-5" filter="url(#glow)">G4F</text>
+</svg>

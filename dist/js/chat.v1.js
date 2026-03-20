@@ -340,7 +340,7 @@ class HtmlRenderPlugin {
         el,
         text
     }) {
-        if (!el.classList.contains("language-html")) {
+        if (!el.classList.contains("language-html") && !el.classList.contains("language-svg")) {
             return;
         }
         let button = Object.assign(document.createElement("button"), {
@@ -353,7 +353,8 @@ class HtmlRenderPlugin {
             if (hook && typeof hook === "function") {
                 newText = hook(text, el) || text
             }
-            iframe.src = `data:text/html;charset=utf-8,${encodeURIComponent(newText)}`;
+            const mimeType = el.classList.contains("language-svg") ? "image/svg+xml" : "text/html";
+            iframe.src = `data:${mimeType};charset=utf-8,${encodeURIComponent(newText)}`;
             iframe_container.classList.remove("hidden");
             if (typeof callback === "function") return callback(newText, el);
         }
