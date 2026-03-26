@@ -327,7 +327,7 @@ function createStreamChunk(data, model) {
   }
   if (data.message?.tool_calls) {
     delta.tool_calls = data.message.tool_calls.map((tc, index) => ({
-      index: index,
+      index: tc.function?.index || index,
       id: tc.id || `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${index}`,
       type: "function",
       function: {
@@ -375,6 +375,7 @@ function createCompletionResponse(env, ctx, clientIP, model, content, thinkingCo
   // Include tool_calls if present
   if (toolCalls && toolCalls.length > 0) {
     message.tool_calls = toolCalls.map((tc, index) => ({
+      index: tc.function?.index || index,
       id: tc.id || `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${index}`,
       type: "function",
       function: {

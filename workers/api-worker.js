@@ -92,12 +92,45 @@ var DEFAULT_MODELS = {
   // "srv_mks0cusg6010f87029ea": "model-router3",
   // azure
 };
-var BLOCKED_SERVERS = ["srv_mkrzs4lg75588992eb03", "srv_mm4b22wq6142dcde995b"];
+var URL_MAP = {
+  "https://gen.pollinations.ai/quota": "https://gen.pollinations.ai/account/balance"
+}
+var BLOCKED_SERVERS = ["srv_mkrzs4lg75588992eb03", "srv_mm4b22wq6142dcde995b", "srv_mmaeaqcwf1c31c3fb25d"];
 // organizations (from Cloudflare `asOrganization`) that should be blocked
 // when the request is anonymous (no user/session or API key provided).
 var BLOCKED_ORGS = [
   "Oracle Public Cloud",
-  "Oracle Corporation"
+  "Oracle Corporation",
+  "Windstream Communications LLC",
+  "Aventice LLC",
+  "EGIHosting",
+  "web2objects GmbH",
+  "OVH Hosting, Inc.",
+  "Rings-3",
+  "Leaseweb USA, Inc.",
+  "GoDaddy.com, LLC",
+  "netcup GmbH",
+  "Virtual Private Hosting Service",
+  "DigitalOcean, LLC",
+  "SEO Hosting LTD",
+  "Cloudflare London, LLC",
+  "Contabo GmbH",
+  "Amazon Data Services Brazil",
+  "Private Customer",
+  "Emerald Onion",
+  "Google LLC",
+  "Enzu Inc.",
+  "Dai IP dong ket noi xDSL",
+  "Nocix, LLC",
+  "Luminous Apartments Limited",
+  "play2go.cloud - Cheap and reliable hosting",
+  "Vultr Holdings, LLC",
+  "NETH LLC",
+  "NReach Net (Pvt.) Ltd",
+  "HostRoyale LLC",
+  "Packethub S.A.",
+  "Akamai Connected Cloud / Linode",
+  "Latitude.sh"
 ];
 var GPT_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "marin", "cedar", "amuch", "dan", "elan", "breeze", "cove", "ember", "fathom", "glimmer", "harp", "juniper", "maple", "orbit", "vale"];
 var custom_worker_default = {
@@ -635,6 +668,11 @@ async function getPublicServers(env) {
       publicServers = JSON.parse(indexStr).filter((s) => !BLOCKED_SERVERS.includes(s.id));
     }
   }
+  publicServers.sort((a, b) => {
+    const aCreated = new Date(a.created_at || a.updated_at || 0).getTime();
+    const bCreated = new Date(b.created_at || b.updated_at || 0).getTime();
+    return aCreated - bCreated;
+  });
   return publicServers;
 }
 async function handleListPublicServers(request, env) {
@@ -722,14 +760,16 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey)
     return jsonResponse({ error: `Failed to connect to server: ${e.message}` }, 502);
   }
 }
-async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user = null, pathname = null, userProvidedKey = null, rateCheck = null, requestModel = null) {
+async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user = null, pathname = null, userProvidedKey = null, rateCheck = null, requestBody = null) {
   if (!server) {
     return jsonResponse({ error: "Server not found" }, 404);
   }
-  let requestBody = {};
+  let requestModel = null;
   if (request.method === "POST") {
-    requestBody = await request.clone().json();
-    requestModel = requestModel || requestBody.model;
+    if (!requestBody) {
+      requestBody = await request.clone().json();
+    }
+    requestModel = requestBody.model;
     try {
       const messages = requestBody.messages;
       if (messages) {
@@ -758,6 +798,8 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       }
     } catch (e) {
     }
+  } else {
+    requestBody = {}
   }
   if (subPath === "/chat/completions") {
     if (!user && server.base_url.includes("pass.g4f.space")) {
@@ -805,6 +847,9 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     targetUrl = server.base_url.split("/v1/")[0] + subPath;
   } else {
     targetUrl = `${server.base_url}${subPath}`;
+  }
+  if (targetUrl in URL_MAP) {
+    targetUrl = URL_MAP[targetUrl];
   }
   const clientIP = getClientIP(request);
   try {
@@ -1170,6 +1215,7 @@ async function updatePublicServerIndex(env, server, ownerId, action) {
         allowed_models: server.allowed_models,
         owner_id: ownerId,
         usage: server.usage,
+        created_at: server.created_at || server.updated_at,
         updated_at: server.updated_at
       });
     }
@@ -1926,7 +1972,7 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, ra
   const prefixMatch = /^([^:]+):(.+)$/.exec(model || "");
   if (prefixMatch) {
     const serverId = prefixMatch[1];
-    modelName = prefixMatch[2];
+    const modelName = prefixMatch[2];
     const maybe = await getServerById(env, serverId, user);
     if (maybe) {
       serverFromPrefix = maybe;
@@ -1987,7 +2033,7 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, ra
   //   });
   // }
 
-  return handleProxyToServer(request, env, ctx, selectedServer, "/chat/completions", cacheKey, user, pathname, null, rateCheck, model);
+  return handleProxyToServer(request, env, ctx, selectedServer, "/chat/completions", cacheKey, user, pathname, null, rateCheck, requestBody);
 }
 // helper that reads usage files and returns a map of models used on a given server
 // with the total request count for each model

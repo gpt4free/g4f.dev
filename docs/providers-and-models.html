@@ -499,7 +499,7 @@ print(response)
         }
 
         // Helper to render a provider table from a list
-        function renderProviderTable(tableId, providersList, getName = p => p.name || p.label || p.key, getModels = p => p.models || [], getTags = p => p.tags || "", getMeta = p => "") {
+        async function renderProviderTable(tableId, providersList, getName = p => p.name || p.label || p.key, getModels = p => p.models || [], getTags = p => p.tags || "", getMeta = p => "") {
             const table = document.getElementById(tableId);
             table.innerHTML = '';
             for (const p of providersList) {
@@ -531,20 +531,31 @@ print(response)
                 actions.appendChild(btn);
                 const modelDiv = document.createElement('div');
                 modelDiv.className = 'models-list';
-                const models = getModels(p);
-                models.slice(0, 5).forEach(m => {
+                p.key = `custom:${p.id}`;
+                p.models = getModels(p);
+                if (!p.models.length) {
+                    try {
+                        const client = await createClient(p.key);
+                        p.models = await client.models.list();
+                        p.models = p.models.map(m => m.id);
+                    } catch (error) {
+                        console.warn(`Failed to load models for provider ${p.key}:`, error);
+                        p.models = [];
+                    }
+                }
+                p.models.slice(0, 5).forEach(m => {
                     const pill = document.createElement('div');
                     pill.className = 'model-pill';
                     pill.textContent = m;
                     preview.appendChild(pill);
                 });
-                if (models.length > 5) {
+                if (p.models.length > 5) {
                     const more = document.createElement('div');
                     more.className = 'model-pill';
-                    more.textContent = `…+${models.length - 5}`;
+                    more.textContent = `…+${p.models.length - 5}`;
                     preview.appendChild(more);
                 }
-                models.forEach(m => {
+                p.models.forEach(m => {
                     const pill = document.createElement('div');
                     pill.className = 'model-pill';
                     pill.textContent = m;
