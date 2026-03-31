@@ -180,7 +180,7 @@ def process_file(file_path: Path, template: str, output_dir: Optional[Path] = No
 
         # If output file exists, read and replace title and content
         if output_path.is_file():
-            output = output_path.read_text()
+            output = output_path.read_text("utf-8")
             output = re.sub(r"<title>([\S\s]+?)</title>", f"<title>{title}</title>", output)
             def replace_main_content(match):
                 opening_tag = match.group(1)  # <main role="main" ...>

@@ -134,6 +134,7 @@ Examples
 - [Image Editing & Variation](image_editing.md)
 - [Authentication, Configuration Guide (.har and cookies)](config.md)
 - [Advanced: Create your own Provider](guides/create_provider.md)
+- [Routing with custom models (OpenClaw)](guides/openclaw.md)
 - [Integrations: LangChain, PydanticAI](pydantic_ai.md)
 - [GUI/WebUI](gui.md), [Phone](guides/phone.md), [Backend API](backend_api_documentation.md)
 - [Troubleshooting](https://github.com/gpt4free/g4f.dev/issues)
