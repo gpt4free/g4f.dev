@@ -291,7 +291,7 @@ var custom_worker_default = {
           server = await getServerByLabel(env, label, user);
         }
         if (!server) {
-          return jsonResponse({ error: "Server not found" }, 404);
+          return proxyToPassG4f(request, env, pathname, url.search);
         }
         return handleModels(request, env, ctx, server.id, user, server, cacheKey);
       }
@@ -322,7 +322,7 @@ var custom_worker_default = {
           }
         }
         if (!server) {
-          return jsonResponse({ error: `Server by label '${label}' not found`, servers: await getPublicServers(env) }, 404);
+          return proxyToPassG4f(request, env, pathname, url.search);
         }
         return handleProxyToServer(request, env, ctx, server, "/chat/completions", cacheKey, user, pathname, userProvidedKey, rateCheck);
       }
@@ -344,11 +344,11 @@ var custom_worker_default = {
         const user2 = await authenticateRequest(request, env);
         const server = await getServerByLabel(env, label, user2);
         if (!server) {
-          return jsonResponse({ error: "Server not found" }, 404);
+          return proxyToPassG4f(request, env, pathname, url.search);
         }
         return handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user2, pathname, userProvidedKey, rateCheck);
       }
-      return jsonResponse({ error: "Not found" }, 404);
+      return proxyToPassG4f(request, env, pathname, url.search);
     } catch (error) {
       console.error("Custom worker error:", error);
       return jsonResponse({ error: error.message || "Internal server error" }, 500);
@@ -2184,6 +2184,31 @@ async function setCachedResponse(request, response, cacheControl, cacheKey = nul
   } catch (e) {
     console.error("Cache write error:", e);
   }
+}
+async function proxyToPassG4f(request, env, pathname, search) {
+  const passApiKey = env.PASS_API_KEY;
+  const headers = new Headers(request.headers);
+  if (passApiKey) {
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const existingKey = authHeader.substring(7);
+      headers.set("Authorization", `Bearer ${passApiKey}\n${existingKey}`);
+    } else {
+      headers.set("Authorization", `Bearer ${passApiKey}`);
+    }
+  }
+  const targetUrl = `https://pass.g4f.dev${pathname}${search || ""}`;
+  const fetchOptions = {
+    method: request.method,
+    headers
+  };
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    fetchOptions.body = request.clone().body;
+  }
+  const response = await fetch(targetUrl, fetchOptions);
+  const newResponse = new Response(response.body, response);
+  newResponse.headers.set("Access-Control-Allow-Origin", "*");
+  return newResponse;
 }
 export {
   custom_worker_default as default
