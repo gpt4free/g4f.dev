@@ -1226,6 +1226,8 @@
         const API_BASE = 'https://auth.gpt4free.workers.dev';
         const API_URL = 'https://g4f.space';
         const MEMBERS_API = `${API_BASE}/members/api`;
+        const POLLINATIONS_APP_KEY = 'pk_7X0QLj0xijSd0xj7';
+        const POLLINATIONS_PERMISSIONS = 'profile,balance,usage';
 
         // DOM Elements
         const loginSection = document.getElementById('loginSection');
@@ -1494,7 +1496,12 @@
 
         // Pollinations login (main section)
         loginPollinations.addEventListener('click', () => {
-            window.location.href = `https://enter.pollinations.ai/authorize?redirect_url=${encodeURIComponent(window.location.origin + '/members')}`;
+            const params = new URLSearchParams({
+                redirect_url: window.location.origin + '/members',
+                app_key: POLLINATIONS_APP_KEY,
+                permissions: POLLINATIONS_PERMISSIONS
+            });
+            window.location.href = `https://enter.pollinations.ai/authorize?${params}`;
         });
 
         // Redirect login buttons (include redirect parameter for temp API key)
@@ -1513,7 +1520,12 @@
         // Pollinations login from redirect section - save external redirect then start OAuth
         redirectLoginPollinations.addEventListener('click', () => {
             localStorage.setItem('members_external_redirect', externalRedirect);
-            window.location.href = `https://enter.pollinations.ai/authorize?redirect_url=${encodeURIComponent(window.location.origin + '/members')}`;
+            const params = new URLSearchParams({
+                redirect_url: window.location.origin + '/members',
+                app_key: POLLINATIONS_APP_KEY,
+                permissions: POLLINATIONS_PERMISSIONS
+            });
+            window.location.href = `https://enter.pollinations.ai/authorize?${params}`;
         });
 
         // Handle OAuth callback
@@ -1843,7 +1855,12 @@
             if (addPollinationsServerBtn) {
                 addPollinationsServerBtn.addEventListener('click', () => {
                     // Redirect to Pollinations OAuth
-                    window.location.href = `https://enter.pollinations.ai/authorize?redirect_url=${encodeURIComponent(window.location.origin + '/members')}`;
+                    const params = new URLSearchParams({
+                        redirect_url: window.location.origin + '/members',
+                        app_key: POLLINATIONS_APP_KEY,
+                        permissions: POLLINATIONS_PERMISSIONS
+                    });
+                    window.location.href = `https://enter.pollinations.ai/authorize?${params}`;
                 });
             }
             
