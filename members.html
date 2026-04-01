@@ -940,6 +940,11 @@
                     🤗
                     Sign in with Hugging Face
                 </button>
+                
+                <button class="oauth-btn pollinations" id="redirectLoginPollinations">
+                    🌸
+                    Sign in with Pollinations
+                </button>
             </div>
             
             <p style="margin-top: 1.5rem;">
@@ -970,6 +975,11 @@
                 <button class="oauth-btn huggingface" id="loginHuggingface">
                     🤗
                     Sign in with Hugging Face
+                </button>
+                
+                <button class="oauth-btn pollinations" id="loginPollinations">
+                    🌸
+                    Sign in with Pollinations
                 </button>
             </div>
             
@@ -1224,9 +1234,11 @@
         const loginGithub = document.getElementById('loginGithub');
         const loginDiscord = document.getElementById('loginDiscord');
         const loginHuggingface = document.getElementById('loginHuggingface');
+        const loginPollinations = document.getElementById('loginPollinations');
         const redirectLoginGithub = document.getElementById('redirectLoginGithub');
         const redirectLoginDiscord = document.getElementById('redirectLoginDiscord');
         const redirectLoginHuggingface = document.getElementById('redirectLoginHuggingface');
+        const redirectLoginPollinations = document.getElementById('redirectLoginPollinations');
         const logoutBtn = document.getElementById('logoutBtn');
         const userName = document.getElementById('userName');
         const generateKeyBtn = document.getElementById('generateKeyBtn');
@@ -1246,6 +1258,19 @@
         // Check for redirect parameter (external login request)
         const urlParams = new URLSearchParams(window.location.search);
         const externalRedirect = urlParams.get('redirect');
+
+        // Validate that a redirect URL belongs to a trusted domain
+        function isValidRedirectUrl(url) {
+            try {
+                const parsed = new URL(url);
+                return parsed.hostname.endsWith('g4f.dev') ||
+                       parsed.hostname === 'gpt4free.github.io' ||
+                       parsed.hostname === 'localhost' ||
+                       parsed.hostname === '127.0.0.1';
+            } catch {
+                return false;
+            }
+        }
 
         // OAuth Configuration
         const GITHUB_CLIENT_ID = 'Ov23lin6fPvRsvE7JZ3S';
@@ -1467,6 +1492,11 @@
             window.location.href = `${API_BASE}/members/auth/huggingface`;
         });
 
+        // Pollinations login (main section)
+        loginPollinations.addEventListener('click', () => {
+            window.location.href = `https://enter.pollinations.ai/authorize?redirect_url=${encodeURIComponent(window.location.origin + '/members')}`;
+        });
+
         // Redirect login buttons (include redirect parameter for temp API key)
         redirectLoginGithub.addEventListener('click', () => {
             window.location.href = `${API_BASE}/members/auth/github?redirect=${encodeURIComponent(externalRedirect)}`;
@@ -1478,6 +1508,12 @@
 
         redirectLoginHuggingface.addEventListener('click', () => {
             window.location.href = `${API_BASE}/members/auth/huggingface?redirect=${encodeURIComponent(externalRedirect)}`;
+        });
+
+        // Pollinations login from redirect section - save external redirect then start OAuth
+        redirectLoginPollinations.addEventListener('click', () => {
+            localStorage.setItem('members_external_redirect', externalRedirect);
+            window.location.href = `https://enter.pollinations.ai/authorize?redirect_url=${encodeURIComponent(window.location.origin + '/members')}`;
         });
 
         // Handle OAuth callback
@@ -1532,6 +1568,13 @@
                     localStorage.setItem('oauth', JSON.stringify(oauthResult));
                     showToast('Successfully signed in with Hugging Face!');
                     window.history.replaceState({}, document.title, window.location.pathname);
+                    // If there's a pending external redirect, redirect with HuggingFace api_key
+                    const pendingRedirect = localStorage.getItem('members_external_redirect');
+                    if (pendingRedirect && isValidRedirectUrl(pendingRedirect)) {
+                        localStorage.removeItem('members_external_redirect');
+                        window.location.href = `${pendingRedirect}#HuggingFace-api_key=${encodeURIComponent(oauthResult.accessToken)}`;
+                        return;
+                    }
                     showDashboard(user);
                     return;
                 }
@@ -1553,6 +1596,13 @@
                         localStorage.setItem('pollinations_pending_server', pollinationsToken);
                         showToast('Successfully signed in with Pollinations!');
                         window.history.replaceState({}, document.title, window.location.pathname);
+                        // If there's a pending external redirect, redirect with api_key in URL
+                        const pendingRedirect = localStorage.getItem('members_external_redirect');
+                        if (pendingRedirect && isValidRedirectUrl(pendingRedirect)) {
+                            localStorage.removeItem('members_external_redirect');
+                            window.location.href = `${pendingRedirect}#PollinationsAI-api_key=${encodeURIComponent(pollinationsToken)}`;
+                            return;
+                        }
                         addPollinationsServerBtn.style.display = 'none';
                     }
                     return;

@@ -6165,8 +6165,25 @@ function handleCloudSyncCallback() {
     const urlParams = new URLSearchParams(window.location.search);
     let token = urlParams.get("session_token");
     
-    // Also check hash fragment for session token (starts with g4f_ or gfs_)
+    // Check hash fragment for provider-specific API keys or session tokens
+    const hashStr = window.location.hash ? decodeURIComponent(window.location.hash.substring(1)) : "";
     const hashParts = window.location.hash.split("#");
+    
+    // Handle provider API keys from URL hash (set by members page after OAuth)
+    if (hashStr.startsWith("HuggingFace-api_key=")) {
+        const hfKey = hashStr.substring("HuggingFace-api_key=".length);
+        if (hfKey) {
+            appStorage.setItem("HuggingFace-api_key", hfKey);
+            window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+        }
+    } else if (hashStr.startsWith("PollinationsAI-api_key=")) {
+        const pollinationsKey = hashStr.substring("PollinationsAI-api_key=".length);
+        if (pollinationsKey) {
+            appStorage.setItem("PollinationsAI-api_key", pollinationsKey);
+            window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+        }
+    }
+
     if (!token && hashParts.length > 1) {
         const hashValue = decodeURIComponent(hashParts[hashParts.length - 1]);
         if (hashValue.startsWith("g4f_") || hashValue.startsWith("gfs_")) {
@@ -6184,6 +6201,10 @@ function handleCloudSyncCallback() {
         if (userParam) {
             try {
                 const user = JSON.parse(decodeURIComponent(userParam));
+                // Also store provider-specific API key if included in user info
+                if (user.provider === "huggingface" && user.access_token) {
+                    appStorage.setItem("HuggingFace-api_key", user.access_token);
+                }
                 showCloudSyncLoggedIn(user);
             } catch (e) {
                 console.error("Failed to parse user data:", e);

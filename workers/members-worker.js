@@ -1563,6 +1563,11 @@ function calculateUserTier(userData, contributors, sponsors) {
           tier: user.tier
       })));
       
+      // Include provider-specific API key in hash for localStorage storage on the redirect target
+      if (user.provider === "huggingface" && user.access_token) {
+          redirectUrl.hash = `HuggingFace-api_key=${encodeURIComponent(user.access_token)}`;
+      }
+      
       // Set session cookie with 7 day expiry
       const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
       const cookie = `g4f_session=${sessionToken}; Path=/; Expires=${cookieExpiry}; SameSite=Lax; Secure`;
