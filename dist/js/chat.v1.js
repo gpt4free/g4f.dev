@@ -660,11 +660,12 @@ const register_message_buttons = async () => {
         provider_link?.addEventListener("click", async (event) => {
             event.preventDefault();
             await load_provider_parameters(el.dataset.provider);
-            const provider_forms = document.querySelector(".provider_forms");
-            const provider_form = provider_forms.querySelector(`#${el.dataset.provider}-form`);
+            const provider_forms_container = document.querySelector(".provider_forms");
+            provider_forms_container.querySelectorAll("form").forEach(form => form.classList.add("hidden"));
+            const provider_form = provider_forms_container.querySelector(`#${el.dataset.provider}-form`);
             if (provider_form) {
                 provider_form.classList.remove("hidden");
-                provider_forms.classList.remove("hidden");
+                provider_forms_container.classList.remove("hidden");
                 chat.classList.add("hidden");
             }
             return false;
@@ -1130,6 +1131,9 @@ async function load_provider_parameters(provider) {
     if (!parameters_storage[provider]) {
         parameters_storage[provider] = JSON.parse(appStorage.getItem(form_id));
     }
+    if (!parameters_storage[provider]) {
+        parameters_storage[provider] = {"provider": provider, "model": "", "messages": [{"role": "system", "content": ""}, {"role": "user", "content": ""}], "stream": true, "timeout": 0, "response_format": {"type": "json_object"}, "max_tokens": 4096, "stop": ["stop1", "stop2"], "media": [["data:image/jpeg;base64,...", "filename.jpg"]], "temperature": 1, "presence_penalty": 1, "top_p": 1, "frequency_penalty": 1}
+    }
     if (parameters_storage[provider]) {
         let provider_forms = document.querySelector(".provider_forms");
         let form_el = document.createElement("form");
@@ -1186,8 +1190,8 @@ async function load_provider_parameters(provider) {
                 }
                 field_el.innerHTML = `<label for="${el_id}" title="">${key}:</label>`;
                 if (Number.isInteger(value)) {
-                    max = value == 42 || value >= 4096 ? 8192 : value >= 100 ? 4096 : value == 1 ? 10 : 100;
-                    step = value >= 1024 ? 8 : 1;
+                    max =  key === "n" ? 10 : value == 42 || value >= 4096 ? 8192 : value >= 100 ? 4096 : value > 1 ? 100 : value === 0 ? 600 : 2;
+                    step = value >= 1024 ? 8 : value > 1 ? 1 : value > 0 ? 0.1 : 1;
                     field_el.innerHTML += `<input type="range" id="${el_id}" name="${key}" value="${framework.escape(value)}" class="slider" min="0" max="${max}" step="${step}"/><output>${framework.escape(value)}</output>`;
                     field_el.innerHTML += `<i class="fa-solid fa-xmark"></i>`;
                 } else if (typeof value == "number") {
@@ -1517,6 +1521,23 @@ const toUrl = async (file)=>{
         return await toBase64(file);
     }
     return file.url ? file.url : file;
+}
+
+function getExtraBody(provider) {
+    const extraBody = {};
+    for (el of document.getElementById(`${provider}-form`)?.querySelectorAll(".saved input, .saved textarea") || []) {
+        let value;
+        if (el.type == "checkbox") {
+            value = el.checked;
+        } else {
+            value = el.value;
+            try {
+                value = JSON.parse(value);
+            } catch (e) {}
+        }
+        extraBody[el.name] = value;
+    };
+    return extraBody;
 }
 
 const ask_gpt = async (message_id, message_index = -1, regenerate = false, provider = null, model = null, action = null, message = null) => {
@@ -1876,21 +1897,61 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     : undefined;
 
                 // Handle chat completion (existing logic)
-                const stream = await client.chat.completions.create({
+                const body = {
                     model: selectedModel,
                     messages,
                     stream: true,
                     signal: controller_storage[message_id].signal,
                     ...(mcpTools && mcpTools.length > 0 ? { tools: mcpTools } : {}),
-                    ...(conversation.data ? { conversation: conversation.data[provider] } : {})
-                });
+                    ...(conversation.data ? { conversation: conversation.data[provider] } : {}),
+                    ...getExtraBody(provider)
+                };
+                const response = await client.chat.completions.create(body);
+
+                add_message_chunk({type: "provider", provider: {name: provider, model: selectedModel, label: providerLabel}}, message_id);
+
+                if (!body.stream) {
+                    if (response.usage) {
+                        add_message_chunk({type: "usage", usage: response.usage}, message_id);
+                    }
+                    if (response.model) {
+                        if (response.server && response.provider) {
+                            provider = `custom:${response.server}`;
+                            providerLabel = response.provider;
+                        } else if (response.provider) {
+                            provider = response.provider || provider;
+                        }
+                        add_message_chunk({type: "provider", provider: {name: provider, model: response.model, label: providerLabel}}, message_id);
+                    }
+                    if (response.error) {
+                        add_message_chunk({type: "error", ...response.error}, message_id, null, finish_message);
+                        return;
+                    }
+                    if (response.conversation) {
+                        const conversation = await get_conversation(window.conversation_id);
+                        if (!conversation.data) {
+                            conversation.data = {};
+                        }
+                        conversation.data[provider] = response.conversation;
+                        await save_conversation(update_conversation(conversation));
+                    }
+                    if (response.choices) {
+                        const choice = response.choices[0];
+                        if (choice?.reasoning) {
+                            await add_message_chunk({type: "reasoning", token: choice?.reasoning, is_thinking: choice?.is_thinking}, message_id);
+                        }
+                        if (choice?.content) {
+                            await add_message_chunk({type: "content", content: choice.content}, message_id);
+                        }
+                    }
+                    await finish_message();
+                    return;
+                }
 
                 let hasModel = false;
                 let pendingToolCalls = [];
-                
-                add_message_chunk({type: "provider", provider: {name: provider, model: selectedModel, label: providerLabel}}, message_id);
-                
-                for await (const chunk of stream) {
+
+                for await (const chunk of response) {
                     if (chunk.usage) {
                         add_message_chunk({type: "usage", usage: chunk.usage}, message_id);
                     }
@@ -1969,19 +2030,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             apiBase = appStorage.getItem("Custom-api_base");
         }
         const ignored = Array.from(settings.querySelectorAll("input.provider:not(:checked)")).map((el)=>el.value);
-        const extraBody = {};
-        for (el of document.getElementById(`${provider}-form`)?.querySelectorAll(".saved input, .saved textarea") || []) {
-            let value;
-            if (el.type == "checkbox") {
-                value = el.checked;
-            } else {
-                value = el.value;
-                try {
-                    value = await JSON.parse(value);
-                } catch (e) {}
-            }
-            extraBody[el.name] = value;
-        };
+        const extraBody = getExtraBody(provider);
         const isAutomaticOrientation = appStorage.getItem("automaticOrientation") != "false";
         const aspectRatio = isAutomaticOrientation ? (window.innerHeight > window.innerWidth ? "9:16" : "16:9") : null;
         let conversationData = null;
