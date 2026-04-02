@@ -3469,26 +3469,26 @@ window.addEventListener("load", (event) => {
 async function on_load() {
     translationSnipptes.forEach((snippet)=>this.framework.translate(snippet));
     count_input();
-    if (window.location.hash == "#settings") {
+    const locationHash = window.location.hash.replace("#", "");
+    if (locationHash == "settings") {
         open_settings();
         await load_conversations();
         return;
     }
-    let conversation_id = window.location.hash.replace("#", "");
-    conversation_id = ["new", "menu", "private"].includes(conversation_id) ? null : conversation_id;
-    if (conversation_id) {
-        window.conversation_id = conversation_id;
+    let isNewConversation = locationHash === "" || ["new", "private"].includes(locationHash);
+    if (!isNewConversation && !locationHash.startsWith("session=") && locationHash !== "menu") {
+        window.conversation_id = locationHash;
     } else {
         window.conversation_id = generateUUID();
     }
     chatPrompt.value = document.getElementById("systemPrompt")?.value || "";
-    let chat_params = new URLSearchParams(window.location.search);
-    if (chat_params.get("prompt")) {
-        userInput.value = chat_params.get("prompt");
+    let chatParams = new URLSearchParams(window.location.search);
+    if (chatParams.get("prompt")) {
+        userInput.value = chatParams.get("prompt");
         userInput.focus();
     }
-    if (!conversation_id) {
-        await new_conversation(window.location.hash == "#private");
+    if (isNewConversation) {
+        await new_conversation(locationHash === "private");
     } else {
         await load_conversations();
     }
@@ -6164,42 +6164,18 @@ function showCloudSyncLoggedIn(user) {
 }
 
 function handleCloudSyncCallback() {
-    const urlParams = new URLSearchParams(window.location.search);
-    let token = urlParams.get("session_token");
-    
     // Check hash fragment for provider-specific API keys or session tokens
     const hashStr = window.location.hash ? decodeURIComponent(window.location.hash.substring(1)) : "";
-    let userParam;
-    let openSettings = false;
-    const hashParts = window.location.hash.split("#");
-    // Handle provider API keys from URL hash (set by members page after OAuth)
-    if (hashStr.startsWith("HuggingFace-api_key=")) {
-        const hfKey = hashStr.substring("HuggingFace-api_key=".length);
-        if (hfKey) {
-            appStorage.setItem("HuggingFace-api_key", hfKey);
-            window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
-        }
-    } else if (hashStr.startsWith("session=")) {
-        token = hashStr.substring("session=".length);
-        userParam = token.split("&user=")
-        token = userParam[0];
-        userParam = userParam[1] || "";
-        openSettings = userParam.endsWith("&settings=true")
-        userParam = userParam.split("&")[0];
-        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
-    } else {
-        userParam = urlParams.get("user");
-        if (!token && hashParts.length > 1) {
-            const hashValue = decodeURIComponent(hashParts[hashParts.length - 1]);
-            if (hashValue.startsWith("g4f_") || hashValue.startsWith("gfs_")) {
-                token = hashValue;
-            }
-        }
-        openSettings = urlParams.get("settings") === "true";
-    }
+    const hashParams = new URLSearchParams(hashStr);
+    const token = hashParams.get("session");
+    const userParam = hashParams.get("user");
+    const openSettings = hashParams.has("settings");
 
+    // Handle provider API keys from URL hash (set by members page after OAuth)
     if (token) {
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
         appStorage.setItem("session_token", token);
+
         // Parse and use user info if provided
         if (userParam) {
             try {
@@ -6217,13 +6193,6 @@ function handleCloudSyncCallback() {
             }
         }
         
-        // Clean up URL by removing session_token, user, settings params and hash
-        const url = new URL(window.location.href);
-        url.searchParams.delete("session_token");
-        url.searchParams.delete("user");
-        url.searchParams.delete("settings");
-        url.hash = "";
-        window.history.replaceState({}, document.title, url.pathname + url.search + (hashParts.length > 1 && !(hashParts[1].startsWith("g4f_") || hashParts[1].startsWith("gfs_")) ? "#" + hashParts[1] : "#"));
         // Open settings to cloud sync tab if requested
         if (openSettings) {
             setTimeout(() => {
