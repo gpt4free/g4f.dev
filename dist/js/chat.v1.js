@@ -3664,7 +3664,7 @@ function load_provider_login_urls(providersListContainer) {
         }
 
         const apiKeyLink = is_login
-            ? `<a href="https://g4f.dev/members?provider=${login_provider}&redirect=${encodeURIComponent(window.location.href)}" title="${framework.trans_escape("Login to")} ${framework.trans_escape(label)}">${framework.trans_escape('Login')}</a>`
+            ? `<a href="https://g4f.dev/members?provider=${login_provider}&redirect=${encodeURIComponent(window.location.href.split("#")[0])}" title="${framework.trans_escape("Login to")} ${framework.trans_escape(label)}">${framework.trans_escape('Login')}</a>`
             : (login_url ? `<a href="${login_url}" target="_blank" title="${framework.trans_escape("Login to")} ${framework.escape(label)}">${framework.trans_escape('Get API key')}</a>` : "");
         
         providerBox.innerHTML = `
@@ -6171,6 +6171,7 @@ function handleCloudSyncCallback() {
     const hashStr = window.location.hash ? decodeURIComponent(window.location.hash.substring(1)) : "";
     let userParam;
     let openSettings = false;
+    const hashParts = window.location.hash.split("#");
     // Handle provider API keys from URL hash (set by members page after OAuth)
     if (hashStr.startsWith("HuggingFace-api_key=")) {
         const hfKey = hashStr.substring("HuggingFace-api_key=".length);
@@ -6185,9 +6186,9 @@ function handleCloudSyncCallback() {
         userParam = userParam[1] || "";
         openSettings = userParam.endsWith("&settings=true")
         userParam = userParam.split("&")[0];
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
     } else {
         userParam = urlParams.get("user");
-        const hashParts = window.location.hash.split("#");
         if (!token && hashParts.length > 1) {
             const hashValue = decodeURIComponent(hashParts[hashParts.length - 1]);
             if (hashValue.startsWith("g4f_") || hashValue.startsWith("gfs_")) {
@@ -6196,7 +6197,7 @@ function handleCloudSyncCallback() {
         }
         openSettings = urlParams.get("settings") === "true";
     }
-        
+
     if (token) {
         appStorage.setItem("session_token", token);
         // Parse and use user info if provided
@@ -6223,9 +6224,8 @@ function handleCloudSyncCallback() {
         url.searchParams.delete("settings");
         url.hash = "";
         window.history.replaceState({}, document.title, url.pathname + url.search + (hashParts.length > 1 && !(hashParts[1].startsWith("g4f_") || hashParts[1].startsWith("gfs_")) ? "#" + hashParts[1] : "#"));
-        
         // Open settings to cloud sync tab if requested
-        if (openSettings && typeof open_settings === "function") {
+        if (openSettings) {
             setTimeout(() => {
                 open_settings();
                 const cloudSyncTab = document.querySelector('.settings-tab[data-tab="cloudsync"]');
