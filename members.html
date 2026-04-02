@@ -1260,6 +1260,7 @@
         // Check for redirect parameter (external login request)
         const urlParams = new URLSearchParams(window.location.search);
         const externalRedirect = urlParams.get('redirect');
+        const selectedProvider = urlParams.get('provider');
 
         // Validate that a redirect URL belongs to a trusted domain
         function isValidRedirectUrl(url) {
@@ -1323,7 +1324,7 @@
         async function checkAuth() {
             // If there's an external redirect, show the redirect login section
             if (externalRedirect) {
-                showRedirectLogin();
+                showRedirectLogin(selectedProvider);
                 return;
             }
 
@@ -1349,11 +1350,20 @@
         }
 
         // Show redirect login section (for external login requests)
-        function showRedirectLogin() {
+        function showRedirectLogin(selectedProvider) {
             loginSection.style.display = 'none';
             redirectLoginSection.style.display = 'block';
             dashboard.classList.remove('active');
             navUserInfo.style.display = 'none';
+            if (selectedProvider == 'huggingface') {
+                redirectLoginDiscord.style.display = 'none';
+                redirectLoginGithub.style.display = 'none';
+                redirectLoginPollinations.style.display = 'none';
+            } else if (selectedProvider == 'pollinations') {
+                redirectLoginHuggingface.style.display = 'none';
+                redirectLoginGithub.style.display = 'none';
+                redirectLoginDiscord.style.display = 'none';
+            }
             
             // Display the redirect target
             try {
