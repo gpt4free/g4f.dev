@@ -1632,7 +1632,7 @@
                                 const pendingRedirect = localStorage.getItem('members_external_redirect');
                                 if (pendingRedirect && isValidRedirectUrl(pendingRedirect)) {
                                     localStorage.removeItem('members_external_redirect');
-                                    window.location.href = `${pendingRedirect}#session=${encodeURIComponent(data.session)}&user=${encodeURIComponent(JSON.stringify(data.user))}`;
+                                    window.location.href = `${pendingRedirect}#session=${encodeURIComponent(data.session)}&user=${encodeURIComponent(JSON.stringify(data.user))}&settings=true`;
                                     return;
                                 }
                                 showDashboard(data.user);

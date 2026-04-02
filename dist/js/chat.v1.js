@@ -6169,8 +6169,8 @@ function handleCloudSyncCallback() {
     
     // Check hash fragment for provider-specific API keys or session tokens
     const hashStr = window.location.hash ? decodeURIComponent(window.location.hash.substring(1)) : "";
-    const hashParts = window.location.hash.split("#");
-    
+    let userParam;
+    let openSettings = false;
     // Handle provider API keys from URL hash (set by members page after OAuth)
     if (hashStr.startsWith("HuggingFace-api_key=")) {
         const hfKey = hashStr.substring("HuggingFace-api_key=".length);
@@ -6178,32 +6178,35 @@ function handleCloudSyncCallback() {
             appStorage.setItem("HuggingFace-api_key", hfKey);
             window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
         }
-    } else if (hashStr.startsWith("PollinationsAI-api_key=")) {
-        const pollinationsKey = hashStr.substring("PollinationsAI-api_key=".length);
-        if (pollinationsKey) {
-            appStorage.setItem("PollinationsAI-api_key", pollinationsKey);
-            window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+    } else if (hashStr.startsWith("session=")) {
+        token = hashStr.substring("session=".length);
+        userParam = token.split("&user=")
+        token = userParam[0];
+        userParam = userParam[1] || "";
+        openSettings = userParam.endsWith("&settings=true")
+        userParam = userParam.split("&")[0];
+    } else {
+        userParam = urlParams.get("user");
+        const hashParts = window.location.hash.split("#");
+        if (!token && hashParts.length > 1) {
+            const hashValue = decodeURIComponent(hashParts[hashParts.length - 1]);
+            if (hashValue.startsWith("g4f_") || hashValue.startsWith("gfs_")) {
+                token = hashValue;
+            }
         }
+        openSettings = urlParams.get("settings") === "true";
     }
-
-    if (!token && hashParts.length > 1) {
-        const hashValue = decodeURIComponent(hashParts[hashParts.length - 1]);
-        if (hashValue.startsWith("g4f_") || hashValue.startsWith("gfs_")) {
-            token = hashValue;
-        }
-    }
-    
-    const userParam = urlParams.get("user");
-    const openSettings = urlParams.get("settings") === "true";
-    
+        
     if (token) {
         appStorage.setItem("session_token", token);
-        
         // Parse and use user info if provided
         if (userParam) {
             try {
                 const user = JSON.parse(decodeURIComponent(userParam));
                 // Also store provider-specific API key if included in user info
+                if (user.pollinations.api_key) {
+                    appStorage.setItem("PollinationsAI-api_key", user.pollinations.api_key);
+                }
                 if (user.provider === "huggingface" && user.access_token) {
                     appStorage.setItem("HuggingFace-api_key", user.access_token);
                 }
