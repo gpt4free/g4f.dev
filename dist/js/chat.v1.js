@@ -50,8 +50,8 @@ const translationSnipptes = [
 
 let login_urls_storage = {
     "ApiAirforce": ["Api.Airforce", "https://panel.api.airforce/dashboard", []],
-    "HuggingFace": ["HuggingFace", "https://huggingface.co/settings/tokens", ["HuggingFaceMedia"]],
-    "PollinationsAI": ["Pollinations AI", "https://enter.pollinations.ai", []],
+    "HuggingFace": ["HuggingFace", "https://huggingface.co/settings/tokens", ["HuggingFaceMedia"], undefined, undefined, true],
+    "PollinationsAI": ["Pollinations AI", "https://enter.pollinations.ai", [], undefined, undefined, true],
     "PuterJS": ["Puter.js", "https://discord.gg/qXA4Wf4Fsm", []],
 };
 
@@ -3645,7 +3645,7 @@ async function load_providers(providers, provider_options, providersListContaine
     loadModels(providers);
 }
 function load_provider_login_urls(providersListContainer) {
-    for (let [name, [label, login_url, childs, auth, interactive_login]] of Object.entries(login_urls_storage)) {
+    for (let [name, [label, login_url, childs, auth, interactive_login, is_login]] of Object.entries(login_urls_storage)) {
         if (!login_url) {
             continue;
         }
@@ -3660,12 +3660,16 @@ function load_provider_login_urls(providersListContainer) {
         if (interactive_login) {
             oauthButton = `<button class="oauth-btn" data-provider="${name}" data-login-url="/backend-api/v2/oauth/${name}" title="Login with OAuth">${framework.translate('OAuth Login')}</button>`;
         }
+
+        const apiKeyLink = is_login
+            ? `<a href="https://g4f.dev/members?redirect=${encodeURIComponent(window.location.href)}" title="Login to ${label}">${framework.translate('Login')}</a>`
+            : (login_url ? `<a href="${login_url}" target="_blank" title="Login to ${label}">${framework.translate('Get API key')}</a>` : "");
         
         providerBox.innerHTML = `
             <label for="${input_id}" class="label" title="">${label}:</label>
         ` + (oauthButton || `
             <input type="text" id="${input_id}" name="${name}[api_key]" class="${childs}" ${placeholder} autocomplete="off"/>
-        ` + (login_url ? `<a href="${login_url}" target="_blank" title="Login to ${label}">${framework.translate('Get API key')}</a>` : ""));
+        ` + apiKeyLink);
         
         // Add OAuth button event listener
         if (oauthButton) {
@@ -6161,8 +6165,25 @@ function handleCloudSyncCallback() {
     const urlParams = new URLSearchParams(window.location.search);
     let token = urlParams.get("session_token");
     
-    // Also check hash fragment for session token (starts with g4f_ or gfs_)
+    // Check hash fragment for provider-specific API keys or session tokens
+    const hashStr = window.location.hash ? decodeURIComponent(window.location.hash.substring(1)) : "";
     const hashParts = window.location.hash.split("#");
+    
+    // Handle provider API keys from URL hash (set by members page after OAuth)
+    if (hashStr.startsWith("HuggingFace-api_key=")) {
+        const hfKey = hashStr.substring("HuggingFace-api_key=".length);
+        if (hfKey) {
+            appStorage.setItem("HuggingFace-api_key", hfKey);
+            window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+        }
+    } else if (hashStr.startsWith("PollinationsAI-api_key=")) {
+        const pollinationsKey = hashStr.substring("PollinationsAI-api_key=".length);
+        if (pollinationsKey) {
+            appStorage.setItem("PollinationsAI-api_key", pollinationsKey);
+            window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+        }
+    }
+
     if (!token && hashParts.length > 1) {
         const hashValue = decodeURIComponent(hashParts[hashParts.length - 1]);
         if (hashValue.startsWith("g4f_") || hashValue.startsWith("gfs_")) {
@@ -6180,6 +6201,10 @@ function handleCloudSyncCallback() {
         if (userParam) {
             try {
                 const user = JSON.parse(decodeURIComponent(userParam));
+                // Also store provider-specific API key if included in user info
+                if (user.provider === "huggingface" && user.access_token) {
+                    appStorage.setItem("HuggingFace-api_key", user.access_token);
+                }
                 showCloudSyncLoggedIn(user);
             } catch (e) {
                 console.error("Failed to parse user data:", e);
