@@ -45,7 +45,8 @@ const translationSnipptes = [
     "Get API key", "Uploading files...", "Invalid link", "Loading...", "Live Providers", "Custom Providers",
     "Search Off", "Search On", "Recognition On", "Recognition Off", "Delete Conversation",
     "Favorite Models:", "Stop Recording", "Record Audio", "Upload Audio", "No Title", "1 Copy",
-    "Delete all conversations?", "Error Occurred", "Remaining:", "Balance:", "Reasoning", "Credits:"
+    "Delete all conversations?", "Error Occurred", "Remaining:", "Balance:", "Reasoning", "Credits:",
+    "Login", "Login to", "OAuth Login", "Login with OAuth"
 ];
 
 let login_urls_storage = {
@@ -3654,19 +3655,20 @@ function load_provider_login_urls(providersListContainer) {
         childs = childs.map((child) => `${child}-api_key`).join(" ");
         const placeholder = `placeholder="${name == "HuggingSpace" ? "zerogpu_token" : "api_key"}"`;
         const input_id = name == "PuterJS" ? "puter.auth.token" : `${name}-api_key`;
+        const login_provider = name.replace("AI", "").toLowerCase();
         let oauthButton = "";
         
         // Add OAuth button for providers that support it (server-side endpoint)
         if (interactive_login) {
-            oauthButton = `<button class="oauth-btn" data-provider="${name}" data-login-url="/backend-api/v2/oauth/${name}" title="Login with OAuth">${framework.translate('OAuth Login')}</button>`;
+            oauthButton = `<button class="oauth-btn" data-provider="${name}" data-login-url="/backend-api/v2/oauth/${name}" title="${framework.trans_escape("Login with OAuth")}">${framework.trans_escape('OAuth Login')}</button>`;
         }
 
         const apiKeyLink = is_login
-            ? `<a href="https://g4f.dev/members?redirect=${encodeURIComponent(window.location.href)}" title="Login to ${label}">${framework.translate('Login')}</a>`
-            : (login_url ? `<a href="${login_url}" target="_blank" title="Login to ${label}">${framework.translate('Get API key')}</a>` : "");
+            ? `<a href="https://g4f.dev/members?provider=${login_provider}&redirect=${encodeURIComponent(window.location.href)}" title="${framework.trans_escape("Login to")} ${framework.trans_escape(label)}">${framework.trans_escape('Login')}</a>`
+            : (login_url ? `<a href="${login_url}" target="_blank" title="${framework.trans_escape("Login to")} ${framework.escape(label)}">${framework.trans_escape('Get API key')}</a>` : "");
         
         providerBox.innerHTML = `
-            <label for="${input_id}" class="label" title="">${label}:</label>
+            <label for="${input_id}" class="label" title="">${framework.escape(label)}:</label>
         ` + (oauthButton || `
             <input type="text" id="${input_id}" name="${name}[api_key]" class="${childs}" ${placeholder} autocomplete="off"/>
         ` + apiKeyLink);

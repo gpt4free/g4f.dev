@@ -388,6 +388,9 @@ framework.query = query;
 framework.markdown = renderMarkdown;
 framework.filterMarkdown = filterMarkdown;
 framework.escape = escapeHtml;
+framework.trans_escape = (text) => {
+    return framework.escape(framework.translate(text));
+}
 framework.getHeaders = getHeaders;
 framework.getPublicKey = getPublicKey;
 framework.nl2br = nl2br;
