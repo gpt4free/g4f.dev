@@ -248,6 +248,9 @@ function calculateUserTier(userData, contributors, sponsors) {
             if (pathname === "/members/auth/huggingface/callback" || pathname === "/members/oauth/huggingface/callback") {
                 return handleHuggingFaceCallback(request, env, url);
             }
+            if (pathname === "/members/auth/pollinations" || pathname === "/members/oauth/pollinations") {
+                return handlePollinationsAuth(request, env, url);
+            }
   
             // User management endpoints
             if (pathname === "/members/api/user") {
@@ -724,6 +727,97 @@ function calculateUserTier(userData, contributors, sponsors) {
     }
   
     return redirectWithSession(sessionToken, user);
+  }
+  
+  /**
+   * POST /members/auth/pollinations
+   * Authenticate using a Pollinations API key.
+   * Pollinations uses GitHub as identity provider, so the profile response
+   * contains GitHub username/id which is used to create or link the account.
+   *
+   * Body: { "api_key": "<pollinations_api_key>" }
+   * OR:   Authorization: Bearer <pollinations_api_key>
+   */
+  async function handlePollinationsAuth(request, env, url) {
+      if (request.method !== "POST") {
+          return jsonResponse({ error: "Method not allowed" }, 405);
+      }
+  
+      // Accept key from body or Authorization header
+      let pollinationsKey;
+      try {
+          const body = await request.json();
+          pollinationsKey = body.api_key;
+      } catch {
+          // ignore JSON parse errors
+      }
+      if (!pollinationsKey) {
+          pollinationsKey = request.headers.get("Authorization")?.replace("Bearer ", "");
+      }
+      if (!pollinationsKey) {
+          return jsonResponse({ error: "api_key is required" }, 400);
+      }
+  
+      // Validate key by fetching the Pollinations profile
+      const profile = await fetchPollinationsProfile(pollinationsKey);
+      if (!profile) {
+          return jsonResponse({ error: "Invalid Pollinations API key" }, 401);
+      }
+  
+      // Pollinations profile includes GitHub identity fields
+      const githubUsername = profile.github?.username || profile.username || profile.login;
+      const githubId = profile.github?.id || profile.id;
+      if (!githubUsername || !githubId) {
+          return jsonResponse({ error: "Pollinations profile missing GitHub identity" }, 502);
+      }
+  
+      // Create or update the user, linked to the GitHub identity
+      const user = await createOrUpdateUser(env, {
+          provider: "github",
+          provider_id: githubId.toString(),
+          username: githubUsername,
+          name: profile.name || githubUsername,
+          email: profile.email || null,
+          avatar: profile.avatar || profile.avatarUrl || null,
+          access_token: null  // no GitHub OAuth token in this flow
+      });
+  
+      // Store the Pollinations key on the user for future profile refreshes
+      user.pollinations = { ...profile, api_key: pollinationsKey };
+      user.updated_at = new Date().toISOString();
+      await saveUser(env, user);
+  
+      const sessionToken = await createSession(env, user.id);
+  
+      const redirectParam = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect");
+      if (redirectParam) {
+          try {
+              const redirectUrl = new URL(redirectParam);
+              if (redirectUrl.hostname.endsWith("g4f.dev") || redirectUrl.hostname === "localhost") {
+                  return redirectWithSessionToExternal(sessionToken, user, redirectParam);
+              }
+          } catch (e) {
+              console.error("Invalid redirect URL:", e);
+          }
+          return redirectWithTempApiKey(env, user, redirectParam);
+      }
+  
+      // Return JSON session for programmatic use
+      const safeUser = { ...user };
+      delete safeUser.access_token;
+      delete safeUser.api_keys;
+  
+      const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
+      const cookie = `g4f_session=${sessionToken}; Path=/; Expires=${cookieExpiry}; SameSite=Lax; Secure`;
+  
+      return new Response(JSON.stringify({ session: sessionToken, user: safeUser }), {
+          status: 200,
+          headers: {
+              "Content-Type": "application/json",
+              "Set-Cookie": cookie,
+              ...CORS_HEADERS
+          }
+      });
   }
   
   // ============================================

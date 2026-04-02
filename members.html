@@ -1396,7 +1396,8 @@
             const providerIcons = {
                 github: '<i class="fab fa-github"></i> GitHub',
                 discord: '<i class="fab fa-discord"></i> Discord',
-                huggingface: '🤗 Hugging Face'
+                huggingface: '🤗 Hugging Face',
+                pollinations: '🌸 Pollinations'
             };
             providerBadge.innerHTML = `<span class="provider-badge ${provider}">${providerIcons[provider]}</span>`;
             
@@ -1597,41 +1598,53 @@
             if (hash && (hash.startsWith('#api_key='))) {
                 const pollinationsToken = hash.substring(9);
                 if (pollinationsToken) {
-                    const response = await fetch('https://pollinations.g4f-dev.workers.dev/account/balance', {
-                        headers: {
-                            'Authorization': `Bearer ${pollinationsToken}`
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    try {
+                        const authResponse = await fetch(`${API_BASE}/members/auth/pollinations`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ api_key: pollinationsToken })
+                        });
+                        if (authResponse.ok) {
+                            const data = await authResponse.json();
+                            if (data.session && data.user) {
+                                sessionToken = data.session;
+                                localStorage.setItem('g4f_session', data.session);
+                                localStorage.setItem('g4f_user', JSON.stringify(data.user));
+                                localStorage.setItem('user', data.user.name || data.user.username);
+                                localStorage.setItem('PollinationsAI-api_key', pollinationsToken);
+                                localStorage.setItem('pollinations_pending_server', pollinationsToken);
+                                showToastFormat('Successfully signed in with {0}!', 'success', data.user.provider);
+                                const pendingRedirect = localStorage.getItem('members_external_redirect');
+                                if (pendingRedirect && isValidRedirectUrl(pendingRedirect)) {
+                                    localStorage.removeItem('members_external_redirect');
+                                    window.location.href = `${pendingRedirect}#session=${encodeURIComponent(data.session)}&user=${encodeURIComponent(JSON.stringify(data.user))}`;
+                                    return;
+                                }
+                                showDashboard(data.user);
+                                return;
+                            }
                         }
-                    });
-                    if (response.ok || response.status === 403) {
-                        localStorage.setItem('PollinationsAI-api_key', pollinationsToken);
-                        // Store token for creating/updating custom server after dashboard loads
-                        localStorage.setItem('pollinations_pending_server', pollinationsToken);
-                        showToast('Successfully signed in with Pollinations!');
-                        window.history.replaceState({}, document.title, window.location.pathname);
-                        // If there's a pending external redirect, redirect with api_key in URL
-                        const pendingRedirect = localStorage.getItem('members_external_redirect');
-                        if (pendingRedirect && isValidRedirectUrl(pendingRedirect)) {
-                            localStorage.removeItem('members_external_redirect');
-                            window.location.href = `${pendingRedirect}#PollinationsAI-api_key=${encodeURIComponent(pollinationsToken)}`;
-                            return;
-                        }
-                        addPollinationsServerBtn.style.display = 'none';
+                    } catch (e) {
+                        console.error('Failed to authenticate with Pollinations worker:', e);
                     }
+                    // Fallback: store token locally if worker auth fails
+                    localStorage.setItem('PollinationsAI-api_key', pollinationsToken);
+                    localStorage.setItem('pollinations_pending_server', pollinationsToken);
+                    showToast('Successfully signed in with Pollinations!');
+                    const pendingRedirect = localStorage.getItem('members_external_redirect');
+                    if (pendingRedirect && isValidRedirectUrl(pendingRedirect)) {
+                        localStorage.removeItem('members_external_redirect');
+                        window.location.href = `${pendingRedirect}#PollinationsAI-api_key=${encodeURIComponent(pollinationsToken)}`;
+                        return;
+                    }
+                    addPollinationsServerBtn.style.display = 'none';
                     return;
                 }
             } else {
                 const existingToken = localStorage.getItem('PollinationsAI-api_key');
                 if (existingToken) {
-                    const response = await fetch('https://pollinations.g4f-dev.workers.dev/account/balance', {
-                        headers: {
-                            'Authorization': `Bearer ${existingToken}`
-                        }
-                    });
-                    if (!response.ok && response.status !== 403) {
-                        localStorage.removeItem('PollinationsAI-api_key');
-                    } else {
-                        addPollinationsServerBtn.style.display = 'none';
-                    }
+                    addPollinationsServerBtn.style.display = 'none';
                 }
             }
 
