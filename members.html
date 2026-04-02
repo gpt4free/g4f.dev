@@ -1260,6 +1260,8 @@
         // Check for redirect parameter (external login request)
         const urlParams = new URLSearchParams(window.location.search);
         const externalRedirect = urlParams.get('redirect');
+        const externalConversation = urlParams.get('conversation');
+        const externalQuery = `redirect=${encodeURIComponent(externalRedirect)}` + (externalConversation ? `&conversation=${encodeURIComponent(externalConversation)}` : '');
         const selectedProvider = urlParams.get('provider');
 
         // Validate that a redirect URL belongs to a trusted domain
@@ -1517,20 +1519,23 @@
 
         // Redirect login buttons (include redirect parameter for temp API key)
         redirectLoginGithub.addEventListener('click', () => {
-            window.location.href = `${API_BASE}/members/auth/github?redirect=${encodeURIComponent(externalRedirect)}`;
+            window.location.href = `${API_BASE}/members/auth/github?${externalQuery}`;
         });
 
         redirectLoginDiscord.addEventListener('click', () => {
-            window.location.href = `${API_BASE}/members/auth/discord?redirect=${encodeURIComponent(externalRedirect)}`;
+            window.location.href = `${API_BASE}/members/auth/discord?${externalQuery}`;
         });
 
         redirectLoginHuggingface.addEventListener('click', () => {
-            window.location.href = `${API_BASE}/members/auth/huggingface?redirect=${encodeURIComponent(externalRedirect)}`;
+            window.location.href = `${API_BASE}/members/auth/huggingface?${externalQuery}`;
         });
 
         // Pollinations login from redirect section - save external redirect then start OAuth
         redirectLoginPollinations.addEventListener('click', () => {
             localStorage.setItem('members_external_redirect', externalRedirect);
+            if (externalConversation) {
+                localStorage.setItem('members_external_conversation', externalConversation);
+            }
             const params = new URLSearchParams({
                 redirect_url: window.location.origin + '/members',
                 app_key: POLLINATIONS_APP_KEY,
@@ -1630,9 +1635,11 @@
                                 localStorage.setItem('pollinations_pending_server', pollinationsToken);
                                 showToastFormat('Successfully signed in with {0}!', 'success', data.user.provider);
                                 const pendingRedirect = localStorage.getItem('members_external_redirect');
+                                const externalConversation = localStorage.getItem('members_external_conversation');
                                 if (pendingRedirect && isValidRedirectUrl(pendingRedirect)) {
                                     localStorage.removeItem('members_external_redirect');
-                                    window.location.href = `${pendingRedirect}#session=${encodeURIComponent(data.session)}&user=${encodeURIComponent(JSON.stringify(data.user))}&settings=true`;
+                                    localStorage.removeItem('members_external_conversation');
+                                    window.location.href = `${pendingRedirect}#session=${encodeURIComponent(data.session)}&user=${encodeURIComponent(JSON.stringify(data.user))}&settings=true` + (externalConversation ? `&conversation=${encodeURIComponent(externalConversation)}` : '');
                                     return;
                                 }
                                 showDashboard(data.user);

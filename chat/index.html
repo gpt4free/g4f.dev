@@ -130,7 +130,7 @@
                             <i class="fa-solid fa-user" aria-hidden="true"></i>
                             <span id="user-tier-text">Guest</span>
                         </div>
-                        <a id="sidebar-login-btn" class="tier-auth-btn" href="#" onclick="event.preventDefault(); window.location.href='https://g4f.dev/members?redirect='+encodeURIComponent(location.href);" title="Login to Members Area">
+                        <a id="sidebar-login-btn" class="tier-auth-btn" href="#" onclick="event.preventDefault(); window.location.href='https://g4f.dev/members?redirect='+encodeURIComponent(location.href.split('#')[0])+'&conversation='+encodeURIComponent(window.conversation_id);" title="Login to Members Area">
                             <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
                             <span>Login</span>
                         </a>

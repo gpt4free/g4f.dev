@@ -3470,6 +3470,10 @@ async function on_load() {
     translationSnipptes.forEach((snippet)=>this.framework.translate(snippet));
     count_input();
     const locationHash = window.location.hash.replace("#", "");
+    const locationQuery = new URLSearchParams(locationHash);
+    if (locationQuery.get("conversation")) {
+        locationHash = locationQuery.get("conversation");
+    }
     if (locationHash == "settings") {
         open_settings();
         await load_conversations();
