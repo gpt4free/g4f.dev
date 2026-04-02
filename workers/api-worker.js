@@ -291,7 +291,7 @@ var custom_worker_default = {
           server = await getServerByLabel(env, label, user);
         }
         if (!server) {
-          return proxyToPassG4f(request, env, pathname, url.search);
+          return proxyToPassG4f(request, env, pathname, url.search, user);
         }
         return handleModels(request, env, ctx, server.id, user, server, cacheKey);
       }
@@ -322,7 +322,7 @@ var custom_worker_default = {
           }
         }
         if (!server) {
-          return proxyToPassG4f(request, env, pathname, url.search);
+          return proxyToPassG4f(request, env, pathname, url.search, user);
         }
         return handleProxyToServer(request, env, ctx, server, "/chat/completions", cacheKey, user, pathname, userProvidedKey, rateCheck);
       }
@@ -344,11 +344,11 @@ var custom_worker_default = {
         const user2 = await authenticateRequest(request, env);
         const server = await getServerByLabel(env, label, user2);
         if (!server) {
-          return proxyToPassG4f(request, env, pathname, url.search);
+          return proxyToPassG4f(request, env, pathname, url.search, user2);
         }
         return handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user2, pathname, userProvidedKey, rateCheck);
       }
-      return proxyToPassG4f(request, env, pathname, url.search);
+      return proxyToPassG4f(request, env, pathname, url.search, user);
     } catch (error) {
       console.error("Custom worker error:", error);
       return jsonResponse({ error: error.message || "Internal server error" }, 500);
@@ -2185,8 +2185,8 @@ async function setCachedResponse(request, response, cacheControl, cacheKey = nul
     console.error("Cache write error:", e);
   }
 }
-async function proxyToPassG4f(request, env, pathname, search) {
-  const passApiKey = env.PASS_API_KEY;
+async function proxyToPassG4f(request, env, pathname, search, user = null) {
+  const passApiKey = user ? env.PASS_API_KEY : null;
   const headers = new Headers(request.headers);
   if (passApiKey) {
     const authHeader = request.headers.get("Authorization");
