@@ -1617,6 +1617,10 @@
                         });
                         if (authResponse.ok) {
                             const data = await authResponse.json();
+                            if (data.location) {
+                                window.location.href = data.location;
+                                return;
+                            }
                             if (data.session && data.user) {
                                 sessionToken = data.session;
                                 localStorage.setItem('g4f_session', data.session);
