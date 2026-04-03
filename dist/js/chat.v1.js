@@ -3664,7 +3664,6 @@ function load_provider_login_urls(providersListContainer, providers = []) {
             }
         }
         providerBox.addEventListener('mouseenter', checkStatus);
-        providerBox.addEventListener('touchstart', checkStatus);
         const label = provider.label || provider.name;
         childs = childs.map((child) => `${child}-api_key`).join(" ");
         const input_id = provider.name == "PuterJS" ? "puter.auth.token" : `${provider.name}-api_key`;

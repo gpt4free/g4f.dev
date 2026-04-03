@@ -632,8 +632,12 @@ class PollinationsAI extends Client {
             this._models = [
                 ...textModels.map(model => {
                     model.id = model.name;
-                    model.label = model.aliases && model.aliases.length > 0 ? model.aliases[0] : (this.swapAliases[model.name]  || model.name);
-                    this.modelAliases[model.label] = model.name;
+                    if (model.aliases && model.aliases.length > 0) {
+                        model.tags = [`(${model.aliases[0]})`];
+                        for (const alias of model.aliases) {
+                            this.modelAliases[alias] = model.id;
+                        }
+                    }
                     model.type = model.type || 'chat';      
                     if (model.input_modalities && model.input_modalities.includes('image')) {
                         model.vision = true;

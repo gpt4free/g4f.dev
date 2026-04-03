@@ -160,7 +160,10 @@ window.addEventListener('load', async () => {
         }
     }
 });
-framework.translateAll = async () =>{
+framework.translateAll = async () => {
+    if (navigator.language === "en" || navigator.language.startsWith("en-")) {
+        return false;
+    }
     let allTranslations = {...framework.translations};
     for (const text of newTranslations) {
         allTranslations[text] = "";
@@ -194,7 +197,7 @@ framework.delete = async (bucketId) => {
         method: 'DELETE'
     });
 }
-const sanitizedConfig = ()=>{
+const sanitizedConfig = () => {
     return {
         allowedTags: window?.sanitizeHtml?.defaults.allowedTags.concat(['img', 'iframe', 'audio', 'video', 'details', 'summary', 'div']),
         allowedAttributes: {
