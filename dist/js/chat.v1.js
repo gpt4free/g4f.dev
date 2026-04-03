@@ -3683,7 +3683,7 @@ function load_provider_login_urls(providersListContainer, providers = []) {
 
         providerBox.addEventListener("click", () => {
             isChecked = false;
-            checkStatus();
+            setTimeout(checkStatus, 100);
         });
         
         // Add OAuth button event listener
