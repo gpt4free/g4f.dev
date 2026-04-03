@@ -49,12 +49,13 @@ const translationSnipptes = [
     "Login", "Login to", "OAuth Login", "Login with OAuth"
 ];
 
-let login_urls_storage = {
-    "ApiAirforce": ["Api.Airforce", "https://panel.api.airforce/dashboard", []],
-    "HuggingFace": ["HuggingFace", "https://huggingface.co/settings/tokens", ["HuggingFaceMedia"], undefined, undefined, true],
-    "PollinationsAI": ["Pollinations AI", "https://enter.pollinations.ai", [], undefined, undefined, true],
-    "PuterJS": ["Puter.js", "https://discord.gg/qXA4Wf4Fsm", []],
-};
+let providers = [
+    {"name": "ApiAirforce", "label": "Api.Airforce", "login_url": "https://panel.api.airforce/dashboard"},
+    {"name": "HuggingFace", "login_url": "https://huggingface.co/settings/tokens", "login": true},
+    {"name": "HuggingFaceMedia", "parent": "HuggingFace"},
+    {"name": "PollinationsAI", "label": "Pollinations AI", "login_url": "https://enter.pollinations.ai", "login": true},
+    {"name": "PuterJS", "label": "Puter.js", "login_url": "https://discord.gg/qXA4Wf4Fsm"},
+];
 
 const modelTags = {
     image: "🎨",
@@ -2929,7 +2930,7 @@ const register_settings_storage = async () => {
                 }
             });
         }
-        if (element.id.endsWith("-api_key")) {
+        if (element.id.endsWith("-api_key") || element.id === "puter.auth.token") {
             element.addEventListener('focus', async (event) => {
                 if (element.dataset.value) {
                     element.value = element.dataset.value
@@ -3082,7 +3083,7 @@ const load_settings_storage = async () => {
                 case "text":
                 case "number":
                 case "textarea":
-                    if (element.id.endsWith("-api_key")) {
+                    if (element.id.endsWith("-api_key") || element.id === "puter.auth.token") {
                         element.placeholder = value && value.length >= 22 ? (value.substring(0, 12)+"*".repeat(12)+value.substring(value.length-12)) : "*".repeat(value ? value.length : 0);
                         element.dataset.value = value;
                     } else {
@@ -3470,10 +3471,6 @@ async function on_load() {
     translationSnipptes.forEach((snippet)=>this.framework.translate(snippet));
     count_input();
     const locationHash = window.location.hash.replace("#", "");
-    const locationQuery = new URLSearchParams(locationHash);
-    if (locationQuery.get("conversation")) {
-        locationHash = locationQuery.get("conversation");
-    }
     if (locationHash == "settings") {
         open_settings();
         await load_conversations();
@@ -3558,22 +3555,6 @@ async function load_providers(providers, provider_options, providersListContaine
         if (provider.parent)
             option.dataset.parent = provider.parent;
         providerSelect.appendChild(option);
-
-        if (provider.parent && provider.name != "PuterJS") {
-            if (!login_urls_storage[provider.parent]) {
-                login_urls_storage[provider.parent] = [provider.label, provider.login_url, [provider.name], provider.auth, provider.login];
-            } else {
-                login_urls_storage[provider.parent][2].push(provider.name);
-            }
-        } else if (provider.login_url) {
-            const name = provider.parent || provider.name;
-            if (!login_urls_storage[name]) {
-                login_urls_storage[name] = [provider.label, provider.login_url, [name, provider.name], provider.auth, provider.login];
-            } else {
-                login_urls_storage[name][0] = provider.label;
-                login_urls_storage[name][1] = provider.login_url;
-            }
-        }
     });
     if (!document.body.classList.contains("screen-reader")) {
         let providersContainer = document.createElement("div");
@@ -3645,37 +3626,65 @@ async function load_providers(providers, provider_options, providersListContaine
         });
         providersContainer.querySelector(".collapsible-content").insertBefore(customProvidersToggle, providersContainer.querySelector(".collapsible-content").firstChild.nextSibling);
     }
-    load_provider_login_urls(providersListContainer);
+    load_provider_login_urls(providersListContainer, providers);
     await load_settings(provider_options);
     loadModels(providers);
 }
-function load_provider_login_urls(providersListContainer) {
-    for (let [name, [label, login_url, childs, auth, interactive_login, is_login]] of Object.entries(login_urls_storage)) {
-        if (!login_url) {
+function load_provider_login_urls(providersListContainer, providers = []) {
+    for (const provider of providers) {
+        if (provider.parent || provider.name == "AnyProvider") {
             continue;
         }
+        let childs = providers.filter((p) => p.parent == provider.name).map((p) => p.name);
         let providerBox = document.createElement("div");
         providerBox.classList.add("field", "box");
+        if (!provider.active_by_default || appStorage.getItem(`Provider${provider.name}`) === "false") {
+            providerBox.classList.add("hidden");
+        }
+        let isChecked = false;
+        async function checkStatus() {
+            if (isChecked) {
+                return;
+            }
+            isChecked = true;
+            const label = providerBox.querySelector('label');
+            if (!label) {
+                return;
+            }
+            label.textContent = label.textContent.replaceAll(" ✅", "") + " 🔄";
+            const quota = await get_quota(provider.name);
+            label.textContent = label.textContent.replaceAll(" 🔄", "")
+            if (quota) {
+                label.textContent += " ✅";
+            }
+        }
+        providerBox.addEventListener('mouseenter', checkStatus);
+        providerBox.addEventListener('touchstart', checkStatus);
+        const label = provider.label || provider.name;
         childs = childs.map((child) => `${child}-api_key`).join(" ");
-        const placeholder = `placeholder="${name == "HuggingSpace" ? "zerogpu_token" : "api_key"}"`;
-        const input_id = name == "PuterJS" ? "puter.auth.token" : `${name}-api_key`;
-        const login_provider = name.replace("AI", "").toLowerCase();
+        const input_id = provider.name == "PuterJS" ? "puter.auth.token" : `${provider.name}-api_key`;
+        const login_provider = provider.name.replace("AI", "").toLowerCase();
         let oauthButton = "";
         
         // Add OAuth button for providers that support it (server-side endpoint)
-        if (interactive_login) {
-            oauthButton = `<button class="oauth-btn" data-provider="${name}" data-login-url="/backend-api/v2/oauth/${name}" title="${framework.trans_escape("Login with OAuth")}">${framework.trans_escape('OAuth Login')}</button>`;
+        if (provider.login) {
+            oauthButton = `<button class="oauth-btn" data-provider="${provider.name}" data-login-url="/backend-api/v2/oauth/${provider.name}" title="${framework.trans_escape("Login with OAuth")}">${framework.trans_escape('OAuth Login')}</button>`;
         }
 
-        const apiKeyLink = is_login
-            ? `<a href="https://g4f.dev/members?provider=${login_provider}&redirect=${encodeURIComponent(window.location.href.split("#")[0])}" title="${framework.trans_escape("Login to")} ${framework.trans_escape(label)}">${framework.trans_escape('Login')}</a>`
-            : (login_url ? `<a href="${login_url}" target="_blank" title="${framework.trans_escape("Login to")} ${framework.escape(label)}">${framework.trans_escape('Get API key')}</a>` : "");
+        const apiKeyLink = ["PollinationsAI", "HuggingFace"].includes(provider.name)
+            ? `<a href="https://g4f.dev/members?provider=${login_provider}&redirect=${encodeURIComponent(window.location.href.split("#")[0])}" title="${framework.trans_escape("Login to")} ${framework.escape(label)}">${framework.trans_escape('Login')}</a>`
+            : (provider.login_url ? `<a href="${framework.escape(provider.login_url)}" target="_blank" title="${framework.trans_escape("Login to")} ${framework.escape(label)}">${framework.trans_escape('Get API key')}</a>` : "");
         
         providerBox.innerHTML = `
             <label for="${input_id}" class="label" title="">${framework.escape(label)}:</label>
-        ` + (oauthButton || `
-            <input type="text" id="${input_id}" name="${name}[api_key]" class="${childs}" ${placeholder} autocomplete="off"/>
-        ` + apiKeyLink);
+        ` + (oauthButton || (apiKeyLink ? `
+            <input type="text" id="${input_id}" name="${provider.name}[api_key]" class="${childs}" placeholder="api_key" autocomplete="off" data-provider="${provider.name}"/>
+        ` + apiKeyLink : ""));
+
+        providerBox.addEventListener("click", () => {
+            isChecked = false;
+            checkStatus();
+        });
         
         // Add OAuth button event listener
         if (oauthButton) {
@@ -3739,12 +3748,6 @@ function load_provider_login_urls(providersListContainer) {
                     event.target.disabled = false;
                     event.target.textContent = framework.translate('OAuth Login');
                 }
-            });
-        } else if (auth) {
-            providerBox.querySelector("input")?.addEventListener("input", (event) => {
-                const input = document.getElementById(`Provider${name}`);
-                input.checked = !!event.target.value;
-                load_provider_option(input, name);
             });
         }
         providersListContainer.querySelector(".collapsible-content").appendChild(providerBox);
@@ -3868,13 +3871,13 @@ async function on_api() {
         }).catch(async (e)=>{
             console.log(e)
             providerSelect.querySelectorAll("option:not([data-live])").forEach((el)=>el.remove());
-            await load_provider_login_urls(providersListContainer);
+            await load_provider_login_urls(providersListContainer, providers);
             await load_settings(provider_options);
             await load_provider_models(appStorage.getItem("provider"));
             set_favorite_providers();
         });
     } else {
-        await load_provider_login_urls(providersListContainer);
+        await load_provider_login_urls(providersListContainer, providers);
         await load_settings({});
         await initClient();
     }
@@ -4556,7 +4559,7 @@ function get_api_key_by_provider(provider) {
         if (!api_key && provider.startsWith("Puter") && appStorage.getItem('puter.auth.token')) {
             return appStorage.getItem("puter.auth.token");
         }
-        if (["GeminiPro", "Ollama", "Nvidia", "OpenRouterFree", "PollinationsAI", "Groq"].includes(provider)) {
+        if (!api_key && ["GeminiPro", "Ollama", "Nvidia", "OpenRouterFree", "PollinationsAI", "Groq"].includes(provider)) {
             return appStorage.getItem("session_token");
         }
     }
@@ -4730,17 +4733,17 @@ function set_provider_models(models, provider, quota=null) {
         }
     }
 }
+async function get_quota(provider) {
+    const url = `${framework.backendUrl}/backend-api/v2/quota/${provider}`;
+    const api_key = get_api_key_by_provider(provider);
+    response = await fetch(url, { method: 'GET', headers: api_key ? {"Authorization": `Bearer ${api_key}`} : {} });
+    return response.ok ? response.json() : undefined;
+}
 async function refresh_models(provider) {
     let models = appStorage.getItem(`${provider}:models`);
     if (models) {
         models = JSON.parse(models);
         set_provider_models(models, provider);
-    }
-    async function get_quota(provider) {
-        const url = `${framework.backendUrl}/backend-api/v2/quota/${provider}`;
-        const api_key = get_api_key_by_provider(provider);
-        response = await fetch(url, { method: 'GET', headers: api_key ? {"Authorization": `Bearer ${api_key}`} : {} });
-        return response.ok ? response.json() : undefined;
     }
     const [new_models, quota] = await Promise.all([api('models', provider), get_quota(provider)]);
     if (new_models) {
@@ -6177,7 +6180,8 @@ function handleCloudSyncCallback() {
 
     // Handle provider API keys from URL hash (set by members page after OAuth)
     if (token) {
-        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+        const location_url = window.location.href.split("#")[0] + (hashParams.get("conversation") ? `#${hashParams.get("conversation")}` : "");
+        window.history.replaceState({}, document.title, location_url);
         appStorage.setItem("session_token", token);
 
         // Parse and use user info if provided
@@ -6332,8 +6336,8 @@ checkCloudSyncSession();
 
 // Redirect to members login page
 function cloudSyncLoginRedirect() {
-    const returnUrl = encodeURIComponent(window.location.href);
-    window.location.href = `https://g4f.dev/members?redirect=${returnUrl}${settingsParam}`;
+    const returnUrl = encodeURIComponent(window.location.href.split("#")[0]);
+    window.location.href = `https://g4f.dev/members?redirect=${returnUrl}&conversation=${encodeURIComponent(window.conversation_id)}`;
 }
 
 // Cloud Sync button event listeners
