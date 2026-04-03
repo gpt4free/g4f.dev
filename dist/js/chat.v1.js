@@ -6190,7 +6190,7 @@ function handleCloudSyncCallback() {
             try {
                 const user = JSON.parse(decodeURIComponent(userParam));
                 // Also store provider-specific API key if included in user info
-                if (user.pollinations.api_key) {
+                if (user.pollinations?.api_key) {
                     appStorage.setItem("PollinationsAI-api_key", user.pollinations.api_key);
                 }
                 if (user.provider === "huggingface" && user.access_token) {
