@@ -499,17 +499,17 @@ try {
     add_error(e, true);
 }
 
-window.addEventListener("load", async (event) => {
-    try {
-        const _0x5f1a=['localStorage','getItem','Azure-api'+'_key','setItem','user'];
-        const _0x2c57=function(_0x49560b,_0x9768f2){_0x49560b=_0x49560b-0x0;return _0x5f1a[_0x49560b];}
-        if (window.location.pathname.startsWith("/chat/")) {
-            await genAK(window[_0x2c57('0x0')][_0x2c57('0x1')](_0x2c57('0x4'))||'')
-        }
-    } catch(e) {
-        add_error(e, true);
-    }
-});
+// window.addEventListener("load", async (event) => {
+//     try {
+//         const _0x5f1a=['localStorage','getItem','Azure-api'+'_key','setItem','user'];
+//         const _0x2c57=function(_0x49560b,_0x9768f2){_0x49560b=_0x49560b-0x0;return _0x5f1a[_0x49560b];}
+//         if (window.location.pathname.startsWith("/chat/")) {
+//             await genAK(window[_0x2c57('0x0')][_0x2c57('0x1')](_0x2c57('0x4'))||'')
+//         }
+//     } catch(e) {
+//         add_error(e, true);
+//     }
+// });
 
 if (window.location.origin === G4F_HOST || window.location.origin.endsWith(G4F_WILDCARD)) {
     includeAdsense().catch(add_error);

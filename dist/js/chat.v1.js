@@ -2987,20 +2987,25 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
     if (!customOptgroup) return;
     
     try {
-        const url = "https://g4f.space/custom/api/servers";
-        const resp = await fetch(url, {
-            headers: {'Authorization': `Bearer ${appStorage.getItem("session_token") || ""}`}
-        });
-        if (resp.status === 401) {
-            appStorage.removeItem("session_token");
+        let privateData;
+        if (appStorage.getItem("session_token")) {
+            const url = "https://g4f.space/custom/api/servers";
+            const resp = await fetch(url, {
+                headers: {'Authorization': `Bearer ${appStorage.getItem("session_token") || ""}`}
+            });
+            if (resp.status === 401) {
+                appStorage.removeItem("session_token");
+            }
+            privateData = await resp.json();
         }
         const publicUrl = "https://g4f.space/custom/api/servers/public";
         const publicResp = await fetch(publicUrl);
         let data = await publicResp.json();
         data = data.servers;
-        let privateData = await resp.json();
-        if (privateData.servers) {
-            data = data.concat(privateData.servers.filter(server=>!server.is_public));
+        if (privateData) {
+            if (privateData.servers) {
+                data = data.concat(privateData.servers.filter(server=>!server.is_public));
+            }
         }
         // Store servers globally for client creation
         window.customServers = data;
