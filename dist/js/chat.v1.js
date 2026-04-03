@@ -4505,34 +4505,28 @@ async function read_response(response, message_id, provider, finish_message) {
     }
 }
 
-function get_api_key_by_provider(provider) {
+function get_api_key_by_provider(provider, single=false) {
     let api_key = null;
     if (provider) {
-        if (provider === "custom:srv_mkrzs4lg75588992eb03") {
-            return appStorage.getItem("Custom-api_key");
-        }
         if (provider === "custom:srv_mkslnbmha177b2d2971f") {
             return appStorage.getItem("puter.auth.token");
         }
-        if (provider === "custom:srv_mkozmel868dab43dfcc7") {
-            return appStorage.getItem("LMArena-api_key");
-        }
         if (provider === "custom:srv_ml2kr1wn9b1fb453079a") {
-            return appStorage.getItem("DeepInfra-api_key");
+            return appStorage.getItem("DeepInfra-api_key") || appStorage.getItem("session_token");
         }
         if (provider === "custom:srv_mkomfko63371049b6da6") {
-            return appStorage.getItem("ApiAirforce-api_key");
+            return appStorage.getItem("ApiAirforce-api_key") || appStorage.getItem("session_token");
         }
-        if (["Azure"].includes(provider)) {
+        if (!single && ["Azure"].includes(provider)) {
             return appStorage.getItem("session_token");
         }
         if (["custom"].includes(provider)) {
             return appStorage.getItem("Custom-api_key");
         }
-        if (provider.startsWith("custom:")) {
+        if (!single && provider.startsWith("custom:")) {
             return appStorage.getItem("session_token");
         }
-        if (provider === "AnyProvider") {
+        if (!single &&provider === "AnyProvider") {
             return {
                 "PollinationsAI": get_api_key_by_provider("PollinationsAI"),
                 "HuggingFace": appStorage.getItem("HuggingFace-api_key"),
@@ -4559,7 +4553,7 @@ function get_api_key_by_provider(provider) {
         if (!api_key && provider.startsWith("Puter") && appStorage.getItem('puter.auth.token')) {
             return appStorage.getItem("puter.auth.token");
         }
-        if (!api_key && ["GeminiPro", "Ollama", "Nvidia", "OpenRouterFree", "PollinationsAI", "Groq"].includes(provider)) {
+        if (!single && !api_key && ["GeminiPro", "Ollama", "Nvidia", "OpenRouterFree", "PollinationsAI", "Groq"].includes(provider)) {
             return appStorage.getItem("session_token");
         }
     }
@@ -4735,7 +4729,7 @@ function set_provider_models(models, provider, quota=null) {
 }
 async function get_quota(provider) {
     const url = `${framework.backendUrl}/backend-api/v2/quota/${provider}`;
-    const api_key = get_api_key_by_provider(provider);
+    const api_key = get_api_key_by_provider(provider, true);
     response = await fetch(url, { method: 'GET', headers: api_key ? {"Authorization": `Bearer ${api_key}`} : {} });
     return response.ok ? response.json() : undefined;
 }
