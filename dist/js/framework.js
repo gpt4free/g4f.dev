@@ -219,8 +219,8 @@ async function query(prompt, options={ json: false, cache: true }) {
     if (options === true || options === false) {
         options = { json: options, cache: true };
     }
-    let encodedParams = (new URLSearchParams(options)).toString();
-    let secondPartyUrl = `https://g4f.space/ai/auto/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
+    const encodedParams = (new URLSearchParams(options)).toString();
+    const secondPartyUrl = `https://g4f.space/ai/auto/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
     let response;
     try {
         response = await fetch(secondPartyUrl, { headers: localStorage.getItem("session_token") ? {

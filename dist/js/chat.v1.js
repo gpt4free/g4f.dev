@@ -4734,7 +4734,7 @@ function set_provider_models(models, provider, quota=null) {
 async function get_quota(provider) {
     const url = `${framework.backendUrl}/backend-api/v2/quota/${provider}`;
     const api_key = get_api_key_by_provider(provider, true);
-    response = await fetch(url, { method: 'GET', headers: api_key ? {"Authorization": `Bearer ${api_key}`} : {} });
+    response = await fetch(url, { method: 'GET', headers: api_key ? {"x-api-key": api_key} : {} });
     return response.ok ? response.json() : undefined;
 }
 async function refresh_models(provider) {
