@@ -4611,7 +4611,7 @@ function set_quota_info(models, quota) {
     }
     let default_model = null;
     models.forEach((model) => {
-        const model_id = model.model || model.id;
+        const model_id = model.id || model.model;
         let percent = undefined;
         if (quota.buckets) {
             if (!["gemini-3-pro-preview"].includes(default_model)) {
@@ -4697,8 +4697,8 @@ function set_provider_models(models, provider, quota=null) {
         models.forEach((model, i) => {
             if (!model.models) {
                 let option = document.createElement('option');
-                option.value = model.model;
-                option.dataset.label = model.model;
+                option.value = model.id || model.model;
+                option.dataset.label = model.id || model.model;
                 option.text = model.label + (model.count > 1 ? ` (${model.count}+)` : "") + get_modelTags(model);
                 if (model.audio) {
                     option.dataset.audio = "true";
@@ -4855,7 +4855,7 @@ modelSearch?.addEventListener('input', function() {
             matches.push({ provider, model: subModel });
           }
         });
-      } else if ((model.model || model).toLowerCase().includes(searchTerm)) {
+      } else if ((model.id || model).toLowerCase().includes(searchTerm)) {
         matches.push({ provider, model });
       }
     });
@@ -4866,14 +4866,14 @@ modelSearch?.addEventListener('input', function() {
     const div = document.createElement('div');
     div.className = 'suggestion-item';
     div.innerHTML = `
-      <strong>${match.model.model || match.model}</strong>
+      <strong>${match.model.id || match.model}</strong>
       <span class="provider-tag">${match.provider}</span>
     `;
     div.addEventListener('click', async () => {
       modelSearch.value = "";
       providerSelect.value = match.provider;
       await load_provider_models();
-      modelSelect.value = match.model.model || match.model;
+      modelSelect.value = match.model.id || match.model;
       modelSelector.classList.add("hidden");
       providerSelect.classList.remove("hidden");
       modelSelect.classList.remove("hidden");
