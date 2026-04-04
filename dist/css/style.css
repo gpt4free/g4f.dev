@@ -1880,6 +1880,7 @@ form textarea {
 
 .settings .settings-content, .log .log-content {
     overflow: auto;
+    width: 100%;
 }
 
 .settings .field, form .field {

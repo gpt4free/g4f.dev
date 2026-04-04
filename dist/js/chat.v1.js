@@ -2011,8 +2011,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     }
                     if (chunk.choices) {
                         const choice = chunk.choices[0];
-                        console.debug("Received chunk choice:", choice);
-                        if (choice.groundingMetadata?.groundingChunks) {
+                        if (choice?.groundingMetadata?.groundingChunks) {
                             sources = choice.groundingMetadata;
                         }
                         // Handle tool calls
