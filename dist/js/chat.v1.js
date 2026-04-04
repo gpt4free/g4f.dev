@@ -3658,7 +3658,7 @@ function load_provider_login_urls(providersListContainer, providers = []) {
             }
             label.textContent = label.textContent.replaceAll(" ✅", "") + " 🔄";
             const quota = await get_quota(provider.name);
-            label.textContent = label.textContent.replaceAll(" 🔄", "")
+            label.textContent = label.textContent.replaceAll(" 🔄", "").replaceAll(" ✅", "")
             if (quota) {
                 label.textContent += " ✅";
             }
@@ -4690,6 +4690,8 @@ function set_quota_info(models, quota) {
 function set_provider_models(models, provider, quota=null) {
     console.log("Setting models for provider:", provider, models);
     modelSelect.innerHTML = '';
+    const option = providerSelect.options[providerSelect.selectedIndex];
+    option.text = provider.replaceAll(" 🟢", "") + (quota ? " 🟢" : "");
     function add_options(group, models, search) {
         if (quota) {
             set_quota_info(models, quota);
