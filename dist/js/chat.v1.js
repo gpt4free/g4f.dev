@@ -46,7 +46,7 @@ const translationSnipptes = [
     "Search Off", "Search On", "Recognition On", "Recognition Off", "Delete Conversation",
     "Favorite Models:", "Stop Recording", "Record Audio", "Upload Audio", "No Title", "1 Copy",
     "Delete all conversations?", "Error Occurred", "Remaining:", "Balance:", "Reasoning", "Credits:",
-    "Login", "Login to", "OAuth Login", "Login with OAuth"
+    "Login", "Login to", "Enable"
 ];
 
 let providers = [
@@ -3551,8 +3551,9 @@ const load_provider_option = (input, provider_name) => {
         providerSelect.querySelectorAll(`option[data-parent="${provider_name}"]:not([data-live="true"])`).forEach(
             (el) => el.removeAttribute("disabled")
         );
-        settings.querySelector(`.field:has(#${provider_name}-api_key)`)?.classList.remove("hidden");
-        settings.querySelector(`.field:has(#${provider_name}-api_base)`)?.classList.remove("hidden");
+        settings.querySelector(`.field.box:has(label[for="${provider_name}-api_key"])`)?.classList.remove("hidden");
+        console.log(`.field.box:has(label[for="${provider_name}-api_key"])`)
+        settings.querySelector(`.field.box:has(label[for="${provider_name}-api_base"])`)?.classList.remove("hidden");
     } else {
         providerSelect.querySelectorAll(`option[value="${provider_name}"]:not([data-live="true"])`).forEach(
             (el) => el.setAttribute("disabled", "disabled")
@@ -3618,7 +3619,7 @@ async function load_providers(providers, provider_options, providersListContaine
                 option.classList.add("provider-item");
                 let api_key = appStorage.getItem(`${name}-api_key`);
                 option.innerHTML = `
-                    <span class="label">Enable ${provider.label}</span>
+                    <span class="label">${framework.trans_escape("Enable")} ${provider.label}</span>
                     <input id="Provider${name}" type="checkbox" name="Provider${name}" value="${name}" class="provider" ${(provider.active_by_default || api_key) ? 'checked="checked"' : ''}/>
                     <label for="Provider${name}" class="toogle" title="Remove provider from dropdown"></label>
                 `;
@@ -3712,7 +3713,7 @@ function load_provider_login_urls(providersListContainer, providers = []) {
         
         // Add OAuth button for providers that support it (server-side endpoint)
         if (provider.login) {
-            oauthButton = `<button class="oauth-btn" data-provider="${provider.name}" data-login-url="/backend-api/v2/oauth/${provider.name}" title="${framework.trans_escape("Login with OAuth")}">${framework.trans_escape('OAuth Login')}</button>`;
+            oauthButton = `<button class="oauth-btn" data-provider="${provider.name}" data-login-url="/backend-api/v2/oauth/${provider.name}" title="${framework.trans_escape("Login to")} ${framework.escape(label)}">${framework.trans_escape('Login')}</button>`;
         }
 
         const apiKeyLink = ["PollinationsAI", "HuggingFace"].includes(provider.name)
@@ -3790,7 +3791,7 @@ function load_provider_login_urls(providersListContainer, providers = []) {
                     showToast(`OAuth error: ${error.message}`, "error");
                 } finally {
                     event.target.disabled = false;
-                    event.target.textContent = framework.translate('OAuth Login');
+                    event.target.textContent = framework.translate('Login');
                 }
             });
         }
