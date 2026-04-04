@@ -4553,25 +4553,22 @@ async function read_response(response, message_id, provider, finish_message) {
 function get_api_key_by_provider(provider, single=false) {
     let api_key = null;
     if (provider) {
-        if (provider === "custom:srv_mkslnbmha177b2d2971f") {
-            return appStorage.getItem("puter.auth.token");
-        }
         if (provider === "custom:srv_ml2kr1wn9b1fb453079a") {
             return appStorage.getItem("DeepInfra-api_key") || appStorage.getItem("session_token");
         }
         if (provider === "custom:srv_mkomfko63371049b6da6") {
             return appStorage.getItem("ApiAirforce-api_key") || appStorage.getItem("session_token");
         }
-        if (!single && ["Azure"].includes(provider)) {
+        if (["Azure"].includes(provider)) {
             return appStorage.getItem("session_token");
         }
         if (["custom"].includes(provider)) {
             return appStorage.getItem("Custom-api_key");
         }
-        if (!single && provider.startsWith("custom:")) {
+        if (provider.startsWith("custom:")) {
             return appStorage.getItem("session_token");
         }
-        if (!single &&provider === "AnyProvider") {
+        if (!single && provider === "AnyProvider") {
             return {
                 "PollinationsAI": get_api_key_by_provider("PollinationsAI"),
                 "HuggingFace": appStorage.getItem("HuggingFace-api_key"),
@@ -4595,10 +4592,10 @@ function get_api_key_by_provider(provider, single=false) {
         if (api_key) {
             api_key = appStorage.getItem(api_key);
         }
-        if (!api_key && provider.startsWith("Puter") && appStorage.getItem('puter.auth.token')) {
+        if (!api_key && provider.startsWith("Puter")) {
             return appStorage.getItem("puter.auth.token");
         }
-        if (!single && !api_key && ["GeminiPro", "Ollama", "Nvidia", "OpenRouterFree", "PollinationsAI", "Groq"].includes(provider)) {
+        if (!api_key && ["GeminiPro", "Ollama", "Nvidia", "OpenRouterFree", "PollinationsAI", "Groq"].includes(provider)) {
             return appStorage.getItem("session_token");
         }
     }
