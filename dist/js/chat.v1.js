@@ -1343,7 +1343,6 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
             content_alt_storage[message_id] = message.alt;
             const div = document.createElement("div");
             div.innerHTML = framework.markdown(message.content);
-            const media = div.querySelector("img, video")
             content_map.inner.appendChild(div);
             let cursorDiv = content_map.inner.querySelector(".cursor");
             if (cursorDiv) cursorDiv.parentNode.removeChild(cursorDiv);
@@ -1450,6 +1449,36 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
     } else if (message.type == "headers") {
         headers_storage[message_id] = message.headers;
     } 
+}
+
+function add_sources(data, message_id) {
+    console.debug("Adding sources for message", message_id, data);
+    const blockquote = document.createElement("blockquote");
+    if (data.webSearchQueries) {
+        suggestions = data.webSearchQueries;
+    }
+    if (data.groundingChunks) {
+        const links = data.groundingChunks.map((chunk, index) => {
+            return `<p>[${index}] <a target="_blank" href="${chunk.web.uri}">${chunk.web.title}</a></p>`;
+        }).join("");
+        blockquote.innerHTML = links;
+    }
+    if (data.citations) {
+        const links = data.citations.map((citation, index) => {
+            return `<p>[${index+1}] <a target="_blank" href="${citation}">${citation.replace("https://www.", "").replace("https://", "")}</a></p>`;
+        }).join("");
+        blockquote.innerHTML = links;
+    }
+    if (data.sources) {
+        const links = data.sources.map((source, index) => {
+            return `<p>[${index}] <a target="_blank" href="${source.link}">${source.title}</a></p>`;
+        }).join("");
+        blockquote.innerHTML = links;
+    }
+    if (blockquote.innerHTML) {
+        message_storage[message_id] += blockquote.outerHTML;
+        content_storage[message_id].inner.innerHTML += blockquote.outerHTML;
+    }
 }
 
 function renderer(text) {
@@ -1939,10 +1968,10 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     }
                     if (response.choices) {
                         const choice = response.choices[0];
-                        if (choice?.reasoning) {
+                        if (choice.reasoning) {
                             await add_message_chunk({type: "reasoning", token: choice?.reasoning, is_thinking: choice?.is_thinking}, message_id);
                         }
-                        if (choice?.content) {
+                        if (choice.content) {
                             await add_message_chunk({type: "content", content: choice.content}, message_id);
                         }
                     }
@@ -1952,6 +1981,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
 
                 let hasModel = false;
                 let pendingToolCalls = [];
+                let sources = null;
 
                 for await (const chunk of response) {
                     if (chunk.usage) {
@@ -1981,7 +2011,10 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     }
                     if (chunk.choices) {
                         const choice = chunk.choices[0];
-                        
+                        console.debug("Received chunk choice:", choice);
+                        if (choice.groundingMetadata?.groundingChunks) {
+                            sources = choice.groundingMetadata;
+                        }
                         // Handle tool calls
                         if (choice?.delta?.tool_calls) {
                             for (const toolCall of choice.delta.tool_calls) {
@@ -1996,7 +2029,6 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                                 }
                             }
                         }
-                        
                         if (choice?.delta?.reasoning) {
                             await add_message_chunk({type: "reasoning", token: choice?.delta?.reasoning}, message_id);
                         }
@@ -2007,9 +2039,16 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                             await add_message_chunk({type: "content", content: processedDelta}, message_id);
                         }
                     }
+                    if (chunk.citations) {
+                        sources = {citations: chunk.citations};
+                    }
+                    if (chunk.sources) {
+                       sources = {sources: chunk.sources};
+                    }
                 }
-                
-                // Handle tool calls if any
+                if (sources) {
+                    add_sources(sources, message_id);
+                }
                 if (pendingToolCalls.length > 0 && mcpClient) {
                     await handleToolCalls(pendingToolCalls, messages, selectedModel, provider, message_id, finish_message);
                 }
@@ -3648,20 +3687,22 @@ function load_provider_login_urls(providersListContainer, providers = []) {
         }
         let isChecked = false;
         async function checkStatus() {
-            if (isChecked) {
-                return;
-            }
-            isChecked = true;
-            const label = providerBox.querySelector('label');
-            if (!label) {
-                return;
-            }
-            label.textContent = label.textContent.replaceAll(" ✅", "") + " 🔄";
-            const quota = await get_quota(provider.name);
-            label.textContent = label.textContent.replaceAll(" 🔄", "").replaceAll(" ✅", "")
-            if (quota) {
-                label.textContent += " ✅";
-            }
+            setTimeout(async () => {
+                if (isChecked) {
+                    return;
+                }
+                isChecked = true;
+                const label = providerBox.querySelector('label');
+                if (!label) {
+                    return;
+                }
+                label.textContent = label.textContent.replaceAll(" ✅", "") + " 🔄";
+                const quota = await get_quota(provider.name);
+                label.textContent = label.textContent.replaceAll(" 🔄", "").replaceAll(" ✅", "")
+                if (quota) {
+                    label.textContent += " ✅";
+                }
+            }, Math.random() * 100);
         }
         providerBox.addEventListener('mouseenter', checkStatus);
         const label = provider.label || provider.name;
@@ -4691,7 +4732,7 @@ function set_provider_models(models, provider, quota=null) {
     console.log("Setting models for provider:", provider, models);
     modelSelect.innerHTML = '';
     const option = providerSelect.options[providerSelect.selectedIndex];
-    option.text = provider.replaceAll(" 🟢", "") + (quota ? " 🟢" : "");
+    option.text = option.text.replaceAll(" 🟢", "") + (quota ? " 🟢" : "");
     function add_options(group, models, search) {
         if (quota) {
             set_quota_info(models, quota);
