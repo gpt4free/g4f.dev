@@ -4779,7 +4779,9 @@ function set_provider_models(models, provider, quota=null) {
     console.log("Setting models for provider:", provider, models);
     modelSelect.innerHTML = '';
     const option = providerSelect.options[providerSelect.selectedIndex];
-    option.text = option.text.replaceAll(" 🟢", "") + (quota ? " 🟢" : "");
+    if (option) {
+        option.text = option.text.replaceAll(" 🟢", "") + (quota ? " 🟢" : "");
+    }
     function add_options(group, models, search) {
         if (quota) {
             set_quota_info(models, quota);
