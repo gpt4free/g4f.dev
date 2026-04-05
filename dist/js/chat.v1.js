@@ -1302,18 +1302,19 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         console.error(message.message)
         await api("log", {...message, provider: provider_storage[message_id]});
     } else if (message.type == "error") {
-        error_storage[message_id] = message.message
-        console.error(message.message);
-        content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${message.message}`);
+        const error_message = message.message || message.error;
+        error_storage[message_id] = error_message;
+        console.error(error_message);
+        content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${error_message}`);
         
         // Show error popup with partner hints
-        await showErrorPopup(message.message);
+        await showErrorPopup(error_message);
         
         if (finish_message) {
             await finish_message();
         }
         let p = document.createElement("p");
-        p.innerText = message.error;
+        p.innerText = error_message;
         logContent.appendChild(p);
         await api("log", {...message, provider: provider_storage[message_id]});
     } else if (message.type == "preview") {
@@ -3890,26 +3891,28 @@ async function on_api() {
         if (!liveProvidersEnabled) {
             optgroup.disabled = true;
         }
-        try {
-            Object.entries(await window.loadProviders()).forEach(([name, config]) => {
-                if (name === "custom") {
-                    return; // Skip custom here, will be added separately
-                }
-                if (["together", "huggingface", "typegpt"].includes(name) && !appStorage.getItem(window.providerLocalStorage[name])) {
-                    return;
-                }
-                let option = document.createElement("option");
-                if (name === config.defaultModel) {
-                    option.selected = true;
-                }
-                option.value = name;
-                option.dataset.live = "true";
-                option.text = `${config.label || name} ${config.tags} 🟢`;
-                optgroup.appendChild(option);
-            });
-            providerSelect.appendChild(optgroup);
-        } catch(e) {
-            add_error(e, true);
+        providerSelect.appendChild(optgroup);
+        async function updateLiveProviderOptions() {
+            try {
+                Object.entries(await window.loadProviders()).forEach(([name, config]) => {
+                    if (name === "custom") {
+                        return; // Skip custom here, will be added separately
+                    }
+                    if (["together", "huggingface", "typegpt"].includes(name) && !appStorage.getItem(window.providerLocalStorage[name])) {
+                        return;
+                    }
+                    let option = document.createElement("option");
+                    if (name === config.defaultModel) {
+                        option.selected = true;
+                    }
+                    option.value = name;
+                    option.dataset.live = "true";
+                    option.text = `${config.label || name} ${config.tags} 🟢`;
+                    optgroup.appendChild(option);
+                });
+            } catch(e) {
+                add_error(e, true);
+            }
         }
 
         // Add Custom Providers optgroup
@@ -3920,37 +3923,46 @@ async function on_api() {
         if (!customProvidersEnabled) {
             customOptgroup.disabled = true;
         }
-        try {
-            // Add Custom provider if configured (local custom provider)
-            if (appStorage.getItem("Custom-api_base")) {
-                const customOption = document.createElement("option");
-                customOption.value = "custom";
-                customOption.dataset.live = "true";
-                customOption.dataset.custom = "true";
-                customOption.text = "Custom Provider 🔧";
-                customOptgroup.appendChild(customOption);
+        providerSelect.appendChild(customOptgroup);
+        async function loadCustomProvidersSelect() {
+            try {
+                // Add Custom provider if configured (local custom provider)
+                if (appStorage.getItem("Custom-api_base")) {
+                    const customOption = document.createElement("option");
+                    customOption.value = "custom";
+                    customOption.dataset.live = "true";
+                    customOption.dataset.custom = "true";
+                    customOption.text = "Custom Provider 🔧";
+                    customOptgroup.appendChild(customOption);
+                } 
+                // Load custom providers from API and add to toggle list
+                await loadCustomProvidersFromAPI(document.getElementById("custom-providers-optgroup"));
+            } catch(e) {
+                add_error(e, true);
             }
-            providerSelect.appendChild(customOptgroup);
-            
-            // Load custom providers from API and add to toggle list
-            await loadCustomProvidersFromAPI(document.getElementById("custom-providers-optgroup"));
-        } catch(e) {
-            add_error(e, true);
         }
 
+        // Add PA Providers optgroup
+        const paOptgroup = document.createElement("optgroup");
+        paOptgroup.id = "pa-providers-optgroup";
+        paOptgroup.label = framework.translate('PA Providers');
+        providerSelect.appendChild(paOptgroup);
+
+        await Promise.all([updateLiveProviderOptions(), loadCustomProvidersSelect(), loadPaProviderSelect(paOptgroup)]);
+
         let provider_options = [];
-        api("providers").then(async (providers) => {
+        await api("providers").then(async (providers) => {
             await load_providers(providers, provider_options, providersListContainer, providersToggleContainer);
             load_provider_models(appStorage.getItem("provider"));
-            set_favorite_providers();
         }).catch(async (e)=>{
             console.log(e)
             providerSelect.querySelectorAll("option:not([data-live])").forEach((el)=>el.remove());
             await load_provider_login_urls(providersListContainer, providers);
             await load_settings(provider_options);
             await load_provider_models(appStorage.getItem("provider"));
-            set_favorite_providers();
         });
+
+        set_favorite_providers();
     } else {
         await load_provider_login_urls(providersListContainer, providers);
         await load_settings({});
@@ -4468,6 +4480,11 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
             signal: providerModelSignal.signal,
         });
     } else if (ressource == "conversation") {
+        // Route PA providers to their dedicated backend endpoint
+        if (args && args.provider && String(args.provider).startsWith("pa:")) {
+            args = { ...args, provider: args.provider.slice(3) };
+            url = `${framework.backendUrl}/pa/backend-api/v2/conversation`;
+        }
         let body = JSON.stringify(args);
         headers = {
             accept: 'text/event-stream',
@@ -4582,6 +4599,9 @@ async function read_response(response, message_id, provider, finish_message) {
 
 function get_api_key_by_provider(provider, single=false) {
     let api_key = null;
+    if (provider.startsWith("pa:")) {
+        return appStorage.getItem(`pa:${provider.slice(3)}-api_key`) || appStorage.getItem("session_token");
+    }
     if (provider) {
         if (provider === "custom:srv_ml2kr1wn9b1fb453079a") {
             return appStorage.getItem("DeepInfra-api_key") || appStorage.getItem("session_token");
@@ -4769,7 +4789,7 @@ function set_provider_models(models, provider, quota=null) {
                 let option = document.createElement('option');
                 option.value = model.id || model.model;
                 option.dataset.label = model.id || model.model;
-                option.text = model.label + (model.count > 1 ? ` (${model.count}+)` : "") + get_modelTags(model);
+                option.text = option.dataset.label + (model.count > 1 ? ` (${model.count}+)` : "") + get_modelTags(model);
                 if (model.audio) {
                     option.dataset.audio = "true";
                 }
@@ -4831,6 +4851,18 @@ async function get_quota(provider) {
     return response.ok ? data : undefined;
 }
 async function refresh_models(provider) {
+    // PA providers expose models via the pa providers list, not the models API
+    if (provider && String(provider).startsWith("pa:")) {
+        const paId = provider.slice(3);
+        const paEntry = window._paProviders && window._paProviders.find(p => p.id === paId);
+        console.log("PA provider entry for provider:", provider, paEntry);
+        if (paEntry && Array.isArray(paEntry.models) && paEntry.models.length > 0) {
+            const models = paEntry.models.map(m => ({ name: m, model: m }));
+            console.log("Setting PA provider models for provider:", provider, models);
+            set_provider_models(models, provider);
+        }
+        return;
+    }
     let models = appStorage.getItem(`${provider}:models`);
     if (models) {
         models = JSON.parse(models);
@@ -5960,6 +5992,10 @@ function initializeMCPUI() {
     
     // Refresh tools button
     document.getElementById('refresh-mcp-tools-btn')?.addEventListener('click', refreshMCPTools);
+
+    // PA providers
+    document.getElementById('refresh-pa-providers-btn')?.addEventListener('click', loadPaProviders);
+    loadPaProviders();
 }
 
 function renderMCPServers() {
@@ -6091,6 +6127,99 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+// ============================================================
+// PA Providers listing
+// ============================================================
+
+/**
+ * Derive the base URL for PA endpoints.
+ * Uses the first enabled MCP server URL (strips /mcp suffix) or falls back
+ * to window.location.origin.
+ */
+function getPaBaseUrl() {
+    if (typeof mcpClient !== 'undefined' && mcpClient.servers.length > 0) {
+        const first = mcpClient.servers.find(s => s.enabled) || mcpClient.servers[0];
+        // MCP server URLs end with /mcp — strip that to get the base
+        return first.url.replace(/\/mcp$/, '');
+    }
+    return window.location.origin;
+}
+
+async function fetchPaProviders() {
+    const base = framework.backendUrl || getPaBaseUrl();
+    const res = await fetch(`${base}/pa/providers`, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+}
+
+async function loadPaProviderSelect(optgroup) {
+    optgroup = optgroup || document.getElementById('pa-providers-optgroup');
+    if (!optgroup) return;
+    try {
+        const providers = await fetchPaProviders();
+        window._paProviders = providers;
+        // Remove stale options
+        optgroup.innerHTML = '';
+        providers.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = `pa:${p.id}`;
+            opt.dataset.pa = 'true';
+            opt.dataset.paId = p.id;
+            opt.dataset.label = p.label || p.id;
+            const modelHint = Array.isArray(p.models) && p.models.length > 0 ? ` (${p.models.length} model${p.models.length > 1 ? 's' : ''})` : '';
+            opt.text = `${p.label || p.id}${modelHint} 🔌`;
+            optgroup.appendChild(opt);
+        });
+    } catch (e) {
+        console.debug('Failed to load PA providers into select:', e);
+    }
+}
+
+async function loadPaProviders() {
+    const btn = document.getElementById('refresh-pa-providers-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-sync fa-spin"></i>';
+    }
+    try {
+        const providers = await fetchPaProviders();
+        window._paProviders = providers;
+        renderPaProviders(providers);
+        // Also refresh the select dropdown
+        await loadPaProviderSelect();
+    } catch (err) {
+        const container = document.getElementById('pa-providers-list');
+        if (container) container.innerHTML = `<div class="mcp-empty">Failed to load PA providers: ${escapeHtml(String(err))}</div>`;
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-sync"></i>';
+        }
+    }
+}
+
+function renderPaProviders(providers) {
+    const container = document.getElementById('pa-providers-list');
+    if (!container) return;
+    if (!providers || providers.length === 0) {
+        container.innerHTML = '<div class="mcp-empty">No PA providers found. Add <code>.pa.py</code> files to <code>~/.g4f/workspace</code> and refresh.</div>';
+        return;
+    }
+    container.innerHTML = providers.map(p => {
+        const models = Array.isArray(p.models) ? p.models.join(', ') : '';
+        const url = p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="mcp-server-url">${escapeHtml(p.url)}</a>` : '';
+        return `<div class="mcp-tool-item">
+            <div>
+                <span class="mcp-tool-name">${escapeHtml(p.label || p.id)}</span>
+                ${url}
+                ${models ? `<span class="mcp-tool-desc">${escapeHtml(models)}</span>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+document.getElementById('refresh-pa-providers-btn')?.addEventListener('click', loadPaProviders);
 
 /**
  * Handle tool calls from assistant
