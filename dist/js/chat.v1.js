@@ -1635,7 +1635,9 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         }
         // Handle tool calls if any
         if (tool_calls_storage[message_id] && tool_calls_storage[message_id].length > 0 && mcpClient) {
-            await handleToolCalls(tool_calls_storage[message_id], messages, model, provider, message_id, finish_message);
+            const tool_calls = tool_calls_storage[message_id];
+            delete tool_calls_storage[message_id];
+            await handleToolCalls(tool_calls, messages, model, provider, message_id, finish_message);
         }
         if (message_storage[message_id] || reasoning_storage[message_id]?.status || reasoning_storage[message_id]?.text) {
             const message_provider = message_id in provider_storage ? provider_storage[message_id] : null;
@@ -2945,24 +2947,24 @@ function open_settings() {
 const register_settings_storage = async () => {
     const optionElements = document.querySelectorAll(optionElementsSelector);
     optionElements.forEach((element) => {
-        const field = element.id == "PuterJS" ? "puter.auth.token" : element.id;
+        const storageKey = element.dataset.storageKey || element.id;
         if (element.type == "textarea") {
             element.addEventListener('input', async (event) => {
-                appStorage.setItem(field, element.value);
+                appStorage.setItem(storageKey, element.value);
             });
         } else {
             element.addEventListener('change', async (event) => {
                 switch (element.type) {
                     case "checkbox":
-                        appStorage.setItem(field, element.checked);
+                        appStorage.setItem(storageKey, element.checked);
                         break;
                     case "select-one":
-                        appStorage.setItem(field, element.value);
+                        appStorage.setItem(storageKey, element.value);
                         break;
                     case "url":
                     case "text":
                     case "number":
-                        appStorage.setItem(field, element.value);
+                        appStorage.setItem(storageKey, element.value);
                         break;
                     default:
                         console.warn("Unresolved element type");
@@ -3111,8 +3113,8 @@ async function load_settings(provider_options) {
 const load_settings_storage = async () => {
     const optionElements = document.querySelectorAll(optionElementsSelector);
     optionElements.forEach((element) => {
-        const field = element.id == "PuterJS" ? "puter.auth.token" : element.id;
-        let value = appStorage.getItem(field);
+        const storageKey = element.dataset.storageKey || element.id;
+        let value = appStorage.getItem(storageKey);
         if (value == null && element.dataset.value) {
             value = element.dataset.value;
         }
@@ -3725,13 +3727,26 @@ function load_provider_login_urls(providersListContainer, providers = []) {
         const apiKeyLink = ["PollinationsAI", "HuggingFace"].includes(provider.name)
             ? `<a href="https://g4f.dev/members?provider=${login_provider}&redirect=${encodeURIComponent(window.location.href.split("#")[0])}" title="${framework.trans_escape("Login to")} ${framework.escape(label)}">${framework.trans_escape('Login')}</a>`
             : (provider.login_url ? `<a href="${framework.escape(provider.login_url)}" target="_blank" title="${framework.trans_escape("Login to")} ${framework.escape(label)}">${framework.trans_escape('Get API key')}</a>` : "");
-        
         const inputId = `${provider.name}-api_key`;
+        const storageKey = provider.name == "PuterJS" ? "puter.auth.token" : inputId;
         providerBox.innerHTML = `
             <label for="${inputId}" class="label" title="">${framework.escape(label)}:</label>
         ` + (oauthButton || (apiKeyLink ? `
-            <input type="text" id="${inputId}" name="${provider.name}[api_key]" class="${childs}" placeholder="api_key" autocomplete="off" data-provider="${provider.name}"/>
+            <input type="text" id="${inputId}" name="${provider.name}[api_key]" class="${childs}" placeholder="api_key" autocomplete="off" data-storage-key="${storageKey}"/>
         ` + apiKeyLink : ""));
+
+        if (provider.name == "PuterJS") {
+            const link = providerBox.querySelector("a");
+            link.textContent = framework.translate("Login");
+            link.addEventListener("click", async (event) => {
+                event.preventDefault();
+                await (new window.Puter()).signIn().then((res) => {
+                    console.log('PuterJS signed in:', res);
+                    providerBox.querySelector("input").value = res.token;
+                    appStorage.setItem(storageKey, res.token);
+                });
+            });
+        }
 
         providerBox.addEventListener("click", () => {
             isChecked = false;

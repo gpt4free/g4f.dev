@@ -576,7 +576,7 @@ class PollinationsAI extends Client {
                     remainingRequests: 10,
                     remainingTokens: d.balance,
                     limitRequests: 10,
-                    limitTokens: 20
+                    limitTokens: 1
                 };
                 if (typeof window !== "undefined") {
                     window.dispatchEvent(new CustomEvent('userTierUpdate', { detail: userInfo }));
