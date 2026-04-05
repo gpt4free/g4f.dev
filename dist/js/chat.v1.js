@@ -3726,10 +3726,11 @@ function load_provider_login_urls(providersListContainer, providers = []) {
             ? `<a href="https://g4f.dev/members?provider=${login_provider}&redirect=${encodeURIComponent(window.location.href.split("#")[0])}" title="${framework.trans_escape("Login to")} ${framework.escape(label)}">${framework.trans_escape('Login')}</a>`
             : (provider.login_url ? `<a href="${framework.escape(provider.login_url)}" target="_blank" title="${framework.trans_escape("Login to")} ${framework.escape(label)}">${framework.trans_escape('Get API key')}</a>` : "");
         
+        const inputId = `${provider.name}-api_key`;
         providerBox.innerHTML = `
-            <label for="${provider.name}" class="label" title="">${framework.escape(label)}:</label>
+            <label for="${inputId}" class="label" title="">${framework.escape(label)}:</label>
         ` + (oauthButton || (apiKeyLink ? `
-            <input type="text" id="${provider.name}" name="${provider.name}[api_key]" class="${childs}" placeholder="api_key" autocomplete="off" data-provider="${provider.name}"/>
+            <input type="text" id="${inputId}" name="${provider.name}[api_key]" class="${childs}" placeholder="api_key" autocomplete="off" data-provider="${provider.name}"/>
         ` + apiKeyLink : ""));
 
         providerBox.addEventListener("click", () => {
@@ -3874,23 +3875,27 @@ async function on_api() {
         if (!liveProvidersEnabled) {
             optgroup.disabled = true;
         }
-        Object.entries(await window.loadProviders()).forEach(([name, config]) => {
-            if (name === "custom") {
-                return; // Skip custom here, will be added separately
-            }
-            if (["together", "huggingface", "typegpt"].includes(name) && !appStorage.getItem(window.providerLocalStorage[name])) {
-                return;
-            }
-            let option = document.createElement("option");
-            if (name === config.defaultModel) {
-                option.selected = true;
-            }
-            option.value = name;
-            option.dataset.live = "true";
-            option.text = `${config.label || name} ${config.tags} 🟢`;
-            optgroup.appendChild(option);
-        });
-        providerSelect.appendChild(optgroup);
+        try {
+            Object.entries(await window.loadProviders()).forEach(([name, config]) => {
+                if (name === "custom") {
+                    return; // Skip custom here, will be added separately
+                }
+                if (["together", "huggingface", "typegpt"].includes(name) && !appStorage.getItem(window.providerLocalStorage[name])) {
+                    return;
+                }
+                let option = document.createElement("option");
+                if (name === config.defaultModel) {
+                    option.selected = true;
+                }
+                option.value = name;
+                option.dataset.live = "true";
+                option.text = `${config.label || name} ${config.tags} 🟢`;
+                optgroup.appendChild(option);
+            });
+            providerSelect.appendChild(optgroup);
+        } catch(e) {
+            add_error(e, true);
+        }
 
         // Add Custom Providers optgroup
         const customOptgroup = document.createElement("optgroup");
@@ -3900,19 +3905,23 @@ async function on_api() {
         if (!customProvidersEnabled) {
             customOptgroup.disabled = true;
         }
-        // Add Custom provider if configured (local custom provider)
-        if (appStorage.getItem("Custom-api_base")) {
-            const customOption = document.createElement("option");
-            customOption.value = "custom";
-            customOption.dataset.live = "true";
-            customOption.dataset.custom = "true";
-            customOption.text = "Custom Provider 🔧";
-            customOptgroup.appendChild(customOption);
+        try {
+            // Add Custom provider if configured (local custom provider)
+            if (appStorage.getItem("Custom-api_base")) {
+                const customOption = document.createElement("option");
+                customOption.value = "custom";
+                customOption.dataset.live = "true";
+                customOption.dataset.custom = "true";
+                customOption.text = "Custom Provider 🔧";
+                customOptgroup.appendChild(customOption);
+            }
+            providerSelect.appendChild(customOptgroup);
+            
+            // Load custom providers from API and add to toggle list
+            await loadCustomProvidersFromAPI(document.getElementById("custom-providers-optgroup"));
+        } catch(e) {
+            add_error(e, true);
         }
-        providerSelect.appendChild(customOptgroup);
-
-        // Load custom providers from API and add to toggle list
-        await loadCustomProvidersFromAPI(document.getElementById("custom-providers-optgroup"));
 
         let provider_options = [];
         api("providers").then(async (providers) => {
@@ -5908,7 +5917,11 @@ let mcpClient = null;
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof MCPClient !== 'undefined') {
         mcpClient = new MCPClient();
-        initializeMCPUI();
+        try {
+             initializeMCPUI();
+        } catch(e) {
+            add_error(e)
+        }
     }
 });
 

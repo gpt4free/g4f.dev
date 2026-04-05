@@ -1857,7 +1857,7 @@ form textarea {
     flex-direction: column;
 }
 
-.settings, .log, form {
+.log, form {
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -1871,16 +1871,15 @@ form textarea {
     display: none;
 }
 
+.settings {
+    width: 100%;
+    overflow: scroll;
+}
+
 .settings .paper {
     display: flex;
     flex-direction: column;
-    min-width: 400px;
     height: 100%;
-}
-
-.settings .settings-content, .log .log-content {
-    overflow: auto;
-    width: 100%;
 }
 
 .settings .field, form .field {

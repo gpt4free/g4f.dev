@@ -235,14 +235,20 @@ async function query(prompt, options={ json: false, cache: true }) {
         if (delay > 0 && delay <= 60) {
             console.log(`Retrying after ${delay} seconds...`);
             await new Promise(resolve => setTimeout(resolve, delay * 1000));
-            response = await fetch(secondPartyUrl, { headers: localStorage.getItem("session_token") ? {
-                'Authorization': `Bearer ${localStorage.getItem("session_token")}`
-            } : {}});
-            window.captureUserTierHeaders?.(response.headers);
+            try {
+                response = await fetch(secondPartyUrl, { headers: localStorage.getItem("session_token") ? {
+                    'Authorization': `Bearer ${localStorage.getItem("session_token")}`
+                } : {}});
+                window.captureUserTierHeaders?.(response.headers);
+            } catch(e) {
+                add_error(`Error fetching URL: \`${secondPartyUrl}\``, e);
+            }
         }
     }
     if (!response || !response.ok) {
-        add_error(`Error ${response.status} with URL: \`${secondPartyUrl}\`\n ${await response.clone().text()}`, true);
+        if (response) {
+            add_error(`Error ${response.status} with URL: \`${secondPartyUrl}\`\n ${await response.clone().text()}`, true);
+        }
         let firstPartyUrl = `https://gen.pollinations.ai/text/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
         response = await fetch(firstPartyUrl, { headers: {"Authorization": `Bearer ${["pk", "_7X0QLj0xijSd0xj7"].join("")}`}});
         if (!response.ok) {
