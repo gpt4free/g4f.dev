@@ -6147,7 +6147,7 @@ function getPaBaseUrl() {
 }
 
 async function fetchPaProviders() {
-    const base = framework.backendUrl || getPaBaseUrl();
+    const base = getPaBaseUrl() || framework.backendUrl || '';
     const res = await fetch(`${base}/pa/providers`, { headers: { 'Accept': 'application/json' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
