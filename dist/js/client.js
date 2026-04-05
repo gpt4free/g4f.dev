@@ -542,11 +542,10 @@ class PollinationsAI extends Client {
             apiEndpoint: options.apiKey || options.baseUrl ? null : options.apiEndpoint || 'https://text.pollinations.ai/openai',
             imageEndpoint: options.apiKey ? 'https://gen.pollinations.ai/image/{prompt}' : options.imageEndpoint || 'https://image.pollinations.ai/prompt/{prompt}',
             modelsEndpoint: options.modelsEndpoint || 'https://gen.pollinations.ai/text/models',
+            quotaEndpoint: options.quotaEndpoint || (options.apiKey ? 'https://gen.pollinations.ai/account/balance' : 'https://g4f.space/api/pollinations/quota'),
             imageModelsEndpoint: options.imageModelsEndpoint || options.apiKey ? 'https://gen.pollinations.ai/image/models' : 'https://image.pollinations.ai/models',
             defaultModel: options.defaultModel || 'openai',
-            extraBody: options.extraBody || {
-                seed: 10352102
-            },
+            extraBody: options.extraBody,
             modelAliases: {
                 "sdxl-turbo": "turbo",
                 "gpt-image": "gptimage",

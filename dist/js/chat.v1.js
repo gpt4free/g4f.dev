@@ -46,7 +46,7 @@ const translationSnipptes = [
     "Search Off", "Search On", "Recognition On", "Recognition Off", "Delete Conversation",
     "Favorite Models:", "Stop Recording", "Record Audio", "Upload Audio", "No Title", "1 Copy",
     "Delete all conversations?", "Error Occurred", "Remaining:", "Balance:", "Reasoning", "Credits:",
-    "Login", "Login to", "Enable"
+    "Login", "Login to", "Enable", "Invalid API key"
 ];
 
 let providers = [
@@ -2096,7 +2096,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             download_media: downloadMedia,
             debug_mode: appStorage.getItem("debugMode") == "true",
             api_key: apiKey,
-            api_base: apiBase,
+            base_url: apiBase,
             ignored: ignored,
             aspect_ratio: aspectRatio,
             ...(mcpTools && mcpTools.length > 0 ? { tools: mcpTools } : {}),
@@ -2870,7 +2870,7 @@ async function hide_sidebar(remove_shown=false) {
     chat.classList.remove("hidden");
     logStorage.classList.add("hidden");
     await hide_settings();
-    if (window.location.hash.endsWith("#menu") || window.location.pathname.endsWith("#settings")) {
+    if (window.location.hash.endsWith("#menu") || window.location.hash.endsWith("#settings")) {
         history.back();
     }
 }
@@ -2945,30 +2945,31 @@ function open_settings() {
 const register_settings_storage = async () => {
     const optionElements = document.querySelectorAll(optionElementsSelector);
     optionElements.forEach((element) => {
+        const field = element.id == "PuterJS" ? "puter.auth.token" : element.id;
         if (element.type == "textarea") {
             element.addEventListener('input', async (event) => {
-                appStorage.setItem(element.id, element.value);
+                appStorage.setItem(field, element.value);
             });
         } else {
             element.addEventListener('change', async (event) => {
                 switch (element.type) {
                     case "checkbox":
-                        appStorage.setItem(element.id, element.checked);
+                        appStorage.setItem(field, element.checked);
                         break;
                     case "select-one":
-                        appStorage.setItem(element.id, element.value);
+                        appStorage.setItem(field, element.value);
                         break;
                     case "url":
                     case "text":
                     case "number":
-                        appStorage.setItem(element.id, element.value);
+                        appStorage.setItem(field, element.value);
                         break;
                     default:
                         console.warn("Unresolved element type");
                 }
             });
         }
-        if (element.id.endsWith("-api_key") || element.id === "puter.auth.token") {
+        if (element.id.endsWith("-api_key")) {
             element.addEventListener('focus', async (event) => {
                 if (element.dataset.value) {
                     element.value = element.dataset.value
@@ -3110,7 +3111,8 @@ async function load_settings(provider_options) {
 const load_settings_storage = async () => {
     const optionElements = document.querySelectorAll(optionElementsSelector);
     optionElements.forEach((element) => {
-        value = appStorage.getItem(element.id);
+        const field = element.id == "PuterJS" ? "puter.auth.token" : element.id;
+        let value = appStorage.getItem(field);
         if (value == null && element.dataset.value) {
             value = element.dataset.value;
         }
@@ -3126,7 +3128,7 @@ const load_settings_storage = async () => {
                 case "text":
                 case "number":
                 case "textarea":
-                    if (element.id.endsWith("-api_key") || element.id === "puter.auth.token") {
+                    if (element.id.endsWith("-api_key")) {
                         element.placeholder = value && value.length >= 22 ? (value.substring(0, 12)+"*".repeat(12)+value.substring(value.length-12)) : "*".repeat(value ? value.length : 0);
                         element.dataset.value = value;
                     } else {
@@ -3307,17 +3309,22 @@ chatPrompt.addEventListener("input", function() {
 window.addEventListener("hashchange", async (event) => {
     iframe_container.classList.add("hidden");
     iframe.src = "";
-    const conversation_id = window.location.hash.replace("#", "");
-    if (conversation_id == "menu" || conversation_id == "settings") {
-        if (conversation_id == "settings") {
+    const locationHash = window.location.hash.substring(1);
+    
+    if (locationHash == "login") {
+        window.location.href='https://g4f.dev/members?redirect='+encodeURIComponent(location.href.split('#')[0])+'&conversation='+encodeURIComponent(window.conversation_id);
+        return;
+    }
+    if (locationHash == "menu" || locationHash == "settings") {
+        if (locationHash == "settings") {
             open_settings();
         }
         return;
     }
     hide_sidebar(true);
-    if (conversation_id && conversation_id != "new") {
-        window.conversation_id = conversation_id;
-        set_conversation(conversation_id);
+    if (locationHash && locationHash != "new") {
+        window.conversation_id = locationHash;
+        set_conversation(locationHash);
     } else {
         window.conversation_id = generateUUID();
         new_conversation();
@@ -3505,7 +3512,7 @@ window.addEventListener('pywebviewready', async function() {
 });
 
 window.addEventListener("load", (event) => {
-    if (!window.location.hash.replace("#", "")) {
+    if (!window.location.hash.substring(1)) {
         render_startup_questions();
     }
 });
@@ -3513,7 +3520,7 @@ window.addEventListener("load", (event) => {
 async function on_load() {
     translationSnipptes.forEach((snippet)=>this.framework.translate(snippet));
     count_input();
-    const locationHash = window.location.hash.replace("#", "");
+    const locationHash = window.location.hash.substring(1);
     if (locationHash == "settings") {
         open_settings();
         await load_conversations();
@@ -3707,7 +3714,6 @@ function load_provider_login_urls(providersListContainer, providers = []) {
         providerBox.addEventListener('mouseenter', checkStatus);
         const label = provider.label || provider.name;
         childs = childs.map((child) => `${child}-api_key`).join(" ");
-        const input_id = provider.name == "PuterJS" ? "puter.auth.token" : `${provider.name}-api_key`;
         const login_provider = provider.name.replace("AI", "").toLowerCase();
         let oauthButton = "";
         
@@ -3721,9 +3727,9 @@ function load_provider_login_urls(providersListContainer, providers = []) {
             : (provider.login_url ? `<a href="${framework.escape(provider.login_url)}" target="_blank" title="${framework.trans_escape("Login to")} ${framework.escape(label)}">${framework.trans_escape('Get API key')}</a>` : "");
         
         providerBox.innerHTML = `
-            <label for="${input_id}" class="label" title="">${framework.escape(label)}:</label>
+            <label for="${provider.name}" class="label" title="">${framework.escape(label)}:</label>
         ` + (oauthButton || (apiKeyLink ? `
-            <input type="text" id="${input_id}" name="${provider.name}[api_key]" class="${childs}" placeholder="api_key" autocomplete="off" data-provider="${provider.name}"/>
+            <input type="text" id="${provider.name}" name="${provider.name}[api_key]" class="${childs}" placeholder="api_key" autocomplete="off" data-provider="${provider.name}"/>
         ` + apiKeyLink : ""));
 
         providerBox.addEventListener("click", () => {
@@ -4777,8 +4783,28 @@ async function get_quota(provider) {
     }
     const url = `${framework.backendUrl}/backend-api/v2/quota/${provider}`;
     const api_key = get_api_key_by_provider(provider, true);
-    response = await fetch(url, { method: 'GET', headers: api_key ? {"x-api-key": api_key} : {} });
-    return response.ok ? response.json() : undefined;
+    const response = await fetch(url, { method: 'GET', headers: api_key ? {"x-api-key": api_key} : {} });
+    let data;
+    try {
+        data = await response.json();
+    } catch (e) {
+        add_error(e, true);
+        return;
+    }
+    if (response.status == 401 || (data.error && data.error.code == 401)) {
+        let input = document.querySelector(`.${provider}-api_key`);
+        if (!input) {
+            input = document.getElementById(`${provider}-api_key`);
+        }
+        console.warn("Unauthorized access for provider:", provider);
+        if (input) {
+            input.value = "";
+            input.dataset.value = "";
+            appStorage.removeItem(input.id);
+            input.placeholder = framework.translate("Invalid API key");
+        }
+    }
+    return response.ok ? data : undefined;
 }
 async function refresh_models(provider) {
     let models = appStorage.getItem(`${provider}:models`);
@@ -6246,7 +6272,7 @@ function handleCloudSyncCallback() {
         if (openSettings) {
             setTimeout(() => {
                 open_settings();
-                const cloudSyncTab = document.querySelector('.settings-tab[data-tab="cloudsync"]');
+                const cloudSyncTab = document.querySelector(`.settings-tab[data-tab="${hashParams.get("tab")}"]`);
                 if (cloudSyncTab) cloudSyncTab.click();
             }, 100);
         }
