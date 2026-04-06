@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>GPT4Free - Free Access to AI Power</title>
+    <title>GPT4Free - Next Gen AI Access</title>
 
     <meta name="description" content="GPT4Free offers free, fast, and unrestricted access to powerful AI models with open-source API endpoints, chat demos, and developer resources." />
     <meta name="keywords" content="GPT4Free, free AI, AI chatbot, GPT-5, DeepSeek, Claude, Gwmini, chat API, open source AI, AI tools, GPT4Free.js, AI projects" />
@@ -11,7 +11,7 @@
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="GPT4Free - Free Access to AI Power" />
+    <meta property="og:title" content="GPT4Free - Next Gen AI Access" />
     <meta property="og:description" content="Access powerful AI models for free with GPT4Free. Open-source APIs, chat demos, and docs to get you started." />
     <meta property="og:url" content="https://g4f.dev/" />
     <meta property="og:site_name" content="GPT4Free" />
@@ -19,7 +19,7 @@
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="GPT4Free - Free Access to AI Power" />
+    <meta name="twitter:title" content="GPT4Free - Next Gen AI Access" />
     <meta name="twitter:description" content="Access powerful AI models for free with GPT4Free. Open-source APIs, chat demos, and docs." />
     <meta name="twitter:image" content="https://g4f.dev/dist/img/g4f-180x180.png" />
 
@@ -32,291 +32,774 @@
     <link rel="manifest" href="dist/img/site.webmanifest" />
 
     <style>
-        :root {
-            --primary: #6e48aa;
-            --secondary: #9d50bb;
-            --accent: #4776E6;
-            --dark: #1a1a2e;
-            --light: #f8f9fa;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        * {
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, var(--dark), #16213e);
-            color: var(--light);
-            min-height: 100vh;
+            box-sizing: border-box;
         }
-        
-        .navbar {
-            background: rgba(26, 26, 46, 0.8);
-            backdrop-filter: blur(10px);
-            padding: 1rem 2rem;
+
+        :root {
+            --primary: #00f0ff;
+            --secondary: #7b2fff;
+            --accent: #ff00aa;
+            --dark: #030014;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: var(--dark);
+            color: #fff;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Animated Grid Background */
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            background-image: 
+                linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        /* Floating Orbs */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .orb-1 {
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(123, 47, 255, 0.4) 0%, transparent 70%);
+            top: -200px;
+            left: -200px;
+            animation-delay: 0s;
+        }
+
+        .orb-2 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(0, 240, 255, 0.3) 0%, transparent 70%);
+            top: 50%;
+            right: -200px;
+            animation-delay: -7s;
+        }
+
+        .orb-3 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(255, 0, 170, 0.3) 0%, transparent 70%);
+            bottom: -100px;
+            left: 30%;
+            animation-delay: -14s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(30px, -30px) scale(1.05); }
+            50% { transform: translate(-20px, 20px) scale(0.95); }
+            75% { transform: translate(20px, 30px) scale(1.02); }
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 1.5rem 3rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            position: fixed;
-            width: 100%;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-            box-sizing: border-box;
-        }
-        
-        .logo {
-            font-size: 1.8rem;
-            font-weight: 700;
-            background: linear-gradient(to right, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-        
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-        }
-        
-        .nav-links a {
-            color: var(--light);
-            text-decoration: none;
-            font-weight: 500;
+            background: rgba(3, 0, 20, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
             transition: all 0.3s ease;
         }
-        
-        .nav-links a:hover {
-            color: var(--secondary);
+
+        nav.scrolled {
+            padding: 1rem 3rem;
+            background: rgba(3, 0, 20, 0.95);
         }
-        
+
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(0, 240, 255, 0.5);
+            letter-spacing: 2px;
+        }
+
+        .logo span {
+            color: var(--accent);
+            -webkit-text-fill-color: var(--accent);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            position: relative;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: #fff;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .nav-cta {
+            background: linear-gradient(135deg, var(--secondary), var(--accent));
+            padding: 0.7rem 1.8rem;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(123, 47, 255, 0.4);
+        }
+
+        .nav-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 40px rgba(123, 47, 255, 0.6);
+        }
+
+        .nav-cta::after {
+            display: none;
+        }
+
+        /* Hero Section */
         .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             padding: 8rem 2rem 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-content {
             text-align: center;
-            background: url('https://images.unsplash.com/photo-1620712943543-bcc4688e7485?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80') no-repeat center center;
-            background-size: cover;
+            max-width: 1000px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            padding: 0.5rem 1.2rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .hero-badge .dot {
+            width: 8px;
+            height: 8px;
+            background: #00ff88;
+            border-radius: 50%;
+            animation: pulse 2s ease infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7); }
+            50% { opacity: 0.8; box-shadow: 0 0 0 10px rgba(0, 255, 136, 0); }
+        }
+
+        .hero h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            animation: fadeInUp 0.8s ease 0.2s backwards;
+        }
+
+        .hero h1 .gradient-text {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            background-size: 200% 200%;
+            animation: gradientShift 5s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            color: rgba(255, 255, 255, 0.7);
+            max-width: 700px;
+            margin: 0 auto 3rem;
+            animation: fadeInUp 0.8s ease 0.4s backwards;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.8s ease 0.6s backwards;
+        }
+
+        .btn {
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 50px rgba(0, 240, 255, 0.5);
+        }
+
+        .btn-secondary {
+            background: var(--glass);
+            color: #fff;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Stats Section */
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 4rem;
+            padding: 4rem 2rem;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 0.5rem;
+        }
+
+        /* Features Section */
+        .section {
+            padding: 6rem 2rem;
             position: relative;
         }
-        
-        .hero::before {
+
+        .section-header {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 4rem;
+        }
+
+        .section-tag {
+            display: inline-block;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 1rem;
+        }
+
+        .section-header h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .section-header p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.1rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .feature-card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            bottom: 0;
-            background: rgba(26, 26, 46, 0.7);
-            z-index: 0;
-        }
-        
-        .hero-content {
-            position: relative;
-            z-index: 1;
-            max-width: 800px;
-            margin: 0 auto;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
-        .hero iframe {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            left: 0;
-            border: none;
-            top: 0;
-        }
-        
-        h1 {
-            font-size: 3.8rem;
-            margin-bottom: 1rem;
-            font-weight: 800;
-            background: linear-gradient(to right, var(--primary), var(--secondary), var(--accent));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            line-height: 1.1;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-        }
-        
-        .subtitle {
-            font-size: 1.2rem;
-            margin-bottom: 2rem;
-            opacity: 0.9;
+        .feature-card:hover {
+            transform: translateY(-10px);
+            border-color: rgba(0, 240, 255, 0.3);
+            box-shadow: 0 20px 60px rgba(0, 240, 255, 0.1);
         }
 
-        .cta-button {
-            background: linear-gradient(to right, var(--primary), var(--secondary));
-            color: white;
-            border: none;
-            padding: 0.8rem 2.4rem;
-            font-size: 1.1rem;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(123, 47, 255, 0.1));
+            border: 1px solid rgba(0, 240, 255, 0.2);
+        }
+
+        .feature-card h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.3rem;
             font-weight: 600;
-            box-shadow: 0 5px 15px rgba(110, 72, 170, 0.5);
-            text-decoration: none;
-            display: inline-block;
-            margin: 0.4rem 0.6rem;
-            user-select: none;
-        }
-        
-        .cta-button:hover,
-        .cta-button:focus {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 25px rgba(110, 72, 170, 0.8);
-            background: linear-gradient(to right, var(--secondary), var(--accent));
-            outline: none;
+            margin-bottom: 1rem;
         }
 
-        .cta-button:active {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 10px rgba(110, 72, 170, 0.4);
+        .feature-card p {
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.7;
         }
 
-        .feature-card .cta-button {
-            margin-top: 1rem;
-        }
-        
-        .features {
-            padding: 4rem 2rem;
+        /* Models Section */
+        .models-showcase {
             max-width: 1200px;
             margin: 0 auto;
         }
-        
-        .features-grid {
+
+        .model-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 3rem;
+        }
+
+        .model-badge {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            padding: 0.8rem 1.5rem;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .model-badge:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .model-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary);
+        }
+
+        /* Chat Demo */
+        .demo-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .chat-box {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+        }
+
+        .chat-header {
+            padding: 1.5rem 2rem;
+            background: rgba(0, 240, 255, 0.05);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .chat-status .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #00ff88;
+            animation: pulse 2s ease infinite;
+        }
+
+        .chat-messages {
+            min-height: 400px;
+            padding: 2rem;
+        }
+
+        .message {
+            margin-bottom: 1.5rem;
+            animation: fadeInUp 0.4s ease;
+        }
+
+        .message.bot {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .message.bot .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--secondary), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .message.bot .content {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem 1.5rem;
+            border-radius: 0 20px 20px 20px;
+            border: 1px solid var(--glass-border);
+            max-width: 80%;
+        }
+
+        .message.user {
+            margin-left: auto;
+            max-width: 80%;
+        }
+
+        .message.user .content {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(123, 47, 255, 0.2));
+            padding: 1rem 1.5rem;
+            border-radius: 20px 0 20px 20px;
+            margin-left: auto;
+        }
+
+        .chat-input-container {
+            padding: 1.5rem 2rem;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            gap: 1rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            padding: 1rem 1.5rem;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+        }
+
+        .chat-send {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .chat-send:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.4);
+        }
+
+        /* Accessibility Section */
+        .accessibility-cards {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 2rem;
-            margin-top: 3rem;
-        }
-        
-        .feature-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 2rem;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .feature-card:hover {
-            transform: translateY(-10px);
-            background: rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        }
-        
-        .feature-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            color: var(--secondary);
-        }
-        
-        .demo-section {
-            padding: 4rem 2rem;
-            background: rgba(26, 26, 46, 0.5);
-            text-align: center;
-        }
-        
-        .chat-container {
-            max-width: 800px;
-            margin: 2rem auto;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            overflow: hidden;
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .chat-header {
-            padding: 1rem;
-            background: rgba(110, 72, 170, 0.2);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .chat-messages {
-            height: 400px;
-            overflow-y: auto;
-            padding: 1rem;
-            text-align: left;
-        }
-        
-        .message {
-            margin-bottom: 1rem;
-            padding: 2px 1rem;
-            border-radius: 10px;
-            max-width: 70%;
-        }
-        
-        .user-message {
-            background: rgba(110, 72, 170, 0.3);
-            margin-left: auto;
-            border-bottom-right-radius: 0;
-        }
-        
-        .bot-message {
-            background: rgba(255, 255, 255, 0.1);
-            border-bottom-left-radius: 0;
-        }
-        
-        .chat-input {
-            display: flex;
-            padding: 1rem;
-            background: rgba(26, 26, 46, 0.7);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .chat-input input {
-            flex: 1;
-            padding: 0.8rem 1rem;
-            border: none;
-            border-radius: 50px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            outline: none;
-            width: calc(100% - 60px);
-        }
-        
-        .chat-input button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 0 1.5rem;
-            margin-left: 1rem;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .chat-input button:hover {
-            background: var(--secondary);
-        }
-        
-        footer {
-            text-align: center;
-            padding: 2rem;
-            background: rgba(26, 26, 46, 0.8);
-            margin-top: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
+        .access-card {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.05), rgba(123, 47, 255, 0.05));
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .access-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+        }
+
+        .access-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(123, 47, 255, 0.1));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .access-card h3 {
+            font-family: 'Orbitron', sans-serif;
+            margin-bottom: 1rem;
+        }
+
+        .access-card p {
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 1.5rem;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            padding: 8rem 2rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .cta-box {
+            max-width: 900px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, rgba(123, 47, 255, 0.2), rgba(0, 240, 255, 0.1));
+            border: 1px solid rgba(123, 47, 255, 0.3);
+            border-radius: 30px;
+            padding: 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-box::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 240, 255, 0.1) 0%, transparent 50%);
+            animation: rotate 30s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .cta-box h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .cta-box p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        /* Footer */
+        footer {
+            padding: 4rem 2rem 2rem;
+            border-top: 1px solid var(--glass-border);
+            text-align: center;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.6);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary);
+        }
+
+        .footer-copy {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
         @media (max-width: 768px) {
-            h1 {
-                font-size: 2.5rem;
+            nav {
+                padding: 1rem 1.5rem;
             }
-            
+
             .nav-links {
                 display: none;
             }
-            
+
             .hero {
-                padding: 6rem 1rem 3rem;
+                padding: 6rem 1.5rem 3rem;
             }
 
-            .hero-content {
-                max-width: 95%;
+            .stats {
+                gap: 2rem;
             }
 
-            .cta-button {
-                max-width: 300px;
-                margin: 0.6rem auto;
+            .stat-number {
+                font-size: 2.5rem;
             }
         }
     </style>
@@ -353,150 +836,279 @@
           }
         }
       ]
-    }
+        }
     </script>
 </head>
 <body class="translate">
-    <header role="banner" class="navbar" aria-label="Primary Navigation">
-        <div class="logo" tabindex="0" aria-label="GPT4Free logo">G4F</div>
-        <nav class="nav-links" role="navigation" aria-label="Main menu">
+    <!-- Background Effects -->
+    <div class="bg-grid"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <!-- Navigation -->
+    <nav id="navbar">
+        <div class="logo">G4<span>F</span></div>
+        <div class="nav-links">
             <a href="#features">Features</a>
-            <a href="#accessibility" aria-label="Navigate to AI accessibility tools section">AI for Everyone</a>
-            <a href="#demo">Try It</a>
-            <a href="#about">About</a>
+            <a href="#models">Models</a>
+            <a href="#accessibility">Accessibility</a>
+            <a href="#demo">Demo</a>
             <a href="/docs/">Docs</a>
-            <a href="/chat/">Chat</a>
-            <a href="/members.html">Members</a>
-            <a href="/manifesto">Manifesto</a>
-            <a href="https://github.com/xtekky/gpt4free" target="_blank" rel="noopener noreferrer">GitHub</a>
-        </nav>
-    </header>
+            <a href="/chat/" class="nav-cta">Get Started</a>
+        </div>
+    </nav>
 
-    <main>
-        <section class="hero" aria-label="Hero section">
-            <iframe src="background.html" title="Dynamic AI background animation" aria-hidden="true" tabindex="-1"></iframe>
-            <form action="home.html" method="get" aria-labelledby="hero-heading hero-subtitle">
-                <div class="hero-content">
-                    <h1 id="hero-heading">Unleash AI Power For Free</h1>
-                    <p id="hero-subtitle" class="subtitle">
-                        GPT4Free provides free access to powerful AI models without compromising on quality or performance.
-                    </p>
-                    <nav class="button-group" role="navigation" aria-label="Primary call to action links">
-                        <a href="home.html" class="cta-button" role="button">🔑 Login Page</a>
-                        <a href="/members.html" class="cta-button" role="button">👤 Members Area</a>
-                        <a href="/chat/pro.html" class="cta-button" role="button">🎬 GPT4Free.js</a>
-                        <a href="/chat/" class="cta-button" role="button">💬 Open Chat</a>
-                        <a href="/docs/" class="cta-button" role="button">📄 Documentation</a>
-                    </nav>
-                </div>
-            </form>
-        </section>
-
-        <section class="features" id="features" aria-labelledby="features-heading">
-            <h2 id="features-heading">Why Choose GPT4Free?</h2>
-            <p>Experience cutting-edge AI technology without the price tag</p>
-            <div class="features-grid">
-                <article class="feature-card" role="region" aria-labelledby="feature-powerful">
-                    <div class="feature-icon" aria-hidden="true">🚀</div>
-                    <h3 id="feature-powerful">Powerful Models</h3>
-                    <p>Access to GPT-5 level AI models completely free of charge with no hidden fees.</p>
-                </article>
-
-                <article class="feature-card" role="region" aria-labelledby="feature-no-restrictions">
-                    <div class="feature-icon" aria-hidden="true">🔓</div>
-                    <h3 id="feature-no-restrictions">No Restrictions</h3>
-                    <p>No paywalls, no usage limits - just pure AI power at your fingertips.</p>
-                </article>
-
-                <article class="feature-card" role="region" aria-labelledby="feature-fast">
-                    <div class="feature-icon" aria-hidden="true">⚡</div>
-                    <h3 id="feature-fast">Lightning Fast</h3>
-                    <p>Optimized for speed to deliver responses in seconds, not minutes.</p>
-                </article>
-
-                <article class="feature-card" role="region" aria-labelledby="feature-api">
-                    <div class="feature-icon" aria-hidden="true">🔌</div>
-                    <h3 id="feature-api">API Access</h3>
-                    <p>Easy integration with your projects through our simple API endpoints.</p>
-                </article>
-
-                <article class="feature-card" role="region" aria-labelledby="feature-privacy">
-                    <div class="feature-icon" aria-hidden="true">🛡️</div>
-                    <h3 id="feature-privacy">Privacy Focused</h3>
-                    <p>We don't store your conversations or sell your data - your privacy matters.</p>
-                </article>
-
-                <article class="feature-card" role="region" aria-labelledby="feature-open-source">
-                    <div class="feature-icon" aria-hidden="true">🌎</div>
-                    <h3 id="feature-open-source">Open Source</h3>
-                    <p>Transparent, community-driven development you can trust and contribute to.</p>
-                </article>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="dot"></span>
+                Now Free & Unlimited
             </div>
-        </section>
-
-        <section class="features" id="accessibility" aria-labelledby="accessibility-heading">
-            <h2 id="accessibility-heading">AI for Everyone</h2>
-            <p>Inclusive AI tools designed to help everyone access AI technology</p>
-            <div class="features-grid">
-                <article class="feature-card" role="region" aria-labelledby="feature-screen-reader">
-                    <div class="feature-icon" aria-hidden="true">🗣️</div>
-                    <h3 id="feature-screen-reader">Screen Reader Chat</h3>
-                    <p>AI chat optimized for screen readers and people with visual impairments, featuring enhanced accessibility.</p>
-                    <a href="/chat/sr.html" class="cta-button" role="button">Open Screen Reader Chat</a>
-                </article>
-
-                <article class="feature-card" role="region" aria-labelledby="feature-mute">
-                    <div class="feature-icon" aria-hidden="true">✍️</div>
-                    <h3 id="feature-mute">Speech Assistant</h3>
-                    <p>Text-to-speech tool designed for people who are non-verbal or have speech disabilities, helping them communicate with AI.</p>
-                    <a href="/apps/mute.html" class="cta-button" role="button">Open Speech Assistant</a>
-                </article>
-
-                <article class="feature-card" role="region" aria-labelledby="feature-voice">
-                    <div class="feature-icon" aria-hidden="true">🎤</div>
-                    <h3 id="feature-voice">Voice Assistant</h3>
-                    <p>Voice-activated AI assistant for people who are blind or cannot good read write, with speech recognition and audio responses.</p>
-                    <a href="/apps/voice_assistant.html" class="cta-button" role="button">Open Voice Assistant</a>
-                </article>
+            <h1>
+                <span class="gradient-text">Next Generation</span><br>
+                AI Access
+            </h1>
+            <p>Experience the most powerful AI models without barriers. Open-source, unrestricted, and built for everyone.</p>
+            <div class="hero-buttons">
+                <a href="/chat/" class="btn btn-primary">
+                    <span>🚀</span> Start Chatting Free
+                </a>
+                <a href="/docs/" class="btn btn-secondary">
+                    <span>📚</span> View Documentation
+                </a>
             </div>
-        </section>
-
-        <section class="demo-section" id="demo" aria-labelledby="demo-heading">
-            <h2 id="demo-heading">Try It Out</h2>
-            <p>Experience the power of GPT4Free right in your browser</p>
-
-            <section class="chat-container" aria-label="GPT4Free Chat Demo">
-                <header class="chat-header" role="heading" aria-level="3">GPT4Free Chat Demo</header>
-                <div class="chat-messages" role="log" aria-live="polite" aria-relevant="additions">
-                    <div class="message bot-message">
-                        <p>Hello! I'm your GPT4Free assistant. How can I help you today?</p>
-                    </div>
-                </div>
-                <form class="chat-input" role="search" aria-label="Chat input form">
-                    <input type="text" placeholder="Ask me anything..." aria-label="Chat input text" />
-                    <button type="submit" aria-label="Send message">▶</button>
-                </form>
-            </section>
-        </section>
-
-    </main>
-
-    <section class="about" id="about" aria-labelledby="about-heading">
-        <div style="max-width:800px; margin:0 auto; padding:2rem; text-align:center;">
-            <h2 id="about-heading">About GPT4Free</h2>
-            <p>GPT4Free is an open-source project dedicated to providing free access to powerful AI models. Our mission is to democratize AI technology and make it accessible to everyone, regardless of their financial situation.</p>
-            <p>The project is maintained by a community of passionate developers and AI enthusiasts who believe in free and open access to technology.</p>
-            <p style="margin-top:2rem;">
-                <a href="https://github.com/xtekky/gpt4free" style="color: var(--secondary); text-decoration: none; font-weight: 600;" target="_blank" rel="noopener noreferrer nofollow">Contribute on GitHub →</a>
-            </p>
         </div>
     </section>
 
-    <footer role="contentinfo">
-        <p>© 2025 GPT4Free Project. All rights reserved.</p>
-        <p>This is an open-source project not affiliated with OpenAI.</p>
+    <!-- Stats -->
+    <section class="stats">
+        <div class="stat">
+            <div class="stat-number">50M+</div>
+            <div class="stat-label">API Requests</div>
+        </div>
+        <div class="stat">
+            <div class="stat-number">100+</div>
+            <div class="stat-label">AI Models</div>
+        </div>
+        <div class="stat">
+            <div class="stat-number">100%</div>
+            <div class="stat-label">Free Access</div>
+        </div>
+        <div class="stat">
+            <div class="stat-number">24/7</div>
+            <div class="stat-label">Availability</div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="section" id="features">
+        <div class="section-header">
+            <span class="section-tag">// Features</span>
+            <h2>Built for the Future</h2>
+            <p>Cutting-edge technology designed to democratize AI access for developers and users worldwide.</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3>Lightning Fast</h3>
+                <p>Optimized infrastructure delivers responses in milliseconds. No waiting, no buffering—just instant AI power.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔓</div>
+                <h3>Unrestricted Access</h3>
+                <p>No paywalls, no rate limits, no hidden fees. Get full access to premium AI capabilities completely free.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔌</div>
+                <h3>Easy Integration</h3>
+                <p>Simple REST API with SDKs for Python, JavaScript, and more. Integrate AI into your projects in minutes.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🛡️</div>
+                <h3>Privacy First</h3>
+                <p>Your conversations are never stored or shared. Complete privacy with zero data collection.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🌐</div>
+                <h3>Open Source</h3>
+                <p>Fully transparent codebase on GitHub. Audit, contribute, or fork—community driven development.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h3>Multi-Model Support</h3>
+                <p>Access GPT-5, Claude, DeepSeek, Gemini, and more—all through a single unified interface.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Models Section -->
+    <section class="section" id="models">
+        <div class="section-header">
+            <span class="section-tag">// Models</span>
+            <h2>Powered by Leading AI</h2>
+            <p>Access multiple state-of-the-art AI models through our unified API.</p>
+        </div>
+        <div class="models-showcase">
+            <div class="model-badges">
+                <div class="model-badge"><span class="dot"></span> GPT-5</div>
+                <div class="model-badge"><span class="dot"></span> Claude 4.6</div>
+                <div class="model-badge"><span class="dot"></span> DeepSeek V3</div>
+                <div class="model-badge"><span class="dot"></span> Gemini Pro</div>
+                <div class="model-badge"><span class="dot"></span> Kimi K2.5</div>
+                <div class="model-badge"><span class="dot"></span> Grok</div>
+                <div class="model-badge"><span class="dot"></span> Mistral</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Accessibility Section -->
+    <section class="section" id="accessibility">
+        <div class="section-header">
+            <span class="section-tag">// Inclusive AI</span>
+            <h2>AI for Everyone</h2>
+            <p>Specialized tools designed to ensure AI accessibility for all users.</p>
+        </div>
+        <div class="accessibility-cards">
+            <div class="access-card">
+                <div class="access-icon">🗣️</div>
+                <h3>Screen Reader Chat</h3>
+                <p>Fully accessible AI chat optimized for screen readers and visual impairments.</p>
+                <a href="/chat/sr.html" class="btn btn-secondary">Try Now</a>
+            </div>
+            <div class="access-card">
+                <div class="access-icon">✍️</div>
+                <h3>Speech Assistant</h3>
+                <p>Text-to-speech tool for non-verbal communication with AI assistants.</p>
+                <a href="/apps/mute.html" class="btn btn-secondary">Try Now</a>
+            </div>
+            <div class="access-card">
+                <div class="access-icon">🎤</div>
+                <h3>Voice Assistant</h3>
+                <p>Hands-free AI interaction with speech recognition and audio responses.</p>
+                <a href="/apps/voice_assistant.html" class="btn btn-secondary">Try Now</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Section -->
+    <section class="section" id="demo">
+        <div class="section-header">
+            <span class="section-tag">// Live Demo</span>
+            <h2>Try It Now</h2>
+            <p>Experience the power of GPT4Free directly in your browser.</p>
+        </div>
+        <div class="demo-container">
+            <div class="chat-box">
+                <div class="chat-header">
+                    <div class="chat-status">
+                        <span class="dot"></span>
+                        Online
+                    </div>
+                    <span>G4F Assistant</span>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message bot">
+                        <div class="avatar">🤖</div>
+                        <div class="content">
+                            Hello! I'm your G4F assistant. Ask me anything and I'll help you explore the power of free AI!
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input-container">
+                    <input type="text" class="chat-input" id="chatInput" placeholder="Type your message..." />
+                    <button class="chat-send" onclick="sendMessage()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="cta-box">
+            <h2>Ready to Unlock AI Power?</h2>
+            <p>Join millions of users accessing cutting-edge AI models for free. No signup required.</p>
+            <div class="cta-buttons">
+                <a href="/chat/" class="btn btn-primary">🚀 Start for Free</a>
+                <a href="https://github.com/xtekky/gpt4free" target="_blank" class="btn btn-secondary">
+                    <span>⭐</span> Star on GitHub
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="/docs/">Documentation</a>
+                <a href="/chat/">Chat</a>
+                <a href="/members.html">Members</a>
+                <a href="/manifesto">Manifesto</a>
+                <a href="https://github.com/xtekky/gpt4free" target="_blank">GitHub</a>
+                <a href="https://github.com/xtekky/gpt4free/discussions" target="_blank">Community</a>
+            </div>
+            <p class="footer-copy">© 2025 GPT4Free Project. Open source and free forever.</p>
+        </div>
     </footer>
 
+    <script>
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                nav.classList.add('scrolled');
+            } else {
+                nav.classList.remove('scrolled');
+            }
+        });
+
+        // Simple chat demo functionality
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const messages = document.getElementById('chatMessages');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Add user message
+            const userDiv = document.createElement('div');
+            userDiv.className = 'message user';
+            userDiv.innerHTML = `<div class="content">${message}</div>`;
+            messages.appendChild(userDiv);
+            
+            input.value = '';
+            
+            // Simulate bot response
+            setTimeout(async () => {
+                const response = await framework.query(message);
+                const botMessage = document.createElement("div");
+                const botDiv = document.createElement('div');
+                botDiv.className = 'message bot';
+                botDiv.innerHTML = `
+                    <div class="avatar">🤖</div>
+                    <div class="content">
+                        ${framework.markdown(await response.text())}
+                    </div>
+                `;
+                messages.appendChild(botDiv);
+                messages.scrollTop = messages.scrollHeight;
+            }, 100);
+            
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        // Enter key to send
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+    
     <script>
         document.addEventListener("DOMContentLoaded", async () => {
             const demo = document.getElementById("demo");
@@ -520,5 +1132,5 @@
             });
         });
     </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e7efdba6a1a4795',t:'MTc3NTQ1OTYxOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
