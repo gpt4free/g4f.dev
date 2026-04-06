@@ -547,7 +547,7 @@ async function showErrorPopup(errorMessage) {
     const HOUR_IN_MS = 3600000; // 1 hour in milliseconds
     const SHOW_PROBABILITY = 0.3; // 30% chance to show
     
-    const lastShown = localStorage.getItem('errorPopupLastShown');
+    const lastShown = appStorage.getItem('errorPopupLastShown');
     const now = Date.now();
     
     // Show if: never shown before OR (more than 1 hour since last shown AND random chance)
@@ -560,7 +560,7 @@ async function showErrorPopup(errorMessage) {
     }
     
     // Mark as shown
-    localStorage.setItem('errorPopupLastShown', now.toString());
+    appStorage.setItem('errorPopupLastShown', now.toString());
     
     // Remove any existing error popup
     const existingOverlay = document.querySelector('.error-popup-overlay');
