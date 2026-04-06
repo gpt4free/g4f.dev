@@ -1,0 +1,848 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instant Website Creator - Build Websites with AI in Seconds</title>
+    <meta name="description" content="Create stunning websites instantly with AI. No coding required. Powered by GPT4Free with MCP tools enabled.">
+    <meta property="og:title" content="Instant Website Creator 🚀">
+    <meta property="og:description" content="Build any website in seconds with AI. Free, no signup required.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg/1f680.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --accent: #06b6d4;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --glass: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        /* Animated background particles */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(99, 102, 241, 0.4);
+            border-radius: 50%;
+            animation: float 15s infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100vh) rotate(720deg); opacity: 0; }
+        }
+
+        /* Navbar */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 5%;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: white;
+        }
+
+        .badge {
+            background: linear-gradient(135deg, var(--secondary), var(--accent));
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 8rem 5% 5rem;
+            position: relative;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #fff 0%, #a5b4fc 50%, #c084fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: rgba(255, 255, 255, 0.7);
+            max-width: 600px;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        /* Input Section */
+        .creator-box {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 800px;
+            margin: 2rem auto;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .input-group textarea {
+            width: 100%;
+            padding: 1.5rem;
+            padding-right: 140px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            color: white;
+            font-size: 1rem;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 120px;
+            transition: all 0.3s;
+        }
+
+        .input-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+        }
+
+        .input-group textarea::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .create-btn {
+            position: absolute;
+            right: 12px;
+            bottom: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            color: white;
+            padding: 0.875rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s;
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+
+        .create-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+        }
+
+        .create-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Settings Alert */
+        .settings-alert {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.1));
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .settings-alert svg {
+            flex-shrink: 0;
+            color: #f59e0b;
+        }
+
+        .settings-alert h4 {
+            color: #fbbf24;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        .settings-alert p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        /* Examples */
+        .examples {
+            margin-top: 1.5rem;
+        }
+
+        .examples-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 0.75rem;
+        }
+
+        .example-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .example-chip {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .example-chip:hover {
+            background: rgba(99, 102, 241, 0.3);
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        /* Features Grid */
+        .features {
+            padding: 5rem 5%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .section-header h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .section-header p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.1rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+            transform: scaleX(0);
+            transition: transform 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .feature-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .feature-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-card p {
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.6;
+        }
+
+        /* Stats Section */
+        .stats {
+            background: rgba(255, 255, 255, 0.03);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 4rem 5%;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .stat-item h3 {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-item p {
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 0.5rem;
+        }
+
+        /* CTA Section */
+        .cta {
+            padding: 6rem 5%;
+            text-align: center;
+        }
+
+        .cta-box {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(236, 72, 153, 0.2));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 30px;
+            padding: 4rem 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-box::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .cta-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .cta p {
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .cta-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: white;
+            color: var(--dark);
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .cta-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 3rem 5%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .input-group textarea {
+                padding-right: 1.5rem;
+                padding-bottom: 4rem;
+            }
+
+            .create-btn {
+                right: 12px;
+                bottom: 12px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(99, 102, 241, 0.3);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading p {
+            margin-top: 1.5rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transform: translateX(400px);
+            transition: transform 0.3s;
+            z-index: 10000;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Particles Background -->
+    <div class="particles" id="particles"></div>
+
+    <!-- Loading Screen -->
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Opening AI Website Builder...</p>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <div class="toast-icon">✓</div>
+        <span>Opening g4f.dev with your prompt...</span>
+    </div>
+
+    <!-- Navbar -->
+    <nav>
+        <div class="logo">
+            <span>⚡</span>
+            <span>InstantSite AI</span>
+        </div>
+        <div class="nav-links">
+            <a href="#how-it-works">How it Works</a>
+            <a href="#features">Features</a>
+            <span class="badge">Free Forever</span>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-badge">
+            <span>🔥</span>
+            <span>Powered by GPT4Free with MCP Tools</span>
+        </div>
+        
+        <h1>Build Any Website<br>in Seconds with AI</h1>
+        
+        <p>Describe your dream website, and our AI will create it instantly. No coding, no signup, completely free. Just pure magic.</p>
+
+        <div class="creator-box">
+            <!-- Settings Alert -->
+            <div class="settings-alert">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <div>
+                    <h4>⚠️ Important: Enable MCP Tools in Settings</h4>
+                    <p>After clicking "Create Website", go to Settings (⚙️) in g4f.dev and enable <strong>MCP Tools</strong> to generate files and create websites instantly.</p>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <textarea 
+                    id="promptInput" 
+                    placeholder="Describe your website... (e.g., 'Create a modern portfolio website for a photographer with gallery, about section, and contact form')"
+                ></textarea>
+                <button class="create-btn" onclick="createWebsite()">
+                    <span>Create Website</span>
+                    <span>🚀</span>
+                </button>
+            </div>
+
+            <div class="examples">
+                <div class="examples-title">Try these examples:</div>
+                <div class="example-chips">
+                    <button class="example-chip" onclick="setExample('Create a landing page for a coffee shop with menu, location, and online ordering')">☕ Coffee Shop</button>
+                    <button class="example-chip" onclick="setExample('Build a personal portfolio with dark theme, skills section, and project gallery')">💼 Portfolio</button>
+                    <button class="example-chip" onclick="setExample('Make an e-commerce site for sneakers with product cards and shopping cart')">👟 Sneaker Store</button>
+                    <button class="example-chip" onclick="setExample('Create a dashboard for a SaaS app with analytics, charts, and user stats')">📊 Dashboard</button>
+                    <button class="example-chip" onclick="setExample('Design a wedding invitation website with RSVP form and photo gallery')">💒 Wedding Site</button>
+                    <button class="example-chip" onclick="setExample('Build a restaurant website with online menu, reservation system, and reviews')">🍽️ Restaurant</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="stats">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <h3>0</h3>
+                <p>Lines of Code Needed</p>
+            </div>
+            <div class="stat-item">
+                <h3>30s</h3>
+                <p>Average Build Time</p>
+            </div>
+            <div class="stat-item">
+                <h3>100%</h3>
+                <p>Free Forever</p>
+            </div>
+            <div class="stat-item">
+                <h3>∞</h3>
+                <p>Possibilities</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features" id="features">
+        <div class="section-header">
+            <h2>Why InstantSite AI?</h2>
+            <p>The fastest way to go from idea to live website</p>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3>Instant Generation</h3>
+                <p>Describe what you want, and AI builds it in real-time. No waiting, no complex setup.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🎨</div>
+                <h3>Beautiful Design</h3>
+                <p>AI creates modern, responsive designs that look professional on any device.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🔧</div>
+                <h3>MCP Tools Enabled</h3>
+                <p>Advanced tools allow AI to generate actual files, code, and deployable websites.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">💰</div>
+                <h3>Completely Free</h3>
+                <p>Powered by GPT4Free (g4f.dev). No credit card, no subscription, no limits.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📱</div>
+                <h3>Mobile Ready</h3>
+                <p>Every generated website is automatically responsive and works perfectly on phones.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🚀</div>
+                <h3>One-Click Deploy</h3>
+                <p>Get shareable links instantly. Show your creation to the world immediately.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta">
+        <div class="cta-box">
+            <div class="cta-content">
+                <h2>Ready to Build Something Amazing?</h2>
+                <p>Join thousands of creators building websites with AI. No signup required.</p>
+                <a href="#" class="cta-btn" onclick="scrollToTop(); return false;">
+                    <span>Start Creating Now</span>
+                    <span>→</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>Powered by <a href="https://g4f.dev" target="_blank">GPT4Free</a> • Built with ❤️ for the community</p>
+        <p style="margin-top: 0.5rem; font-size: 0.8rem;">Don't forget to enable MCP Tools in settings!</p>
+    </footer>
+
+    <script>
+        // Create particles
+        const particlesContainer = document.getElementById('particles');
+        for (let i = 0; i < 50; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 15 + 's';
+            particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+            particlesContainer.appendChild(particle);
+        }
+
+        // Set example text
+        function setExample(text) {
+            document.getElementById('promptInput').value = text;
+            document.getElementById('promptInput').focus();
+        }
+
+        // Create website function
+        function createWebsite() {
+            const prompt = document.getElementById('promptInput').value.trim();
+            
+            if (!prompt) {
+                document.getElementById('promptInput').focus();
+                document.getElementById('promptInput').style.borderColor = '#ef4444';
+                setTimeout(() => {
+                    document.getElementById('promptInput').style.borderColor = '';
+                }, 1000);
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loading').classList.add('active');
+
+            // Prepare the enhanced prompt for g4f.dev
+            const enhancedPrompt = `Create a complete, modern HTML website for: ${prompt}
+
+Requirements:
+- Use modern HTML5, CSS3 with Tailwind-like styling
+- Make it fully responsive and mobile-friendly
+- Include engaging animations and transitions
+- Use a cohesive color scheme
+- Make it production-ready and visually stunning
+- Include all necessary sections based on the website type
+- Add interactive elements where appropriate
+
+Please generate the complete HTML code in a single file.`;
+
+            // Encode for URL
+            const encodedPrompt = encodeURIComponent(enhancedPrompt);
+            
+            // Show toast
+            setTimeout(() => {
+                document.getElementById('loading').classList.remove('active');
+                document.getElementById('toast').classList.add('show');
+                
+                // Open g4f.dev with prompt
+                window.open(`https://g4f.dev/chat/?prompt=${encodedPrompt}`, '_blank');
+                
+                // Hide toast after 3 seconds
+                setTimeout(() => {
+                    document.getElementById('toast').classList.remove('show');
+                }, 3000);
+            }, 1500);
+        }
+
+        // Scroll to top
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setTimeout(() => {
+                document.getElementById('promptInput').focus();
+            }, 500);
+        }
+
+        // Enter key to submit
+        document.getElementById('promptInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.metaKey) {
+                createWebsite();
+            }
+        });
+
+        // Smooth scroll for nav links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e8028478f308eb4',t:'MTc3NTQ3MTg0Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
