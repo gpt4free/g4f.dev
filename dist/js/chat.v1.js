@@ -589,7 +589,10 @@ async function showErrorPopup(errorMessage) {
         hintsHtml = generateFallbackHints();
     }
 
-    const translatedResponse = framework.query(`Translate this document to (${navigator.language}):\n\`\`\`html\n${hintsHtml}\`\`\``)
+    let translatedResponse;
+    if (!navigator.language.startsWith('en')) {
+        translatedResponse = framework.query(`Translate this document to (${navigator.language}):\n\`\`\`html\n${hintsHtml}\`\`\``)
+    }
     
     // Create popup
     const popup = document.createElement('div');
@@ -616,11 +619,11 @@ async function showErrorPopup(errorMessage) {
     popup.innerHTML = hintsTemplate(hintsHtml);
     updateErrorMessage();
 
+    if (translatedResponse)
     translatedResponse.then(r=>r.text())
         .then(t=>framework.filterMarkdown(t, 'html', t))
         .then(t=>window.sanitizeHtml(t, framework.sanitizedConfig()))
         .then(t=>(popup.innerHTML=hintsTemplate(t)) && updateErrorMessage())
-    
     
     // Add to document
     document.body.appendChild(overlay);
@@ -3369,7 +3372,7 @@ Example:
     ]
 }
 \`\`\``;
-    if (appStorage.getItem(framework.translationKey)) {
+    if (appStorage.getItem(framework.translationKey) && navigator.language.startsWith("en") == false) {
         prompt += `\nRespond in ${navigator.language}.`;
     }
     try {
@@ -3408,7 +3411,7 @@ async function load_follow_up_questions(messages, new_response) {
   ]
 }
 \`\`\``;
-    if (appStorage.getItem(framework.translationKey)) {
+    if (appStorage.getItem(framework.translationKey) && navigator.language.startsWith("en") == false) {
         prompt += `\n\nRespond in language ${navigator.language}.`;
     }
     const new_messages = [{role: "assistant", content: new_response}, {role: "user", content: prompt}];
@@ -5106,6 +5109,9 @@ async function get_recognition_language() {
     const lang = document.getElementById("recognition-language")?.value;
     if (lang) {
         return lang;
+    }
+    if (navigator.language == "en") {
+        return "en-US";
     }
     let locale = navigator.language;
     if (!locale.includes("-")) {
