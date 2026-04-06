@@ -542,7 +542,7 @@ class PollinationsAI extends Client {
             apiEndpoint: options.apiKey || options.baseUrl ? null : options.apiEndpoint || 'https://text.pollinations.ai/openai',
             imageEndpoint: options.apiKey ? 'https://gen.pollinations.ai/image/{prompt}' : options.imageEndpoint || 'https://image.pollinations.ai/prompt/{prompt}',
             modelsEndpoint: options.modelsEndpoint || 'https://gen.pollinations.ai/text/models',
-            quotaEndpoint: options.quotaEndpoint || (options.apiKey ? 'https://gen.pollinations.ai/account/balance' : 'https://g4f.space/api/pollinations/quota'),
+            quotaEndpoint: options.quotaEndpoint || 'https://g4f.space/api/pollinations/quota',
             imageModelsEndpoint: options.imageModelsEndpoint || options.apiKey ? 'https://gen.pollinations.ai/image/models' : 'https://image.pollinations.ai/models',
             defaultModel: options.defaultModel || 'openai',
             extraBody: options.extraBody,
@@ -565,9 +565,8 @@ class PollinationsAI extends Client {
     }
 
     async checkBalance() {
-        const BALANCE_ENDPOINT = "https://g4f.space/api/pollinations/account/balance";
-        return fetch(BALANCE_ENDPOINT).then(r=>r.json()).then(d=>{
-            console.log(`PollinationsAI balance: ${d.balance}`);
+        return fetch(this.quotaEndpoint).then(r=>r.json()).then(d=>{
+            console.log(`Pollinations balance: ${d.balance}`);
             if (d.balance > 0) {
                 this.baseUrl = 'https://g4f.space/api/pollinations';
                 this.apiEndpoint = `${this.baseUrl}/chat/completions`;
