@@ -22,6 +22,14 @@ function add_error(event, log=false) {
         return;
     }
     let p = document.createElement("p");
+    if (typeof(event) === 'object' && event.srcElement && event.target) {
+        if(event.srcElement == '[object HTMLScriptElement]' && event.target == '[object HTMLScriptElement]'){
+            event.message = 'Error loading script';
+        } else {
+            event.message = 'Event Error - target:' + event.target + ' srcElement:' + event.srcElement;
+        }
+    }
+    event.message = (event.message || "") + JSON.stringify(Object.keys(event));
     if (event.target && (event.target.src || event.target.href)) {
         p.innerText = `Resource failed to load: ${event.target.src || event.target.href}`;
     } else if (event.message) {
