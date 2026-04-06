@@ -538,12 +538,12 @@ class PollinationsAI extends Client {
     constructor(options = {}) {
         super({
             ...options,
-            baseUrl: options.apiKey ? 'https://gen.pollinations.ai/v1' : options.baseUrl || 'https://text.pollinations.ai',
-            apiEndpoint: options.apiKey || options.baseUrl ? null : options.apiEndpoint || 'https://text.pollinations.ai/openai',
-            imageEndpoint: options.apiKey ? 'https://gen.pollinations.ai/image/{prompt}' : options.imageEndpoint || 'https://image.pollinations.ai/prompt/{prompt}',
+            apiKey: options.apiKey || "p" + "k_i0NJnRMi1nHDjerf",
+            baseUrl: options.baseUrl || 'https://gen.pollinations.ai/v1',
+            imageEndpoint: options.imageEndpoint || 'https://gen.pollinations.ai/image/{prompt}',
             modelsEndpoint: options.modelsEndpoint || 'https://gen.pollinations.ai/text/models',
             quotaEndpoint: options.quotaEndpoint || 'https://g4f.space/api/pollinations/quota',
-            imageModelsEndpoint: options.imageModelsEndpoint || options.apiKey ? 'https://gen.pollinations.ai/image/models' : 'https://image.pollinations.ai/models',
+            imageModelsEndpoint: options.imageModelsEndpoint || 'https://gen.pollinations.ai/image/models',
             defaultModel: options.defaultModel || 'openai',
             extraBody: options.extraBody,
             modelAliases: {
@@ -553,9 +553,7 @@ class PollinationsAI extends Client {
                 ...(options.modelAliases || {})
             }
         });
-        if (!options.apiKey) {
-            this.balance = this.checkBalance();
-        }
+        this.balance = this.checkBalance();
     }
 
     async getQuota() {
@@ -630,8 +628,9 @@ class PollinationsAI extends Client {
             this._models = [
                 ...textModels.map(model => {
                     model.id = model.name;
+                    model.label = model.name;
                     if (model.aliases && model.aliases.length > 0) {
-                        model.tags = [`(${model.aliases[0]})`];
+                        model.label += ` (${model.aliases[0]})`;
                         for (const alias of model.aliases) {
                             this.modelAliases[alias] = model.id;
                         }
@@ -647,8 +646,11 @@ class PollinationsAI extends Client {
                 }),
                 ...imageModelsResponse.map(model => {
                     const isVideo = model.output_modalities && model.output_modalities.includes('video');
-                    const modelName = model.name || model
-                    return { id: modelName, label: this.swapAliases[modelName]  || modelName, type: isVideo ? 'video' : 'image', seed: true};
+                    const modelName = model.name || model.id
+                    if (model.input_modalities && model.input_modalities.includes('image')) {
+                        model.vision = true;
+                    }
+                    return { id: modelName, label: this.swapAliases[modelName]  || modelName, type: isVideo ? 'video' : 'image', seed: true, ...model};
                 })
             ];
             return this._models;
