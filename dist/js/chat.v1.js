@@ -5224,7 +5224,7 @@ function hideLog() {
 function logRequestResponse(event, messageId, count=0) {
     const eventType = event.response ? "response" : "request";
     if (eventType == "response") {
-        if (count > 5 && event?.response?.choices && event.response.choices[0] && event.response.choices[0]?.delta?.content) {
+        if (count > 5 && event?.response?.choices && event.response.choices[0]) {
             return;
         }
     }
