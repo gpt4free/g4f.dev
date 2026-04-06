@@ -868,6 +868,25 @@ const register_message_buttons = async () => {
     });
 }
 
+const new_conversation = async (private = false) => {
+    if (window.location.hash) {
+        await clear_conversation();
+        add_url_to_history(private ? "#private" : window.location.pathname);
+    }
+    window.conversation_id = private ? null : generateUUID();
+    document.title = window.title || document.title;
+    document.querySelector(".chat-top-panel .convo-title").innerText = private ? framework.translate("Private Conversation") : framework.translate("New Conversation");
+    
+    suggestions = null;
+    if (chatPrompt) {
+        chatPrompt.value = document.getElementById("systemPrompt")?.value;
+    }
+    load_conversations();
+    hide_sidebar(true);
+    say_hello();
+    render_startup_questions();
+};
+
 const delete_conversations = async () => {
     if (!confirm(framework.translate("Delete all conversations?"))) {
         return;
@@ -2298,25 +2317,6 @@ const set_conversation = async (conversation_id) => {
     play_last_message();
     load_conversations();
     hide_sidebar(true);
-};
-
-const new_conversation = async (private = false) => {
-    if (window.location.hash) {
-        await clear_conversation();
-        add_url_to_history(private ? "#private" : window.location.pathname);
-    }
-    window.conversation_id = private ? null : generateUUID();
-    document.title = window.title || document.title;
-    document.querySelector(".chat-top-panel .convo-title").innerText = private ? framework.translate("Private Conversation") : framework.translate("New Conversation");
-    
-    suggestions = null;
-    if (chatPrompt) {
-        chatPrompt.value = document.getElementById("systemPrompt")?.value;
-    }
-    load_conversations();
-    hide_sidebar(true);
-    say_hello();
-    render_startup_questions();
 };
 
 function merge_messages(message1, message2) {
