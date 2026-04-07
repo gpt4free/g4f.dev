@@ -1370,9 +1370,9 @@
             // Display the redirect target
             try {
                 const targetUrl = new URL(decodeURIComponent(externalRedirect));
-                redirectTarget.textContent = `You will be redirected to: ${targetUrl.origin}`;
+                redirectTarget.textContent = `${framework.translate('You will be redirected to:')} ${targetUrl.origin}`;
             } catch {
-                redirectTarget.textContent = `You will be redirected back to the application.`;
+                redirectTarget.textContent = `${framework.translate('You will be redirected back to the application.')}`;
             }
         }
 
@@ -2015,13 +2015,14 @@
                 const servers = result.servers || [];
                 const existingServer = servers.find(s => 
                     s.base_url === 'https://huggingface.g4f-dev.workers.dev' || 
+                    s.base_url === 'https://router.huggingface.co/v1' || 
                     s.label.toLowerCase().includes('huggingface') ||
                     s.label.toLowerCase().includes('hugging face')
                 );
                 
                 const serverData = {
                     label: 'HuggingFace',
-                    base_url: 'https://huggingface.g4f-dev.workers.dev',
+                    base_url: 'https://router.huggingface.co/v1',
                     api_keys: apiKey,
                     allowed_models: [],
                     is_public: false
@@ -2482,5 +2483,7 @@
 <template>Generating...</template>
 <template>Failed to delete server: {0}</template>
 <template>Validating...</template>
+<template>You will be redirected to:</template>
+<template>You will be redirected back to the application.</template>
 </body>
 </html>

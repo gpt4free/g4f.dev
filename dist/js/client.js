@@ -121,7 +121,10 @@ class Client {
         this.apiEndpoint = options.apiEndpoint || `${this.baseUrl}/chat/completions`;
         this.imageEndpoint = options.imageEndpoint || `${this.baseUrl}/images/generations`;
         this.modelsEndpoint = options.modelsEndpoint || `${this.baseUrl}/models`;
-        this.quotaEndpoint = options.quotaEndpoint || `${this.baseUrl}/quota`;
+        if (!("quotaEndpoint" in options)) {
+            this.quotaEndpoint = `${this.baseUrl}/quota`;
+        }
+        this.quotaEndpoint = options.quotaEndpoint;
         this.defaultModel = options.defaultModel;
         this.useModelName = options.useModelName || false;
         this.apiKey = options.apiKey;
@@ -334,6 +337,10 @@ class Client {
     }
 
     async getQuota() {
+        if (!this.quotaEndpoint) {
+            throw new Error("Quota endpoint is not defined");
+        }
+
         const response = await fetch(this.quotaEndpoint, {
             method: 'GET',
             headers: this.apiKey ? { "Authorization": `Bearer ${this.apiKey}` } : {}
@@ -911,7 +918,7 @@ class HuggingFace extends Client {
             }
         }
         super({
-            baseUrl: 'https://api-inference.huggingface.co/v1',
+            baseUrl: 'https://router.huggingface.co/v1',
             modelAliases: {
                 // Chat //
                 "llama-3": "meta-llama/Llama-3.3-70B-Instruct",
@@ -935,121 +942,9 @@ class HuggingFace extends Client {
                 "sdxl-turbo": "stabilityai/sdxl-turbo",
                 "sd-3.5-large": "stabilityai/stable-diffusion-3.5-large",
             },
-            ...options
+            ...options,
+            quotaEndpoint: options.quotaEndpoint
         });
-        this.providerMapping = {
-            "google/gemma-3-27b-it": {
-                "hf-inference/models/google/gemma-3-27b-it": {
-                    "task": "conversational",
-                    "providerId": "google/gemma-3-27b-it"
-                }
-            }
-        };
-    }
-
-    get models() {
-      return {
-        list: async () => {
-            const response = await fetch("https://huggingface.co/api/models?inference=warm&&expand[]=inferenceProviderMapping");
-            if (!response.ok) {
-              throw new Error(`Failed to fetch models: ${response.status}`);
-            }
-            const data = await response.json();
-            return data
-                .filter(model => 
-                    model.inferenceProviderMapping?.some(provider => 
-                        provider.status === "live" && provider.task === "conversational"
-                    )
-                )
-                .concat(Object.keys(this.providerMapping).map(model => ({
-                    id: model,
-                    type: "chat"
-                })))
-        }
-      };
-    }
-
-    async _getMapping(model) {
-        if (this.providerMapping[model]) {
-            return this.providerMapping[model];
-        }
-        const response = await fetch(`https://huggingface.co/api/models/${model}?expand[]=inferenceProviderMapping`, {
-            headers: this.extraHeaders
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch model mapping: ${response.status}`);
-        }
-
-        const modelData = await response.json();
-        this.providerMapping[model] = modelData.inferenceProviderMapping;
-        return this.providerMapping[model];
-    }
-
-    get chat() {
-        return {
-            completions: {
-                create: async (params) => {
-                    if (!this.apiKey) {
-                        throw new Error("HuggingFace API key is required. Set it in the options or as an environment variable HUGGINGFACE_API_KEY.");
-                    }
-                    let { model, signal, ...options } = params;
-
-                    if (!model) {
-                      model = this.defaultModel;
-                    }
-                    if (this.modelAliases[model]) {
-                      model = this.modelAliases[model];
-                    }
-
-                    // Model resolution would go here
-                    const providerMapping = await this._getMapping(model);
-                    if (!providerMapping) {
-                        throw new Error(`Model is not supported: ${model}`);
-                    }
-
-                    let apiBase = this.apiBase;
-                    for (const providerKey in providerMapping) {
-                        let apiPath;
-                        if (providerKey === "zai-org")
-                            apiPath = "zai-org/api/paas/v4"
-                        else if (providerKey === "novita")
-                            apiPath = "novita/v3/openai";
-                        else if (providerKey === "groq")
-                            apiPath = "groq/openai/v1";
-                        else if (providerKey === "hf-inference")
-                            apiPath = `${providerKey}/models/${model}/v1`;
-                        else
-                            apiPath = `${providerKey}/v1`;
-                        apiBase = `https://router.huggingface.co/${apiPath}`;
-
-                        const task = providerMapping[providerKey].task;
-                        if (task !== "conversational") {
-                            throw new Error(`Model is not supported: ${model} task: ${task}`);
-                        }
-
-                        model = providerMapping[providerKey].providerId;
-                        break;
-                    }
-                    this.logCallback && this.logCallback({request: {baseUrl: apiBase, model, ...options}, type: 'chat'});
-                    const requestOptions = {
-                        method: 'POST',
-                        headers: this.extraHeaders,
-                        body: JSON.stringify({
-                            model,
-                            ...options
-                        }),
-                        signal: signal
-                    };
-                    const response = await fetch(`${apiBase}/chat/completions`, requestOptions);
-                    if (params.stream) {
-                        return this._streamCompletion(response);
-                    } else {
-                        return this._regularCompletion(response);
-                    }
-                }
-            }
-        };
     }
 }
 
