@@ -3450,24 +3450,26 @@ window.addEventListener('DOMContentLoaded', async function () {
     await on_load();
     await on_api();
 
-    let conversation = await get_conversation(window.conversation_id);
-    if (conversation && !conversation.share) {
-        await load_conversation(conversation);
-        await play_last_message();
-        return;
+    if (window.conversation_id) {
+        let conversation = await get_conversation(window.conversation_id);
+        if (conversation && !conversation.share) {
+            await load_conversation(conversation);
+            await play_last_message();
+            return;
+        }
+        const response = await fetch(`${framework.backendUrl}/backend-api/v2/chat/${window.conversation_id}`, {
+            headers: {'accept': 'application/json'},
+        });
+        if (!response.ok) {
+            return await load_conversation(conversation);
+        }
+        conversation = await response.json();
+        if (conversation.id == window.conversation_id) {
+            await save_conversation(conversation);
+            await load_conversations();
+        }
+        await load_conversation(window.conversation_id);
     }
-    const response = await fetch(`${framework.backendUrl}/backend-api/v2/chat/${window.conversation_id}`, {
-        headers: {'accept': 'application/json'},
-    });
-    if (!response.ok) {
-        return await load_conversation(conversation);
-    }
-    conversation = await response.json();
-    if (conversation.id == window.conversation_id) {
-        await save_conversation(conversation);
-        await load_conversations();
-    }
-    await load_conversation(window.conversation_id);
     
     // Set default sidebar state based on screen size
     if (window.innerWidth >= 640) { // 40em = 640px
@@ -6158,8 +6160,7 @@ function getPaBaseUrl() {
 }
 
 async function fetchPaProviders() {
-    const base = getPaBaseUrl() || framework.backendUrl || '';
-    const res = await fetch(`${base}/pa/providers`, { headers: { 'Accept': 'application/json' } });
+    const res = await fetch(`${framework.backendUrl}/pa/providers`, { headers: { 'Accept': 'application/json' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
 }
