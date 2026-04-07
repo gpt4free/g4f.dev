@@ -46,7 +46,7 @@ const translationSnipptes = [
     "Search Off", "Search On", "Recognition On", "Recognition Off", "Delete Conversation",
     "Favorite Models:", "Stop Recording", "Record Audio", "Upload Audio", "No Title", "1 Copy",
     "Delete all conversations?", "Error Occurred", "Remaining:", "Balance:", "Reasoning", "Credits:",
-    "Login", "Login to", "Enable", "Invalid API key"
+    "Login", "Login to", "Enable", "Invalid API key", "Waiting for tool response..."
 ];
 
 let providers = [
@@ -1449,7 +1449,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
     } else if (message.type == "suggestions") {
         suggestions = message.suggestions;
     } else if (message.type == "tool_calls") {
-        // Handle tool calls
+        // Handle tool calls and show spinner
         if (message.tool_calls) {
             if (!tool_calls_storage[message_id]) {
                 tool_calls_storage[message_id] = [];
@@ -1463,6 +1463,16 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
                     tool_calls_storage[message_id][toolCall.index].function.arguments = tool_calls_storage[message_id][toolCall.index].function.arguments || '';
                 } else if (toolCall.function?.arguments) {
                     tool_calls_storage[message_id][toolCall.index].function.arguments += toolCall.function.arguments;
+                }
+            }
+            // Show spinner/loading indicator in the message
+            if (content_storage[message_id] && content_storage[message_id].inner) {
+                let spinner = content_storage[message_id].inner.querySelector('.tool-call-spinner');
+                if (!spinner) {
+                    spinner = document.createElement('div');
+                    spinner.className = 'tool-call-spinner';
+                    spinner.innerHTML = `<span>${framework.trans_escape('Waiting for tool response...')}</span>`;
+                    content_storage[message_id].inner.appendChild(spinner);
                 }
             }
         }
@@ -1661,6 +1671,11 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             const tool_calls = tool_calls_storage[message_id];
             delete tool_calls_storage[message_id];
             await handleToolCalls(tool_calls, messages, model, provider, message_id, finish_message);
+            // Remove spinner/loading indicator after tool call is handled
+            if (content_storage[message_id] && content_storage[message_id].inner) {
+                let spinner = content_storage[message_id].inner.querySelector('.tool-call-spinner');
+                if (spinner) spinner.remove();
+            }
         }
         if (message_storage[message_id] || reasoning_storage[message_id]?.status || reasoning_storage[message_id]?.text) {
             const message_provider = message_id in provider_storage ? provider_storage[message_id] : null;
@@ -2041,17 +2056,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                         }
                         // Handle tool calls
                         if (choice?.delta?.tool_calls) {
-                            for (const toolCall of choice.delta.tool_calls) {
-                                if (typeof toolCall.index === 'undefined') {
-                                    toolCall.index = toolCall.function.index || 0;
-                                }
-                                if (!pendingToolCalls[toolCall.index]) {
-                                    pendingToolCalls[toolCall.index] = toolCall
-                                    pendingToolCalls[toolCall.index].function.arguments = toolCall.function.arguments || '';
-                                } else if (toolCall.function?.arguments) {
-                                    pendingToolCalls[toolCall.index].function.arguments += toolCall.function.arguments;
-                                }
-                            }
+                            await add_message_chunk({type: "tool_calls", tool_calls: choice.delta.tool_calls}, message_id);
                         }
                         if (choice?.delta?.reasoning) {
                             await add_message_chunk({type: "reasoning", token: choice?.delta?.reasoning}, message_id);
@@ -2073,8 +2078,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 if (sources) {
                     add_sources(sources, message_id);
                 }
-                if (pendingToolCalls.length > 0 && mcpClient) {
-                    await handleToolCalls(pendingToolCalls, messages, selectedModel, provider, message_id, finish_message);
+                if (tool_calls_storage[message_id] && tool_calls_storage[message_id].length > 0 && mcpClient) {
+                    await handleToolCalls(tool_calls_storage[message_id], messages, selectedModel, provider, message_id, finish_message);
                 }
             }
             await finish_message();
