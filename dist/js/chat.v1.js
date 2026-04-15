@@ -4762,7 +4762,7 @@ function set_quota_info(models, quota) {
             credits_info += " ⚠️";
         }
         if (models.length > 10) {
-            models.unshift({model: "credits_info", label: credits_info, disabled: true});
+            models.unshift({id: "credits_info", label: credits_info, disabled: true});
         }
     }
     if (quota.credits) {
