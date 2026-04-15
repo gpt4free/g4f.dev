@@ -1436,7 +1436,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
             reasoning_storage[message_id].text += message.token;
         }
         if (message.status || message.token || message.label) {
-            let reasoning_body = content_map.inner.querySelector(".reasoning_body") || content_map.inner;
+            const reasoning_body = content_map.inner;
             reasoning_body.innerHTML = render_reasoning(reasoning_storage[message_id]);
         }
     } else if (message.type == "parameters") {
@@ -1986,13 +1986,13 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                         add_message_chunk({type: "usage", usage: response.usage}, message_id);
                     }
                     if (response.model) {
+                        let provider;
                         if (response.server && response.provider) {
                             provider = `custom:${response.server}`;
-                            providerLabel = response.provider;
                         } else if (response.provider) {
                             provider = response.provider || provider;
                         }
-                        add_message_chunk({type: "provider", provider: {name: provider, model: response.model, label: providerLabel}}, message_id);
+                        add_message_chunk({type: "provider", provider: {name: provider, model: response.model, label: response.provider}}, message_id);
                     }
                     if (response.error) {
                         add_message_chunk({type: "error", ...response.error}, message_id, null, finish_message);
@@ -2008,8 +2008,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     }
                     if (response.choices) {
                         const choice = response.choices[0];
-                        if (choice.reasoning) {
-                            await add_message_chunk({type: "reasoning", token: choice?.reasoning, is_thinking: choice?.is_thinking}, message_id);
+                        if (choice.reasoning || choice.reasoning_content) {
+                            await add_message_chunk({type: "reasoning", token: choice.reasoning || choice.reasoning_content}, message_id);
                         }
                         if (choice.content) {
                             await add_message_chunk({type: "content", content: choice.content}, message_id);
@@ -2020,7 +2020,6 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 }
 
                 let hasModel = false;
-                let pendingToolCalls = [];
                 let sources = null;
 
                 for await (const chunk of response) {
@@ -2058,8 +2057,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                         if (choice?.delta?.tool_calls) {
                             await add_message_chunk({type: "tool_calls", tool_calls: choice.delta.tool_calls}, message_id);
                         }
-                        if (choice?.delta?.reasoning) {
-                            await add_message_chunk({type: "reasoning", token: choice?.delta?.reasoning}, message_id);
+                        if (choice?.delta?.reasoning || choice?.delta?.reasoning_content) {
+                            await add_message_chunk({type: "reasoning", token: choice.delta.reasoning || choice.delta.reasoning_content}, message_id);
                         }
                         if (choice?.delta?.content) {
                             const delta = choice?.delta?.content || '';
@@ -4773,11 +4772,18 @@ function set_quota_info(models, quota) {
         } else {
             credits_info += " ⚠️";
         }
-        models.unshift({model: "credits_info", label: credits_info, disabled: true});
+        models.unshift({id: "credits_info", label: credits_info, disabled: true});
         if (models.length > 10) {
-            models.push({model: "credits_info_end", label: credits_info, disabled: true});
+            models.push({id: "credits_info_end", label: credits_info, disabled: true});
         }
     }
+    if (quota.session_usage) {
+        models.push({id: "session_usage", label: `${framework.translate("Session usage:")} ${quota.session_usage.used_percent}%` + (quota.session_usage.used_percent > 90 ? " ⚠️" : " ✅"), disabled: true});
+    }
+    if (quota.weekly_usage) {
+        models.push({id: "weekly_usage", label: `${framework.translate("Weekly usage:")} ${quota.weekly_usage.used_percent}%` + (quota.weekly_usage.used_percent > 90 ? " ⚠️" : " ✅"), disabled: true});
+    }
+
     if (!default_model && client && client.defaultModel) {
         default_model = client.defaultModel;
         models.forEach((model) => {
@@ -6291,8 +6297,8 @@ async function handleToolCalls(toolCalls, messages, model, provider, message_id,
                 }
                 if (chunk.choices) {
                     const choice = chunk.choices[0];
-                    if (choice?.delta?.reasoning) {
-                        await add_message_chunk({type: "reasoning", content: choice?.delta?.reasoning}, message_id);
+                    if (choice?.delta?.reasoning || choice?.delta?.reasoning_content) {
+                        await add_message_chunk({type: "reasoning", token: choice.delta.reasoning || choice.delta.reasoning_content}, message_id);
                     }
                     if (choice?.delta?.content) {
                         const delta = choice?.delta?.content || '';
