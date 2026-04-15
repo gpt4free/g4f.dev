@@ -330,7 +330,7 @@ function calculateUserTier(userData, contributors, sponsors) {
             return jsonResponse({ error: "Not found" }, 404);
         } catch (error) {
             console.error("Worker error:", error);
-            return jsonResponse({ error: error.message || "Internal server error" }, 500);
+            return jsonResponse({ error: "Worker error: " + error.message || "Internal server error" }, 500);
         }
     },
 
@@ -425,8 +425,9 @@ function calculateUserTier(userData, contributors, sponsors) {
     const state = generateState();
     const scope = "user:email read:user";
     // Support both "redirect" and "redirect_chat" parameters
-    const redirectParam = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect");
-    
+    const redirect = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect") || null;
+    const conversation = url.searchParams.get("conversation") || null;
+
     const authUrl = new URL("https://github.com/login/oauth/authorize");
     authUrl.searchParams.set("client_id", env.GITHUB_CLIENT_ID);
     authUrl.searchParams.set("redirect_uri", `${url.origin}/members/auth/github/callback`);
@@ -434,7 +435,7 @@ function calculateUserTier(userData, contributors, sponsors) {
     authUrl.searchParams.set("state", state);
   
     // Store state in KV for verification, include redirect URL if present
-    const stateData = JSON.stringify({ provider: "github", redirect: redirectParam || null });
+    const stateData = JSON.stringify({ provider: "github", redirect, conversation });
     await env.MEMBERS_KV.put(`oauth_state:${state}`, stateData, { expirationTtl: 600 });
   
     return Response.redirect(authUrl.toString(), 302);
@@ -505,7 +506,6 @@ function calculateUserTier(userData, contributors, sponsors) {
     // Create or update user
     const user = await createOrUpdateUser(env, {
         provider: "github",
-        provider_id: githubUser.id.toString(),
         username: githubUser.login,
         name: githubUser.name || githubUser.login,
         email: primaryEmail,
@@ -522,12 +522,12 @@ function calculateUserTier(userData, contributors, sponsors) {
         try {
             const redirectUrl = new URL(externalRedirect);
             if (redirectUrl.hostname.endsWith("g4f.dev") || redirectUrl.hostname === "localhost") {
-                return redirectWithSessionToExternal(sessionToken, user, externalRedirect);
+                return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation);
             }
         } catch (e) {
             console.error("Invalid redirect URL:", e);
         }
-        return redirectWithTempApiKey(env, user, externalRedirect);
+        return redirectWithTempApiKey(env, user, externalRedirect, stateData.conversation);
     }
   
     return redirectWithSession(sessionToken, user);
@@ -537,8 +537,9 @@ function calculateUserTier(userData, contributors, sponsors) {
     const state = generateState();
     const scope = "identify email";
     // Support both "redirect" and "redirect_chat" parameters
-    const redirectParam = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect");
-    
+    const redirect = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect") || null;
+    const conversation = url.searchParams.get("conversation") || null;
+
     const authUrl = new URL("https://discord.com/api/oauth2/authorize");
     authUrl.searchParams.set("client_id", env.DISCORD_CLIENT_ID);
     authUrl.searchParams.set("redirect_uri", `${url.origin}/members/auth/discord/callback`);
@@ -546,7 +547,7 @@ function calculateUserTier(userData, contributors, sponsors) {
     authUrl.searchParams.set("scope", scope);
     authUrl.searchParams.set("state", state);
   
-    const stateData = JSON.stringify({ provider: "discord", redirect: redirectParam || null });
+    const stateData = JSON.stringify({ provider: "discord", redirect, conversation });
     await env.MEMBERS_KV.put(`oauth_state:${state}`, stateData, { expirationTtl: 600 });
   
     return Response.redirect(authUrl.toString(), 302);
@@ -603,7 +604,6 @@ function calculateUserTier(userData, contributors, sponsors) {
   
     const user = await createOrUpdateUser(env, {
         provider: "discord",
-        provider_id: discordUser.id,
         username: discordUser.username,
         name: discordUser.global_name || discordUser.username,
         email: discordUser.email,
@@ -621,12 +621,12 @@ function calculateUserTier(userData, contributors, sponsors) {
         try {
             const redirectUrl = new URL(externalRedirect);
             if (redirectUrl.hostname.endsWith("g4f.dev") || redirectUrl.hostname === "localhost") {
-                return redirectWithSessionToExternal(sessionToken, user, externalRedirect);
+                return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation);
             }
         } catch (e) {
             console.error("Invalid redirect URL:", e);
         }
-        return redirectWithTempApiKey(env, user, externalRedirect);
+        return redirectWithTempApiKey(env, user, externalRedirect, stateData.conversation);
     }
   
     return redirectWithSession(sessionToken, user);
@@ -634,10 +634,11 @@ function calculateUserTier(userData, contributors, sponsors) {
   
   async function handleHuggingFaceAuth(request, env, url) {
     const state = generateState();
-    const scope = "openid profile email";
+    const scope = "inference-api";
     // Support both "redirect" and "redirect_chat" parameters
-    const redirectParam = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect");
-    
+    const redirect = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect") || null;
+    const conversation = url.searchParams.get("conversation") || null;
+
     const authUrl = new URL("https://huggingface.co/oauth/authorize");
     authUrl.searchParams.set("client_id", env.HUGGINGFACE_CLIENT_ID);
     authUrl.searchParams.set("redirect_uri", `${url.origin}/members/auth/huggingface/callback`);
@@ -645,7 +646,7 @@ function calculateUserTier(userData, contributors, sponsors) {
     authUrl.searchParams.set("scope", scope);
     authUrl.searchParams.set("state", state);
   
-    const stateData = JSON.stringify({ provider: "huggingface", redirect: redirectParam || null });
+    const stateData = JSON.stringify({ provider: "huggingface", redirect, conversation });
     await env.MEMBERS_KV.put(`oauth_state:${state}`, stateData, { expirationTtl: 600 });
   
     return Response.redirect(authUrl.toString(), 302);
@@ -702,7 +703,6 @@ function calculateUserTier(userData, contributors, sponsors) {
   
     const user = await createOrUpdateUser(env, {
         provider: "huggingface",
-        provider_id: hfUser.id || hfUser.name,
         username: hfUser.name,
         name: hfUser.fullname || hfUser.name,
         email: hfUser.email,
@@ -718,17 +718,37 @@ function calculateUserTier(userData, contributors, sponsors) {
         try {
             const redirectUrl = new URL(externalRedirect);
             if (redirectUrl.hostname.endsWith("g4f.dev") || redirectUrl.hostname === "localhost") {
-                return redirectWithSessionToExternal(sessionToken, user, externalRedirect);
+                return redirectWithSessionToExternal(sessionToken, user, externalRedirect, tokenData.conversation);
             }
         } catch (e) {
             console.error("Invalid redirect URL:", e);
         }
-        return redirectWithTempApiKey(env, user, externalRedirect);
+        return redirectWithTempApiKey(env, user, externalRedirect, tokenData.conversation);
     }
   
     return redirectWithSession(sessionToken, user);
   }
   
+  /**
+   * Fetch user profile from Pollinations API.
+   * @param {string} apiKey - Pollinations API key
+   * @returns {Promise<Object|null>} Profile object or null on failure
+   */
+  async function fetchPollinationsProfile(apiKey) {
+      try {
+          const response = await fetch("https://gen.pollinations.ai/account/profile", {
+              headers: {
+                  "Authorization": `Bearer ${apiKey}`
+              }
+          });
+          if (!response.ok) return null;
+          return await response.json();
+      } catch (e) {
+          console.error("Failed to fetch Pollinations profile:", e);
+          return null;
+      }
+  }
+
   /**
    * POST /members/auth/pollinations
    * Authenticate using a Pollinations API key.
@@ -765,20 +785,18 @@ function calculateUserTier(userData, contributors, sponsors) {
       }
   
       // Pollinations profile includes GitHub identity fields
-      const githubUsername = profile.github?.username || profile.username || profile.login;
-      const githubId = profile.github?.id || profile.id;
-      if (!githubUsername || !githubId) {
-          return jsonResponse({ error: "Pollinations profile missing GitHub identity" }, 502);
+      const githubUsername = profile.githubUsername;
+      if (!githubUsername) {
+          return jsonResponse({ error: "Pollinations profile missing GitHub identity", profile}, 502);
       }
   
       // Create or update the user, linked to the GitHub identity
       const user = await createOrUpdateUser(env, {
           provider: "github",
-          provider_id: githubId.toString(),
           username: githubUsername,
           name: profile.name || githubUsername,
           email: profile.email || null,
-          avatar: profile.avatar || profile.avatarUrl || null,
+          avatar: profile.image || null,
           access_token: null  // no GitHub OAuth token in this flow
       });
   
@@ -788,19 +806,6 @@ function calculateUserTier(userData, contributors, sponsors) {
       await saveUser(env, user);
   
       const sessionToken = await createSession(env, user.id);
-  
-      const redirectParam = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect");
-      if (redirectParam) {
-          try {
-              const redirectUrl = new URL(redirectParam);
-              if (redirectUrl.hostname.endsWith("g4f.dev") || redirectUrl.hostname === "localhost") {
-                  return redirectWithSessionToExternal(sessionToken, user, redirectParam);
-              }
-          } catch (e) {
-              console.error("Invalid redirect URL:", e);
-          }
-          return redirectWithTempApiKey(env, user, redirectParam);
-      }
   
       // Return JSON session for programmatic use
       const safeUser = { ...user };
@@ -825,7 +830,7 @@ function calculateUserTier(userData, contributors, sponsors) {
   // ============================================
   
   async function createOrUpdateUser(env, userData) {
-    const lookupKey = `user_lookup:${userData.provider}:${userData.provider_id}`;
+    const lookupKey = `user_lookup:${userData.provider}:${userData.username}`;
     let userId = await env.MEMBERS_KV.get(lookupKey);
     
     const now = new Date().toISOString();
@@ -853,7 +858,6 @@ function calculateUserTier(userData, contributors, sponsors) {
         user = {
             id: userId,
             provider: userData.provider,
-            provider_id: userData.provider_id,
             username: userData.username,
             name: userData.name,
             email: userData.email,
@@ -978,7 +982,7 @@ function calculateUserTier(userData, contributors, sponsors) {
     // Delete user data
     await env.MEMBERS_BUCKET.delete(`users/${user.id}.json`);
     await env.MEMBERS_KV.delete(`user:${user.id}`);
-    await env.MEMBERS_KV.delete(`user_lookup:${user.provider}:${user.provider_id}`);
+    await env.MEMBERS_KV.delete(`user_lookup:${user.provider}:${user.username}`);
   
     // Delete all API keys
     for (const keyData of user.api_keys || []) {
@@ -1645,22 +1649,23 @@ function calculateUserTier(userData, contributors, sponsors) {
    * Redirect to external URL with session token for cloud sync
    * Used for login redirects from chat interface
    */
-  function redirectWithSessionToExternal(sessionToken, user, externalRedirectUrl) {
+  function redirectWithSessionToExternal(sessionToken, user, externalRedirectUrl, conversation = null) {
       const redirectUrl = new URL(externalRedirectUrl);
-      redirectUrl.searchParams.set("session_token", sessionToken);
-      redirectUrl.searchParams.set("user", encodeURIComponent(JSON.stringify({
+      const hashParams = new URLSearchParams();
+      hashParams.set("session", sessionToken);
+      hashParams.set("user", encodeURIComponent(JSON.stringify({
           id: user.id,
           name: user.name,
           username: user.username,
           avatar: user.avatar,
           provider: user.provider,
-          tier: user.tier
+          tier: user.tier,
+          access_token: user.access_token
       })));
-      
-      // Include provider-specific API key in hash for localStorage storage on the redirect target
-      if (user.provider === "huggingface" && user.access_token) {
-          redirectUrl.hash = `HuggingFace-api_key=${encodeURIComponent(user.access_token)}`;
+      if (conversation) {
+        hashParams.set("conversation", conversation);
       }
+      redirectUrl.hash = hashParams.toString();
       
       // Set session cookie with 7 day expiry
       const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
@@ -1679,7 +1684,7 @@ function calculateUserTier(userData, contributors, sponsors) {
    * Generate a temporary API key and redirect to external URL
    * Used for login redirects from external sites
    */
-  async function redirectWithTempApiKey(env, user, externalRedirectUrl) {
+  async function redirectWithTempApiKey(env, user, externalRedirectUrl, conversation = null) {
     try {
         // Generate a temporary API key for the user
         const apiKey = await generateApiKey(env, user.id);
@@ -1716,10 +1721,14 @@ function calculateUserTier(userData, contributors, sponsors) {
         user.api_keys.push(keyData);
         user.updated_at = new Date().toISOString();
         await saveUser(env, user);
-  
         
         const redirectUrl = new URL(externalRedirectUrl);
-        redirectUrl.searchParams.set("session_token", apiKey);
+        const hashParams = new URLSearchParams();
+        hashParams.set("session", apiKey);
+        if (conversation) {
+            hashParams.set("conversation", conversation);
+        }
+        redirectUrl.hash = hashParams.toString();
         return Response.redirect(redirectUrl.toString(), 302);
     } catch (error) {
         console.error("Failed to generate temp API key:", error);

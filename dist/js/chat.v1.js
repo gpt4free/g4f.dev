@@ -3534,6 +3534,10 @@ async function on_load() {
     translationSnipptes.forEach((snippet)=>this.framework.translate(snippet));
     count_input();
     const locationHash = window.location.hash.substring(1);
+    if (locationHash == "login") {
+        window.location.href='https://g4f.dev/members?redirect='+encodeURIComponent(location.href.split('#')[0])+'&conversation='+encodeURIComponent(window.conversation_id);
+        return;
+    }
     if (locationHash == "settings") {
         open_settings();
         await load_conversations();
@@ -4786,7 +4790,6 @@ function set_quota_info(models, quota) {
     }
 }
 function set_provider_models(models, provider, quota=null) {
-    console.log("Setting models for provider:", provider, models);
     modelSelect.innerHTML = '';
     const option = providerSelect.options[providerSelect.selectedIndex];
     if (option) option.text = option.text.replaceAll(" 🟢", "") + (quota ? " 🟢" : "");
@@ -4799,7 +4802,7 @@ function set_provider_models(models, provider, quota=null) {
                 let option = document.createElement('option');
                 option.value = model.id || model.model;
                 option.dataset.label = model.id || model.model;
-                option.text = option.dataset.label + (model.count > 1 ? ` (${model.count}+)` : "") + get_modelTags(model);
+                option.text = (model.label || model.id || model.model) + (model.count > 1 ? ` (${model.count}+)` : "") + get_modelTags(model);
                 if (model.audio) {
                     option.dataset.audio = "true";
                 }

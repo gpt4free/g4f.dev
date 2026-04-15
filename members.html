@@ -1269,6 +1269,7 @@
             try {
                 const parsed = new URL(url);
                 return parsed.hostname.endsWith('g4f.dev') ||
+                       parsed.hostname.endsWith('g4f.space') ||
                        parsed.hostname === 'gpt4free.github.io' ||
                        parsed.hostname === 'localhost' ||
                        parsed.hostname === '127.0.0.1';
