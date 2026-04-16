@@ -20,7 +20,7 @@ messages = [
 ```python
 from g4f.client import AsyncClient
 
-class Conversation:
+class ConversationManager:
     def __init__(self):
         self.client = AsyncClient()
         self.history = [
