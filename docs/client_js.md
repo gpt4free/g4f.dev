@@ -1,214 +1,121 @@
-# GPT4Free.js Client Documentation
+# Using G4F from JavaScript / Node.js
 
-## Overview
+If you prefer JavaScript over Python, you can use G4F in your JS projects too.
 
-This JavaScript library provides a flexible interface to interact with **multiple AI model providers** via unified APIs. It supports:
+## What You Need
 
-- **Chat Completions** (including streaming)
-- **Image Generation**
-- **Audio Modalities**
-- **Multi-provider support**
-- **Automatic model alias mapping**
-- Easy model listing and discovery
+- Node.js installed on your computer
+- A project folder
 
----
+## Setup
 
-## Installation
-
-### HTML (CDN)
-
-```html
-<script type="module">
-  import { Client, PollinationsAI, DeepInfra, Together, Puter, HuggingFace } from 'https://g4f.dev/dist/js/client.js';
-</script>
-```
-
-### NPM
+1. Make a new folder for your project and open it in your terminal.
+2. Install the G4F package:
 
 ```bash
-npm install @gpt4free/g4f.dev
+npm install g4f
 ```
 
----
+## Simple Example
 
-## Providers
+This sends a message to an AI and prints the reply:
 
-You can initialize a client using one of the following providers:
+```javascript
+const { G4F } = require("g4f");
+const g4f = new G4F();
 
-```js
-import { Client, PollinationsAI, DeepInfra, Together, Puter, HuggingFace } from '@gpt4free/g4f.dev';
+const messages = [
+    { role: "user", content: "Hello! Can you help me write an email?" }
+];
 
-// Pollinations
-const client = new PollinationsAI({ apiKey: 'optional' });
-
-// DeepInfra
-const client = new DeepInfra({ apiKey: 'optional' });
-
-// HuggingFace
-const client = new HuggingFace({ apiKey: 'required' });
-
-// Together.AI
-const client = new Together({ apiKey: 'required' });
-
-// Puter
-const client = new Puter();
-
-// Custom (e.g., local GPT4Free instance)
-const client = new Client({ baseUrl: 'http://localhost:8080/v1', apiKey: 'secret' });
+(async () => {
+    const response = await g4f.chatCompletion(messages);
+    console.log(response);
+})();
 ```
 
-All clients conform to the same method interfaces for completions, models, and image generation.
+## Streaming Replies
 
----
+Streaming means you see the answer appear word-by-word, like a real conversation.
 
-## Chat Completions
+```javascript
+const { G4F } = require("g4f");
+const g4f = new G4F();
 
-### Regular Completion
+const messages = [
+    { role: "user", content: "Tell me a short story." }
+];
 
-```js
-const result = await client.chat.completions.create({
-  model: 'gpt-4.1',
-  messages: [
-    { role: 'system', content: 'You are a helpful assistant.' },
-    { role: 'user', content: 'Tell me a joke.' }
-  ]
-});
-```
+const options = {
+    provider: g4f.providers.GPT,
+    stream: true
+};
 
-### Streaming Completion
-
-```js
-const stream = await client.chat.completions.create({
-  model: 'gpt-4.1',
-  messages: [...],
-  stream: true
-});
-
-for await (const chunk of stream) {
-  console.log(chunk.choices[0]?.delta?.content);
-}
-```
-
----
-
-## Image Generation
-
-```js
-const result = await client.images.generate({
-  model: 'flux', // Or "gpt-image", "sdxl-turbo"
-  prompt: 'A futuristic city skyline at night',
-  size: '512x512' // Optional
-});
-
-const image = new Image();
-image.src = result.data[0].url;
-document.body.appendChild(image);
-```
-
----
-
-## Audio Modality Support
-
-```js
-const result = await client.chat.completions.create({
-  model: 'gpt-4o-audio',
-  messages: [...],
-  audio: {
-    voice: 'alloy',
-    format: 'mp3'
-  },
-  modalities: ['text', 'audio']
-});
-```
-
----
-
-## Model Listing
-
-```js
-const models = await client.models.list();
-models.forEach(m => console.log(m.id, m.type));
-```
-
----
-
-### **List All Models for All Providers**
-
-You can also iterate through every available provider and fetch their supported models in one go:
-
-```js
-import { loadProviders, createClient } from '@gpt4free/g4f.dev/providers';
-
-const providers = await loadProviders();
-
-// Example usage: Fetch and log models for each provider
-const providerModels = {};
-for (const key of Object.keys(providers)) {
-    console.log('Provider:', key, providers[key]);
-    try {
-        const client = await createClient(key);
-        providerModels[key] = await client.models.list();
-        console.log(`Models for provider "${key}":`, providerModels[key].map(m => m.id));
-    } catch (error) {
-        console.error(`Error fetching models for provider "${key}":`, error);
+(async () => {
+    const response = await g4f.chatCompletion(messages, options);
+    for await (const chunk of response) {
+        process.stdout.write(chunk);
     }
-}
-
-export { providers, createClient, providerModels };
+})();
 ```
 
-This snippet will:
-- Loop through all built-in providers.
-- Create a client for each provider.
-- Fetch and list all models they support.
-- Store results in a `providerModels` object for later use.
+## Choosing a Provider
+
+Providers are the services that actually run the AI. Pick one when you need a specific model.
+
+```javascript
+const options = {
+    provider: g4f.providers.Bing,
+    model: "gpt-4"
+};
+```
+
+## Sending Images
+
+You can show the AI a picture and ask about it.
+
+```javascript
+const fs = require('fs');
+const { G4F } = require("g4f");
+const g4f = new G4F();
+
+const imageBuffer = fs.readFileSync("photo.jpg");
+const imageBase64 = imageBuffer.toString('base64');
+
+const messages = [
+    {
+        role: "user",
+        content: "What do you see in this image?",
+        image: imageBase64
+    }
+];
+
+(async () => {
+    const response = await g4f.chatCompletion(messages);
+    console.log(response);
+})();
+```
+
+## Creating Images
+
+Turn text into pictures:
+
+```javascript
+const { G4F } = require("g4f");
+const g4f = new G4F();
+
+(async () => {
+    const image = await g4f.imageGeneration("a cat wearing a space suit");
+    console.log(image);
+})();
+```
+
+## Common Issues
+
+- **"Module not found"**: Make sure you ran `npm install g4f`.
+- **Network errors**: Check your internet connection. Some providers may be blocked in your region.
+- **Slow responses**: Try a different provider if one is taking too long.
 
 ---
 
-## Multi-Provider Web UI Example
-
-You can create a browser-based chat UI supporting multiple providers and models. See [`pro.html`](../chat/pro.html) for a working example.
-
-### Features:
-- Dynamic model loading per provider
-- Chat and image model routing
-- API key input
-- Markdown rendering
-
----
-
-## Configuration Options
-
-| Option         | Type    | Description                                 | Default                      |
-|----------------|---------|---------------------------------------------|------------------------------|
-| `baseUrl`      | string  | Override API base URL                       | Depends on provider          |
-| `apiKey`       | string  | Authorization key/token                     | `undefined`                  |
-| `extraHeaders` | object  | Custom headers                              | `{}`                         |
-| `modelAliases` | object  | Shortcut names for models                   | [See below]                  |
-
----
-
-## Default Model Aliases
-
-| Alias           | Maps To          |
-|------------------|------------------|
-| `gpt-4.1`        | `openai-large`   |
-| `gpt-4.1-mini`   | `openai`         |
-| `deepseek-v3`    | `deepseek`       |
-
----
-
-## Error Handling
-
-Client throws informative errors for:
-- Network/API issues
-- Unsupported streaming environments
-- Model fetch or alias errors
-
----
-
-## Notes
-
-- Streaming requires a modern browser with `ReadableStream` support
-- Models list includes type info for routing (e.g., `chat`, `image`)
-- Markdown (`marked`) can be used for rich text rendering in browser UIs
+[Back to main docs](README.md)
