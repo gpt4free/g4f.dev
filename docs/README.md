@@ -1,158 +1,220 @@
-## GPT4Free Documentation Hub
-<img src="https://g4f.dev/docs/images/pico.jpeg" alt="Welcome to the official docs for **GPT4Free** – free and convenient AI endpoints you can use directly in your apps, scripts, and even right in your browser.
-Here you’ll find a clear overview, quick examples, and entry points to deeper docs for every major feature."/>
+# Welcome to G4F - AI for Everyone! 🤖
+
+**No coding needed. No expensive subscriptions. Just free AI.**
 
 ---
 
-## Installation & Setup
+## What is G4F?
 
-For full install guides—choose your method:
+Imagine having a super-smart friend who can:
+- Answer any question you have
+- Write stories, emails, or creative content
+- Create beautiful images from your descriptions
+- Help you learn new things
+- Chat with you about anything
 
-- [Git Install](git.md)
-- [Docker](docker.md)
-- [Requirements](requirements.md)
-
-For rapid starts, you can use either **Python** or **JavaScript** (web).
-
----
-
-## Getting Started
-
-### 📝 Text Generation
-
-Python example for chat completion (with and without web search):
-
-```python
-from g4f.client import Client
-
-client = Client()
-response = client.chat.completions.create(
-    model="gpt-4.1",  # Try "gpt-4o", "deepseek-v3", etc.
-    messages=[{"role": "user", "content": "Hello"}],
-    web_search=False
-)
-print(response.choices[0].message.content)
-```
-**Output:**
-```
-Hello! How can I assist you today?
-```
+**That's G4F!** It's like having access to the world's best AI assistants, completely free.
 
 ---
 
-### 🎨  Image Generation
+## 🚀 Three Easy Ways to Use G4F
 
-Generate images with a single call (returns URLs or base64):
+### **Way 1: Just Use the Website (Easiest!)**
+1. Go to [https://g4f.dev/chat](https://g4f.dev/chat)
+2. Start typing your question or request
+3. Get an answer instantly!
 
-```python
-from g4f.client import Client
-
-client = Client()
-response = client.images.generate(
-    model="flux",  # Other models: 'dalle-3', 'gpt-image', etc.
-    prompt="a white siamese cat",
-    response_format="url"
-)
-print(f"Generated image URL: {response.data[0].url}")
-```
-
-[More Python client info →](client.md)
-
-[and Async client →](async_client.md)
+**No installation. No setup. Just chat!**
 
 ---
 
-### 🧙‍♂️ Using GPT4Free.js
-
-Use the **official JS client** right in the browser—no backend needed.
-
-For text generation:
-```html
-<script type="module">
-    import Client from 'https://g4f.dev/dist/js/client.js';
-
-    const client = new Client();
-    const result = await client.chat.completions.create({
-        model: 'gpt-4.1',  // Or "gpt-4o", "deepseek-v3"
-        messages: [{ role: 'user', content: 'Explain quantum computing' }]
-    });
-    console.log(result.choices[0].message.content);
-</script>
-```
-
-And for image generation:
-```html
-<script type="module">
-    import Client from 'https://g4f.dev/dist/js/client.js';
-
-    const client = new Client();
-    const response = await client.images.generate({
-        model: "flux", // Or "dalle-3", "gpt-image"
-        prompt: "a white siamese cat"
-    });
-    const imageUrl = response.data[0].url;
-    console.log(`Generated Image URL: ${imageUrl}`);
-    // Example: document.body.innerHTML += `<img src="${imageUrl}" />`;
-</script>
-```
-
-[See more JS client usage →](client_js.md)
-
-### 💻 Using CLI Client
-
-Examples
-
-1. **Text generation**:
-   ```bash
-   g4f client "Explain quantum computing in simple terms"
+### **Way 2: Use the Visual Program (Like an App)**
+1. Open your computer's terminal or command prompt
+2. Type this one command:
    ```
-
-2. **Image description**:
-   ```bash
-   g4f client image.jpg "Describe this image"
+   pip install g4f
    ```
-
-3. **Image generation** (with supported models):
-   ```bash
-   g4f client -m flux -O output.jpg "A futuristic cityscape"
+3. Then type:
    ```
+   python -m g4f.cli gui
+   ```
+4. A window will open in your browser - start chatting!
 
-[CLI Client documentation →](client_cli.md)
-
----
-
-## Deep Dives
-
-- [API endpoints and usage](ready_to_use.md) ***new**
-- [Available Providers & Models](https://g4f.dev/docs/providers-and-models.html)
-- [Selecting a Provider](selecting_a_provider.md)
-- [Provider Documentation](providers/)
-- [API docs (full spec)](/api-docs)
-- [File API Documentation (Files and Documents)](file.md)
-- [Media Documentation (Audio, Image and Video)](media.md)
-- [Vision Support (Image Upload)](vision.md)
-- [Image Editing & Variation](image_editing.md)
-- [Authentication, Configuration Guide (.har and cookies)](config.md)
-- [Advanced: Create your own Provider](guides/create_provider.md)
-- [Routing with custom models (OpenClaw)](guides/openclaw.md)
-- [Integrations: LangChain, PydanticAI](pydantic_ai.md)
-- [GUI/WebUI](gui.md), [Phone](guides/phone.md), [Backend API](backend_api_documentation.md)
-- [Troubleshooting](https://github.com/gpt4free/g4f.dev/issues)
+**It's like opening any other app on your computer.**
 
 ---
 
-## Community & Links
-
-- **Open Source:** [GitHub: gpt4free/g4f.dev](https://github.com/gpt4free/g4f.dev)
-- **Contribute & Report Bugs:** PRs & issues are welcome!
-- **Project Website:** [https://g4f.dev/](https://g4f.dev/)
-- **Pollinations AI:**  
-  <img src="https://image.pollinations.ai/prompt/Create+a+logo+for+Pollinations+AI+featuring+an+abstract+flower+blooming+digital+petals+glowing+center+futuristic+font+Pollinations+AI?width=512&height=256&nologo=true" height="80">
-
-  [GitHub: pollinations/pollinations](https://github.com/pollinations/pollinations)
+### **Way 3: For People Who Write Code**
+If you know Python or JavaScript, you can add AI to your programs.
+See the "For Builders" section below.
 
 ---
 
-GPT4Free and g4f.dev are continuously improving. Have fun building, and let the bots do the heavy lifting for you!
+## 💡 What Can You Do With G4F?
 
-[← Back to GPT4Free GitHub](https://github.com/xtekky/gpt4free)
+### ✍️ **Ask Questions**
+- "How do I make pancakes?"
+- "Explain quantum physics like I'm 10"
+- "What's the best way to learn Spanish?"
+
+### 📝 **Write Things**
+- Emails to your boss
+- Stories for your kids
+- Poems for your partner
+- Code for your website
+- Social media posts
+
+### 🎨 **Create Images**
+- "A cute cat wearing sunglasses on a beach"
+- "A futuristic city with flying cars"
+- "A watercolor painting of mountains at sunset"
+
+### 🗣️ **Have Conversations**
+- Practice a new language
+- Get homework help
+- Brainstorm ideas
+- Just chat for fun!
+
+### 📁 **Work With Files**
+- Upload a document and ask questions about it
+- Describe an image you uploaded
+- Summarize long articles
+
+---
+
+## 🆓 Why Is It Free?
+
+G4F connects to many different AI services that already exist. Think of it like a universal remote control - one tool that works with many different "TVs" (AI services). 
+
+We don't charge you because we're not the ones running the AI - we just help you access what's already available.
+
+---
+
+## 🎯 Quick Start Guide
+
+### For Complete Beginners:
+
+1. **Open your web browser** (Chrome, Firefox, Safari, etc.)
+2. **Go to**: [https://g4f.dev/chat](https://g4f.dev/chat)
+3. **Type**: "Hello! What can you do?"
+4. **Wait a few seconds**
+5. **Get your answer!**
+
+That's it! You're using AI! 🎉
+
+---
+
+## 📚 What's in This Documentation?
+
+This guide has different sections for different types of users:
+
+### 👥 **For Everyone**
+- **What is G4F?** - Learn what this is all about
+- **Getting Started** - Your first steps
+- **How to Chat** - Tips for better conversations
+- **Creating Images** - Make pictures from words
+
+### 🛠️ **For People Who Build Things**
+- **Python Guide** - Add AI to Python programs
+- **JavaScript Guide** - Add AI to websites
+- **Available Models** - Choose which AI to use
+- **Advanced Features** - Power user stuff
+
+### ❓ **Need Help?**
+- **Common Problems** - Fix things that go wrong
+- **FAQ** - Answers to questions
+- **Contact Us** - Get support
+
+---
+
+## 🌟 Tips for Great Results
+
+### Be Specific
+❌ "Tell me about dogs"  
+✅ "Tell me about Golden Retrievers - are they good for families with kids?"
+
+### Ask Follow-Up Questions
+If the answer isn't quite right, just ask again with more details!
+
+### Try Different "Personalities"
+Some AIs are better at creative writing, others at facts, others at coding. Try a few!
+
+### Have Fun!
+AI is like a magic tool - the more you use it, the better you'll get at using it.
+
+---
+
+## 🔒 Is It Private?
+
+Yes! Your conversations are:
+- ✅ Not stored anywhere
+- ✅ Not shared with anyone
+- ✅ Not used to train AI
+- ✅ Completely private
+
+---
+
+## 📱 Can I Use It on My Phone?
+
+Absolutely! Just go to [https://g4f.dev/chat](https://g4f.dev/chat) in your phone's browser. It works perfectly on mobile!
+
+---
+
+## 🎁 Bonus Features
+
+### Voice Chat
+Some versions let you:
+- Talk to AI with your voice
+- Get spoken answers
+- Have hands-free conversations
+
+### File Upload
+Upload:
+- Photos (AI can describe them)
+- Documents (AI can read and answer questions)
+- Screenshots (AI can explain what's in them)
+
+### Multiple Languages
+Speak in any language - G4F understands and responds in hundreds of languages!
+
+---
+
+## 🚨 Common Questions
+
+**Q: Do I need to create an account?**  
+A: No! Just start using it.
+
+**Q: Is there a limit to how much I can use?**  
+A: No limits! Use it as much as you want.
+
+**Q: What if it's slow sometimes?**  
+A: Try again in a minute, or switch to a different AI model.
+
+**Q: Can kids use it?**  
+A: Yes! It's safe and great for learning.
+
+**Q: Does it work offline?**  
+A: No, it needs internet to connect to the AI services.
+
+---
+
+## 🎓 Next Steps
+
+1. **Start chatting** at [https://g4f.dev/chat](https://g4f.dev/chat)
+2. **Explore** different types of questions
+3. **Try creating an image** - it's fun!
+4. **Come back** to this guide when you want to learn more
+
+---
+
+## 💬 Need More Help?
+
+- Check out the other pages in this documentation
+- Visit the [main website](https://g4f.dev) for updates
+- Join our community (links on the website)
+
+---
+
+**Welcome to the future of AI! 🚀**
+
+*Remember: You don't need to be a tech expert. If you can type a message, you can use G4F.*

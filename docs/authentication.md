@@ -1,93 +1,50 @@
-## G4F - Authentication Guide
+# Login & Passwords Guide
 
-This documentation explains how to authenticate with G4F providers and configure GUI security. It covers API key management, cookie-based authentication, rate limiting, and GUI access controls.
-
----
-
-## **Table of Contents**  
-1. **[Provider Authentication](#provider-authentication)**  
-   - [Prerequisites](#prerequisites)  
-   - [API Key Setup](#api-key-setup)  
-   - [Synchronous Usage](#synchronous-usage)  
-   - [Asynchronous Usage](#asynchronous-usage)  
-   - [Multiple Providers](#multiple-providers-with-api-keys)  
-   - [Cookie-Based Authentication](#cookie-based-authentication)  
-   - [Rate Limiting](#rate-limiting)  
-   - [Error Handling](#error-handling)  
-   - [Supported Providers](#supported-providers)  
-2. **[GUI Authentication](#gui-authentication)**  
-   - [Server Setup](#server-setup)  
-   - [Browser Access](#browser-access)  
-   - [Programmatic Access](#programmatic-access)  
-3. **[Best Practices](#best-practices)**  
-4. **[Troubleshooting](#troubleshooting)**  
+How to connect to services that need passwords or browser cookies.
 
 ---
 
-## **Provider Authentication**  
+## API Keys (Service Passwords)
 
-### **Prerequisites**  
-- Python 3.7+  
-- Installed `g4f` package:  
-  ```bash
-  pip install g4f
-  ```  
-- API keys or cookies from providers (if required).  
+### What You Need
+- Python installed
+- The tool installed (`pip install g4f`)
+- API keys from services you want to use
 
----
+### Get Your Keys
+Sign up at these services to get free or paid keys:
+- OpenAI
+- Google (Gemini)
+- Anthropic
+- HuggingFace
+- And others...
 
-### **API Key Setup**  
-#### **Step 1: Set Environment Variables**  
-**For Linux/macOS (Terminal)**:  
+### Set Up Keys
+
+**Mac/Linux (Terminal):**
 ```bash
-# Example for Anthropic
-export ANTHROPIC_API_KEY="your_key_here"
-
-# Example for HuggingFace
-export HUGGINGFACE_API_KEY="another_key_here"
+export OPENAI_API_KEY="paste-your-key-here"
+export GEMINI_API_KEY="paste-your-key-here"
 ```
 
-**For Windows (Command Prompt)**:  
+**Windows (Command Prompt):**
 ```cmd
-:: Example for Anthropic
-set ANTHROPIC_API_KEY=your_key_here
-
-:: Example for HuggingFace
-set HUGGINGFACE_API_KEY=another_key_here
+set OPENAI_API_KEY=paste-your-key-here
 ```
 
-**For Windows (PowerShell)**:  
-```powershell
-# Example for Anthropic
-$env:ANTHROPIC_API_KEY = "your_key_here"
+### Use Keys in Your Code
 
-# Example for HuggingFace
-$env:HUGGINGFACE_API_KEY = "another_key_here"
-```
-
-#### **Step 2: Initialize Client**  
 ```python
+import os
 from g4f.client import Client
+from g4f.Provider import OpenaiAPI
 
-# Example for Anthropic
-client = Client(
-    provider="g4f.Provider.Anthropic",
-    api_key="your_key_here"  # Or use os.getenv("ANTHROPIC_API_KEY")
-)
-```
+# Just create the client - it finds keys automatically
+client = Client(provider=OpenaiAPI)
 
----
-
-### **Synchronous Usage**  
-```python
-from g4f.client import Client
-
-# Initialize with Anthropic
-client = Client(provider="g4f.Provider.Anthropic", api_key="your_key_here")
-
-# Simple request
+# Now ask something
 response = client.chat.completions.create(
-    model="claude-3.5-sonnet",
+    model="gpt-4o",
     messages=[{"role": "user", "content": "Hello!"}]
 )
 print(response.choices[0].message.content)
@@ -95,184 +52,57 @@ print(response.choices[0].message.content)
 
 ---
 
-### **Asynchronous Usage**  
+## Browser Cookies (For Free Services)
+
+Some services don't need keys - they use your browser login.
+
+### Which Services Need Cookies?
+- **Bing** → needs `_U` cookie
+- **Google** → needs `__Secure-1PSID` cookie
+- **Meta AI** → needs Facebook cookies
+
+### How to Get Cookies
+
+1. Install "EditThisCookie" extension in Chrome/Firefox
+2. Go to the website (bing.com, google.com, etc.)
+3. Log in normally
+4. Click the extension icon
+5. Copy the cookie values
+
+### Use Cookies in Code
+
 ```python
-import asyncio
-from g4f.client import AsyncClient
+from g4f.cookies import set_cookies
 
-async def main():
-    # Initialize with Groq
-    client = AsyncClient(provider="g4f.Provider.Groq", api_key="your_key_here")
-    
-    response = await client.chat.completions.create(
-        model="mixtral-8x7b",
-        messages=[{"role": "user", "content": "Hello!"}]
-    )
-    print(response.choices[0].message.content)
+# Set Bing cookie
+set_cookies(".bing.com", {"_U": "your_cookie_value_here"})
 
-asyncio.run(main())
+# Set Google cookie
+set_cookies(".google.com", {"__Secure-1PSID": "your_cookie_value_here"})
 ```
 
 ---
 
-### **Multiple Providers with API Keys**  
-```python
-import os
-import g4f.Provider
-from g4f.client import Client
+## Web Interface Password
 
-# Using environment variables
-providers = {
-    "Anthropic": os.getenv("ANTHROPIC_API_KEY"),
-    "Groq": os.getenv("GROQ_API_KEY")
-}
-
-for provider_name, api_key in providers.items():
-    client = Client(provider=getattr(g4f.Provider, provider_name), api_key=api_key)
-    response = client.chat.completions.create(
-        model="claude-3.5-sonnet",
-        messages=[{"role": "user", "content": f"Hello to {provider_name}!"}]
-    )
-    print(f"{provider_name}: {response.choices[0].message.content}")
-```
-
----
-
-### **Cookie-Based Authentication**  
-**For Providers Like Gemini/Bing**:  
-1. Open your browser and log in to the provider's website.  
-2. Use developer tools (F12) to copy cookies:  
-   - Chrome/Edge: **Application** → **Cookies**  
-   - Firefox: **Storage** → **Cookies**  
+Protect your local web interface so others can't use it:
 
 ```python
-from g4f.client import Client
-from g4f.Provider import Gemini
+from g4f.gui import run_gui
 
-# Using with cookies
-client = Client(
-    provider=Gemini,
-)
-response = client.chat.completions.create(
-    model="", # Default model
-    messages="Hello Google",
-    cookies={
-        "__Secure-1PSID": "your_cookie_value_here",
-        "__Secure-1PSIDTS": "your_cookie_value_here"
-    }
-)
-print(f"Gemini: {response.choices[0].message.content}")
+# Start with password protection
+run_gui(password="my_secret_password")
 ```
 
----
-
-### **Rate Limiting**  
-```python
-from aiolimiter import AsyncLimiter
-
-# Limit to 5 requests per second
-rate_limiter = AsyncLimiter(max_rate=5, time_period=1)
-
-async def make_request():
-    async with rate_limiter:
-        return await client.chat.completions.create(...)
-```
+Now when someone visits the web page, they must enter this password.
 
 ---
 
-### **Error Handling**  
-```python
-from tenacity import retry, stop_after_attempt, wait_exponential
+## Troubleshooting
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
-def safe_request():
-    try:
-        return client.chat.completions.create(...)
-    except Exception as e:
-        print(f"Attempt failed: {str(e)}")
-        raise
-```
-
----
-
-### **Supported Providers**  
-| Provider       | Auth Type       | Example Models       |  
-|----------------|-----------------|----------------------|  
-| Anthropic      | API Key         | `claude-3.5-sonnet`  |  
-| Gemini         | Cookies         | `gemini-1.5-pro`     |  
-| Groq           | API Key         | `mixtral-8x7b`       |  
-| HuggingFace    | API Key         | `llama-3.1-70b`      |  
-
-*Full list: [Providers and Models](providers-and-models.md)*  
-
----
-
-## **GUI Authentication**  
-
-### **Server Setup**  
-1. Create a password:  
-   ```bash
-   # Linux/macOS
-   export G4F_API_KEY="your_password_here"
-
-   # Windows (Command Prompt)
-   set G4F_API_KEY=your_password_here
-
-   # Windows (PowerShell)
-   $env:G4F_API_KEY = "your_password_here"
-   ```  
-2. Start the server:  
-   ```bash
-   python -m g4f --debug --port 8080 --g4f-api-key $G4F_API_KEY
-   ```  
-
----
-
-### **Browser Access**  
-1. Navigate to `http://localhost:8080/chat/`.  
-2. Use credentials:  
-   - **Username**: Any value (e.g., `admin`).  
-   - **Password**: Your `G4F_API_KEY`.  
-
----
-
-### **Programmatic Access**  
-```python
-import requests
-
-response = requests.get(
-    "http://localhost:8080/chat/",
-    auth=("admin", "your_password_here")
-)
-print("Success!" if response.status_code == 200 else f"Failed: {response.status_code}")
-```
-
----
-
-## **Best Practices**  
-1. 🔒 **Never hardcode keys**  
-   - Use `.env` files or secret managers like AWS Secrets Manager.  
-2. 🔄 **Rotate keys every 90 days**  
-   - Especially critical for production environments.  
-3. 📊 **Monitor API usage**  
-   - Use tools like Prometheus/Grafana for tracking.  
-4. ♻️ **Retry transient errors**  
-   - Use the `tenacity` library for robust retry logic.  
-
----
-
-## **Troubleshooting**  
-| Issue                     | Solution                                  |  
-|---------------------------|-------------------------------------------|  
-| **"Invalid API Key"**     | 1. Verify key spelling<br>2. Regenerate key in provider dashboard |  
-| **"Cookie Expired"**      | 1. Re-login to provider website<br>2. Update cookie values |  
-| **"Rate Limit Exceeded"** | 1. Implement rate limiting<br>2. Upgrade provider plan |  
-| **"Provider Not Found"**  | 1. Check provider name spelling<br>2. Verify provider compatibility |  
-
----
-
-**[Providers and Models →](providers-and-models.md)**
-
-**[← Return to Documentation](README.md)**
-
-**[⬆ Back to Top](#table-of-contents)**
+| Problem | Fix |
+|---------|-----|
+| "API key not found" | Check that you set the environment variable |
+| "Cookie invalid" | Log in again and copy fresh cookies |
+| "Rate limited" | Wait a few minutes or use a different service |
+| "Access denied" | Check that your password is correct |

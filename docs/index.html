@@ -1,668 +1,430 @@
 <!DOCTYPE html>
-<html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
+<html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>GPT4Free Documentation Hub</title>
-
-    <meta name="description" content="GPT4Free documentation for GPT4Free Documentation Hub. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
-    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, GPT4Free Documentation Hub" />
-    <meta name="author" content="GPT4Free Team" />
-
-    <!-- Open Graph -->
-    <meta property="og:type" content="article" />
-    <meta property="og:title" content="GPT4Free Documentation Hub" />
-    <meta property="og:description" content="GPT4Free documentation for GPT4Free Documentation Hub. Free AI endpoints, examples, and comprehensive guides." />
-    <meta property="og:url" content="https://g4f.dev/docs/" />
-    <meta property="og:site_name" content="GPT4Free Documentation" />
-    <meta property="og:image" content="https://g4f.dev/dist/img/g4f-180x180.png" />
-
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="GPT4Free Documentation Hub | GPT4Free Documentation" />
-    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for GPT4Free Documentation Hub." />
-    <meta name="twitter:image" content="https://g4f.dev/dist/img/g4f-180x180.png" />
-
-    <!-- Canonical -->
-    <link rel="canonical" href="https://g4f.dev/docs/" />
-
-    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/g4f-180x180.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/g4f-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/g4f-16x16.png" />
-    <link rel="manifest" href="/dist/img/site.webmanifest" />
-
-    <!-- GitHub Primer CSS & styles -->
-    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
-    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
-    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
-    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
-    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
-    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
-
-    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G4F - AI for Everyone! 🤖</title>
     <style>
-        :root {
-            --accent: #8b3dff;
-            --background: #16101b;
-            --text-primary: #ddd;
-            --text-secondary: #9b7dff;
-            --card-bg: #1e152e;
-            --border-color: #333;
-            --hover-color: #a67eff;
-        }
-
-        body {
+        * {
             margin: 0;
             padding: 0;
-            background: var(--background);
-            color: var(--text-primary);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-            line-height: 1.6;
-            min-height: 100vh;
-        }
-
-        .container {
-            display: flex;
-            max-width: 100%;
-            margin: 0;
-            padding: 2rem;
-            gap: 3rem;
-            min-height: calc(100vh - 4rem);
-        }
-
-        /* Enhanced main content styling */
-        main {
-            flex: 1;
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 2.5rem;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
-            overflow-wrap: break-word;
-            position: relative;
-        }
-
-        /* Typography improvements */
-        .markdown-body h1 {
-            font-size: 2.8rem;
-            margin-bottom: 1rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            border-bottom: 3px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        .markdown-body h2 {
-            margin-top: 3rem;
-            margin-bottom: 1rem;
-            border-bottom: 2px solid var(--accent);
-            padding-bottom: 0.25rem;
-            color: var(--text-primary);
-        }
-
-        .markdown-body h3 {
-            margin-top: 2rem;
-            margin-bottom: 0.8rem;
-            color: var(--text-primary);
-        }
-
-        .markdown-body p {
-            margin-bottom: 1.2rem;
-            color: var(--text-primary);
-        }
-
-        /* Enhanced link styling */
-        .markdown-body a {
-            color: var(--accent);
-            text-decoration: none;
-            transition: all 0.3s ease;
-            font-weight: 500;
+            box-sizing: border-box;
         }
         
-        .markdown-body a:hover,
-        .markdown-body a:focus {
-            color: var(--hover-color);
-            outline: none;
-            text-decoration: underline;
-            text-shadow: 0 0 8px rgba(139, 61, 255, 0.3);
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
         }
-
-        /* Enhanced code block styling */
-        .markdown-body pre {
-            border-radius: 12px;
-            padding: 1.5rem !important;
-            font-size: 0.95rem !important;
-            overflow-x: auto;
-            max-height: 500px;
-            box-shadow: inset 0 0 12px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.4);
-            color: #fff;
-            border: 1px solid #3d2a5c;
-            position: relative;
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
         }
-
-
-        .markdown-body code {
-            font-family: 'SF Mono', 'Cascadia Code', 'Roboto Mono', Consolas, Liberation Mono, Menlo, monospace;
-            background: rgba(139, 61, 255, 0.1);
-            padding: 0.2em 0.4em;
-            border-radius: 4px;
-            color: #e6ccff;
-            font-size: 0.9em;
-        }
-
-        .markdown-body pre code {
-            background: transparent;
-            padding: 0;
-            color: var(--fgColor-default, var(--color-fg-default))
-        }
-        /* Table styling */
-        .markdown-body table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 2rem 0;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        }
-
-        .markdown-body table th,
-        .markdown-body table td {
-            padding: 1rem;
-            text-align: left;
-            border: 1px solid var(--border-color);
-        }
-
-        .markdown-body table th {
-            background: var(--accent);
-            color: white;
-            font-weight: 600;
-        }
-
-        .markdown-body table tr:nth-child(even) {
-            background: rgba(139, 61, 255, 0.05);
-        }
-
-        .markdown-body table tr {
-            background-color: transparent;
-        }
-
-        /* List styling */
-        .markdown-body ul, 
-        .markdown-body ol {
-            margin-bottom: 1.5rem;
-            padding-left: 2rem;
-        }
-
-        .markdown-body li {
-            margin-bottom: 0.5rem;
-            color: var(--text-primary);
-        }
-
-        /* Blockquote styling */
-        .markdown-body blockquote {
-            border-left: 4px solid var(--accent);
-            background: rgba(139, 61, 255, 0.1);
-            margin: 2rem 0;
-            padding: 1rem 1.5rem;
-            border-radius: 0 8px 8px 0;
-        }
-
-        /* HR styling */
-        .markdown-body hr {
-            border: none;
-            border-top: 2px solid var(--accent);
-            margin: 3rem 0;
-            opacity: 0.6;
-        }
-
-        /* Sticky table of contents */
-        nav#toc {
-            flex: 0 0 280px;
-            position: sticky;
-            top: 2rem;
-            background: var(--card-bg);
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
-            max-height: calc(100vh - 4rem);
-            overflow-y: auto;
-            font-size: 0.9rem;
-            line-height: 1.5;
-            border: 1px solid rgba(139, 61, 255, 0.2);
-        }
-
-        nav#toc h2 {
-            font-size: 1.4rem;
-            margin: 0 0 1.5rem 0;
-            border-bottom: 2px solid var(--accent);
-            padding-bottom: 0.5rem;
-            color: var(--text-primary);
-        }
-
-        nav#toc ul {
-            list-style: none;
-            padding-left: 0;
-            margin: 0;
-        }
-
-        nav#toc li {
-            margin-bottom: 0.8rem;
-        }
-
-        nav#toc a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            display: block;
-            padding: 0.3rem 0.5rem;
-            border-radius: 6px;
-            transition: all 0.3s ease;
-        }
-
-        nav#toc a:hover, 
-        nav#toc a:focus {
-            background: rgba(139, 61, 255, 0.1);
-            color: var(--hover-color);
-            text-decoration: none;
-            transform: translateX(4px);
-        }
-
-        /* Responsive design */
-        @media (max-width: 1024px) {
-            .container {
-                flex-direction: column;
-                padding: 1rem;
-                gap: 2rem;
-            }
-
-            nav#toc {
-                position: relative;
-                max-height: none;
-                order: -1;
-                flex: none;
-            }
-
-            .markdown-body h1 {
-                font-size: 2.2rem;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 0.5rem;
-            }
-
-            main {
-                padding: 1.5rem;
-            }
-
-            .markdown-body h1 {
-                font-size: 1.8rem;
-            }
-
-            .markdown-body pre {
-                padding: 1rem !important;
-                font-size: 0.85rem !important;
-            }
-        }
-
-        /* Accessibility improvements */
-        @media (prefers-reduced-motion: reduce) {
-            * {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
-
-        /* Focus indicators */
-        *:focus {
-            outline: 2px solid var(--accent);
-            outline-offset: 2px;
-        }
-
-        /* Print styles */
-        @media print {
-            .container {
-                display: block;
-            }
-            
-            nav#toc {
-                display: none;
-            }
-            
-            main {
-                box-shadow: none;
-                background: white;
-                color: black;
-            }
-        }
-
-        /* Loading animation for syntax highlighting */
-        .highlight-loading {
-            position: relative;
-            opacity: 0.7;
-        }
-
-        .highlight-loading::after {
-            content: 'Loading syntax highlighting...';
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            font-size: 0.8rem;
-            color: rgba(255, 255, 255, 0.6);
-        }
-
-        /* Translate Button Style */
-        #translate-toggle {
-            display: block;
-            background: var(--accent);
-            color: #fff;
+        
+        header {
             text-align: center;
-            padding: 0.5rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
-            cursor: pointer;
-            font-size: 0.9rem;
-            border: none;
+            color: white;
+            margin-bottom: 60px;
         }
-        #google_translate_element {
-            margin-bottom: 1rem;
+        
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .subtitle {
+            font-size: 1.5rem;
+            opacity: 0.95;
+            margin-bottom: 30px;
+        }
+        
+        .tagline {
+            font-size: 1.2rem;
+            background: rgba(255,255,255,0.2);
+            padding: 15px 30px;
+            border-radius: 50px;
+            display: inline-block;
+            backdrop-filter: blur(10px);
+        }
+        
+        .quick-start {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 60px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        
+        .quick-start h2 {
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2rem;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 50px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-size: 1.3rem;
+            font-weight: bold;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+        
+        .feature-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        
+        .feature-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+        
+        .guides {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 60px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        
+        .guides h2 {
+            color: #667eea;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2rem;
+        }
+        
+        .guide-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .guide-item {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+        
+        .guide-item:hover {
+            background: #e8ebff;
+        }
+        
+        .guide-item h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .guide-item a {
+            color: #764ba2;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .guide-item a:hover {
+            text-decoration: underline;
+        }
+        
+        .benefits {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 60px;
+            color: white;
+        }
+        
+        .benefit {
+            background: rgba(255,255,255,0.15);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .benefit h3 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .benefit p {
+            font-size: 1.1rem;
+        }
+        
+        .getting-started {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 60px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        
+        .getting-started h2 {
+            color: #667eea;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2rem;
+        }
+        
+        .steps {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+        }
+        
+        .step {
+            flex: 1;
+            min-width: 250px;
+            max-width: 350px;
+            background: #f8f9ff;
+            padding: 30px;
+            border-radius: 15px;
+            position: relative;
+        }
+        
+        .step-number {
+            position: absolute;
+            top: -15px;
+            left: -15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .step h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            margin-top: 10px;
+        }
+        
+        footer {
+            text-align: center;
+            color: white;
+            padding: 40px 20px;
+            opacity: 0.9;
+        }
+        
+        footer a {
+            color: white;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            .subtitle {
+                font-size: 1.2rem;
+            }
+            
+            .container {
+                padding: 20px 15px;
+            }
+            
+            .quick-start, .guides, .getting-started {
+                padding: 30px 20px;
+            }
         }
     </style>
-
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "TechArticle",
-      "headline": "GPT4Free Documentation Hub",
-      "description": "GPT4Free documentation for GPT4Free Documentation Hub. Complete guides, examples, and API reference for free AI endpoints.",
-      "author": {
-        "@type": "Organization",
-        "@id": "https://g4f.dev/#organization",
-        "name": "GPT4Free",
-        "url": "https://g4f.dev",
-        "logo": {
-          "@type": "ImageObject",
-          "url": "https://g4f.dev/dist/img/g4f-180x180.png"
-        }
-      },
-      "publisher": {
-        "@type": "Organization",
-        "@id": "https://g4f.dev/#organization"
-      },
-      "mainEntityOfPage": {
-        "@type": "WebPage",
-        "@id": "https://g4f.dev/docs/"
-      },
-      "datePublished": "2024-01-01T00:00:00Z",
-      "dateModified": "2024-01-01T00:00:00Z",
-      "inLanguage": "en",
-      "isAccessibleForFree": true,
-      "keywords": "GPT4Free, AI documentation, free AI API, code generation",
-      "articleSection": "Documentation"
-    }
-    </script>
 </head>
 <body>
     <div class="container">
-        <nav id="toc" aria-label="Table of contents" role="navigation">
-            <!-- Translation Button -->
-            <button id="translate-toggle">🌐 Translate Page</button>
-            <div id="google_translate_element" style="display:none;"></div>
+        <header>
+            <h1>Welcome to G4F 🤖</h1>
+            <p class="subtitle">Your Friendly AI Assistant - Completely Free</p>
+            <div class="tagline">No coding needed. No expensive subscriptions. Just free AI.</div>
+        </header>
 
-            <h2>Contents</h2>
-            <ul id="toc-list"></ul>
-            <hr style="margin: 1.5rem 0; opacity: 0.3;">
-            <ul>
-                <li><a href="/docs/" aria-label="Return to documentation home">📚 Documentation Hub</a></li>
-                <li><a href="/" aria-label="Return to main site">🏠 G4F Home</a></li>
-            </ul>
-        </nav>
+        <div class="benefits">
+            <div class="benefit">
+                <h3>🆓</h3>
+                <p>100% Free</p>
+            </div>
+            <div class="benefit">
+                <h3>⚡</h3>
+                <p>Instant Access</p>
+            </div>
+            <div class="benefit">
+                <h3>🔒</h3>
+                <p>Private & Secure</p>
+            </div>
+            <div class="benefit">
+                <h3>🎯</h3>
+                <p>Easy to Use</p>
+            </div>
+        </div>
 
-        <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
-<h2>GPT4Free Documentation Hub</h2>
-<p>
-<img src="https://g4f.dev/docs/images/pico.jpeg" alt="Welcome to the official docs for **GPT4Free** – free and convenient AI endpoints you can use directly in your apps, scripts, and even right in your browser.
-Here you’ll find a clear overview, quick examples, and entry points to deeper docs for every major feature."/>
-</p>
-<hr>
-<h2>Installation &amp; Setup</h2>
-<p>For full install guides—choose your method:</p>
-<ul>
-<li><a href="git.html">Git Install</a></li>
-<li><a href="docker.html">Docker</a></li>
-<li><a href="requirements.html">Requirements</a></li>
-</ul>
-<p>For rapid starts, you can use either <strong>Python</strong> or <strong>JavaScript</strong> (web).</p>
-<hr>
-<h2>Getting Started</h2>
-<h3>📝 Text Generation</h3>
-<p>Python example for chat completion (with and without web search):</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
+        <div class="quick-start">
+            <h2>Ready to Start?</h2>
+            <a href="https://g4f.dev/chat" class="cta-button">🚀 Start Chatting Now - It's Free!</a>
+            <p style="margin-top: 20px; color: #666;">No signup required. Just click and start!</p>
+        </div>
 
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>()
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">chat</span>.<span class="pl-c1">completions</span>.<span class="pl-c1">create</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"gpt-4.1"</span>,  <span class="pl-c"># Try "gpt-4o", "deepseek-v3", etc.</span>
-    <span class="pl-s1">messages</span><span class="pl-c1">=</span>[{<span class="pl-s">"role"</span>: <span class="pl-s">"user"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello"</span>}],
-    <span class="pl-s1">web_search</span><span class="pl-c1">=</span><span class="pl-c1">False</span>
-)
-<span class="pl-en">print</span>(<span class="pl-s1">response</span>.<span class="pl-c1">choices</span>[<span class="pl-c1">0</span>].<span class="pl-c1">message</span>.<span class="pl-c1">content</span>)</pre></div>
-<p><strong>Output:</strong></p>
-<pre class="notranslate"><code class="notranslate">Hello! How can I assist you today?
-</code></pre>
-<hr>
-<h3>🎨  Image Generation</h3>
-<p>Generate images with a single call (returns URLs or base64):</p>
-<div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">client</span> <span class="pl-k">import</span> <span class="pl-v">Client</span>
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">💬</div>
+                <h3>Chat With AI</h3>
+                <p>Ask questions, have conversations, get help with anything. Just like texting a super-smart friend!</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🎨</div>
+                <h3>Create Images</h3>
+                <p>Type what you want to see, and AI creates it! Perfect for ideas, art, or just having fun.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📚</div>
+                <h3>Learn Anything</h3>
+                <p>Get explanations, homework help, learn new skills, or explore new topics in simple terms.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">✍️</div>
+                <h3>Write Stuff</h3>
+                <p>Emails, stories, poems, code, social media posts - AI helps you write anything!</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🧮</div>
+                <h3>Solve Problems</h3>
+                <p>Math homework, coding bugs, decision making, brainstorming - AI has your back!</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🌍</div>
+                <h3>Any Language</h3>
+                <p>Speak in any language! G4F understands and responds in hundreds of languages.</p>
+            </div>
+        </div>
 
-<span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-en">Client</span>()
-<span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-s1">client</span>.<span class="pl-c1">images</span>.<span class="pl-c1">generate</span>(
-    <span class="pl-s1">model</span><span class="pl-c1">=</span><span class="pl-s">"flux"</span>,  <span class="pl-c"># Other models: 'dalle-3', 'gpt-image', etc.</span>
-    <span class="pl-s1">prompt</span><span class="pl-c1">=</span><span class="pl-s">"a white siamese cat"</span>,
-    <span class="pl-s1">response_format</span><span class="pl-c1">=</span><span class="pl-s">"url"</span>
-)
-<span class="pl-en">print</span>(<span class="pl-s">f"Generated image URL: <span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">response</span>.<span class="pl-c1">data</span>[<span class="pl-c1">0</span>].<span class="pl-c1">url</span><span class="pl-kos">}</span></span>"</span>)</pre></div>
-<p><a href="client.html">More Python client info →</a></p>
-<p><a href="async_client.html">and Async client →</a></p>
-<hr>
-<h3>🧙‍♂️ Using GPT4Free.js</h3>
-<p>Use the <strong>official JS client</strong> right in the browser—no backend needed.</p>
-<p>For text generation:</p>
-<div class="highlight highlight-text-html-basic"><pre class="notranslate"><span class="pl-kos">&lt;</span><span class="pl-ent">script</span> <span class="pl-c1">type</span>="<span class="pl-s">module</span>"<span class="pl-kos">&gt;</span>
-    <span class="pl-k">import</span> <span class="pl-v">Client</span> <span class="pl-k">from</span> <span class="pl-s">'https://g4f.dev/dist/js/client.js'</span><span class="pl-kos">;</span>
+        <div class="getting-started">
+            <h2>How to Get Started (3 Easy Steps)</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Open Your Browser</h3>
+                    <p>Use Chrome, Firefox, Safari, or any browser on your computer or phone.</p>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Go to the Chat</h3>
+                    <p>Visit <a href="https://g4f.dev/chat" style="color: #667eea; font-weight: bold;">g4f.dev/chat</a></p>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Start Typing!</h3>
+                    <p>Type your question or request and get an answer in seconds!</p>
+                </div>
+            </div>
+        </div>
 
-    <span class="pl-k">const</span> <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">Client</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-k">const</span> <span class="pl-s1">result</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span><span class="pl-kos">.</span><span class="pl-c1">chat</span><span class="pl-kos">.</span><span class="pl-c1">completions</span><span class="pl-kos">.</span><span class="pl-en">create</span><span class="pl-kos">(</span><span class="pl-kos">{</span>
-        <span class="pl-c1">model</span>: <span class="pl-s">'gpt-4.1'</span><span class="pl-kos">,</span>  <span class="pl-c">// Or "gpt-4o", "deepseek-v3"</span>
-        <span class="pl-c1">messages</span>: <span class="pl-kos">[</span><span class="pl-kos">{</span> <span class="pl-c1">role</span>: <span class="pl-s">'user'</span><span class="pl-kos">,</span> <span class="pl-c1">content</span>: <span class="pl-s">'Explain quantum computing'</span> <span class="pl-kos">}</span><span class="pl-kos">]</span>
-    <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">log</span><span class="pl-kos">(</span><span class="pl-s1">result</span><span class="pl-kos">.</span><span class="pl-c1">choices</span><span class="pl-kos">[</span><span class="pl-c1">0</span><span class="pl-kos">]</span><span class="pl-kos">.</span><span class="pl-c1">message</span><span class="pl-kos">.</span><span class="pl-c1">content</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-<span class="pl-kos">&lt;/</span><span class="pl-ent">script</span><span class="pl-kos">&gt;</span></pre></div>
-<p>And for image generation:</p>
-<div class="highlight highlight-text-html-basic"><pre class="notranslate"><span class="pl-kos">&lt;</span><span class="pl-ent">script</span> <span class="pl-c1">type</span>="<span class="pl-s">module</span>"<span class="pl-kos">&gt;</span>
-    <span class="pl-k">import</span> <span class="pl-v">Client</span> <span class="pl-k">from</span> <span class="pl-s">'https://g4f.dev/dist/js/client.js'</span><span class="pl-kos">;</span>
+        <div class="guides">
+            <h2>📚 Learn More - Simple Guides for Everyone</h2>
+            <div class="guide-list">
+                <div class="guide-item">
+                    <h4>🤔 What is G4F?</h4>
+                    <p>Learn what G4F is and how it works</p>
+                    <a href="what-is-g4f.md">Read Guide →</a>
+                </div>
+                
+                <div class="guide-item">
+                    <h4>🚀 Getting Started</h4>
+                    <p>Your first steps with AI</p>
+                    <a href="getting-started.md">Start Here →</a>
+                </div>
+                
+                <div class="guide-item">
+                    <h4>💬 How to Chat</h4>
+                    <p>Tips for amazing conversations</p>
+                    <a href="how-to-chat.md">Learn Tips →</a>
+                </div>
+                
+                <div class="guide-item">
+                    <h4>🎨 Create Images</h4>
+                    <p>Turn words into pictures</p>
+                    <a href="create-images.md">Create Now →</a>
+                </div>
+                
+                <div class="guide-item">
+                    <h4>🤖 Choose AI Models</h4>
+                    <p>Find your perfect AI friend</p>
+                    <a href="models.md">Explore Models →</a>
+                </div>
+                
+                <div class="guide-item">
+                    <h4>❓ FAQ</h4>
+                    <p>Answers to common questions</p>
+                    <a href="faq.md">Get Answers →</a>
+                </div>
+            </div>
+        </div>
 
-    <span class="pl-k">const</span> <span class="pl-s1">client</span> <span class="pl-c1">=</span> <span class="pl-k">new</span> <span class="pl-v">Client</span><span class="pl-kos">(</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-k">const</span> <span class="pl-s1">response</span> <span class="pl-c1">=</span> <span class="pl-k">await</span> <span class="pl-s1">client</span><span class="pl-kos">.</span><span class="pl-c1">images</span><span class="pl-kos">.</span><span class="pl-en">generate</span><span class="pl-kos">(</span><span class="pl-kos">{</span>
-        <span class="pl-c1">model</span>: <span class="pl-s">"flux"</span><span class="pl-kos">,</span> <span class="pl-c">// Or "dalle-3", "gpt-image"</span>
-        <span class="pl-c1">prompt</span>: <span class="pl-s">"a white siamese cat"</span>
-    <span class="pl-kos">}</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-k">const</span> <span class="pl-s1">imageUrl</span> <span class="pl-c1">=</span> <span class="pl-s1">response</span><span class="pl-kos">.</span><span class="pl-c1">data</span><span class="pl-kos">[</span><span class="pl-c1">0</span><span class="pl-kos">]</span><span class="pl-kos">.</span><span class="pl-c1">url</span><span class="pl-kos">;</span>
-    <span class="pl-smi">console</span><span class="pl-kos">.</span><span class="pl-en">log</span><span class="pl-kos">(</span><span class="pl-s">`Generated Image URL: <span class="pl-s1"><span class="pl-kos">${</span><span class="pl-s1">imageUrl</span><span class="pl-kos">}</span></span>`</span><span class="pl-kos">)</span><span class="pl-kos">;</span>
-    <span class="pl-c">// Example: document.body.innerHTML += `&lt;img src="${imageUrl}" /&gt;`;</span>
-<span class="pl-kos">&lt;/</span><span class="pl-ent">script</span><span class="pl-kos">&gt;</span></pre></div>
-<p><a href="client_js.html">See more JS client usage →</a></p>
-<h3>💻 Using CLI Client</h3>
-<p>Examples</p>
-<ol>
-<li>
-<p><strong>Text generation</strong>:</p>
-<div class="highlight highlight-source-shell"><pre class="notranslate">g4f client <span class="pl-s"><span class="pl-pds">"</span>Explain quantum computing in simple terms<span class="pl-pds">"</span></span></pre></div>
-</li>
-<li>
-<p><strong>Image description</strong>:</p>
-<div class="highlight highlight-source-shell"><pre class="notranslate">g4f client image.jpg <span class="pl-s"><span class="pl-pds">"</span>Describe this image<span class="pl-pds">"</span></span></pre></div>
-</li>
-<li>
-<p><strong>Image generation</strong> (with supported models):</p>
-<div class="highlight highlight-source-shell"><pre class="notranslate">g4f client -m flux -O output.jpg <span class="pl-s"><span class="pl-pds">"</span>A futuristic cityscape<span class="pl-pds">"</span></span></pre></div>
-</li>
-</ol>
-<p><a href="client_cli.html">CLI Client documentation →</a></p>
-<hr>
-<h2>Deep Dives</h2>
-<ul>
-<li><a href="ready_to_use.html">API endpoints and usage</a> *<strong>new</strong></li>
-<li><a href="https://g4f.dev/docs/providers-and-models.html" rel="nofollow">Available Providers &amp; Models</a></li>
-<li><a href="selecting_a_provider.html">Selecting a Provider</a></li>
-<li><a href="providers/">Provider Documentation</a></li>
-<li><a href="/api-docs">API docs (full spec)</a></li>
-<li><a href="file.html">File API Documentation (Files and Documents)</a></li>
-<li><a href="media.html">Media Documentation (Audio, Image and Video)</a></li>
-<li><a href="vision.html">Vision Support (Image Upload)</a></li>
-<li><a href="image_editing.html">Image Editing &amp; Variation</a></li>
-<li><a href="config.html">Authentication, Configuration Guide (.har and cookies)</a></li>
-<li><a href="guides/create_provider.html">Advanced: Create your own Provider</a></li>
-<li><a href="guides/openclaw.html">Routing with custom models (OpenClaw)</a></li>
-<li><a href="pydantic_ai.html">Integrations: LangChain, PydanticAI</a></li>
-<li><a href="gui.html">GUI/WebUI</a>, <a href="guides/phone.html">Phone</a>, <a href="backend_api_documentation.html">Backend API</a></li>
-<li><a href="https://github.com/gpt4free/g4f.dev/issues">Troubleshooting</a></li>
-</ul>
-<hr>
-<h2>Community &amp; Links</h2>
-<ul>
-<li>
-<p><strong>Open Source:</strong> <a href="https://github.com/gpt4free/g4f.dev">GitHub: gpt4free/g4f.dev</a></p>
-</li>
-<li>
-<p><strong>Contribute &amp; Report Bugs:</strong> PRs &amp; issues are welcome!</p>
-</li>
-<li>
-<p><strong>Project Website:</strong> <a href="https://g4f.dev/" rel="nofollow">https://g4f.dev/</a></p>
-</li>
-<li>
-<p><strong>Pollinations AI:</strong><br>
-<a target="_blank" rel="noopener noreferrer nofollow" href="https://camo.githubusercontent.com/8341e031ba5b4186aa7bc75b70faa0377efea43c4eed1b880b6ce81ec0e74af5/68747470733a2f2f696d6167652e706f6c6c696e6174696f6e732e61692f70726f6d70742f4372656174652b612b6c6f676f2b666f722b506f6c6c696e6174696f6e732b41492b666561747572696e672b616e2b61627374726163742b666c6f7765722b626c6f6f6d696e672b6469676974616c2b706574616c732b676c6f77696e672b63656e7465722b667574757269737469632b666f6e742b506f6c6c696e6174696f6e732b41493f77696474683d353132266865696768743d323536266e6f6c6f676f3d74727565"><img src="https://camo.githubusercontent.com/8341e031ba5b4186aa7bc75b70faa0377efea43c4eed1b880b6ce81ec0e74af5/68747470733a2f2f696d6167652e706f6c6c696e6174696f6e732e61692f70726f6d70742f4372656174652b612b6c6f676f2b666f722b506f6c6c696e6174696f6e732b41492b666561747572696e672b616e2b61627374726163742b666c6f7765722b626c6f6f6d696e672b6469676974616c2b706574616c732b676c6f77696e672b63656e7465722b667574757269737469632b666f6e742b506f6c6c696e6174696f6e732b41493f77696474683d353132266865696768743d323536266e6f6c6f676f3d74727565" height="80" data-canonical-src="https://image.pollinations.ai/prompt/Create+a+logo+for+Pollinations+AI+featuring+an+abstract+flower+blooming+digital+petals+glowing+center+futuristic+font+Pollinations+AI?width=512&amp;height=256&amp;nologo=true" style="max-width: 100%; height: auto; max-height: 80px;"></a></p>
-<p><a href="https://github.com/pollinations/pollinations">GitHub: pollinations/pollinations</a></p>
-</li>
-</ul>
-<hr>
-<p>GPT4Free and g4f.dev are continuously improving. Have fun building, and let the bots do the heavy lifting for you!</p>
-<p><a href="https://github.com/xtekky/gpt4free">← Back to GPT4Free GitHub</a></p>
-</main>
+        <div class="quick-start" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <h2 style="color: white;">Still Have Questions?</h2>
+            <p style="margin-bottom: 20px; font-size: 1.1rem;">Our friendly AI is here to help - just ask!</p>
+            <a href="https://g4f.dev/chat" class="cta-button" style="background: white; color: #667eea;">💬 Ask AI Now</a>
+        </div>
     </div>
 
-    <script>
-        // Toggle Translation Widget
-        document.getElementById("translate-toggle").addEventListener("click", function() {
-            const el = document.getElementById("google_translate_element");
-            el.style.display = (el.style.display === "none") ? "block" : "none";
-        });
-
-        function googleTranslateElementInit() {
-            new google.translate.TranslateElement({
-                pageLanguage: 'en',
-                layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-            }, 'google_translate_element');
-        }
-    </script>
-    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
-    <script>
-        // Enhanced syntax highlighting with error handling
-        document.addEventListener('DOMContentLoaded', function() {
-            try {
-                // Generate table of contents
-                generateTableOfContents();
-            } catch (error) {
-                console.error('Error generating table of contents:', error);
-            }
-        });
-
-        function generateTableOfContents() {
-            const headings = document.querySelectorAll('main h2, main h3');
-            const tocList = document.getElementById('toc-list');
-            
-            if (!tocList || headings.length === 0) return;
-            
-            tocList.innerHTML = '';
-            
-            headings.forEach(function(heading, index) {
-                const id = heading.id || `heading-${index}`;
-                if (!heading.id) {
-                    heading.id = id;
-                }
-                
-                const li = document.createElement('li');
-                const a = document.createElement('a');
-                a.href = `#${id}`;
-                a.textContent = heading.textContent;
-                a.setAttribute('aria-label', `Jump to ${heading.textContent}`);
-                
-                if (heading.tagName === 'H3') {
-                    li.style.marginLeft = '1rem';
-                    li.style.fontSize = '0.9em';
-                }
-                
-                li.appendChild(a);
-                tocList.appendChild(li);
-        });
-        }
-
-        // Smooth scrolling for anchor links
-        document.addEventListener('click', function(e) {
-            if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
-                e.preventDefault();
-                const target = document.querySelector(e.target.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            }
-        });
-
-        // Add copy button to code blocks
-        document.querySelectorAll('pre code, .highlight pre').forEach(function(block) {
-            const button = document.createElement('button');
-            button.textContent = 'Copy';
-            button.className = 'copy-button';
-            button.style.cssText = `
-                position: absolute;
-                top: 0.5rem;
-                right: 0.5rem;
-                background: rgba(139, 61, 255, 0.8);
-                color: white;
-                border: none;
-                padding: 0.25rem 0.5rem;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 0.8rem;
-                opacity: 0;
-                transition: opacity 0.3s ease;
-            `;
-            
-            const pre = block.parentElement;
-            pre.style.position = 'relative';
-            pre.appendChild(button);
-            
-            pre.addEventListener('mouseenter', function() {
-                button.style.opacity = '1';
-            });
-            
-            pre.addEventListener('mouseleave', function() {
-                button.style.opacity = '0';
-            });
-            
-            button.addEventListener('click', function() {
-                navigator.clipboard.writeText(block.textContent).then(function() {
-                    button.textContent = 'Copied!';
-                    setTimeout(function() {
-                        button.textContent = 'Copy';
-                    }, 2000);
-                });
-            });
-        });
-    </script>
+    <footer>
+        <p>🎉 Welcome to the future of AI! It's free, it's easy, and it's yours.</p>
+        <p style="margin-top: 15px;">
+            <a href="what-is-g4f.md">What is G4F?</a> • 
+            <a href="getting-started.md">Getting Started</a> • 
+            <a href="faq.md">FAQ</a> • 
+            <a href="https://github.com/gpt4free/g4f.dev">GitHub</a>
+        </p>
+        <p style="margin-top: 20px; font-size: 0.9rem;">Made with ❤️ for everyone</p>
+    </footer>
 </body>
 </html>
