@@ -15,13 +15,13 @@ Here are answers to the most common questions people have about G4F.
 **A:** Yes! 100% free. No hidden costs, no credit card needed, no "freemium" traps. Just free AI.
 
 ### **Q: Do I need to create an account?**  
-**A:** No! You can start using G4F immediately without signing up or creating an account.
+**A:** No! You can start using G4F immediately without signing up or creating an account. But you can make one for higher ratelimit.
 
 ### **Q: How do I start?**  
 **A:** Just go to [https://g4f.dev/chat](https://g4f.dev/chat) and start typing! That's it!
 
 ### **Q: Do I need to install anything?**  
-**A:** No! You can use it right in your web browser. If you want, you can also install it on your computer, but it's not necessary.
+**A:** We're available as OpenAI-API compatible and web chat. So in theory no.
 
 ---
 
@@ -41,7 +41,7 @@ Here are answers to the most common questions people have about G4F.
 **A:** Usually 5-15 seconds for text, 10-30 seconds for images. Sometimes faster, sometimes a bit slower.
 
 ### **Q: Is there a limit to how much I can use?**  
-**A:** No limits! Use it as much as you want, whenever you want.
+**A:** Theres a limit for free user but you will not likely touch the ceiling in just a few seconds.
 
 ### **Q: Can I have long conversations?**  
 **A:** Yes! You can chat back and forth as much as you like. The AI will remember the conversation (within the same chat session).
@@ -56,11 +56,8 @@ Here are answers to the most common questions people have about G4F.
 ### **Q: Do you save my data?**  
 **A:** No. We don't store your conversations, messages, or any personal information.
 
-### **Q: Is it safe for kids?**  
-**A:** Yes! G4F is safe for children. The AI filters out inappropriate content. However, parental supervision is always recommended for young children.
-
 ### **Q: Can companies use G4F?**  
-**A:** Yes! Many businesses use G4F for customer service, content creation, and more.
+**A:** Yes!
 
 ---
 
@@ -79,15 +76,6 @@ Here are answers to the most common questions people have about G4F.
 ### **Q: Does it work offline?**  
 **A:** No, you need an internet connection to use G4F because it connects to AI services online.
 
-### **Q: What browsers work best?**  
-**A:** All modern browsers work:
-- Chrome
-- Firefox
-- Safari
-- Edge
-- Brave
-- Opera
-
 ### **Q: Why is it slow sometimes?**  
 **A:** Sometimes the AI services are busy. Try again in a minute, or switch to a different AI model.
 
@@ -96,10 +84,10 @@ Here are answers to the most common questions people have about G4F.
 ## Models & Features
 
 ### **Q: What AI models are available?**  
-**A:** Many! Including GPT-4o, Claude, DeepSeek, Gemini, Grok, Perplexity, and more. Each has different strengths.
+**A:** From ollama, nvidia, openrouter, perplexity and auto model
 
 ### **Q: Which model should I use?**  
-**A:** Start with GPT-4o - it's great for everything. Then try others as you get comfortable!
+**A:** Any model that suitable with your aim.
 
 ### **Q: Can I create images?**  
 **A:** Yes! Some models can create images from your descriptions. Just ask!
@@ -108,7 +96,7 @@ Here are answers to the most common questions people have about G4F.
 **A:** Some versions let you upload documents, images, or other files for the AI to analyze.
 
 ### **Q: Can I use it in different languages?**  
-**A:** Yes! G4F understands and responds in hundreds of languages.
+**A:** Yes! Most model understands and responds in hundreds of languages.
 
 ---
 
