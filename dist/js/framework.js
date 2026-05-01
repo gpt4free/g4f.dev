@@ -168,6 +168,73 @@ window.addEventListener('load', async () => {
         }
     }
 });
+
+function filterMarkdown(text, allowedTypes = null, defaultValue = null) {
+    const match = text.match(/```(.+)\n(?<code>[\s\S]+?)(\n```|$)/);
+    if (match) {
+        const [, type, code] = match;
+        if (!allowedTypes || allowedTypes.includes(type)) {
+            return code;
+        }
+    }
+    return defaultValue;
+}
+async function query(prompt, options={ json: false, cache: true }) {
+    if (options === true || options === false) {
+        options = { json: options, cache: true };
+    }
+    const encodedParams = (new URLSearchParams(options)).toString();
+    const secondPartyUrl = `https://g4f.space/ai/auto/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
+    let response;
+    try {
+        response = await fetch(secondPartyUrl, { headers: localStorage.getItem("session_token") ? {
+            'Authorization': `Bearer ${localStorage.getItem("session_token")}`
+        } : {}});
+        window.captureUserTierHeaders?.(response.headers);
+    } catch (e) {
+        add_error(`Error fetching URL: \`${secondPartyUrl}\``, e);
+    }
+    if (response && !response.ok) {
+        const delay = parseInt(response.headers.get('Retry-After'), 10);
+        if (delay > 0 && delay <= 60) {
+            console.log(`Retrying after ${delay} seconds...`);
+            await new Promise(resolve => setTimeout(resolve, delay * 1000));
+            try {
+                response = await fetch(secondPartyUrl, { headers: localStorage.getItem("session_token") ? {
+                    'Authorization': `Bearer ${localStorage.getItem("session_token")}`
+                } : {}});
+                window.captureUserTierHeaders?.(response.headers);
+            } catch(e) {
+                add_error(`Error fetching URL: \`${secondPartyUrl}\``, e);
+            }
+        }
+    }
+    if (!response || !response.ok) {
+        if (response) {
+            add_error(`Error ${response.status} with URL: \`${secondPartyUrl}\`\n ${await response.clone().text()}`, true);
+        }
+        let firstPartyUrl = `https://g4f.space/ai/pollinations/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
+        response = await fetch(firstPartyUrl, { headers: {"Authorization": `Bearer ${["pk", "_7X0QLj0xijSd0xj7"].join("")}`}});
+        if (!response.ok) {
+            add_error(`Error ${response.status} with URL: \`${firstPartyUrl}\`\n ${await response.clone().text()}`, true);
+            return response;
+        }
+    }
+    if (options.json) {
+        try {
+            try {
+                await response.clone().json();
+            } catch (e) {
+                const text = await response.clone().text();
+                return new Response(filterMarkdown(text, ["json"], text), response);
+            }
+        } catch (e) {
+            add_error(`Error parsing JSON response from URL: \`${response.url}\``, e);
+        }
+    }
+
+    return response;
+}
 framework.translateAll = async () => {
     if (navigator.language === "en" || navigator.language.startsWith("en-")) {
         return false;
@@ -223,49 +290,6 @@ const sanitizedConfig = () => {
         allowedSchemes: [ 'http', 'https', 'data' ]
     }
 };
-async function query(prompt, options={ json: false, cache: true }) {
-    if (options === true || options === false) {
-        options = { json: options, cache: true };
-    }
-    const encodedParams = (new URLSearchParams(options)).toString();
-    const secondPartyUrl = `https://g4f.space/ai/auto/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
-    let response;
-    try {
-        response = await fetch(secondPartyUrl, { headers: localStorage.getItem("session_token") ? {
-            'Authorization': `Bearer ${localStorage.getItem("session_token")}`
-        } : {}});
-        window.captureUserTierHeaders?.(response.headers);
-    } catch (e) {
-        add_error(`Error fetching URL: \`${secondPartyUrl}\``, e);
-    }
-    if (response && !response.ok) {
-        const delay = parseInt(response.headers.get('Retry-After'), 10);
-        if (delay > 0 && delay <= 60) {
-            console.log(`Retrying after ${delay} seconds...`);
-            await new Promise(resolve => setTimeout(resolve, delay * 1000));
-            try {
-                response = await fetch(secondPartyUrl, { headers: localStorage.getItem("session_token") ? {
-                    'Authorization': `Bearer ${localStorage.getItem("session_token")}`
-                } : {}});
-                window.captureUserTierHeaders?.(response.headers);
-            } catch(e) {
-                add_error(`Error fetching URL: \`${secondPartyUrl}\``, e);
-            }
-        }
-    }
-    if (!response || !response.ok) {
-        if (response) {
-            add_error(`Error ${response.status} with URL: \`${secondPartyUrl}\`\n ${await response.clone().text()}`, true);
-        }
-        let firstPartyUrl = `https://g4f.space/ai/pollinations/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
-        response = await fetch(firstPartyUrl, { headers: {"Authorization": `Bearer ${["pk", "_7X0QLj0xijSd0xj7"].join("")}`}});
-        if (!response.ok) {
-            add_error(`Error ${response.status} with URL: \`${firstPartyUrl}\`\n ${await response.clone().text()}`, true);
-            return response;
-        }
-    }
-    return response;
-}
 const renderMarkdown = (content) => {
     if (!content) {
         return "";
@@ -323,16 +347,6 @@ function nl2br(str) {
     const div = document.createElement('div');
     div.appendChild(document.createTextNode(str));
     return div.innerHTML.replace(/\n/g, "<br>");
-}
-function filterMarkdown(text, allowedTypes = null, defaultValue = null) {
-    const match = text.match(/```(.+)\n(?<code>[\s\S]+?)(\n```|$)/);
-    if (match) {
-        const [, type, code] = match;
-        if (!allowedTypes || allowedTypes.includes(type)) {
-            return code;
-        }
-    }
-    return defaultValue;
 }
 async function getPublicKey(backendUrl) {
     let response = await fetch(`${backendUrl || framework.backendUrl}/backend-api/v2/public-key`, {method: 'POST'});
