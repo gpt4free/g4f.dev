@@ -1,13 +1,13 @@
 {
     "providers": {
-        "default": {"baseUrl": "https://g4f.space/api/{model}", "backupUrl": "https://g4f.space/api/{model}", "tags": "", "defaultModel": "auto", "quotaEndpoint": "https://g4f.space/api/auto/chat/completions"},
+        "default": {"baseUrl": "https://g4f.space/api/{model}", "backupUrl": "https://g4f.space/api/{model}", "quotaEndpoint": "https://g4f.space/api/auto/chat/completions"},
         "pollinations": {"label": "pollinations.ai", "tags": "🎨 👓", "provider": "PollinationsAI"},
         "api.airforce": {"baseUrl": "https://api.airforce/v1", "tags": "🎨 👓", "sleep": 60000},
         "master": {"label": "master by api.airforce", "baseUrl": "https://g4f.space/api/api.airforce", "tags": "🎨 👓", "sleep": 10000},
         "audio": {"label": "audio by g4f.dev", "baseUrl": "https://g4f.space/api/audio", "backupUrl": "https://g4f.space/api/audio", "tags": "🎧", "sleep": 10000},
         "azure": {"label": "azure by g4f.dev", "baseUrl": "https://g4f.space/api/azure", "backupUrl": "https://g4f.space/api/azure", "tags": "👓", "sleep": 10000},
         "custom": {"tags": ""},
-        "deepinfra": {"tags": "🎨 👓", "modelsEndpoint": "https://api.deepinfra.com/models/featured"},
+        "deepinfra": {"baseUrl": "https://api.deepinfra.com/v1/openai", "tags": "🎨 👓", "modelsEndpoint": "https://api.deepinfra.com/models/featured"},
         "gemini": {"baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai", "backupUrl": "https://g4f.space/api/gemini-v1beta", "tags": "👓"},
         "groq": {"baseUrl": "https://api.groq.com/openai/v1", "backupUrl": "https://g4f.space/api/groq", "tags": ""},
         "huggingface": {"tags": "🤗", "provider": "HuggingFace"},
@@ -18,16 +18,17 @@
         "perplexity": {"baseUrl": "https://perplexity.g4f-dev.workers.dev", "tags": "🔎"}
     },
     "defaultModels": {
+        "default": "auto",
         "pollinations": "openai-fast",
         "azure": "model-router3",
         "gemini": "models/gemini-3-flash-preview",
         "openrouter": "openrouter/free",
-        "nvidia": "deepseek-ai/deepseek-v3.2",
-        "ollama": "deepseek-v3.2",
+        "nvidia": "moonshotai/kimi-k2.6",
+        "ollama": "deepseek-v4-pro",
         "groq": "openai/gpt-oss-120b",
-        "gpt4free.pro": "deepseek-ai/deepseek-v3.2",
         "puter": "anthropic:anthropic/claude-sonnet-4-6",
-        "perplexity": "turbo"
+        "perplexity": "turbo",
+        "deepinfra": "deepseek-ai/DeepSeek-V4-Flash"
     },
     "providerLocalStorage": {
         "api.airforce": "ApiAirforce-api_key",
