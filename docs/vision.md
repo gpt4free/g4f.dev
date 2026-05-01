@@ -1,40 +1,87 @@
-# Working with Images
+## G4F - Vision Support in Chat Completion
 
-## What This Means
-Some sources can look at pictures and describe them or answer questions about them.
+This documentation provides an overview of how to integrate vision support into chat completions using an API and a client. It includes examples to guide you through the process.
 
-## Supported Sources
-- OpenAI (GPT-4 with Vision)
-- Gemini (Google)
-- Qwen (Alibaba)
+### Example with the API
 
-## How to Send an Image
+To use vision support in chat completion with the API, follow the example below:
 
-**Python:**
 ```python
-from tool import Client
+import requests
+import json
+from g4f.image import to_data_uri
+from g4f.requests.raise_for_status import raise_for_status
 
-client = Client()
-response = client.ask(
-    "What's in this picture?",
-    image="path/to/photo.jpg"
-)
+url = "http://localhost:8080/v1/chat/completions"
+body = {
+    "model": "",
+    "provider": "Copilot",
+    "messages": [
+        {"role": "user", "content": "what are on this image?"}
+    ],
+    "images": [
+        ["data:image/jpeg;base64,...", "cat.jpeg"]
+    ]
+}
+response = requests.post(url, json=body, headers={"g4f-api-key": "secret"})
+raise_for_status(response)
+print(response.json())
 ```
 
-**API:**
-```bash
-curl -X POST http://localhost:8080/v1/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [{"role": "user", "content": "What is this?"}],
-    "image": "data:image/jpeg;base64,/9j/4AAQ..."
-  }'
+In this example:
+- `url` is the endpoint for the chat completion API.
+- `body` contains the model, provider, messages, and images.
+- `messages` is a list of message objects with roles and content.
+- `images` is a list of image data in Data URI format and optional filenames.
+- `response` stores the API response.
+
+### Example with the Client
+
+To use vision support in chat completion with the client, follow the example below:
+
+```python
+import g4f
+import g4f.Provider
+
+def chat_completion(prompt):
+    client = g4f.Client(provider=g4f.Provider.Blackbox)
+    images = [
+        [open("docs/images/waterfall.jpeg", "rb"), "waterfall.jpeg"],
+        [open("docs/images/cat.webp", "rb"), "cat.webp"]
+    ]
+    response = client.chat.completions.create([{"content": prompt, "role": "user"}], "", images=images)
+    print(response.choices[0].message.content)
+
+prompt = "what are on this images?"
+chat_completion(prompt)
 ```
 
-## Image Format
-- **File:** Just give the file path
-- **URL:** Paste the web link
-- **Base64:** Encode the image as text
+```
+**Image 1**
 
-## Size Limits
-Most sources accept images up to 5MB. Larger files may be rejected.
+* A waterfall with a rainbow
+* Lush greenery surrounding the waterfall
+* A stream flowing from the waterfall
+
+**Image 2**
+
+* A white cat with blue eyes
+* A bird perched on a window sill
+* Sunlight streaming through the window
+```
+
+In this example:
+- `client` initializes a new client with the specified provider.
+- `images` is a list of image data and optional filenames.
+- `response` stores the response from the client.
+- The `chat_completion` function prints the chat completion output.
+
+### Notes
+
+- Multiple images can be sent. Each image has two data parts: image data (in Data URI format for the API) and an optional filename.
+- The client supports bytes, IO objects, and PIL images as input.
+- Ensure you use a provider that supports vision and multiple images.
+
+---
+
+[Return to Documentation](README.md)

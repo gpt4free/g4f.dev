@@ -1,93 +1,113 @@
-# Command Line Guide
+# G4F CLI Client
 
-Talk to the assistant directly from your computer's terminal. No browser needed.
+A command-line interface for interacting with various AI providers and models, supporting text and image generation with conversation history.
 
----
-
-## Install
+## Installation
 
 ```bash
-pip install g4f
+pip install g4f[all]
 ```
 
-## Quick Start
+Call it in your terminal:
 
-Ask anything:
 ```bash
-g4f client "Explain the moon landing in simple terms"
+g4f client "Explain generative AI"
 ```
 
-The answer appears right in your terminal.
+Or with:
 
----
-
-## Common Uses
-
-### Ask a question
 ```bash
-g4f client "What are good beginner plants for gardening?"
+python -m g4f.cli.client "Explain quantum computing"
 ```
 
-### Describe an image
-```bash
-g4f client my-photo.jpg "What's in this picture?"
+## Usage
+
+```text
+usage: g4f [-h] [--debug] [-p PROVIDER] [-m MODEL] [-O [FILE]] [-i INSTRUCTIONS] [-c COOKIES_DIR]
+           [--conversation-file CONVERSATION_FILE] [-C]
+           [input ...]
 ```
 
-### Create an image
-```bash
-g4f client -m flux -O my-art.jpg "A peaceful mountain lake at sunset"
-```
+### Basic Examples
 
-### Continue a conversation
-Your last few messages are remembered automatically, so you can follow up:
-```bash
-g4f client "Now explain it like I'm five"
-```
+1. **Text generation**:
+   ```bash
+   g4f client "Explain quantum computing in simple terms"
+   ```
 
----
+2. **Image description**:
+   ```bash
+   g4f client image.jpg "Describe this image"
+   ```
 
-## Useful Options
+3. **Image generation** (with supported models):
+   ```bash
+   g4f client -m flux -O output.jpg "A futuristic cityscape"
+   ```
 
-| Option | What It Does |
+4. **Continue conversation**:
+   ```bash
+   g4f client "Now explain it like I'm five"
+   ```
+
+### Options
+
+| Option | Description |
 |--------|-------------|
-| `-h`, `--help` | Show all available options |
-| `--debug` | Show detailed technical info if something goes wrong |
-| `-p NAME` | Pick which service to use (e.g., `OpenaiChat`, `Gemini`) |
-| `-m NAME` | Pick which assistant model to use |
-| `-O FILE` | Save the answer to a file |
-| `-i TEXT` | Give the assistant special instructions, like "You are a math tutor" |
-| `-C` | Start fresh, forget previous messages |
+| `-h`, `--help` | Show help message |
+| `--debug`, `-d` | Enable verbose logging |
+| `-p PROVIDER`, `--provider PROVIDER` | Specify provider (e.g., `OpenaiChat`, `Gemini`, `Grok`) |
+| `-m MODEL`, `--model MODEL` | Specify model (provider-specific) |
+| `-O [FILE]`, `--output [FILE]` | Save response to file (for text or image generation) |
+| `-i INSTRUCTIONS`, `--instructions INSTRUCTIONS` | Add custom system instructions |
+| `-c COOKIES_DIR`, `--cookies-dir COOKIES_DIR` | Directory for authenticated providers |
+| `--conversation-file FILE` | Custom conversation state file |
+| `-C`, `--clear-history` | Clear conversation history before starting |
 
----
+### Features
 
-## Examples
+- **Multi-modal support**: Process both text and images
+- **Conversation history**: Maintains context between queries
+- **Multiple providers**: Supports 50+ AI providers
+- **Image generation**: With supported models (e.g., `flux`)
+- **Persistent settings**: Saves selected model in conversation file
 
-**Get a science explanation with a custom tone:**
-```bash
-g4f client -p PollinationsAI -i "You are a helpful science tutor" "Explain photosynthesis"
-```
+### Advanced Usage
 
-**Save a response to a file:**
-```bash
-g4f client -O story.txt "Write a short bedtime story"
-```
+1. **Custom provider with instructions**:
+   ```bash
+   g4f client -p PollinationsAI -i "You are a helpful science tutor" "Explain photosynthesis"
+   ```
 
-**Start a completely new conversation:**
-```bash
-g4f client -C "Tell me a joke"
-```
+2. **Debug mode**:
+   ```bash
+   g4f client --debug "What's the weather today?"
+   ```
 
----
+3. **Clear history and start fresh**:
+   ```bash
+   g4f client -C "New conversation"
+   ```
 
-## Where Conversations Are Saved
+4. **Save response to file**:
+   ```bash
+   g4f client -O generator.js "Write a poem generator in js"
+   ```
 
-- Conversation history: `~/.config/g4f/conversation.json`
-- Login cookies (if needed): `~/.config/g4f/cookies/`
+## Configuration
 
----
+- Default conversation file: `~/.config/g4f/conversation.json`
+- Default cookies directory: `~/.config/g4f/cookies/`
 
-## Tips
+## Supported Providers
 
-- For creating images, use a model that supports it (like `flux`)
-- Some services may ask you to log in through a browser first
-- The model you last used is saved automatically for next time
+The CLI supports numerous providers including:
+- Anthropic, BingCreateImages, Blackbox, Copilot, DeepSeek, Gemini, Grok, HuggingChat, MetaAI, OpenaiChat, PerplexityLabs, and many more.
+
+Run `g4f --help` to see the complete list.
+
+## Notes
+
+- For image generation, ensure you select a model that supports it (e.g., `flux`)
+- Some providers may require authentication via cookies
+- The selected model is automatically saved in the conversation file
