@@ -64,6 +64,7 @@ const modelTags = {
     audio: "🎧",
     video: "🎥",
     paid_only: "💰",
+    free: "🆓",
 }
 
 document.addEventListener("DOMContentLoaded", (event) => {
@@ -3588,9 +3589,6 @@ const load_provider_option = (input, provider_name) => {
 };
 
 function get_modelTags(model, add_vision = true) {
-    if (model.tags && model.tags.length > 0) {
-        return " " + model.tags.join(" ")
-    }
     const parts = []
     for (let [name, text] of Object.entries(modelTags)) {
         if (name != "vision" || add_vision) {
@@ -3599,6 +3597,15 @@ function get_modelTags(model, add_vision = true) {
         if (!model[name] && model.type === name) {
             parts.push(` ${text}`);
         }
+    }
+    if (model.id.endsWith("/free") || model.id.endsWith(":free")) {
+        parts.push(` ${modelTags.free}`);
+    }
+    if (model.id.startsWith("models/gemini-") && model.id.includes("-flash-") && (model.id.endsWith("-latest") || model.id.endsWith("-preview")) && !model.id.includes("-image-") && !model.id.includes("-audio-") && !model.id.includes("-live-")) {
+        parts.push(` ${modelTags.free}`);
+    }
+    if (model.id.startsWith("models/gemma-")) {
+        parts.push(` ${modelTags.free}`);
     }
     return parts.join("");
 }
@@ -3920,7 +3927,7 @@ async function on_api() {
                     }
                     option.value = name;
                     option.dataset.live = "true";
-                    option.text = `${config.label || name} ${config.tags} 🟢`;
+                    option.text = (config.label || name) + (config.tags ? ` ${config.tags} 🟢` : " 🟢");
                     optgroup.appendChild(option);
                 });
             } catch(e) {

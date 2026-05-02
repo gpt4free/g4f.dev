@@ -20,6 +20,8 @@
     "defaultModels": {
         "default": "auto",
         "pollinations": "openai-fast",
+        "api.airforce": "llama-4-scout",
+        "master": "llama-4-scout",
         "azure": "model-router3",
         "gemini": "models/gemini-3-flash-preview",
         "openrouter": "openrouter/free",

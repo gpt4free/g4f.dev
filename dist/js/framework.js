@@ -322,7 +322,12 @@ const renderMarkdown = (content) => {
         html: window.sanitizeHtml ? true : false,
         breaks: true
     });
-    content = markdown.render(content)
+    content = markdown.render(
+            content.replaceAll('<think>', `<details><summary>${framework.translate('Reasoning')}</summary>`)
+            .replaceAll('</think>', '\n</details>\n')
+            .replaceAll('<thought>', `<details><summary>${framework.translate('Reasoning')}</summary>`)
+            .replaceAll('</thought>', '\n</details>\n')
+        )
         .replaceAll("<a href=", '<a target="_blank" href=')
         .replaceAll('<code>', '<code class="language-plaintext">')
         .replaceAll('<iframe src="', '<iframe frameborder="0" height="224" width="400" src="')
@@ -331,8 +336,6 @@ const renderMarkdown = (content) => {
         .replaceAll('src="/media/', `src="${framework.backendUrl}/media/`)
         .replaceAll('src="/thumbnail/', `src="${framework.backendUrl}/thumbnail/`)
         .replaceAll('href="/media/', `src="${framework.backendUrl}/media/`)
-        .replaceAll('<think>', `<details><summary>${framework.translate('Reasoning')}</summary>`)
-        .replaceAll('</think>', '</details>')
     if (window.sanitizeHtml) {
         content = window.sanitizeHtml(content, sanitizedConfig());
     }
