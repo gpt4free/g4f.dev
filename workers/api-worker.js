@@ -66,24 +66,24 @@ var CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Credentials": "true",
   "Access-Control-Allow-Methods": "GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key, x-user, x-ignored, x-secret, x-recognition-language, if-none-match",
   "Access-Control-Expose-Headers": "Content-Type, X-User-Id, X-User-Tier, X-Provider, X-Model, X-Server, X-Url, X-Usage-Total-Tokens, X-Stream, X-Ratelimit-Model-Factor, X-Ratelimit-Remaining-Requests, X-Ratelimit-Remaining-Tokens, X-Ratelimit-Limit-Requests, X-Ratelimit-Limit-Tokens"
 };
 var ACCESS_CONTROL_ALLOW_ORIGIN = {
   "Access-Control-Allow-Origin": "*"
 };
 var DEFAULT_MODELS = {
-  "srv_mkom688d57c76d8a3542": "moonshotai/kimi-k2-instruct-0905",
+  // "srv_mkom688d57c76d8a3542": "moonshotai/kimi-k2-instruct-0905",
   // groq
-  "srv_mkombumpae45db46dcb8": "deepseek-ai/deepseek-v3.2",
+  "srv_mkombumpae45db46dcb8": "moonshotai/kimi-k2.6",
   // nvidia
-  // "srv_mkolabu46aa55fc6f003": "deepseek-v3.2",
+  "srv_mnkjel2208cf770e5009": "deepseek-v4-pro",
   // ollama
   "srv_mm0u9cua212491d78695": "openrouter/free",
   // openrouter
   // 'srv_mjlq1ncq8a3f7fe0aea0': 'turbo',
   // perplexity
-  "srv_mkol5tgcd33cc358ddbc": "models/gemini-flash-latest",
+  // "srv_mkol5tgcd33cc358ddbc": "models/gemini-flash-latest",
   // gemini
   "srv_mkoloq41e34074b6133e": "openai-fast",
   // pollinations
@@ -92,10 +92,21 @@ var DEFAULT_MODELS = {
   // "srv_mks0cusg6010f87029ea": "model-router3",
   // azure
 };
-var URL_MAP = {
-  "https://gen.pollinations.ai/quota": "https://gen.pollinations.ai/account/balance"
+var SERVER_MAP = {
+  //"api": "srv_mnkjel2208cf770e5009",
+  "ollama": "srv_mnkjel2208cf770e5009",
+  "openrouter": "srv_mm0u9cua212491d78695",
+  "pollinations": "srv_mkoloq41e34074b6133e",
+  "groq": "srv_mkom688d57c76d8a3542",
+  "gemini": "srv_mkol5tgcd33cc358ddbc",
+  "nvidia": "srv_mkombumpae45db46dcb8",
+  "azure": "srv_mks0cusg6010f87029ea",
 }
-var BLOCKED_SERVERS = ["srv_mkrzs4lg75588992eb03", "srv_mm4b22wq6142dcde995b", "srv_mmaeaqcwf1c31c3fb25d"];
+var URL_MAP = {
+  "https://gen.pollinations.ai/quota": "https://gen.pollinations.ai/account/balance",
+  "https://generativelanguage.googleapis.com/v1beta/openai/quota": "https://generativelanguage.googleapis.com/v1beta/openai/models"
+}
+var BLOCKED_SERVERS = ["srv_mkrzs4lg75588992eb03", "srv_mm4b22wq6142dcde995b", "srv_mmaeaqcwf1c31c3fb25d", "srv_mku7zugs5088a704d608", "srv_mn0rn0i5dfde3b0eaea5", "srv_mmze6r2y3ef94fe04216", "srv_mkolabu46aa55fc6f003", "srv_mlk9nas87e67219356a6"];
 // organizations (from Cloudflare `asOrganization`) that should be blocked
 // when the request is anonymous (no user/session or API key provided).
 var BLOCKED_ORGS = [
@@ -148,16 +159,17 @@ var custom_worker_default = {
         return { id: voice, audio: true };
       })] }, { headers: ACCESS_CONTROL_ALLOW_ORIGIN });
     }
-    if (pathname == "/api/auto/models") {
+    if (pathname == "/api/auto/models" || pathname == "/api/azure/quota") {
       return Response.json({ data: [{id: "auto"}] }, { headers: ACCESS_CONTROL_ALLOW_ORIGIN });
     }
+    let userProvidedKey = null;
+    let user = null;
     try {
-      const user = await authenticateRequest(request, env);
-      const authHeader = request.headers.get("Authorization");
-      let userProvidedKey = null;
+      user = await authenticateRequest(request, env);
+      const authHeader = request.headers.get("authorization");
       if (authHeader && authHeader.startsWith("Bearer ")) {
         const tokens = authHeader.substring(7).split(/\s+/);
-        userProvidedKey = tokens.find((t) => t && !t.startsWith("g4f_") && !t.startsWith("gfs_"));
+        userProvidedKey = tokens.find((t) => t && !t.startsWith("g4f_") && !t.startsWith("gfs_") && t != "screct");
       }
       // block anonymous requests originating from certain cloud providers
       // (Cloudflare sets `request.cf.asOrganization` for the source ASN/org).
@@ -170,8 +182,14 @@ var custom_worker_default = {
           }
         }, 403);
       }
-      let rateCheck;
-      if (!userProvidedKey && !pathname.endsWith("/models") && !pathname.startsWith("/custom/api/"))
+    } catch (error) {
+        console.error("User error:", error);
+        return jsonResponse({ error: "User error: " + error.message || "Internal server error" }, 500);
+    }
+    try {
+    let rateCheck;
+    try {
+      if (!userProvidedKey && !pathname.endsWith("/models") && !pathname.endsWith("/quota") && !pathname.startsWith("/custom/api/") && !pathname.startsWith("/chat/") && !pathname.startsWith("/backend-api/") && !pathname.startsWith("/pa/"))
         if (user) {
           rateCheck = await checkUserRateLimits(env, user, request);
           if (!rateCheck.allowed) {
@@ -225,8 +243,12 @@ var custom_worker_default = {
             return newResponse;
           }
         }
+      } catch (error) {
+        console.error("Rate check error:", error);
+        return jsonResponse({ error: "Rate check error: " + error.message || "Internal server error" }, 500);
+      }
       const cacheKey = url.toString();
-      if (request.method === "GET") {
+      if ((!userProvidedKey || pathname.endsWith("/models")) && request.method === "GET") {
         const cachedResponse = await getCachedResponse(request, cacheKey);
         if (cachedResponse) {
           const newResponse = new Response(cachedResponse.body, cachedResponse);
@@ -245,6 +267,29 @@ var custom_worker_default = {
           ctx.waitUntil(updateUserRateLimit(env, user.id, ctx));
         }
         ctx.waitUntil(updateAnonymousRateLimit(env, getClientIP(request), ctx));
+      }
+      const serverLabel = url.hostname.split(".")[0];
+      try {
+        if (serverLabel in SERVER_MAP) {
+          const server = await getServerById(env, SERVER_MAP[serverLabel], user);
+          if (!server) {
+            return jsonResponse({ error: "Server not found" }, 404);
+          }
+          if (pathname.match(/^\/models$/)) {
+            try {
+              return await handleModels(request, env, ctx, server.id, user, server, cacheKey, userProvidedKey);
+            } catch(error) {
+              return jsonResponse({ error: "Server model error: " + error.message || "Internal server error" }, 500);
+            }
+          }
+          if (pathname.match(/^\/chat\/completions$/)) {
+            return handleProxyToServer(request, env, ctx, server, "/chat/completions", cacheKey, user, pathname, userProvidedKey, rateCheck);
+          }
+          return handleProxyToServer(request, env, ctx, server, pathname, cacheKey, user, pathname, userProvidedKey, rateCheck);
+        }
+      } catch (error) {
+        console.error("Server map error:", error);
+        return jsonResponse({ error: "Server map error: " + pathname + error.message || "Internal server error" }, 500);
       }
       if (pathname.startsWith("/ai/")) {
         return handleCustomAiRoute(request, pathname, cacheKey, rateCheck, env, ctx);
@@ -291,7 +336,7 @@ var custom_worker_default = {
           server = await getServerByLabel(env, label, user);
         }
         if (!server) {
-          return proxyToPassG4f(request, env, pathname, url.search, user);
+          return proxyToPassG4f(request, env, pathname, url.search, user, cacheKey, ctx);
         }
         return handleModels(request, env, ctx, server.id, user, server, cacheKey);
       }
@@ -322,7 +367,7 @@ var custom_worker_default = {
           }
         }
         if (!server) {
-          return proxyToPassG4f(request, env, pathname, url.search, user);
+          return proxyToPassG4f(request, env, pathname, url.search, user, cacheKey, ctx);
         }
         return handleProxyToServer(request, env, ctx, server, "/chat/completions", cacheKey, user, pathname, userProvidedKey, rateCheck);
       }
@@ -344,14 +389,14 @@ var custom_worker_default = {
         const user2 = await authenticateRequest(request, env);
         const server = await getServerByLabel(env, label, user2);
         if (!server) {
-          return proxyToPassG4f(request, env, pathname, url.search, user2);
+          return proxyToPassG4f(request, env, pathname, url.search, user2, cacheKey, ctx);
         }
         return handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user2, pathname, userProvidedKey, rateCheck);
       }
-      return proxyToPassG4f(request, env, pathname, url.search, user);
+      return proxyToPassG4f(request, env, pathname, url.search, user, cacheKey, ctx);
     } catch (error) {
       console.error("Custom worker error:", error);
-      return jsonResponse({ error: error.message || "Internal server error" }, 500);
+      return jsonResponse({ error: "Custom worker error: " + error.message || "Internal server error" }, 500);
     }
   },
   async scheduled(event, env, ctx) {
@@ -714,14 +759,14 @@ async function handleGetServerModels(request, env, serverId) {
   }
   return jsonResponse({ data: [] });
 }
-async function handleModels(request, env, ctx, serverId, user, server, cacheKey) {
+async function handleModels(request, env, ctx, serverId, user, server, cacheKey, userProvidedKey) {
   if (!server) {
     return jsonResponse({ error: "Server not found" }, 404);
   }
-  const apiKey = getRandomApiKey(server.api_keys);
+  const apiKey = userProvidedKey || getRandomApiKey(server.api_keys);
   const headers = { "Content-Type": "application/json" };
   if (apiKey) {
-    headers["Authorization"] = apiKey.includes("Bearer") ? apiKey : `Bearer ${apiKey}`;
+    headers["Authorization"] = `Bearer ${apiKey}`;
   }
   try {
     const targetUrl = server.base_url.includes("/chat/completions") ? server.base_url.replace("/chat/completions", "/models") : `${server.base_url}/models`;
@@ -752,7 +797,7 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey)
     return newResponse;
   } catch (e) {
     if (server.allowed_models && server.allowed_models.length > 0) {
-      console.log(e);
+      console.error(e);
       return jsonResponse({
         data: server.allowed_models.map((m) => ({ id: m, audio: m.includes("audio") }))
       });
@@ -859,7 +904,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     };
     if (subPath === "/chat/completions") {
       fetchOptions.method = "POST";
-      fetchOptions.body = JSON.stringify({ ...requestBody, "messages": [{ "role": "user", "content": "Hello" }] });
+      fetchOptions.body = JSON.stringify({ ...requestBody, "messages": [{ "role": "user", "content": "say only okay" }] });
     }
     if (request.method === "POST") {
       fetchOptions.body = requestBody ? JSON.stringify(requestBody) : await request.text();
@@ -904,10 +949,13 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
         for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
           newResponse2.headers.set(key, value);
         }
+        newResponse2.headers.delete("set-cookie");
         newResponse2.headers.set("X-Url", targetUrl);
         newResponse2.headers.set("X-Server", server.id);
         newResponse2.headers.set("X-Provider", server.label);
-        if (requestModel) newResponse2.headers.set("X-Model", requestModel);
+        if (requestModel) {
+          newResponse2.headers.set("X-Model", requestModel);
+        }
         if (user) {
           newResponse2.headers.set("X-User-Id", user.id);
           newResponse2.headers.set("X-User-Tier", user.tier);
@@ -917,7 +965,6 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
           newResponse2.headers.set("X-Ratelimit-Model-Factor", String(getModelFactor(requestBody.model)));
           updateResponsefromRateCheck(newResponse2, rateCheck);
         }
-        newResponse2.headers.delete("set-cookie");
         return newResponse2;
       } else if (contentType2.includes("application/json")) {
         const clonedResponse = response.clone();
@@ -933,12 +980,12 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
         }
       }
     }
-    let totalTokens = parseInt(response.headers.get("X-Usage-Total-Tokens") || "0") || usage.total_tokens || 0;
-    if (subPath === "/chat/completions" && response.ok || usage) {
+    const totalTokens = parseInt(response.headers.get("X-Usage-Total-Tokens") || "0") || usage.total_tokens || 0;
+    if (subPath === "/chat/completions" && response.ok || totalTokens > 0) {
       const geoLocation = request.cf?.asOrganization || request.cf?.country || null;
       const userAgent = request.headers.get("user-agent") || null;
       ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, requestModel, totalTokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
-      if (totalTokens) {
+      if (totalTokens > 0) {
         ctx.waitUntil(updateServerUsage(env, server, totalTokens, requestModel));
       }
       if (user) {
@@ -957,15 +1004,18 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
       newResponse.headers.set(key, value);
     }
+    newResponse.headers.delete("set-cookie");
     newResponse.headers.set("X-Url", targetUrl);
     newResponse.headers.set("X-Server", server.id);
     newResponse.headers.set("X-Provider", server.label);
-    if (requestModel) newResponse.headers.set("X-Model", requestModel);
+    if (requestModel) {
+      newResponse.headers.set("X-Model", requestModel);
+    }
     if (totalTokens) {
       newResponse.headers.set("X-Usage-Total-Tokens", String(totalTokens));
     }
-    if (request.method === "GET") {
-      ctx.waitUntil(setCachedResponse(request, newResponse.clone(), CACHE_HEADERS.SHORT, cacheKey, ctx));
+    if (request.method === "GET" && !userProvidedKey) {
+      ctx.waitUntil(setCachedResponse(request, newResponse.clone(), subPath.endsWith("/quota") ? CACHE_HEADERS.SHORT : CACHE_HEADERS.MEDIUM, cacheKey, ctx));
     }
     if (user) {
       newResponse.headers.set("X-User-Id", user.id);
@@ -977,7 +1027,6 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     if (rateCheck) {
       updateResponsefromRateCheck(newResponse, rateCheck);
     }
-    newResponse.headers.delete("set-cookie");
     return newResponse;
   } catch (e) {
     return jsonResponse({
@@ -985,7 +1034,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     }, 502);
   }
 }
-async function createUsageTrackingStream(response, env, ctx, server, serverId, clientIP, model, firstMessage, user, pathname, userProvidedKey, geoLocation, userAgent) {
+async function createUsageTrackingStream(response, env, ctx, server, serverId, clientIP, requestModel, firstMessage, user, pathname, userProvidedKey, geoLocation, userAgent) {
   const reader = response.clone().body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -1009,9 +1058,6 @@ async function createUsageTrackingStream(response, env, ctx, server, serverId, c
           if (data.usage) {
             usage = data.usage;
           }
-          if (data.model) {
-            model = data.model;
-          }
         } catch (e) {
         }
       }
@@ -1020,14 +1066,14 @@ async function createUsageTrackingStream(response, env, ctx, server, serverId, c
       break;
     }
   }
-  ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${serverId}`, model, usage.total_tokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
-  ctx.waitUntil(updateServerUsage(env, server, usage.total_tokens, model));
+  ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${serverId}`, requestModel, usage.total_tokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
+  ctx.waitUntil(updateServerUsage(env, server, usage.total_tokens, requestModel));
   if (user) {
-    ctx.waitUntil(updateUserDailyUsage(env, user.id, usage.total_tokens, `custom:${serverId}`, model));
+    ctx.waitUntil(updateUserDailyUsage(env, user.id, usage.total_tokens, `custom:${serverId}`, requestModel));
   }
   const isCached = (response.headers.get("X-Cache") || usage.cache || "MISS") === "HIT";
   if (!userProvidedKey && !isCached) {
-    const totalTokens = getModelTokens(model, usage.total_tokens);
+    const totalTokens = getModelTokens(requestModel, usage.total_tokens);
     ctx.waitUntil(updateAnonymousTokenUsage(env, clientIP, totalTokens, ctx));
     if (user) {
       ctx.waitUntil(updateUserTokenUsage(env, user.id, totalTokens, ctx));
@@ -1063,7 +1109,8 @@ async function persistUsageToDb(env, clientIP, provider, model, tokensUsed, prom
       promptTokens || 0,
       completionTokens || 0,
       pathname || "unknown",
-      firstMessage ? firstMessage.substring(0, 5000) : null,      userInfo?.user_id || userInfo?.id || null,
+      firstMessage ? firstMessage.substring(0, 5000) : null,
+      userInfo?.user_id || userInfo?.id || null,
       userInfo?.tier || null,
       userInfo?.username || null,
       geoLocation || null,
@@ -1101,8 +1148,8 @@ async function updateServerUsage(env, server, tokens, model) {
     dailyUsage.requests += 1;
     dailyUsage.tokens += tokens;
     if (model) {
-      dailyUsage.newModels2 = dailyUsage.newModels2 || {};
-      dailyUsage.newModels2[model] = (dailyUsage.newModels2[model] || 0) + 1;
+      dailyUsage.models = dailyUsage.models || {};
+      dailyUsage.models[model] = (dailyUsage.models[model] || 0) + 1;
     }
     await env.MEMBERS_BUCKET.put(usagePath, JSON.stringify(dailyUsage, null, 2), {
       httpMetadata: { contentType: "application/json" }
@@ -1377,6 +1424,27 @@ async function handleCustomAiRoute(request, pathname, cacheKey, rateCheck, env, 
   let serverLabel = splited[0];
   let prompt = splited[1] || "";
   let server;
+  if (serverLabel == "audio" && prompt && request.method === "GET") {
+    let queryUrl = `https://gen.pollinations.ai/audio/${encodeURIComponent(prompt)}?model=whisper`;
+    if (url.searchParams.get("voice")) {
+      queryUrl += `&voice=${encodeURIComponent(url.searchParams.get("voice"))}`
+    }
+    const response = await fetch(queryUrl, {headers: {"Authorization": "Bearer pk_1BHiyzFdDqUjDCoI"}});
+    const newResponse = new Response(response.body, response);
+    for (const [key, value] of Object.entries(CORS_HEADERS)) {
+      newResponse.headers.set(key, value);
+    }
+    newResponse.headers.set("X-Provider", serverLabel);
+    // if (queryBody.model) newResponse.headers.set("X-Model", queryBody.model);
+    // newResponse.headers.set("X-Server", server.id);
+    newResponse.headers.set("X-Url", queryUrl);
+    newResponse.headers.set("X-Cache", "YES");
+    ctx.waitUntil(setCachedResponse(request, newResponse.clone(), CACHE_HEADERS.LONG, cacheKey, ctx));
+    if (rateCheck) {
+      updateResponsefromRateCheck(newResponse, rateCheck);
+    }
+    return newResponse;
+  }
   if (!serverLabel || serverLabel === "auto") {
     server = await getRandomPublicServer(env);
     if (!server) {
@@ -1486,6 +1554,8 @@ ${prompt}
               const reader = response.body.getReader();
               const decoder = new TextDecoder();
               let buffer = "";
+              let last_data;
+              let last_content;
               try {
                 while (true) {
                   const { done, value } = await reader.read();
@@ -1498,11 +1568,11 @@ ${prompt}
                       const data = line.slice(6).trim();
                       if (data === "[DONE]") continue;
                       try {
+                        last_data = data;
                         const parsed = JSON.parse(data);
-                        const content = parsed.choices?.[0]?.delta?.content || 
-                                        parsed.choices?.[0]?.delta?.reasoning_content ||
-                                        parsed.choices?.[0]?.text || "";
+                        const content = parsed.choices?.[0]?.delta?.content;
                         if (content) {
+                          last_content = content;
                           controller.enqueue(new TextEncoder().encode(content));
                         }
                       } catch (e) {
@@ -1514,6 +1584,9 @@ ${prompt}
               } catch (e) {
                 controller.error(e);
               } finally {
+                if (!last_content && last_data) {
+                  controller.enqueue(new TextEncoder().encode(`${data}`));
+                }
                 controller.close();
               }
             }
@@ -1526,6 +1599,10 @@ ${prompt}
           newResponse2.headers.set("X-Server", server.id);
           newResponse2.headers.set("X-Url", queryUrl);
           newResponse2.headers.set("X-Stream", "true");
+          if (request.method === "GET" && prompt) {
+            newResponse2.headers.set("X-Cache", "YES");
+            ctx.waitUntil(setCachedResponse(request, newResponse2.clone(), CACHE_HEADERS.LONG, cacheKey, ctx));
+          }
           if (rateCheck) {
             newResponse2.headers.set("X-Ratelimit-Model-Factor", String(getModelFactor(queryBody.model)));
             updateResponsefromRateCheck(newResponse2, rateCheck);
@@ -1541,6 +1618,10 @@ ${prompt}
       if (queryBody.model) newResponse2.headers.set("X-Model", queryBody.model);
       newResponse2.headers.set("X-Server", server.id);
       newResponse2.headers.set("X-Url", queryUrl);
+      if (request.method === "GET" && prompt) {
+        newResponse2.headers.set("X-Cache", "YES");
+        ctx.waitUntil(setCachedResponse(request, newResponse2.clone(), CACHE_HEADERS.LONG, cacheKey, ctx));
+      }
       if (rateCheck) {
         newResponse2.headers.set("X-Ratelimit-Model-Factor", String(getModelFactor(queryBody.model)));
         updateResponsefromRateCheck(newResponse2, rateCheck);
@@ -1579,7 +1660,8 @@ ${prompt}
     if (queryBody.model) newResponse.headers.set("X-Model", queryBody.model);
     newResponse.headers.set("X-Server", server.id);
     newResponse.headers.set("X-Url", queryUrl);
-    if (request.method === "GET" && prompt && !data.includes("Model unavailable")) {
+    if (request.method === "GET") {
+      newResponse.headers.set("X-Cache", "YES");
       ctx.waitUntil(setCachedResponse(request, newResponse, CACHE_HEADERS.LONG, cacheKey, ctx));
     }
     const clientIP = getClientIP(request);
@@ -1588,7 +1670,7 @@ ${prompt}
     const requestModel = data.model || queryBody.model;
     const firstMessage = prompt || getFirstMessage(queryBody.messages);
     ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, queryBody.model, usage.total_tokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
-    if (subPath === "/chat/completions" && response.ok) {
+    if (response.ok) {
       ctx.waitUntil(updateServerUsage(env, server, usage.total_tokens, queryBody.model));
     }
     if (user) {
@@ -2041,7 +2123,9 @@ async function getModelsFromStats(env, server) {
   const modelCounts = {};
   if (!env.MEMBERS_BUCKET || !server || !server.owner_id) return modelCounts;
   try {
-    const prefix = `custom_servers/${server.owner_id}/${server.id}/usage/`;
+    const now = new Date();
+    const dateKey = now.toISOString().split("T")[0];
+    const prefix = `custom_servers/${server.owner_id}/${server.id}/usage/${dateKey}.json`;
     const list = await env.MEMBERS_BUCKET.list({ prefix });
     if (list && list.objects) {
       for (const entry of list.objects) {
@@ -2049,8 +2133,8 @@ async function getModelsFromStats(env, server) {
           const rec = await env.MEMBERS_BUCKET.get(entry.key);
           if (!rec) continue;
           const json = await rec.json();
-          if (json && json.newModels2) {
-            for (const [m, cnt] of Object.entries(json.newModels2)) {
+          if (json && json.models) {
+            for (const [m, cnt] of Object.entries(json.models)) {
               modelCounts[m] = (modelCounts[m] || 0) + (cnt || 0);
             }
           }
@@ -2084,30 +2168,6 @@ async function handleV1Models(request, env) {
   }
   const publicServersIndex = await getPublicServers(env);
   const allModels = {};
-
-  // include allowed models for each owned/private server (use server prefix)
-  for (const server of privateServers) {
-    if (server.allowed_models && server.allowed_models.length > 0) {
-      server.allowed_models.forEach((model) => {
-        const key = `${server.id}:${model}`;
-        if (!allModels[key]) {
-          allModels[key] = { id: key, label: `${server.label}:${model}`, base_url: `/custom/${server.id}`, requests: 0 };
-        }
-      });
-    }
-  }
-
-  // same logic for public servers index (prefix allowed models)
-  for (const serverIndex of publicServersIndex) {
-    if (serverIndex.allowed_models && serverIndex.allowed_models.length > 0) {
-      serverIndex.allowed_models.forEach((model) => {
-        const key = `${serverIndex.id}:${model}`;
-        if (!allModels[key]) {
-          allModels[key] = { id: key, label: `${serverIndex.label}:${model}`, base_url: `/custom/${serverIndex.id}`, requests: 0 };
-        }
-      });
-    }
-  }
 
   // aggregate stats if bucket available
   if (env.MEMBERS_BUCKET) {
@@ -2185,19 +2245,19 @@ async function setCachedResponse(request, response, cacheControl, cacheKey = nul
     console.error("Cache write error:", e);
   }
 }
-async function proxyToPassG4f(request, env, pathname, search, user = null) {
+async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ctx) {
   const passApiKey = user ? env.PASS_API_KEY : null;
   const headers = new Headers(request.headers);
+  const authHeader = request.headers.get("Authorization");
   if (passApiKey) {
-    const authHeader = request.headers.get("Authorization");
     if (authHeader && authHeader.startsWith("Bearer ")) {
       const existingKey = authHeader.substring(7);
-      headers.set("Authorization", `Bearer ${passApiKey}\n${existingKey}`);
+      headers.set("Authorization", `Bearer ${passApiKey} ${existingKey}`);
     } else {
       headers.set("Authorization", `Bearer ${passApiKey}`);
     }
   }
-  const targetUrl = `https://pass.g4f.dev${pathname}${search || ""}`;
+  const targetUrl = `https://pass.g4f.space${pathname}${search || ""}`;
   const fetchOptions = {
     method: request.method,
     headers
@@ -2208,6 +2268,9 @@ async function proxyToPassG4f(request, env, pathname, search, user = null) {
   const response = await fetch(targetUrl, fetchOptions);
   const newResponse = new Response(response.body, response);
   newResponse.headers.set("Access-Control-Allow-Origin", "*");
+  if (request.method === "GET" && !authHeader && !request.headers.get("x-api-key") && !request.headers.get("x-ignored")) {
+    ctx.waitUntil(setCachedResponse(request, newResponse.clone(), CACHE_HEADERS.SHORT, cacheKey, ctx));
+  }
   return newResponse;
 }
 export {

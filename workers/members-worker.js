@@ -45,7 +45,7 @@ const ADMIN_USERS = {
     huggingface: []
 };
 
-const EXTRA_CONTRIBUTERS = ["Screenmax1234", "kirill670", "georgedorn"];
+const EXTRA_CONTRIBUTERS = ["Screenmax1234", "kirill670", "georgedorn", "yakovexplorer", "tak-gamingYT", "sasaiber", "redac1ed"];
 
 /**
  * Fetch all contributors from GitHub API (handles pagination using Link header)
@@ -101,7 +101,7 @@ async function fetchContributors(env) {
             }
         });
         
-        console.log(`Fetched ${contributors.length} contributors`);
+        console.log(`Fetched ${contributors.length} contributors (${EXTRA_CONTRIBUTERS.length} extra)`);
         return contributors;
     } catch (error) {
         console.error("Failed to fetch contributors:", error);
@@ -352,62 +352,68 @@ function calculateUserTier(userData, contributors, sponsors) {
             
             console.log(`Fetched ${contributors.length} contributors and ${sponsors.length} sponsors`);
             
-            // List all users from R2
-            const usersList = await env.MEMBERS_BUCKET.list({ prefix: "users/" });
+            // Iterate through all users in R2, handling pagination.
+            let listResult = await env.MEMBERS_BUCKET.list({ prefix: "users/", limit: 100 });
             let updatedCount = 0;
             let errorCount = 0;
             
-            for (const object of usersList.objects) {
-                try {
-                    // Skip non-JSON files
-                    if (!object.key.endsWith('.json')) continue;
-                    
-                    const userObject = await env.MEMBERS_BUCKET.get(object.key);
-                    if (!userObject) continue;
-                    
-                    const user = await userObject.json();
-                    const newTier = calculateUserTier(user, contributors, sponsors);
-                    
-                    // Only update if tier changed
-                    if (user.tier !== newTier) {
-                        const oldTier = user.tier;
-                        user.tier = newTier;
-                        user.updated_at = new Date().toISOString();
+            while (listResult && Array.isArray(listResult.objects)) {
+                for (const object of listResult.objects) {
+                    try {
+                        // Skip non-JSON files
+                        if (!object.key.endsWith('.json')) continue;
                         
-                        // Save to R2
-                        await env.MEMBERS_BUCKET.put(
-                            object.key,
-                            JSON.stringify(user, null, 2),
-                            { httpMetadata: { contentType: "application/json" } }
-                        );
+                        const userObject = await env.MEMBERS_BUCKET.get(object.key);
+                        if (!userObject) continue;
                         
-                        // Update KV cache
-                        await env.MEMBERS_KV.put(
-                            `user:${user.id}`,
-                            JSON.stringify(user),
-                            { expirationTtl: 3600 }
-                        );
+                        const user = await userObject.json();
+                        const newTier = calculateUserTier(user, contributors, sponsors);
                         
-                        // Update API key tier in KV
-                        for (const keyData of user.api_keys || []) {
-                            const keyInfo = await env.MEMBERS_KV.get(`api_key:${keyData.key_hash}`);
-                            if (keyInfo) {
-                                const parsed = JSON.parse(keyInfo);
-                                parsed.tier = newTier;
-                                await env.MEMBERS_KV.put(
-                                    `api_key:${keyData.key_hash}`,
-                                    JSON.stringify(parsed)
-                                );
+                        if (user.tier !== newTier) {
+                            const oldTier = user.tier;
+                            user.tier = newTier;
+                            user.updated_at = new Date().toISOString();
+                            
+                            // Save to R2
+                            await env.MEMBERS_BUCKET.put(
+                                object.key,
+                                JSON.stringify(user, null, 2),
+                                { httpMetadata: { contentType: "application/json" } }
+                            );
+                            
+                            // Update KV cache
+                            await env.MEMBERS_KV.put(
+                                `user:${user.id}`,
+                                JSON.stringify(user),
+                                { expirationTtl: 3600 }
+                            );
+                            
+                            // Update API key tier in KV
+                            for (const keyData of user.api_keys || []) {
+                                const keyInfo = await env.MEMBERS_KV.get(`api_key:${keyData.key_hash}`);
+                                if (keyInfo) {
+                                    const parsed = JSON.parse(keyInfo);
+                                    parsed.tier = newTier;
+                                    await env.MEMBERS_KV.put(
+                                        `api_key:${keyData.key_hash}`,
+                                        JSON.stringify(parsed)
+                                    );
+                                }
                             }
+                            
+                            console.log(`Updated user ${user.username} (${user.provider}): ${oldTier} -> ${newTier}`);
+                            updatedCount++;
                         }
-                        
-                        console.log(`Updated user ${user.username} (${user.provider}): ${oldTier} -> ${newTier}`);
-                        updatedCount++;
+                    } catch (userError) {
+                        console.error(`Error processing user ${object.key}:`, userError);
+                        errorCount++;
                     }
-                } catch (userError) {
-                    console.error(`Error processing user ${object.key}:`, userError);
-                    errorCount++;
                 }
+                
+                if (!listResult.truncated || !listResult.cursor) {
+                    break;
+                }
+                listResult = await env.MEMBERS_BUCKET.list({ prefix: "users/", limit: 100, cursor: listResult.cursor });
             }
             
             console.log(`Scheduled tier update complete: ${updatedCount} users updated, ${errorCount} errors`);
@@ -835,8 +841,7 @@ function calculateUserTier(userData, contributors, sponsors) {
     
     const now = new Date().toISOString();
     let user;
-  
-  
+
     if (userId) {
         // Update existing user
         user = await getUser(env, userId);
