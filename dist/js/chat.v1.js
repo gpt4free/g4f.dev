@@ -50,11 +50,11 @@ const translationSnipptes = [
 ];
 
 let providers = [
-    {"name": "ApiAirforce", "label": "Api.Airforce", "login_url": "https://panel.api.airforce/dashboard"},
-    {"name": "HuggingFace", "login_url": "https://huggingface.co/settings/tokens", "login": true},
-    {"name": "HuggingFaceMedia", "parent": "HuggingFace"},
-    {"name": "PollinationsAI", "label": "Pollinations AI", "login_url": "https://enter.pollinations.ai", "login": true},
-    {"name": "PuterJS", "label": "Puter.js", "login_url": "https://discord.gg/qXA4Wf4Fsm"},
+    {"name": "ApiAirforce", "label": "Api.Airforce", "login_url": "https://panel.api.airforce/dashboard", "active_by_default": true},
+    {"name": "HuggingFace", "login_url": "https://huggingface.co/settings/tokens", "active_by_default": true},
+    {"name": "HuggingFaceMedia", "parent": "HuggingFace", "active_by_default": true},
+    {"name": "PollinationsAI", "label": "Pollinations AI", "login_url": "https://enter.pollinations.ai", "active_by_default": true},
+    {"name": "PuterJS", "label": "Puter.js", "login_url": "https://discord.gg/qXA4Wf4Fsm", "active_by_default": true},
 ];
 
 const modelTags = {
@@ -6185,11 +6185,10 @@ async function loadPaProviderSelect(optgroup) {
     optgroup = optgroup || document.getElementById('pa-providers-optgroup');
     if (!optgroup) return;
     try {
-        const providers = await fetchPaProviders();
-        window._paProviders = providers;
+        window._paProviders = window._paProviders || await fetchPaProviders();
         // Remove stale options
         optgroup.innerHTML = '';
-        providers.forEach(p => {
+        window._paProviders.forEach(p => {
             const opt = document.createElement('option');
             opt.value = `pa:${p.id}`;
             opt.dataset.pa = 'true';
@@ -6215,7 +6214,7 @@ async function loadPaProviders() {
         window._paProviders = providers;
         renderPaProviders(providers);
         // Also refresh the select dropdown
-        await loadPaProviderSelect();
+        await loadPaProviderSelect(providers);
     } catch (err) {
         const container = document.getElementById('pa-providers-list');
         if (container) container.innerHTML = `<div class="mcp-empty">Failed to load PA providers: ${escapeHtml(String(err))}</div>`;

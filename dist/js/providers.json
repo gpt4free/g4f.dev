@@ -1,7 +1,7 @@
 {
     "providers": {
         "default": {"baseUrl": "https://g4f.space/api/{model}", "backupUrl": "https://g4f.space/api/{model}", "quotaEndpoint": "https://g4f.space/api/auto/chat/completions"},
-        "pollinations": {"label": "pollinations.ai", "tags": "🎨 👓", "provider": "PollinationsAI"},
+        "pollinations": {"backupUrl": "https://g4f.space/api/pollinations", "label": "pollinations.ai", "tags": "🎨 👓", "provider": "PollinationsAI"},
         "api.airforce": {"baseUrl": "https://api.airforce/v1", "tags": "🎨 👓", "sleep": 60000},
         "master": {"label": "master by api.airforce", "baseUrl": "https://g4f.space/api/api.airforce", "tags": "🎨 👓", "sleep": 10000},
         "audio": {"label": "audio by g4f.dev", "baseUrl": "https://g4f.space/api/audio", "backupUrl": "https://g4f.space/api/audio", "tags": "🎧", "sleep": 10000},
@@ -10,7 +10,7 @@
         "deepinfra": {"baseUrl": "https://api.deepinfra.com/v1/openai", "tags": "🎨 👓", "modelsEndpoint": "https://api.deepinfra.com/models/featured"},
         "gemini": {"baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai", "backupUrl": "https://g4f.space/api/gemini-v1beta", "tags": "👓"},
         "groq": {"baseUrl": "https://api.groq.com/openai/v1", "backupUrl": "https://g4f.space/api/groq", "tags": ""},
-        "huggingface": {"tags": "🤗", "provider": "HuggingFace"},
+        "huggingface": {"baseUrl": "https://router.huggingface.co/v1", "tags": "🤗", "provider": "HuggingFace"},
         "nvidia": {"baseUrl": "https://integrate.api.nvidia.com/v1", "backupUrl": "https://g4f.space/api/nvidia", "tags": "📟"},
         "ollama": {"baseUrl": "https://ollama.g4f-dev.workers.dev", "backupUrl": "https://g4f.space/api/ollama", "tags": "🦙", "sleep": 10000},
         "openrouter": {"baseUrl": "https://openrouter.ai/api/v1", "backupUrl": "https://g4f.space/api/openrouter", "tags": "👓"},
