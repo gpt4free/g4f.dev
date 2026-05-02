@@ -1,4 +1,4 @@
-## G4F - Interference API Usage Guide
+# G4F - Interference API Usage Guide
 
 ## Table of Contents
    - [Introduction](#introduction)

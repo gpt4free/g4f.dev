@@ -45,7 +45,7 @@ const ADMIN_USERS = {
     huggingface: []
 };
 
-const EXTRA_CONTRIBUTERS = ["Screenmax1234", "kirill670", "georgedorn"];
+const EXTRA_CONTRIBUTERS = ["Screenmax1234", "kirill670", "georgedorn", "takthegod"];
 
 /**
  * Fetch all contributors from GitHub API (handles pagination using Link header)
