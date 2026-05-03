@@ -668,7 +668,7 @@ const register_message_buttons = async () => {
             await load_provider_parameters(el.dataset.provider);
             const provider_forms_container = document.querySelector(".provider_forms");
             provider_forms_container.querySelectorAll("form").forEach(form => form.classList.add("hidden"));
-            const provider_form = provider_forms_container.querySelector(`#${el.dataset.provider}-form`);
+            const provider_form = provider_forms_container.querySelector(`#${el.dataset.provider.replaceAll(':', '-')}-form`);
             if (provider_form) {
                 provider_form.classList.remove("hidden");
                 provider_forms_container.classList.remove("hidden");
@@ -1152,7 +1152,7 @@ const prepare_messages = (messages, message_index = -1, do_continue = false, do_
 }
 
 async function load_provider_parameters(provider) {
-    let form_id = `${provider}-form`;
+    let form_id = `${provider.replaceAll(':', '-')}-form`;
     if (!parameters_storage[provider]) {
         parameters_storage[provider] = JSON.parse(appStorage.getItem(form_id));
     }
@@ -1590,7 +1590,7 @@ const toUrl = async (file)=>{
 
 function getExtraBody(provider) {
     const extraBody = {};
-    for (el of document.getElementById(`${provider}-form`)?.querySelectorAll(".saved input, .saved textarea") || []) {
+    for (el of document.getElementById(`${provider.replaceAll(':', '-')}-form`)?.querySelectorAll(".saved input, .saved textarea") || []) {
         let value;
         if (el.type == "checkbox") {
             value = el.checked;
@@ -1993,7 +1993,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                         } else if (response.provider) {
                             provider = response.provider || provider;
                         }
-                        add_message_chunk({type: "provider", provider: {name: provider, model: response.model, label: response.provider}}, message_id);
+                        add_message_chunk({type: "provider", provider: {name: provider, model: response.model, label: response.provider, server: response.server}}, message_id);
                     }
                     if (response.error) {
                         add_message_chunk({type: "error", ...response.error}, message_id, null, finish_message);
@@ -2421,7 +2421,7 @@ const load_conversation = async (conversation, append = false) => {
         let next_i = parseInt(i) + 1;
         let next_provider = item.provider ? item.provider : (messages.length > next_i ? messages[next_i].provider : null);
         let provider_label = item.provider?.label ? item.provider.label : item.provider?.name;
-        let provider_link = item.provider?.name ? `<a href="${item.provider.modelUrl || item.provider.url}" target="_blank">${provider_label}</a>` : "";
+        let provider_link = item.provider?.name ? `<a href="${item.provider.modelUrl || item.provider.url || ('#' + item.provider.server) || ''}" target="_blank">${provider_label}</a>` : "";
         let provider = provider_link ? `
             <div class="provider" data-provider="${item.provider.name}">
                 ${provider_link}
