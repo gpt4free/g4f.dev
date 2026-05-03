@@ -789,7 +789,6 @@ class Together extends Client {
 class Puter extends Client {
     constructor(options = {}) {
         super({});
-        this.baseUrl = options.baseUrl || null;
         this.quotaEndpoint = options.quotaEndpoint || 'https://api.puter.com/metering/usage';
         this.extraHeaders = {
             "content-type": "application/json",
@@ -806,13 +805,6 @@ class Puter extends Client {
             completions: {
                 create: async (params) => {
                     this.puter = this.puter || await this._injectPuter();
-                    this.extraHeaders = {
-                        ...this.extraHeaders,
-                        'Authorization': `Bearer ${localStorage.getItem("puter.auth.token") || ''}`
-                    };
-                    if (this.baseUrl) {
-                        return super.chat.completions.create(params);
-                    }
                     const { messages, signal, ...options } = params;
                     if (!options.model && this.defaultModel) {
                         options.model = this.defaultModel;
@@ -822,16 +814,9 @@ class Puter extends Client {
                     }
                     const response = await this.puter.ai.chat(messages, false, options);
                     this.logCallback && this.logCallback({response: response, type: 'chat'});
-                    if (response.choices === undefined && response.message !== undefined) {
-                        return {
-                            ...response,
-                            get choices() {
-                                return [{message: response.message}];
-                            }
-                        };
-                    } else {
-                        return response;
-                    }
+                    return {
+                        choices: [response]
+                    };
                 }
             }
         };
@@ -897,11 +882,12 @@ class Puter extends Client {
           item.model = model;
           this.logCallback && this.logCallback({response: item, type: 'chat'});
           if (item.text) {
-            item.choices = [{delta: {content: item.text}}]
+            yield {choices: [{delta: {content: item.text}}]}
           } else if (item.reasoning) {
-            item.choices = [{delta: {reasoning: item.reasoning}}]
+            yield {choices: [{delta: {item}}]}
+          } else {
+            yield item;
           }
-          yield item;
         }
     }
 }
