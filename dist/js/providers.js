@@ -1,5 +1,5 @@
 
-import { Client, Pollinations, DeepInfra, Puter, HuggingFace, Worker, Audio, captureUserTierHeaders } from "./client.js";
+import { Client, Pollinations, DeepInfra, HuggingFace, Worker, Audio, captureUserTierHeaders, Puter } from "./client.js";
 let fs;
 if (typeof window === "undefined") {
     fs = require("fs");
@@ -98,4 +98,4 @@ async function createClient(provider, options = {}) {
     return new ClientClass({ ...config, ...options });
 }
 
-export { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders,Puter };
+export { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, Puter };
