@@ -279,7 +279,7 @@ class Client {
                 model.type = "image";
               }
             }
-            if (model.type === 'text' || model.type === 'text-generation') {
+            if (['text', 'text-generation', 'chat.completions'].includes(model.type)) {
                 model.type = 'chat';
             } else if (model.type === 'text-to-image') {
                 model.type = 'image';
