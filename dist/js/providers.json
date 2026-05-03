@@ -14,7 +14,7 @@
         "ollama": {"baseUrl": "https://ollama.g4f-dev.workers.dev", "backupUrl": "https://g4f.space/api/ollama", "tags": "🦙", "sleep": 10000},
         "openrouter": {"baseUrl": "https://openrouter.ai/api/v1", "backupUrl": "https://g4f.space/api/openrouter", "tags": "👓"},
         "puter": {"baseUrl": "https://puter.g4f-dev.workers.dev", "tags": "👓", "provider": "PuterJS"},
-        "perplexity": {"baseUrl": "https://perplexity.g4f-dev.workers.dev", "tags": "🔎"},
+        "perplexity": {"baseUrl": "https://perplexity.g4f-dev.workers.dev", "tags": "🔎"}
     },
     "defaultModels": {
         "default": "auto",
