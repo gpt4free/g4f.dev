@@ -1168,6 +1168,13 @@
                             </div>
                             <div class="form-group">
                                 <label class="checkbox-label">
+                                    <input type="checkbox" id="serverAutoUpdateModels" checked>
+                                    <span>Auto-update allowed models list from server</span>
+                                </label>
+                                <small style="color: rgba(255,255,255,0.5);">When enabled, the allowed models list is automatically refreshed from the server's /models endpoint.</small>
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
                                     <input type="checkbox" id="serverPublic">
                                     <span>Make server public (visible to other users)</span>
                                 </label>
@@ -1834,6 +1841,10 @@
             if (serverForm) {
                 serverForm.addEventListener('submit', handleServerSubmit);
             }
+            const serverAutoUpdateModels = document.getElementById('serverAutoUpdateModels');
+            if (serverAutoUpdateModels) {
+                serverAutoUpdateModels.addEventListener('change', updateModelsTextareaState);
+            }
             if (serverModal) {
                 serverModal.addEventListener('click', (e) => {
                     if (e.target === serverModal) closeModal();
@@ -2277,14 +2288,31 @@
                 document.getElementById('serverBaseUrl').value = server.base_url || '';
                 document.getElementById('serverModels').value = (server.allowed_models || []).join('\n');
                 document.getElementById('serverPublic').checked = server.is_public || false;
+                // Default to true for old servers that don't have the field
+                document.getElementById('serverAutoUpdateModels').checked = server.auto_update_models !== false;
                 // Note: API keys are not returned for security, user must re-enter
             } else {
                 // Add mode
                 serverModalTitle.textContent = framework.translate('Add New Server');
                 editServerId.value = '';
+                document.getElementById('serverAutoUpdateModels').checked = true;
             }
             
+            updateModelsTextareaState();
             serverModal.style.display = 'flex';
+        }
+        
+        function updateModelsTextareaState() {
+            const autoUpdate = document.getElementById('serverAutoUpdateModels')?.checked;
+            const textarea = document.getElementById('serverModels');
+            if (!textarea) return;
+            if (autoUpdate) {
+                textarea.disabled = true;
+                textarea.placeholder = 'Models will be automatically fetched from the server';
+            } else {
+                textarea.disabled = false;
+                textarea.placeholder = 'gpt-4\ngpt-3.5-turbo';
+            }
         }
         
         function closeModal() {
@@ -2307,8 +2335,9 @@
             const apiKeys = document.getElementById('serverApiKeys').value.trim();
             const modelsInput = document.getElementById('serverModels').value.trim();
             const isPublic = document.getElementById('serverPublic').checked;
+            const autoUpdateModels = document.getElementById('serverAutoUpdateModels').checked;
             
-            const allowedModels = modelsInput 
+            const allowedModels = (!autoUpdateModels && modelsInput)
                 ? modelsInput.split('\n').map(m => m.trim()).filter(Boolean)
                 : [];
             
@@ -2319,6 +2348,7 @@
                     base_url: baseUrl,
                     api_keys: apiKeys,
                     allowed_models: allowedModels,
+                    auto_update_models: autoUpdateModels,
                     is_public: isPublic
                 };
                 

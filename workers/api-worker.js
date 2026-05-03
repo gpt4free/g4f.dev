@@ -72,25 +72,23 @@ var CORS_HEADERS = {
 var ACCESS_CONTROL_ALLOW_ORIGIN = {
   "Access-Control-Allow-Origin": "*"
 };
+var AUTO_PROVIDERS = [
+  "srv_mkombumpae45db46dcb8", // nvidia
+  "srv_mnkjel2208cf770e5009", // ollama
+  "srv_mm0u9cua212491d78695", // openrouter
+  "srv_mkoloq41e34074b6133e", // pollinations
+]
 var DEFAULT_MODELS = {
-  // "srv_mkom688d57c76d8a3542": "moonshotai/kimi-k2-instruct-0905",
-  // groq
-  "srv_mkombumpae45db46dcb8": "moonshotai/kimi-k2.6",
-  // nvidia
-  "srv_mnkjel2208cf770e5009": "deepseek-v4-pro",
-  // ollama
-  "srv_mm0u9cua212491d78695": "openrouter/free",
-  // openrouter
-  // 'srv_mjlq1ncq8a3f7fe0aea0': 'turbo',
-  // perplexity
-  // "srv_mkol5tgcd33cc358ddbc": "models/gemini-flash-latest",
-  // gemini
-  "srv_mkoloq41e34074b6133e": "openai-fast",
-  // pollinations
-  // "srv_mkomfko63371049b6da6": "deepseek-v3.2:free"
-  // api.airforce
-  // "srv_mks0cusg6010f87029ea": "model-router3",
-  // azure
+  "srv_mkom688d57c76d8a3542": "moonshotai/kimi-k2-instruct-0905", // groq
+  "srv_mkombumpae45db46dcb8": "moonshotai/kimi-k2.6", // nvidia
+  "srv_mnkjel2208cf770e5009": "deepseek-v3.2", // "deepseek-v4-pro", // ollama
+  "srv_mm0u9cua212491d78695": "openrouter/free", // openrouter
+  "srv_mkolylnsaec61b86b9c2": "openrouter/free", // openrouter old
+  "srv_mjlq1ncq8a3f7fe0aea0": "turbo", // perplexity
+  "srv_mkol5tgcd33cc358ddbc": "models/gemini-flash-latest", // gemini
+  "srv_mkoloq41e34074b6133e": "openai-fast", // pollinations
+  "srv_mkomfko63371049b6da6": "deepseek-v3.2:free", // api.airforce
+  "srv_mks0cusg6010f87029ea": "model-router3",// azure
 };
 var SERVER_MAP = {
   //"api": "srv_mnkjel2208cf770e5009",
@@ -106,7 +104,18 @@ var URL_MAP = {
   "https://gen.pollinations.ai/quota": "https://gen.pollinations.ai/account/balance",
   "https://generativelanguage.googleapis.com/v1beta/openai/quota": "https://generativelanguage.googleapis.com/v1beta/openai/models"
 }
-var BLOCKED_SERVERS = ["srv_mkrzs4lg75588992eb03", "srv_mm4b22wq6142dcde995b", "srv_mmaeaqcwf1c31c3fb25d", "srv_mku7zugs5088a704d608", "srv_mn0rn0i5dfde3b0eaea5", "srv_mmze6r2y3ef94fe04216", "srv_mkolabu46aa55fc6f003", "srv_mlk9nas87e67219356a6"];
+var BLOCKED_SERVERS = [
+  "srv_mkrzs4lg75588992eb03",
+  "srv_mm4b22wq6142dcde995b",
+  "srv_mmaeaqcwf1c31c3fb25d",
+  "srv_mku7zugs5088a704d608",
+  "srv_mn0rn0i5dfde3b0eaea5",
+  "srv_mmze6r2y3ef94fe04216",
+  "srv_mkolabu46aa55fc6f003",
+  "srv_mlk9nas87e67219356a6",
+  "srv_mkopytsj9b6425de1db8",
+  "srv_mopbpkq354c09bdbbd48"
+];
 // organizations (from Cloudflare `asOrganization`) that should be blocked
 // when the request is anonymous (no user/session or API key provided).
 var BLOCKED_ORGS = [
@@ -545,7 +554,10 @@ async function handleCreateServer(request, env) {
   }
   const serverId = generateServerId();
   const now = (/* @__PURE__ */ new Date()).toISOString();
-  const allowedModels = body.allowed_models && body.allowed_models.length > 0 ? body.allowed_models : validationResult.models || [];
+  const autoUpdateModels = body.auto_update_models !== false;
+  const allowedModels = autoUpdateModels
+    ? validationResult.models || []
+    : body.allowed_models && body.allowed_models.length > 0 ? body.allowed_models : validationResult.models || [];
   const server = {
     id: serverId,
     label: body.label || `Server ${(user.custom_servers || []).length + 1}`,
@@ -553,6 +565,7 @@ async function handleCreateServer(request, env) {
     api_keys: body.api_keys || "",
     // Line-separated API keys
     allowed_models: allowedModels,
+    auto_update_models: autoUpdateModels,
     is_public: body.is_public || false,
     created_at: now,
     updated_at: now,
@@ -597,7 +610,7 @@ async function handleUpdateServer(request, env) {
   const server = user.custom_servers[serverIndex];
   const wasPublic = server.is_public;
   const now = (/* @__PURE__ */ new Date()).toISOString();
-  const allowedFields = ["label", "base_url", "api_keys", "allowed_models", "is_public"];
+  const allowedFields = ["label", "base_url", "api_keys", "allowed_models", "auto_update_models", "is_public"];
   for (const field of allowedFields) {
     if (body[field] !== void 0) {
       if (field === "base_url") {
@@ -610,6 +623,17 @@ async function handleUpdateServer(request, env) {
       } else if (field != "api_keys" || body[field]) {
         server[field] = body[field];
       }
+    }
+  }
+  // When auto_update_models is enabled, refresh the allowed_models from the upstream server
+  if (server.auto_update_models !== false) {
+    try {
+      const refreshResult = await validateServer(server.base_url, server.api_keys);
+      if (refreshResult.valid && refreshResult.models && refreshResult.models.length > 0) {
+        server.allowed_models = refreshResult.models;
+      }
+    } catch (e) {
+      console.error("Failed to refresh models on update:", e);
     }
   }
   server.updated_at = now;
@@ -738,11 +762,6 @@ async function handleGetServerModels(request, env, serverId) {
   if (!server) {
     return jsonResponse({ error: "Server not found" }, 404);
   }
-  if (server.allowed_models && server.allowed_models.length > 0) {
-    return jsonResponse({
-      data: server.allowed_models.map((m) => ({ id: m }))
-    });
-  }
   try {
     const apiKey = getRandomApiKey(server.api_keys);
     const headers = { "Content-Type": "application/json" };
@@ -752,10 +771,33 @@ async function handleGetServerModels(request, env, serverId) {
     const response = await fetch(`${server.base_url}/models`, { headers });
     if (response.ok) {
       const data = await response.json();
+      // Auto-update stored allowed_models when enabled (default)
+      if (server.auto_update_models !== false && data.data && Array.isArray(data.data)) {
+        const freshModels = data.data.map((m) => m.id).filter(Boolean);
+        if (freshModels.length > 0 && server.owner_id) {
+          const owner = await getUser(env, server.owner_id);
+          if (owner) {
+            const idx = (owner.custom_servers || []).findIndex((s) => s.id === server.id);
+            if (idx !== -1) {
+              owner.custom_servers[idx].allowed_models = freshModels;
+              owner.updated_at = new Date().toISOString();
+              await saveUser(env, owner);
+              if (owner.custom_servers[idx].is_public) {
+                await updatePublicServerIndex(env, owner.custom_servers[idx], owner.id, "update");
+              }
+            }
+          }
+        }
+      } else if (server.allowed_models && server.allowed_models.length > 0 && data.data && Array.isArray(data.data)) {
+        data.data = data.data.filter((model) => server.allowed_models.includes(model.id));
+      }
       return jsonResponse(data);
     }
   } catch (e) {
     console.error("Failed to fetch models:", e);
+  }
+  if (server.allowed_models && server.allowed_models.length > 0) {
+    return jsonResponse({ data: server.allowed_models.map((m) => ({ id: m })) });
   }
   return jsonResponse({ data: [] });
 }
@@ -878,6 +920,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   const apiKey = getRandomApiKey(server.api_keys);
   const tokens = apiKey ? apiKey.split(/\s+/) : [];
   const proxyHeaders = {
+    "User-Agent": null,
     "Content-Type": request.headers.get("Content-Type") || "application/json"
   };
   if (userProvidedKey) {
@@ -904,9 +947,8 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     };
     if (subPath === "/chat/completions") {
       fetchOptions.method = "POST";
-      fetchOptions.body = JSON.stringify({ ...requestBody, "messages": [{ "role": "user", "content": "say only okay" }] });
-    }
-    if (request.method === "POST") {
+      fetchOptions.body = JSON.stringify({"messages": [{ "role": "user", "content": "say only okay" }], ...requestBody});
+    } else if (request.method === "POST") {
       fetchOptions.body = requestBody ? JSON.stringify(requestBody) : await request.text();
     }
     const firstMessage = requestBody ? requestBody.prompt || getFirstMessage(requestBody.messages) : null;
@@ -1424,12 +1466,12 @@ async function handleCustomAiRoute(request, pathname, cacheKey, rateCheck, env, 
   let serverLabel = splited[0];
   let prompt = splited[1] || "";
   let server;
-  if (serverLabel == "audio" && prompt && request.method === "GET") {
+  if (false && serverLabel == "audio" && prompt && request.method === "GET") {
     let queryUrl = `https://gen.pollinations.ai/audio/${encodeURIComponent(prompt)}?model=whisper`;
     if (url.searchParams.get("voice")) {
       queryUrl += `&voice=${encodeURIComponent(url.searchParams.get("voice"))}`
     }
-    const response = await fetch(queryUrl, {headers: {"Authorization": "Bearer pk_1BHiyzFdDqUjDCoI"}});
+    const response = await fetch(queryUrl, {headers: {"Authorization": `Bearer ${env.AUDIO_API_KEY}`}});
     const newResponse = new Response(response.body, response);
     for (const [key, value] of Object.entries(CORS_HEADERS)) {
       newResponse.headers.set(key, value);
@@ -1502,7 +1544,7 @@ ${prompt}
       queryBody.modalities = ["text", "audio"];
     }
   }
-  if (server.allowed_models && server.allowed_models.length > 0 && queryBody.model) {
+  if (server.allowed_models && server.allowed_models.length > 0 && queryBody.model && serverLabel != "audio") {
     if (!server.allowed_models.includes(queryBody.model)) {
       return jsonResponse({
         error: `Model '${queryBody.model}' not allowed. Available models: ${server.allowed_models.join(", ")}`
@@ -1698,7 +1740,7 @@ ${prompt}
   }
 }
 async function getRandomPublicServer(env) {
-  const servers = Object.keys(DEFAULT_MODELS);
+  const servers = AUTO_PROVIDERS;
   const serverId = servers[Math.floor(Math.random() * servers.length)];
   return await getServerById(env, serverId);
 }
@@ -2178,7 +2220,7 @@ async function handleV1Models(request, env) {
       for (const [m, cnt] of Object.entries(map)) {
         const key = `${server.id}:${m}`;
         if (!allModels[key]) {
-          allModels[key] = { id: key, label: `${server.label}:${m}`, base_url: `/custom/${server.id}`, requests: cnt };
+          allModels[key] = { id: key, label: `${server.label}:${m}`, server: server.id, requests: cnt };
         } else {
           allModels[key].requests = (allModels[key].requests || 0) + cnt;
         }
@@ -2190,7 +2232,7 @@ async function handleV1Models(request, env) {
   let result = Array.from(Object.values(allModels));
   result = result.filter(m => m.requests > 0); // only show models with usage for relevance
   result.sort((a, b) => (b.requests || 0) - (a.requests || 0));
-  result.unshift({ id: "auto", label: "Auto (random public server)", base_url: "/custom/auto" });
+  result.unshift({ id: "auto", label: "Auto (random public server)" });
 
   const payload = { data: result };
   modelsCache = { payload };
