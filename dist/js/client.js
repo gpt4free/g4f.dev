@@ -884,7 +884,7 @@ class Puter extends Client {
           if (item.text) {
             yield {choices: [{delta: {content: item.text}}]}
           } else if (item.reasoning) {
-            yield {choices: [{delta: {item}}]}
+            yield {choices: [{delta: {reasoning: item.reasoning}}]}
           } else {
             yield item;
           }

@@ -3598,14 +3598,16 @@ function get_modelTags(model, add_vision = true) {
             parts.push(` ${text}`);
         }
     }
-    if (model.id.endsWith("/free") || model.id.endsWith(":free")) {
-        parts.push(` ${modelTags.free}`);
-    }
-    if (model.id.startsWith("models/gemini-") && model.id.includes("-flash-") && (model.id.endsWith("-latest") || model.id.endsWith("-preview")) && !model.id.includes("-image-") && !model.id.includes("-audio-") && !model.id.includes("-live-")) {
-        parts.push(` ${modelTags.free}`);
-    }
-    if (model.id.startsWith("models/gemma-")) {
-        parts.push(` ${modelTags.free}`);
+    if (model.id) {
+        if (model.id.endsWith("/free") || model.id.endsWith(":free")) {
+            parts.push(` ${modelTags.free}`);
+        }
+        if (model.id.startsWith("models/gemini-") && model.id.includes("-flash-") && (model.id.endsWith("-latest") || model.id.endsWith("-preview")) && !model.id.includes("-image-") && !model.id.includes("-audio-") && !model.id.includes("-live-")) {
+            parts.push(` ${modelTags.free}`);
+        }
+        if (model.id.startsWith("models/gemma-")) {
+            parts.push(` ${modelTags.free}`);
+        }
     }
     return parts.join("");
 }
@@ -6214,7 +6216,7 @@ async function loadPaProviders() {
         window._paProviders = providers;
         renderPaProviders(providers);
         // Also refresh the select dropdown
-        await loadPaProviderSelect(providers);
+        await loadPaProviderSelect();
     } catch (err) {
         const container = document.getElementById('pa-providers-list');
         if (container) container.innerHTML = `<div class="mcp-empty">Failed to load PA providers: ${escapeHtml(String(err))}</div>`;
