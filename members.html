@@ -1601,7 +1601,6 @@
                     localStorage.setItem('g4f_user', JSON.stringify(user));
                     localStorage.setItem('HuggingFace-api_key', oauthResult.accessToken);
                     localStorage.setItem('user', user.name);
-                    localStorage.setItem('oauth', JSON.stringify(oauthResult));
                     showToast('Successfully signed in with Hugging Face!');
                     window.history.replaceState({}, document.title, window.location.pathname);
                     // If there's a pending external redirect, redirect with HuggingFace api_key
@@ -1703,7 +1702,6 @@
             localStorage.removeItem('g4f_user');
             localStorage.removeItem('g4f_session');
             localStorage.removeItem('g4f_api_key');
-            localStorage.removeItem('oauth');
             localStorage.removeItem('HuggingFace-api_key');
             localStorage.removeItem('PollinationsAI-api_key');
             localStorage.removeItem('user');
@@ -2438,30 +2436,6 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
-        }
-
-        // Check for existing HuggingFace login from home.html
-        const existingOAuth = localStorage.getItem('oauth');
-        if (existingOAuth) {
-            try {
-                const oauthData = JSON.parse(existingOAuth);
-                const existingUser = localStorage.getItem('user');
-                if (oauthData.accessToken && existingUser) {
-                    const user = {
-                        name: existingUser,
-                        username: existingUser,
-                        provider: 'huggingface',
-                        accessToken: oauthData.accessToken,
-                        tier: 'free',
-                        created_at: new Date().toISOString()
-                    };
-                    if (!localStorage.getItem('g4f_user')) {
-                        localStorage.setItem('g4f_user', JSON.stringify(user));
-                    }
-                }
-            } catch (e) {
-                console.error('Error parsing existing OAuth:', e);
-            }
         }
 
         // Restore session from localStorage
