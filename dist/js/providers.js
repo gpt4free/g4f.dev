@@ -63,10 +63,6 @@ async function createClient(provider, options = {}) {
     }
     const { class: ClientClass = (providerClassMap[provider] || Client), backupUrl, localStorageApiKey, tags, ...config } = providers[provider];
 
-    if (provider === "default") {
-        options.modelAliases = defaultModels;
-    }
-
     // Set baseUrl
     if (typeof localStorage !== "undefined" && providerLocalStorage[provider] && localStorage.getItem(providerLocalStorage[provider])) {
         options.apiKey = localStorage.getItem(providerLocalStorage[provider]);

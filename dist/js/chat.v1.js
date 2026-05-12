@@ -2035,7 +2035,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                         } else if (chunk.provider) {
                             provider = chunk.provider || provider;
                         }
-                        add_message_chunk({type: "provider", provider: {name: provider, model: chunk.model, label: providerLabel}}, message_id);
+                        add_message_chunk({type: "provider", provider: {name: provider, model: chunk.model, label: providerLabel, server: chunk.server}}, message_id);
                     }
                     if (chunk.error) {
                         add_message_chunk({type: "error", ...chunk.error}, message_id, null, finish_message);
@@ -2086,7 +2086,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         } catch (err) {
             add_error(err, true);
             safe_remove_cancel_button();
-            error_storage[message_id] = `${err?.error?.message || err}`;
+            error_storage[message_id] = `${err.message || err}`;
             content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${error_storage[message_id]}`);
             await finish_message();
         }
@@ -3606,6 +3606,11 @@ function get_modelTags(model, add_vision = true) {
             parts.push(` ${modelTags.free}`);
         }
         if (model.id.startsWith("models/gemma-")) {
+            parts.push(` ${modelTags.free}`);
+        }
+    }
+    if (model.tiers) {
+        if (model.tiers.includes("Free")) {
             parts.push(` ${modelTags.free}`);
         }
     }
