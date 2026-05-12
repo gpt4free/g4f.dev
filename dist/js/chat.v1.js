@@ -2063,9 +2063,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                         }
                         if (choice?.delta?.content) {
                             const delta = choice?.delta?.content || '';
-                            const processedDelta = delta.replaceAll("/media/", framework.backendUrl + "/media/")
-                                                         .replaceAll("/thumbnail/", framework.backendUrl + "/thumbnail/");
-                            await add_message_chunk({type: "content", content: processedDelta}, message_id);
+                            await add_message_chunk({type: "content", content: delta}, message_id);
                         }
                     }
                     if (chunk.citations) {
@@ -2079,7 +2077,9 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     add_sources(sources, message_id);
                 }
                 if (tool_calls_storage[message_id] && tool_calls_storage[message_id].length > 0 && mcpClient) {
-                    await handleToolCalls(tool_calls_storage[message_id], messages, selectedModel, provider, message_id, finish_message);
+                    const toolCalls = tool_calls_storage[message_id];
+                    delete tool_calls_storage[message_id];
+                    await handleToolCalls(toolCalls, messages, selectedModel, provider, message_id, finish_message);
                 }
             }
             await finish_message();
@@ -6310,10 +6310,8 @@ async function handleToolCalls(toolCalls, messages, model, provider, message_id,
                     }
                     if (choice?.delta?.content) {
                         const delta = choice?.delta?.content || '';
-                        const processedDelta = delta.replaceAll("/media/", framework.backendUrl + "/media/")
-                                                .replaceAll("/thumbnail/", framework.backendUrl + "/thumbnail/");
-                        if (processedDelta) {
-                            await add_message_chunk({type: "content", content: processedDelta}, message_id);
+                        if (delta) {
+                            await add_message_chunk({type: "content", content: delta}, message_id);
                         }
                     }
                 }
