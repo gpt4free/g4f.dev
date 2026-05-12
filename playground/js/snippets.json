@@ -10,6 +10,7 @@
     "Assistant": "",
     "🌐 Translate": "",
     "⏳ Translating": "",
+    "Reset Translations": "",
     "Your open-source AI playground — chat, roleplay, and code": "",
     "Multi-turn conversations with any AI model": "",
     "Character-based chats with custom personas": "",
@@ -110,5 +111,6 @@
     "Settings saved": "",
     "Fetching models...": "",
     "No provider": "",
-    "Copy": ""
+    "Copy": "",
+    "Thinking": ""
 }

@@ -109,7 +109,7 @@ const Components = (() => {
       <div class="thinking-block collapsed">
         <div class="thinking-toggle">
           <span class="thinking-icon">💭</span>
-          <span class="thinking-label">Thinking</span>
+          <span class="thinking-label">${framework.translate('Thinking')}</span>
           <span class="thinking-preview">${escHtml(preview)}</span>
           <span class="thinking-chevron">▸</span>
         </div>

@@ -92,7 +92,7 @@ const Router = (() => {
         <div style="margin-top:32px;padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;text-align:left;">
           <h2 style="font-size:13px;margin-bottom:8px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px">Default Provider</h2>
           <p style="font-size:13px;color:var(--text2);line-height:1.5">
-            Uses <strong style="color:var(--text)">Airforce API</strong> (api.airforce) by default — no API key required for free models.
+            ${Store.getActiveProviderId() === 'api.airforce' ? 'Uses <strong style="color:var(--text)">Airforce API</strong> (api.airforce) by default — no API key required for free models.' : ``}
             Add your own providers in <a href="#/providers" style="color:var(--accent)">Providers</a>.
           </p>
         </div>

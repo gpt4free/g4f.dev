@@ -10,33 +10,7 @@ const Store = (() => {
   const STORE_NAME = 'conversations';
   const VERSION = 1;
 
-  function loadProviders() {
-    const url = 'https://g4f.dev/dist/js/providers.json';
-    fetch(url).then(res => res.json()).then(data => {
-      for ([key, provider] of Object.entries(data.providers)) {
-        provider.id = key;
-        provider.name = (provider.label || key) + (provider.tags ? ` ${provider.tags}` : '');
-        provider.baseUrl = provider.backupUrl || provider.baseUrl || `https://g4f.space/api/${key}`;
-        provider.defaultModel = data.defaultModels[key] || provider.defaultModel;
-        provider.baseUrl = provider.baseUrl.replace('{model}', provider.defaultModel)
-        provider.type = provider.type || 'openai';
-        provider.models = provider.models || [];
-        provider.fetchedModels = [];
-        provider.defaultModel = data.defaultModels[key] || provider.defaultModel;
-        if (data.providerLocalStorage[key]) {
-          provider.apiKey = localStorage.getItem(data.providerLocalStorage[key]);
-        }
-      }
-      delete data.providers.custom;
-      Store.setProviders(Object.values(data.providers));
-      ProvidersPage.renderList();
-    });
-  }
-
-  if (!localStorage.getItem(KEYS['providers'])) {
-    loadProviders();
-  }
-
+  
   const defaults = {
     providers: [
       {
@@ -60,6 +34,34 @@ const Store = (() => {
       theme: 'dark',
     },
   };
+
+  function loadProviders() {
+    const url = 'https://g4f.dev/dist/js/providers.json';
+    fetch(url).then(res => res.json()).then(data => {
+      for ([key, provider] of Object.entries(data.providers)) {
+        provider.id = key;
+        provider.name = (provider.label || key) + (provider.tags ? ` ${provider.tags}` : '');
+        provider.baseUrl = provider.backupUrl || provider.baseUrl || `https://g4f.space/api/${key}`;
+        provider.defaultModel = data.defaultModels[key] || provider.defaultModel;
+        provider.baseUrl = provider.baseUrl.replace('{model}', provider.defaultModel)
+        provider.type = provider.type || 'openai';
+        provider.models = provider.models || [];
+        provider.fetchedModels = [];
+        provider.defaultModel = data.defaultModels[key] || provider.defaultModel;
+        if (data.providerLocalStorage[key]) {
+          provider.apiKey = localStorage.getItem(data.providerLocalStorage[key]);
+        }
+      }
+      delete data.providers.custom;
+      Store.setProviders(Object.values(data.providers));
+      Store.setActiveProviderId(document.location.hostname === 'llmplayground.net' ? defaults.activeProvider : Object.keys(data.providers)[0]);
+      ProvidersPage.renderList();
+    });
+  }
+
+  if (!localStorage.getItem(KEYS['providers'])) {
+    loadProviders();
+  }
 
   let privateConversation;
 

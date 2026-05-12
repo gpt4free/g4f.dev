@@ -271,8 +271,7 @@
       <a href="#/providers" data-route="/providers">Providers</a>
     </div>
     <div class="spacer"></div>
-    <button class="translate-btn" id="btn-translate" onclick="btnTranslate(this)">🌐 Translate</button>
-    <button class="translate-btn" id="btn-delete-translate" onclick="deleteTranslations(); window.location.reload()">✕ Reset</button>
+    <a class="translate-btn" id="btn-translate" onclick="btnTranslate(this); return false;" title="Translate">🌐</a>
     <span class="provider-badge notranslate" id="active-provider-badge" onclick="window.location.hash='#/providers'">Loading...</span>
   </nav>
   <div id="app">
