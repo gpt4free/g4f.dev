@@ -1,0 +1,342 @@
+.coding-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.coding-chat-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.coding-editor-pane {
+  display: none;
+  flex-direction: column;
+  width: 50%;
+  min-width: 320px;
+  border-left: 1px solid var(--border);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.coding-editor-pane.visible {
+  display: flex;
+}
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.editor-toolbar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-right: auto;
+}
+
+.editor-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 8px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.editor-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.editor-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text2);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 0;
+  transition: color 0.15s, border-color 0.15s;
+  min-height: auto;
+}
+
+.editor-tab:hover {
+  color: var(--text);
+  background: var(--bg3);
+}
+
+.editor-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.editor-tab-lang {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--bg3);
+  color: var(--text2);
+  text-transform: uppercase;
+}
+
+.editor-tab-changed {
+  color: var(--yellow);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.editor-tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 11px;
+  color: var(--text2);
+  background: none;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+  min-height: auto;
+  line-height: 1;
+}
+
+.editor-tab-close:hover {
+  background: var(--bg3);
+  color: var(--red);
+}
+
+.editor-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.editor-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text2);
+  gap: 8px;
+  text-align: center;
+  padding: 24px;
+}
+
+.editor-empty-icon {
+  font-size: 36px;
+}
+
+.editor-empty-text {
+  font-size: 13px;
+}
+
+.editor-toggle-fab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  bottom: calc(80px + var(--safe-bottom));
+  right: 16px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 20px;
+  border: none;
+  cursor: pointer;
+  z-index: 95;
+  box-shadow: 0 2px 12px rgba(124, 106, 247, 0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+  min-height: auto;
+  padding: 0;
+}
+
+.editor-toggle-fab:active {
+  transform: scale(0.92);
+}
+
+.editor-toggle-fab .fab-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--red);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+.editor-modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 200;
+  flex-direction: column;
+}
+
+.editor-modal-overlay.open {
+  display: flex;
+}
+
+.editor-modal {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin-top: var(--nav-height);
+  background: var(--bg);
+  overflow: hidden;
+  animation: editorSlideUp 0.25s ease;
+}
+
+@keyframes editorSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.editor-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.editor-modal-header-title {
+  font-size: 15px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.editor-modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  min-height: auto;
+}
+
+#code-messages .code-block {
+  border-left: 3px solid var(--accent);
+}
+
+.file-edit-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  margin: 4px 0;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text);
+}
+
+.file-edit-badge:hover {
+  border-color: var(--accent);
+  background: rgba(124, 106, 247, 0.1);
+}
+
+.file-edit-badge-icon {
+  font-size: 14px;
+}
+
+.file-edit-badge-name {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.file-edit-badge-action {
+  font-size: 11px;
+  color: var(--accent);
+}
+
+.file-edit-badge.edited {
+  border-color: var(--green);
+}
+
+.file-edit-badge.edited:hover {
+  border-color: var(--green);
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.file-edit-badge.edited .file-edit-badge-action {
+  color: var(--green);
+}
+
+@media (min-width: 768px) {
+  .coding-editor-pane.visible {
+    display: flex;
+  }
+
+  .editor-toggle-fab {
+    display: none;
+  }
+
+  .editor-modal-overlay {
+    display: none !important;
+  }
+
+  .editor-toolbar {
+    padding: 6px 10px;
+  }
+
+  .editor-tab {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .editor-tab-close {
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .editor-tab:hover .editor-tab-close {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 767px) {
+  .coding-editor-pane {
+    display: none !important;
+  }
+}
