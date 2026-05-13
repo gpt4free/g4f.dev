@@ -273,6 +273,7 @@
     </div>
     <div class="spacer"></div>
     <a class="translate-btn" id="btn-translate" onclick="btnTranslate(this); return false;" title="Translate">🌐</a>
+    <button class="translate-btn notranslate" id="auth-status-btn" onclick="window.location.hash='#/providers'" title="Login">Login</button>
     <span class="provider-badge notranslate" id="active-provider-badge" onclick="window.location.hash='#/providers'">Loading...</span>
   </nav>
   <div id="app">
@@ -309,6 +310,12 @@
         resolve();
       });
     });
+  </script>
+  <script type="module">
+    // query() (translations.js) calls this so API responses can emit userTierUpdate data used by
+    // the auth/tier UI (tier badge and limits) after authenticated requests.
+    import { captureUserTierHeaders } from '../dist/js/providers.js';
+    window.captureUserTierHeaders = captureUserTierHeaders;
   </script>
   <script src="js/store.js"></script>
   <script src="js/api.js"></script>
