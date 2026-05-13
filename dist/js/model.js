@@ -8,7 +8,7 @@ const modelTags = {
     free: "🆓",
 };
 
-function getModelLabel(model, splitProvider = false) {
+function getModelLabel(model) {
     const value = model.label || `${model.id || ""}`.replace("models/", "");
     return value;
 }
@@ -43,11 +43,10 @@ function getModelTags(model, addVision = true) {
 function convertModel(inputModel, options = {}) {
     const model = inputModel;
     const useModelName = !!options.useModelName;
-
     if (!model.id || useModelName) {
         model.id = model.name || model.model_name;
     }
-    model.label = getModelLabel(model.label || model.id);
+    model.label = getModelLabel(model);
     if (!model.type) {
         if (model.task?.name === "Text Generation") {
             model.type = "chat";
