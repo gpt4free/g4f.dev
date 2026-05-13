@@ -19,7 +19,8 @@
   "files": [
     "dist/js/client.js",
     "dist/js/client.d.ts",
-    "dist/js/providers.js"
+    "dist/js/providers.js",
+    "dist/js/model.js"
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
