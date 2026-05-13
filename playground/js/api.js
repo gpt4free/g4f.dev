@@ -31,6 +31,8 @@ const API = (() => {
     /image/i,
   ];
 
+  let mcpClient = null;
+
   function isImageModel(modelName) {
     if (!modelName) return false;
     return IMAGE_MODEL_PATTERNS.some(p => p.test(modelName));
@@ -44,6 +46,37 @@ const API = (() => {
       else chat.push(m);
     }
     return { chat, image };
+  }
+
+  function getMCPClient() {
+    if (typeof MCPClient === 'undefined') return null;
+    if (mcpClient) return mcpClient;
+    try {
+      mcpClient = new MCPClient();
+      if (mcpClient.servers.length === 0) {
+        try {
+          mcpClient.addServer({ name: 'Default', url: 'https://mcp.g4f.space' });
+        } catch {}
+      }
+      mcpClient.fetchAllTools()
+        .then(async r => mcpClient.getAllTools())
+        .then(tools=>console.log('Fetched MCP tools:', tools))
+        .catch(err => console.warn('Error fetching MCP tools:', err));
+      return mcpClient;
+    } catch {
+      return null;
+    }
+  }
+
+  function getSelectedMCPToolsForAPI() {
+    const client = getMCPClient();
+    if (!client) return null;
+    try {
+      const tools = client.getSelectedToolsForAPI();
+      return Array.isArray(tools) && tools.length > 0 ? tools : null;
+    } catch {
+      return null;
+    }
   }
 
   function isEndpointError(body) {
@@ -374,13 +407,76 @@ const API = (() => {
     }
   }
 
+  function normalizeToolCall(toolCall) {
+    if (!toolCall) return null;
+    const normalized = { ...toolCall };
+    if (!normalized.function && normalized.tool_call) normalized.function = normalized.tool_call;
+    if (!normalized.function && normalized.function_call) normalized.function = normalized.function_call;
+    return normalized;
+  }
+
+  function mergeToolCalls(accumulator, toolCalls) {
+    if (!toolCalls) return accumulator;
+    const calls = Array.isArray(toolCalls) ? toolCalls : [toolCalls];
+    for (const call of calls) {
+      const normalized = normalizeToolCall(call);
+      if (!normalized) continue;
+      const key = normalized.id || `${normalized.function?.name || 'tool'}:${normalized.index ?? ''}`;
+      if (!accumulator[key]) {
+        accumulator[key] = normalized;
+        continue;
+      }
+      const existing = accumulator[key];
+      const existingFn = existing.function || {};
+      const incomingFn = normalized.function || {};
+      existing.function = existingFn;
+      if (incomingFn.name) existing.function.name = incomingFn.name;
+      if (incomingFn.arguments) {
+        existing.function.arguments = (existingFn.arguments || '') + incomingFn.arguments;
+      }
+      if (incomingFn.description) existing.function.description = incomingFn.description;
+    }
+    return accumulator;
+  }
+
+  async function executeToolCalls(toolCalls) {
+    if (!toolCalls || toolCalls.length === 0) return [];
+    return getMCPClient().executeToolCalls(toolCalls.map(normalizeToolCall).filter(Boolean));
+  }
+
+  function filterMessages(messages) {
+    const assistantFiltered = [];
+    let lastMessageIsAssistant = false;
+    for (const m of messages) {
+      if (m.error) continue;
+      if (m.role === 'assistant') {
+        if (!lastMessageIsAssistant) {
+          lastMessageIsAssistant = true;
+          assistantFiltered.push(m);
+        }
+      } else {
+        lastMessageIsAssistant = false;
+        assistantFiltered.push(m);
+      }
+    }
+    for (let i = assistantFiltered.length - 1; i >= 0; i--) {
+      const m = assistantFiltered[i];
+      if (m.role === 'assistant') {
+        assistantFiltered.pop();
+      } else {
+        break;
+      }
+    }
+    return assistantFiltered.map(m => ({ role: m.role, content: m.content, tool_calls: m.tool_calls, name: m.name }));
+  }
+
   async function* streamChatOpenAI(provider, messages, model, options = {}) {
     const headers = { 'Content-Type': 'application/json' };
     if (provider.apiKey) headers['Authorization'] = `Bearer ${provider.apiKey}`;
-
+  
     const body = {
       model: model || provider.defaultModel || 'llama-4-scout',
-      messages: messages.map(m => ({ role: m.role, content: m.content })),
+      messages: filterMessages(messages),
       stream: true
     };
     if (options.temperature !== undefined) body.temperature = options.temperature;
@@ -435,7 +531,11 @@ const API = (() => {
             if (delta?.reasoning_content) yield { type: 'thinking', content: delta.reasoning_content };
             if (delta?.reasoning) yield { type: 'thinking', content: delta.reasoning };
             if (delta?.content) yield { type: 'text', content: delta.content };
-            if (delta?.tool_calls) yield { type: 'tool_calls', tool_calls: delta.tool_calls };
+
+            let toolCalls = delta?.tool_calls;
+            if (!toolCalls && delta?.function_call) toolCalls = [delta.function_call];
+            if (!toolCalls && delta?.tool_call) toolCalls = [delta.tool_call];
+            if (toolCalls) yield { type: 'tool_calls', tool_calls: Array.isArray(toolCalls) ? toolCalls : [toolCalls] };
           } catch {}
         }
       }
@@ -695,6 +795,10 @@ const API = (() => {
     if (options.temperature !== undefined) body.temperature = options.temperature;
     if (options.maxTokens) body.max_tokens = options.maxTokens;
     if (options.reasoningEffort) body.reasoning_effort = options.reasoningEffort;
+    if (options.tools) {
+      body.tools = options.tools;
+      body.tool_choice = options.toolChoice || 'auto';
+    }
 
     const res = await fetchWithRetry(`${provider.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -743,6 +847,7 @@ const API = (() => {
 
   return {
     fetchModels, streamChat, chat, detectEndpointType, extractThinkingFromText,
+    executeToolCalls, mergeToolCalls, normalizeToolCall, getMCPClient, getSelectedMCPToolsForAPI,
     generateImage, isImageModel, classifyModels, ENDPOINT_TYPES,
   };
 })();

@@ -24,10 +24,12 @@ const ChatPage = (() => {
     layout.appendChild(main);
     container.appendChild(layout);
 
-    Store.getChats().then(chats => {
-      const chatList = chats.filter(c => c.type === 'chat');
-      if (chatList.length > 0) loadChat(chatList[0].id);
-      else newChat();
+    Store.getLastChat().then(lastChat => {
+      if (lastChat) {
+        loadChat(lastChat.id);
+      } else {
+        newChat();
+      }
     });
   }
 
@@ -158,6 +160,16 @@ const ChatPage = (() => {
     Store.getChat(id).then(chat => {
       console.log('Loaded chat:', chat);
       if (!chat) return;
+      const sendBtn = document.querySelector('.input-bar .send-btn');
+      if (sendBtn) {
+        if (chat.items.any(m => m.role === 'user')) {
+          sendBtn.textContent = sendBtn.dataset.label;
+          sendBtn.disabled = true;
+        } else {
+          sendBtn.textContent = framework.translate('Regenerate');
+          sendBtn.disabled = false;
+        }
+      }
 
       const modelSel = document.querySelector('#chat-toolbar .model-select');
       if (modelSel) {
@@ -200,12 +212,15 @@ const ChatPage = (() => {
     const settings = Store.getSettings();
     const model = currentModel || provider.defaultModel;
 
-    const userMsg = { id: Store.newId(), role: 'user', content: text, ts: Date.now() };
-    chat.items.push(userMsg);
-    Store.upsertChat(chat);
+    let userMsg = null;
+    if (text) {
+      userMsg = { id: Store.newId(), role: 'user', content: text, ts: Date.now() };
+      chat.items.push(userMsg);
+      Store.upsertChat(chat);
+    }
 
     const wrap = document.getElementById('chat-messages');
-    if (wrap) {
+    if (wrap && userMsg) {
       const emptyState = wrap.querySelector('.empty-state');
       if (emptyState) emptyState.remove();
       const userEl = Components.renderMessage(userMsg, { deletable: true });
@@ -216,7 +231,7 @@ const ChatPage = (() => {
     }
 
     const inputBar = document.getElementById('chat-input-bar');
-    abortController = new AbortController();
+    abortController = null;
     isStreaming = true;
     inputBar?.setStreaming(true, () => { abortController?.abort(); });
 
@@ -229,51 +244,84 @@ const ChatPage = (() => {
     if (wrap) { wrap.appendChild(assistantEl); wrap.scrollTop = wrap.scrollHeight; }
 
     let typingRemoved = false;
+    let collectedToolCalls = {};
 
     try {
       let fullContent = '';
       let fullThinking = '';
       const images = [];
-      for await (const chunk of API.streamChat(provider, chat.items.filter(m => m.role !== 'system' || true), model, {
-        ...settings,
-        signal: abortController.signal,
-      })) {
-        if (chunk.type === 'thinking') {
-          fullThinking += chunk.content;
-          Components.updateThinkingBlock(assistantEl, fullThinking);
-          if (!assistantEl.querySelector('.thinking-streaming')) {
-            const tb = assistantEl.querySelector('.thinking-block');
-            if (tb) tb.classList.add('thinking-streaming');
-          }
-          if (wrap) wrap.scrollTop = wrap.scrollHeight;
-        }
-        if (chunk.type === 'text') {
-          if (!typingRemoved) {
-            Components.removeTypingIndicator(assistantEl);
-            typingRemoved = true;
-          }
-          fullContent += chunk.content;
-          contentEl.innerHTML = Components.renderMarkdown(fullContent);
-          if (wrap) wrap.scrollTop = wrap.scrollHeight;
-        }
-        if (chunk.type === 'image') {
-          if (!typingRemoved) {
-            Components.removeTypingIndicator(assistantEl);
-            typingRemoved = true;
-          }
-          images.push({ url: chunk.url, b64: chunk.b64, revisedPrompt: chunk.revisedPrompt });
-          const src = chunk.url || (chunk.b64 ? `data:image/png;base64,${chunk.b64}` : '');
-          if (src) {
-            let imagesContainer = assistantEl.querySelector('.msg-images');
-            if (!imagesContainer) {
-              imagesContainer = document.createElement('div');
-              imagesContainer.className = 'msg-images';
-              assistantEl.appendChild(imagesContainer);
+      let messages = [...chat.items];
+      let doStreamChat = true;
+      const selectedTools = API.getSelectedMCPToolsForAPI();
+      while (doStreamChat) {
+        doStreamChat = false;
+        abortController = new AbortController();
+        for await (const chunk of API.streamChat(provider, messages, model, {
+          ...settings,
+          tools: selectedTools,
+          signal: abortController.signal,
+        })) {
+          if (chunk.type === 'thinking') {
+            fullThinking += chunk.content;
+            Components.updateThinkingBlock(assistantEl, fullThinking);
+            if (!assistantEl.querySelector('.thinking-streaming')) {
+              const tb = assistantEl.querySelector('.thinking-block');
+              if (tb) tb.classList.add('thinking-streaming');
             }
-            const imgWrap = Components.createImageWithLoader(src, 'Generated image', chunk.revisedPrompt);
-            imagesContainer.appendChild(imgWrap);
             if (wrap) wrap.scrollTop = wrap.scrollHeight;
           }
+          if (chunk.type === 'tool_calls') {
+            API.mergeToolCalls(collectedToolCalls, chunk.tool_calls);
+            continue;
+          }
+          if (chunk.type === 'text') {
+            if (!typingRemoved) {
+              Components.removeTypingIndicator(assistantEl);
+              typingRemoved = true;
+            }
+            fullContent += chunk.content;
+            contentEl.innerHTML = Components.renderMarkdown(fullContent);
+            if (wrap) wrap.scrollTop = wrap.scrollHeight;
+          }
+          if (chunk.type === 'image') {
+            if (!typingRemoved) {
+              Components.removeTypingIndicator(assistantEl);
+              typingRemoved = true;
+            }
+            images.push({ url: chunk.url, b64: chunk.b64, revisedPrompt: chunk.revisedPrompt });
+            const src = chunk.url || (chunk.b64 ? `data:image/png;base64,${chunk.b64}` : '');
+            if (src) {
+              let imagesContainer = assistantEl.querySelector('.msg-images');
+              if (!imagesContainer) {
+                imagesContainer = document.createElement('div');
+                imagesContainer.className = 'msg-images';
+                assistantEl.appendChild(imagesContainer);
+              }
+              const imgWrap = Components.createImageWithLoader(src, 'Generated image', chunk.revisedPrompt);
+              imagesContainer.appendChild(imgWrap);
+              if (wrap) wrap.scrollTop = wrap.scrollHeight;
+            }
+          }
+        }
+
+        const toolCalls = Object.values(collectedToolCalls);
+        if (toolCalls.length > 0) {
+          collectedToolCalls = {};
+          fullContent += Components.formatToolCalls(toolCalls);
+          try {
+            const toolResults = await API.executeToolCalls(toolCalls);
+            const resultsText = toolResults.map(result => `\n\n✅ **Tool Result:** \`${result.name}\`\n\`\`\`json\n${JSON.stringify(JSON.parse(result.content), null, 2)}\n\`\`\``).join('\n\n');
+            fullContent += resultsText;
+            messages = [...messages, {
+                role: 'assistant',
+                content: '',
+                tool_calls: toolCalls
+            }, ...toolResults];
+            doStreamChat = true;
+          } catch (err) {
+            fullContent += `\n\n❌ **Tool Execution Error:** ${err?.message || String(err)}`;
+          }
+          contentEl.innerHTML = Components.renderMarkdown(fullContent);
         }
       }
 
@@ -289,8 +337,10 @@ const ChatPage = (() => {
       assistantMsg.thinking = fullThinking;
       assistantMsg.images = images;
     } catch (err) {
+      console.error('Streaming error:', err);
       if (err.name !== 'AbortError') {
-        assistantMsg.content = `Error: ${err.message}`;
+        assistantMsg.error = true;
+        assistantMsg.content = `*${framework.translate('Error')}*: ${err.message}`;
         contentEl.innerHTML = Components.renderMarkdown(assistantMsg.content);
         Components.toast(err.message, 'error');
       }
@@ -304,13 +354,12 @@ const ChatPage = (() => {
     if (streamingBlock) streamingBlock.classList.remove('thinking-streaming');
 
     assistantEl.querySelector('[data-action="copy"]')?.addEventListener('click', () => Components.copyMessageContent(assistantMsg));
-
-    chat.items.push(assistantMsg);
-    if (chat.title === framework.translate('New Chat') && chat.items.length === 2) {
+    if (chat.title === framework.translate('New Chat') && chat.items.length <= 2) {
       chat.title = text.slice(0, 40) + (text.length > 40 ? '…' : '');
       const titleInput = document.querySelector('#chat-toolbar .title-input');
       if (titleInput) titleInput.value = chat.title;
     }
+    chat.items.push(assistantMsg);
     Store.upsertChat(chat);
     refreshSidebar();
 

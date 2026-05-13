@@ -220,7 +220,7 @@ framework.translateAll = async () => {
     newTranslations.forEach(text => {
         allTranslations[text] = "";
     });
-    const jsonTranslations = "\n\n```json\n" + JSON.stringify(allTranslations) + "\n```";
+    const jsonTranslations = "\n\n```json\n" + JSON.stringify(allTranslations, null, 2) + "\n```";
     const languageName = navigator.language === "de" ? 'de-DE' : navigator.language === "es" ? 'es-ES' : navigator.language;
     const jsonLanguage = "`" + languageName + "`";
     const prompt = `Translate the following text snippets in a JSON object to ${jsonLanguage}: ${jsonTranslations} (iso-code)`;

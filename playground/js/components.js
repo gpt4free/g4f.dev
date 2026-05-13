@@ -284,8 +284,8 @@ const Components = (() => {
         }).join("\n");
     }
     let html = window.sanitizeHtml ? content : escHtml(content);
-    html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
-      `<pre class="code-block"><div class="code-lang">${lang || 'code'}</div><code>${code.trim()}</code><button class="copy-code-btn" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent)">Copy</button></pre>`
+    html = html.replace(/```(\w*)\n?([\s\S]*?)(```|$)/g, (_, lang, code) =>
+      `<pre class="code-block"><div class="code-lang">${lang || 'code'}</div><code>${window.sanitizeHtml ? escHtml(code.trim()) : code.trim()}</code></pre>`
     );
     html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
     html = html.replace(/\[!\[([^\]]*)\]\(([^)]*)\)\]\(([^)]*)\)/g, '<a href="$3"><img src="$2" alt="$1"></a>');
@@ -336,12 +336,20 @@ const Components = (() => {
     return `<p>${html}</p>`;
   }
 
+  function formatToolCalls(toolCalls) {
+    if (!toolCalls || !Array.isArray(toolCalls) || toolCalls.length === 0) return '';
+    return toolCalls.map(call => {
+      const name = call.name || call.function?.name || call.tool_name || call.id || 'unknown_tool';
+      const args = call.arguments || call.function?.arguments || call.args || {};
+      const formattedArgs = typeof args === 'string' ? args : JSON.stringify(args, null, 2);
+      return `\n\n🔧 **Tool Call:** \`${name}\`\n\n\`\`\`json\n${formattedArgs}\n\`\`\``;
+    }).join('\n\n');
+  }
+
   function escHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+    const div = document.createElement('div');
+    div.innerText = str;
+    return div.innerHTML;
   }
 
   function formatTime(ts) {
@@ -376,9 +384,15 @@ const Components = (() => {
     const ta = wrap.querySelector('textarea');
     const btn = wrap.querySelector('.send-btn');
     const stopBtn = wrap.querySelector('.stop-btn');
+    btn.dataset.label = btn.innerText;
+    btn.disabled = true;
     ta.addEventListener('input', () => {
       ta.style.height = 'auto';
       ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
+      if (ta.value.trim()) {
+        btn.textContent = btn.dataset.label;
+        btn.disabled = false;
+      }
     });
     ta.addEventListener('keydown', e => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
@@ -386,7 +400,6 @@ const Components = (() => {
     btn.addEventListener('click', send);
     function send() {
       const val = ta.value.trim();
-      if (!val) return;
       ta.value = '';
       ta.style.height = 'auto';
       onSend(val);
@@ -404,7 +417,6 @@ const Components = (() => {
         stopBtn.style.display = 'none';
         ta.disabled = false;
         btn.disabled = false;
-        btn.textContent = opts.sendLabel || 'Send';
         stopBtn.onclick = null;
       }
     };
@@ -582,5 +594,5 @@ const Components = (() => {
     document.head.appendChild(style);
   }
 
-  return { toast, modal, confirm, renderMessage, renderMarkdown, escHtml, modelSelector, chatInputBar, injectStyles, renderThinkingBlock, updateThinkingBlock, addTypingIndicator, removeTypingIndicator, createImageWithLoader, copyMessageContent };
+  return { toast, modal, confirm, renderMessage, renderMarkdown, escHtml, modelSelector, chatInputBar, injectStyles, renderThinkingBlock, updateThinkingBlock, addTypingIndicator, removeTypingIndicator, createImageWithLoader, copyMessageContent, formatToolCalls };
 })();

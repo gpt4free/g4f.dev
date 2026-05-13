@@ -232,6 +232,16 @@ const Store = (() => {
     }
   }
 
+  async function getLastChat() {
+    const chats = await getChats();
+    for (const chat of chats) {
+      if (chat.type === 'chat') {
+        return chat;
+      }
+    }
+    return null;
+  }
+
   const deleteChat = async (id) => {
       const { store, done } = await withStore('readwrite');
       store.delete(id);
@@ -253,7 +263,7 @@ const Store = (() => {
     getProviders, setProviders, getActiveProviderId, setActiveProviderId,
     getActiveProvider, upsertProvider, deleteProvider,
     getPersonas, setPersonas, upsertPersona, deletePersona,
-    getChats, getChat, upsertChat, deleteChat,
+    getChats, getChat, upsertChat, deleteChat, getLastChat,
     getSettings, setSettings, updateSettings, deleteSettings,
     newId, loadProviders,
   };
