@@ -164,7 +164,7 @@
       transition: background 0.15s;
       -webkit-tap-highlight-color: transparent;
     }
-    input, textarea, select {
+    input:not([type=radio]), textarea, select {
       background: var(--bg3);
       border: 1px solid var(--border);
       color: var(--text);
@@ -208,8 +208,9 @@
     @keyframes slideModalUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     .modal h2 { font-size: 17px; margin-bottom: 16px; }
     .form-group { margin-bottom: 14px; }
-    .form-group label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 6px; }
-    .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px 12px; }
+    .form-group label { font-size: 13px; color: var(--text2); margin: 0 4px 6px 0; }
+    .form-group label:not(.radio-label) { display: block; }
+    .form-group input:not([type=radio]), .form-group textarea, .form-group select { width: 100%; padding: 10px 12px; }
     .form-group textarea { resize: vertical; min-height: 80px; }
 
     @media (min-width: 768px) {

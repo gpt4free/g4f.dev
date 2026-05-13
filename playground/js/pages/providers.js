@@ -95,7 +95,7 @@ const ProvidersPage = (() => {
         </div>
         <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--text2)">
           <span>Model: <strong class="notranslate" style="color:var(--text)">${Components.escHtml(provider.defaultModel || '—')}</strong></span>
-          <span>Key: <strong class="notranslate" style="color:var(--text)">${provider.apiKey ? '••••' + provider.apiKey.slice(-4) : 'None'}</strong></span>
+          <span>Key: <strong class="notranslate" style="color:var(--text)">${provider.apiKey ? '••••' + provider.apiKey.slice(-4) : framework.translate('No')}</strong></span>
           <span>Cached: <strong style="color:var(--text)">${provider.fetchedModels?.length || 0}</strong></span>
         </div>
         ${provider.fetchedModels?.length ? `
@@ -129,7 +129,7 @@ const ProvidersPage = (() => {
       card.querySelector('[data-action="redetect"]')?.addEventListener('click', async () => {
         try {
           Components.toast('Detecting endpoint type...', 'info');
-          const detected = await API.detectEndpointType(provider.baseUrl, provider.apiKey);
+          const detected = await API.detectEndpointType(provider.baseUrl, provider.apiKey, provider.defaultModel);
           provider.endpointType = detected;
           Store.upsertProvider(provider);
           renderList();
@@ -156,6 +156,7 @@ const ProvidersPage = (() => {
       });
 
       list.appendChild(card);
+      framework.translateElements(card.querySelectorAll('*'));
     });
   }
 
@@ -205,6 +206,7 @@ const ProvidersPage = (() => {
         const name = modal.querySelector('#prov-name').value.trim();
         const baseUrl = modal.querySelector('#prov-url').value.trim().replace(/\/$/, '');
         const apiKey = modal.querySelector('#prov-key').value.trim();
+        const defaultModel = modal.querySelector('#prov-model').value.trim() || provider?.defaultModel || ''
         const errEl = modal.querySelector('#prov-error');
         const statusEl = modal.querySelector('#prov-status');
         if (!name || !baseUrl) {
@@ -222,7 +224,7 @@ const ProvidersPage = (() => {
         if (isNew || baseUrl !== provider?.baseUrl || apiKey !== provider?.apiKey) {
           statusEl.innerHTML = '<span style="animation:thinkPulse 1s infinite;color:var(--accent)">⟳</span> Probing endpoint type...';
           try {
-            detectedType = await API.detectEndpointType(baseUrl, apiKey);
+            detectedType = await API.detectEndpointType(baseUrl, apiKey, defaultModel);
             statusEl.innerHTML = `<span style="color:${endpointColor(detectedType)}">●</span> Detected: <strong style="color:var(--text)">${endpointLabel(detectedType)}</strong>`;
           } catch {
             statusEl.innerHTML = `<span style="color:var(--yellow)">⚠</span> ${framework.translate('Detection failed, defaulting to OpenAI')}`;
@@ -235,7 +237,7 @@ const ProvidersPage = (() => {
           name,
           baseUrl,
           apiKey,
-          defaultModel: modal.querySelector('#prov-model').value.trim() || provider?.defaultModel || '',
+          defaultModel,
           type: detectedType,
           endpointType: detectedType,
           fetchedModels: provider?.fetchedModels || [],
@@ -269,25 +271,51 @@ const ProvidersPage = (() => {
     section.style.cssText = 'margin-top:24px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;';
     const settings = Store.getSettings();
     section.innerHTML = `
+      <form>
       <h2 style="font-size:15px;margin-bottom:16px">Global Settings</h2>
       <div style="display:grid;grid-template-columns:1fr;gap:14px;">
         <div class="form-group" style="margin:0">
           <label>Temperature (0–2)</label>
-          <input id="set-temp" type="number" min="0" max="2" step="0.1" value="${settings.temperature}" style="width:100%;padding:10px 12px;">
+          <input id="set-temp" name="temperature" type="range" min="0" max="2" step="0.1" value="${settings.temperature}" style="width:100%;padding:10px 12px;"><output>${settings.temperature}</output>
         </div>
         <div class="form-group" style="margin:0">
           <label>Max Tokens</label>
-          <input id="set-maxtok" type="number" min="64" max="32000" step="64" value="${settings.maxTokens}" style="width:100%;padding:10px 12px;">
+          <input id="set-maxtok" name="maxTokens" type="range" min="64" max="32000" step="64" value="${settings.maxTokens}" style="width:100%;padding:10px 12px;"><output>${settings.maxTokens}</output>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Max Retries</label>
+          <input id="set-maxret" name="maxRetries" type="range" min="0" max="10" step="1" value="${settings.maxRetries}" style="width:100%;padding:10px 12px;"><output>${settings.maxRetries || 0}</output>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Reasoning Effort</label>
+          <input id="set-reasoning-none" type="radio" name="reasoningEffort" value="" ${!settings.reasoningEffort ? 'checked' : ''}>
+          <label for="set-reasoning-none" class="radio-label">Default</label>
+          <input id="set-reasoning-low" type="radio" name="reasoningEffort" value="low" ${settings.reasoningEffort === 'low' ? 'checked' : ''}>
+          <label for="set-reasoning-low" class="radio-label">Low</label>
+          <input id="set-reasoning-medium" type="radio" name="reasoningEffort" value="medium" ${settings.reasoningEffort === 'medium' ? 'checked' : ''}>
+          <label for="set-reasoning-medium" class="radio-label">Medium</label>
+          <input id="set-reasoning-high" type="radio" name="reasoningEffort" value="high" ${settings.reasoningEffort === 'high' ? 'checked' : ''}>
+          <label for="set-reasoning-high" class="radio-label">High</label>
         </div>
       </div>
       <div style="margin-top:14px">
-        <button class="btn btn-primary" id="save-settings-btn" style="width:100%">Save Settings</button>
-      </div>`;
-    section.querySelector('#save-settings-btn').addEventListener('click', () => {
-      Store.updateSettings({
-        temperature: parseFloat(document.getElementById('set-temp')?.value) || 0.7,
-        maxTokens: parseInt(document.getElementById('set-maxtok')?.value) || 2048,
+        <button type="submit" class="btn btn-primary" id="save-settings-btn" style="width:100%">Save Settings</button>
+      </div>
+      </form>`;
+    section.querySelectorAll('input[type="range"]').forEach(input => {
+      const output = input.nextElementSibling;
+      input.addEventListener('input', () => {
+        output.value = input.value;
       });
+    });
+    section.querySelector('form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const settings = Object.fromEntries(new FormData(form));
+      settings.temperature = parseFloat(settings.temperature);
+      settings.maxTokens = parseInt(settings.maxTokens);
+      settings.maxRetries = parseInt(settings.maxRetries);
+      Store.updateSettings(settings);
       Components.toast('Settings saved', 'success');
     });
     return section;

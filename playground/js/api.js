@@ -71,7 +71,7 @@ const API = (() => {
     return false;
   }
 
-  async function detectEndpointType(baseUrl, apiKey) {
+  async function detectEndpointType(baseUrl, apiKey, model) {
     const headers = { 'Content-Type': 'application/json' };
     if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
     const cleanUrl = baseUrl.replace(/\/$/, '');
@@ -82,7 +82,7 @@ const API = (() => {
         run: () => probeEndpoint(cleanUrl + '/chat/completions', {
           method: 'POST',
           headers,
-          body: JSON.stringify({ model: 'test', messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 }),
+          body: JSON.stringify({ model: model || 'test', messages: [{ role: 'user', content: 'hi' }] }),
         }),
       },
       {
@@ -92,7 +92,7 @@ const API = (() => {
           return probeEndpoint(cleanUrl.replace(/\/v1$/, '') + '/v1/messages', {
             method: 'POST',
             headers: anthropicHeaders,
-            body: JSON.stringify({ model: 'test', messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 }),
+            body: JSON.stringify({ model: model || 'test', messages: [{ role: 'user', content: 'hi' }] }),
           });
         },
       },
@@ -101,7 +101,7 @@ const API = (() => {
         run: () => probeEndpoint(cleanUrl + '/responses', {
           method: 'POST',
           headers,
-          body: JSON.stringify({ model: 'test', input: 'hi', max_output_tokens: 1 }),
+          body: JSON.stringify({ model: model || 'test', input: 'hi', max_output_tokens: 1 }),
         }),
       },
       {
@@ -216,7 +216,7 @@ const API = (() => {
       headers,
       body: JSON.stringify(body),
       signal: options.signal,
-    });
+    }, options.maxRetries || 0);
 
     if (!res.ok) {
       const err = await res.text();
@@ -254,7 +254,7 @@ const API = (() => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
       signal: options.signal,
-    });
+    }, options.maxRetries || 0);
 
     if (!res.ok) {
       const err = await res.text();
@@ -302,7 +302,7 @@ const API = (() => {
       }
     }
 
-    const lastUserMsg = [...items].reverse().find(m => m.role === 'user');
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
     const prompt = lastUserMsg?.content || '';
     if (prompt) {
       try {
@@ -334,7 +334,7 @@ const API = (() => {
     /try again/i,
   ];
 
-  async function fetchWithRetry(url, opts, maxRetries = 5) {
+  async function fetchWithRetry(url, opts, maxRetries = 0) {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       const res = await fetch(url, opts);
       if (res.status === 429 && attempt < maxRetries) {
@@ -385,6 +385,7 @@ const API = (() => {
       temperature: options.temperature ?? 0.7,
     };
     if (options.maxTokens) body.max_tokens = options.maxTokens;
+    if (options.reasoningEffort) body.reasoning_effort = options.reasoningEffort;
 
     if (options.tools) {
       body.tools = options.tools;
@@ -396,7 +397,7 @@ const API = (() => {
       headers,
       body: JSON.stringify(body),
       signal: options.signal,
-    });
+    }, options.maxRetries || 0);
 
     if (!res.ok) {
       const err = await res.text();
@@ -479,7 +480,7 @@ const API = (() => {
       headers,
       body: JSON.stringify(body),
       signal: options.signal,
-    });
+    }, options.maxRetries || 0);
 
     if (!res.ok) {
       const err = await res.text();
@@ -566,7 +567,7 @@ const API = (() => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
       signal: options.signal,
-    });
+    }, options.maxRetries || 0);
 
     if (!res.ok) {
       const err = await res.text();
@@ -635,7 +636,7 @@ const API = (() => {
       headers,
       body: JSON.stringify(body),
       signal: options.signal,
-    });
+    }, options.maxRetries || 0);
 
     if (!res.ok) {
       const err = await res.text();
@@ -699,7 +700,7 @@ const API = (() => {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
-    });
+    }, options.maxRetries || 0);
 
     if (!res.ok) {
       const err = await res.text();

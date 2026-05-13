@@ -17,7 +17,6 @@
     "Copilot-style coding assistant with code blocks": "",
     "Create and manage AI characters": "",
     "Configure API providers and models": "",
-    "DEFAULT PROVIDER": "",
     "Airforce API": "",
     "no API key required for free models": "",
     "Add your own providers in": "",
@@ -107,10 +106,17 @@
     "Global Settings": "",
     "Temperature (0–2)": "",
     "Max Tokens": "",
+    "Max Retries": "",
     "Save Settings": "",
     "Settings saved": "",
     "Fetching models...": "",
     "No provider": "",
     "Copy": "",
-    "Thinking": ""
+    "Thinking": "",
+    "Reasoning Effort": "",
+    "Default": "",
+    "Low": "",
+    "Medium": "",
+    "High": "",
+    "No": ""
 }

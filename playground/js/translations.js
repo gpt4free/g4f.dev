@@ -29,8 +29,8 @@ framework.translate = (text) => {
     return text;
 };
 
-function countWords(text) {
-    return text.trim().match(/[\w\u4E00-\u9FA5]+/gu)?.length || 0;
+function hasWords(text) {
+    return text.trim().match(/[a-zA-Z]+/gu)?.length > 0;
 }
 
 framework.translationKey = "translations" + document.location.pathname;
@@ -41,7 +41,7 @@ try {
         framework.translations = JSON.parse(storedTranslations);
         const btn = document.getElementById("btn-translate");
         if (btn) {
-            btn.textContent += " ✕";
+            btn.innerHTML += "&nbsp;✕";
             btn.title = framework.translate('Reset Translations');
             btn.onclick = function () {
                 deleteTranslations();
@@ -69,12 +69,12 @@ framework.translateElements = function (check = null) {
         if (element.dataset.translated === "true") {
             return;
         }
-        if (["SCRIPT", "STYLE", "OPTION"].includes(element.tagName)) {
+        if (["SCRIPT", "STYLE", "OPTION", "OUTPUT"].includes(element.tagName)) {
             return;
         }
         element.childNodes.forEach(child => {
             if (child.nodeType === Node.TEXT_NODE) {
-                if (countWords(child.textContent) > 0) {
+                if (hasWords(child.textContent)) {
                     child.textContent = framework.translate(child.textContent);
                 }
             }

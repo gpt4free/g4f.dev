@@ -470,6 +470,7 @@ const CodingPage = (() => {
       const images = [];
       for await (const chunk of API.streamChat(provider, apiMessages, model, {
         temperature: 0.3,
+        maxRetries: settings.maxRetries || 0,
         signal: abortController.signal,
       })) {
         if (chunk.type === 'thinking') {

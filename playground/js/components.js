@@ -288,6 +288,7 @@ const Components = (() => {
       `<pre class="code-block"><div class="code-lang">${lang || 'code'}</div><code>${code.trim()}</code><button class="copy-code-btn" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent)">Copy</button></pre>`
     );
     html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+    html = html.replace(/\[!\[([^\]]*)\]\(([^)]*)\)\]\(([^)]*)\)/g, '<a href="$3"><img src="$2" alt="$1"></a>');
     html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -328,7 +329,7 @@ const Components = (() => {
         .replaceAll('"></iframe>', `?enablejsapi=1"></iframe>`)
         .replaceAll('src="/media/', `src="${framework.backendUrl}/media/`)
         .replaceAll('src="/thumbnail/', `src="${framework.backendUrl}/thumbnail/`)
-        .replaceAll('href="/media/', `src="${framework.backendUrl}/media/`)
+        .replaceAll('href="/media/', `href="${framework.backendUrl}/media/`);
     if (window.sanitizeHtml) {
         html = window.sanitizeHtml(html, sanitizedConfig());
     }

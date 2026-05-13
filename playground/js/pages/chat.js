@@ -235,8 +235,7 @@ const ChatPage = (() => {
       let fullThinking = '';
       const images = [];
       for await (const chunk of API.streamChat(provider, chat.items.filter(m => m.role !== 'system' || true), model, {
-        temperature: settings.temperature,
-        maxTokens: settings.maxTokens,
+        ...settings,
         signal: abortController.signal,
       })) {
         if (chunk.type === 'thinking') {

@@ -1356,7 +1356,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         if (message.content) {
             if (!message_storage[message_id]) {
                 content_map.inner.innerHTML = '<pre><span class="cursor"></span><pre><br>';
-                content_map.inner = content_map.inner.querySelector("pre");
+                content_map.innerPre = content_map.inner.querySelector("pre");
             }
             message_storage[message_id] += message.content;
             if (message.data) {
@@ -1371,16 +1371,22 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
             let cursorDiv = content_map.inner.querySelector(".cursor");
             if (cursorDiv) cursorDiv.parentNode.removeChild(cursorDiv);
         } else if (message.content) {
-            let lastChild = content_map.inner.querySelector(".cursor") || content_map.inner.lastChild;
+            const contentInnerPre = content_map.innerPre || content_map.inner;
+            if (Math.floor(Math.random() * 100) === 0) {
+                setTimeout(() => {
+                    contentInnerPre.innerHTML = contentInnerPre.innerHTML; // Trigger re-render to prevent freezing on long messages
+                }, 100);
+            }
+            let lastChild = contentInnerPre.querySelector(".cursor") || contentInnerPre.lastChild;
             if (appStorage.getItem("simulateTyping") === "false") {
-                content_map.inner.insertBefore(document.createTextNode(message.content), lastChild);
+                contentInnerPre.insertBefore(document.createTextNode(message.content), lastChild);
             } else {
                 let firstLine = true;
                 for (line of message.content.split("\n")) {
                     if (firstLine) {
                         firstLine = false;
                     } else {
-                        content_map.inner.insertBefore(document.createElement("br"), lastChild);
+                        contentInnerPre.insertBefore(document.createElement("br"), lastChild);
                     }
                     if (line.length > 0) {
                         let firstToken = true;
@@ -1393,7 +1399,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
                             } else {
                                 token = ' ' + token
                             }
-                            content_map.inner.insertBefore(document.createTextNode(token), lastChild);
+                            contentInnerPre.insertBefore(document.createTextNode(token), lastChild);
                         }
                     }
                 };

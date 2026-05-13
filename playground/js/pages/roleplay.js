@@ -285,8 +285,7 @@ const RoleplayPage = (() => {
       let fullThinking = '';
       const images = [];
       for await (const chunk of API.streamChat(provider, chat.items, model, {
-        temperature: settings.temperature,
-        maxTokens: settings.maxTokens,
+        ...settings,
         signal: abortController.signal,
       })) {
         if (chunk.type === 'thinking') {
