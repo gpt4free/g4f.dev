@@ -6,6 +6,7 @@ const modelTags = {
     video: "🎥",
     paid_only: "💰",
     free: "🆓",
+    supports_tools: "🧰",
 };
 
 function getModelLabel(model) {
@@ -22,20 +23,6 @@ function getModelTags(model, addVision = true) {
         if (!model[name] && model.type === name) {
             parts.push(` ${text}`);
         }
-    }
-    if (model.id) {
-        if (model.id.endsWith("/free") || model.id.endsWith(":free")) {
-            parts.push(` ${modelTags.free}`);
-        }
-        if (model.id.startsWith("models/gemini-") && model.id.includes("-flash-") && (model.id.endsWith("-latest") || model.id.endsWith("-preview")) && !model.id.includes("-image-") && !model.id.includes("-audio-") && !model.id.includes("-live-")) {
-            parts.push(` ${modelTags.free}`);
-        }
-        if (model.id.startsWith("models/gemma-")) {
-            parts.push(` ${modelTags.free}`);
-        }
-    }
-    if (model.tiers && model.tiers.includes("Free")) {
-        parts.push(` ${modelTags.free}`);
     }
     return parts.join("");
 }
@@ -56,6 +43,8 @@ function convertModel(inputModel, options = {}) {
             model.type = "video";
         } else if (model.video) {
             model.type = "video";
+        } else if (model.id.includes("veo-")) {
+            model.type = "video";
         } else if (model.supports_chat) {
             model.type = "chat";
         } else if (model.supports_images) {
@@ -74,6 +63,10 @@ function convertModel(inputModel, options = {}) {
             model.type = "image";
         } else if (model.id.includes("generate")) {
             model.type = "image";
+        } else if (model.media_type) {
+            model.type = model.media_type;
+        } else {
+            model.type = "chat";
         }
     }
     if (["text", "text-generation", "chat.completions"].includes(model.type)) {
@@ -85,8 +78,34 @@ function convertModel(inputModel, options = {}) {
     if (inputModalities.includes("image")) {
         model.vision = true;
     }
+    if (inputModalities.includes('audio')) {
+        model.audio = true;
+    }
+    if (model.providers && model.providers.length > 0) {
+        model.supports_tools = model.providers[0].supports_tools;
+    }
+    if (model.tags && model.tags.includes("tools")) {
+        model.supports_tools = true;
+    }
+    if (model.id) {
+        if (model.id.endsWith("/free") || model.id.endsWith(":free")) {
+            model.free = true;
+        }
+        if (model.id.startsWith("models/gemini-") && model.id.includes("-flash-") && (model.id.endsWith("-latest") || model.id.endsWith("-preview")) && !model.id.includes("-image-") && !model.id.includes("-audio-") && !model.id.includes("-live-")) {
+            model.free = true;
+        }
+        if (model.id.startsWith("models/gemma-")) {
+            model.free = true;
+        }
+    }
+    if (model.tiers && model.tiers.includes("Free")) {
+        model.free = true;
+    }
+    if (model.multiplier === 1) {
+        model.free = true;
+    }
     model.tags = getModelTags(model);
-    model.labelWithTags = model.label + (model.requests > 1 ? ` (${model.requests}+)` : "") + (model.tags ? ` ${model.tags}` : "");
+    model.label = model.label + (model.requests > 1 ? ` (${model.requests}+)` : "") + (model.tags ? ` ${model.tags}` : "");
     return model;
 }
 

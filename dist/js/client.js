@@ -248,7 +248,13 @@ class Client {
           let data = await response.json();
           data = data.data || data.result || data.models || data;
           data = data.map((model) => convertModel(model, { useModelName: this.useModelName }));
-          return data;
+          const uniqueModels = {};
+          data.forEach(model => {
+            if (!uniqueModels[model.id]) {
+                uniqueModels[model.id] = model;
+            }
+          });
+          return Object.values(uniqueModels);
         }
       };
     }
@@ -598,22 +604,11 @@ class PollinationsAI extends Client {
                             this.modelAliases[alias] = model.id;
                         }
                     }
-                    model.type = model.type || 'chat';      
-                    if (model.input_modalities && model.input_modalities.includes('image')) {
-                        model.vision = true;
-                    }
-                    if (model.input_modalities && model.input_modalities.includes('audio')) {
-                        model.audio = true;
-                    }
-                    return model
+                    return convertModel(model);
                 }),
                 ...imageModelsResponse.map(model => {
                     const isVideo = model.output_modalities && model.output_modalities.includes('video');
-                    const modelName = model.name || model.id
-                    if (model.input_modalities && model.input_modalities.includes('image')) {
-                        model.vision = true;
-                    }
-                    return { id: modelName, label: this.swapAliases[modelName]  || modelName, type: isVideo ? 'video' : 'image', seed: true, ...model};
+                    return convertModel({ ...model, type: isVideo ? 'video' : 'image', seed: true });
                 })
             ];
             return this._models;
@@ -787,11 +782,7 @@ class Puter extends Client {
             let data = await response.json();
             data.models = data.models.filter(model => !model.includes("claude-3-5") && !model.includes("claude-3-7"));
             return data.models.map(model => {
-                return {
-                    id: model,
-                    type: "chat",
-                    label: getModelLabel(model, true)
-                };
+                return convertModel({id: model, type: "chat"});
             });
         }
       };

@@ -4754,10 +4754,6 @@ function set_quota_info(models, quota) {
                 percent = Math.max(0, quota.quota_snapshots?.chat?.percent_remaining || 0);
                 model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
             }
-        } else if (quota.allowanceInfo?.remaining) {
-            percent = (quota.allowanceInfo.remaining / quota.allowanceInfo.monthUsageAllowance) * 100;
-            const total = (quota?.allowanceInfo?.remaining || 0) / 1e8;
-            model.label += ` (${framework.translate("Remaining:")} $${total.toFixed(2)})`;
         } else {
             return;
         }
@@ -4803,7 +4799,12 @@ function set_quota_info(models, quota) {
     if (quota.weekly_usage) {
         models.push({id: "weekly_usage", label: `${framework.translate("Weekly usage:")} ${quota.weekly_usage.used_percent}%` + (quota.weekly_usage.used_percent > 90 ? " ⚠️" : " ✅"), disabled: true});
     }
-
+    if (quota.allowanceInfo?.remaining) {
+        const percent = (quota.allowanceInfo.remaining / quota.allowanceInfo.monthUsageAllowance) * 100;
+        const total = (quota?.allowanceInfo?.remaining || 0) / 1e8;
+        const credits_info = `${framework.translate("Credits:")} ${total.toFixed(2)}$, ${framework.translate("Remaining:")} ${percent.toFixed(2)}%` + (percent > 10 ? " ✅" : " ⚠️");
+        models.unshift({id: "credits_info", label: credits_info, disabled: true});
+    }
     if (!default_model && client && client.defaultModel) {
         default_model = client.defaultModel;
         models.forEach((model) => {
@@ -5899,7 +5900,7 @@ async function loadClientModels() {
             }
             const opt = document.createElement('option');
             opt.value = model.id;
-            opt.text = model.labelWithTags;
+            opt.text = model.label;
             if (model.type) {
                 opt.dataset.type = model.type;
             }
