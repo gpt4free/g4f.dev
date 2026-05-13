@@ -399,19 +399,19 @@ const ProvidersPage = (() => {
       return;
     }
 
-    container.innerHTML = client.servers.map(server => `
+    container.innerHTML = client.servers.map((server, index) => `
       <div style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg3)">
-        <input type="checkbox" id="mcp-server-${server.id}" ${server.enabled ? 'checked' : ''}>
-        <label for="mcp-server-${server.id}" style="flex:1;min-width:0">
+        <input type="checkbox" id="mcp-server-${index}" data-server-id="${Components.escHtml(server.id)}" ${server.enabled ? 'checked' : ''}>
+        <label for="mcp-server-${index}" style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600">${Components.escHtml(server.name)}</div>
           <div style="font-size:11px;color:var(--text2);word-break:break-all">${Components.escHtml(server.url)}</div>
         </label>
-        <button type="button" class="btn btn-danger btn-sm" data-server-remove="${server.id}">Remove</button>
+        <button type="button" class="btn btn-danger btn-sm" data-server-remove="${Components.escHtml(server.id)}">Remove</button>
       </div>
     `).join('');
 
     client.servers.forEach(server => {
-      container.querySelector(`#mcp-server-${server.id}`)?.addEventListener('change', () => {
+      container.querySelector(`input[data-server-id="${server.id}"]`)?.addEventListener('change', () => {
         client.toggleServer(server.id);
         renderMCPServers(section);
         renderMCPTools(section);
@@ -453,7 +453,7 @@ const ProvidersPage = (() => {
         <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${Components.escHtml(serverName)}</div>
         ${serverTools.map(tool => `
           <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px">
-            <input type="checkbox" data-tool-id="${Components.escHtml(tool.toolId)}" ${client.isToolSelected(tool.toolId) ? 'checked' : ''}>
+            <input type="checkbox" data-tool-id="${encodeURIComponent(tool.toolId)}" ${client.isToolSelected(tool.toolId) ? 'checked' : ''}>
             <span style="min-width:0">
               <span style="font-size:13px;display:block">${Components.escHtml(tool.name)}</span>
               ${tool.description ? `<span style="font-size:11px;color:var(--text2);display:block">${Components.escHtml(tool.description)}</span>` : ''}
@@ -465,7 +465,7 @@ const ProvidersPage = (() => {
 
     container.querySelectorAll('input[data-tool-id]').forEach(input => {
       input.addEventListener('change', () => {
-        client.toggleToolSelection(input.getAttribute('data-tool-id'));
+        client.toggleToolSelection(decodeURIComponent(input.getAttribute('data-tool-id')));
       });
     });
   }
