@@ -311,10 +311,10 @@
       });
     });
   </script>
-  <script type="module">
+  <script type="module" async>
     // query() (translations.js) calls this so API responses can emit userTierUpdate data used by
     // the auth/tier UI (tier badge and limits) after authenticated requests.
-    import { captureUserTierHeaders } from '../dist/js/providers.js';
+    import { captureUserTierHeaders } from 'https://g4f.dev/dist/js/providers.js';
     window.captureUserTierHeaders = captureUserTierHeaders;
   </script>
   <script src="js/store.js"></script>

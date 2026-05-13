@@ -232,18 +232,6 @@ const PlaygroundAuth = (() => {
       handled = true;
     }
 
-    const hfApiKey = hashParams.get('HuggingFace-api_key');
-    if (hfApiKey) {
-      setProviderApiKey('huggingface', hfApiKey);
-      handled = true;
-    }
-
-    const pollinationsApiKey = hashParams.get('PollinationsAI-api_key');
-    if (pollinationsApiKey) {
-      setProviderApiKey('pollinations', pollinationsApiKey);
-      handled = true;
-    }
-
     if (hash.startsWith('#api_key=')) {
       const pollinationsToken = hash.substring(9);
       handled = (await handlePollinationsHash(pollinationsToken)) || handled;
@@ -281,7 +269,8 @@ const PlaygroundAuth = (() => {
       } else {
         setUser(data.user || getUser());
       }
-    } catch {
+    } catch (e) {
+      console.error('Error refreshing session:', e);
       updateAuthButton(getUser());
     }
   }
@@ -319,6 +308,10 @@ const PlaygroundAuth = (() => {
     await handleRedirectCallback();
     await refreshSession();
   }
+  
+  function isApiKeyToken(token) {
+    return token.startsWith(API_KEY_PREFIX);
+  }
 
   return { init, getUser, login, logout, refreshSession };
 })();
@@ -326,6 +319,3 @@ const PlaygroundAuth = (() => {
 window.PlaygroundAuth = PlaygroundAuth;
 
 Router.init();
-  function isApiKeyToken(token) {
-    return token.startsWith(API_KEY_PREFIX);
-  }

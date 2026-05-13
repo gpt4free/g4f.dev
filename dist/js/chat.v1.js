@@ -5899,7 +5899,7 @@ async function loadClientModels() {
             }
             const opt = document.createElement('option');
             opt.value = model.id;
-            opt.text = (model.label || model.id) + (model.requests > 1 ? ` (${model.requests}+)` : "") + get_modelTags(model);
+            opt.text = model.labelWithTags;
             if (model.type) {
                 opt.dataset.type = model.type;
             }

@@ -31,7 +31,7 @@ framework.translate = (text, check = false) => {
         const startWithSpace = text.startsWith(" ");
         const endWithSpace = text.endsWith(" ");
         if (stripText in framework.translations && framework.translations[stripText]) {
-            return (startWithSpace ? " " : "") + framework.translations[stripText] + (endWithSpace ? " " : "");
+            return (startWithSpace ? " " : "") + escapeHtml(framework.translations[stripText]) + (endWithSpace ? " " : "");
         }
         if (stripText && !newTranslations.includes(stripText)) {
             newTranslations.push(stripText);
@@ -40,7 +40,7 @@ framework.translate = (text, check = false) => {
             }
         }
     }
-    return escapeHtml(text);
+    return text;
 };
 
 function hasWords(text) {

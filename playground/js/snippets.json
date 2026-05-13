@@ -20,7 +20,6 @@
     "Airforce API": "",
     "no API key required for free models": "",
     "Add your own providers in": "",
-    "Open source": "",
     "Chats": "",
     "+ New": "",
     "No chats yet": "",
@@ -121,5 +120,11 @@
     "High": "",
     "No": "",
     "Unlimited": "",
-    "No value": ""
+    "No value": "",
+    "Signed in as": "",
+    "Tier": "",
+    "Refreshing...": "",
+    "Sign in to use your members access token and provider API keys.": "",
+    "Refresh Tier": "",
+    "Logout": ""
 }

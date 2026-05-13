@@ -9,11 +9,8 @@ const modelTags = {
 };
 
 function getModelLabel(model, splitProvider = false) {
-    const value = `${model || ""}`.replace("models/", "");
-    if (!splitProvider || value.startsWith("openrouter:")) {
-        return value;
-    }
-    return value.split(":").slice(-1).join(":");
+    const value = model.label || `${model.id || ""}`.replace("models/", "");
+    return value;
 }
 
 function getModelTags(model, addVision = true) {
@@ -89,6 +86,8 @@ function convertModel(inputModel, options = {}) {
     if (inputModalities.includes("image")) {
         model.vision = true;
     }
+    model.tags = getModelTags(model);
+    model.labelWithTags = model.label + (model.requests > 1 ? ` (${model.requests}+)` : "") + (model.tags ? ` ${model.tags}` : "");
     return model;
 }
 

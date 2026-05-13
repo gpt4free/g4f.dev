@@ -57,12 +57,12 @@ const ProvidersPage = (() => {
     section.innerHTML = `
       <h2 style="font-size:15px;margin-bottom:8px">Account</h2>
       <div class="notranslate" style="font-size:13px;color:var(--text2);margin-bottom:12px">
-        ${user ? `Signed in as <strong style="color:var(--text)">${Components.escHtml(accountName)}</strong> · Tier: <strong style="color:var(--text)">${Components.escHtml(tier)}</strong>` : 'Sign in to use your members access token and provider API keys.'}
+        ${user ? `${framework.translate('Signed in as')} <strong style="color:var(--text)">${Components.escHtml(accountName)}</strong> · ${framework.translate('Tier')}: <strong style="color:var(--text)">${Components.escHtml(tier)}</strong>` : `${framework.translate('Sign in to use your members access token and provider API keys.')}`}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${user ? `
-          <button class="btn btn-secondary btn-sm" data-auth-action="refresh">Refresh Tier</button>
-          <button class="btn btn-danger btn-sm" data-auth-action="logout">Logout</button>
+          <button class="btn btn-secondary btn-sm" data-auth-action="refresh">${framework.translate('Refresh Tier')}</button>
+          <button class="btn btn-danger btn-sm" data-auth-action="logout">${framework.translate('Logout')}</button>
         ` : `
           <button class="btn btn-secondary btn-sm" data-auth-provider="github">GitHub</button>
           <button class="btn btn-secondary btn-sm" data-auth-provider="discord">Discord</button>
@@ -81,11 +81,16 @@ const ProvidersPage = (() => {
         Router.navigate();
       }
     });
-    section.querySelector('[data-auth-action="refresh"]')?.addEventListener('click', async () => {
-      await auth?.refreshSession?.();
-      if (typeof Router !== 'undefined' && Router.navigate) {
-        Router.navigate();
-      }
+    const refreshBtn = section.querySelector('[data-auth-action="refresh"]');
+    refreshBtn?.addEventListener('click', async (e) => {
+      const backupText = refreshBtn.textContent;
+      refreshBtn.innerHTML = framework.translate('Refreshing...');
+      setTimeout(async() => {
+        await auth?.refreshSession?.();
+        if (typeof Router !== 'undefined' && Router.navigate) {
+          Router.navigate();
+        }
+      }, 1000);
     });
     return section;
   }
