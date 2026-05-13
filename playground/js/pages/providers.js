@@ -2,12 +2,15 @@ const ProvidersPage = (() => {
   let mcpClient = null;
 
   function ensureMCPClient() {
-    if (mcpClient || typeof MCPClient === 'undefined') return mcpClient;
+    if (mcpClient) return mcpClient;
+    if (typeof MCPClient === 'undefined') return null;
     mcpClient = new MCPClient();
     if (mcpClient.servers.length === 0) {
       try {
         mcpClient.addServer({ name: 'Default', url: 'https://mcp.g4f.space' });
-      } catch {}
+      } catch (err) {
+        console.warn('Failed to add default MCP server. You can manually add a server later.', err);
+      }
     }
     return mcpClient;
   }
@@ -478,6 +481,16 @@ const ProvidersPage = (() => {
     if (!name) return;
     const url = window.prompt('Enter MCP server URL (e.g., https://mcp.g4f.space):');
     if (!url) return;
+    try {
+      const parsed = new URL(url);
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        Components.toast('Please enter a valid MCP server URL using http or https.', 'error');
+        return;
+      }
+    } catch {
+      Components.toast('Please enter a valid MCP server URL.', 'error');
+      return;
+    }
 
     try {
       client.addServer({ name, url });
@@ -502,7 +515,7 @@ const ProvidersPage = (() => {
       await client.fetchAllTools();
       renderMCPTools(section);
     } catch (err) {
-      Components.toast(`Error refreshing tools: ${err.message}`, 'error');
+      Components.toast(`Error refreshing tools. Check your network/server configuration: ${err.message}`, 'error');
     } finally {
       if (button) {
         button.disabled = false;
