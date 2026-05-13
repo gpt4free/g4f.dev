@@ -8,7 +8,7 @@ This documentation covers the `backend_api.py` module in the GPT4Free project, w
 
 ### Models and Providers
 
-#### Get Available Models
+#### Get all avaiblable Models and Providers
 ```
 GET /backend-api/v2/models
 ```
