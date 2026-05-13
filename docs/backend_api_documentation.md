@@ -12,13 +12,13 @@ This documentation covers the `backend_api.py` module in the GPT4Free project, w
 ```
 GET /backend-api/v2/models
 ```
-Returns a list of all available models with their capabilities (image, vision, audio, video) and compatible providers.
+Returns a list of all available models  and there providers. Example: `{"ProviderA": ["modelA", "modelsB"], "ProviderB": ["modelC", "modelsD"]}`
 
 #### Get Provider-Specific Models
 ```
 GET /backend-api/v2/models/<provider>
 ```
-Returns models available for a specific provider.
+Returns models with their capabilities (image, vision, audio, video) available for a specific provider.
 
 #### Get Available Providers
 ```
