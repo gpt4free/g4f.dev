@@ -1377,32 +1377,37 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
                     contentInnerPre.innerHTML = contentInnerPre.innerHTML; // Trigger re-render to prevent freezing on long messages
                 }, 100);
             }
-            let lastChild = contentInnerPre.querySelector(".cursor") || contentInnerPre.lastChild;
-            if (appStorage.getItem("simulateTyping") === "false") {
-                contentInnerPre.insertBefore(document.createTextNode(message.content), lastChild);
-            } else {
-                let firstLine = true;
-                for (line of message.content.split("\n")) {
-                    if (firstLine) {
-                        firstLine = false;
-                    } else {
-                        contentInnerPre.insertBefore(document.createElement("br"), lastChild);
-                    }
-                    if (line.length > 0) {
-                        let firstToken = true;
-                        for (token of line.split(' ')) {
-                            if (token) {
-                                await new Promise(resolve => setTimeout(resolve, (Math.random() * (20 - 40) + 20)))
-                            }
-                            if (firstToken) {
-                                firstToken = false;
-                            } else {
-                                token = ' ' + token
-                            }
-                            contentInnerPre.insertBefore(document.createTextNode(token), lastChild);
+            try {
+                let lastChild = contentInnerPre.querySelector(".cursor") || contentInnerPre.lastChild;
+                if (appStorage.getItem("simulateTyping") === "false") {
+                    contentInnerPre.insertBefore(document.createTextNode(message.content), lastChild);
+                } else {
+                    let firstLine = true;
+                    for (line of message.content.split("\n")) {
+                        if (firstLine) {
+                            firstLine = false;
+                        } else {
+                            contentInnerPre.insertBefore(document.createElement("br"), lastChild);
                         }
-                    }
-                };
+                        if (line.length > 0) {
+                            let firstToken = true;
+                            for (token of line.split(' ')) {
+                                if (token) {
+                                    await new Promise(resolve => setTimeout(resolve, (Math.random() * (20 - 40) + 20)))
+                                }
+                                if (firstToken) {
+                                    firstToken = false;
+                                } else {
+                                    token = ' ' + token
+                                }
+                                contentInnerPre.insertBefore(document.createTextNode(token), lastChild);
+                            }
+                        }
+                    };
+                }
+            } catch (e) {
+                add_error("Error updating content:", e);
+                contentInnerPre.innerHTML += message.content;
             }
         }
     } else if (message.type == "log") {
