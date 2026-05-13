@@ -1,4 +1,17 @@
 const ProvidersPage = (() => {
+  let mcpClient = null;
+
+  function ensureMCPClient() {
+    if (mcpClient || typeof MCPClient === 'undefined') return mcpClient;
+    mcpClient = new MCPClient();
+    if (mcpClient.servers.length === 0) {
+      try {
+        mcpClient.addServer({ name: 'Default', url: 'https://mcp.g4f.space' });
+      } catch {}
+    }
+    return mcpClient;
+  }
+
   function render(container) {
     Components.injectStyles();
     container.innerHTML = '';
@@ -32,11 +45,13 @@ const ProvidersPage = (() => {
     list.style.cssText = 'display:flex;flex-direction:column;gap:12px;';
 
     const settingsSection = buildSettingsSection();
+    const mcpSection = buildMCPSection();
 
     wrap.appendChild(header);
     wrap.appendChild(hint);
     wrap.appendChild(list);
     wrap.appendChild(settingsSection);
+    wrap.appendChild(mcpSection);
     container.appendChild(wrap);
 
     renderList();
@@ -342,6 +357,158 @@ const ProvidersPage = (() => {
       Components.toast('Settings reset', 'success');
     });
     return section;
+  }
+
+  function buildMCPSection() {
+    const section = document.createElement('div');
+    section.style.cssText = 'margin-top:24px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;';
+    section.innerHTML = `
+      <h2 style="font-size:15px;margin-bottom:16px">MCP Servers</h2>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button type="button" class="btn btn-secondary btn-sm" id="add-mcp-server-btn">+ Add Server</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="refresh-mcp-tools-btn">Refresh Tools</button>
+      </div>
+      <div id="mcp-servers-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+      <h3 style="font-size:13px;color:var(--text2);margin-bottom:8px">MCP Tools</h3>
+      <div id="mcp-tools-list" style="display:flex;flex-direction:column;gap:10px"></div>`;
+
+    section.querySelector('#add-mcp-server-btn')?.addEventListener('click', () => showAddMCPServerDialog(section));
+    section.querySelector('#refresh-mcp-tools-btn')?.addEventListener('click', () => refreshMCPTools(section));
+
+    renderMCPServers(section);
+    renderMCPTools(section);
+    refreshMCPTools(section);
+    return section;
+  }
+
+  function renderMCPServers(section) {
+    const container = section.querySelector('#mcp-servers-list');
+    if (!container) return;
+    const client = ensureMCPClient();
+
+    if (!client) {
+      container.innerHTML = '<div style="font-size:12px;color:var(--text2)">MCP client not available.</div>';
+      return;
+    }
+
+    if (client.servers.length === 0) {
+      container.innerHTML = '<div style="font-size:12px;color:var(--text2)">No MCP servers configured.</div>';
+      return;
+    }
+
+    container.innerHTML = client.servers.map(server => `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg3)">
+        <input type="checkbox" id="mcp-server-${server.id}" ${server.enabled ? 'checked' : ''}>
+        <label for="mcp-server-${server.id}" style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600">${Components.escHtml(server.name)}</div>
+          <div style="font-size:11px;color:var(--text2);word-break:break-all">${Components.escHtml(server.url)}</div>
+        </label>
+        <button type="button" class="btn btn-danger btn-sm" data-server-remove="${server.id}">Remove</button>
+      </div>
+    `).join('');
+
+    client.servers.forEach(server => {
+      container.querySelector(`#mcp-server-${server.id}`)?.addEventListener('change', () => {
+        client.toggleServer(server.id);
+        renderMCPServers(section);
+        renderMCPTools(section);
+      });
+      container.querySelector(`[data-server-remove="${server.id}"]`)?.addEventListener('click', async () => {
+        const ok = await Components.confirm(`Remove MCP server "${server.name}"?`);
+        if (!ok) return;
+        client.removeServer(server.id);
+        renderMCPServers(section);
+        renderMCPTools(section);
+      });
+    });
+  }
+
+  function renderMCPTools(section) {
+    const container = section.querySelector('#mcp-tools-list');
+    if (!container) return;
+    const client = ensureMCPClient();
+
+    if (!client) {
+      container.innerHTML = '<div style="font-size:12px;color:var(--text2)">MCP client not available.</div>';
+      return;
+    }
+
+    const tools = client.getAllTools();
+    if (tools.length === 0) {
+      container.innerHTML = '<div style="font-size:12px;color:var(--text2)">No tools available. Refresh after adding servers.</div>';
+      return;
+    }
+
+    const toolsByServer = {};
+    tools.forEach(tool => {
+      if (!toolsByServer[tool.serverName]) toolsByServer[tool.serverName] = [];
+      toolsByServer[tool.serverName].push(tool);
+    });
+
+    container.innerHTML = Object.entries(toolsByServer).map(([serverName, serverTools]) => `
+      <div style="border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--bg3)">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${Components.escHtml(serverName)}</div>
+        ${serverTools.map(tool => `
+          <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px">
+            <input type="checkbox" data-tool-id="${Components.escHtml(tool.toolId)}" ${client.isToolSelected(tool.toolId) ? 'checked' : ''}>
+            <span style="min-width:0">
+              <span style="font-size:13px;display:block">${Components.escHtml(tool.name)}</span>
+              ${tool.description ? `<span style="font-size:11px;color:var(--text2);display:block">${Components.escHtml(tool.description)}</span>` : ''}
+            </span>
+          </label>
+        `).join('')}
+      </div>
+    `).join('');
+
+    container.querySelectorAll('input[data-tool-id]').forEach(input => {
+      input.addEventListener('change', () => {
+        client.toggleToolSelection(input.getAttribute('data-tool-id'));
+      });
+    });
+  }
+
+  function showAddMCPServerDialog(section) {
+    const client = ensureMCPClient();
+    if (!client) {
+      Components.toast('MCP client not available', 'error');
+      return;
+    }
+
+    const name = window.prompt('Enter MCP server name:');
+    if (!name) return;
+    const url = window.prompt('Enter MCP server URL (e.g., https://mcp.g4f.space):');
+    if (!url) return;
+
+    try {
+      client.addServer({ name, url });
+      renderMCPServers(section);
+      refreshMCPTools(section);
+    } catch (err) {
+      Components.toast(`Error adding server: ${err.message}`, 'error');
+    }
+  }
+
+  async function refreshMCPTools(section) {
+    const client = ensureMCPClient();
+    if (!client) return;
+
+    const button = section.querySelector('#refresh-mcp-tools-btn');
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Refreshing...';
+    }
+
+    try {
+      await client.fetchAllTools();
+      renderMCPTools(section);
+    } catch (err) {
+      Components.toast(`Error refreshing tools: ${err.message}`, 'error');
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.textContent = 'Refresh Tools';
+      }
+    }
   }
 
   function updateBadge() {
