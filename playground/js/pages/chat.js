@@ -162,7 +162,7 @@ const ChatPage = (() => {
       if (!chat) return;
       const sendBtn = document.querySelector('.input-bar .send-btn');
       if (sendBtn) {
-        if (chat.items.any(m => m.role === 'user')) {
+        if (chat.items.some(m => m.role === 'user')) {
           sendBtn.textContent = sendBtn.dataset.label;
           sendBtn.disabled = true;
         } else {
