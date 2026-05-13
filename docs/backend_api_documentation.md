@@ -12,7 +12,13 @@ This documentation covers the `backend_api.py` module in the GPT4Free project, w
 ```
 GET /backend-api/v2/models
 ```
-Returns a list of all available models  and there providers. Example: `{"ProviderA": ["modelA", "modelB"], "ProviderB": ["modelC", "modelD"]}`
+Returns a list of all available models  and there providers. Response format:
+```json
+{
+    "ProviderA": ["modelA", "modelB"],
+    "ProviderB": ["modelC", "modelD"]
+}
+```
 
 #### Get Provider-Specific Models
 ```
