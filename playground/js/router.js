@@ -130,6 +130,8 @@ const Router = (() => {
 const PlaygroundAuth = (() => {
   const AUTH_BASE = 'https://auth.gpt4free.workers.dev';
   const USER_KEY = 'llmp_user';
+  const DEFAULT_ACCOUNT_NAME = 'Account';
+  const API_KEY_PREFIX = 'g4f_';
 
   function getUser() {
     try {
@@ -260,7 +262,7 @@ const PlaygroundAuth = (() => {
       return;
     }
     try {
-      const endpoint = token.startsWith('g4f_') ? 'keys/validate' : 'session';
+      const endpoint = isApiKeyToken(token) ? 'keys/validate' : 'session';
       const response = await fetch(`${AUTH_BASE}/members/api/${endpoint}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -272,8 +274,8 @@ const PlaygroundAuth = (() => {
       const data = await response.json();
       if (endpoint === 'keys/validate') {
         setUser({
-          name: data.username || 'Account',
-          username: data.username || 'Account',
+          name: data.username || DEFAULT_ACCOUNT_NAME,
+          username: data.username || DEFAULT_ACCOUNT_NAME,
           tier: data.tier || 'free'
         });
       } else {
@@ -324,3 +326,6 @@ const PlaygroundAuth = (() => {
 window.PlaygroundAuth = PlaygroundAuth;
 
 Router.init();
+  function isApiKeyToken(token) {
+    return token.startsWith(API_KEY_PREFIX);
+  }

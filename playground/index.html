@@ -312,7 +312,8 @@
     });
   </script>
   <script type="module">
-    // Used by translations.js query() responses to capture tier/rate-limit headers for UI updates.
+    // query() (translations.js) calls this so API responses can emit userTierUpdate data used by
+    // the auth/tier UI (tier badge and limits) after authenticated requests.
     import { captureUserTierHeaders } from '../dist/js/providers.js';
     window.captureUserTierHeaders = captureUserTierHeaders;
   </script>
