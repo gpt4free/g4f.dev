@@ -13,7 +13,7 @@
         "huggingface": {"baseUrl": "https://router.huggingface.co/v1", "tags": "🤗", "provider": "HuggingFace"},
         "nvidia": {"baseUrl": "https://integrate.api.nvidia.com/v1", "backupUrl": "https://g4f.space/api/nvidia", "tags": "📟"},
         "ollama": {"baseUrl": "https://ollama.g4f-dev.workers.dev", "backupUrl": "https://g4f.space/api/ollama", "tags": "🦙"},
-        "ollama.pro": {"baseUrl": "https://g4f.space/api/ollama.pro", "backupUrl": "https://g4f.space/api/ollama.pro", "tags": "🦙👑"},
+        "ollama.pro": {"baseUrl": "https://ollama.g4f-dev.workers.dev", "backupUrl": "https://g4f.space/api/ollama.pro", "tags": "🦙 👑"},
         "openrouter": {"baseUrl": "https://openrouter.ai/api/v1", "backupUrl": "https://g4f.space/api/openrouter", "tags": "👓"},
         "puter": {"baseUrl": "https://puter.g4f-dev.workers.dev", "tags": "👓", "provider": "PuterJS"},
         "perplexity": {"baseUrl": "https://perplexity.g4f-dev.workers.dev", "tags": "🔎"}
@@ -30,7 +30,7 @@
         "ollama": "nemotron-3-nano:30b",
         "ollama.pro": "deepseek-v4-flash",
         "groq": "openai/gpt-oss-120b",
-        "puter": "anthropic:anthropic/claude-sonnet-4-6",
+        "puter": "anthropic:anthropic/claude-sonnet-4-7",
         "perplexity": "turbo",
         "deepinfra": "deepseek-ai/DeepSeek-V4-Flash"
     },
@@ -41,6 +41,7 @@
         "gemini": "GeminiPro-api_key",
         "nvidia": "Nvidia-api_key",
         "ollama": "Ollama-api_key",
+        "ollama.pro": "Ollama-api_key",
         "openrouter": "OpenRouter-api_key",
         "pollinations": "PollinationsAI-api_key",
         "together": "Together-api_key",
