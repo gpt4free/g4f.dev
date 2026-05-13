@@ -146,7 +146,7 @@ const API = (() => {
     const res = await fetchWithRetry(`${provider.baseUrl}/models`, { headers });
     if (!res.ok) throw new Error(`Failed to fetch models: ${res.status}`);
     const data = await res.json();
-    return (data.data || data.models || []).map(m => typeof m === 'string' ? m : m.id).filter(Boolean);
+    return (data.data || data.models || []).filter(m => m.id || m);
   }
 
   async function fetchModelsAnthropic(provider) {
@@ -381,9 +381,9 @@ const API = (() => {
     const body = {
       model: model || provider.defaultModel || 'llama-4-scout',
       messages: messages.map(m => ({ role: m.role, content: m.content })),
-      stream: true,
-      temperature: options.temperature ?? 0.7,
+      stream: true
     };
+    if (options.temperature !== undefined) body.temperature = options.temperature;
     if (options.maxTokens) body.max_tokens = options.maxTokens;
     if (options.reasoningEffort) body.reasoning_effort = options.reasoningEffort;
 
@@ -465,9 +465,9 @@ const API = (() => {
       model: model || provider.defaultModel || 'claude-sonnet-4-20250514',
       messages: nonSystemMsgs,
       stream: true,
-      max_tokens: options.maxTokens || 16384,
-      temperature: options.temperature ?? 0.7,
     };
+    if (options.temperature !== undefined) body.temperature = options.temperature;
+    if (options.maxTokens) body.max_tokens = options.maxTokens;
 
     if (systemMsg) body.system = systemMsg.content;
 
@@ -544,9 +544,9 @@ const API = (() => {
     }));
 
     const genConfig = {
-      temperature: options.temperature ?? 0.7,
       thinkingConfig: { thinkingBudget: 8000 },
     };
+    if (options.temperature !== undefined) genConfig.temperature = options.temperature;
     if (options.maxTokens) genConfig.maxOutputTokens = options.maxTokens;
 
     const body = {
@@ -627,7 +627,6 @@ const API = (() => {
       input,
       stream: true,
     };
-
     if (options.maxTokens) body.max_output_tokens = options.maxTokens;
     if (options.temperature !== undefined) body.temperature = options.temperature;
 
@@ -691,10 +690,11 @@ const API = (() => {
 
     const body = {
       model: model || provider.defaultModel || 'llama-4-scout',
-      messages,
-      temperature: options.temperature ?? 0.7,
+      messages: messages.map(m => ({ role: m.role, content: m.content })),
     };
+    if (options.temperature !== undefined) body.temperature = options.temperature;
     if (options.maxTokens) body.max_tokens = options.maxTokens;
+    if (options.reasoningEffort) body.reasoning_effort = options.reasoningEffort;
 
     const res = await fetchWithRetry(`${provider.baseUrl}/chat/completions`, {
       method: 'POST',

@@ -469,7 +469,7 @@ const CodingPage = (() => {
       let fullThinking = '';
       const images = [];
       for await (const chunk of API.streamChat(provider, apiMessages, model, {
-        temperature: 0.3,
+        temperature: settings.codingTemperature,
         maxRetries: settings.maxRetries || 0,
         signal: abortController.signal,
       })) {

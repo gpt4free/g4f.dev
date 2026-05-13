@@ -358,9 +358,9 @@ const Components = (() => {
     sel.className = 'model-select';
     models.forEach(m => {
       const opt = document.createElement('option');
-      opt.value = m;
-      opt.textContent = m;
-      if (m === (currentModel || provider?.defaultModel)) opt.selected = true;
+      opt.value = m.id || m;
+      opt.textContent = m.label || m.id || m;
+      if ((m.id || m) === (currentModel || provider?.defaultModel)) opt.selected = true;
       sel.appendChild(opt);
     });
     return sel;

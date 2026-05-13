@@ -105,6 +105,7 @@
     "Provider saved": "",
     "Global Settings": "",
     "Temperature (0–2)": "",
+    "Coding Temperature": "",
     "Max Tokens": "",
     "Max Retries": "",
     "Save Settings": "",
@@ -118,5 +119,7 @@
     "Low": "",
     "Medium": "",
     "High": "",
-    "No": ""
+    "No": "",
+    "Unlimited": "",
+    "No value": ""
 }

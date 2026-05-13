@@ -16,7 +16,16 @@ fetch('js/snippets.json')
     })
     .catch(() => {});
 
-framework.translate = (text) => {
+function escapeHtml(text) {
+    const element = document.createElement('div');
+    if (text) {
+        element.innerText = text;
+        return element.innerHTML;
+    }
+    return '';
+}
+
+framework.translate = (text, check = false) => {
     const stripText = text.trim().replace(/\s+/g, ' ');
     if (stripText) {
         const startWithSpace = text.startsWith(" ");
@@ -24,9 +33,14 @@ framework.translate = (text) => {
         if (stripText in framework.translations && framework.translations[stripText]) {
             return (startWithSpace ? " " : "") + framework.translations[stripText] + (endWithSpace ? " " : "");
         }
-        stripText && !newTranslations.includes(stripText) ? newTranslations.push(stripText) : null;
+        if (stripText && !newTranslations.includes(stripText)) {
+            newTranslations.push(stripText);
+            if (check) {
+                console.log(`New snippet found: \`${stripText}\``);
+            }
+        }
     }
-    return text;
+    return escapeHtml(text);
 };
 
 function hasWords(text) {
@@ -69,27 +83,27 @@ framework.translateElements = function (check = null) {
         if (element.dataset.translated === "true") {
             return;
         }
-        if (["SCRIPT", "STYLE", "OPTION", "OUTPUT"].includes(element.tagName)) {
+        if (["SCRIPT", "STYLE", "OPTION", "OUTPUT", "TABLE", "TR", "I"].includes(element.tagName)) {
             return;
         }
         element.childNodes.forEach(child => {
             if (child.nodeType === Node.TEXT_NODE) {
                 if (hasWords(child.textContent)) {
-                    child.textContent = framework.translate(child.textContent);
+                    child.textContent = framework.translate(child.textContent, !!check);
                 }
             }
         });
         if (element.alt) {
-            element.alt = framework.translate(element.alt);
+            element.alt = framework.translate(element.alt, !!check);
         }
         if (element.title) {
-            element.title = framework.translate(element.title);
+            element.title = framework.translate(element.title, !!check);
         }
         if (element.placeholder) {
-            element.placeholder = framework.translate(element.placeholder);
+            element.placeholder = framework.translate(element.placeholder, !!check);
         }
         if (element.classList.contains("title-input") && element.value) {
-            element.value = framework.translate(element.value);
+            element.value = framework.translate(element.value, !!check);
         }
         if (check) {
             element.dataset.translated = "true";

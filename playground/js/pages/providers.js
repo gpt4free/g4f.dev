@@ -13,19 +13,19 @@ const ProvidersPage = (() => {
     btnWrap.style.cssText = 'display:flex;gap:8px;';
     const resetBtn = document.createElement('button');
     resetBtn.className = 'btn btn-secondary btn-sm';
-    resetBtn.textContent = framework.translate('Reset');
+    resetBtn.textContent = 'Reset';
     resetBtn.addEventListener('click', () => Store.loadProviders());
     btnWrap.appendChild(resetBtn);
     const newBtn = document.createElement('button');
     newBtn.className = 'btn btn-primary btn-sm';
-    newBtn.textContent = framework.translate('+ Add');
+    newBtn.textContent = '+ Add';
     newBtn.addEventListener('click', () => openEditor(null));
     btnWrap.appendChild(newBtn);
     header.appendChild(btnWrap);
 
     const hint = document.createElement('p');
     hint.style.cssText = 'color:var(--text2);font-size:13px;margin-bottom:20px;line-height:1.5;';
-    hint.textContent = framework.translate('Add any provider — OpenAI, Anthropic, Google, or compatible APIs. The endpoint type is auto-detected.');
+    hint.textContent = 'Add any provider — OpenAI, Anthropic, Google, or compatible APIs. The endpoint type is auto-detected.';
 
     const list = document.createElement('div');
     list.id = 'providers-list';
@@ -102,7 +102,7 @@ const ProvidersPage = (() => {
         <div style="margin-top:12px">
           <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Default Model</label>
           <select class="model-select default-model-sel" style="width:100%">
-            ${provider.fetchedModels.map(m => `<option value="${Components.escHtml(m)}" ${m === provider.defaultModel ? 'selected' : ''}>${Components.escHtml(m)}</option>`).join('')}
+            ${provider.fetchedModels.map(m => `<option value="${Components.escHtml(m.id || m)}" ${(m.id || m) === provider.defaultModel ? 'selected' : ''}>${Components.escHtml(m.label || m.id || m)}</option>`).join('')}
           </select>
         </div>` : ''}`;
 
@@ -251,7 +251,7 @@ const ProvidersPage = (() => {
           const models = await API.fetchModels(updated);
           if (models.length > 0) {
             updated.fetchedModels = models;
-            if (!updated.defaultModel) updated.defaultModel = models[0];
+            if (!updated.defaultModel) updated.defaultModel = models.length > 0 ? (models[0].id || models[0]) : '';
             Store.upsertProvider(updated);
           }
         } catch {}
@@ -276,11 +276,15 @@ const ProvidersPage = (() => {
       <div style="display:grid;grid-template-columns:1fr;gap:14px;">
         <div class="form-group" style="margin:0">
           <label>Temperature (0–2)</label>
-          <input id="set-temp" name="temperature" type="range" min="0" max="2" step="0.1" value="${settings.temperature}" style="width:100%;padding:10px 12px;"><output>${settings.temperature}</output>
+          <input id="set-temp" name="temperature" type="range" min="-0.1" max="2" step="0.1" value="${settings.temperature === undefined ? -0.1 : settings.temperature}" style="width:100%;padding:10px 12px;"><output>${settings.temperature === undefined ? framework.translate('No value') : settings.temperature}</output>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Coding Temperature</label>
+          <input id="set-coding-temp" name="codingTemperature" type="range" min="-0.1" max="2" step="0.1" value="${settings.codingTemperature === undefined ? -0.1 : settings.codingTemperature}" style="width:100%;padding:10px 12px;"><output>${settings.codingTemperature === undefined ? framework.translate('No value') : settings.codingTemperature}</output>
         </div>
         <div class="form-group" style="margin:0">
           <label>Max Tokens</label>
-          <input id="set-maxtok" name="maxTokens" type="range" min="64" max="32000" step="64" value="${settings.maxTokens}" style="width:100%;padding:10px 12px;"><output>${settings.maxTokens}</output>
+          <input id="set-maxtok" name="maxTokens" type="range" min="0" max="16384" step="32" value="${settings.maxTokens || 0}" style="width:100%;padding:10px 12px;"><output>${settings.maxTokens ? settings.maxTokens : framework.translate('Unlimited')}</output>
         </div>
         <div class="form-group" style="margin:0">
           <label>Max Retries</label>
@@ -298,14 +302,22 @@ const ProvidersPage = (() => {
           <label for="set-reasoning-high" class="radio-label">High</label>
         </div>
       </div>
-      <div style="margin-top:14px">
+      <div style="margin-top:14px;display: flex;flex-direction: row;">
+        <button type="button" class="btn btn-secondary" id="reset-settings-btn" style="margin-right:8px">Reset</button>
         <button type="submit" class="btn btn-primary" id="save-settings-btn" style="width:100%">Save Settings</button>
       </div>
       </form>`;
     section.querySelectorAll('input[type="range"]').forEach(input => {
       const output = input.nextElementSibling;
       input.addEventListener('input', () => {
-        output.value = input.value;
+        if(['temperature', 'codingTemperature'].includes(input.name) && parseFloat(input.value) < 0) {
+          output.value = framework.translate('No value');
+        } else if (input.name === 'maxTokens' && parseInt(input.value) === 0) {
+          output.value = framework.translate('Unlimited');
+          return;
+        } else {
+          output.value = input.value; 
+        }
       });
     });
     section.querySelector('form').addEventListener('submit', (e) => {
@@ -313,10 +325,21 @@ const ProvidersPage = (() => {
       const form = e.target;
       const settings = Object.fromEntries(new FormData(form));
       settings.temperature = parseFloat(settings.temperature);
+      if (settings.temperature < 0) delete settings.temperature;
+      settings.codingTemperature = parseFloat(settings.codingTemperature);
+      if (settings.codingTemperature < 0) delete settings.codingTemperature;
       settings.maxTokens = parseInt(settings.maxTokens);
+      if (settings.maxTokens === 0) delete settings.maxTokens;
       settings.maxRetries = parseInt(settings.maxRetries);
       Store.updateSettings(settings);
       Components.toast('Settings saved', 'success');
+    });
+    section.querySelector('#reset-settings-btn').addEventListener('click', () => {
+      Store.deleteSettings();
+      const newSection = buildSettingsSection();
+      section.replaceWith(newSection);
+      framework.translateElements(newSection.querySelectorAll('*'));
+      Components.toast('Settings reset', 'success');
     });
     return section;
   }

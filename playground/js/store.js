@@ -54,8 +54,7 @@ const Store = (() => {
     chats: [],
     settings: {
       streamingEnabled: true,
-      temperature: 0.7,
-      maxTokens: 2048,
+      codingTemperature: 0,
       maxRetries: 2,
       theme: 'dark',
     },
@@ -102,6 +101,10 @@ const Store = (() => {
 
   function set(key, value) {
     localStorage.setItem(KEYS[key], JSON.stringify(value));
+  }
+
+  function deleteSettings() {
+    localStorage.removeItem(KEYS['settings']);
   }
 
   function getProviders() { return get('providers'); }
@@ -251,7 +254,7 @@ const Store = (() => {
     getActiveProvider, upsertProvider, deleteProvider,
     getPersonas, setPersonas, upsertPersona, deletePersona,
     getChats, getChat, upsertChat, deleteChat,
-    getSettings, setSettings, updateSettings,
+    getSettings, setSettings, updateSettings, deleteSettings,
     newId, loadProviders,
   };
 })();
