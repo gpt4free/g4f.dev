@@ -130,8 +130,6 @@ const Router = (() => {
 const PlaygroundAuth = (() => {
   const AUTH_BASE = 'https://auth.gpt4free.workers.dev';
   const USER_KEY = 'llmp_user';
-  const POLLINATIONS_APP_KEY = 'pk_7X0QLj0xijSd0xj7';
-  const POLLINATIONS_PERMISSIONS = 'profile,balance,usage';
 
   function getUser() {
     try {
@@ -169,22 +167,30 @@ const PlaygroundAuth = (() => {
     return window.location.href.split('#')[0];
   }
 
+  function setProviderApiKey(providerId, apiKey) {
+    if (!apiKey || typeof Store === 'undefined' || !Store.getProviders) return;
+    const provider = Store.getProviders().find(p => p.id === providerId);
+    if (!provider) return;
+    provider.apiKey = apiKey;
+    Store.upsertProvider(provider);
+  }
+
   function applyAuthResult(sessionToken, user) {
     if (sessionToken) {
       localStorage.setItem('session_token', sessionToken);
     }
     if (user?.pollinations?.api_key) {
-      localStorage.setItem('PollinationsAI-api_key', user.pollinations.api_key);
+      setProviderApiKey('pollinations', user.pollinations.api_key);
     }
     if (user?.provider === 'huggingface' && user?.access_token) {
-      localStorage.setItem('HuggingFace-api_key', user.access_token);
+      setProviderApiKey('huggingface', user.access_token);
     }
     setUser(user || getUser());
   }
 
   async function handlePollinationsHash(pollinationsToken) {
     if (!pollinationsToken) return false;
-    localStorage.setItem('PollinationsAI-api_key', pollinationsToken);
+    setProviderApiKey('pollinations', pollinationsToken);
     try {
       const authResponse = await fetch(`${AUTH_BASE}/members/auth/pollinations`, {
         method: 'POST',
@@ -226,13 +232,13 @@ const PlaygroundAuth = (() => {
 
     const hfApiKey = hashParams.get('HuggingFace-api_key');
     if (hfApiKey) {
-      localStorage.setItem('HuggingFace-api_key', hfApiKey);
+      setProviderApiKey('huggingface', hfApiKey);
       handled = true;
     }
 
     const pollinationsApiKey = hashParams.get('PollinationsAI-api_key');
     if (pollinationsApiKey) {
-      localStorage.setItem('PollinationsAI-api_key', pollinationsApiKey);
+      setProviderApiKey('pollinations', pollinationsApiKey);
       handled = true;
     }
 
@@ -278,14 +284,16 @@ const PlaygroundAuth = (() => {
     }
   }
 
-  function login(provider) {
+  async function login(provider) {
     if (provider === 'pollinations') {
-      const params = new URLSearchParams({
-        redirect_url: getCurrentUrl(),
-        app_key: POLLINATIONS_APP_KEY,
-        permissions: POLLINATIONS_PERMISSIONS
-      });
-      window.location.href = `https://enter.pollinations.ai/authorize?${params.toString()}`;
+      const pollinationsKey = window.prompt('Enter your Pollinations API key');
+      if (pollinationsKey) {
+        await handlePollinationsHash(pollinationsKey.trim());
+        await refreshSession();
+        if (typeof Router !== 'undefined' && Router.navigate) {
+          Router.navigate();
+        }
+      }
       return;
     }
     window.location.href = `${AUTH_BASE}/members/auth/${provider}?redirect=${encodeURIComponent(getCurrentUrl())}`;
@@ -299,7 +307,9 @@ const PlaygroundAuth = (() => {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });
-      } catch {}
+      } catch (e) {
+        console.warn('Logout request failed:', e);
+      }
     }
     localStorage.removeItem('session_token');
     setUser(null);
