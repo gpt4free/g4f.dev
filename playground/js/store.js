@@ -107,7 +107,21 @@ const Store = (() => {
     localStorage.removeItem(KEYS['settings']);
   }
 
-  function getProviders() { return get('providers'); }
+  function getProviders() {
+    const providers = get('providers');
+    providers.forEach(provider => {
+      if (provider.localStorageKey && localStorage.getItem(provider.localStorageKey)) {
+        provider.apiKey = localStorage.getItem(provider.localStorageKey);
+      }
+      if (provider.apiKey && (provider.apiKey.startsWith("g4f_") || provider.apiKey.startsWith("gfs_"))) {
+        provider.baseUrl = provider.backupUrl || provider.baseUrl;
+      }
+      if (!provider.apiKey && provider.baseUrl && provider.baseUrl.startsWith("https://g4f.space/")) {
+        provider.apiKey = localStorage.getItem("session_token");
+      }
+    });
+    return providers;
+  }
   function setProviders(v) { set('providers', v); }
 
   function getActiveProviderId() { return get('activeProvider'); }
@@ -116,16 +130,7 @@ const Store = (() => {
   function getActiveProvider() {
     const providers = getProviders();
     const id = getActiveProviderId();
-    const provider = providers.find(p => p.id === id) || providers[0];
-    if (provider.localStorageKey && localStorage.getItem(provider.localStorageKey)) {
-      provider.apiKey = localStorage.getItem(provider.localStorageKey);
-    } else if (!provider.apiKey && provider.backupUrl) {
-      provider.apiKey = localStorage.getItem("session_token");
-    }
-    if (provider.apiKey && (provider.apiKey.startsWith("g4f_") || provider.apiKey.startsWith("gfs_"))) {
-      provider.baseUrl = provider.backupUrl || provider.baseUrl;
-    }
-    return provider;
+    return providers.find(p => p.id === id) || providers[0];
   }
 
   function upsertProvider(provider) {

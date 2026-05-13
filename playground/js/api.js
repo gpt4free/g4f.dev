@@ -112,6 +112,18 @@ const API = (() => {
     const probes = [
       {
         type: 'openai',
+        run: () => probeEndpoint(cleanUrl + '/quota', {
+          headers
+        }),
+      },
+      {
+        type: 'openai',
+        run: () => probeEndpoint(cleanUrl + '/chat/completions', {
+          headers
+        }),
+      },
+      {
+        type: 'openai',
         run: () => probeEndpoint(cleanUrl + '/chat/completions', {
           method: 'POST',
           headers,

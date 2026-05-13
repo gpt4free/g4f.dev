@@ -391,8 +391,10 @@ const Components = (() => {
       ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
       if (ta.value.trim()) {
         btn.textContent = btn.dataset.label;
-        btn.disabled = false;
+      } else {
+        btn.textContent = framework.translate('Regenerate');
       }
+      btn.disabled = false;
     });
     ta.addEventListener('keydown', e => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
