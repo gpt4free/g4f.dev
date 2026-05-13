@@ -286,14 +286,11 @@ const PlaygroundAuth = (() => {
 
   async function login(provider) {
     if (provider === 'pollinations') {
-      const pollinationsKey = window.prompt('Enter your Pollinations API key');
-      if (pollinationsKey) {
-        await handlePollinationsHash(pollinationsKey.trim());
-        await refreshSession();
-        if (typeof Router !== 'undefined' && Router.navigate) {
-          Router.navigate();
-        }
-      }
+      const params = new URLSearchParams({
+        redirect: getCurrentUrl(),
+        provider: 'pollinations'
+      });
+      window.location.href = `https://g4f.dev/members?${params.toString()}`;
       return;
     }
     window.location.href = `${AUTH_BASE}/members/auth/${provider}?redirect=${encodeURIComponent(getCurrentUrl())}`;
