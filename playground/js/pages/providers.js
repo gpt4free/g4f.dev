@@ -31,8 +31,10 @@ const ProvidersPage = (() => {
     list.id = 'providers-list';
     list.style.cssText = 'display:flex;flex-direction:column;gap:12px;';
 
+    const accountSection = buildAccountSection();
     const settingsSection = buildSettingsSection();
 
+    wrap.appendChild(accountSection);
     wrap.appendChild(header);
     wrap.appendChild(hint);
     wrap.appendChild(list);
@@ -41,6 +43,51 @@ const ProvidersPage = (() => {
 
     renderList();
     updateBadge();
+  }
+
+  function buildAccountSection() {
+    const section = document.createElement('div');
+    section.style.cssText = 'margin-bottom:16px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;';
+
+    const auth = window.PlaygroundAuth;
+    const user = auth?.getUser?.();
+    const tier = user?.tier || 'guest';
+    const accountName = user ? (user.name || user.username || 'Account') : 'Guest';
+
+    section.innerHTML = `
+      <h2 style="font-size:15px;margin-bottom:8px">Account</h2>
+      <div class="notranslate" style="font-size:13px;color:var(--text2);margin-bottom:12px">
+        ${user ? `Signed in as <strong style="color:var(--text)">${Components.escHtml(accountName)}</strong> · Tier: <strong style="color:var(--text)">${Components.escHtml(tier)}</strong>` : 'Sign in to use your members access token and provider API keys.'}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${user ? `
+          <button class="btn btn-secondary btn-sm" data-auth-action="refresh">Refresh Tier</button>
+          <button class="btn btn-danger btn-sm" data-auth-action="logout">Logout</button>
+        ` : `
+          <button class="btn btn-secondary btn-sm" data-auth-provider="github">GitHub</button>
+          <button class="btn btn-secondary btn-sm" data-auth-provider="discord">Discord</button>
+          <button class="btn btn-secondary btn-sm" data-auth-provider="huggingface">HuggingFace</button>
+          <button class="btn btn-secondary btn-sm" data-auth-provider="pollinations">Pollinations</button>
+        `}
+      </div>
+    `;
+
+    section.querySelectorAll('[data-auth-provider]').forEach(btn => {
+      btn.addEventListener('click', () => auth?.login?.(btn.dataset.authProvider));
+    });
+    section.querySelector('[data-auth-action="logout"]')?.addEventListener('click', async () => {
+      await auth?.logout?.();
+      if (typeof Router !== 'undefined' && Router.navigate) {
+        Router.navigate();
+      }
+    });
+    section.querySelector('[data-auth-action="refresh"]')?.addEventListener('click', async () => {
+      await auth?.refreshSession?.();
+      if (typeof Router !== 'undefined' && Router.navigate) {
+        Router.navigate();
+      }
+    });
+    return section;
   }
 
   function endpointLabel(type) {

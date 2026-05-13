@@ -121,10 +121,199 @@ const Router = (() => {
   function init() {
     initHamburger();
     window.addEventListener('hashchange', navigate);
-    navigate();
+    PlaygroundAuth.init().finally(() => navigate());
   }
 
   return { init, navigate };
 })();
+
+const PlaygroundAuth = (() => {
+  const AUTH_BASE = 'https://auth.gpt4free.workers.dev';
+  const USER_KEY = 'llmp_user';
+  const POLLINATIONS_APP_KEY = 'pk_7X0QLj0xijSd0xj7';
+  const POLLINATIONS_PERMISSIONS = 'profile,balance,usage';
+
+  function getUser() {
+    try {
+      return JSON.parse(localStorage.getItem(USER_KEY) || 'null');
+    } catch {
+      return null;
+    }
+  }
+
+  function setUser(user) {
+    if (user) {
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(USER_KEY);
+    }
+    window.dispatchEvent(new CustomEvent('llmp-auth-updated', { detail: { user } }));
+    updateAuthButton(user);
+  }
+
+  function updateAuthButton(user = getUser()) {
+    const btn = document.getElementById('auth-status-btn');
+    if (!btn) return;
+    if (user) {
+      const name = user.name || user.username || 'Account';
+      const tier = user.tier || 'free';
+      btn.textContent = `${name} · ${tier}`;
+      btn.title = `Logged in (${tier})`;
+    } else {
+      btn.textContent = 'Login';
+      btn.title = 'Login';
+    }
+  }
+
+  function getCurrentUrl() {
+    return window.location.href.split('#')[0];
+  }
+
+  function applyAuthResult(sessionToken, user) {
+    if (sessionToken) {
+      localStorage.setItem('session_token', sessionToken);
+    }
+    if (user?.pollinations?.api_key) {
+      localStorage.setItem('PollinationsAI-api_key', user.pollinations.api_key);
+    }
+    if (user?.provider === 'huggingface' && user?.access_token) {
+      localStorage.setItem('HuggingFace-api_key', user.access_token);
+    }
+    setUser(user || getUser());
+  }
+
+  async function handlePollinationsHash(pollinationsToken) {
+    if (!pollinationsToken) return false;
+    localStorage.setItem('PollinationsAI-api_key', pollinationsToken);
+    try {
+      const authResponse = await fetch(`${AUTH_BASE}/members/auth/pollinations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: pollinationsToken })
+      });
+      if (authResponse.ok) {
+        const data = await authResponse.json();
+        if (data.session && data.user) {
+          applyAuthResult(data.session, data.user);
+        }
+      }
+    } catch (e) {
+      console.warn('Pollinations account login failed, key stored locally.', e);
+    }
+    return true;
+  }
+
+  async function handleRedirectCallback() {
+    const hash = window.location.hash || '';
+    const decodedHash = hash ? decodeURIComponent(hash.substring(1)) : '';
+    const hashParams = new URLSearchParams(decodedHash);
+    let handled = false;
+
+    const sessionToken = hashParams.get('session');
+    const userParam = hashParams.get('user');
+    if (sessionToken) {
+      let user = getUser();
+      if (userParam) {
+        try {
+          user = JSON.parse(decodeURIComponent(userParam));
+        } catch {
+          user = getUser();
+        }
+      }
+      applyAuthResult(sessionToken, user);
+      handled = true;
+    }
+
+    const hfApiKey = hashParams.get('HuggingFace-api_key');
+    if (hfApiKey) {
+      localStorage.setItem('HuggingFace-api_key', hfApiKey);
+      handled = true;
+    }
+
+    const pollinationsApiKey = hashParams.get('PollinationsAI-api_key');
+    if (pollinationsApiKey) {
+      localStorage.setItem('PollinationsAI-api_key', pollinationsApiKey);
+      handled = true;
+    }
+
+    if (hash.startsWith('#api_key=')) {
+      const pollinationsToken = hash.substring(9);
+      handled = (await handlePollinationsHash(pollinationsToken)) || handled;
+    }
+
+    if (handled) {
+      window.history.replaceState({}, document.title, `${window.location.pathname}#/providers`);
+    }
+    return handled;
+  }
+
+  async function refreshSession() {
+    const token = localStorage.getItem('session_token');
+    if (!token) {
+      setUser(null);
+      return;
+    }
+    try {
+      const endpoint = token.startsWith('g4f_') ? 'keys/validate' : 'session';
+      const response = await fetch(`${AUTH_BASE}/members/api/${endpoint}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) {
+        localStorage.removeItem('session_token');
+        setUser(null);
+        return;
+      }
+      const data = await response.json();
+      if (endpoint === 'keys/validate') {
+        setUser({
+          name: data.username || 'Account',
+          username: data.username || 'Account',
+          tier: data.tier || 'free'
+        });
+      } else {
+        setUser(data.user || getUser());
+      }
+    } catch {
+      updateAuthButton(getUser());
+    }
+  }
+
+  function login(provider) {
+    if (provider === 'pollinations') {
+      const params = new URLSearchParams({
+        redirect_url: getCurrentUrl(),
+        app_key: POLLINATIONS_APP_KEY,
+        permissions: POLLINATIONS_PERMISSIONS
+      });
+      window.location.href = `https://enter.pollinations.ai/authorize?${params.toString()}`;
+      return;
+    }
+    window.location.href = `${AUTH_BASE}/members/auth/${provider}?redirect=${encodeURIComponent(getCurrentUrl())}`;
+  }
+
+  async function logout() {
+    const token = localStorage.getItem('session_token');
+    if (token) {
+      try {
+        await fetch(`${AUTH_BASE}/members/api/logout`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      } catch {}
+    }
+    localStorage.removeItem('session_token');
+    setUser(null);
+  }
+
+  async function init() {
+    updateAuthButton(getUser());
+    await handleRedirectCallback();
+    await refreshSession();
+  }
+
+  return { init, getUser, login, logout, refreshSession };
+})();
+
+window.PlaygroundAuth = PlaygroundAuth;
 
 Router.init();
