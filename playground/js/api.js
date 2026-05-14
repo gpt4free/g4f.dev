@@ -107,11 +107,15 @@ const API = (() => {
   async function checkProvider(provider) {
     console.log('Checking provider:', provider);
     if (provider.apiKey && provider.checkUrl && !provider.isNotProviderKey) {
+      let result = null;
       try {
         const headers = { 'Authorization': `Bearer ${provider.apiKey}` };
-        const res = await fetch(provider.checkUrl, { headers });
-        if (res.ok) return 'openai';
+        result = await fetch(provider.checkUrl, { headers });
+        if (result.ok) return 'openai';
       } catch {}
+      if (result && result.status === 401) {
+        throw Object.assign(new Error('Unauthorized'), { status: 401 });
+      }
     }
     return detectEndpointType(provider.baseUrl, provider.apiKey, provider.defaultModel);
   }

@@ -300,6 +300,7 @@ const ProvidersPage = (() => {
 
         const updated = {
           id: provider?.id || Store.newId(),
+          ...(provider || {}),
           name,
           baseUrl,
           apiKey,

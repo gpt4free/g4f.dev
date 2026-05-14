@@ -16,7 +16,7 @@ const Store = (() => {
       for ([key, provider] of Object.entries(data.providers)) {
         provider.id = key;
         provider.name = (provider.label || key) + (provider.tags ? ` ${provider.tags}` : '');
-        provider.baseUrl = provider.baseUrl || `https://g4f.space/api/${key}`;
+        provider.baseUrl = provider.backupUrl || provider.baseUrl || `https://g4f.space/api/${key}`;
         provider.defaultModel = data.defaultModels[key] || provider.defaultModel;
         provider.baseUrl = provider.baseUrl.replace('{model}', provider.defaultModel)
         provider.type = provider.type || 'openai';
@@ -24,6 +24,7 @@ const Store = (() => {
         provider.fetchedModels = [];
         provider.defaultModel = data.defaultModels[key] || provider.defaultModel;
         provider.localStorageKey = data.providerLocalStorage[key] || null;
+        provider.checkUrl = data.checkUrls[key] || null;
       }
       delete data.providers.custom;
       Store.setProviders(Object.values(data.providers));
