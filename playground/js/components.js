@@ -71,6 +71,7 @@ const Components = (() => {
         <span class="msg-name">${escHtml(name)}</span>
         <span class="msg-time">${formatTime(msg.ts)}</span>
         <div class="msg-actions">
+          ${opts.audio ? `<button class="msg-btn" data-action="speak" title="Listen">🔊</button>` : ''}
           <button class="msg-btn" data-action="copy" title="Copy">⎘</button>
           ${opts.editable ? `<button class="msg-btn" data-action="edit" title="Edit">✎</button>` : ''}
           ${opts.deletable ? `<button class="msg-btn" data-action="delete" title="Delete">✕</button>` : ''}

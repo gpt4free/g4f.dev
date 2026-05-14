@@ -193,7 +193,7 @@ const ProvidersPage = (() => {
           renderList();
           Components.toast(`Checked: ${endpointLabel(detected)}`, 'success');
         } catch (err) {
-          if (err?.status === 401 || /unauthorized|401/i.test(err.message || '')) {
+          if (err?.status === 401) {
             provider.apiKey = '';
             provider.fetchedModels = [];
             Store.upsertProvider(provider);
@@ -290,9 +290,18 @@ const ProvidersPage = (() => {
         if (isNew || baseUrl !== provider?.baseUrl || apiKey !== provider?.apiKey) {
           statusEl.innerHTML = '<span style="animation:thinkPulse 1s infinite;color:var(--accent)">⟳</span> Probing endpoint type...';
           try {
-            detectedType = await API.detectEndpointType(baseUrl, apiKey, defaultModel);
+            const checkProvider = Store.applyProviderConfig(provider);
+            checkProvider.baseUrl = baseUrl;
+            checkProvider.apiKey = apiKey;
+            checkProvider.defaultModel = defaultModel;
+            detectedType = await API.checkProvider(checkProvider);
             statusEl.innerHTML = `<span style="color:${endpointColor(detectedType)}">●</span> Detected: <strong style="color:var(--text)">${endpointLabel(detectedType)}</strong>`;
-          } catch {
+          } catch (err) {
+            console.error('Detection error', err);
+            if (err.status === 401) {
+              statusEl.innerHTML = `<span style="color:var(--red)">●</span> Unauthorized. API key may be invalid.`;
+              return;
+            }
             statusEl.innerHTML = `<span style="color:var(--yellow)">⚠</span> ${framework.translate('Detection failed, defaulting to OpenAI')}`;
             detectedType = 'openai';
           }

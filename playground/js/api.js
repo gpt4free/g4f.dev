@@ -117,6 +117,7 @@ const API = (() => {
         throw Object.assign(new Error('Unauthorized'), { status: 401 });
       }
     }
+    console.log('Detecting endpoint type for provider:', provider);
     return detectEndpointType(provider.baseUrl, provider.apiKey, provider.defaultModel);
   }
 

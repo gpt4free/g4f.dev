@@ -25,7 +25,11 @@ const ChatPage = (() => {
     container.appendChild(layout);
 
     Store.getLastChat().then(lastChat => {
-      if (lastChat) {
+      const importChatId = localStorage.getItem('openChatId');
+      if (importChatId) {
+        localStorage.removeItem('openChatId');
+        loadChat(importChatId);
+      } else if (lastChat) {
         loadChat(lastChat.id);
       } else {
         newChat();
@@ -132,10 +136,28 @@ const ChatPage = (() => {
     clearBtn.textContent = 'Clear';
     clearBtn.addEventListener('click', clearMessages);
 
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'btn btn-secondary btn-sm';
+    saveBtn.textContent = 'Save';
+    saveBtn.addEventListener('click', () => saveChatAsFile());
+
+    const playBtn = document.createElement('button');
+    playBtn.className = 'btn btn-secondary btn-sm';
+    playBtn.textContent = 'Play';
+    playBtn.addEventListener('click', () => playChatAsAudio());
+
+    const qrBtn = document.createElement('button');
+    qrBtn.className = 'btn btn-secondary btn-sm';
+    qrBtn.textContent = 'QR';
+    qrBtn.addEventListener('click', () => generateChatQRCode());
+
     toolbar.appendChild(sidebarBtn);
     toolbar.appendChild(titleInput);
     toolbar.appendChild(modelSel);
     toolbar.appendChild(clearBtn);
+    toolbar.appendChild(saveBtn);
+    toolbar.appendChild(playBtn);
+    toolbar.appendChild(qrBtn);
 
     const messagesWrap = document.createElement('div');
     messagesWrap.className = 'messages-wrap';
@@ -198,9 +220,10 @@ const ChatPage = (() => {
     }
     messages.forEach(msg => {
       if (msg.role === 'system') return;
-      const el = Components.renderMessage(msg, { editable: false, deletable: true });
+      const el = Components.renderMessage(msg, { editable: false, deletable: true, audio: true });
       el.querySelector('[data-action="delete"]')?.addEventListener('click', () => deleteMessage(msg.id));
       el.querySelector('[data-action="copy"]')?.addEventListener('click', () => Components.copyMessageContent(msg));
+      el.querySelector('[data-action="speak"]')?.addEventListener('click', () => playMessageAudio(msg.content));
       wrap.appendChild(el);
     });
     wrap.scrollTop = wrap.scrollHeight;
@@ -343,7 +366,7 @@ const ChatPage = (() => {
       console.error('Streaming error:', err);
       if (err.name !== 'AbortError') {
         assistantMsg.error = true;
-        assistantMsg.content = `*${framework.translate('Error')}*: ${err.message}`;
+        assistantMsg.content = `**${framework.translate('Error')}**: ${err.message}`;
         contentEl.innerHTML = Components.renderMarkdown(assistantMsg.content);
         Components.toast(err.message, 'error');
       }
@@ -389,6 +412,134 @@ const ChatPage = (() => {
       Store.upsertChat(chat);
       renderMessages([]);
     });
+  }
+
+  function createDownloadFile(filename, content) {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  function saveChatAsFile() {
+    if (!currentChatId) return;
+    Store.getChat(currentChatId).then(chat => {
+      if (!chat) return;
+      const lines = [`Chat: ${chat.title || 'Untitled'}`, `Created: ${new Date(chat.added).toLocaleString()}`, ''];
+      chat.items.forEach(item => {
+        const role = item.role === 'user' ? 'You' : item.role === 'assistant' ? 'Assistant' : item.role;
+        lines.push(`${role} [${item.id || ''}] @ ${new Date(item.ts).toLocaleString()}`);
+        lines.push(item.content || '');
+        lines.push('');
+      });
+      const filename = `${(chat.title || 'chat').replace(/[^a-z0-9_-]/gi, '_').slice(0, 40)}.txt`;
+      createDownloadFile(filename, lines.join('\n'));
+      Components.toast('Chat saved as file', 'success');
+    });
+  }
+
+  async function fetchAudioUrl(text) {
+    const payload = text.trim().slice(0, 1000);
+    if (!payload) throw new Error('No text to play');
+    const url = `https://g4f.space/audio/${encodeURIComponent(payload)}`;
+    const headers = {};
+    const token = localStorage.getItem('session_token');
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    } else {
+      return url;
+    }
+    const response = await fetch(url, { method: 'GET', headers });
+    if (!response.ok) {
+      throw new Error(`Audio request failed (${response.status})`);
+    }
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
+  }
+
+  async function playMessageAudio(text) {
+    try {
+      const audioUrl = await fetchAudioUrl(text);
+      const audio = new Audio(audioUrl);
+      audio.onended = () => { URL.revokeObjectURL(audioUrl); Components.toast('Audio playback finished', 'success'); };
+      audio.onerror = () => { URL.revokeObjectURL(audioUrl); Components.toast('Audio playback failed', 'error'); };
+      await audio.play();
+      Components.toast('Playing message audio', 'info');
+    } catch (err) {
+      Components.toast(err.message || 'Failed to play audio', 'error');
+    }
+  }
+
+  async function playChatAsAudio() {
+    if (!currentChatId) return;
+    const chat = await Store.getChat(currentChatId);
+    if (!chat || !chat.items || chat.items.length === 0) {
+      Components.toast('Nothing to play', 'info');
+      return;
+    }
+    const text = chat.items
+      .map(item => {
+        const role = item.role === 'user' ? 'You said:' : item.role === 'assistant' ? 'Assistant replied:' : `${item.role}:`;
+        return `${role} ${item.content || ''}`;
+      })
+      .join(' \n ');
+    try {
+      const audioUrl = await fetchAudioUrl(text);
+      const audio = new Audio(audioUrl);
+      audio.onended = () => { URL.revokeObjectURL(audioUrl); Components.toast('Audio playback finished', 'success'); };
+      audio.onerror = () => { URL.revokeObjectURL(audioUrl); Components.toast('Audio playback failed', 'error'); };
+      await audio.play();
+      Components.toast('Playing chat as audio', 'info');
+    } catch (err) {
+      Components.toast(err.message || 'Failed to play chat audio', 'error');
+    }
+  }
+
+  function openQrcodeDb(mode) {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('chat-db', 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result.transaction('conversations', mode));
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains('conversations')) {
+          db.createObjectStore('conversations', { keyPath: 'id' });
+        }
+      };
+    });
+  }
+
+  async function saveConversationForQRCode(chat) {
+    const tx = await openQrcodeDb('readwrite');
+    const store = tx.objectStore('conversations');
+    store.put({
+      id: chat.id || Store.newId(),
+      title: chat.title,
+      items: chat.items,
+      added: chat.added || Date.now(),
+      updated: Date.now(),
+      type: 'chat'
+    });
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  async function generateChatQRCode() {
+    if (!currentChatId) return;
+    const chat = await Store.getChat(currentChatId);
+    if (!chat || !chat.items || chat.items.length === 0) {
+      Components.toast('No chat content available', 'info');
+      return;
+    }
+    await saveConversationForQRCode(chat);
+    const qrcodeUrl = new URL('qrcode.html#' + encodeURIComponent(chat.id), window.location.href).href;
+    window.open(qrcodeUrl, '_blank');
   }
 
   async function deleteChat(id) {

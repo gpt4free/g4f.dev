@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open Chat</title>
+  <style>
+    body {
+      background: #0f0f0f;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin-bottom: 12px;
+    }
+    p {
+      margin: 10px 0;
+      color: #c0c0c0;
+      line-height: 1.6;
+    }
+    .status {
+      margin-top: 12px;
+      font-size: 14px;
+      color: #9aa0b4;
+    }
+    a {
+      color: #7c6af7;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Open Chat</h1>
+    <p id="info">Importing chat...</p>
+    <p class="status" id="status"></p>
+  </div>
+  <script>
+    const DB_NAME = 'chat-db';
+    const STORE_NAME = 'conversations';
+
+    function base64DecodeUnicode(str) {
+      return decodeURIComponent(atob(str).split('').map(c => '%'+('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    }
+
+    function decodeImportValue(value) {
+      if (!value) return null;
+      try {
+        return JSON.parse(decodeURIComponent(value));
+      } catch (err) {
+        // ignore
+      }
+      try {
+        return JSON.parse(base64DecodeUnicode(value));
+      } catch (err) {
+        // ignore
+      }
+      try {
+        return JSON.parse(value);
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function parseImportParams() {
+      const params = new URLSearchParams(window.location.search);
+      const chatParam = params.get('chat') || params.get('data') || params.get('conv');
+      if (chatParam) {
+        const parsed = decodeImportValue(chatParam);
+        if (parsed) return parsed;
+      }
+      const url = params.get('url');
+      if (url) return { url };
+      const text = params.get('text');
+      if (text) return { text, title: params.get('title') || 'Imported Chat' };
+      const id = params.get('id');
+      if (id) return { id };
+      return null;
+    }
+
+    function parseChatText(text) {
+      const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+      const items = [];
+      let currentRole = 'user';
+      lines.forEach(line => {
+        const lower = line.toLowerCase();
+        if (lower.startsWith('you:') || lower.startsWith('you said:')) {
+          currentRole = 'user';
+          items.push({ role: 'user', content: line.replace(/^[^:]*:\s*/i, '') });
+        } else if (lower.startsWith('assistant:') || lower.startsWith('assistant replied:')) {
+          currentRole = 'assistant';
+          items.push({ role: 'assistant', content: line.replace(/^[^:]*:\s*/i, '') });
+        } else if (items.length === 0) {
+          items.push({ role: currentRole, content: line });
+        } else {
+          const last = items[items.length - 1];
+          last.content += '\n' + line;
+        }
+      });
+      return items;
+    }
+
+    function normalizeConversation(conv) {
+      const conversation = {
+        id: conv.id || `import-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        title: conv.title || conv.name || 'Imported Chat',
+        items: Array.isArray(conv.items) ? conv.items : (typeof conv.text === 'string' ? parseChatText(conv.text) : []),
+        added: conv.added || Date.now(),
+        updated: Date.now(),
+        type: 'chat'
+      };
+      return conversation;
+    }
+
+    async function openDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          }
+        };
+      });
+    }
+
+    async function saveConversation(conversation) {
+      const db = await openDB();
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      store.put(conversation);
+      return new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve(conversation);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function fetchRemoteUrl(url, depth = 0) {
+      const requestUrl = new URL(url);
+      requestUrl.searchParams.set('download', 'true');
+      const response = await fetch(requestUrl, { redirect: 'follow' });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch remote chat payload (${response.status})`);
+      }
+      const contentType = (response.headers.get('content-type') || '').toLowerCase();
+      const text = await response.text();
+
+      if (contentType.includes('application/json') || text.trim().startsWith('{')) {
+        const parsed = decodeImportValue(text);
+        if (parsed) return parsed;
+      }
+
+      const downloadLinkMatch = text.match(/<a[^>]*class=["'][^"']*primary-btn[^"']*["'][^>]*href=["']([^"']+)["'][^>]*>\s*Download\s*<\/a>/i)
+        || text.match(/<a[^>]*href=["']([^"']+)["'][^>]*>\s*Download\s*<\/a>/i);
+      if (downloadLinkMatch && depth < 3) {
+        const downloadUrl = new URL(downloadLinkMatch[1], requestUrl).href;
+        return fetchRemoteUrl(downloadUrl, depth + 1);
+      }
+
+      const parsed = decodeImportValue(text);
+      if (parsed) return parsed;
+      return { text };
+    }
+
+    async function init() {
+      const infoEl = document.getElementById('info');
+      const statusEl = document.getElementById('status');
+      infoEl.textContent = 'Importing chat...';
+
+      const params = parseImportParams();
+      if (!params) {
+        infoEl.textContent = 'No import payload found.';
+        statusEl.textContent = 'Provide ?chat=, ?url=, ?text= or ?id= in the URL.';
+        return;
+      }
+
+      try {
+        let conversation;
+        if (params.id && !params.url && !params.text && !params.items) {
+          conversation = { id: params.id };
+          localStorage.setItem('openChatId', conversation.id);
+          infoEl.textContent = 'Opening existing chat...';
+          statusEl.textContent = 'Redirecting to playground chat.';
+          window.location.replace('./index.html#/chat');
+          return;
+        }
+        if (params.url) {
+          statusEl.textContent = 'Fetching remote chat payload...';
+          const imported = await fetchRemoteUrl(params.url);
+          conversation = normalizeConversation(imported);
+        } else if (params.text) {
+          conversation = normalizeConversation(params);
+        } else {
+          conversation = normalizeConversation(params);
+        }
+
+        statusEl.textContent = 'Saving chat to IndexedDB...';
+        const saved = await saveConversation(conversation);
+        localStorage.setItem('openChatId', saved.id);
+        infoEl.textContent = 'Chat imported successfully.';
+        statusEl.textContent = 'Redirecting to playground chat...';
+        window.location.replace('./index.html#/chat');
+      } catch (error) {
+        infoEl.textContent = 'Unable to import chat.';
+        statusEl.textContent = error.message || String(error);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

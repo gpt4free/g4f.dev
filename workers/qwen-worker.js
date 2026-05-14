@@ -600,8 +600,8 @@ async function handleChatCompletions(request, env) {
   }
 
   const msgPayload = {
-    stream,
-    incremental_output: stream,
+    stream: true,
+    incremental_output: true,
     chat_id: conversationId,
     chat_mode: "normal",
     model,

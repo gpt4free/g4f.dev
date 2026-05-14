@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat QR Code</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js" defer></script>
+  <script src="https://g4f.dev/dist/js/framework.js" defer></script>
+  <style>
+    body {
+      background: #0f0f0f;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    h1, h2 {
+      margin: 0 0 12px;
+    }
+    p { margin: 8px 0; color: #c0c0c0; }
+    #qrcode { margin: 20px auto; width: 320px; height: 320px; background: white; padding: 16px; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
+    button { margin: 8px 4px 0 0; padding: 10px 14px; border: 1px solid #444; border-radius: 10px; background: #1a1a1a; color: #e0e0e0; cursor: pointer; }
+    button:hover { border-color: #7c6af7; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .status { margin-top: 10px; font-size: 14px; color: #9aa0b4; }
+    .container { max-width: 720px; margin: 0 auto; }
+    pre { white-space: pre-wrap; word-break: break-word; background: #141414; border: 1px solid #333; border-radius: 12px; padding: 14px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Chat QR Code</h1>
+    <p><a id="backLink" href="./index.html#/chat">Back to Chat</a></p>
+    <p id="info">Loading conversation...</p>
+    <div id="qrcode"></div>
+    <div>
+      <button id="downloadBtn" disabled>Download QR</button>
+      <button id="copyBtn" disabled>Copy Text</button>
+    </div>
+    <p class="status" id="status"></p>
+    <h2>Chat Content</h2>
+    <pre id="chatText"></pre>
+  </div>
+
+  <script>
+    const INLINE_TEXT_LIMIT = 500;
+    const ANONDROP_HOST = 'https://anondrop.net';
+    const ANONDROP_KEY_STORAGE = 'anonDropKey';
+
+    async function openDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open('chat-db', 1);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains('conversations')) {
+            db.createObjectStore('conversations', { keyPath: 'id' });
+          }
+        };
+      });
+    }
+
+    async function getConversation(id) {
+      const db = await openDB();
+      const tx = db.transaction('conversations', 'readonly');
+      const store = tx.objectStore('conversations');
+      return new Promise((resolve, reject) => {
+        const request = store.get(id);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function saveConversation(conversation) {
+      const db = await openDB();
+      const tx = db.transaction('conversations', 'readwrite');
+      const store = tx.objectStore('conversations');
+      store.put(conversation);
+      return new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    function base64EncodeUnicode(text) {
+      return btoa(encodeURIComponent(text).replace(/%([0-9A-F]{2})/g, (_, p) => String.fromCharCode('0x' + p)));
+    }
+
+    function encodeChatPayload(chat) {
+      const json = JSON.stringify(chat);
+      return base64EncodeUnicode(json);
+    }
+
+    function decodeImportValue(value) {
+      if (!value) return null;
+      try {
+        return JSON.parse(decodeURIComponent(value));
+      } catch (err) {
+        // ignore
+      }
+      try {
+        return JSON.parse(atob(value));
+      } catch (err) {
+        // ignore
+      }
+      try {
+        return JSON.parse(value);
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function parseImportParams() {
+      const params = new URLSearchParams(window.location.search);
+      const jsonValue = params.get('chat') || params.get('data') || params.get('conv');
+      const imported = decodeImportValue(jsonValue);
+      if (imported && typeof imported === 'object' && Array.isArray(imported.items)) {
+        return imported;
+      }
+      const textValue = params.get('text');
+      if (textValue) {
+        return {
+          title: params.get('title') || 'Imported Chat',
+          items: [{ role: 'user', content: textValue }],
+        };
+      }
+      return null;
+    }
+
+    function sanitizeText(text) {
+      return (text || '').replace(/[\u0000-\u001F\u007F]+/g, '');
+    }
+
+    function buildShareText(chat) {
+      const lines = [];
+      lines.push(`Chat: ${chat.title || 'Untitled'}`);
+      lines.push('');
+      (chat.items || []).forEach(item => {
+        const role = item.role === 'user' ? 'You' : item.role === 'assistant' ? 'Assistant' : item.role;
+        lines.push(`${role}: ${sanitizeText(item.content || '')}`);
+        lines.push('');
+      });
+      return lines.join('\n');
+    }
+
+    async function getAnonDropKey() {
+      let key = localStorage.getItem(ANONDROP_KEY_STORAGE);
+      if (key) return key;
+      const response = await fetch(`${ANONDROP_HOST}/register`, { method: 'GET' });
+      if (!response.ok) {
+        throw new Error(`Unable to register AnonDrop key (${response.status})`);
+      }
+      const html = await response.text();
+      const patterns = [
+        /key\s*[=:]\s*([A-Za-z0-9_-]{16,})/i,
+        /YOUR KEY\s*[:\-]?\s*([A-Za-z0-9_-]{16,})/i,
+        /([A-Za-z0-9_-]{24,})/,
+        /([A-Za-z0-9]{16,})/
+      ];
+      let match = null;
+      for (const pat of patterns) {
+        match = html.match(pat);
+        if (match && match[1]) break;
+      }
+      if (!match) {
+        throw new Error('AnonDrop registration failed: key not found');
+      }
+      key = match[1];
+      localStorage.setItem(ANONDROP_KEY_STORAGE, key);
+      return key;
+    }
+
+    async function uploadToAnonDrop(content, filename) {
+      const key = await getAnonDropKey();
+      const formData = new FormData();
+      formData.append('file', new Blob([content], { type: 'text/plain' }), filename);
+      const response = await fetch(`${ANONDROP_HOST}/upload?key=${encodeURIComponent(key)}`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) {
+        throw new Error(`AnonDrop upload failed (${response.status})`);
+      }
+      const bodyText = await response.text();
+      const urlMatch = bodyText.match(/https?:\/\/[^"'<>\s]+/);
+      if (!urlMatch) {
+        throw new Error('AnonDrop did not return a valid link');
+      }
+      return urlMatch[0];
+    }
+
+    async function init() {
+      const id = window.location.hash.replace('#', '');
+      const infoEl = document.getElementById('info');
+      const chatTextEl = document.getElementById('chatText');
+      const qrcodeEl = document.getElementById('qrcode');
+      const statusEl = document.getElementById('status');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const copyBtn = document.getElementById('copyBtn');
+
+      infoEl.textContent = 'Loading conversation...';
+      if (!id) {
+        infoEl.textContent = 'No chat ID provided. Use qrcode.html#<chat-id> or supply an import payload via query string.';
+      }
+
+      const importHint = document.getElementById('backLink');
+      if (importHint) {
+        importHint.href = './index.html#/chat';
+      }
+
+      let conversation;
+      try {
+        if (id) {
+          conversation = await getConversation(id);
+        }
+        if (!conversation) {
+          const imported = parseImportParams();
+          if (imported) {
+            imported.id = imported.id || id || `import-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+            imported.title = imported.title || 'Imported Chat';
+            imported.type = 'chat';
+            imported.added = imported.added || Date.now();
+            imported.updated = Date.now();
+            await saveConversation(imported);
+            conversation = imported;
+            statusEl.textContent = 'Conversation imported into memory and saved to IndexedDB.';
+          }
+        }
+      } catch (error) {
+        infoEl.textContent = 'Failed to load or import conversation.';
+        statusEl.textContent = error.message || String(error);
+        return;
+      }
+
+      if (!conversation) {
+        infoEl.textContent = 'Conversation not found.';
+        return;
+      }
+
+      const payload = {
+        id: conversation.id,
+        title: conversation.title || 'Imported Chat',
+        items: conversation.items || [],
+        added: conversation.added || Date.now(),
+        updated: conversation.updated || Date.now(),
+        type: 'chat'
+      };
+      const filename = `${(conversation.title || 'chat').replace(/[^a-z0-9_-]/gi, '_').slice(0, 40)}.json`;
+      let shareUrl = new URL(`./open.html?chat=${encodeURIComponent(encodeChatPayload(payload))}`, window.location.href).href;
+
+      if (JSON.stringify(payload).length > INLINE_TEXT_LIMIT) {
+        try {
+          statusEl.textContent = 'Large conversation detected. Uploading chat payload to AnonDrop...';
+          const url = await uploadToAnonDrop(JSON.stringify(payload), filename);
+          shareUrl = new URL(`./open.html?url=${encodeURIComponent(url)}`, window.location.href).href;
+          statusEl.textContent = 'Uploaded chat payload to AnonDrop and generated share link.';
+        } catch (error) {
+          statusEl.textContent = `AnonDrop upload failed: ${error.message}. Sharing via open.html payload instead.`;
+        }
+      } else {
+        statusEl.textContent = 'Generating share link via open.html.';
+      }
+
+      infoEl.textContent = `Share link for: ${conversation.title || 'Untitled'}`;
+      chatTextEl.textContent = shareUrl;
+      qrcodeEl.innerHTML = '';
+      new QRCode(qrcodeEl, {
+        text: shareUrl,
+        width: 320,
+        height: 320,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+      downloadBtn.disabled = false;
+      copyBtn.disabled = false;
+
+      downloadBtn.addEventListener('click', () => {
+        const canvas = qrcodeEl.querySelector('canvas');
+        if (!canvas) return;
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = `${filename.replace('.json', '')}.png`;
+        link.click();
+      });
+
+      copyBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          statusEl.textContent = 'Link copied to clipboard.';
+        } catch (error) {
+          statusEl.textContent = 'Copy failed.';
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
