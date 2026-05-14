@@ -107,6 +107,20 @@ const Store = (() => {
     localStorage.removeItem(KEYS['settings']);
   }
 
+  function applyProviderConfig(provider) {
+    const copy = {...provider};
+    if (provider.localStorageKey && localStorage.getItem(provider.localStorageKey)) {
+      copy.apiKey = localStorage.getItem(provider.localStorageKey);
+    }
+    if (!copy.apiKey && provider.backupUrl) {
+      copy.apiKey = localStorage.getItem("session_token");
+    }
+    if (copy.apiKey && (copy.apiKey.startsWith("g4f_") || copy.apiKey.startsWith("gfs_"))) {
+      copy.baseUrl = provider.backupUrl || provider.baseUrl;
+    }
+    return copy;
+  }
+
   function getProviders() {
     const providers = get('providers');
     providers.forEach(provider => {
@@ -130,7 +144,9 @@ const Store = (() => {
   function getActiveProvider() {
     const providers = getProviders();
     const id = getActiveProviderId();
-    return providers.find(p => p.id === id) || providers[0];
+    return applyProviderLocalStorage(
+      providers.find(p => p.id === id) || providers[0]
+    );
   }
 
   function upsertProvider(provider) {
@@ -270,6 +286,6 @@ const Store = (() => {
     getPersonas, setPersonas, upsertPersona, deletePersona,
     getChats, getChat, upsertChat, deleteChat, getLastChat,
     getSettings, setSettings, updateSettings, deleteSettings,
-    newId, loadProviders,
+    newId, loadProviders, applyProviderConfig
   };
 })();

@@ -171,7 +171,7 @@ const ProvidersPage = (() => {
       card.querySelector('[data-action="fetch-models"]')?.addEventListener('click', async () => {
         try {
           Components.toast('Fetching models...', 'info');
-          const models = await API.fetchModels(provider);
+          const models = await API.fetchModels(Store.applyProviderConfig(provider));
           provider.fetchedModels = models;
           Store.upsertProvider(provider);
           renderList();
@@ -184,7 +184,8 @@ const ProvidersPage = (() => {
       card.querySelector('[data-action="redetect"]')?.addEventListener('click', async () => {
         try {
           Components.toast('Detecting endpoint type...', 'info');
-          const detected = await API.detectEndpointType(provider.baseUrl, provider.apiKey, provider.defaultModel);
+          const {baseUrl, apiKey, defaultModel} = Store.applyProviderConfig(provider);
+          const detected = await API.detectEndpointType(baseUrl, apiKey, defaultModel);
           provider.endpointType = detected;
           Store.upsertProvider(provider);
           renderList();
