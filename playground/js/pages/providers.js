@@ -144,7 +144,7 @@ const ProvidersPage = (() => {
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
           ${!isActive ? `<button class="btn btn-secondary btn-sm" data-action="activate">Set Active</button>` : ''}
           <button class="btn btn-secondary btn-sm" data-action="fetch-models">Fetch Models</button>
-          <button class="btn btn-secondary btn-sm" data-action="redetect">Re-detect</button>
+          <button class="btn btn-secondary btn-sm" data-action="redetect">Check</button>
           <button class="btn btn-secondary btn-sm" data-action="edit">Edit</button>
           ${provider.id !== 'airforce' ? `<button class="btn btn-danger btn-sm" data-action="delete">Delete</button>` : ''}
         </div>
@@ -172,6 +172,9 @@ const ProvidersPage = (() => {
         try {
           Components.toast('Fetching models...', 'info');
           const models = await API.fetchModels(Store.applyProviderConfig(provider));
+          if (window.convertModel) {
+            models.map(m => typeof m === 'string' ? {id: m} : m).forEach(convertModel);
+          }
           provider.fetchedModels = models;
           Store.upsertProvider(provider);
           renderList();
@@ -183,15 +186,22 @@ const ProvidersPage = (() => {
 
       card.querySelector('[data-action="redetect"]')?.addEventListener('click', async () => {
         try {
-          Components.toast('Detecting endpoint type...', 'info');
-          const {baseUrl, apiKey, defaultModel} = Store.applyProviderConfig(provider);
-          const detected = await API.detectEndpointType(baseUrl, apiKey, defaultModel);
+          Components.toast('Checking provider...', 'info');
+          const detected = await API.checkProvider(Store.applyProviderConfig(provider));
           provider.endpointType = detected;
           Store.upsertProvider(provider);
           renderList();
-          Components.toast(`Detected: ${endpointLabel(detected)}`, 'success');
+          Components.toast(`Checked: ${endpointLabel(detected)}`, 'success');
         } catch (err) {
-          Components.toast(`Detection failed: ${err.message}`, 'error');
+          if (err?.status === 401 || /unauthorized|401/i.test(err.message || '')) {
+            provider.apiKey = '';
+            provider.fetchedModels = [];
+            Store.upsertProvider(provider);
+            renderList();
+            Components.toast('API key invalid, key cleared. Try again with a valid key.', 'error');
+          } else {
+            Components.toast(`Check failed: ${err.message}`, 'error');
+          }
         }
       });
 

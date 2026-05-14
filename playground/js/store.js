@@ -114,6 +114,7 @@ const Store = (() => {
     }
     if (!copy.apiKey && provider.backupUrl) {
       copy.apiKey = localStorage.getItem("session_token");
+      copy.isNotProviderKey = true;
     }
     if (copy.apiKey && (copy.apiKey.startsWith("g4f_") || copy.apiKey.startsWith("gfs_"))) {
       copy.baseUrl = provider.backupUrl || provider.baseUrl;

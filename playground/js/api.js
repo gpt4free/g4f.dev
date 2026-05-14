@@ -92,16 +92,28 @@ const API = (() => {
 
   async function probeEndpoint(url, fetchOpts) {
     const r = await fetch(url, fetchOpts);
-    if (r.status === 404 || r.status === 405) return false;
+    if (r.status === 404 || r.status === 405) return { ok: false, status: r.status };
     if (r.status >= 200 && r.status < 500) {
       try {
         const text = await r.text();
         const json = JSON.parse(text);
-        if (isEndpointError(json)) return false;
+        if (isEndpointError(json)) return { ok: false, status: r.status };
       } catch {}
-      return true;
+      return { ok: true, status: r.status };
     }
-    return false;
+    return { ok: false, status: r.status };
+  }
+
+  async function checkProvider(provider) {
+    console.log('Checking provider:', provider);
+    if (provider.apiKey && provider.checkUrl && !provider.isNotProviderKey) {
+      try {
+        const headers = { 'Authorization': `Bearer ${provider.apiKey}` };
+        const res = await fetch(provider.checkUrl, { headers });
+        if (res.ok) return 'openai';
+      } catch {}
+    }
+    return detectEndpointType(provider.baseUrl, provider.apiKey, provider.defaultModel);
   }
 
   async function detectEndpointType(baseUrl, apiKey, model) {
@@ -110,18 +122,6 @@ const API = (() => {
     const cleanUrl = baseUrl.replace(/\/$/, '');
 
     const probes = [
-      {
-        type: 'openai',
-        run: () => probeEndpoint(cleanUrl + '/quota', {
-          headers
-        }),
-      },
-      {
-        type: 'openai',
-        run: () => probeEndpoint(cleanUrl + '/chat/completions', {
-          headers
-        }),
-      },
       {
         type: 'openai',
         run: () => probeEndpoint(cleanUrl + '/chat/completions', {
@@ -155,21 +155,22 @@ const API = (() => {
           const gUrl = cleanUrl.replace(/\/v1beta$/, '') + '/v1beta/models';
           const googleUrl = apiKey ? `${gUrl}?key=${apiKey}` : gUrl;
           const r = await fetch(googleUrl);
-          if (r.status === 404 || r.status === 405) return false;
+          if (r.status === 404 || r.status === 405) return { ok: false, status: r.status };
           try {
             const data = await r.json();
-            if (data.models && Array.isArray(data.models)) return true;
-            if (isEndpointError(data)) return false;
+            if (data.models && Array.isArray(data.models)) return { ok: true, status: r.status };
+            if (isEndpointError(data)) return { ok: false, status: r.status };
           } catch {}
-          return r.status >= 200 && r.status < 400;
+          return { ok: r.status >= 200 && r.status < 400, status: r.status };
         },
       },
     ];
 
     for (const probe of probes) {
       try {
-        const ok = await probe.run();
-        if (ok) return probe.type;
+        const result = await probe.run();
+        if (result.status === 401) throw Object.assign(new Error('Unauthorized'), { status: 401 });
+        if (result.ok) return probe.type;
       } catch {}
     }
 
@@ -860,6 +861,6 @@ const API = (() => {
   return {
     fetchModels, streamChat, chat, detectEndpointType, extractThinkingFromText,
     executeToolCalls, mergeToolCalls, normalizeToolCall, getMCPClient, getSelectedMCPToolsForAPI,
-    generateImage, isImageModel, classifyModels, ENDPOINT_TYPES,
+    generateImage, isImageModel, classifyModels, checkProvider, ENDPOINT_TYPES,
   };
 })();

@@ -1,7 +1,7 @@
 {
     "providers": {
         "default": {"baseUrl": "https://g4f.space/v1", "backupUrl": "https://g4f.space/v1", "quotaEndpoint": "https://g4f.space/api/auto/chat/completions"},
-        "pollinations": {"backupUrl": "https://g4f.space/api/pollinations", "label": "pollinations.ai", "tags": "🎨 👓", "provider": "PollinationsAI"},
+        "pollinations": {"backupUrl": "https://g4f.space/api/gen.pollinations", "label": "pollinations.ai", "tags": "🎨 👓", "provider": "PollinationsAI"},
         "api.airforce": {"baseUrl": "https://api.airforce/v1", "tags": "🎨 👓", "sleep": 60000},
         "master": {"label": "master by api.airforce", "baseUrl": "https://g4f.space/api/api.airforce", "tags": "🎨 👓", "sleep": 10000},
         "audio": {"label": "audio by g4f.dev", "baseUrl": "https://g4f.space/api/audio", "backupUrl": "https://g4f.space/api/audio", "tags": "🎧", "sleep": 10000},
@@ -46,5 +46,12 @@
         "pollinations": "PollinationsAI-api_key",
         "together": "Together-api_key",
         "puter": "puter.auth.token"
+    },
+    "checkUrls": {
+        "pollinations": "https://gen.pollinations.ai/account/balance",
+        "gemini": "https://generativelanguage.googleapis.com/v1beta/models",
+        "puter": "https://api.puter.com/metering/usage",
+        "huggingface": "https://huggingface.co/api/whoami-v2",
+        "groq": "https://api.groq.com/openai/v1/models"
     }
 }
