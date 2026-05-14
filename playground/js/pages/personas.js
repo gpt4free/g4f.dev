@@ -153,7 +153,7 @@ const PersonasPage = (() => {
           description: modal.querySelector('#pe-desc')?.value?.trim() || '',
           systemPrompt: modal.querySelector('#pe-system')?.value?.trim() || '',
           tags: modal.querySelector('#pe-tags')?.value?.split(',').map(t => t.trim()).filter(Boolean) || [],
-          createdAt: persona?.createdAt || Date.now(),
+          added: persona?.added || Date.now(),
         };
 
         Store.upsertPersona(updated);

@@ -238,7 +238,7 @@ const CodingPage = (() => {
     const chat = {
       id, type: 'coding', title: framework.translate('New Session'),
       items: [],
-      createdAt: Date.now(),
+      added: Date.now(),
     };
     Store.upsertChat(chat);
     loadChat(id);

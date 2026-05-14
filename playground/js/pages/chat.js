@@ -153,7 +153,7 @@ const ChatPage = (() => {
 
   function newChat() {
     const id = Store.newId();
-    const chat = { id, type: 'chat', title: framework.translate('New Chat'), items: [], createdAt: Date.now() };
+    const chat = { id, type: 'chat', title: framework.translate('New Chat'), items: [], added: Date.now() };
     Store.upsertChat(chat);
     loadChat(id);
   }

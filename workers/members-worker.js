@@ -45,7 +45,7 @@ const ADMIN_USERS = {
     huggingface: []
 };
 
-const EXTRA_CONTRIBUTERS = ["Screenmax1234", "kirill670", "georgedorn", "yakovexplorer", "tak-gamingYT", "sasaiber", "redac1ed"];
+const EXTRA_CONTRIBUTERS = ["Screenmax1234", "kirill670", "georgedorn", "yakovexplorer", "tak-gamingYT", "sasaiber", "redac1ed", "AskingAcake"];
 
 /**
  * Fetch all contributors from GitHub API (handles pagination using Link header)
@@ -67,9 +67,6 @@ async function fetchContributors(env) {
             
             if (!response.ok) {
                 console.error(`Failed to fetch contributors: ${response.status}`);
-                if (contributors.length === 0) {
-                    return EXTRA_CONTRIBUTERS;
-                }
                 break;
             }
             
@@ -94,18 +91,11 @@ async function fetchContributors(env) {
             }
         }
         
-        // Add additional contributor
-        EXTRA_CONTRIBUTERS.forEach(sponsor => {
-            if (!contributors.includes(sponsor)) {
-                contributors.push(sponsor);
-            }
-        });
-        
-        console.log(`Fetched ${contributors.length} contributors (${EXTRA_CONTRIBUTERS.length} extra)`);
+        console.log(`Fetched ${contributors.length} contributors`);
         return contributors;
     } catch (error) {
         console.error("Failed to fetch contributors:", error);
-        return contributors.length > 0 ? contributors : EXTRA_CONTRIBUTERS;
+        return contributors;
     }
 }
 
@@ -143,7 +133,11 @@ function calculateUserTier(userData, contributors, sponsors) {
     if (adminList.includes(userData.username)) {
         return "admin";
     }
-    
+
+    if (userData.provider === "github" && EXTRA_CONTRIBUTERS.includes(userData.username)) {
+        return "pro";
+    }
+
     // Check contributor status (GitHub only)
     if (userData.provider === "github" && contributors.includes(userData.username)) {
         return "pro";
@@ -358,6 +352,7 @@ function calculateUserTier(userData, contributors, sponsors) {
             let errorCount = 0;
             
             while (listResult && Array.isArray(listResult.objects)) {
+                console.log(listResult.objects.length)
                 for (const object of listResult.objects) {
                     try {
                         // Skip non-JSON files
@@ -881,10 +876,10 @@ function calculateUserTier(userData, contributors, sponsors) {
                 last_reset: now
             }
         };
-  
-        // Store lookup index
-        await env.MEMBERS_KV.put(lookupKey, userId);
     }
+  
+    // Store lookup index for this user
+    await env.MEMBERS_KV.put(lookupKey, userId);
   
     // Save user to R2
     await saveUser(env, user);

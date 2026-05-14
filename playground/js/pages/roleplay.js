@@ -163,7 +163,7 @@ const RoleplayPage = (() => {
 
   function newChat() {
     const id = Store.newId();
-    const chat = { id, type: 'roleplay', title: framework.translate('New Session'), items: [], personaId: null, createdAt: Date.now() };
+    const chat = { id, type: 'roleplay', title: framework.translate('New Session'), items: [], personaId: null, added: Date.now() };
     Store.upsertChat(chat);
     loadChat(id);
   }
