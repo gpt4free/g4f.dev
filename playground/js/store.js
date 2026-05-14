@@ -144,7 +144,7 @@ const Store = (() => {
   function getActiveProvider() {
     const providers = getProviders();
     const id = getActiveProviderId();
-    return applyProviderLocalStorage(
+    return applyProviderConfig(
       providers.find(p => p.id === id) || providers[0]
     );
   }
