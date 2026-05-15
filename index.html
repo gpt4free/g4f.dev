@@ -994,15 +994,6 @@
             overflow: hidden;
         }
 
-        .access-card::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.05) 0%, transparent 70%);
-            opacity: 0;
-            transition: opacity var(--transition);
-        }
-
         .access-card:hover {
             transform: translateY(-8px);
             border-color: var(--glass-border-hover);
@@ -1597,7 +1588,7 @@
 
             function createStars() {
                 stars = [];
-                const count = Math.floor((w * h) / 1800);
+                const count = Math.floor((w * h) / 2500);
                 for (let i = 0; i < count; i++) {
                     stars.push({
                         x: Math.random() * w,
