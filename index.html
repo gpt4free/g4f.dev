@@ -6,7 +6,7 @@
     <title>GPT4Free - Next Gen AI Access</title>
 
     <meta name="description" content="GPT4Free offers free, fast, and unrestricted access to powerful AI models with open-source API endpoints, chat demos, and developer resources." />
-    <meta name="keywords" content="GPT4Free, free AI, AI chatbot, GPT-5, DeepSeek, Claude, Gwmini, chat API, open source AI, AI tools, GPT4Free.js, AI projects" />
+    <meta name="keywords" content="GPT4Free, free AI, AI chatbot, GPT-5, DeepSeek, Claude, Gemini, chat API, open source AI, AI tools, GPT4Free.js, AI projects" />
     <meta name="author" content="GPT4Free Team" />
 
     <!-- Open Graph / Facebook -->
@@ -31,20 +31,42 @@
     <link rel="icon" type="image/png" sizes="16x16" href="dist/img/g4f-16x16.png" />
     <link rel="manifest" href="dist/img/site.webmanifest" />
 
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
     <style>
+        :root {
+            --primary: #00f0ff;
+            --primary-glow: rgba(0, 240, 255, 0.6);
+            --secondary: #7b2fff;
+            --secondary-glow: rgba(123, 47, 255, 0.6);
+            --accent: #ff00aa;
+            --accent-glow: rgba(255, 0, 170, 0.5);
+            --success: #00ff88;
+            --dark: #030014;
+            --dark-2: #0a0520;
+            --glass: rgba(255, 255, 255, 0.02);
+            --glass-2: rgba(255, 255, 255, 0.04);
+            --glass-border: rgba(255, 255, 255, 0.06);
+            --glass-border-hover: rgba(255, 255, 255, 0.15);
+            --text: #ffffff;
+            --text-dim: rgba(255, 255, 255, 0.65);
+            --text-faint: rgba(255, 255, 255, 0.4);
+            --radius-sm: 12px;
+            --radius: 20px;
+            --radius-lg: 28px;
+            --radius-xl: 36px;
+            --transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            --shadow-glow: 0 0 40px rgba(0, 240, 255, 0.15);
+            --shadow-glow-lg: 0 0 80px rgba(123, 47, 255, 0.2);
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-        }
-
-        :root {
-            --primary: #00f0ff;
-            --secondary: #7b2fff;
-            --accent: #ff00aa;
-            --dark: #030014;
-            --glass: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.08);
         }
 
         html {
@@ -54,12 +76,38 @@
         body {
             font-family: 'Rajdhani', sans-serif;
             background: var(--dark);
-            color: #fff;
+            color: var(--text);
             overflow-x: hidden;
             line-height: 1.6;
+            cursor: default;
         }
 
-        /* Animated Grid Background */
+        /* ─── CURSOR GLOW ──────────────── */
+        .cursor-glow {
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: -1;
+            background: radial-gradient(circle, rgba(0, 240, 255, 0.07) 0%, transparent 70%);
+            transform: translate(-50%, -50%);
+            transition: transform 0.15s ease-out;
+            will-change: transform;
+        }
+
+        /* ─── STARFIELD ──────────────── */
+        #starfield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -3;
+            pointer-events: none;
+        }
+
+        /* ─── GRID ──────────────── */
         .bg-grid {
             position: fixed;
             top: 0;
@@ -67,130 +115,185 @@
             width: 100%;
             height: 100%;
             z-index: -2;
-            background-image: 
-                linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
-            animation: gridMove 20s linear infinite;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(0, 240, 255, 0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.025) 1px, transparent 1px);
+            background-size: 60px 60px;
+            animation: gridShift 25s linear infinite;
+            mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 70%);
+            -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 70%);
         }
 
-        @keyframes gridMove {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(50px, 50px); }
+        @keyframes gridShift {
+            0% {
+                transform: translate(0, 0);
+            }
+            100% {
+                transform: translate(60px, 60px);
+            }
         }
 
-        /* Floating Orbs */
+        /* ─── ORBS ──────────────── */
         .orb {
             position: fixed;
             border-radius: 50%;
-            filter: blur(80px);
+            filter: blur(100px);
             z-index: -1;
-            animation: float 20s ease-in-out infinite;
+            pointer-events: none;
+            opacity: 0.6;
+            will-change: transform;
         }
 
         .orb-1 {
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(123, 47, 255, 0.4) 0%, transparent 70%);
-            top: -200px;
+            width: 700px;
+            height: 700px;
+            background: radial-gradient(circle, rgba(123, 47, 255, 0.45) 0%, transparent 70%);
+            top: -250px;
             left: -200px;
-            animation-delay: 0s;
+            animation: orbFloat1 18s ease-in-out infinite;
         }
 
         .orb-2 {
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(0, 240, 255, 0.3) 0%, transparent 70%);
-            top: 50%;
-            right: -200px;
-            animation-delay: -7s;
+            width: 550px;
+            height: 550px;
+            background: radial-gradient(circle, rgba(0, 240, 255, 0.35) 0%, transparent 70%);
+            top: 40%;
+            right: -180px;
+            animation: orbFloat2 22s ease-in-out infinite;
         }
 
         .orb-3 {
-            width: 400px;
-            height: 400px;
+            width: 500px;
+            height: 500px;
             background: radial-gradient(circle, rgba(255, 0, 170, 0.3) 0%, transparent 70%);
-            bottom: -100px;
-            left: 30%;
-            animation-delay: -14s;
+            bottom: -150px;
+            left: 35%;
+            animation: orbFloat3 20s ease-in-out infinite;
         }
 
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            25% { transform: translate(30px, -30px) scale(1.05); }
-            50% { transform: translate(-20px, 20px) scale(0.95); }
-            75% { transform: translate(20px, 30px) scale(1.02); }
+        @keyframes orbFloat1 {
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+            25% {
+                transform: translate(60px, -40px) scale(1.08);
+            }
+            50% {
+                transform: translate(-30px, 50px) scale(0.93);
+            }
+            75% {
+                transform: translate(40px, 30px) scale(1.05);
+            }
         }
 
-        /* Navigation */
+        @keyframes orbFloat2 {
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+            33% {
+                transform: translate(-50px, -30px) scale(1.1);
+            }
+            66% {
+                transform: translate(30px, 40px) scale(0.9);
+            }
+        }
+
+        @keyframes orbFloat3 {
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+            50% {
+                transform: translate(-40px, -50px) scale(1.12);
+            }
+        }
+
+        /* ─── NAVIGATION ──────────────── */
         nav {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             z-index: 1000;
-            padding: 1.5rem 3rem;
+            padding: 1.4rem 3rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(3, 0, 20, 0.8);
-            backdrop-filter: blur(20px);
+            background: rgba(3, 0, 20, 0.75);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
             border-bottom: 1px solid var(--glass-border);
-            transition: all 0.3s ease;
+            transition: all var(--transition);
         }
 
         nav.scrolled {
-            padding: 1rem 3rem;
-            background: rgba(3, 0, 20, 0.95);
+            padding: 0.9rem 3rem;
+            background: rgba(3, 0, 20, 0.92);
+            box-shadow: 0 4px 40px rgba(0, 0, 0, 0.5);
         }
 
         .logo {
             font-family: 'Orbitron', sans-serif;
-            font-size: 1.8rem;
-            font-weight: 800;
+            font-size: 2rem;
+            font-weight: 900;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            text-shadow: 0 0 30px rgba(0, 240, 255, 0.5);
-            letter-spacing: 2px;
+            letter-spacing: 3px;
+            position: relative;
+            filter: drop-shadow(0 0 20px rgba(0, 240, 255, 0.4));
+            transition: all var(--transition);
+        }
+
+        .logo:hover {
+            filter: drop-shadow(0 0 35px rgba(0, 240, 255, 0.7));
+            transform: scale(1.04);
         }
 
         .logo span {
             color: var(--accent);
             -webkit-text-fill-color: var(--accent);
+            filter: drop-shadow(0 0 15px rgba(255, 0, 170, 0.5));
         }
 
         .nav-links {
             display: flex;
-            gap: 2.5rem;
+            gap: 2.2rem;
             align-items: center;
         }
 
         .nav-links a {
-            color: rgba(255, 255, 255, 0.7);
+            color: var(--text-dim);
             text-decoration: none;
             font-weight: 500;
-            font-size: 1rem;
-            transition: all 0.3s ease;
+            font-size: 0.92rem;
+            transition: all var(--transition);
             position: relative;
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
+            padding: 0.4rem;
         }
 
         .nav-links a::after {
             content: '';
             position: absolute;
-            bottom: -5px;
+            bottom: -2px;
             left: 0;
             width: 0;
             height: 2px;
             background: linear-gradient(90deg, var(--primary), var(--secondary));
-            transition: width 0.3s ease;
+            border-radius: 2px;
+            transition: width var(--transition);
+            box-shadow: 0 0 10px var(--primary-glow);
         }
 
         .nav-links a:hover {
             color: #fff;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
         }
 
         .nav-links a:hover::after {
@@ -199,23 +302,62 @@
 
         .nav-cta {
             background: linear-gradient(135deg, var(--secondary), var(--accent));
-            padding: 0.7rem 1.8rem;
+            padding: 0.65rem 1.8rem;
             border-radius: 50px;
             font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 20px rgba(123, 47, 255, 0.4);
+            transition: all var(--transition);
+            box-shadow: 0 0 25px rgba(123, 47, 255, 0.35);
+            color: #fff !important;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-cta::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            opacity: 0;
+            transition: opacity var(--transition);
+            border-radius: 50px;
         }
 
         .nav-cta:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0 40px rgba(123, 47, 255, 0.6);
+            transform: translateY(-3px);
+            box-shadow: 0 0 45px rgba(255, 0, 170, 0.5);
         }
 
+        .nav-cta:hover::before {
+            opacity: 1;
+        }
+
+        .nav-cta span {
+            position: relative;
+            z-index: 1;
+        }
         .nav-cta::after {
             display: none;
         }
 
-        /* Hero Section */
+        /* ─── MOBILE MENU TOGGLE ──────── */
+        .menu-toggle {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            cursor: pointer;
+            z-index: 1001;
+            padding: 8px;
+        }
+
+        .menu-toggle span {
+            width: 28px;
+            height: 2px;
+            background: #fff;
+            border-radius: 2px;
+            transition: all var(--transition);
+        }
+
+        /* ─── HERO ──────────────── */
         .hero {
             min-height: 100vh;
             display: flex;
@@ -228,7 +370,7 @@
 
         .hero-content {
             text-align: center;
-            max-width: 1000px;
+            max-width: 1050px;
             position: relative;
             z-index: 10;
         }
@@ -236,58 +378,88 @@
         .hero-badge {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.6rem;
             background: var(--glass);
-            border: 1px solid var(--glass-border);
-            padding: 0.5rem 1.2rem;
+            border: 1px solid rgba(0, 255, 136, 0.25);
+            padding: 0.55rem 1.4rem;
             border-radius: 50px;
             font-size: 0.85rem;
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
             animation: fadeInUp 0.8s ease;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.1);
         }
 
         .hero-badge .dot {
-            width: 8px;
-            height: 8px;
-            background: #00ff88;
+            width: 9px;
+            height: 9px;
+            background: var(--success);
             border-radius: 50%;
-            animation: pulse 2s ease infinite;
+            animation: softPulse 2s ease infinite;
+            box-shadow: 0 0 12px rgba(0, 255, 136, 0.7);
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7); }
-            50% { opacity: 0.8; box-shadow: 0 0 0 10px rgba(0, 255, 136, 0); }
+        @keyframes softPulse {
+            0%,
+            100% {
+                opacity: 1;
+                box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7);
+            }
+            50% {
+                opacity: 0.6;
+                box-shadow: 0 0 0 14px rgba(0, 255, 136, 0);
+            }
         }
 
         .hero h1 {
             font-family: 'Orbitron', sans-serif;
-            font-size: clamp(2.5rem, 8vw, 5rem);
+            font-size: clamp(2.8rem, 9vw, 5.5rem);
             font-weight: 900;
-            line-height: 1.1;
+            line-height: 1.08;
             margin-bottom: 1.5rem;
-            animation: fadeInUp 0.8s ease 0.2s backwards;
+            animation: fadeInUp 0.8s ease 0.15s backwards;
+            letter-spacing: -0.02em;
         }
 
         .hero h1 .gradient-text {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 40%, var(--accent) 80%, var(--primary) 100%);
+            background-size: 300% 300%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            background-size: 200% 200%;
-            animation: gradientShift 5s ease infinite;
+            animation: gradientShift 6s ease infinite;
+            filter: drop-shadow(0 0 40px rgba(123, 47, 255, 0.4));
         }
 
         @keyframes gradientShift {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+            25% {
+                background-position: 100% 0%;
+            }
+            50% {
+                background-position: 100% 100%;
+            }
+            75% {
+                background-position: 0% 100%;
+            }
+        }
+
+        .hero .subtitle-glow {
+            color: #fff;
+            text-shadow: 0 0 40px rgba(0, 240, 255, 0.5);
         }
 
         .hero p {
-            font-size: 1.3rem;
-            color: rgba(255, 255, 255, 0.7);
-            max-width: 700px;
+            font-size: 1.35rem;
+            color: var(--text-dim);
+            max-width: 680px;
             margin: 0 auto 3rem;
-            animation: fadeInUp 0.8s ease 0.4s backwards;
+            animation: fadeInUp 0.8s ease 0.3s backwards;
+            font-weight: 400;
         }
 
         .hero-buttons {
@@ -295,32 +467,54 @@
             gap: 1.5rem;
             justify-content: center;
             flex-wrap: wrap;
-            animation: fadeInUp 0.8s ease 0.6s backwards;
+            animation: fadeInUp 0.8s ease 0.5s backwards;
         }
 
         .btn {
-            padding: 1rem 2.5rem;
+            padding: 1rem 2.6rem;
             border-radius: 50px;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 600;
             text-decoration: none;
-            transition: all 0.3s ease;
+            transition: all var(--transition);
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.6rem;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
+            position: relative;
+            overflow: hidden;
+            font-family: 'Rajdhani', sans-serif;
         }
 
         .btn-primary {
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: #fff;
-            box-shadow: 0 0 30px rgba(0, 240, 255, 0.3);
+            box-shadow: 0 0 35px rgba(0, 240, 255, 0.3);
+            border: none;
+        }
+
+        .btn-primary::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--secondary), var(--accent));
+            opacity: 0;
+            transition: opacity var(--transition);
+            border-radius: 50px;
         }
 
         .btn-primary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 0 50px rgba(0, 240, 255, 0.5);
+            transform: translateY(-4px);
+            box-shadow: 0 0 60px rgba(0, 240, 255, 0.5);
+        }
+        .btn-primary:hover::after {
+            opacity: 1;
+        }
+
+        .btn-primary span {
+            position: relative;
+            z-index: 1;
         }
 
         .btn-secondary {
@@ -328,17 +522,20 @@
             color: #fff;
             border: 1px solid var(--glass-border);
             backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
 
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.08);
             border-color: var(--primary);
+            box-shadow: 0 0 40px rgba(0, 240, 255, 0.2);
+            transform: translateY(-3px);
         }
 
         @keyframes fadeInUp {
             from {
                 opacity: 0;
-                transform: translateY(30px);
+                transform: translateY(40px);
             }
             to {
                 opacity: 1;
@@ -346,87 +543,140 @@
             }
         }
 
-        /* Stats Section */
+        /* ─── HERO PARTICLES ──────────── */
+        .hero-particles {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .hero-particle {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: var(--primary);
+            border-radius: 50%;
+            animation: particleFloat linear infinite;
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        @keyframes particleFloat {
+            0% {
+                transform: translateY(100vh) scale(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-10vh) scale(1);
+                opacity: 0;
+            }
+        }
+
+        /* ─── STATS ──────────────── */
         .stats {
             display: flex;
             justify-content: center;
-            gap: 4rem;
-            padding: 4rem 2rem;
+            gap: 5rem;
+            padding: 5rem 2rem;
             flex-wrap: wrap;
+            position: relative;
         }
 
         .stat {
             text-align: center;
+            position: relative;
         }
 
         .stat-number {
             font-family: 'Orbitron', sans-serif;
-            font-size: 3.5rem;
-            font-weight: 800;
+            font-size: 3.8rem;
+            font-weight: 900;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            filter: drop-shadow(0 0 25px rgba(0, 240, 255, 0.4));
+            transition: all var(--transition);
+        }
+
+        .stat:hover .stat-number {
+            filter: drop-shadow(0 0 45px rgba(123, 47, 255, 0.7));
+            transform: scale(1.08);
         }
 
         .stat-label {
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 0.9rem;
+            color: var(--text-faint);
+            font-size: 0.85rem;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-top: 0.5rem;
+            letter-spacing: 3px;
+            margin-top: 0.6rem;
+            font-weight: 500;
         }
 
-        /* Features Section */
+        /* ─── SECTION ──────────────── */
         .section {
-            padding: 6rem 2rem;
+            padding: 7rem 2rem;
             position: relative;
         }
 
         .section-header {
             text-align: center;
-            max-width: 700px;
-            margin: 0 auto 4rem;
+            max-width: 720px;
+            margin: 0 auto 5rem;
         }
 
         .section-tag {
             display: inline-block;
             font-family: 'Orbitron', sans-serif;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--primary);
             text-transform: uppercase;
-            letter-spacing: 3px;
-            margin-bottom: 1rem;
+            letter-spacing: 4px;
+            margin-bottom: 1.2rem;
+            position: relative;
+            padding: 0.5rem 1.2rem;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 50px;
+            background: rgba(0, 240, 255, 0.04);
         }
 
         .section-header h2 {
             font-family: 'Orbitron', sans-serif;
-            font-size: clamp(2rem, 5vw, 3rem);
+            font-size: clamp(2.2rem, 5.5vw, 3.2rem);
             font-weight: 700;
             margin-bottom: 1rem;
+            letter-spacing: -0.01em;
         }
 
         .section-header p {
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 1.1rem;
+            color: var(--text-dim);
+            font-size: 1.15rem;
         }
 
+        /* ─── FEATURES GRID ──────────── */
         .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
             gap: 2rem;
-            max-width: 1400px;
+            max-width: 1440px;
             margin: 0 auto;
         }
 
         .feature-card {
-            background: var(--glass);
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.015), rgba(255, 255, 255, 0.03));
             border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 2.5rem;
-            transition: all 0.4s ease;
+            border-radius: var(--radius-lg);
+            padding: 2.8rem 2.2rem;
+            transition: all var(--transition-slow);
             position: relative;
             overflow: hidden;
+            cursor: default;
         }
 
         .feature-card::before {
@@ -436,50 +686,71 @@
             left: 0;
             right: 0;
             height: 2px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+            background: linear-gradient(90deg, transparent, var(--primary), var(--secondary), var(--accent), transparent);
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transition: opacity var(--transition-slow);
+        }
+
+        .feature-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 0%, rgba(0, 240, 255, 0.06) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity var(--transition);
         }
 
         .feature-card:hover {
-            transform: translateY(-10px);
-            border-color: rgba(0, 240, 255, 0.3);
-            box-shadow: 0 20px 60px rgba(0, 240, 255, 0.1);
+            transform: translateY(-12px);
+            border-color: var(--glass-border-hover);
+            box-shadow: 0 30px 70px rgba(0, 240, 255, 0.08), 0 0 0 1px rgba(0, 240, 255, 0.1) inset;
         }
 
-        .feature-card:hover::before {
+        .feature-card:hover::before,
+        .feature-card:hover::after {
             opacity: 1;
         }
 
         .feature-icon {
-            width: 70px;
-            height: 70px;
-            border-radius: 16px;
+            width: 72px;
+            height: 72px;
+            border-radius: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
-            margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(123, 47, 255, 0.1));
-            border: 1px solid rgba(0, 240, 255, 0.2);
+            font-size: 2.2rem;
+            margin-bottom: 1.6rem;
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.08), rgba(123, 47, 255, 0.08));
+            border: 1px solid rgba(0, 240, 255, 0.15);
+            position: relative;
+            transition: all var(--transition);
+        }
+
+        .feature-card:hover .feature-icon {
+            border-color: rgba(0, 240, 255, 0.4);
+            box-shadow: 0 0 40px rgba(0, 240, 255, 0.2);
+            transform: scale(1.08);
         }
 
         .feature-card h3 {
             font-family: 'Orbitron', sans-serif;
-            font-size: 1.3rem;
+            font-size: 1.25rem;
             font-weight: 600;
-            margin-bottom: 1rem;
+            margin-bottom: 0.9rem;
+            letter-spacing: 0.5px;
         }
 
         .feature-card p {
-            color: rgba(255, 255, 255, 0.6);
-            line-height: 1.7;
+            color: var(--text-dim);
+            line-height: 1.75;
+            font-size: 1rem;
         }
 
-        /* Models Section */
+        /* ─── MODELS ──────────────── */
         .models-showcase {
             max-width: 1200px;
             margin: 0 auto;
+            text-align: center;
         }
 
         .model-badges {
@@ -493,17 +764,15 @@
         .model-badge {
             background: var(--glass);
             border: 1px solid var(--glass-border);
-            padding: 0.8rem 1.5rem;
+            padding: 0.85rem 1.6rem;
             border-radius: 50px;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            transition: all 0.3s ease;
-        }
-
-        .model-badge:hover {
-            border-color: var(--primary);
-            transform: translateY(-2px);
+            gap: 0.6rem;
+            transition: all var(--transition);
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            cursor: default;
         }
 
         .model-badge .dot {
@@ -511,120 +780,173 @@
             height: 8px;
             border-radius: 50%;
             background: var(--primary);
+            box-shadow: 0 0 10px var(--primary-glow);
+            transition: all var(--transition);
         }
 
-        /* Chat Demo */
+        .model-badge:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 240, 255, 0.15);
+            background: rgba(0, 240, 255, 0.05);
+        }
+
+        .model-badge:hover .dot {
+            background: var(--accent);
+            box-shadow: 0 0 18px var(--accent-glow);
+        }
+
+        /* ─── DEMO CHAT ──────────────── */
         .demo-container {
             max-width: 900px;
             margin: 0 auto;
         }
 
         .chat-box {
-            background: var(--glass);
+            background: rgba(10, 5, 30, 0.7);
             border: 1px solid var(--glass-border);
-            border-radius: 24px;
+            border-radius: var(--radius-xl);
             overflow: hidden;
-            backdrop-filter: blur(20px);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4), var(--shadow-glow-lg);
+            transition: all var(--transition);
+        }
+
+        .chat-box:hover {
+            border-color: var(--glass-border-hover);
+            box-shadow: 0 30px 100px rgba(0, 0, 0, 0.5), 0 0 100px rgba(123, 47, 255, 0.25);
         }
 
         .chat-header {
-            padding: 1.5rem 2rem;
-            background: rgba(0, 240, 255, 0.05);
+            padding: 1.4rem 2.2rem;
+            background: rgba(0, 240, 255, 0.04);
             border-bottom: 1px solid var(--glass-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
+            font-weight: 500;
         }
 
         .chat-status {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.6rem;
             font-size: 0.9rem;
+            color: var(--success);
         }
 
         .chat-status .dot {
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            background: #00ff88;
-            animation: pulse 2s ease infinite;
+            background: var(--success);
+            animation: softPulse 2s ease infinite;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.6);
         }
 
         .chat-messages {
-            min-height: 400px;
-            padding: 2rem;
+            min-height: 420px;
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 2.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            scroll-behavior: smooth;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 5px;
+        }
+        .chat-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
         }
 
         .message {
-            margin-bottom: 1.5rem;
             animation: fadeInUp 0.4s ease;
         }
 
         .message.bot {
             display: flex;
             gap: 1rem;
+            align-items: flex-start;
         }
 
         .message.bot .avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
             background: linear-gradient(135deg, var(--secondary), var(--accent));
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             flex-shrink: 0;
+            box-shadow: 0 0 20px rgba(123, 47, 255, 0.4);
         }
 
         .message.bot .content {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 1rem 1.5rem;
-            border-radius: 0 20px 20px 20px;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 1.1rem 1.6rem;
+            border-radius: 4px 22px 22px 22px;
             border: 1px solid var(--glass-border);
-            max-width: 80%;
+            max-width: 78%;
+            line-height: 1.7;
+            color: var(--text-dim);
         }
 
         .message.user {
-            margin-left: auto;
-            max-width: 80%;
+            align-self: flex-end;
+            max-width: 78%;
         }
 
         .message.user .content {
-            background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(123, 47, 255, 0.2));
-            padding: 1rem 1.5rem;
-            border-radius: 20px 0 20px 20px;
-            margin-left: auto;
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.18), rgba(123, 47, 255, 0.18));
+            padding: 1.1rem 1.6rem;
+            border-radius: 22px 4px 22px 22px;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            line-height: 1.7;
         }
 
         .chat-input-container {
-            padding: 1.5rem 2rem;
+            padding: 1.4rem 2.2rem;
             background: rgba(0, 0, 0, 0.3);
             display: flex;
             gap: 1rem;
+            border-top: 1px solid var(--glass-border);
         }
 
         .chat-input {
             flex: 1;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.04);
             border: 1px solid var(--glass-border);
             border-radius: 50px;
-            padding: 1rem 1.5rem;
+            padding: 1rem 1.6rem;
             color: #fff;
             font-size: 1rem;
             outline: none;
-            transition: all 0.3s ease;
+            transition: all var(--transition);
+            font-family: 'Rajdhani', sans-serif;
+        }
+
+        .chat-input::placeholder {
+            color: var(--text-faint);
         }
 
         .chat-input:focus {
             border-color: var(--primary);
-            box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.15);
+            background: rgba(255, 255, 255, 0.06);
         }
 
         .chat-send {
-            width: 50px;
-            height: 50px;
+            width: 52px;
+            height: 52px;
             border-radius: 50%;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             border: none;
@@ -633,63 +955,99 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s ease;
+            transition: all var(--transition);
+            flex-shrink: 0;
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.3);
         }
 
         .chat-send:hover {
-            transform: scale(1.1);
-            box-shadow: 0 0 30px rgba(0, 240, 255, 0.4);
+            transform: scale(1.12);
+            box-shadow: 0 0 45px rgba(0, 240, 255, 0.55);
+            background: linear-gradient(135deg, var(--secondary), var(--accent));
         }
 
-        /* Accessibility Section */
+        .chat-send:active {
+            transform: scale(0.94);
+        }
+
+        /* ─── ACCESSIBILITY ──────────── */
         .accessibility-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
             gap: 2rem;
             max-width: 1200px;
             margin: 0 auto;
         }
 
         .access-card {
-            background: linear-gradient(135deg, rgba(0, 240, 255, 0.05), rgba(123, 47, 255, 0.05));
+            background: linear-gradient(160deg, rgba(0, 240, 255, 0.03), rgba(123, 47, 255, 0.03));
             border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 2rem;
+            border-radius: var(--radius-lg);
+            padding: 2.5rem 2rem;
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
-            transition: all 0.3s ease;
+            transition: all var(--transition-slow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .access-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.05) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity var(--transition);
         }
 
         .access-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--primary);
+            transform: translateY(-8px);
+            border-color: var(--glass-border-hover);
+            box-shadow: 0 25px 60px rgba(0, 240, 255, 0.08);
+        }
+        .access-card:hover::after {
+            opacity: 1;
         }
 
         .access-icon {
-            width: 80px;
-            height: 80px;
+            width: 85px;
+            height: 85px;
             border-radius: 50%;
-            background: linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(123, 47, 255, 0.1));
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.08), rgba(123, 47, 255, 0.08));
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.5rem;
-            margin-bottom: 1.5rem;
+            font-size: 2.8rem;
+            margin-bottom: 1.6rem;
+            border: 1px solid rgba(0, 240, 255, 0.15);
+            transition: all var(--transition);
+        }
+
+        .access-card:hover .access-icon {
+            box-shadow: 0 0 50px rgba(0, 240, 255, 0.25);
+            border-color: rgba(0, 240, 255, 0.4);
         }
 
         .access-card h3 {
             font-family: 'Orbitron', sans-serif;
-            margin-bottom: 1rem;
+            margin-bottom: 0.8rem;
+            font-size: 1.2rem;
+            letter-spacing: 0.5px;
         }
 
         .access-card p {
-            color: rgba(255, 255, 255, 0.6);
-            margin-bottom: 1.5rem;
+            color: var(--text-dim);
+            margin-bottom: 1.8rem;
+            line-height: 1.7;
         }
 
-        /* CTA Section */
+        .access-card .btn {
+            margin-top: auto;
+        }
+
+        /* ─── CTA ──────────────── */
         .cta-section {
             padding: 8rem 2rem;
             text-align: center;
@@ -697,14 +1055,16 @@
         }
 
         .cta-box {
-            max-width: 900px;
+            max-width: 920px;
             margin: 0 auto;
-            background: linear-gradient(135deg, rgba(123, 47, 255, 0.2), rgba(0, 240, 255, 0.1));
-            border: 1px solid rgba(123, 47, 255, 0.3);
-            border-radius: 30px;
-            padding: 4rem;
+            background: linear-gradient(160deg, rgba(123, 47, 255, 0.15), rgba(0, 240, 255, 0.06));
+            border: 1px solid rgba(123, 47, 255, 0.25);
+            border-radius: var(--radius-xl);
+            padding: 4.5rem 3rem;
             position: relative;
             overflow: hidden;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
 
         .cta-box::before {
@@ -714,42 +1074,50 @@
             left: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(circle, rgba(0, 240, 255, 0.1) 0%, transparent 50%);
-            animation: rotate 30s linear infinite;
+            background: radial-gradient(circle, rgba(0, 240, 255, 0.08) 0%, transparent 50%);
+            animation: rotateCta 25s linear infinite;
         }
 
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+        @keyframes rotateCta {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .cta-box h2 {
             font-family: 'Orbitron', sans-serif;
-            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-size: clamp(1.9rem, 4.5vw, 2.6rem);
             margin-bottom: 1rem;
             position: relative;
+            letter-spacing: -0.01em;
         }
 
         .cta-box p {
-            color: rgba(255, 255, 255, 0.7);
+            color: var(--text-dim);
             font-size: 1.2rem;
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
             position: relative;
         }
 
         .cta-buttons {
             display: flex;
-            gap: 1rem;
+            gap: 1.2rem;
             justify-content: center;
             flex-wrap: wrap;
             position: relative;
         }
 
-        /* Footer */
+        /* ─── FOOTER ──────────────── */
         footer {
-            padding: 4rem 2rem 2rem;
+            padding: 4rem 2rem 2.5rem;
             border-top: 1px solid var(--glass-border);
             text-align: center;
+            background: rgba(3, 0, 20, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
         }
 
         .footer-content {
@@ -760,46 +1128,183 @@
         .footer-links {
             display: flex;
             justify-content: center;
-            gap: 2rem;
+            gap: 2.5rem;
             flex-wrap: wrap;
             margin-bottom: 2rem;
         }
 
         .footer-links a {
-            color: rgba(255, 255, 255, 0.6);
+            color: var(--text-dim);
             text-decoration: none;
-            transition: color 0.3s ease;
+            transition: all var(--transition);
+            font-weight: 500;
+            letter-spacing: 0.5px;
         }
 
         .footer-links a:hover {
             color: var(--primary);
+            text-shadow: 0 0 20px var(--primary-glow);
         }
 
         .footer-copy {
-            color: rgba(255, 255, 255, 0.4);
+            color: var(--text-faint);
             font-size: 0.9rem;
         }
 
-        /* Responsive */
+        /* ─── REVEAL ON SCROLL ──────── */
+        .reveal {
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 0.9s cubic-bezier(0.22, 0.61, 0.36, 1);
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .reveal-delay-1 {
+            transition-delay: 0.1s;
+        }
+        .reveal-delay-2 {
+            transition-delay: 0.2s;
+        }
+        .reveal-delay-3 {
+            transition-delay: 0.3s;
+        }
+        .reveal-delay-4 {
+            transition-delay: 0.4s;
+        }
+        .reveal-delay-5 {
+            transition-delay: 0.5s;
+        }
+        .reveal-delay-6 {
+            transition-delay: 0.6s;
+        }
+
+        /* ─── GLOW LINE DIVIDER ─────── */
+        .glow-divider {
+            width: 120px;
+            height: 3px;
+            margin: 0 auto 3rem;
+            border-radius: 3px;
+            background: linear-gradient(90deg, transparent, var(--primary), var(--secondary), transparent);
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        /* ─── RESPONSIVE ──────────────── */
+        @media (max-width: 1024px) {
+            .nav-links {
+                gap: 1.5rem;
+            }
+            .nav-links a {
+                font-size: 0.8rem;
+                letter-spacing: 1px;
+            }
+            .stats {
+                gap: 3rem;
+            }
+            .stat-number {
+                font-size: 3rem;
+            }
+            .features-grid {
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 1.5rem;
+            }
+        }
+
         @media (max-width: 768px) {
             nav {
                 padding: 1rem 1.5rem;
             }
-
             .nav-links {
-                display: none;
+                position: fixed;
+                top: 0;
+                right: -100%;
+                width: 75%;
+                max-width: 320px;
+                height: 100vh;
+                flex-direction: column;
+                background: rgba(3, 0, 20, 0.97);
+                backdrop-filter: blur(40px);
+                -webkit-backdrop-filter: blur(40px);
+                padding: 6rem 2rem 2rem;
+                gap: 1.8rem;
+                transition: right var(--transition);
+                border-left: 1px solid var(--glass-border);
+                z-index: 999;
             }
-
+            .nav-links.active {
+                right: 0;
+            }
+            .nav-links a {
+                font-size: 1rem;
+            }
+            .menu-toggle {
+                display: flex;
+            }
             .hero {
                 padding: 6rem 1.5rem 3rem;
             }
-
+            .hero h1 {
+                font-size: clamp(2rem, 7vw, 3rem);
+            }
+            .hero p {
+                font-size: 1.1rem;
+            }
             .stats {
                 gap: 2rem;
+                padding: 3rem 1.5rem;
             }
-
             .stat-number {
-                font-size: 2.5rem;
+                font-size: 2.4rem;
+            }
+            .section {
+                padding: 4rem 1.5rem;
+            }
+            .feature-card {
+                padding: 2rem 1.6rem;
+            }
+            .cta-box {
+                padding: 3rem 1.8rem;
+            }
+            .chat-messages {
+                min-height: 300px;
+                max-height: 350px;
+                padding: 1.5rem;
+            }
+            .footer-links {
+                gap: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-buttons {
+                flex-direction: column;
+                align-items: center;
+                gap: 1rem;
+            }
+            .btn {
+                width: 100%;
+                justify-content: center;
+                padding: 0.9rem 1.8rem;
+            }
+            .stats {
+                gap: 1.5rem;
+            }
+            .stat-number {
+                font-size: 2rem;
+            }
+            .stat-label {
+                font-size: 0.7rem;
+                letter-spacing: 2px;
+            }
+            .section-header h2 {
+                font-size: 1.6rem;
+            }
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
             }
         }
     </style>
@@ -808,40 +1313,49 @@
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js" async></script>
 
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@graph": [
         {
-          "@type": "WebSite",
-          "@id": "https://g4f.dev/#website",
-          "url": "https://g4f.dev/",
-          "name": "GPT4Free",
-          "publisher": {
-            "@type": "Organization",
-            "name": "GPT4Free"
-          }
-        },
-        {
-          "@type": "WebPage",
-          "@id": "https://g4f.dev/#webpage",
-          "url": "https://g4f.dev/",
-          "name": "GPT4Free - Free Access to AI Power",
-          "isPartOf": {
-            "@id": "https://g4f.dev/#website"
-          },
-          "inLanguage": "en",
-          "primaryImageOfPage": {
-            "@type": "ImageObject",
-            "url": "https://g4f.dev/dist/img/g4f-180x180.png"
-          }
-        }
-      ]
+            "@context": "https://schema.org",
+            "@graph": [
+                {
+                    "@type": "WebSite",
+                    "@id": "https://g4f.dev/#website",
+                    "url": "https://g4f.dev/",
+                    "name": "GPT4Free",
+                    "publisher": {
+                        "@type": "Organization",
+                        "name": "GPT4Free"
+                    }
+                },
+                {
+                    "@type": "WebPage",
+                    "@id": "https://g4f.dev/#webpage",
+                    "url": "https://g4f.dev/",
+                    "name": "GPT4Free - Free Access to AI Power",
+                    "isPartOf": {
+                        "@id": "https://g4f.dev/#website"
+                    },
+                    "inLanguage": "en",
+                    "primaryImageOfPage": {
+                        "@type": "ImageObject",
+                        "url": "https://g4f.dev/dist/img/g4f-180x180.png"
+                    }
+                }
+            ]
         }
     </script>
 </head>
 <body class="translate">
-    <!-- Background Effects -->
+
+    <!-- Cursor Glow -->
+    <div class="cursor-glow" id="cursorGlow"></div>
+
+    <!-- Starfield -->
+    <canvas id="starfield"></canvas>
+
+    <!-- Background Grid -->
     <div class="bg-grid"></div>
+
+    <!-- Floating Orbs -->
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
     <div class="orb orb-3"></div>
@@ -849,34 +1363,40 @@
     <!-- Navigation -->
     <nav id="navbar">
         <div class="logo">G4<span>F</span></div>
-        <div class="nav-links">
+        <div class="nav-links" id="navLinks">
             <a href="#features">Features</a>
             <a href="#models">Models</a>
             <a href="#accessibility">Accessibility</a>
             <a href="#demo">Demo</a>
             <a href="/docs/">Docs</a>
-            <a href="/chat/" class="nav-cta">Get Started</a>
+            <a href="/chat/" class="nav-cta"><span>Get Started</span></a>
+        </div>
+        <div class="menu-toggle" id="menuToggle">
+            <span></span>
+            <span></span>
+            <span></span>
         </div>
     </nav>
 
     <!-- Hero Section -->
-    <section class="hero">
+    <section class="hero" id="hero">
+        <div class="hero-particles" id="heroParticles"></div>
         <div class="hero-content">
-            <div class="hero-badge">
+            <div class="hero-badge reveal">
                 <span class="dot"></span>
                 Now Free & Unlimited
             </div>
-            <h1>
+            <h1 class="reveal reveal-delay-1">
                 <span class="gradient-text">Next Generation</span><br>
-                AI Access
+                <span class="subtitle-glow">AI Access</span>
             </h1>
-            <p>Experience the most powerful AI models without barriers. Open-source, unrestricted, and built for everyone.</p>
-            <div class="hero-buttons">
+            <p class="reveal reveal-delay-2">Experience the most powerful AI models without barriers. Open-source, unrestricted, and built for everyone.</p>
+            <div class="hero-buttons reveal reveal-delay-3">
                 <a href="/chat/" class="btn btn-primary">
-                    <span>🚀</span> Start Chatting Free
+                    <span>🚀</span><span>Start Chatting Free</span>
                 </a>
                 <a href="/docs/" class="btn btn-secondary">
-                    <span>📚</span> View Documentation
+                    <span>📚</span><span>View Documentation</span>
                 </a>
             </div>
         </div>
@@ -884,19 +1404,19 @@
 
     <!-- Stats -->
     <section class="stats">
-        <div class="stat">
-            <div class="stat-number">50M+</div>
+        <div class="stat reveal reveal-delay-1">
+            <div class="stat-number" data-target="50">0M+</div>
             <div class="stat-label">API Requests</div>
         </div>
-        <div class="stat">
-            <div class="stat-number">100+</div>
+        <div class="stat reveal reveal-delay-2">
+            <div class="stat-number" data-target="100">0+</div>
             <div class="stat-label">AI Models</div>
         </div>
-        <div class="stat">
+        <div class="stat reveal reveal-delay-3">
             <div class="stat-number">100%</div>
             <div class="stat-label">Free Access</div>
         </div>
-        <div class="stat">
+        <div class="stat reveal reveal-delay-4">
             <div class="stat-number">24/7</div>
             <div class="stat-label">Availability</div>
         </div>
@@ -904,121 +1424,125 @@
 
     <!-- Features Section -->
     <section class="section" id="features">
-        <div class="section-header">
-            <span class="section-tag">// Features</span>
+        <div class="section-header reveal">
+            <span class="section-tag">✦ Features</span>
             <h2>Built for the Future</h2>
             <p>Cutting-edge technology designed to democratize AI access for developers and users worldwide.</p>
+            <div class="glow-divider"></div>
         </div>
         <div class="features-grid">
-            <div class="feature-card">
+            <div class="feature-card reveal reveal-delay-1">
                 <div class="feature-icon">⚡</div>
                 <h3>Lightning Fast</h3>
-                <p>Optimized infrastructure delivers responses in milliseconds. No waiting, no buffering—just instant AI power.</p>
+                <p>Optimized infrastructure delivers responses in milliseconds. No waiting, no buffering—just instant AI power at your fingertips.</p>
             </div>
-            <div class="feature-card">
+            <div class="feature-card reveal reveal-delay-2">
                 <div class="feature-icon">🔓</div>
                 <h3>Unrestricted Access</h3>
-                <p>No paywalls, no rate limits, no hidden fees. Get full access to premium AI capabilities completely free.</p>
+                <p>No paywalls, no rate limits, no hidden fees. Get full access to premium AI capabilities completely free, forever.</p>
             </div>
-            <div class="feature-card">
+            <div class="feature-card reveal reveal-delay-3">
                 <div class="feature-icon">🔌</div>
                 <h3>Easy Integration</h3>
                 <p>Simple REST API with SDKs for Python, JavaScript, and more. Integrate AI into your projects in minutes.</p>
             </div>
-            <div class="feature-card">
+            <div class="feature-card reveal reveal-delay-4">
                 <div class="feature-icon">🛡️</div>
                 <h3>Privacy First</h3>
-                <p>Your conversations are never stored or shared. Complete privacy with zero data collection.</p>
+                <p>Your conversations are never stored or shared. Complete privacy with zero data collection—your data stays yours.</p>
             </div>
-            <div class="feature-card">
+            <div class="feature-card reveal reveal-delay-5">
                 <div class="feature-icon">🌐</div>
                 <h3>Open Source</h3>
-                <p>Fully transparent codebase on GitHub. Audit, contribute, or fork—community driven development.</p>
+                <p>Fully transparent codebase on GitHub. Audit, contribute, or fork—community driven development for everyone.</p>
             </div>
-            <div class="feature-card">
+            <div class="feature-card reveal reveal-delay-6">
                 <div class="feature-icon">🎯</div>
                 <h3>Multi-Model Support</h3>
-                <p>Access GPT-5, Claude, DeepSeek, Gemini, and more—all through a single unified interface.</p>
+                <p>Access GPT-5, Claude, DeepSeek, Gemini, and more—all through a single unified interface with zero friction.</p>
             </div>
         </div>
     </section>
 
     <!-- Models Section -->
     <section class="section" id="models">
-        <div class="section-header">
-            <span class="section-tag">// Models</span>
+        <div class="section-header reveal">
+            <span class="section-tag">✦ Models</span>
             <h2>Powered by Leading AI</h2>
             <p>Access multiple state-of-the-art AI models through our unified API.</p>
+            <div class="glow-divider"></div>
         </div>
         <div class="models-showcase">
             <div class="model-badges">
-                <div class="model-badge"><span class="dot"></span> GPT-5</div>
-                <div class="model-badge"><span class="dot"></span> Claude 4.6</div>
-                <div class="model-badge"><span class="dot"></span> DeepSeek V3</div>
-                <div class="model-badge"><span class="dot"></span> Gemini Pro</div>
-                <div class="model-badge"><span class="dot"></span> Kimi K2.5</div>
-                <div class="model-badge"><span class="dot"></span> Grok</div>
-                <div class="model-badge"><span class="dot"></span> Mistral</div>
+                <div class="model-badge reveal reveal-delay-1"><span class="dot"></span> GPT-5</div>
+                <div class="model-badge reveal reveal-delay-2"><span class="dot"></span> Claude 4.6</div>
+                <div class="model-badge reveal reveal-delay-3"><span class="dot"></span> DeepSeek V3</div>
+                <div class="model-badge reveal reveal-delay-2"><span class="dot"></span> Gemini Pro</div>
+                <div class="model-badge reveal reveal-delay-4"><span class="dot"></span> Kimi K2.5</div>
+                <div class="model-badge reveal reveal-delay-3"><span class="dot"></span> Grok</div>
+                <div class="model-badge reveal reveal-delay-1"><span class="dot"></span> Mistral</div>
             </div>
         </div>
     </section>
 
     <!-- Accessibility Section -->
     <section class="section" id="accessibility">
-        <div class="section-header">
-            <span class="section-tag">// Inclusive AI</span>
+        <div class="section-header reveal">
+            <span class="section-tag">✦ Inclusive AI</span>
             <h2>AI for Everyone</h2>
             <p>Specialized tools designed to ensure AI accessibility for all users.</p>
+            <div class="glow-divider"></div>
         </div>
         <div class="accessibility-cards">
-            <div class="access-card">
+            <div class="access-card reveal reveal-delay-1">
                 <div class="access-icon">🗣️</div>
                 <h3>Screen Reader Chat</h3>
                 <p>Fully accessible AI chat optimized for screen readers and visual impairments.</p>
-                <a href="/chat/sr.html" class="btn btn-secondary">Try Now</a>
+                <a href="/chat/sr.html" class="btn btn-secondary">Try Now →</a>
             </div>
-            <div class="access-card">
+            <div class="access-card reveal reveal-delay-2">
                 <div class="access-icon">✍️</div>
                 <h3>Speech Assistant</h3>
                 <p>Text-to-speech tool for non-verbal communication with AI assistants.</p>
-                <a href="/apps/mute.html" class="btn btn-secondary">Try Now</a>
+                <a href="/apps/mute.html" class="btn btn-secondary">Try Now →</a>
             </div>
-            <div class="access-card">
+            <div class="access-card reveal reveal-delay-3">
                 <div class="access-icon">🎤</div>
                 <h3>Voice Assistant</h3>
                 <p>Hands-free AI interaction with speech recognition and audio responses.</p>
-                <a href="/apps/voice_assistant.html" class="btn btn-secondary">Try Now</a>
+                <a href="/apps/voice_assistant.html" class="btn btn-secondary">Try Now →</a>
             </div>
         </div>
     </section>
 
     <!-- Demo Section -->
     <section class="section" id="demo">
-        <div class="section-header">
-            <span class="section-tag">// Live Demo</span>
+        <div class="section-header reveal">
+            <span class="section-tag">✦ Live Demo</span>
             <h2>Try It Now</h2>
             <p>Experience the power of GPT4Free directly in your browser.</p>
+            <div class="glow-divider"></div>
         </div>
-        <div class="demo-container">
+        <div class="demo-container reveal">
             <div class="chat-box">
                 <div class="chat-header">
                     <div class="chat-status">
                         <span class="dot"></span>
-                        Online
+                        Online — Ready
                     </div>
-                    <span>G4F Assistant</span>
+                    <span style="color:var(--text-dim);">🤖 G4F Assistant</span>
                 </div>
                 <div class="chat-messages" id="chatMessages">
                     <div class="message bot">
                         <div class="avatar">🤖</div>
                         <div class="content">
-                            Hello! I'm your G4F assistant. Ask me anything and I'll help you explore the power of free AI!
+                            👋 Hello! I'm your <strong>G4F assistant</strong>. Ask me anything and I'll help you explore the power of free AI! Try asking about coding, creative writing, or problem-solving.
                         </div>
                     </div>
                 </div>
                 <div class="chat-input-container">
-                    <input type="text" class="chat-input" id="chatInput" placeholder="Type your message..." />
-                    <button class="chat-send" onclick="sendMessage()">
+                    <input type="text" class="chat-input" id="chatInput" placeholder="Type your message and press Enter..." />
+                    <button class="chat-send" id="chatSendBtn" aria-label="Send message">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
                         </svg>
@@ -1030,13 +1554,13 @@
 
     <!-- CTA Section -->
     <section class="cta-section">
-        <div class="cta-box">
+        <div class="cta-box reveal">
             <h2>Ready to Unlock AI Power?</h2>
-            <p>Join millions of users accessing cutting-edge AI models for free. No signup required.</p>
+            <p>Join millions of users accessing cutting-edge AI models for free. No signup required — just start chatting.</p>
             <div class="cta-buttons">
-                <a href="/chat/" class="btn btn-primary">🚀 Start for Free</a>
-                <a href="https://github.com/xtekky/gpt4free" target="_blank" class="btn btn-secondary">
-                    <span>⭐</span> Star on GitHub
+                <a href="/chat/" class="btn btn-primary"><span>🚀</span><span>Start for Free</span></a>
+                <a href="https://github.com/xtekky/gpt4free" target="_blank" rel="noopener" class="btn btn-secondary">
+                    <span>⭐</span><span>Star on GitHub</span>
                 </a>
             </div>
         </div>
@@ -1050,87 +1574,265 @@
                 <a href="/chat/">Chat</a>
                 <a href="/members.html">Members</a>
                 <a href="/manifesto">Manifesto</a>
-                <a href="https://github.com/xtekky/gpt4free" target="_blank">GitHub</a>
-                <a href="https://github.com/xtekky/gpt4free/discussions" target="_blank">Community</a>
+                <a href="https://github.com/xtekky/gpt4free" target="_blank" rel="noopener">GitHub</a>
+                <a href="https://github.com/xtekky/gpt4free/discussions" target="_blank" rel="noopener">Community</a>
             </div>
-            <p class="footer-copy">© 2026 GPT4Free Project. Open source and free forever.</p>
+            <p class="footer-copy">© 2026 GPT4Free Project. Open source and free forever. ✨</p>
         </div>
     </footer>
 
     <script>
-        // Navbar scroll effect
-        window.addEventListener('scroll', () => {
-            const nav = document.getElementById('navbar');
-            if (window.scrollY > 50) {
-                nav.classList.add('scrolled');
-            } else {
-                nav.classList.remove('scrolled');
+        (function() {
+            // ─── STARFIELD ──────────────────
+            const canvas = document.getElementById('starfield');
+            const ctx = canvas.getContext('2d');
+            let stars = [];
+            let w, h;
+
+            function resizeCanvas() {
+                w = canvas.width = window.innerWidth;
+                h = canvas.height = window.innerHeight;
             }
-        });
 
-        // Simple chat demo functionality
-        function sendMessage() {
-            const input = document.getElementById('chatInput');
-            const messages = document.getElementById('chatMessages');
-            const message = input.value.trim();
-            
-            if (!message) return;
-            
-            // Add user message
-            const userDiv = document.createElement('div');
-            userDiv.className = 'message user';
-            userDiv.innerHTML = `<div class="content">${message}</div>`;
-            messages.appendChild(userDiv);
-            
-            input.value = '';
-            
-            // Simulate bot response
-            setTimeout(async () => {
-                const response = await framework.query(message);
-                const botMessage = document.createElement("div");
-                const botDiv = document.createElement('div');
-                botDiv.className = 'message bot';
-                botDiv.innerHTML = `
-                    <div class="avatar">🤖</div>
-                    <div class="content">
-                        ${framework.markdown(await response.text())}
-                    </div>
-                `;
-                messages.appendChild(botDiv);
-                messages.scrollTop = messages.scrollHeight;
-            }, 100);
-            
-            messages.scrollTop = messages.scrollHeight;
-        }
-
-        // Enter key to send
-        document.getElementById('chatInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
-        });
-    </script>
-    
-    <script>
-        document.addEventListener("DOMContentLoaded", async () => {
-            const demo = document.getElementById("demo");
-            demo.querySelector("button").addEventListener("click", async (e) => {
-                e.preventDefault();
-                const input = demo.querySelector("input");
-                const prompt = input.value;
-                input.value = "";
-                if (prompt.trim() === "") {
-                    return;
+            function createStars() {
+                stars = [];
+                const count = Math.floor((w * h) / 1800);
+                for (let i = 0; i < count; i++) {
+                    stars.push({
+                        x: Math.random() * w,
+                        y: Math.random() * h,
+                        r: Math.random() * 1.6 + 0.3,
+                        speed: Math.random() * 0.3 + 0.05,
+                        opacity: Math.random() * 0.7 + 0.3,
+                        twinkleSpeed: Math.random() * 0.02 + 0.005,
+                        twinkleOffset: Math.random() * Math.PI * 2,
+                    });
                 }
-                const userMessage = document.createElement("div");
-                userMessage.classList.add("message", "user-message");
-                userMessage.innerHTML = framework.markdown(prompt);
-                demo.querySelector(".chat-messages").appendChild(userMessage);
-                const response = await framework.query(prompt);
-                const botMessage = document.createElement("div");
-                botMessage.classList.add("message", "bot-message");
-                botMessage.innerHTML = framework.markdown(await response.text());
-                demo.querySelector(".chat-messages").appendChild(botMessage);
+            }
+
+            function drawStars(time) {
+                ctx.clearRect(0, 0, w, h);
+                stars.forEach(s => {
+                    const twinkle = Math.sin(time * s.twinkleSpeed + s.twinkleOffset) * 0.3 + 0.7;
+                    const alpha = s.opacity * twinkle;
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(180,210,255,${alpha})`;
+                    ctx.fill();
+                    // Glow
+                    if (s.r > 1.0) {
+                        ctx.beginPath();
+                        ctx.arc(s.x, s.y, s.r * 3, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(0,240,255,${alpha * 0.12})`;
+                        ctx.fill();
+                    }
+                });
+            }
+
+            function animateStars(time) {
+                drawStars(time);
+                requestAnimationFrame(animateStars);
+            }
+
+            resizeCanvas();
+            createStars();
+            requestAnimationFrame(animateStars);
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                createStars();
             });
-        });
+
+            // ─── CURSOR GLOW ──────────────
+            const cursorGlow = document.getElementById('cursorGlow');
+            let mouseX = -500;
+            let mouseY = -500;
+            let currentX = -500;
+            let currentY = -500;
+
+            document.addEventListener('mousemove', (e) => {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            });
+
+            function animateCursor() {
+                currentX += (mouseX - currentX) * 0.08;
+                currentY += (mouseY - currentY) * 0.08;
+                cursorGlow.style.left = currentX + 'px';
+                cursorGlow.style.top = currentY + 'px';
+                requestAnimationFrame(animateCursor);
+            }
+            requestAnimationFrame(animateCursor);
+
+            // ─── HERO PARTICLES ────────────
+            const heroParticlesContainer = document.getElementById('heroParticles');
+            for (let i = 0; i < 35; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('hero-particle');
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDuration = (Math.random() * 12 + 8) + 's';
+                particle.style.animationDelay = (Math.random() * 10) + 's';
+                particle.style.width = (Math.random() * 3 + 1.5) + 'px';
+                particle.style.height = particle.style.width;
+                const colors = ['#00f0ff', '#7b2fff', '#ff00aa', '#ffffff'];
+                particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                particle.style.boxShadow = `0 0 ${Math.random() * 12 + 4}px ${particle.style.background}`;
+                heroParticlesContainer.appendChild(particle);
+            }
+
+            // ─── MOBILE MENU ───────────────
+            const menuToggle = document.getElementById('menuToggle');
+            const navLinks = document.getElementById('navLinks');
+            menuToggle.addEventListener('click', () => {
+                navLinks.classList.toggle('active');
+                menuToggle.classList.toggle('active');
+            });
+            navLinks.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => {
+                    navLinks.classList.remove('active');
+                    menuToggle.classList.remove('active');
+                });
+            });
+
+            // ─── NAVBAR SCROLL ─────────────
+            const navbar = document.getElementById('navbar');
+            window.addEventListener('scroll', () => {
+                navbar.classList.toggle('scrolled', window.scrollY > 50);
+            });
+
+            // ─── SCROLL REVEAL ─────────────
+            const reveals = document.querySelectorAll('.reveal');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+            reveals.forEach(el => observer.observe(el));
+
+            // ─── CHAT DEMO ─────────────────
+            const chatInput = document.getElementById('chatInput');
+            const chatSendBtn = document.getElementById('chatSendBtn');
+            const chatMessages = document.getElementById('chatMessages');
+
+            function sendMessage() {
+                const message = chatInput.value.trim();
+                if (!message) return;
+
+                // User message
+                const userDiv = document.createElement('div');
+                userDiv.className = 'message user';
+                userDiv.innerHTML = `<div class="content">${escapeHtml(message)}</div>`;
+                chatMessages.appendChild(userDiv);
+                chatInput.value = '';
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                // Bot typing indicator
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'message bot';
+                typingDiv.id = 'typingIndicator';
+                typingDiv.innerHTML = `
+                    <div class="avatar">🤖</div>
+                    <div class="content" style="display:flex;gap:6px;align-items:center;padding:1.1rem 1.6rem;">
+                        <span class="typing-dot" style="width:8px;height:8px;border-radius:50%;background:var(--text-faint);animation:softPulse 1.2s ease infinite;"></span>
+                        <span class="typing-dot" style="width:8px;height:8px;border-radius:50%;background:var(--text-faint);animation:softPulse 1.2s ease infinite 0.2s;"></span>
+                        <span class="typing-dot" style="width:8px;height:8px;border-radius:50%;background:var(--text-faint);animation:softPulse 1.2s ease infinite 0.4s;"></span>
+                    </div>`;
+                chatMessages.appendChild(typingDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                // Query API
+                setTimeout(async () => {
+                    const typingIndicator = document.getElementById('typingIndicator');
+                    if (typingIndicator) typingIndicator.remove();
+
+                    try {
+                        const response = await framework.query(message);
+                        const text = await response.text();
+                        const botDiv = document.createElement('div');
+                        botDiv.className = 'message bot';
+                        botDiv.innerHTML = `
+                            <div class="avatar">🤖</div>
+                            <div class="content">${framework.markdown(text)}</div>`;
+                        chatMessages.appendChild(botDiv);
+                    } catch (e) {
+                        const botDiv = document.createElement('div');
+                        botDiv.className = 'message bot';
+                        botDiv.innerHTML = `
+                            <div class="avatar">⚠️</div>
+                            <div class="content">Sorry, I encountered an error. Please try again in a moment.</div>`;
+                        chatMessages.appendChild(botDiv);
+                    }
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }, 300);
+            }
+
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            chatSendBtn.addEventListener('click', sendMessage);
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMessage();
+            });
+
+            // ─── DUPLICATE DEMO HANDLER ─────
+            const demoSection = document.getElementById('demo');
+            const demoButton = demoSection.querySelector('button');
+            const demoInput = demoSection.querySelector('input');
+
+            demoButton.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const prompt = demoInput.value.trim();
+                if (!prompt) return;
+                demoInput.value = '';
+
+                const userMsg = document.createElement('div');
+                userMsg.className = 'message user';
+                userMsg.innerHTML = `<div class="content">${escapeHtml(prompt)}</div>`;
+                chatMessages.appendChild(userMsg);
+
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'message bot';
+                typingDiv.id = 'typingIndicator2';
+                typingDiv.innerHTML = `
+                    <div class="avatar">🤖</div>
+                    <div class="content" style="display:flex;gap:6px;align-items:center;padding:1.1rem 1.6rem;">
+                        <span class="typing-dot" style="width:8px;height:8px;border-radius:50%;background:var(--text-faint);animation:softPulse 1.2s ease infinite;"></span>
+                        <span class="typing-dot" style="width:8px;height:8px;border-radius:50%;background:var(--text-faint);animation:softPulse 1.2s ease infinite 0.2s;"></span>
+                        <span class="typing-dot" style="width:8px;height:8px;border-radius:50%;background:var(--text-faint);animation:softPulse 1.2s ease infinite 0.4s;"></span>
+                    </div>`;
+                chatMessages.appendChild(typingDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                setTimeout(async () => {
+                    const ti = document.getElementById('typingIndicator2');
+                    if (ti) ti.remove();
+                    try {
+                        const response = await framework.query(prompt);
+                        const text = await response.text();
+                        const botMsg = document.createElement('div');
+                        botMsg.className = 'message bot';
+                        botMsg.innerHTML = `
+                            <div class="avatar">🤖</div>
+                            <div class="content">${framework.markdown(text)}</div>`;
+                        chatMessages.appendChild(botMsg);
+                    } catch (e) {
+                        const botMsg = document.createElement('div');
+                        botMsg.className = 'message bot';
+                        botMsg.innerHTML = `
+                            <div class="avatar">⚠️</div>
+                            <div class="content">Sorry, I encountered an error. Please try again.</div>`;
+                        chatMessages.appendChild(botMsg);
+                    }
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }, 300);
+            });
+        })();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e7efdba6a1a4795',t:'MTc3NTQ1OTYxOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
