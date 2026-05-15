@@ -189,8 +189,9 @@ async function query(prompt, options={ json: false, cache: true }) {
     }
     const encodedParams = (new URLSearchParams(options)).toString();
     let response;
+    let queryUrl;
     for (const provider of ['auto', 'pollinations', 'openrouter']) {
-        const queryUrl = `https://g4f.space/ai/${provider}/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
+        queryUrl = `https://g4f.space/ai/${provider}/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
         try {
             response = await fetch(queryUrl, { headers: localStorage.getItem("session_token") ? {
                 'Authorization': `Bearer ${localStorage.getItem("session_token")}`
@@ -203,6 +204,9 @@ async function query(prompt, options={ json: false, cache: true }) {
             break;
         }
     }
+    if (!response || !response.ok) {
+        throw new Error("All providers are unreachable");
+    }
     if (options.json) {
         try {
             try {
@@ -212,7 +216,7 @@ async function query(prompt, options={ json: false, cache: true }) {
                 return new Response(filterMarkdown(text, ["json"], text), response);
             }
         } catch (e) {
-            add_error(`Error parsing JSON response from URL: \`${response.url}\``, e);
+            add_error(`Error parsing JSON response from URL: \`${queryUrl}\``, e);
         }
     }
 
