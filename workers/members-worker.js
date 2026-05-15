@@ -11,6 +11,8 @@
  * - DISCORD_CLIENT_SECRET: Discord OAuth App Client Secret
  * - HUGGINGFACE_CLIENT_ID: HuggingFace OAuth Client ID
  * - HUGGINGFACE_CLIENT_SECRET: HuggingFace OAuth Client Secret
+ * - AIRFORCE_CLIENT_ID: Airforce OAuth Client ID
+ * - AIRFORCE_CLIENT_SECRET: Airforce OAuth Client Secret
  * - JWT_SECRET: Secret for signing JWT tokens
  * - MEMBERS_BUCKET: R2 bucket binding for user data
  * - MEMBERS_KV: KV namespace binding for caching
@@ -42,10 +44,30 @@ const CORS_HEADERS = {
 const ADMIN_USERS = {
     discord: ["hlohaus789"],
     github: ["hlohaus"],
-    huggingface: []
+    huggingface: [],
+    airforce: []
 };
 
 const EXTRA_CONTRIBUTERS = ["Screenmax1234", "kirill670", "georgedorn", "yakovexplorer", "tak-gamingYT", "sasaiber", "redac1ed", "AskingAcake"];
+
+const ALLOWED_REDIRECT_HOSTNAMES = ["localhost", "127.0.0.1", "llmplayground.net", "g4f.dev", "gpt4free.github.io"];
+
+function isValidRedirect(url) {
+    try {
+        const parsed = new URL(url);
+        return ALLOWED_REDIRECT_HOSTNAMES.includes(parsed.hostname) || parsed.hostname.endsWith(".g4f.space");
+    } catch (e) {
+        return false;
+    }
+}
+
+function getSafeUser(user) {
+    const safeUser = { ...user };
+    delete safeUser.pollinations;
+    delete safeUser.huggingface;
+    delete safeUser.airforce;
+    return safeUser;
+}
 
 /**
  * Fetch all contributors from GitHub API (handles pagination using Link header)
@@ -241,6 +263,12 @@ function calculateUserTier(userData, contributors, sponsors) {
             }
             if (pathname === "/members/auth/huggingface/callback" || pathname === "/members/oauth/huggingface/callback") {
                 return handleHuggingFaceCallback(request, env, url);
+            }
+            if (pathname === "/members/auth/airforce" || pathname === "/members/oauth/airforce") {
+                return handleAirforceAuth(request, env, url);
+            }
+            if (pathname === "/members/auth/airforce/callback" || pathname === "/members/oauth/airforce/callback") {
+                return handleAirforceCallback(request, env, url);
             }
             if (pathname === "/members/auth/pollinations" || pathname === "/members/oauth/pollinations") {
                 return handlePollinationsAuth(request, env, url);
@@ -522,7 +550,7 @@ function calculateUserTier(userData, contributors, sponsors) {
         // Check if redirect is for chat/cloud sync (same origin)
         try {
             const redirectUrl = new URL(externalRedirect);
-            if (redirectUrl.hostname.endsWith("g4f.dev") || redirectUrl.hostname === "localhost") {
+            if (isValidRedirect(redirectUrl)) {
                 return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation);
             }
         } catch (e) {
@@ -621,7 +649,7 @@ function calculateUserTier(userData, contributors, sponsors) {
         // Check if redirect is for chat/cloud sync (same origin)
         try {
             const redirectUrl = new URL(externalRedirect);
-            if (redirectUrl.hostname.endsWith("g4f.dev") || redirectUrl.hostname === "localhost") {
+            if (isValidRedirect(redirectUrl)) {
                 return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation);
             }
         } catch (e) {
@@ -708,7 +736,10 @@ function calculateUserTier(userData, contributors, sponsors) {
         name: hfUser.fullname || hfUser.name,
         email: hfUser.email,
         avatar: hfUser.avatarUrl,
-        access_token: tokenData.access_token
+        huggingface: {
+            ...tokenData,
+            created_at: Date.now()
+        }
     });
   
     const sessionToken = await createSession(env, user.id);
@@ -718,7 +749,7 @@ function calculateUserTier(userData, contributors, sponsors) {
         // Check if redirect is for chat/cloud sync (same origin)
         try {
             const redirectUrl = new URL(externalRedirect);
-            if (redirectUrl.hostname.endsWith("g4f.dev") || redirectUrl.hostname === "localhost") {
+            if (isValidRedirect(redirectUrl)) {
                 return redirectWithSessionToExternal(sessionToken, user, externalRedirect, tokenData.conversation);
             }
         } catch (e) {
@@ -727,6 +758,134 @@ function calculateUserTier(userData, contributors, sponsors) {
         return redirectWithTempApiKey(env, user, externalRedirect, tokenData.conversation);
     }
   
+    return redirectWithSession(sessionToken, user);
+  }
+
+  async function handleAirforceAuth(request, env, url) {
+    const state = generateState();
+    const scope = "profile chat images";
+    const redirect = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect") || null;
+    const conversation = url.searchParams.get("conversation") || null;
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+    const authUrl = new URL("https://api.airforce/oauth/authorize");
+    authUrl.searchParams.set("client_id", env.AIRFORCE_CLIENT_ID);
+    authUrl.searchParams.set("redirect_uri", `${url.origin}/members/auth/airforce/callback`);
+    authUrl.searchParams.set("response_type", "code");
+    authUrl.searchParams.set("scope", scope);
+    authUrl.searchParams.set("state", state);
+    authUrl.searchParams.set("code_challenge", codeChallenge);
+    authUrl.searchParams.set("code_challenge_method", "S256");
+
+    const stateData = JSON.stringify({ provider: "airforce", redirect, conversation, codeVerifier });
+    await env.MEMBERS_KV.put(`oauth_state:${state}`, stateData, { expirationTtl: 600 });
+
+    return Response.redirect(authUrl.toString(), 302);
+  }
+
+  async function handleAirforceCallback(request, env, url) {
+    const code = url.searchParams.get("code");
+    const state = url.searchParams.get("state");
+    const error = url.searchParams.get("error");
+
+    if (error) {
+        return redirectWithError(error);
+    }
+
+    if (!code || !state) {
+        return redirectWithError("Missing code or state parameter");
+    }
+
+    const storedStateData = await env.MEMBERS_KV.get(`oauth_state:${state}`);
+    let stateData;
+    try {
+        stateData = JSON.parse(storedStateData);
+    } catch {
+        stateData = { provider: storedStateData, redirect: null };
+    }
+    if (stateData.provider !== "airforce" || !stateData.codeVerifier) {
+        return redirectWithError("Invalid state parameter");
+    }
+    await env.MEMBERS_KV.delete(`oauth_state:${state}`);
+    const externalRedirect = stateData.redirect;
+
+    const tokenResponse = await fetch("https://api.airforce/oauth/token", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json"
+        },
+        body: new URLSearchParams({
+            client_id: env.AIRFORCE_CLIENT_ID,
+            client_secret: env.AIRFORCE_CLIENT_SECRET,
+            grant_type: "authorization_code",
+            code,
+            redirect_uri: `${url.origin}/members/auth/airforce/callback`,
+            code_verifier: stateData.codeVerifier
+        })
+    });
+
+    const tokenData = await tokenResponse.json();
+    if (!tokenResponse.ok || tokenData.error || !tokenData.access_token) {
+        return redirectWithError(tokenData.error_description || tokenData.error || "Failed to exchange authorization code");
+    }
+
+    const userResponse = await fetch("https://api.airforce/oauth/userinfo", {
+        headers: {
+            "Authorization": `Bearer ${tokenData.access_token}`,
+            "Accept": "application/json"
+        }
+    });
+    const airforceUser = await userResponse.json();
+
+    if (!userResponse.ok) {
+        return redirectWithError(airforceUser.error_description || airforceUser.error || "Failed to fetch user profile");
+    }
+
+    let provider;
+    let username;
+
+    if (airforceUser.github_username) {
+        provider = "github";
+        username = airforceUser.github_username;
+    } else if (airforceUser.discord_username) {
+        provider = "discord";
+        username = airforceUser.discord_username;
+    } else {
+        provider = "airforce";
+        username = airforceUser.username;
+    }
+
+    const user = await createOrUpdateUser(env, {
+        provider,
+        username,
+        name: airforceUser.name || username,
+        email: airforceUser.email,
+        avatar: airforceUser.picture || airforceUser.avatar_url || airforceUser.avatar
+    });
+
+    user.airforce = {
+        ...tokenData,
+        created_at: Date.now()
+    };
+    user.updated_at = new Date().toISOString();
+    await saveUser(env, user);
+
+    const sessionToken = await createSession(env, user.id);
+
+    if (externalRedirect) {
+        try {
+            const redirectUrl = new URL(externalRedirect);
+            if (isValidRedirect(redirectUrl)) {
+                return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation);
+            }
+        } catch (e) {
+            console.error("Invalid redirect URL:", e);
+        }
+        return redirectWithTempApiKey(env, user, externalRedirect, stateData.conversation);
+    }
+
     return redirectWithSession(sessionToken, user);
   }
   
@@ -797,8 +956,7 @@ function calculateUserTier(userData, contributors, sponsors) {
           username: githubUsername,
           name: profile.name || githubUsername,
           email: profile.email || null,
-          avatar: profile.image || null,
-          access_token: null  // no GitHub OAuth token in this flow
+          avatar: profile.image || null
       });
   
       // Store the Pollinations key on the user for future profile refreshes
@@ -809,9 +967,7 @@ function calculateUserTier(userData, contributors, sponsors) {
       const sessionToken = await createSession(env, user.id);
   
       // Return JSON session for programmatic use
-      const safeUser = { ...user };
-      delete safeUser.access_token;
-      delete safeUser.api_keys;
+      const safeUser = getSafeUser(user);
   
       const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
       const cookie = `g4f_session=${sessionToken}; Path=/; Expires=${cookieExpiry}; SameSite=Lax; Secure`;
@@ -933,9 +1089,7 @@ function calculateUserTier(userData, contributors, sponsors) {
     }
   
     // Remove sensitive data before returning
-    const safeUser = { ...user };
-    delete safeUser.access_token;
-    delete safeUser.api_keys;
+    const safeUser = getSafeUser(user);
   
     return jsonResponse({ user: safeUser });
   }
@@ -962,9 +1116,7 @@ function calculateUserTier(userData, contributors, sponsors) {
     user.updated_at = new Date().toISOString();
     await saveUser(env, user);
   
-    const safeUser = { ...user };
-    delete safeUser.access_token;
-    delete safeUser.api_keys;
+    const safeUser = getSafeUser(user);
   
     return jsonResponse({ user: safeUser, message: "User updated successfully" });
   }
@@ -1508,9 +1660,7 @@ function calculateUserTier(userData, contributors, sponsors) {
         return jsonResponse({ authenticated: false }, 401);
     }
   
-    const safeUser = { ...user };
-    delete safeUser.access_token;
-    delete safeUser.api_keys;
+    const safeUser = getSafeUser(user);
   
     // Get session token to set refreshed cookie
     let sessionToken = request.headers.get("Authorization")?.replace("Bearer ", "");
@@ -1553,6 +1703,27 @@ function calculateUserTier(userData, contributors, sponsors) {
     const array = new Uint8Array(32);
     crypto.getRandomValues(array);
     return Array.from(array, byte => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  function toBase64Url(buffer) {
+    const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+    let binary = "";
+    for (const byte of bytes) {
+        binary += String.fromCharCode(byte);
+    }
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  function generateCodeVerifier() {
+    const bytes = new Uint8Array(64);
+    crypto.getRandomValues(bytes);
+    return toBase64Url(bytes);
+  }
+
+  async function generateCodeChallenge(codeVerifier) {
+    const data = new TextEncoder().encode(codeVerifier);
+    const digest = await crypto.subtle.digest("SHA-256", data);
+    return toBase64Url(digest);
   }
   
   function generateUserId() {
@@ -1629,7 +1800,10 @@ function calculateUserTier(userData, contributors, sponsors) {
         email: user.email,
         avatar: user.avatar,
         provider: user.provider,
-        tier: user.tier
+        tier: user.tier,
+        airforce: user.airforce,
+        pollinations: user.pollinations,
+        huggingface: user.huggingface
     })));
     
     // Set session cookie with 7 day expiry
@@ -1660,7 +1834,9 @@ function calculateUserTier(userData, contributors, sponsors) {
           avatar: user.avatar,
           provider: user.provider,
           tier: user.tier,
-          access_token: user.access_token
+          airforce: user.airforce,
+          pollinations: user.pollinations,
+          huggingface: user.huggingface
       })));
       if (conversation) {
         hashParams.set("conversation", conversation);

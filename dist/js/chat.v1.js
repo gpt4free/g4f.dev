@@ -1789,7 +1789,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     if (client) {
                         loadClientModels();
                     } else {
-                        refresh_models(providerSelect?.value);
+                        refreshModels(providerSelect?.value);
                     }
                 }
             } catch (e) {
@@ -3544,11 +3544,11 @@ async function on_load() {
     translationSnipptes.forEach((snippet)=>this.framework.translate(snippet));
     count_input();
     const locationHash = window.location.hash.substring(1);
-    if (locationHash == "login") {
+    if (locationHash === "login") {
         window.location.href='https://g4f.dev/members?redirect='+encodeURIComponent(location.href.split('#')[0])+'&conversation='+encodeURIComponent(window.conversation_id);
         return;
     }
-    if (locationHash == "settings") {
+    if (locationHash === "settings") {
         open_settings();
         await load_conversations();
         return;
@@ -3564,6 +3564,7 @@ async function on_load() {
     if (chatParams.get("prompt")) {
         userInput.value = chatParams.get("prompt");
         userInput.focus();
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
     }
     if (isNewConversation) {
         await new_conversation(locationHash === "private");
@@ -3598,38 +3599,11 @@ const load_provider_option = (input, provider_name) => {
     }
 };
 
-function get_modelTags(model, add_vision = true) {
-    const parts = []
-    for (let [name, text] of Object.entries(modelTags)) {
-        if (name != "vision" || add_vision) {
-            parts.push(model[name] ? ` ${text}` : "")
-        }
-        if (!model[name] && model.type === name) {
-            parts.push(` ${text}`);
-        }
-    }
-    if (model.id) {
-        if (model.id.endsWith("/free") || model.id.endsWith(":free")) {
-            parts.push(` ${modelTags.free}`);
-        }
-        if (model.id.startsWith("models/gemini-") && model.id.includes("-flash-") && (model.id.endsWith("-latest") || model.id.endsWith("-preview")) && !model.id.includes("-image-") && !model.id.includes("-audio-") && !model.id.includes("-live-")) {
-            parts.push(` ${modelTags.free}`);
-        }
-        if (model.id.startsWith("models/gemma-")) {
-            parts.push(` ${modelTags.free}`);
-        }
-    }
-    if (model.tiers) {
-        if (model.tiers.includes("Free")) {
-            parts.push(` ${modelTags.free}`);
-        }
-    }
-    return parts.join("");
-}
-
 async function load_providers(providers, provider_options, providersListContainer, providersToggleContainer) {
     providersToggleContainer = providersToggleContainer || settingsContent;
     providers.sort((a, b) => a.label.localeCompare(b.label));
+    const optGroupCore = document.createElement("optgroup");
+    optGroupCore.label = "Core Providers";
     providers.forEach((provider) => {
         if (provider.hf_space) {
             return;
@@ -3638,15 +3612,17 @@ async function load_providers(providers, provider_options, providersListContaine
         option.value = provider.name;
         option.dataset.label = provider.label;
         option.text = provider.label
-            + get_modelTags(provider)
+            + (window.getModelTags ? getModelTags(provider) : "")
             + (provider.hf_space ? " 🤗" : "")
             + (provider.nodriver ? " 🌐" : "")
             + (!provider.nodriver && provider.auth ? " 🔑" : "")
             + (provider.live > 0 ? " 🟢" : "")
         if (provider.parent)
             option.dataset.parent = provider.parent;
-        providerSelect.appendChild(option);
+        optGroupCore.appendChild(option);
     });
+    providerSelect.appendChild(optGroupCore);
+    providerSelect.selectedIndex = 0;
     if (!document.body.classList.contains("screen-reader")) {
         let providersContainer = document.createElement("div");
         providersContainer.classList.add("field", "collapsible");
@@ -3947,6 +3923,7 @@ async function on_api() {
                     option.text = (config.label || name) + (config.tags ? ` ${config.tags} 🟢` : " 🟢");
                     optgroup.appendChild(option);
                 });
+                providerSelect.value = "default";
             } catch(e) {
                 add_error(e, true);
             }
@@ -3990,13 +3967,13 @@ async function on_api() {
         let provider_options = [];
         await api("providers").then(async (providers) => {
             await load_providers(providers, provider_options, providersListContainer, providersToggleContainer);
-            load_provider_models(appStorage.getItem("provider"));
+            loadProviderModels(appStorage.getItem("provider"));
         }).catch(async (e)=>{
             console.log(e)
             providerSelect.querySelectorAll("option:not([data-live])").forEach((el)=>el.remove());
             await load_provider_login_urls(providersListContainer, providers);
             await load_settings(provider_options);
-            await load_provider_models(appStorage.getItem("provider"));
+            await loadProviderModels(appStorage.getItem("provider"));
         });
 
         set_favorite_providers();
@@ -4689,11 +4666,17 @@ function get_api_key_by_provider(provider, single=false) {
     return api_key;
 }
 
-function set_favorite_models(provider) {
+function setFavoriteModels(provider, defaultModel) {
     const optgroup = document.createElement('optgroup');
     optgroup.label = framework.translate("Favorite Models:");
     const favorites = JSON.parse(appStorage.getItem("favorites") || "{}");
-    const selected = favorites[provider] || {};
+    let selected = favorites[provider];
+    if (!selected) {
+        selected = {};
+        if (defaultModel) {
+            selected[defaultModel] = 0;
+        }
+    }
     Object.keys(selected).forEach((key) => {
         const option = document.createElement('option');
         option.value = key;
@@ -4719,7 +4702,11 @@ function set_favorite_models(provider) {
 function set_favorite_providers() {
     const optgroup = document.createElement('optgroup');
     optgroup.label = framework.translate("Favorite Providers:");
-    const favorites = JSON.parse(appStorage.getItem("favorite_providers") || "{}");
+    let favorites = JSON.parse(appStorage.getItem("favorite_providers") || "null");
+    if (!favorites) {
+        favorites = {};
+        favorites[providerSelect.value] = 0;
+    }
     Object.keys(favorites).forEach((key) => {
         const value_option = providerSelect.querySelector(`option[value="${key}"]`)
         if (value_option) {
@@ -4730,28 +4717,27 @@ function set_favorite_providers() {
     providerSelect.appendChild(optgroup);
 }
 
-function set_quota_info(models, quota) {
+function setQuotaInfo(models, quota) {
     if (!quota) {
         return;
     }
-    let default_model = null;
+    let defaultModel = null;
     models.forEach((model) => {
-        const model_id = model.id || model.model;
-        let percent = undefined;
+        let percent;
         if (quota.buckets) {
-            if (!["gemini-3-pro-preview"].includes(default_model)) {
-                default_model = null; // Use last model with enough quota as default instead of the first one
+            if (!["gemini-3-pro-preview"].includes(defaultModel)) {
+                defaultModel = null; // Use last model with enough quota as default instead of the first one
             }
-            percent = (quota.buckets.filter((bucket) => bucket.modelId == model_id).pop()?.remainingFraction || 0) * 100;
+            percent = (quota.buckets.filter((bucket) => bucket.modelId == model.id).pop()?.remainingFraction || 0) * 100;
             model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
         } else if (quota.models) {
-            percent = (quota.models[model_id]?.quotaInfo?.remainingFraction || 0) * 100;
+            percent = (quota.models[model.id]?.quotaInfo?.remainingFraction || 0) * 100;
             model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
         } else if (quota.quota_snapshots) {
-            function is_premium(model) {
+            function isPremium(model) {
                 return model.includes("claude") || model.includes("gemini") || (model != "gpt-5-mini" && model.includes("gpt-5")) || model.includes("grok");
             }
-            if (is_premium(model_id)) {
+            if (isPremium(model.id)) {
                 percent = Math.max(0, quota.quota_snapshots?.premium_interactions?.percent_remaining || 0);
                 model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
             } else {
@@ -4767,34 +4753,34 @@ function set_quota_info(models, quota) {
             model.label += ` ✅`;
         }
         model.remaining_percent = percent;
-        if (!default_model && percent >= 10) {
-            default_model = model_id;
+        if (!defaultModel && percent >= 10) {
+            defaultModel = model.id;
             models.forEach((model) => delete model.default);
             model.default = true;
         }
     });
     if (quota && quota.hasOwnProperty("balance")) {            
-        let credits_info = `${framework.translate("Balance:")} ${quota.balance.toFixed(2).replace(".00", "")} Pollen`;
+        let creditsInfo = `${framework.translate("Balance:")} ${quota.balance.toFixed(2).replace(".00", "")} Pollen`;
         if (quota.balance > 0) {
-            credits_info += " ✅";
+            creditsInfo += " ✅";
         } else {
-            credits_info += " ⚠️";
+            creditsInfo += " ⚠️";
         }
         if (models.length > 10) {
-            models.unshift({id: "credits_info", label: credits_info, disabled: true});
+            models.unshift({id: "credits_info", label: creditsInfo, disabled: true});
         }
     }
     if (quota.credits) {
         const percent = (quota.credits.remaining / quota.credits.total) * 100;
-        let credits_info = `${framework.translate("Credits:")} ${quota.credits.remaining}, ${framework.translate("Remaining:")} ${percent.toFixed(2)}%`;
+        let creditsInfo = `${framework.translate("Credits:")} ${quota.credits.remaining}, ${framework.translate("Remaining:")} ${percent.toFixed(2)}%`;
         if (percent >= 10) {
-            credits_info += " ✅";
+            creditsInfo += " ✅";
         } else {
-            credits_info += " ⚠️";
+            creditsInfo += " ⚠️";
         }
-        models.unshift({id: "credits_info", label: credits_info, disabled: true});
+        models.unshift({id: "credits_info", label: creditsInfo, disabled: true});
         if (models.length > 10) {
-            models.push({id: "credits_info_end", label: credits_info, disabled: true});
+            models.push({id: "credits_info", label: creditsInfo, disabled: true});
         }
     }
     if (quota.session_usage) {
@@ -4806,13 +4792,13 @@ function set_quota_info(models, quota) {
     if (quota.allowanceInfo?.remaining) {
         const percent = (quota.allowanceInfo.remaining / quota.allowanceInfo.monthUsageAllowance) * 100;
         const total = (quota?.allowanceInfo?.remaining || 0) / 1e8;
-        const credits_info = `${framework.translate("Credits:")} ${total.toFixed(2)}$, ${framework.translate("Remaining:")} ${percent.toFixed(2)}%` + (percent > 10 ? " ✅" : " ⚠️");
-        models.unshift({id: "credits_info", label: credits_info, disabled: true});
+        const creditsInfo = `${framework.translate("Credits:")} ${total.toFixed(2)}$, ${framework.translate("Remaining:")} ${percent.toFixed(2)}%` + (percent > 10 ? " ✅" : " ⚠️");
+        models.unshift({id: "credits_info", label: creditsInfo, disabled: true});
     }
-    if (!default_model && client && client.defaultModel) {
-        default_model = client.defaultModel;
+    if (!defaultModel && client && client.defaultModel) {
+        defaultModel = client.defaultModel;
         models.forEach((model) => {
-            if ((model.model || model.id) == default_model) {
+            if ((model.model || model.id) == defaultModel) {
                 model.default = true;
             } else {
                 delete model.default;
@@ -4820,20 +4806,21 @@ function set_quota_info(models, quota) {
         });
     }
 }
-function set_provider_models(models, provider, quota=null) {
+function setProviderModels(models, provider, quota=null) {
     modelSelect.innerHTML = '';
     const option = providerSelect.options[providerSelect.selectedIndex];
     if (option) option.text = option.text.replaceAll(" 🟢", "") + (quota ? " 🟢" : "");
-    function add_options(group, models, search) {
+    function addOptions(group, models, search) {
         if (quota) {
-            set_quota_info(models, quota);
+            setQuotaInfo(models, quota);
         }
         models.forEach((model, i) => {
             if (!model.models) {
                 let option = document.createElement('option');
-                option.value = model.id || model.model;
-                option.dataset.label = model.id || model.model;
-                option.text = (model.label || model.id || model.model) + (model.count > 1 ? ` (${model.count}+)` : "") + get_modelTags(model);
+                option.dataset.label = model.label || model.id || model;
+                if (window.convertModel && model.id) convertModel(model);
+                option.value = model.id || model;
+                option.text = model.label || model.id || model;
                 if (model.audio) {
                     option.dataset.audio = "true";
                 }
@@ -4850,7 +4837,7 @@ function set_provider_models(models, provider, quota=null) {
             } else {
                 let optgroup = document.createElement('optgroup');
                 optgroup.label = model.group;
-                add_options(optgroup, model.models, search);
+                addOptions(optgroup, model.models, search);
                 if (optgroup.childElementCount == 0) {
                     return;
                 }
@@ -4859,9 +4846,10 @@ function set_provider_models(models, provider, quota=null) {
         });
     }
     if (Array.isArray(models)) {
-        add_options(modelSelect, models, search);
+        addOptions(modelSelect, models, search);
         if (models.length > 2) {
-            set_favorite_models(provider);
+            const defaultModel = models.map(m => m.models?.find(m => m.default) || m).find(m => m.default)?.id;
+            setFavoriteModels(provider, defaultModel);
         }
     }
 }
@@ -4894,7 +4882,7 @@ async function get_quota(provider) {
     }
     return response.ok ? data : undefined;
 }
-async function refresh_models(provider) {
+async function refreshModels(provider) {
     // PA providers expose models via the pa providers list, not the models API
     if (provider && String(provider).startsWith("pa:")) {
         const paId = provider.slice(3);
@@ -4903,22 +4891,22 @@ async function refresh_models(provider) {
         if (paEntry && Array.isArray(paEntry.models) && paEntry.models.length > 0) {
             const models = paEntry.models.map(m => ({ name: m, model: m }));
             console.log("Setting PA provider models for provider:", provider, models);
-            set_provider_models(models, provider);
+            setProviderModels(models, provider);
         }
         return;
     }
     let models = appStorage.getItem(`${provider}:models`);
     if (models) {
         models = JSON.parse(models);
-        set_provider_models(models, provider);
+        setProviderModels(models, provider);
     }
     const [new_models, quota] = await Promise.all([api('models', provider), get_quota(provider)]);
     if (new_models) {
-        set_provider_models(new_models, provider, quota);
+        setProviderModels(new_models, provider, quota);
         appStorage.setItem(`${provider}:models`, JSON.stringify(new_models));
     }
 }
-async function load_provider_models(provider=null) {
+async function loadProviderModels(provider=null) {
     const isLoading = !!provider;
     if (!provider) {
         provider = providerSelect?.value;
@@ -4943,11 +4931,11 @@ async function load_provider_models(provider=null) {
         return;
     }
     console.log("Loading models for provider:", provider);
-    await refresh_models(provider);
+    await refreshModels(provider);
 };
 if (providerSelect) {
     providerSelect.addEventListener("change", async () => {
-        await load_provider_models()
+        await loadProviderModels()
         const favorites = appStorage.getItem("favorite_providers") ? JSON.parse(appStorage.getItem("favorite_providers")) : {};
         const selected = providerSelect.options[providerSelect.selectedIndex];
         console.log("Selected provider:", providerSelect.value, selected);
@@ -5038,7 +5026,7 @@ modelSearch?.addEventListener('input', function() {
     div.addEventListener('click', async () => {
       modelSearch.value = "";
       providerSelect.value = match.provider;
-      await load_provider_models();
+      await loadProviderModels();
       modelSelect.value = match.model.id || match.model;
       modelSelector.classList.add("hidden");
       providerSelect.classList.remove("hidden");
@@ -5896,7 +5884,7 @@ async function loadClientModels() {
     modelSelect.innerHTML = `<option value="" disabled selected>${framework.translate("Loading...")}</option>`;
     try {
         const [models, quota] = await Promise.all([client.models.list(), client.getQuota().catch(() => undefined)]);
-        set_quota_info(models, quota);
+        setQuotaInfo(models, quota);
         modelSelect.innerHTML = '';
         models.forEach(model => {
             if (window.isValidModel && !isValidModel(model)) {
@@ -5923,7 +5911,7 @@ async function loadClientModels() {
             modelSelect.appendChild(opt);
         });
         if (models.length > 2) {
-            set_favorite_models(providerSelect?.value);
+            setFavoriteModels(providerSelect?.value, client.defaultModel || models[0].id);
         }
     } catch (err) {
         console.error('Model load failed:', err);
@@ -6462,6 +6450,9 @@ function handleCloudSyncCallback() {
                 if (user.provider === "huggingface" && user.access_token) {
                     appStorage.setItem("HuggingFace-api_key", user.access_token);
                 }
+                if (user.airforce?.access_token) {
+                    appStorage.setItem("ApiAirforce-api_key", user.airforce.access_token);
+                }
                 showCloudSyncLoggedIn(user);
             } catch (e) {
                 console.error("Failed to parse user data:", e);
@@ -6602,9 +6593,11 @@ handleCloudSyncCallback();
 checkCloudSyncSession();
 
 // Redirect to members login page
-function cloudSyncLoginRedirect() {
+function cloudSyncLoginRedirect(provider = "airforce") {
     const returnUrl = encodeURIComponent(window.location.href.split("#")[0]);
-    window.location.href = `https://g4f.dev/members?redirect=${returnUrl}&conversation=${encodeURIComponent(window.conversation_id)}`;
+    const conversation = window.conversation_id ? `&conversation=${encodeURIComponent(window.conversation_id)}` : "";
+    const providerParam = provider ? `&provider=${encodeURIComponent(provider)}` : "";
+    window.location.href = `https://g4f.dev/members.html?redirect=${returnUrl}${conversation}${providerParam}`;
 }
 
 // Cloud Sync button event listeners

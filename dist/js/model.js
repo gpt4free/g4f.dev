@@ -6,7 +6,7 @@ const modelTags = {
     video: "🎥",
     paid_only: "💰",
     free: "🆓",
-    tools: "🧰",
+    tools: "🧰"
 };
 
 function getModelLabel(model) {

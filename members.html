@@ -163,6 +163,11 @@
             color: #333;
         }
 
+        .oauth-btn.airforce {
+            background: linear-gradient(135deg, #1e88ff, #6a5cff);
+            color: white;
+        }
+
         .oauth-btn.pollinations {
             background: white;
             color: #333;
@@ -523,6 +528,11 @@
         .provider-badge.huggingface {
             background: rgba(255, 210, 30, 0.3);
             color: #FFD21E;
+        }
+
+        .provider-badge.airforce {
+            background: rgba(30, 136, 255, 0.25);
+            color: #76b6ff;
         }
         
         /* Loading Spinner */
@@ -940,6 +950,11 @@
                     🤗
                     Sign in with Hugging Face
                 </button>
+
+                <button class="oauth-btn airforce" id="redirectLoginAirforce">
+                    ✈️
+                    Sign in with Airforce
+                </button>
                 
                 <button class="oauth-btn pollinations" id="redirectLoginPollinations">
                     🌸
@@ -975,6 +990,11 @@
                 <button class="oauth-btn huggingface" id="loginHuggingface">
                     🤗
                     Sign in with Hugging Face
+                </button>
+
+                <button class="oauth-btn airforce" id="loginAirforce" style="display: none;">
+                    ✈️
+                    Sign in with Airforce
                 </button>
                 
                 <button class="oauth-btn pollinations" id="loginPollinations">
@@ -1214,7 +1234,7 @@
     </main>
 
     <footer>
-        <p>&copy; 2025 GPT4Free Project. All rights reserved.</p>
+        <p>&copy; 2026 GPT4Free Project. All rights reserved.</p>
         <p>
             <a href="https://github.com/xtekky/gpt4free">GitHub</a> · 
             <a href="/docs/">Documentation</a> · 
@@ -1243,10 +1263,12 @@
         const loginGithub = document.getElementById('loginGithub');
         const loginDiscord = document.getElementById('loginDiscord');
         const loginHuggingface = document.getElementById('loginHuggingface');
+        const loginAirforce = document.getElementById('loginAirforce');
         const loginPollinations = document.getElementById('loginPollinations');
         const redirectLoginGithub = document.getElementById('redirectLoginGithub');
         const redirectLoginDiscord = document.getElementById('redirectLoginDiscord');
         const redirectLoginHuggingface = document.getElementById('redirectLoginHuggingface');
+        const redirectLoginAirforce = document.getElementById('redirectLoginAirforce');
         const redirectLoginPollinations = document.getElementById('redirectLoginPollinations');
         const logoutBtn = document.getElementById('logoutBtn');
         const userName = document.getElementById('userName');
@@ -1365,14 +1387,19 @@
             redirectLoginSection.style.display = 'block';
             dashboard.classList.remove('active');
             navUserInfo.style.display = 'none';
+            [redirectLoginGithub, redirectLoginDiscord].forEach(button => {
+                button.style.display = '';
+            });
+
             if (selectedProvider == 'huggingface') {
-                redirectLoginDiscord.style.display = 'none';
-                redirectLoginGithub.style.display = 'none';
+                redirectLoginAirforce.style.display = 'none';
                 redirectLoginPollinations.style.display = 'none';
             } else if (selectedProvider == 'pollinations') {
                 redirectLoginHuggingface.style.display = 'none';
-                redirectLoginGithub.style.display = 'none';
-                redirectLoginDiscord.style.display = 'none';
+                redirectLoginAirforce.style.display = 'none';
+            } else if (selectedProvider == 'airforce') {
+                redirectLoginHuggingface.style.display = 'none';
+                redirectLoginPollinations.style.display = 'none';
             }
             
             // Display the redirect target
@@ -1417,9 +1444,10 @@
                 github: '<i class="fab fa-github"></i> GitHub',
                 discord: '<i class="fab fa-discord"></i> Discord',
                 huggingface: '🤗 Hugging Face',
+                airforce: '✈️ Airforce',
                 pollinations: '🌸 Pollinations'
             };
-            providerBadge.innerHTML = `<span class="provider-badge ${provider}">${providerIcons[provider]}</span>`;
+            providerBadge.innerHTML = `<span class="provider-badge ${provider}">${providerIcons[provider] || provider}</span>`;
             
             // Show nav user info
             navUserInfo.style.display = 'flex';
@@ -1515,6 +1543,11 @@
             window.location.href = `${API_BASE}/members/auth/huggingface`;
         });
 
+        // Airforce OAuth
+        loginAirforce.addEventListener('click', () => {
+            window.location.href = `${API_BASE}/members/auth/airforce`;
+        });
+
         // Pollinations login (main section)
         loginPollinations.addEventListener('click', () => {
             const params = new URLSearchParams({
@@ -1536,6 +1569,10 @@
 
         redirectLoginHuggingface.addEventListener('click', () => {
             window.location.href = `${API_BASE}/members/auth/huggingface?${externalQuery}`;
+        });
+
+        redirectLoginAirforce.addEventListener('click', () => {
+            window.location.href = `${API_BASE}/members/auth/airforce?${externalQuery}`;
         });
 
         // Pollinations login from redirect section - save external redirect then start OAuth
@@ -1575,6 +1612,16 @@
                     localStorage.setItem('g4f_session', session);
                     localStorage.setItem('g4f_user', JSON.stringify(user));
                     localStorage.setItem('user', user.name || user.username);
+                    if (user.airforce?.access_token) {
+                        if (user.airforce.created_at > Date.now() - user.airforce.expires_in * 1000) {
+                            localStorage.setItem('ApiAirforce-api_key', user.airforce.access_token);
+                        }
+                    }
+                    if (user.huggingface?.access_token) {
+                        if (user.huggingface.created_at > Date.now() - user.huggingface.expires_in * 1000) {
+                            localStorage.setItem('HuggingFace-api_key', user.huggingface.access_token);
+                        }
+                    }
                     showToastFormat('Successfully signed in with {0}!', 'success', user.provider);
                     window.history.replaceState({}, document.title, window.location.pathname);
                     showDashboard(user);
@@ -1703,6 +1750,7 @@
             localStorage.removeItem('g4f_session');
             localStorage.removeItem('g4f_api_key');
             localStorage.removeItem('HuggingFace-api_key');
+            localStorage.removeItem('ApiAirforce-api_key');
             localStorage.removeItem('PollinationsAI-api_key');
             localStorage.removeItem('user');
             

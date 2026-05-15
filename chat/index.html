@@ -53,8 +53,11 @@
         window.captureUserTierHeaders = captureUserTierHeaders;
         window.Puter = Puter;
     </script>
-
-    <!-- MathJax Config -->
+    <script type="module" async>
+        import { convertModel, getModelTags } from '../dist/js/model.js';
+        window.convertModel = convertModel;
+        window.getModelTags = getModelTags;
+    </script>
     <script>
       window.MathJax = {
         chtml: {
@@ -68,8 +71,6 @@
       };
     </script>
     <script id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
-
-    <!-- YouTube API script -->
     <script>
       var tag = document.createElement('script');
       tag.src = "https://www.youtube.com/iframe_api";
@@ -352,19 +353,6 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
 
                   <!-- API Keys Tab -->
                   <div class="settings-tab-content" id="tab-api" role="tabpanel" aria-labelledby="tab-api">
-                  <div class="field mem0 hidden">
-                      <span class="label">Enable Memory with Mem0</span>
-                      <input type="checkbox" id="mem0" />
-                      <label for="mem0" class="toogle" title="Manage persistent conversations"></label>
-                      <button type="button" onclick="import_memory()" aria-label="Import messages to Mem0">
-                          <i class="fa-solid fa-arrow-up-from-bracket"></i>
-                          <span>Import Messages to Mem0</span>
-                      </button>
-                  </div>
-                  <div class="field box hidden">
-                      <label for="mem0-api_key" class="label">Mem0 API Key</label>
-                      <input type="text" id="mem0-api_key" name="mem0[api_key]" placeholder="API key" autocomplete="off" />
-                  </div>
                   <div class="field box hidden row">
                       <label for="Custom-api_base" class="label">Custom Provider Base URL</label>
                       <input type="url" id="Custom-api_base" name="Custom[api_base]" placeholder="http://localhost:8080/v1" autocomplete="off" />
@@ -372,10 +360,6 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                   <div class="field box hidden row">
                       <label for="Custom-api_key" class="label">Custom Provider API Key</label>
                       <input type="text" id="Custom-api_key" name="Custom[api_key]" placeholder="API key" autocomplete="off" />
-                  </div>
-                  <div class="field box hidden">
-                      <label for="BingCreateImages-api_key" class="label">Microsoft Designer Bing Cookie (_U)</label>
-                      <input type="text" id="BingCreateImages-api_key" name="BingCreateImages[api_key]" placeholder="&quot;_U&quot; cookie" autocomplete="off" />
                   </div>
                   </div>
 
