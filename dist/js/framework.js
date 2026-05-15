@@ -97,19 +97,21 @@ framework.connectToBackend = async (connectStatus) => {
 
 let newTranslations = [];
 framework.translate = (text) => {
-    const stripText = text.trim();
+    const stripText = text.replace(/\s+/g, ' ').trim();
     if (stripText) {
         const startWithSpace = text.startsWith(" ");
         const endWithSpace = text.endsWith(" ");
+        if (!newTranslations.includes(stripText)) {
+            newTranslations.push(stripText);
+        }
         if (stripText in framework.translations && framework.translations[stripText]) {
             return (startWithSpace ? " " : "") + framework.translations[stripText] + (endWithSpace ? " " : "");
         }
-        stripText && !newTranslations.includes(stripText) ? newTranslations.push(stripText) : null;
     }
     return text;
 };
-function countWords(text) {
-    return text.trim().match(/[\w\u4E00-\u9FA5]+/gu)?.length || 0;
+function hasWords(text) {
+    return text.trim().match(/[a-zA-Z]+/gu)?.length > 0;
 }
 framework.translationKey = "translations" + document.location.pathname;
 framework.translations = JSON.parse(localStorage.getItem(framework.translationKey) || "{}");
@@ -128,7 +130,7 @@ framework.translateElements = function (elements = null) {
         } 
         for (const child of element.childNodes) {
             if (child.nodeType === Node.TEXT_NODE) {
-                if (countWords(child.textContent) > 0) {
+                if (hasWords(child.textContent)) {
                     child.textContent = framework.translate(child.textContent);
                 }
             }
@@ -158,14 +160,16 @@ window.addEventListener('load', async () => {
     if (!document.body.classList.contains("translate")) {
         return;
     }
-    if (!localStorage.getItem(framework.translationKey)) {
-        try {
-            if (await framework.translateAll()) {
-                window.location.reload();
-            }
-        } catch (e) {
-            add_error(e, true);
+    if (Object.keys(framework.translations).length === newTranslations.length) {
+        console.log("No new translations found.");
+        return;
+    }
+    try {
+        if (await framework.translateAll()) {
+            window.location.reload();
         }
+    } catch (e) {
+        add_error(e, true);
     }
 });
 
@@ -184,40 +188,19 @@ async function query(prompt, options={ json: false, cache: true }) {
         options = { json: options, cache: true };
     }
     const encodedParams = (new URLSearchParams(options)).toString();
-    const secondPartyUrl = `https://g4f.space/ai/auto/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
     let response;
-    try {
-        response = await fetch(secondPartyUrl, { headers: localStorage.getItem("session_token") ? {
-            'Authorization': `Bearer ${localStorage.getItem("session_token")}`
-        } : {}});
-        window.captureUserTierHeaders?.(response.headers);
-    } catch (e) {
-        add_error(`Error fetching URL: \`${secondPartyUrl}\``, e);
-    }
-    if (response && !response.ok) {
-        const delay = parseInt(response.headers.get('Retry-After'), 10);
-        if (delay > 0 && delay <= 60) {
-            console.log(`Retrying after ${delay} seconds...`);
-            await new Promise(resolve => setTimeout(resolve, delay * 1000));
-            try {
-                response = await fetch(secondPartyUrl, { headers: localStorage.getItem("session_token") ? {
-                    'Authorization': `Bearer ${localStorage.getItem("session_token")}`
-                } : {}});
-                window.captureUserTierHeaders?.(response.headers);
-            } catch(e) {
-                add_error(`Error fetching URL: \`${secondPartyUrl}\``, e);
-            }
+    for (const provider of ['auto', 'pollinations', 'openrouter']) {
+        const queryUrl = `https://g4f.space/ai/${provider}/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
+        try {
+            response = await fetch(queryUrl, { headers: localStorage.getItem("session_token") ? {
+                'Authorization': `Bearer ${localStorage.getItem("session_token")}`
+            } : {}});
+            window.captureUserTierHeaders?.(response.headers);
+        } catch (e) {
+            add_error(`Error fetching URL: \`${queryUrl}\``, e);
         }
-    }
-    if (!response || !response.ok) {
-        if (response) {
-            add_error(`Error ${response.status} with URL: \`${secondPartyUrl}\`\n ${await response.clone().text()}`, true);
-        }
-        let firstPartyUrl = `https://g4f.space/ai/pollinations/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
-        response = await fetch(firstPartyUrl, { headers: {"Authorization": `Bearer ${["pk", "_7X0QLj0xijSd0xj7"].join("")}`}});
-        if (!response.ok) {
-            add_error(`Error ${response.status} with URL: \`${firstPartyUrl}\`\n ${await response.clone().text()}`, true);
-            return response;
+        if (response && response.ok) {
+            break;
         }
     }
     if (options.json) {
@@ -239,32 +222,39 @@ framework.translateAll = async () => {
     if (navigator.language === "en" || navigator.language.startsWith("en-")) {
         return false;
     }
-    let allTranslations = {...framework.translations};
-    for (const text of newTranslations) {
+    if (newTranslations.length === 0) {
+        return false;
+    }
+    let allTranslations = {};
+    newTranslations.forEach(text => {
         allTranslations[text] = "";
-    }
-    for (const key in allTranslations) {
-        allTranslations[key] = "";
-    }
+    });
     const jsonTranslations = "\n\n```json\n" + JSON.stringify(allTranslations, null, 4) + "\n```";
     const languageName = navigator.language === "de" ? 'de-DE' : navigator.language === "es" ? 'es-ES' : navigator.language;
     const jsonLanguage = "`" + languageName + "`";
     const prompt = `Translate the following text snippets in a JSON object to ${jsonLanguage}: ${jsonTranslations} (iso-code)`;
-    response = await query(prompt, true);
+    const response = await query(prompt, true);
     let translations = await response.json();
     if (translations[navigator.language] && typeof translations[navigator.language] === 'object' && Object.keys(translations[navigator.language]).length > 0) {
         translations = translations[navigator.language];
     }
-    localStorage.setItem(framework.translationKey, JSON.stringify(translations));
-    return allTranslations;
+    if (typeof translations === 'object' && translations[newTranslations[0]]) {
+        localStorage.setItem(framework.translationKey, JSON.stringify(translations));
+    } else {
+        add_error("Invalid translations received: " + JSON.stringify(translations), true);
+    }
+    return translations;
 }
-function delete_translations() {
+function deleteTranslations() {
+    let hasDeleted = false;
     for (let i = 0; i < appStorage.length; i++) {
         let key = appStorage.key(i);
         if (key.startsWith("translations")) {
             appStorage.removeItem(key);
+            hasDeleted = true;
         }
     }
+    return hasDeleted;
 }
 framework.delete = async (bucketId) => {
     const deleteUrl = `${framework.backendUrl}/backend-api/v2/files/${encodeURIComponent(bucketId)}`;

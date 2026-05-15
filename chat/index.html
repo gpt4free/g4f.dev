@@ -292,7 +292,7 @@
                           <span>Translate UI</span>
                           <i class="fas fa-spinner fa-spin hidden" aria-hidden="true"></i>
                       </button>
-                      <button type="button" onclick="localStorage.getItem(framework.translationKey) ? (delete_translations() || window.location.reload()) : null" aria-label="Delete translations">
+                      <button type="button" onclick="deleteTranslations() && window.location.reload()" aria-label="Delete translations">
                           <i class="fa-solid fa-trash" aria-hidden="true"></i>
                           <span>Delete Translations</span>
                       </button>

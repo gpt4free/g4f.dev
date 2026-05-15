@@ -1407,7 +1407,6 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
                 }
             } catch (e) {
                 add_error("Error updating content:", e);
-                contentInnerPre.innerHTML += message.content;
             }
         }
     } else if (message.type == "log") {
