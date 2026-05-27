@@ -52,9 +52,26 @@ async function createClient(provider, options = {}) {
         options.apiKey = options.apiKey || (typeof window !== "undefined" ? window?.localStorage.getItem("session_token") : undefined);
         provider = "custom";
     }
+    
     if (!providers) {
         providers = await loadProviders();
     }
+
+    if (provider === "custom") {
+        if (!options.baseUrl) {
+            if (typeof localStorage !== "undefined" && localStorage.getItem("Custom-api_base")) {
+                options.baseUrl = localStorage.getItem("Custom-api_base");
+            }
+            if (typeof localStorage !== "undefined" && localStorage.getItem("Custom-api_key")) {
+                options.apiKey = localStorage.getItem("Custom-api_key");
+            }
+            if (!options.baseUrl) {
+                throw new Error("Custom provider requires a baseUrl to be set in options or in localStorage under 'Custom-api_base'.");
+            }
+        }
+        return new Client(options);
+    }
+
     if (!providers[provider]) {
         options.baseUrl = options.baseUrl || `https://g4f.space/api/${provider}`;
         options.apiKey = options.apiKey || (typeof window !== "undefined" ? window?.localStorage.getItem("session_token") : undefined);
@@ -63,27 +80,14 @@ async function createClient(provider, options = {}) {
     }
     const { class: ClientClass = (providerClassMap[provider] || Client), backupUrl, localStorageApiKey, tags, ...config } = providers[provider];
 
-    // Set baseUrl
     if (typeof localStorage !== "undefined" && providerLocalStorage[provider] && localStorage.getItem(providerLocalStorage[provider])) {
         options.apiKey = localStorage.getItem(providerLocalStorage[provider]);
     }
     
-    // Set baseUrl
     if (backupUrl && !options.apiKey && !options.baseUrl) {
         options.baseUrl = backupUrl;
         options.apiKey = (typeof window !== "undefined" ? window?.localStorage.getItem("session_token") : undefined);
         options.sleep = 10000; // 10 seconds delay to avoid rate limiting
-    }
-
-    if (provider === "custom") {
-        if (!options.baseUrl) {
-            if (typeof localStorage !== "undefined" && localStorage.getItem("Custom-api_base")) {
-                options.baseUrl = localStorage.getItem("Custom-api_base");
-            }
-            if (!options.baseUrl) {
-                throw new Error("Custom provider requires a baseUrl to be set in options or in localStorage under 'Custom-api_base'.");
-            }
-        }
     }
 
     if (defaultModels[provider]) {

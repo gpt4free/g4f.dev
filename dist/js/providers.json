@@ -47,7 +47,8 @@
         "openrouter": "OpenRouter-api_key",
         "pollinations": "PollinationsAI-api_key",
         "together": "Together-api_key",
-        "puter": "puter.auth.token"
+        "puter": "puter.auth.token",
+        "custom": "Custom-api_key"
     },
     "checkUrls": {
         "pollinations": "https://gen.pollinations.ai/account/balance",

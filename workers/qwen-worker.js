@@ -25,12 +25,9 @@ const CORS_HEADERS = {
 
 const DEFAULT_MODEL = "qwen3-235b-a22b";
 
-const MODELS = [
-  "qwen3.6-plus", "qwen3.6-max-preview", "qwen3.5-plus", "qwen3.5-omni-plus", "qwen3.6-35b-a3b", "qwen3.5-flash",
-  "qwen3.5-max-2026-03-08", "qwen3.6-plus-preview", "qwen3.5-397b-a17b", "qwen3.5-122b-a10b", "qwen3.5-omni-flash",
-  "qwen3.5-27b", "qwen3.5-35b-a3b", "qwen3-max-2026-01-23", "qwen-plus-2025-07-28", "qwen3-coder-plus",
-  "qwen3-vl-plus", "qwen3-omni-flash-2025-12-01", "qwen-max-latest"
-];
+let cachedModels = null;
+let cachedModelsTimestamp = 0;
+const MODELS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 const DEFAULT_TEMPLATE = {
   deviceId: "84985177a19a010dea49",
@@ -83,7 +80,7 @@ export default {
 
     try {
       if (pathname.endsWith("/models")) {
-        return handleModels();
+        return handleModels(request, env);
       }
 
       if (pathname.endsWith("/chat/completions")) {
@@ -137,12 +134,35 @@ function getApiKey(request, env) {
   return env.QWEN_API_KEY || null;
 }
 
+async function fetchModels(token) {
+  const now = Date.now();
+  if (cachedModels && (now - cachedModelsTimestamp) < MODELS_CACHE_TTL) {
+    return cachedModels;
+  }
+
+  try {
+    const headers = buildDefaultHeaders(token);
+    const response = await fetch(`${QWEN_BASE_URL}/api/models`, { headers });
+    if (response.ok) {
+      const data = await response.json();
+      const models = data?.data || [];
+      cachedModels = models.map(m => {
+        m.vision = m.info?.meta?.capabilities?.vision || null;
+        return m;
+      });
+      cachedModelsTimestamp = now;
+      return cachedModels;
+    }
+  } catch (e) {
+    console.error("Failed to fetch models:", e);
+  }
+
+  // Fallback to default model if fetch fails
+  return cachedModels || [{id: DEFAULT_MODEL}];
+}
+
 function resolveModel(model) {
-  if (!model) return DEFAULT_MODEL;
-  if (MODELS.includes(model)) return model;
-  const lower = model.toLowerCase();
-  const match = MODELS.find(m => m.toLowerCase() === lower);
-  return match || DEFAULT_MODEL;
+  return model || DEFAULT_MODEL;
 }
 
 function extractLastUserMessage(messages) {
@@ -153,6 +173,13 @@ function extractLastUserMessage(messages) {
     const msg = messages[i];
     if (!msg || msg.role !== "user") continue;
     if (typeof msg.content === "string") return msg.content;
+    if (Array.isArray(msg.content)) {
+      for (const part of msg.content) {
+        if (part.type === "text" && typeof part.text === "string") {
+          return part.text;
+        }
+      }
+    }
     try {
       return JSON.stringify(msg.content);
     } catch (_e) {
@@ -536,17 +563,262 @@ function parseSetCookieHeaders(raw) {
   return cookies.join("; ");
 }
 
-async function handleModels() {
-  const modelList = MODELS.map(id => ({
-    id,
-    object: "model",
-    created: Math.floor(Date.now() / 1000),
-    owned_by: "qwen",
-    permission: [],
-    root: id,
-    parent: null
-  }));
-  return jsonResponse({ object: "list", data: modelList });
+// --- Image upload helpers ---
+
+const IMAGE_MIME_TYPES = {
+  "image/png": ".png",
+  "image/jpeg": ".jpg",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+  "image/bmp": ".bmp",
+  "image/svg+xml": ".svg",
+  "image/tiff": ".tiff"
+};
+
+function detectImageType(base64Data) {
+  if (!base64Data) return { extension: ".png", mimeType: "image/png" };
+  // Check magic bytes from the first few chars decoded
+  const head = base64Data.substring(0, 20);
+  // Common base64 prefixes for image types
+  if (head.startsWith("/9j/")) return { extension: ".jpg", mimeType: "image/jpeg" };
+  if (head.startsWith("iVBORw0KGgo")) return { extension: ".png", mimeType: "image/png" };
+  if (head.startsWith("R0lGOD")) return { extension: ".gif", mimeType: "image/gif" };
+  if (head.startsWith("UklGR")) return { extension: ".webp", mimeType: "image/webp" };
+  if (head.startsWith("Qk")) return { extension: ".bmp", mimeType: "image/bmp" };
+  if (head.startsWith("PHN2Zy")) return { extension: ".svg", mimeType: "image/svg+xml" };
+  return { extension: ".png", mimeType: "image/png" };
+}
+
+async function hmacSha256(key, data) {
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw", typeof key === "string" ? new TextEncoder().encode(key) : key,
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", cryptoKey,
+    typeof data === "string" ? new TextEncoder().encode(data) : data);
+  return new Uint8Array(sig);
+}
+
+function toHex(buffer) {
+  return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function getOssHeaders(method, dateStr, stsData, contentType) {
+  const bucketName = stsData.bucketname || "qwen-webui-prod";
+  const filePath = stsData.file_path || "";
+  const accessKeyId = stsData.access_key_id;
+  const accessKeySecret = stsData.access_key_secret;
+  const securityToken = stsData.security_token;
+
+  const headers = {
+    "Content-Type": contentType,
+    "x-oss-content-sha256": "UNSIGNED-PAYLOAD",
+    "x-oss-date": dateStr,
+    "x-oss-security-token": securityToken,
+    "x-oss-user-agent": "aliyun-sdk-js/6.23.0 Chrome 132.0.0.0 on Windows 10 64-bit"
+  };
+
+  const requiredHeaders = ["content-md5", "content-type", "x-oss-content-sha256", "x-oss-date", "x-oss-security-token", "x-oss-user-agent"];
+  const canonicalHeadersList = [];
+  for (const h of requiredHeaders.sort()) {
+    const val = headers[h] || headers[h.toLowerCase()] || "";
+    canonicalHeadersList.push(`${h}:${val}`);
+  }
+  const canonicalHeaders = canonicalHeadersList.join("\n") + "\n";
+  const canonicalUri = `/${bucketName}/${encodeURIComponent(filePath).replace(/%2F/g, "/")}`;
+  const canonicalRequest = `${method}\n${canonicalUri}\n\n${canonicalHeaders}\n\nUNSIGNED-PAYLOAD`;
+
+  const dateParts = dateStr.split("T");
+  const dateScope = `${dateParts[0]}/ap-southeast-1/oss/aliyun_v4_request`;
+  const stringToSign = `OSS4-HMAC-SHA256\n${dateStr}\n${dateScope}\n${await sha256Hex(canonicalRequest)}`;
+
+  const dateKey = await hmacSha256(new TextEncoder().encode(`aliyun_v4${accessKeySecret}`), dateParts[0]);
+  const regionKey = await hmacSha256(dateKey, "ap-southeast-1");
+  const serviceKey = await hmacSha256(regionKey, "oss");
+  const signingKey = await hmacSha256(serviceKey, "aliyun_v4_request");
+  const signature = toHex(await hmacSha256(signingKey, stringToSign));
+
+  headers["authorization"] = `OSS4-HMAC-SHA256 Credential=${accessKeyId}/${dateScope},Signature=${signature}`;
+  return headers;
+}
+
+async function sha256Hex(data) {
+  const hash = await crypto.subtle.digest("SHA-256",
+    typeof data === "string" ? new TextEncoder().encode(data) : data);
+  return toHex(hash);
+}
+
+async function uploadFileToOss(fileUrl, dataBytes, stsData, contentType) {
+  const now = new Date();
+  const dateStr = now.toISOString().replace(/[-:]|\.\d{3}/g, "").slice(0, 15) + "Z";
+  const ossHeaders = await getOssHeaders("PUT", dateStr, stsData, contentType);
+  const uploadUrl = fileUrl.split("?")[0];
+
+  const response = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: ossHeaders,
+    body: dataBytes
+  });
+
+  if (!response.ok) {
+    throw new Error(`OSS upload failed: ${response.status}`);
+  }
+}
+
+function extractImagesFromMessages(messages) {
+  let images = [];
+  if (!Array.isArray(messages)) return images;
+
+  for (const msg of messages) {
+    if (!msg || msg.role !== "user") {
+      images = [];
+      continue;
+    }
+
+    // OpenAI vision format: array of content parts
+    if (Array.isArray(msg.content)) {
+      for (const part of msg.content) {
+        if (part.type === "image_url" && part.image_url?.url) {
+          images.push(part.image_url.url);
+        }
+      }
+    }
+  }
+  return images;
+}
+
+function parseDataUrl(dataUrl) {
+  // data:[<mediatype>][;base64],<data>
+  const match = dataUrl.match(/^data:([^;]*);base64,(.+)$/);
+  if (!match) return null;
+  return { mimeType: match[1] || "image/png", base64: match[2] };
+}
+
+async function prepareFiles(messages, headers) {
+  const imageUrls = extractImagesFromMessages(messages);
+  if (imageUrls.length === 0) return [];
+
+  const files = [];
+  for (const imageUrl of imageUrls) {
+    let dataBytes;
+    let mimeType = "image/png";
+    let extension = ".png";
+
+    // Handle data URLs
+    const parsed = parseDataUrl(imageUrl);
+    if (parsed) {
+      mimeType = parsed.mimeType;
+      dataBytes = Uint8Array.from(atob(parsed.base64), c => c.charCodeAt(0)).buffer;
+      const detected = detectImageType(parsed.base64);
+      extension = detected.extension;
+    } else if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+      // Fetch remote image
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        console.error(`Failed to fetch image: ${imageUrl} (${response.status})`);
+        continue;
+      }
+      dataBytes = await response.arrayBuffer();
+      mimeType = response.headers.get("content-type") || "image/png";
+      // Detect extension from mime type
+      extension = IMAGE_MIME_TYPES[mimeType] || ".png";
+    } else {
+      console.error(`Unsupported image URL format: ${imageUrl.substring(0, 50)}`);
+      continue;
+    }
+
+    const fileSize = dataBytes.byteLength;
+    const fileName = `file-${fileSize}${extension}`;
+
+    // Step 1: Get STS token
+    const stsResponse = await fetch(`${QWEN_BASE_URL}/api/v2/files/getstsToken`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        filename: fileName,
+        filesize: fileSize,
+        filetype: mimeType
+      })
+    });
+
+    if (!stsResponse.ok) {
+      console.error(`STS token request failed: ${stsResponse.status}`);
+      continue;
+    }
+
+    const stsData = await stsResponse.json();
+    if (!stsData.success) {
+      console.error(`STS token error: ${stsData.data?.code}:${stsData.data?.details}`);
+      continue;
+    }
+
+    const fileUrl = stsData.data.file_url;
+    const fileId = stsData.data.file_id;
+
+    // Step 2: Upload to OSS
+    try {
+      await uploadFileToOss(fileUrl, dataBytes, stsData.data, mimeType);
+    } catch (e) {
+      console.error(`OSS upload failed: ${e.message}`);
+      continue;
+    }
+
+    // Determine file class and show type
+    let fileClass = "vision";
+    let showType = "image";
+    let type = "image";
+    if (mimeType.startsWith("video/")) {
+      fileClass = "video";
+      showType = "video";
+      type = "video";
+    } else if (mimeType.startsWith("audio/")) {
+      fileClass = "audio";
+      showType = "audio";
+      type = "audio";
+    }
+
+    const now = Date.now();
+    const fileObj = {
+      type,
+      file: {
+        created_at: now,
+        data: {},
+        filename: fileName,
+        hash: null,
+        id: fileId,
+        meta: {
+          name: fileName,
+          size: fileSize,
+          content_type: mimeType
+        },
+        update_at: now
+      },
+      id: fileId,
+      url: fileUrl,
+      name: fileName,
+      collection_name: "",
+      progress: 0,
+      status: "uploaded",
+      greenNet: "success",
+      size: fileSize,
+      error: "",
+      itemId: crypto.randomUUID(),
+      file_type: mimeType,
+      showType: showType,
+      file_class: fileClass,
+      uploadTaskId: crypto.randomUUID()
+    };
+
+    files.push(fileObj);
+  }
+
+  return files;
+}
+
+async function handleModels(request, env) {
+  const token = getApiKey(request, env);
+  const models = await fetchModels(token);
+  return jsonResponse({ object: "list", data: models });
 }
 
 async function handleChatCompletions(request, env) {
@@ -559,53 +831,60 @@ async function handleChatCompletions(request, env) {
     return jsonResponse({ error: { message: "Invalid JSON body" } }, 400);
   }
 
+  const token = getApiKey(request, env);
   const model = resolveModel(body.model);
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const prompt = extractLastUserMessage(messages);
   const stream = Boolean(body.stream);
   const chat_type = body.chat_type || "t2t";
   const aspect_ratio = body.aspect_ratio;
-  const token = getApiKey(request, env);
-
+  const reasoningEffort = normalizeReasoningEffort(body.reasoning_effort);
+  const conversation = body.conversation || {};
   const headers = await buildQwenHeaders(token);
-  const chatPayload = {
-    title: "New Chat",
-    models: [model],
-    chat_mode: "normal",
-    chat_type,
-    timestamp: Date.now()
-  };
 
-  const createResponse = await fetch(`${QWEN_BASE_URL}/api/v2/chats/new`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(chatPayload)
-  });
+  // Upload images from messages
+  const files = await prepareFiles(messages, headers);
 
-  if (!createResponse.ok) {
-    const errorText = await createResponse.text();
-    return jsonResponse({ error: { message: `Qwen chat.new failed: ${createResponse.status}`, details: errorText } }, 502);
-  }
+  if (!conversation.chat_id) {
+    const chatPayload = {
+      title: "New Chat",
+      models: [model],
+      chat_mode: "normal",
+      chat_type,
+      timestamp: Date.now()
+    };
 
-  const createData = await createResponse.json().catch(() => null);
-  if (!createData || !createData.success || !createData.data?.id) {
-    return jsonResponse({ error: { message: "Failed to initialize Qwen chat", details: createData } }, 502);
-  }
+    const createResponse = await fetch(`${QWEN_BASE_URL}/api/v2/chats/new`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(chatPayload)
+    });
 
-  const conversationId = createData.data.id;
-  const sessionCookies = parseSetCookieHeaders(createResponse.headers.get("set-cookie"));
-  let conversationCookies = headers["Cookie"];
-  if (sessionCookies) {
-    conversationCookies = `${conversationCookies}; ${sessionCookies}`;
+    if (!createResponse.ok) {
+      const errorText = await createResponse.text();
+      return jsonResponse({ error: { message: `Qwen chat.new failed: ${createResponse.status}`, details: errorText } }, 502);
+    }
+
+    const createData = await createResponse.json().catch(() => null);
+    if (!createData || !createData.success || !createData.data?.id) {
+      return jsonResponse({ error: { message: "Failed to initialize Qwen chat", details: createData } }, 502);
+    }
+
+    conversation.chat_id = createData.data.id;
+    const sessionCookies = parseSetCookieHeaders(createResponse.headers.get("set-cookie"));
+    conversation.cookies = headers["Cookie"];
+    if (sessionCookies) {
+      conversation.cookies = `${conversation.cookies}; ${sessionCookies}`;
+    }
   }
 
   const msgPayload = {
     stream: true,
     incremental_output: true,
-    chat_id: conversationId,
+    chat_id: conversation.chat_id,
     chat_mode: "normal",
     model,
-    parent_id: null,
+    parent_id: conversation.parent_id,
     messages: [
       {
         fid: crypto.randomUUID(),
@@ -614,14 +893,10 @@ async function handleChatCompletions(request, env) {
         role: "user",
         content: prompt,
         user_action: "chat",
-        files: [],
+        files: files,
         models: [model],
         chat_type,
-        feature_config: {
-          thinking_enabled: false,
-          output_schema: "phase",
-          thinking_budget: 81920
-        },
+        feature_config: buildFeatureConfig(reasoningEffort, body.thinking_mode),
         sub_chat_type: chat_type
       }
     ]
@@ -631,8 +906,8 @@ async function handleChatCompletions(request, env) {
     msgPayload.size = aspect_ratio;
   }
 
-  const completionHeaders = { ...headers, Cookie: conversationCookies };
-  const completionResponse = await fetch(`${QWEN_BASE_URL}/api/v2/chat/completions?chat_id=${conversationId}`, {
+  const completionHeaders = { ...headers, Cookie: conversation.cookies };
+  const completionResponse = await fetch(`${QWEN_BASE_URL}/api/v2/chat/completions?chat_id=${conversation.chat_id}`, {
     method: "POST",
     headers: completionHeaders,
     body: JSON.stringify(msgPayload)
@@ -647,41 +922,254 @@ async function handleChatCompletions(request, env) {
     const responseHeaders = {
       ...CORS_HEADERS,
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "X-Provider": "qwen",
-      "X-Model": model
+      "Cache-Control": "no-cache"
     };
-    return new Response(completionResponse.body, { headers: responseHeaders });
+    return handleStreamingResponse(completionResponse, responseHeaders, model, conversation);
   }
 
-  const fullText = await collectQwenResponseText(completionResponse.body);
+  const result = await collectQwenResponse(completionResponse.body, conversation);
   return jsonResponse({
-    id: conversationId,
+    id: `chatcmpl-${conversation.chat_id}`,
     object: "chat.completion",
+    created: Math.floor(Date.now() / 1000),
     model,
     choices: [
       {
         index: 0,
         message: {
           role: "assistant",
-          content: fullText
+          content: result.content,
+          ...(result.reasoning ? { reasoning: result.reasoning } : {})
         },
-        finish_reason: "stop"
+        finish_reason: result.finishReason
       }
     ],
-    usage: {
+    usage: result.usage || {
       prompt_tokens: 0,
       completion_tokens: 0,
       total_tokens: 0
-    }
+    },
+    conversation
   });
 }
 
-async function collectQwenResponseText(body) {
+function normalizeReasoningEffort(reasoningEffort) {
+  if (reasoningEffort === "low" || reasoningEffort === "medium" || reasoningEffort === "high") {
+    return reasoningEffort;
+  }
+  return "medium";
+}
+
+function buildFeatureConfig(reasoningEffort, thinkingMode) {
+  const resolvedThinkingMode = thinkingMode || (
+    reasoningEffort === "high" ? "Thinking" :
+    reasoningEffort === "medium" ? "Auto" :
+    "Fast"
+  );
+  const thinkingEnabled = reasoningEffort !== "low";
+
+  if (thinkingEnabled) {
+    return {
+      auto_thinking: resolvedThinkingMode === "Auto",
+      thinking_mode: resolvedThinkingMode,
+      thinking_enabled: true,
+      output_schema: "phase",
+      research_mode: "normal",
+      auto_search: true
+    };
+  }
+
+  return {
+    thinking_enabled: false,
+    output_schema: "phase",
+    thinking_budget: 81920
+  };
+}
+
+function normalizeQwenUsage(usage) {
+  if (!usage || typeof usage !== "object") {
+    return null;
+  }
+
+  const prompt_tokens = usage.prompt_tokens ?? usage.input_tokens ?? usage.promptTokenCount ?? 0;
+  const completion_tokens = usage.completion_tokens ?? usage.output_tokens ?? usage.candidatesTokenCount ?? 0;
+  const total_tokens = usage.total_tokens ?? usage.totalTokenCount ?? (prompt_tokens + completion_tokens);
+  const prompt_tokens_details = usage.prompt_tokens_details ?? usage.input_tokens_details;
+  const completion_tokens_details = usage.completion_tokens_details ?? usage.output_tokens_details;
+
+  return {
+    prompt_tokens,
+    completion_tokens,
+    total_tokens,
+    ...(prompt_tokens_details ? { prompt_tokens_details } : {}),
+    ...(completion_tokens_details ? { completion_tokens_details } : {})
+  };
+}
+
+function parseQwenDelta(data) {
+  const choice = data?.choices?.[0];
+  const delta = choice?.delta || {};
+  const rawContent = typeof delta.content === "string" ? delta.content : "";
+  const phase = delta.phase;
+
+  let content = "";
+  let reasoning = "";
+
+  if (phase === "think") {
+    reasoning = rawContent || delta.reasoning_content || delta.reasoning || "";
+  } else if (phase === "answer") {
+    content = rawContent;
+  } else {
+    reasoning = delta.reasoning_content || delta.reasoning || "";
+    if (!reasoning) {
+      content = rawContent;
+    }
+  }
+
+  let finishReason = choice?.finish_reason;
+  if (finishReason === undefined && phase === "image_gen" && delta.status === "finished") {
+    finishReason = "stop";
+  }
+
+  return {
+    index: choice?.index ?? 0,
+    content,
+    reasoning,
+    finishReason: finishReason ?? null,
+    usage: normalizeQwenUsage(data?.usage)
+  };
+}
+
+function parseQwenStreamLine(line) {
+  const trimmed = line.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const text = trimmed.startsWith("data:") ? trimmed.slice(5).trim() : trimmed;
+  if (!text || text === "[DONE]") {
+    return null;
+  }
+
+  return JSON.parse(text);
+}
+
+function createStreamChunk(data, model, streamId, includeRole = false) {
+  const parsed = parseQwenDelta(data);
+  const delta = {};
+
+  if (includeRole) {
+    delta.role = "assistant";
+  }
+  if (parsed.reasoning) {
+    delta.reasoning_content = parsed.reasoning;
+    delta.reasoning = parsed.reasoning;
+  }
+  if (parsed.content) {
+    delta.content = parsed.content;
+  }
+
+  if (!Object.keys(delta).length && parsed.finishReason === null) {
+    return null;
+  }
+
+  return {
+    id: streamId,
+    object: "chat.completion.chunk",
+    created: Math.floor(Date.now() / 1000),
+    model,
+    choices: [
+      {
+        index: parsed.index,
+        delta,
+        finish_reason: parsed.finishReason
+      }
+    ]
+  };
+}
+
+async function handleStreamingResponse(response, responseHeaders, model, conversation) {
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const encoder = new TextEncoder();
+  const streamId = `chatcmpl-${crypto.randomUUID()}`;
+
+  (async () => {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let usage = null;
+    let sentRole = false;
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          try {
+            const data = parseQwenStreamLine(line);
+            if (!data) continue;
+
+            if (data["response.created"]) {
+              const { chat_id, parent_id } = data["response.created"];
+              conversation["chat_id"] = chat_id;
+              conversation["parent_id"] = parent_id;
+            }
+
+            const parsed = parseQwenDelta(data);
+
+            if (parsed.usage) {
+              usage = parsed.usage;
+            }
+
+            const chunk = createStreamChunk(data, model, streamId, !sentRole && Boolean(parsed.content || parsed.reasoning));
+            if (!chunk) continue;
+            sentRole = true;
+            await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+          } catch (e) {
+            console.error("Parse error:", e);
+          }
+        }
+      }
+
+      if (usage) {
+        await writer.write(encoder.encode(`data: ${JSON.stringify({
+          id: streamId,
+          object: "chat.completion.chunk",
+          created: Math.floor(Date.now() / 1000),
+          model,
+          choices: [],
+          usage,
+          conversation
+        })}\n\n`));
+      }
+
+      await writer.write(encoder.encode("data: [DONE]\n\n"));
+    } catch (e) {
+      console.error("Stream error:", e);
+    } finally {
+      await writer.close();
+    }
+  })();
+
+  return new Response(readable, { headers: responseHeaders });
+}
+
+async function collectQwenResponse(body, conversation) {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  let fullText = "";
+  let content = "";
+  let reasoning = "";
+  let usage = null;
+  let finishReason = "stop";
 
   while (true) {
     const { done, value } = await reader.read();
@@ -691,17 +1179,26 @@ async function collectQwenResponseText(body) {
     buffer = lines.pop() || "";
 
     for (const line of lines) {
-      if (!line.startsWith("data:")) continue;
-      const text = line.slice(5).trim();
-      if (!text || text === "[DONE]") continue;
       try {
-        const jsonData = JSON.parse(text);
-        const choices = jsonData.choices || [];
-        if (choices.length === 0) continue;
-        const delta = choices[0].delta || {};
-        const content = delta.content;
-        if (typeof content === "string") {
-          fullText += content;
+        const jsonData = parseQwenStreamLine(line);
+        if (!jsonData) continue;
+        if (jsonData["response.created"]) {
+          const { chat_id, parent_id } = jsonData["response.created"];
+          conversation["chat_id"] = chat_id;
+          conversation["parent_id"] = parent_id;
+        }
+        const parsed = parseQwenDelta(jsonData);
+        if (parsed.content) {
+          content += parsed.content;
+        }
+        if (parsed.reasoning) {
+          reasoning += parsed.reasoning;
+        }
+        if (parsed.usage) {
+          usage = parsed.usage;
+        }
+        if (parsed.finishReason) {
+          finishReason = parsed.finishReason;
         }
       } catch (_e) {
         continue;
@@ -709,5 +1206,5 @@ async function collectQwenResponseText(body) {
     }
   }
 
-  return fullText;
+  return { content, reasoning, usage, finishReason };
 }
