@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MP4 MOOV Relocator — Drag & Drop</title>
+  <script src="./js/moov-relocator.js" defer></script>
+  <style>
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --border: #333;
+      --text: #e0e0e0;
+      --muted: #9aa0b4;
+      --accent: #7c6af7;
+      --accent-glow: rgba(124, 106, 247, 0.25);
+      --success: #4ade80;
+      --warn: #fbbf24;
+      --error: #f87171;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 680px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      letter-spacing: -0.3px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 28px;
+    }
+
+    /* ── AnonDrop Config ── */
+    .anondrop-config {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 20px;
+    }
+
+    .config-label {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .config-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .config-row input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .config-row input:focus {
+      border-color: var(--accent);
+    }
+
+    .config-row input::placeholder {
+      color: #555;
+    }
+
+    .config-hint {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    /* ── Drop Zone ── */
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+      background: var(--surface);
+      position: relative;
+    }
+
+    .dropzone.dragover {
+      border-color: var(--accent);
+      background: rgba(124, 106, 247, 0.06);
+      box-shadow: 0 0 32px var(--accent-glow);
+    }
+
+    .dropzone-icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .dropzone h2 {
+      font-size: 1.1rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .dropzone p {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .dropzone input[type="file"] {
+      display: none;
+    }
+
+    /* ── File List ── */
+    .file-list {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .file-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: border-color 0.2s;
+    }
+
+    .file-card:hover {
+      border-color: #555;
+    }
+
+    .file-icon {
+      font-size: 1.8rem;
+      flex-shrink: 0;
+    }
+
+    .file-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .file-name {
+      font-weight: 500;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .file-status {
+      font-size: 0.78rem;
+      font-weight: 500;
+      flex-shrink: 0;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    .file-status.pending  { color: var(--muted); background: rgba(154,160,180,0.1); }
+    .file-status.processing { color: var(--warn); background: rgba(251,191,36,0.1); }
+    .file-status.done     { color: var(--success); background: rgba(74,222,128,0.1); }
+    .file-status.error    { color: var(--error); background: rgba(248,113,113,0.1); }
+    .file-status.skipped  { color: var(--muted); background: rgba(154,160,180,0.08); }
+    .file-status.uploading { color: #60a5fa; background: rgba(96,165,250,0.1); }
+
+    .needs-reloc-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 8px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .needs-reloc-badge.yes { color: #fbbf24; background: rgba(251,191,36,0.15); }
+    .needs-reloc-badge.no  { color: var(--muted); background: rgba(154,160,180,0.1); }
+    .needs-reloc-badge.checking { color: #60a5fa; background: rgba(96,165,250,0.1); }
+
+    .anondrop-link {
+      font-size: 0.75rem;
+      color: var(--accent);
+      word-break: break-all;
+      margin-top: 3px;
+    }
+    .anondrop-link a {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+
+    .file-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* ── Buttons ── */
+    button {
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 500;
+      transition: border-color 0.2s, background 0.2s;
+      white-space: nowrap;
+    }
+
+    button:hover:not(:disabled) {
+      border-color: var(--accent);
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    button.primary:hover:not(:disabled) {
+      background: #6a58e8;
+      border-color: #6a58e8;
+    }
+
+    button.small {
+      padding: 5px 10px;
+      font-size: 0.75rem;
+    }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 20px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-left {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    /* ── Progress ── */
+    .progress-bar {
+      margin-top: 16px;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .progress-bar.active {
+      opacity: 1;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 3px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-size: 0.85rem;
+      color: var(--text);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 500px) {
+      .file-card {
+        flex-wrap: wrap;
+      }
+      .file-actions {
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎬 MP4 MOOV Relocator</h1>
+    <p class="subtitle">
+      Drag &amp; drop MP4 files to relocate the MOOV atom to the beginning —
+      enabling progressive download and faster streaming start.
+    </p>
+
+    <!-- AnonDrop Config -->
+    <div class="anondrop-config" id="anondropConfig">
+      <label class="config-label" for="anondropKeyInput">AnonDrop Key</label>
+      <div class="config-row">
+        <input type="text" id="anondropKeyInput" placeholder="Enter your AnonDrop key or leave blank to auto-register" autocomplete="off">
+        <button id="anondropSaveKeyBtn" class="small">Save</button>
+      </div>
+      <p class="config-hint">Key is stored in localStorage. Used to upload relocated videos.</p>
+    </div>
+
+    <!-- Drop Zone -->
+    <div class="dropzone" id="dropzone">
+      <span class="dropzone-icon">📁</span>
+      <h2>Drop MP4 files here</h2>
+      <p>or click to browse — .mp4, .m4v, .mov</p>
+      <input type="file" id="fileInput" accept="video/mp4,video/quicktime,.mp4,.m4v,.mov" multiple>
+    </div>
+
+    <!-- File List -->
+    <div class="file-list" id="fileList"></div>
+
+    <!-- Progress -->
+    <div class="progress-bar" id="progressBar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <button id="processAllBtn" class="primary" disabled>Process All</button>
+        <button id="clearBtn" disabled>Clear</button>
+      </div>
+      <span style="font-size:0.8rem;color:var(--muted)" id="summaryText"></span>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    (() => {
+      // ── Constants ──
+      const ANONDROP_HOST = 'https://anondrop.net';
+      const ANONDROP_KEY_STORAGE = 'anonDropKey';
+
+      // ── DOM refs ──
+      const dropzone = document.getElementById('dropzone');
+      const fileInput = document.getElementById('fileInput');
+      const fileList = document.getElementById('fileList');
+      const processAllBtn = document.getElementById('processAllBtn');
+      const clearBtn = document.getElementById('clearBtn');
+      const progressBar = document.getElementById('progressBar');
+      const progressFill = document.getElementById('progressFill');
+      const summaryText = document.getElementById('summaryText');
+      const toast = document.getElementById('toast');
+      const anondropKeyInput = document.getElementById('anondropKeyInput');
+      const anondropSaveKeyBtn = document.getElementById('anondropSaveKeyBtn');
+
+      // ── State ──
+      /** @type {Array<{id:string, file:File, status:'pending'|'processing'|'done'|'error'|'skipped'|'uploading', resultBlob:Blob|null, wasRelocated:boolean, needsRelocation:boolean|null, errorMsg:string, anondropUrl:string}>} */
+      let files = [];
+
+      // ── AnonDrop Key ──
+      function loadAnonDropKey() {
+        const key = localStorage.getItem(ANONDROP_KEY_STORAGE);
+        if (key) anondropKeyInput.value = key;
+      }
+
+      function saveAnonDropKey() {
+        const key = anondropKeyInput.value.trim();
+        if (key) {
+          localStorage.setItem(ANONDROP_KEY_STORAGE, key);
+          showToast('AnonDrop key saved');
+        } else {
+          localStorage.removeItem(ANONDROP_KEY_STORAGE);
+          showToast('AnonDrop key cleared (will auto-register)');
+        }
+      }
+
+      async function getAnonDropKey() {
+        let key = localStorage.getItem(ANONDROP_KEY_STORAGE);
+        if (key) return key;
+        const response = await fetch(`${ANONDROP_HOST}/register`, { method: 'GET' });
+        if (!response.ok) {
+          throw new Error(`Unable to register AnonDrop key (${response.status})`);
+        }
+        const html = await response.text();
+        const patterns = [
+          /key\s*[=:]\s*([A-Za-z0-9_-]{16,})/i,
+          /YOUR KEY\s*[:\-]?\s*([A-Za-z0-9_-]{16,})/i,
+          /([A-Za-z0-9_-]{24,})/,
+          /([A-Za-z0-9]{16,})/
+        ];
+        let match = null;
+        for (const pat of patterns) {
+          match = html.match(pat);
+          if (match && match[1]) break;
+        }
+        if (!match) {
+          throw new Error('AnonDrop registration failed: key not found');
+        }
+        key = match[1];
+        localStorage.setItem(ANONDROP_KEY_STORAGE, key);
+        anondropKeyInput.value = key;
+        return key;
+      }
+
+      async function uploadToAnonDrop(blob, filename) {
+        const key = await getAnonDropKey();
+        const formData = new FormData();
+        formData.append('file', blob, filename);
+        const response = await fetch(`${ANONDROP_HOST}/upload?key=${encodeURIComponent(key)}`, {
+          method: 'POST',
+          body: formData,
+        });
+        if (!response.ok) {
+          throw new Error(`AnonDrop upload failed (${response.status})`);
+        }
+        const bodyText = await response.text();
+        const urlMatch = bodyText.match(/https?:\/\/[^"'<>\s]+/);
+        if (!urlMatch) {
+          throw new Error('AnonDrop did not return a valid link');
+        }
+        return urlMatch[0];
+      }
+
+      // ── Helpers ──
+      function formatSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+      }
+
+      function uid() {
+        return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      }
+
+      let toastTimer;
+      function showToast(msg) {
+        toast.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+      }
+
+      function updateUI() {
+        const pending = files.filter(f => f.status === 'pending').length;
+        const done = files.filter(f => f.status === 'done').length;
+        const errors = files.filter(f => f.status === 'error').length;
+        const skipped = files.filter(f => f.status === 'skipped').length;
+        const total = files.length;
+
+        processAllBtn.disabled = pending === 0 || total === 0;
+        clearBtn.disabled = total === 0;
+
+        const parts = [];
+        if (done) parts.push(`${done} done`);
+        if (skipped) parts.push(`${skipped} skipped`);
+        if (errors) parts.push(`${errors} failed`);
+        if (pending) parts.push(`${pending} pending`);
+        summaryText.textContent = total ? parts.join(' · ') : '';
+      }
+
+      function updateProgress(current, total) {
+        if (total === 0) {
+          progressBar.classList.remove('active');
+          progressFill.style.width = '0%';
+          return;
+        }
+        progressBar.classList.add('active');
+        progressFill.style.width = ((current / total) * 100) + '%';
+      }
+
+      // ── Render ──
+      function renderFileList() {
+        fileList.innerHTML = files.map(f => {
+          const statusClass = f.status;
+          const statusLabel = {
+            pending: 'Pending',
+            processing: 'Processing…',
+            done: f.wasRelocated ? '✓ Relocated' : '✓ Already OK',
+            error: '✗ Failed',
+            skipped: 'Skipped',
+            uploading: 'Uploading…',
+          }[f.status] || f.status;
+
+          const canDownload = f.status === 'done' && f.resultBlob;
+          const canRetry = f.status === 'error';
+          const canUpload = f.status === 'done' && f.resultBlob && !f.anondropUrl;
+
+          // Needs relocation badge
+          let relocBadge = '';
+          if (f.needsRelocation === true) {
+            relocBadge = '<span class="needs-reloc-badge yes">needs reloc</span>';
+          } else if (f.needsRelocation === false) {
+            relocBadge = '<span class="needs-reloc-badge no">OK</span>';
+          } else if (f.status === 'pending') {
+            relocBadge = '<span class="needs-reloc-badge checking">checking…</span>';
+          }
+
+          // AnonDrop link
+          let anondropHtml = '';
+          if (f.anondropUrl) {
+            anondropHtml = `<div class="anondrop-link">🔗 <a href="${escapeHtml(f.anondropUrl)}" target="_blank" rel="noopener">${escapeHtml(f.anondropUrl)}</a></div>`;
+          }
+
+          return `
+            <div class="file-card">
+              <span class="file-icon">🎞️</span>
+              <div class="file-info">
+                <div class="file-name" title="${escapeHtml(f.file.name)}">${escapeHtml(f.file.name)}${relocBadge}</div>
+                <div class="file-meta">${formatSize(f.file.size)}${f.errorMsg ? ' — ' + escapeHtml(f.errorMsg) : ''}</div>
+                ${anondropHtml}
+              </div>
+              <span class="file-status ${statusClass}">${statusLabel}</span>
+              <div class="file-actions">
+                ${canDownload ? `<button class="small" data-action="download" data-id="${f.id}">⬇ DL</button>` : ''}
+                ${canUpload ? `<button class="small" data-action="upload-anondrop" data-id="${f.id}">☁ Upload</button>` : ''}
+                ${canRetry ? `<button class="small" data-action="retry" data-id="${f.id}">↻ Retry</button>` : ''}
+                <button class="small" data-action="remove" data-id="${f.id}">✕</button>
+              </div>
+            </div>`;
+        }).join('');
+
+        updateUI();
+      }
+
+      function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      // ── File Actions ──
+      function addFiles(newFiles) {
+        const mp4Files = Array.from(newFiles).filter(f => {
+          const ext = f.name.split('.').pop().toLowerCase();
+          return f.type.startsWith('video/') || ['mp4','m4v','mov'].includes(ext);
+        });
+
+        if (mp4Files.length === 0) {
+          showToast('No MP4/MOV files selected');
+          return;
+        }
+
+        if (mp4Files.length < newFiles.length) {
+          showToast(`Skipped ${newFiles.length - mp4Files.length} non-video file(s)`);
+        }
+
+        for (const file of mp4Files) {
+          files.push({
+            id: uid(),
+            file,
+            status: 'pending',
+            resultBlob: null,
+            wasRelocated: false,
+            needsRelocation: null,
+            errorMsg: '',
+            anondropUrl: '',
+          });
+        }
+
+        renderFileList();
+        showToast(`Added ${mp4Files.length} file(s)`);
+
+        // Check each file for relocation needs (async, non-blocking)
+        for (const entry of files) {
+          if (entry.needsRelocation === null) {
+            checkNeedsRelocation(entry);
+          }
+        }
+      }
+
+      async function checkNeedsRelocation(fileEntry) {
+        try {
+          const result = await MoovRelocator.check(fileEntry.file);
+          fileEntry.needsRelocation = result.needsRelocation;
+        } catch (err) {
+          fileEntry.needsRelocation = false;
+        }
+        renderFileList();
+      }
+
+      async function processFile(fileEntry) {
+        fileEntry.status = 'processing';
+        fileEntry.errorMsg = '';
+        renderFileList();
+
+        try {
+          const result = await MoovRelocator.relocate(fileEntry.file);
+          fileEntry.resultBlob = result.blob;
+          fileEntry.wasRelocated = result.wasRelocated;
+          fileEntry.status = 'done';
+        } catch (err) {
+          fileEntry.status = 'error';
+          fileEntry.errorMsg = err.message || 'Unknown error';
+        }
+
+        renderFileList();
+      }
+
+      async function processAll() {
+        const pending = files.filter(f => f.status === 'pending');
+        if (pending.length === 0) return;
+
+        processAllBtn.disabled = true;
+        updateProgress(0, pending.length);
+
+        for (let i = 0; i < pending.length; i++) {
+          await processFile(pending[i]);
+          updateProgress(i + 1, pending.length);
+        }
+
+        updateProgress(0, 0);
+        const doneCount = files.filter(f => f.status === 'done').length;
+        const relocatedCount = files.filter(f => f.status === 'done' && f.wasRelocated).length;
+        showToast(`Processed ${doneCount} file(s) — ${relocatedCount} relocated`);
+      }
+
+      function downloadFile(fileEntry) {
+        if (!fileEntry.resultBlob) return;
+        const url = URL.createObjectURL(fileEntry.resultBlob);
+        const a = document.createElement('a');
+        const name = fileEntry.file.name.replace(/\.\w+$/, '') + '_relocated.mp4';
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      function removeFile(id) {
+        files = files.filter(f => f.id !== id);
+        renderFileList();
+      }
+
+      async function uploadFileToAnonDrop(fileEntry) {
+        if (!fileEntry.resultBlob) return;
+        const prevStatus = fileEntry.status;
+        fileEntry.status = 'uploading';
+        fileEntry.errorMsg = '';
+        renderFileList();
+
+        try {
+          const filename = fileEntry.file.name.replace(/\.\w+$/, '') + '_relocated.mp4';
+          const url = await uploadToAnonDrop(fileEntry.resultBlob, filename);
+          fileEntry.anondropUrl = url;
+          fileEntry.status = 'done';
+          showToast('Uploaded to AnonDrop!');
+        } catch (err) {
+          fileEntry.status = prevStatus;
+          fileEntry.errorMsg = 'Upload: ' + (err.message || 'Unknown error');
+          showToast('AnonDrop upload failed: ' + (err.message || 'Unknown error'));
+        }
+
+        renderFileList();
+      }
+
+      function clearAll() {
+        files = [];
+        renderFileList();
+        updateProgress(0, 0);
+      }
+
+      // ── Event Listeners ──
+      dropzone.addEventListener('click', () => fileInput.click());
+
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+      });
+
+      dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('dragover');
+      });
+
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+          addFiles(e.dataTransfer.files);
+        }
+      });
+
+      fileInput.addEventListener('change', () => {
+        if (fileInput.files.length) {
+          addFiles(fileInput.files);
+          fileInput.value = '';
+        }
+      });
+
+      processAllBtn.addEventListener('click', processAll);
+      clearBtn.addEventListener('click', clearAll);
+
+      anondropSaveKeyBtn.addEventListener('click', saveAnonDropKey);
+      anondropKeyInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') saveAnonDropKey();
+      });
+
+      // Load saved key on init
+      loadAnonDropKey();
+
+      // Delegated clicks on file cards
+      fileList.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const id = btn.dataset.id;
+        const entry = files.find(f => f.id === id);
+        if (!entry) return;
+
+        switch (action) {
+          case 'download':
+            downloadFile(entry);
+            break;
+          case 'upload-anondrop':
+            uploadFileToAnonDrop(entry);
+            break;
+          case 'retry':
+            entry.status = 'pending';
+            entry.errorMsg = '';
+            entry.needsRelocation = null;
+            renderFileList();
+            checkNeedsRelocation(entry);
+            processFile(entry);
+            break;
+          case 'remove':
+            removeFile(id);
+            break;
+        }
+      });
+
+      // Initial render
+      renderFileList();
+    })();
+  </script>
+</body>
+</html>
