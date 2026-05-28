@@ -430,7 +430,7 @@
       async function initFFmpeg() {
         if (ffmpegReady) return;
         try {
-          ffmpeg = new FFmpeg();
+          ffmpeg = new FFmpegWASM();
           
           ffmpeg.on('log', ({ message }) => {
             console.debug('[FFmpeg]', message);
