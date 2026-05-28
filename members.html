@@ -1387,8 +1387,10 @@
             redirectLoginSection.style.display = 'block';
             dashboard.classList.remove('active');
             navUserInfo.style.display = 'none';
-            redirectLoginGithub.style.display = 'none';
-            redirectLoginDiscord.style.display = 'none';
+            if (selectedProvider) {
+                redirectLoginGithub.style.display = 'none';
+                redirectLoginDiscord.style.display = 'none';
+            }
             if (selectedProvider == 'huggingface') {
                 redirectLoginAirforce.style.display = 'none';
                 redirectLoginPollinations.style.display = 'none';
