@@ -225,6 +225,21 @@
       text-decoration: underline;
     }
 
+    .upload-progress-bar {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+
+    .upload-progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
     .file-actions {
       display: flex;
       gap: 6px;
@@ -396,6 +411,8 @@
       // ── Constants ──
       const ANONDROP_HOST = 'https://anondrop.net';
       const ANONDROP_KEY_STORAGE = 'anonDropKey';
+      const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
+      const CHUNKED_UPLOAD_THRESHOLD = 10 * 1024 * 1024; // Use chunked for files > 10MB
 
       // ── DOM refs ──
       const dropzone = document.getElementById('dropzone');
@@ -411,7 +428,7 @@
       const anondropSaveKeyBtn = document.getElementById('anondropSaveKeyBtn');
 
       // ── State ──
-      /** @type {Array<{id:string, file:File, status:'pending'|'processing'|'done'|'error'|'skipped'|'uploading', resultBlob:Blob|null, wasRelocated:boolean, needsRelocation:boolean|null, errorMsg:string, anondropUrl:string}>} */
+      /** @type {Array<{id:string, file:File, status:'pending'|'processing'|'done'|'error'|'skipped'|'uploading', resultBlob:Blob|null, wasRelocated:boolean, needsRelocation:boolean|null, errorMsg:string, anondropUrl:string, uploadProgress:number}>} */
       let files = [];
 
       // ── AnonDrop Key ──
@@ -461,6 +478,13 @@
 
       async function uploadToAnonDrop(blob, filename) {
         const key = await getAnonDropKey();
+        
+        // Use chunked upload for large files
+        if (blob.size > CHUNKED_UPLOAD_THRESHOLD) {
+          return uploadToAnonDropChunked(blob, filename, key);
+        }
+
+        // Single upload for small files
         const formData = new FormData();
         formData.append('file', blob, filename);
         const response = await fetch(`${ANONDROP_HOST}/upload?key=${encodeURIComponent(key)}`, {
@@ -476,6 +500,105 @@
           throw new Error('AnonDrop did not return a valid link');
         }
         return urlMatch[0];
+      }
+
+      async function initiateChunkedUpload(key, filename) {
+        const response = await fetch(
+          `${ANONDROP_HOST}/initiateupload?key=${encodeURIComponent(key)}&filename=${encodeURIComponent(filename)}`,
+          { method: 'GET' }
+        );
+        if (!response.ok) {
+          throw new Error(`Failed to initiate upload (${response.status})`);
+        }
+        const session_hash = await response.json();
+        if (!session_hash) {
+          throw new Error('No session hash received from server');
+        }
+        return session_hash;
+      }
+
+      async function uploadChunk(sessionHash, chunk, chunkIndex) {
+        const formData = new FormData();
+        formData.append('file', chunk);
+        formData.append('chunk_index', chunkIndex.toString());
+        
+        const response = await fetch(
+          `${ANONDROP_HOST}/uploadchunk?session_hash=${encodeURIComponent(sessionHash)}`,
+          {
+            method: 'POST',
+            body: formData,
+          }
+        );
+        if (!response.ok) {
+          throw new Error(`Chunk upload failed (${response.status})`);
+        }
+        return response.text();
+      }
+
+      async function endChunkedUpload(sessionHash) {
+        const response = await fetch(
+          `${ANONDROP_HOST}/endupload?session_hash=${encodeURIComponent(sessionHash)}`,
+          { method: 'GET' }
+        );
+        if (!response.ok) {
+          throw new Error(`Failed to finalize upload (${response.status})`);
+        }
+        const responseText = await response.text();
+        
+        // Try to parse as JSON first
+        try {
+          const data = JSON.parse(responseText);
+          if (data.file_url) {
+            return data.file_url;
+          }
+        } catch (e) {
+          // Not JSON, try parsing as HTML
+        }
+        
+        // Parse HTML response - extract URL from href or content
+        const hrefMatch = responseText.match(/href=['"]([^'"]+)['"]/);
+        if (hrefMatch && hrefMatch[1]) {
+          return hrefMatch[1];
+        }
+        
+        // Try to extract URL from plain text
+        const urlMatch = responseText.match(/https?:\/\/[^\s<>"']+/);
+        if (urlMatch) {
+          return urlMatch[0];
+        }
+        
+        throw new Error('No file URL found in server response');
+      }
+
+      async function uploadToAnonDropChunked(blob, filename, key, onProgress) {
+        try {
+          // Initiate chunked upload
+          const sessionHash = await initiateChunkedUpload(key, filename);
+          
+          // Calculate chunks
+          const totalChunks = Math.ceil(blob.size / CHUNK_SIZE);
+          let uploadedBytes = 0;
+
+          // Upload each chunk
+          for (let i = 0; i < totalChunks; i++) {
+            const start = i * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, blob.size);
+            const chunk = blob.slice(start, end);
+
+            await uploadChunk(sessionHash, chunk, i);
+
+            uploadedBytes = end;
+            if (onProgress) {
+              onProgress(uploadedBytes, blob.size);
+            }
+          }
+
+          // Finalize upload
+          const fileUrl = await endChunkedUpload(sessionHash);
+          return fileUrl;
+        } catch (error) {
+          throw new Error(`Chunked upload failed: ${error.message}`);
+        }
       }
 
       // ── Helpers ──
@@ -560,12 +683,19 @@
             anondropHtml = `<div class="anondrop-link">🔗 <a href="${escapeHtml(f.anondropUrl)}" target="_blank" rel="noopener">${escapeHtml(f.anondropUrl)}</a></div>`;
           }
 
+          // Upload progress bar for chunked uploads
+          let uploadProgressHtml = '';
+          if (f.status === 'uploading' && f.uploadProgress > 0) {
+            uploadProgressHtml = `<div class="upload-progress-bar"><div class="upload-progress-fill" style="width: ${f.uploadProgress}%"></div></div>`;
+          }
+
           return `
             <div class="file-card">
               <span class="file-icon">🎞️</span>
               <div class="file-info">
                 <div class="file-name" title="${escapeHtml(f.file.name)}">${escapeHtml(f.file.name)}${relocBadge}</div>
                 <div class="file-meta">${formatSize(f.file.size)}${f.errorMsg ? ' — ' + escapeHtml(f.errorMsg) : ''}</div>
+                ${uploadProgressHtml}
                 ${anondropHtml}
               </div>
               <span class="file-status ${statusClass}">${statusLabel}</span>
@@ -613,6 +743,7 @@
             needsRelocation: null,
             errorMsg: '',
             anondropUrl: '',
+            uploadProgress: 0,
           });
         }
 
@@ -696,17 +827,38 @@
         const prevStatus = fileEntry.status;
         fileEntry.status = 'uploading';
         fileEntry.errorMsg = '';
+        fileEntry.uploadProgress = 0;
         renderFileList();
 
         try {
           const filename = fileEntry.file.name.replace(/\.\w+$/, '') + '_relocated.mp4';
-          const url = await uploadToAnonDrop(fileEntry.resultBlob, filename);
+          const key = await getAnonDropKey();
+          
+          let url;
+          if (fileEntry.resultBlob.size > CHUNKED_UPLOAD_THRESHOLD) {
+            // Use chunked upload with progress tracking
+            url = await uploadToAnonDropChunked(
+              fileEntry.resultBlob,
+              filename,
+              key,
+              (uploadedBytes, totalBytes) => {
+                fileEntry.uploadProgress = (uploadedBytes / totalBytes) * 100;
+                renderFileList();
+              }
+            );
+          } else {
+            // Single upload
+            url = await uploadToAnonDrop(fileEntry.resultBlob, filename);
+          }
+          
           fileEntry.anondropUrl = url;
           fileEntry.status = 'done';
+          fileEntry.uploadProgress = 0;
           showToast('Uploaded to AnonDrop!');
         } catch (err) {
           fileEntry.status = prevStatus;
           fileEntry.errorMsg = 'Upload: ' + (err.message || 'Unknown error');
+          fileEntry.uploadProgress = 0;
           showToast('AnonDrop upload failed: ' + (err.message || 'Unknown error'));
         }
 
@@ -777,6 +929,7 @@
             entry.status = 'pending';
             entry.errorMsg = '';
             entry.needsRelocation = null;
+            entry.uploadProgress = 0;
             renderFileList();
             checkNeedsRelocation(entry);
             processFile(entry);
