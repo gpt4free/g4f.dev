@@ -405,7 +405,7 @@
   <!-- Toast -->
   <div class="toast" id="toast"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd/ffmpeg.min.js"></script>
+  <script src="https://stream.g4f-dev.workers.dev/https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd/ffmpeg.min.js"></script>
 
   <script>
     const { FFmpeg, fetchFile } = FFmpegWASM;
@@ -436,7 +436,7 @@
             console.debug('[FFmpeg]', message);
           });
 
-          const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd';
+          const baseURL = 'https://stream.g4f-dev.workers.dev/https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd';
           await ffmpeg.load({
             coreURL: `${baseURL}/ffmpeg-core.js`,
             wasmURL: `${baseURL}/ffmpeg-core.wasm`,
