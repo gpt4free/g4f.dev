@@ -406,8 +406,8 @@
   <div class="toast" id="toast"></div>
 
   <script type="module">
-    import { FFmpeg } from "assets/ffmpeg/package/dist/esm/index.js";
-    import { fetchFile } from "assets/util/package/dist/esm/index.js";
+    import { FFmpeg } from "./assets/ffmpeg/package/dist/esm/index.js";
+    import { fetchFile } from "./assets/util/package/dist/esm/index.js";
 
     (() => {
       // ── DOM refs ──
@@ -435,7 +435,7 @@
             console.debug('[FFmpeg]', message);
           });
 
-          const baseURL = 'assets/core-mt/package/dist/esm';
+          const baseURL = './assets/core-mt/package/dist/esm';
           await ffmpeg.load({
             coreURL: `${baseURL}/ffmpeg-core.js`,
             wasmURL: `${baseURL}/ffmpeg-core.wasm`,
