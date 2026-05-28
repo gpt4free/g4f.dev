@@ -1,8 +1,8 @@
 <html>
   <head>
     <link rel="stylesheet" href="style.css">
-    <script src="/assets/ffmpeg/package/dist/umd/ffmpeg.js"></script>
-    <script src="/assets/util/package/dist/umd/index.js"></script>
+    <script src="assets/ffmpeg/package/dist/umd/ffmpeg.js"></script>
+    <script src="assets/util/package/dist/umd/index.js"></script>
   </head>
 
   <body>
@@ -26,7 +26,7 @@
 	    message.innerHTML = `${time / 1000000} s`;
           });
           await ffmpeg.load({
-            coreURL: "/assets/core/package/dist/umd/ffmpeg-core.js",
+            coreURL: "assets/core/package/dist/umd/ffmpeg-core.js",
           });
         }
         message.innerHTML = "Start Concating";
