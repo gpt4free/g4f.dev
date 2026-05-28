@@ -1482,7 +1482,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
                 if (!spinner) {
                     spinner = document.createElement('div');
                     spinner.className = 'tool-call-spinner';
-                    spinner.innerHTML = `<span>${framework.trans_escape('Waiting for tool response...')}</span>`;
+                    spinner.innerHTML = `<span>${framework.translate('Waiting for tool response...')}</span>`;
                     content_storage[message_id].inner.appendChild(spinner);
                 }
             }
@@ -3642,7 +3642,7 @@ async function load_providers(providers, provider_options, providersListContaine
                 option.classList.add("provider-item");
                 let api_key = appStorage.getItem(`${name}-api_key`);
                 option.innerHTML = `
-                    <span class="label">${framework.trans_escape("Enable")} ${provider.label}</span>
+                    <span class="label">${framework.translate("Enable")} ${provider.label}</span>
                     <input id="Provider${name}" type="checkbox" name="Provider${name}" value="${name}" class="provider" ${(provider.active_by_default || api_key) ? 'checked="checked"' : ''}/>
                     <label for="Provider${name}" class="toogle" title="Remove provider from dropdown"></label>
                 `;
@@ -3735,12 +3735,12 @@ function load_provider_login_urls(providersListContainer, providers = []) {
         
         // Add OAuth button for providers that support it (server-side endpoint)
         if (provider.login) {
-            oauthButton = `<button class="oauth-btn" data-provider="${provider.name}" data-login-url="/backend-api/v2/oauth/${provider.name}" title="${framework.trans_escape("Login to")} ${framework.escape(label)}">${framework.trans_escape('Login')}</button>`;
+            oauthButton = `<button class="oauth-btn" data-provider="${provider.name}" data-login-url="/backend-api/v2/oauth/${provider.name}" title="${framework.translate("Login to")} ${framework.escape(label)}">${framework.translate('Login')}</button>`;
         }
 
         const apiKeyLink = ["PollinationsAI", "HuggingFace", "ApiAirforce"].includes(provider.name)
-            ? `<a href="https://g4f.dev/members?provider=${login_provider}&redirect=${encodeURIComponent(window.location.href.split("#")[0])}" title="${framework.trans_escape("Login to")} ${framework.escape(label)}">${framework.trans_escape('Login')}</a>`
-            : (provider.login_url ? `<a href="${framework.escape(provider.login_url)}" target="_blank" title="${framework.trans_escape("Login to")} ${framework.escape(label)}">${framework.trans_escape('Get API key')}</a>` : "");
+            ? `<a href="https://g4f.dev/members?provider=${login_provider}&redirect=${encodeURIComponent(window.location.href.split("#")[0])}" title="${framework.translate("Login to")} ${framework.escape(label)}">${framework.translate('Login')}</a>`
+            : (provider.login_url ? `<a href="${framework.escape(provider.login_url)}" target="_blank" title="${framework.translate("Login to")} ${framework.escape(label)}">${framework.translate('Get API key')}</a>` : "");
         const inputId = `${provider.name}-api_key`;
         const storageKey = provider.name == "PuterJS" ? "puter.auth.token" : inputId;
         providerBox.innerHTML = `
@@ -5272,6 +5272,11 @@ function logRequestResponse(event, messageId, count=0) {
     }
     pre.appendChild(code)
     details.appendChild(pre);
+    const detailsList = logContent.getElementsByTagName('details');
+    if (detailsList.length >= 100) {
+         logContent.removeChild(detailsList[0]);
+    }
+
     logContent.appendChild(details);
     if (window.hljs) {
         hljs.highlightElement(code);

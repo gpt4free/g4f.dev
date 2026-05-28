@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Converter — WebM & MP4</title>
+  <style>
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --border: #333;
+      --text: #e0e0e0;
+      --muted: #9aa0b4;
+      --accent: #7c6af7;
+      --accent-glow: rgba(124, 106, 247, 0.25);
+      --success: #4ade80;
+      --warn: #fbbf24;
+      --error: #f87171;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 680px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      letter-spacing: -0.3px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 28px;
+    }
+
+    /* ── Config ── */
+    .config-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 20px;
+    }
+
+    .config-label {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .config-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .config-row select,
+    .config-row input {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .config-row select:focus,
+    .config-row input:focus {
+      border-color: var(--accent);
+    }
+
+    /* ── Drop Zone ── */
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+      background: var(--surface);
+      position: relative;
+    }
+
+    .dropzone.dragover {
+      border-color: var(--accent);
+      background: rgba(124, 106, 247, 0.06);
+      box-shadow: 0 0 32px var(--accent-glow);
+    }
+
+    .dropzone-icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .dropzone h2 {
+      font-size: 1.1rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .dropzone p {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .dropzone input[type="file"] {
+      display: none;
+    }
+
+    /* ── File List ── */
+    .file-list {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .file-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: border-color 0.2s;
+    }
+
+    .file-card:hover {
+      border-color: #555;
+    }
+
+    .file-icon {
+      font-size: 1.8rem;
+      flex-shrink: 0;
+    }
+
+    .file-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .file-name {
+      font-weight: 500;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .file-format {
+      font-size: 0.75rem;
+      color: var(--text);
+      margin-top: 3px;
+    }
+
+    .file-status {
+      font-size: 0.78rem;
+      font-weight: 500;
+      flex-shrink: 0;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    .file-status.pending  { color: var(--muted); background: rgba(154,160,180,0.1); }
+    .file-status.processing { color: var(--warn); background: rgba(251,191,36,0.1); }
+    .file-status.done     { color: var(--success); background: rgba(74,222,128,0.1); }
+    .file-status.error    { color: var(--error); background: rgba(248,113,113,0.1); }
+
+    .progress-container {
+      margin-top: 8px;
+      display: none;
+    }
+
+    .progress-container.show {
+      display: block;
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    .progress-text {
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    .file-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* ── Buttons ── */
+    button {
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 500;
+      transition: border-color 0.2s, background 0.2s;
+      white-space: nowrap;
+    }
+
+    button:hover:not(:disabled) {
+      border-color: var(--accent);
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    button.primary:hover:not(:disabled) {
+      background: #6a58e8;
+      border-color: #6a58e8;
+    }
+
+    button.small {
+      padding: 5px 10px;
+      font-size: 0.75rem;
+    }
+
+    button.download {
+      background: var(--success);
+      border-color: var(--success);
+      color: #000;
+    }
+
+    button.download:hover:not(:disabled) {
+      background: #22c55e;
+      border-color: #22c55e;
+    }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 20px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-left {
+      display: flex;
+      gap: 8px;
+    }
+
+    .summary-text {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-size: 0.85rem;
+      color: var(--text);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+
+    .toast.error {
+      border-color: var(--error);
+      color: var(--error);
+    }
+
+    .toast.success {
+      border-color: var(--success);
+      color: var(--success);
+    }
+
+    /* ── Loading ── */
+    .loading {
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--warn);
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    @media (max-width: 500px) {
+      .file-card {
+        flex-wrap: wrap;
+      }
+      .file-actions {
+        width: 100%;
+        justify-content: flex-end;
+      }
+      .config-row {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎬 Video Converter</h1>
+    <p class="subtitle">
+      Convert videos to WebM or MP4 format. Supports AVI, MOV, MKV, FLV, and more.
+      Processing happens in your browser — no uploads to external servers.
+    </p>
+
+    <!-- Format Config -->
+    <div class="config-section">
+      <label class="config-label">Output Format</label>
+      <div class="config-row">
+        <select id="outputFormat">
+          <option value="mp4">MP4 (H.264)</option>
+          <option value="webm">WebM (VP8/VP9)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Drop Zone -->
+    <div class="dropzone" id="dropzone">
+      <span class="dropzone-icon">📹</span>
+      <h2>Drop video files here</h2>
+      <p>or click to browse — .avi, .mov, .mkv, .flv, .webm, .mp4, and more</p>
+      <input type="file" id="fileInput" accept="video/*" multiple>
+    </div>
+
+    <!-- File List -->
+    <div class="file-list" id="fileList"></div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <button id="processAllBtn" class="primary" disabled>Convert All</button>
+        <button id="clearBtn" disabled>Clear</button>
+      </div>
+      <span class="summary-text" id="summaryText"></span>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd/ffmpeg.min.js"></script>
+
+  <script>
+    const { FFmpeg, fetchFile } = FFmpegWASM;
+
+    (() => {
+      // ── DOM refs ──
+      const dropzone = document.getElementById('dropzone');
+      const fileInput = document.getElementById('fileInput');
+      const fileList = document.getElementById('fileList');
+      const processAllBtn = document.getElementById('processAllBtn');
+      const clearBtn = document.getElementById('clearBtn');
+      const summaryText = document.getElementById('summaryText');
+      const toast = document.getElementById('toast');
+      const outputFormatSelect = document.getElementById('outputFormat');
+
+      // ── State ──
+      let files = [];
+      let ffmpeg = null;
+      let ffmpegReady = false;
+
+      // ── Initialize FFmpeg ──
+      async function initFFmpeg() {
+        if (ffmpegReady) return;
+        try {
+          ffmpeg = new FFmpeg();
+          
+          ffmpeg.on('log', ({ message }) => {
+            console.debug('[FFmpeg]', message);
+          });
+
+          const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/umd';
+          await ffmpeg.load({
+            coreURL: `${baseURL}/ffmpeg-core.js`,
+            wasmURL: `${baseURL}/ffmpeg-core.wasm`,
+          });
+          
+          ffmpegReady = true;
+          showToast('✓ Video converter ready', 'success');
+        } catch (error) {
+          console.error('FFmpeg init failed:', error);
+          showToast('Failed to initialize video converter: ' + error.message, 'error');
+        }
+      }
+
+      // ── Toast ──
+      function showToast(message, type = 'default') {
+        toast.textContent = message;
+        toast.className = `toast show ${type}`;
+        setTimeout(() => toast.classList.remove('show'), 3000);
+      }
+
+      // ── File handling ──
+      function handleFiles(newFiles) {
+        Array.from(newFiles).forEach(file => {
+          if (!file.type.startsWith('video/')) return;
+          const id = Math.random().toString(36).slice(2, 9);
+          files.push({
+            id,
+            file,
+            status: 'pending',
+            resultBlob: null,
+            resultFilename: '',
+            errorMsg: '',
+            progress: 0,
+          });
+        });
+        updateUI();
+      }
+
+      // ── Drag & Drop ──
+      dropzone.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+      });
+
+      dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('dragover');
+      });
+
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+      });
+
+      // ── Render file cards ──
+      function updateUI() {
+        fileList.innerHTML = '';
+        files.forEach(f => {
+          const card = document.createElement('div');
+          card.className = 'file-card';
+          const ext = f.file.name.split('.').pop().toUpperCase();
+          const outputExt = outputFormatSelect.value === 'mp4' ? 'MP4' : 'WEBM';
+          
+          const statusClass = f.status === 'done' || f.status === 'error' || f.status === 'processing' 
+            ? f.status 
+            : 'pending';
+
+          card.innerHTML = `
+            <div class="file-icon">🎬</div>
+            <div class="file-info">
+              <div class="file-name">${f.file.name}</div>
+              <div class="file-meta">${formatBytes(f.file.size)}</div>
+              <div class="file-format">${ext} → ${outputExt}</div>
+              ${f.status === 'processing' ? `
+                <div class="progress-container show">
+                  <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${f.progress}%"></div>
+                  </div>
+                  <div class="progress-text">Converting <span class="loading"></span></div>
+                </div>
+              ` : ''}
+              ${f.errorMsg ? `<div class="file-meta" style="color: var(--error)">${f.errorMsg}</div>` : ''}
+            </div>
+            <div class="file-status ${statusClass}">
+              ${f.status === 'pending' ? 'Pending' : 
+                f.status === 'processing' ? 'Converting' : 
+                f.status === 'done' ? 'Done' : 
+                'Error'}
+            </div>
+            ${f.status === 'done' ? `
+              <div class="file-actions">
+                <button class="small download" onclick="downloadFile('${f.id}')">Download</button>
+              </div>
+            ` : ''}
+          `;
+          fileList.appendChild(card);
+        });
+
+        const done = files.filter(f => f.status === 'done').length;
+        const errors = files.filter(f => f.status === 'error').length;
+        const processing = files.filter(f => f.status === 'processing').length;
+
+        if (files.length > 0) {
+          summaryText.textContent = `${done} done, ${processing} converting, ${errors} errors`;
+          processAllBtn.disabled = files.length === 0 || processing > 0 || done === files.length;
+          clearBtn.disabled = false;
+        } else {
+          summaryText.textContent = '';
+          processAllBtn.disabled = true;
+          clearBtn.disabled = true;
+        }
+      }
+
+      // ── Convert video ──
+      async function convertVideo(fileEntry) {
+        if (!ffmpegReady) {
+          fileEntry.status = 'error';
+          fileEntry.errorMsg = 'FFmpeg not ready';
+          updateUI();
+          return;
+        }
+
+        fileEntry.status = 'processing';
+        updateUI();
+
+        try {
+          const inputName = `input_${fileEntry.id}`;
+          const outputExt = outputFormatSelect.value === 'mp4' ? 'mp4' : 'webm';
+          const outputName = `output_${fileEntry.id}.${outputExt}`;
+
+          // Read file and write to FFmpeg's filesystem
+          const arrayBuffer = await fileEntry.file.arrayBuffer();
+          await ffmpeg.writeFile(inputName, new Uint8Array(arrayBuffer));
+
+          // Prepare FFmpeg command
+          const command = [
+            '-i', inputName,
+            '-c:v', outputExt === 'mp4' ? 'libx264' : 'libvpx',
+            '-preset', 'fast',
+            '-crf', '28',
+            outputName
+          ];
+
+          // Run FFmpeg
+          await ffmpeg.exec(command);
+
+          // Read output file
+          const data = await ffmpeg.readFile(outputName);
+          const mimeType = outputExt === 'mp4' ? 'video/mp4' : 'video/webm';
+          const blob = new Blob([data.buffer], { type: mimeType });
+
+          // Cleanup
+          await ffmpeg.deleteFile(inputName);
+          await ffmpeg.deleteFile(outputName);
+
+          fileEntry.status = 'done';
+          fileEntry.resultBlob = blob;
+          fileEntry.resultFilename = `converted_${Date.now()}.${outputExt}`;
+          fileEntry.progress = 100;
+        } catch (error) {
+          fileEntry.status = 'error';
+          fileEntry.errorMsg = error.message || 'Conversion failed';
+          console.error('Conversion error:', error);
+        }
+
+        updateUI();
+
+        // Process next file if any
+        const nextFile = files.find(f => f.status === 'pending');
+        if (nextFile) {
+          await convertVideo(nextFile);
+        }
+      }
+
+      // ── Process all ──
+      processAllBtn.addEventListener('click', async () => {
+        if (!ffmpegReady) {
+          showToast('FFmpeg not ready yet, please wait...', 'error');
+          return;
+        }
+        
+        const pendingFiles = files.filter(f => f.status === 'pending');
+        if (pendingFiles.length > 0) {
+          await convertVideo(pendingFiles[0]);
+        }
+      });
+
+      // ── Download ──
+      window.downloadFile = function(fileId) {
+        const f = files.find(f => f.id === fileId);
+        if (f && f.resultBlob) {
+          const url = URL.createObjectURL(f.resultBlob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = f.resultFilename;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      };
+
+      // ── Clear ──
+      clearBtn.addEventListener('click', () => {
+        files = [];
+        fileInput.value = '';
+        updateUI();
+      });
+
+      // ── Utility ──
+      function formatBytes(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+      }
+
+      // Load FFmpeg on page load
+      window.addEventListener('load', () => {
+        initFFmpeg();
+      });
+
+      // Initial update
+      updateUI();
+    })();
+  </script>
+</body>
+</html>

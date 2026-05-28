@@ -95,6 +95,12 @@ framework.connectToBackend = async (connectStatus) => {
     }
 };
 
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+}
+
 let newTranslations = [];
 framework.translate = (text) => {
     const stripText = text.replace(/\s+/g, ' ').trim();
@@ -105,7 +111,7 @@ framework.translate = (text) => {
             newTranslations.push(stripText);
         }
         if (stripText in framework.translations && framework.translations[stripText]) {
-            return (startWithSpace ? " " : "") + framework.translations[stripText] + (endWithSpace ? " " : "");
+            return (startWithSpace ? " " : "") + escapeHtml(framework.translations[stripText]) + (endWithSpace ? " " : "");
         }
     }
     return text;
@@ -335,11 +341,6 @@ const renderMarkdown = (content) => {
     }
     return content;
 };
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.appendChild(document.createTextNode(str));
-    return div.innerHTML;
-}
 function nl2br(str) {
     const div = document.createElement('div');
     div.appendChild(document.createTextNode(str));
@@ -416,9 +417,6 @@ framework.query = query;
 framework.markdown = renderMarkdown;
 framework.filterMarkdown = filterMarkdown;
 framework.escape = escapeHtml;
-framework.trans_escape = (text) => {
-    return framework.escape(framework.translate(text));
-}
 framework.getHeaders = getHeaders;
 framework.getPublicKey = getPublicKey;
 framework.nl2br = nl2br;
