@@ -5,7 +5,6 @@
         "api.airforce": {"baseUrl": "https://api.airforce/v1", "tags": "🎨 👓", "sleep": 60000},
         "master": {"label": "master by api.airforce", "baseUrl": "https://g4f.space/api/api.airforce", "backupUrl": "https://g4f.space/api/api.airforce", "tags": "🎨 👓", "sleep": 10000},
         "audio": {"label": "audio by g4f.dev", "baseUrl": "https://g4f.space/api/audio", "backupUrl": "https://g4f.space/api/audio", "tags": "🎧", "sleep": 10000},
-        "azure": {"label": "azure by g4f.dev", "baseUrl": "https://g4f.space/api/azure", "backupUrl": "https://g4f.space/api/azure", "tags": "👓", "sleep": 10000},
         "deepinfra": {"baseUrl": "https://api.deepinfra.com/v1/openai", "tags": "🎨 👓", "modelsEndpoint": "https://api.deepinfra.com/models/featured"},
         "gemini": {"baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai", "backupUrl": "https://g4f.space/api/gemini-v1beta", "tags": "👓"},
         "gpt4free.pro": {"baseUrl": "https://gpt4free.pro/v1", "tags": "😎"},
