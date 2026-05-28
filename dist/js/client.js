@@ -114,8 +114,7 @@ const toBase64 = file => new Promise((resolve, reject) => {
 class Client {
     constructor(options = {}) {
         if (!options.baseUrl && !options.apiEndpoint) {
-            options.baseUrl = "https://g4f.space/api/auto";
-            options.apiEndpoint = "https://g4f.space/ai/";
+            options.baseUrl = "https://g4f.space/v1";
             options.sleep = 10000;
         }
         this.proxyManager = new CorsProxyManager();
@@ -545,7 +544,7 @@ class PollinationsAI extends Client {
                     limitTokens: 1
                 };
                 if (typeof window !== "undefined") {
-                    window.dispatchEvent(new CustomEvent('userTierUpdate', { detail: userInfo }));
+                    // window.dispatchEvent(new CustomEvent('userTierUpdate', { detail: userInfo }));
                 }
             }
             return d;
