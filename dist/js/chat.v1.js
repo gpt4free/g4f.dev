@@ -3730,7 +3730,7 @@ function load_provider_login_urls(providersListContainer, providers = []) {
         providerBox.addEventListener('mouseenter', checkStatus);
         const label = provider.label || provider.name;
         childs = childs.map((child) => `${child}-api_key`).join(" ");
-        const login_provider = provider.name.replace("AI", "").toLowerCase();
+        const login_provider = provider.name.replace("AI", "").replace("Api", "").toLowerCase();
         let oauthButton = "";
         
         // Add OAuth button for providers that support it (server-side endpoint)
@@ -3738,7 +3738,7 @@ function load_provider_login_urls(providersListContainer, providers = []) {
             oauthButton = `<button class="oauth-btn" data-provider="${provider.name}" data-login-url="/backend-api/v2/oauth/${provider.name}" title="${framework.trans_escape("Login to")} ${framework.escape(label)}">${framework.trans_escape('Login')}</button>`;
         }
 
-        const apiKeyLink = ["PollinationsAI", "HuggingFace"].includes(provider.name)
+        const apiKeyLink = ["PollinationsAI", "HuggingFace", "ApiAirforce"].includes(provider.name)
             ? `<a href="https://g4f.dev/members?provider=${login_provider}&redirect=${encodeURIComponent(window.location.href.split("#")[0])}" title="${framework.trans_escape("Login to")} ${framework.escape(label)}">${framework.trans_escape('Login')}</a>`
             : (provider.login_url ? `<a href="${framework.escape(provider.login_url)}" target="_blank" title="${framework.trans_escape("Login to")} ${framework.escape(label)}">${framework.trans_escape('Get API key')}</a>` : "");
         const inputId = `${provider.name}-api_key`;
