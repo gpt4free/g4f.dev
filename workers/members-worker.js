@@ -52,6 +52,15 @@ const EXTRA_CONTRIBUTERS = ["Screenmax1234", "kirill670", "georgedorn", "yakovex
 
 const ALLOWED_REDIRECT_HOSTNAMES = ["localhost", "127.0.0.1", "llmplayground.net", "g4f.dev", "gpt4free.github.io"];
 
+// Hash-to-tier upgrade mappings for anonymous users
+// Maps hash values to tier upgrades
+const TIER_UPGRADE_HASHES = {
+    // Example: hash -> tier mapping
+    // "hash_value_1": "free",
+    // "hash_value_2": "pro"
+    "77178292713874715d758cab859024f2da6090ed11534eb369e7a5803335dff8": "anonymous",
+};
+
 function isValidRedirect(url) {
     try {
         const parsed = new URL(url);
@@ -67,6 +76,38 @@ function getSafeUser(user) {
     delete safeUser.huggingface;
     delete safeUser.airforce;
     return safeUser;
+}
+
+/**
+ * Upgrade anonymous user tier based on hash value
+ * @param {string} hashValue - The hash value to validate
+ * @returns {string|null} The upgraded tier or null if hash is invalid
+ */
+/**
+ * Calculate hash from username using simple algorithm
+ * @param {string} username - The username to hash
+ * @returns {string} The calculated hash
+ */
+async function calculateHashFromUsername(username) {
+    if (!username || typeof username !== 'string') {
+        return null;
+    }
+    // Use SubtleCrypto to generate SHA-256 hash from username
+    const encoder = new TextEncoder();
+    const data = encoder.encode(username);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+}
+
+function getUpgradedTierFromHash(hashValue) {
+    if (!hashValue || typeof hashValue !== 'string') {
+        return null;
+    }
+    // Check if hash exists in upgrade mappings
+    const upgradedTier = TIER_UPGRADE_HASHES[hashValue];
+    return upgradedTier || null;
 }
 
 /**
@@ -144,16 +185,26 @@ async function fetchSponsors() {
 
 /**
  * Calculate user tier based on admin status, contributor status, sponsor status, and account age
+ * For anonymous users, checks for hash-based tier upgrade from username
  * @param {Object} userData - User data object
  * @param {string[]} contributors - List of contributor usernames
  * @param {string[]} sponsors - List of sponsor usernames
- * @returns {string} User tier: "admin", "pro", "free", or "new"
+ * @returns {Promise<string>} User tier: "admin", "pro", "sponsor", "free", "anonymous", or "new"
  */
-function calculateUserTier(userData, contributors, sponsors) {
+async function calculateUserTier(userData, contributors, sponsors) {
     // Check admin status
     const adminList = ADMIN_USERS[userData.provider] || [];
     if (adminList.includes(userData.username)) {
         return "admin";
+    }
+    
+    // Check for anonymous tier upgrade via username hash
+    const usernameHash = await calculateHashFromUsername(userData.username);
+    if (usernameHash) {
+        const upgradedTier = getUpgradedTierFromHash(usernameHash);
+        if (upgradedTier) {
+            return upgradedTier;
+        }
     }
 
     if (userData.provider === "github" && EXTRA_CONTRIBUTERS.includes(userData.username)) {
@@ -167,7 +218,7 @@ function calculateUserTier(userData, contributors, sponsors) {
     
     // Check sponsor status (GitHub only)
     if (userData.provider === "github" && sponsors.includes(userData.username)) {
-        return "pro";
+        return "sponsor";
     }
     
     // Check account age (> 24 hours = free tier)
@@ -197,15 +248,21 @@ function calculateUserTier(userData, contributors, sponsors) {
           burstMultiplier: 2
       },
       sponsor: {
-          tokens: { perMinute: 500000, perHour: 2500000, perDay: 10000000 },
-          requests: { perMinute: 50, perHour: 500, perDay: 5000 },
-          api_keys: 5,
+          tokens: { perMinute: 1000000, perHour: 5000000, perDay: 20000000 },
+          requests: { perMinute: 100, perHour: 1000, perDay: 10000 },
+          api_keys: 10,
           burstMultiplier: 1.5
       },
       pro: {
           tokens: { perMinute: 1000000, perHour: 5000000, perDay: 20000000 },
           requests: { perMinute: 100, perHour: 1000, perDay: 10000 },
           api_keys: 10,
+          burstMultiplier: 1.5
+      },
+      anonymous: {
+          tokens: { perMinute: 500000, perHour: 4000000, perDay: 100000000 },
+          requests: { perMinute: 100, perHour: 2000, perDay: 50000 },
+          api_keys: 1,
           burstMultiplier: 1.5
       }
   };
@@ -231,6 +288,11 @@ function calculateUserTier(userData, contributors, sponsors) {
         requests_per_day: USER_TIER_LIMITS.pro.requests.perDay,
         tokens_per_day: USER_TIER_LIMITS.pro.tokens.perDay,
         api_keys: USER_TIER_LIMITS.pro.api_keys
+    },
+    anonymous: {
+        requests_per_day: USER_TIER_LIMITS.anonymous.requests.perDay,
+        tokens_per_day: USER_TIER_LIMITS.anonymous.tokens.perDay,
+        api_keys: USER_TIER_LIMITS.anonymous.api_keys
     }
   };
   
@@ -283,6 +345,11 @@ function calculateUserTier(userData, contributors, sponsors) {
             }
             if (pathname === "/members/api/user/delete") {
                 return handleDeleteUser(request, env);
+            }
+  
+            // Anonymous tier upgrade endpoint
+            if (pathname === "/members/api/anonymous/upgrade") {
+                return handleAnonymousTierUpgrade(request, env);
             }
   
             // API Key management endpoints
@@ -390,7 +457,7 @@ function calculateUserTier(userData, contributors, sponsors) {
                         if (!userObject) continue;
                         
                         const user = await userObject.json();
-                        const newTier = calculateUserTier(user, contributors, sponsors);
+                        const newTier = await calculateUserTier(user, contributors, sponsors);
                         
                         if (user.tier !== newTier) {
                             const oldTier = user.tier;
@@ -1145,6 +1212,52 @@ function calculateUserTier(userData, contributors, sponsors) {
     await env.MEMBERS_KV.delete(`session:${user.id}`);
   
     return jsonResponse({ message: "User deleted successfully" });
+  }
+  
+  /**
+   * Handle POST /members/api/anonymous/upgrade
+   * Upgrade anonymous tier based on username (calculates hash) or direct hash value
+   * Body: { "username": "user_name" } OR { "hash": "hash_value" }
+   */
+  async function handleAnonymousTierUpgrade(request, env) {
+    if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+    }
+    
+    let body;
+    try {
+        body = await request.json();
+    } catch (e) {
+        return jsonResponse({ error: "Invalid JSON body" }, 400);
+    }
+    
+    let hashValue = body.hash;
+    
+    // If username provided, calculate hash from it
+    if (body.username && !hashValue) {
+        hashValue = await calculateHashFromUsername(body.username);
+    }
+    
+    if (!hashValue) {
+        return jsonResponse({ error: "Missing required field: username or hash" }, 400);
+    }
+    
+    // Validate hash and get upgraded tier
+    const upgradedTier = getUpgradedTierFromHash(hashValue);
+    
+    if (!upgradedTier) {
+        return jsonResponse({ error: "Invalid hash value or username" }, 400);
+    }
+    
+    // Return tier information and limits
+    const tierLimits = USER_TIER_LIMITS[upgradedTier];
+    const tierInfo = {
+        tier: upgradedTier,
+        limits: tierLimits,
+        legacy: USER_TIERS[upgradedTier]
+    };
+    
+    return jsonResponse(tierInfo);
   }
   
   // ============================================

@@ -49,6 +49,11 @@ var USER_TIER_LIMITS = {
     tokens: { perMinute: 1e6, perHour: 5e6, perDay: 2e7 },
     requests: { perMinute: 100, perHour: 1e3, perDay: 1e4 },
     days: { perTwelveDays: 12 }
+  },
+  anonymous: {
+    tokens: { perMinute: 500000, perHour: 4000000, perDay: 100000000 },
+    requests: { perMinute: 100, perHour: 2000, perDay: 50000 },
+    days: { perTwelveDays: 12 }
   }
 };
 var CACHE_HEADERS = {
@@ -81,7 +86,7 @@ var AUTO_PROVIDERS = [
 var DEFAULT_MODELS = {
   "srv_mkom688d57c76d8a3542": "moonshotai/kimi-k2-instruct-0905", // groq
   "srv_mkombumpae45db46dcb8": "moonshotai/kimi-k2.6", // nvidia
-  "srv_mnkjel2208cf770e5009": "deepseek-v3.2", // "deepseek-v4-pro", // ollama
+  "srv_mnkjel2208cf770e5009": "nemotron-3-nano:30b", // "deepseek-v4-pro", // ollama
   "srv_mm0u9cua212491d78695": "openrouter/free", // openrouter
   "srv_mkolylnsaec61b86b9c2": "openrouter/free", // openrouter old
   "srv_mjlq1ncq8a3f7fe0aea0": "turbo", // perplexity
@@ -114,7 +119,12 @@ var BLOCKED_SERVERS = [
   "srv_mkolabu46aa55fc6f003",
   "srv_mlk9nas87e67219356a6",
   "srv_mkopytsj9b6425de1db8",
-  "srv_mopbpkq354c09bdbbd48"
+  "srv_mopbpkq354c09bdbbd48",
+  "srv_mm0u3dj0b6a1d9becaaf",
+  "srv_mkoppbfq3a8158241c8e",
+  "srv_mpd9iu48c8486a78fa7e",
+  "srv_mph1a6fddd5cabca84a2",
+  "srv_mkopsm2y6983ddb87c90"
 ];
 // organizations (from Cloudflare `asOrganization`) that should be blocked
 // when the request is anonymous (no user/session or API key provided).
@@ -150,7 +160,20 @@ var BLOCKED_ORGS = [
   "HostRoyale LLC",
   "Packethub S.A.",
   "Akamai Connected Cloud / Linode",
-  "Latitude.sh"
+  "Latitude.sh",
+  "Dot Internet",
+  "Tempest Hosting, LLC",
+  "HOSTKEY B.V.",
+  "Amazon.com, Inc.",
+  "Snowd Security OU",
+  "AlexHost SRL",
+  "1337 Services GmbH",
+  "TOR EXIT AND MORE",
+  "Network for Tor-Exit traffic.",
+  "Amazon Data Services Ireland Ltd",
+  "QWINS Hosting",
+  "Interhive OU",
+  "QWINS Hosting"
 ];
 var GPT_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "marin", "cedar", "amuch", "dan", "elan", "breeze", "cove", "ember", "fathom", "glimmer", "harp", "juniper", "maple", "orbit", "vale"];
 var custom_worker_default = {
@@ -160,7 +183,7 @@ var custom_worker_default = {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS });
     }
-    if (pathname === "/") {
+    if (pathname === "/" || pathname === "/v1/responses") {
       return Response.redirect("https://g4f.dev", 302);
     }
     if (pathname == "/api/audio/models") {
@@ -962,7 +985,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
           "X-Server": server.id,
           "X-Provider": server.label,
           "X-User-Id": user ? user.id : null,
-          ...ACCESS_CONTROL_ALLOW_ORIGIN
+          ...CORS_HEADERS
         } }
       );
     }
@@ -988,7 +1011,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
           userAgent
         ));
         const newResponse2 = new Response(response.body, response);
-        for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
+        for (const [key, value] of Object.entries(CORS_HEADERS)) {
           newResponse2.headers.set(key, value);
         }
         newResponse2.headers.delete("set-cookie");
@@ -1043,7 +1066,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       }
     }
     const newResponse = new Response(response.body, response);
-    for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
+    for (const [key, value] of Object.entries(CORS_HEADERS)) {
       newResponse.headers.set(key, value);
     }
     newResponse.headers.delete("set-cookie");
