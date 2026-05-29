@@ -21,8 +21,8 @@
     "defaultModels": {
         "default": "auto",
         "pollinations": "openai-fast",
-        "api.airforce": "llama-4-scout",
-        "master": "llama-4-scout",
+        "api.airforce": "gpt-4o-mini",
+        "master": "gpt-4o-mini",
         "azure": "model-router",
         "gemini": "models/gemini-3-flash-preview",
         "openrouter": "nvidia/nemotron-3-super-120b-a12b:free",
