@@ -425,7 +425,12 @@ framework.resizeIframes = (iframes) => {
             try {
                 const doc = iframe.contentDocument || iframe.contentWindow?.document;
                 if (doc) {
-                    const height = doc.documentElement.scrollHeight;
+                    const height = Math.max(
+                        doc.documentElement.scrollHeight,
+                        doc.documentElement.offsetHeight,
+                        doc.body.scrollHeight,
+                        doc.body.offsetHeight
+                    );
                     if (height > 0) {
                         iframe.style.height = height + 'px';
                     }
@@ -464,7 +469,6 @@ framework.resizeIframes = (iframes) => {
 
     // Listen for content-rendered messages from child iframes
     window.addEventListener('message', (event) => {
-        console.log('Received message:', event.data);
         if (event.data && event.data.type === 'g4f-content-rendered') {
             iframes.forEach(iframe => {
                 if (iframe.contentWindow === event.source) {
