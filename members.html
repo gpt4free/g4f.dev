@@ -1430,8 +1430,8 @@
             const iframe = Object.assign(document.createElement('iframe'), {
                 src: 'render.html?prompt=Show custom welcome message in a h3 with emojies (no comments), (add info: Manage your API keys and monitor your usage) for user: ' + encodeURIComponent(userName.textContent) + ' in language: ' + encodeURIComponent(framework.language),
             })
-            framework.resizeIframes([iframe]);
             userName.parentNode.parentNode.replaceWith(iframe);
+            framework.resizeIframes([iframe]);
             document.getElementById('accountUsername').textContent = user.username || user.name || '-';
             document.getElementById('accountEmail').textContent = user.email || framework.translate('Not provided');
             document.getElementById('accountJoined').textContent = user.created_at ? new Date(user.created_at).toLocaleDateString() : (user.joinedAt || new Date().toLocaleDateString());

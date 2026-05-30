@@ -466,10 +466,14 @@ framework.resizeIframes = (iframes) => {
         // If already loaded, try immediately
         resizeToContent();
     });
+};
 
-    // Listen for content-rendered messages from child iframes
+// Global listener for content-rendered messages from child iframes
+if (!framework._iframeResizeListenerAdded) {
+    framework._iframeResizeListenerAdded = true;
     window.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'g4f-content-rendered') {
+            const iframes = document.querySelectorAll('iframe');
             iframes.forEach(iframe => {
                 if (iframe.contentWindow === event.source) {
                     iframe.style.height = event.data.height + 'px';
@@ -477,7 +481,7 @@ framework.resizeIframes = (iframes) => {
             });
         }
     });
-};
+}
 
 framework.query = query;
 framework.markdown = renderMarkdown;
