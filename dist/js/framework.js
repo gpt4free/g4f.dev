@@ -590,5 +590,7 @@ try {
 // });
 
 if (window.location.origin === G4F_HOST || window.location.origin.endsWith(G4F_WILDCARD)) {
-    includeAdsense().catch(add_error);
+    if (window.self === window.top) {
+        includeAdsense().catch(add_error);
+    }
 }
