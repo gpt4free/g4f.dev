@@ -415,8 +415,8 @@ function isValidModel(model) {
     return !model.type || ["chat", "image", "text", "image-edit", "video"].includes(model.type);
 }
 
-framework.resizeIframes = () => {
-    const iframes = document.querySelectorAll('iframe');
+framework.resizeIframes = (iframes) => {
+    iframes = iframes || document.querySelectorAll('iframe');
     iframes.forEach(iframe => {
         iframe.style.width = '100%';
         iframe.style.border = 'none';
