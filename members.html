@@ -1429,6 +1429,7 @@
             userName.textContent = user.name || user.username || framework.translate('User');
             userName.parentNode.replaceWith(Object.assign(document.createElement('iframe'), {
                 src: 'render.html?prompt=Show%20custom%20welcome%20message%20with%20emojies%20(response%20only%20a%20short%20text)%20for%20user:%20' + encodeURIComponent(userName.textContent) + '%20in%20language:%20' + encodeURIComponent(framework.language),
+                style: 'border:none;width:100%;height:1.5em;overflow:hidden;',
             }));
             document.getElementById('accountUsername').textContent = user.username || user.name || '-';
             document.getElementById('accountEmail').textContent = user.email || framework.translate('Not provided');
