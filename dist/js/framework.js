@@ -104,7 +104,7 @@ function escapeHtml(str) {
 }
 
 let newTranslations = [];
-framework.translate = (text) => {
+framework.translate = (text, escape = true) => {
     const stripText = text.replace(/\s+/g, ' ').trim();
     if (stripText) {
         const startWithSpace = text.startsWith(" ");
@@ -113,7 +113,7 @@ framework.translate = (text) => {
             newTranslations.push(stripText);
         }
         if (stripText in framework.translations && framework.translations[stripText]) {
-            return (startWithSpace ? " " : "") + escapeHtml(framework.translations[stripText]) + (endWithSpace ? " " : "");
+            return (startWithSpace ? " " : "") + (escape ? escapeHtml(framework.translations[stripText]) : framework.translations[stripText]) + (endWithSpace ? " " : "");
         }
     }
     return text;
@@ -139,18 +139,18 @@ framework.translateElements = function (elements = null) {
         for (const child of element.childNodes) {
             if (child.nodeType === Node.TEXT_NODE) {
                 if (hasWords(child.textContent)) {
-                    child.textContent = framework.translate(child.textContent);
+                    child.textContent = framework.translate(child.textContent, false);
                 }
             }
         }
         if (element.alt) {
-            element.alt = framework.translate(element.alt);
+            element.alt = framework.translate(element.alt, false);
         }
         if (element.title) {
-            element.title = framework.translate(element.title);
+            element.title = framework.translate(element.title, false);
         }
         if (element.placeholder) {
-            element.placeholder = framework.translate(element.placeholder);
+            element.placeholder = framework.translate(element.placeholder, false);
         }
     });
 }
