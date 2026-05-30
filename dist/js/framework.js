@@ -477,6 +477,7 @@ if (!framework._iframeResizeListenerAdded) {
             const iframes = document.querySelectorAll('iframe');
             iframes.forEach(iframe => {
                 if (iframe.contentWindow === event.source) {
+                    console.log(iframe.contentWindow);
                     iframe.style.height = event.data.height + 'px';
                 }
             });
