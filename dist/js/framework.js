@@ -567,11 +567,11 @@ try {
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", async () => {
             framework.translateElements();
-            framework.resizeIframe();
+            framework.resizeIframes();
         });
     } else {
         framework.translateElements();
-        framework.resizeIframe();
+        framework.resizeIframes();
     }
 } catch(e) {
     add_error(e, true);
