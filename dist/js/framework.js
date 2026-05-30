@@ -464,6 +464,7 @@ framework.resizeIframes = (iframes) => {
 
     // Listen for content-rendered messages from child iframes
     window.addEventListener('message', (event) => {
+        console.log('Received message:', event.data);
         if (event.data && event.data.type === 'g4f-content-rendered') {
             iframes.forEach(iframe => {
                 if (iframe.contentWindow === event.source) {

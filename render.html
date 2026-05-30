@@ -485,6 +485,7 @@
 
                 // Notify parent window to resize iframe
                 if (window.parent !== window) {
+                    console.log('Content rendered, notifying parent to resize iframe');
                     window.parent.postMessage({ type: 'g4f-content-rendered', height: document.documentElement.scrollHeight }, '*');
                 }
             }
