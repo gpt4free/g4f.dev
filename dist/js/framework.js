@@ -473,12 +473,10 @@ if (!framework._iframeResizeListenerAdded) {
     framework._iframeResizeListenerAdded = true;
     window.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'g4f-content-rendered') {
-            console.debug("Received content-rendered message from iframe:", event.data);
             const iframes = document.querySelectorAll('iframe');
             iframes.forEach(iframe => {
                 if (iframe.contentWindow === event.source) {
-                    console.log(iframe.contentWindow);
-                    iframe.style.height = event.data.height + 'px';
+                    iframe.style.height = event.data.height + 10 + 'px';
                 }
             });
         }
