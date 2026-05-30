@@ -415,6 +415,54 @@ function isValidModel(model) {
     return !model.type || ["chat", "image", "text", "image-edit", "video"].includes(model.type);
 }
 
+framework.resizeIframe = () => {
+    const iframes = document.querySelectorAll('iframe');
+    iframes.forEach(iframe => {
+        iframe.style.width = '100%';
+        iframe.style.border = 'none';
+
+        const resizeToContent = () => {
+            try {
+                const doc = iframe.contentDocument || iframe.contentWindow?.document;
+                if (doc) {
+                    const height = doc.documentElement.scrollHeight;
+                    if (height > 0) {
+                        iframe.style.height = height + 'px';
+                    }
+                }
+            } catch (e) {
+                // Cross-origin iframe, fall back to 100%
+                iframe.style.height = '100%';
+            }
+        };
+
+        // Initial resize once content loads
+        iframe.addEventListener('load', resizeToContent);
+
+        // Observe content changes with MutationObserver
+        iframe.addEventListener('load', () => {
+            try {
+                const doc = iframe.contentDocument || iframe.contentWindow?.document;
+                if (doc) {
+                    const observer = new MutationObserver(resizeToContent);
+                    observer.observe(doc.body, {
+                        childList: true,
+                        subtree: true,
+                        attributes: true,
+                        characterData: true
+                    });
+                    resizeToContent();
+                }
+            } catch (e) {
+                // Cross-origin, ignore
+            }
+        }, { once: true });
+
+        // If already loaded, try immediately
+        resizeToContent();
+    });
+};
+
 framework.query = query;
 framework.markdown = renderMarkdown;
 framework.filterMarkdown = filterMarkdown;
@@ -519,9 +567,11 @@ try {
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", async () => {
             framework.translateElements();
+            framework.resizeIframe();
         });
     } else {
         framework.translateElements();
+        framework.resizeIframe();
     }
 } catch(e) {
     add_error(e, true);
