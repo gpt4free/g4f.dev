@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G4F Render - AI Generated Content</title>
+    <link rel="icon" href="dist/img/g4f.svg" type="image/svg+xml">
+    <link rel="shortcut icon" href="dist/img/g4f.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="dist/img/g4f.svg">
+    <link rel="manifest" href="dist/img/site.webmanifest">
+    <script async src="dist/js/framework.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
+    <style>
+        :root {
+            --colour-1: #000000;
+            --colour-2: #ccc;
+            --colour-3: #e4d4ff;
+            --colour-4: #f0f0f0;
+            --colour-5: #181818;
+            --colour-6: #242424;
+            --accent: #8b3dff;
+            --background: #16101b;
+        }
+
+        @import url("https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap");
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--background);
+            color: var(--colour-3);
+            font-family: "Inter", sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: var(--colour-5);
+            border-bottom: 2px solid var(--colour-6);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--colour-4);
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* Input area */
+        .input-area {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .input-field {
+            padding: 10px 14px;
+            border: 2px solid var(--colour-6);
+            background-color: var(--colour-5);
+            color: var(--colour-3);
+            border-radius: 8px;
+            font-size: 1rem;
+            min-width: 280px;
+            font-family: "Inter", sans-serif;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .button {
+            background-color: var(--accent);
+            color: var(--colour-3);
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-weight: bold;
+            font-family: "Inter", sans-serif;
+            white-space: nowrap;
+        }
+
+        .button:hover {
+            background-color: #7a2ccd;
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .button-secondary {
+            background-color: var(--colour-6);
+            color: var(--colour-2);
+        }
+
+        .button-secondary:hover {
+            background-color: #333;
+        }
+
+        /* Main layout */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 70px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--colour-5);
+            border-right: 2px solid var(--colour-6);
+            padding: 16px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .sidebar h3 {
+            margin: 0 0 12px 0;
+            color: var(--colour-4);
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .history-item {
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            background: var(--colour-6);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--colour-2);
+            transition: background 0.2s;
+            word-break: break-word;
+        }
+
+        .history-item:hover {
+            background: #333;
+        }
+
+        .history-item.active {
+            border-left: 3px solid var(--accent);
+            color: var(--colour-4);
+        }
+
+        /* Content area */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 32px;
+        }
+
+        /* Rendered markdown/HTML styling */
+        .rendered-content {
+            max-width: 860px;
+            margin: 0 auto;
+            line-height: 1.7;
+            color: var(--colour-3);
+        }
+
+        .rendered-content h1,
+        .rendered-content h2,
+        .rendered-content h3,
+        .rendered-content h4,
+        .rendered-content h5,
+        .rendered-content h6 {
+            color: var(--colour-4);
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+
+        .rendered-content h1 { font-size: 2rem; border-bottom: 2px solid var(--colour-6); padding-bottom: 8px; }
+        .rendered-content h2 { font-size: 1.6rem; border-bottom: 1px solid var(--colour-6); padding-bottom: 6px; }
+        .rendered-content h3 { font-size: 1.3rem; }
+
+        .rendered-content p {
+            margin: 0.8em 0;
+        }
+
+        .rendered-content a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .rendered-content a:hover {
+            text-decoration: underline;
+        }
+
+        .rendered-content img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 12px 0;
+        }
+
+        .rendered-content video,
+        .rendered-content audio {
+            max-width: 100%;
+            margin: 12px 0;
+            border-radius: 8px;
+        }
+
+        .rendered-content pre {
+            background: var(--colour-5);
+            border: 1px solid var(--colour-6);
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .rendered-content code {
+            background: var(--colour-6);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .rendered-content pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .rendered-content blockquote {
+            border-left: 3px solid var(--accent);
+            margin: 12px 0;
+            padding: 8px 16px;
+            background: rgba(139, 61, 255, 0.05);
+            border-radius: 0 8px 8px 0;
+            color: var(--colour-2);
+        }
+
+        .rendered-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 12px 0;
+        }
+
+        .rendered-content th,
+        .rendered-content td {
+            border: 1px solid var(--colour-6);
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .rendered-content th {
+            background: var(--colour-5);
+            color: var(--colour-4);
+        }
+
+        .rendered-content ul,
+        .rendered-content ol {
+            padding-left: 24px;
+        }
+
+        .rendered-content li {
+            margin: 4px 0;
+        }
+
+        .rendered-content hr {
+            border: none;
+            border-top: 1px solid var(--colour-6);
+            margin: 24px 0;
+        }
+
+        .rendered-content details {
+            background: var(--colour-5);
+            border: 1px solid var(--colour-6);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 12px 0;
+        }
+
+        .rendered-content details summary {
+            cursor: pointer;
+            color: var(--colour-4);
+            font-weight: bold;
+        }
+
+        /* Loading spinner */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--colour-2);
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--colour-6);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error state */
+        .error-message {
+            background: rgba(255, 80, 80, 0.1);
+            border: 1px solid rgba(255, 80, 80, 0.3);
+            color: #ff6b6b;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+
+        /* Empty state */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--colour-2);
+            text-align: center;
+        }
+
+        .empty-state .icon {
+            font-size: 4rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+            max-width: 400px;
+        }
+
+        /* Iframe mode: hide header and sidebar */
+        body.in-iframe .header,
+        body.in-iframe .sidebar {
+            display: none;
+        }
+
+        body.in-iframe .main-container {
+            height: 100vh;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                max-height: 200px;
+                border-right: none;
+                border-bottom: 2px solid var(--colour-6);
+            }
+
+            .content {
+                padding: 16px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .input-field {
+                min-width: unset;
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>📄 G4F Render</h1>
+        <div class="header-controls">
+            <div class="input-area">
+                <input
+                    type="text"
+                    id="promptInput"
+                    class="input-field"
+                    placeholder="Enter a prompt to generate content..."
+                    autofocus
+                />
+                <button id="generateBtn" class="button">Generate</button>
+            </div>
+            <button id="clearBtn" class="button button-secondary">Clear</button>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="main-container">
+        <!-- Sidebar: History -->
+        <div class="sidebar">
+            <h3>📋 History</h3>
+            <div id="historyList">
+                <div style="color: var(--colour-2); font-size: 0.85rem; opacity: 0.6;">
+                    No history yet
+                </div>
+            </div>
+        </div>
+
+        <!-- Content: Rendered Output -->
+        <div class="content" id="contentArea">
+            <div class="empty-state">
+                <div class="icon">✨</div>
+                <p>Enter a prompt above to generate AI-powered content. Markdown and HTML will be rendered beautifully.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (() => {
+            // --- DOM references ---
+            const promptInput = document.getElementById('promptInput');
+            const generateBtn = document.getElementById('generateBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const contentArea = document.getElementById('contentArea');
+            const historyList = document.getElementById('historyList');
+
+            // --- State ---
+            let history = [];
+            let activeIndex = -1;
+
+            // --- Helpers ---
+            function showLoading() {
+                contentArea.innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <span>Generating content...</span>
+                    </div>
+                `;
+            }
+
+            function showError(message) {
+                contentArea.innerHTML = `
+                    <div class="error-message">
+                        <strong>Error:</strong> ${framework.escape(message)}
+                    </div>
+                `;
+            }
+
+            function showEmpty() {
+                contentArea.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">✨</div>
+                        <p>Enter a prompt above to generate AI-powered content. Markdown and HTML will be rendered beautifully.</p>
+                    </div>
+                `;
+            }
+
+            function renderContent(rawText) {
+                const html = framework.markdown(rawText);
+                contentArea.innerHTML = `<div class="rendered-content">${html}</div>`;
+            }
+
+            function renderHistory() {
+                if (history.length === 0) {
+                    historyList.innerHTML = `
+                        <div style="color: var(--colour-2); font-size: 0.85rem; opacity: 0.6;">
+                            No history yet
+                        </div>
+                    `;
+                    return;
+                }
+                historyList.innerHTML = history.map((item, idx) => {
+                    const preview = item.prompt.length > 50
+                        ? item.prompt.substring(0, 50) + '…'
+                        : item.prompt;
+                    const activeClass = idx === activeIndex ? ' active' : '';
+                    return `
+                        <div class="history-item${activeClass}" data-index="${idx}">
+                            ${framework.escape(preview)}
+                        </div>
+                    `;
+                }).join('');
+
+                // Attach click handlers
+                historyList.querySelectorAll('.history-item').forEach(el => {
+                    el.addEventListener('click', () => {
+                        const idx = parseInt(el.dataset.index, 10);
+                        loadHistoryItem(idx);
+                    });
+                });
+            }
+
+            function loadHistoryItem(idx) {
+                if (idx < 0 || idx >= history.length) return;
+                activeIndex = idx;
+                const item = history[idx];
+                renderContent(item.response);
+                promptInput.value = item.prompt;
+                renderHistory();
+            }
+
+            function addToHistory(prompt, response) {
+                history.unshift({ prompt, response, timestamp: Date.now() });
+                // Keep max 50 entries
+                if (history.length > 50) {
+                    history.pop();
+                }
+                activeIndex = 0;
+                renderHistory();
+            }
+
+            // --- Core: Generate content using framework.query ---
+            async function generateContent() {
+                const prompt = promptInput.value.trim();
+                if (!prompt) return;
+
+                generateBtn.disabled = true;
+                generateBtn.textContent = 'Generating…';
+                showLoading();
+
+                try {
+                    // Use framework.query to call the AI
+                    const response = await framework.query(prompt, { json: false, cache: true });
+
+                    if (!response || !response.ok) {
+                        throw new Error(`AI request failed with status ${response?.status || 'unknown'}`);
+                    }
+
+                    const rawText = await response.text();
+
+                    // Filter out markdown code blocks if the response is wrapped
+                    const filtered = framework.filterMarkdown(rawText, null, rawText);
+
+                    // Render the markdown/HTML
+                    renderContent(filtered);
+
+                    // Save to history
+                    addToHistory(prompt, filtered);
+
+                } catch (err) {
+                    console.error('Generation error:', err);
+                    showError(err.message || 'Failed to generate content');
+                } finally {
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = 'Generate';
+                }
+            }
+
+            function clearAll() {
+                history = [];
+                activeIndex = -1;
+                promptInput.value = '';
+                showEmpty();
+                renderHistory();
+            }
+
+            // --- Event listeners ---
+            generateBtn.addEventListener('click', generateContent);
+
+            promptInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    generateContent();
+                }
+            });
+
+            clearBtn.addEventListener('click', clearAll);
+
+            // --- Initialize ---
+            (async () => {
+                // Detect if embedded in an iframe
+                if (window.self !== window.top) {
+                    document.body.classList.add('in-iframe');
+                }
+
+                try {
+                    await framework.connectToBackend();
+                } catch (e) {
+                    console.warn('Backend connection failed, using default:', e);
+                }
+
+                // Check for ?prompt= query parameter and auto-generate
+                const params = new URLSearchParams(window.location.search);
+                const queryPrompt = params.get('prompt');
+                if (queryPrompt) {
+                    promptInput.value = queryPrompt;
+                    generateContent();
+                }
+            })();
+        })();
+    </script>
+</body>
+</html>

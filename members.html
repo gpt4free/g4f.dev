@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>G4F - Members Area</title>
     <meta name="description" content="GPT4Free Members Area - Manage your API keys, view usage stats, and access premium features." />
-    <link rel="apple-touch-icon" sizes="180x180" href="dist/img/g4f-180x180.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="dist/img/g4f-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="dist/img/g4f-16x16.png">
+    <link rel="icon" href="dist/img/g4f.svg" type="image/svg+xml">
+    <link rel="shortcut icon" href="dist/img/g4f.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="dist/img/g4f.svg">
     <link rel="manifest" href="dist/img/site.webmanifest">
     <script src="https://cdn.jsdelivr.net/npm/jsencrypt/bin/jsencrypt.min.js"></script>
     <style>
@@ -1427,6 +1427,9 @@
             
             // Update user info
             userName.textContent = user.name || user.username || framework.translate('User');
+            userName.parentNode.replaceWith(Object.assign(document.createElement('iframe'), {
+                src: 'render.html?prompt=Show%20custom%20welcome%20message%20with%20emojies%20(response%20only%20a%20short%20text)%20for%20user:%20' + encodeURIComponent(userName.textContent) + '%20in%20language:%20' + encodeURIComponent(framework.language),
+            }));
             document.getElementById('accountUsername').textContent = user.username || user.name || '-';
             document.getElementById('accountEmail').textContent = user.email || framework.translate('Not provided');
             document.getElementById('accountJoined').textContent = user.created_at ? new Date(user.created_at).toLocaleDateString() : (user.joinedAt || new Date().toLocaleDateString());

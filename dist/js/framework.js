@@ -79,6 +79,8 @@ async function checkUrl(url, connectStatus) {
 }
 
 framework.backendUrl = localStorage.getItem('backendUrl') || '';
+framework.language = navigator.language === "de" ? 'de-DE' : navigator.language === "es" ? 'es-ES' : navigator.language;
+framework.language = !framework.language || framework.language.startsWith("en") ? "en-US" : framework.language;
 
 framework.connectToBackend = async (connectStatus) => {
     for (const url of checkUrls) {
