@@ -392,6 +392,12 @@
             }
         }
     </style>
+    <script>
+        // Detect if embedded in an iframe
+        if (window.self !== window.top) {
+            document.body.classList.add('in-iframe');
+        }
+    </script>
 </head>
 <body>
     <!-- Header -->
@@ -586,11 +592,6 @@
 
             // --- Initialize ---
             (async () => {
-                // Detect if embedded in an iframe
-                if (window.self !== window.top) {
-                    document.body.classList.add('in-iframe');
-                }
-
                 try {
                     await framework.connectToBackend();
                 } catch (e) {
