@@ -482,6 +482,11 @@
             function renderContent(rawText) {
                 const html = framework.markdown(rawText);
                 contentArea.innerHTML = `<div class="rendered-content">${html}</div>`;
+
+                // Notify parent window to resize iframe
+                if (window.parent !== window) {
+                    window.parent.postMessage({ type: 'g4f-content-rendered', height: document.documentElement.scrollHeight }, '*');
+                }
             }
 
             function renderHistory() {

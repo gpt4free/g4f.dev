@@ -1428,7 +1428,7 @@
             // Update user info
             userName.textContent = user.name || user.username || framework.translate('User');
             const iframe = Object.assign(document.createElement('iframe'), {
-                src: 'render.html?prompt=Show custom welcome message in a h3 with emojies (no comments), (add: Manage your API keys and monitor your usage) for user: ' + encodeURIComponent(userName.textContent) + ' in language: ' + encodeURIComponent(framework.language),
+                src: 'render.html?prompt=Show custom welcome message in a h3 with emojies (no comments), (add info: Manage your API keys and monitor your usage) for user: ' + encodeURIComponent(userName.textContent) + ' in language: ' + encodeURIComponent(framework.language),
             })
             framework.resizeIframes([iframe]);
             userName.parentNode.parentNode.replaceWith(iframe);

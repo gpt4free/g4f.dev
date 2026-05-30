@@ -461,6 +461,17 @@ framework.resizeIframes = (iframes) => {
         // If already loaded, try immediately
         resizeToContent();
     });
+
+    // Listen for content-rendered messages from child iframes
+    window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'g4f-content-rendered') {
+            iframes.forEach(iframe => {
+                if (iframe.contentWindow === event.source) {
+                    iframe.style.height = event.data.height + 'px';
+                }
+            });
+        }
+    });
 };
 
 framework.query = query;
