@@ -16,7 +16,8 @@
         "openrouter": {"baseUrl": "https://openrouter.ai/api/v1", "backupUrl": "https://g4f.space/api/openrouter", "tags": "👓"},
         "puter": {"baseUrl": "https://puter.g4f-dev.workers.dev", "tags": "👓", "provider": "PuterJS"},
         "perplexity": {"baseUrl": "https://perplexity.g4f-dev.workers.dev", "tags": "🔎"},
-        "qwen": {"baseUrl": "https://qwen.g4f-dev.workers.dev", "tags": "💡", "provider": "Qwen"}
+        "qwen": {"baseUrl": "https://qwen.g4f-dev.workers.dev", "tags": "💡", "provider": "Qwen"},
+        "crow": {"baseUrl": "https://crowllm.com/v1", "backupUrl": "https://g4f.space/api/crowllm.com", "tags": "🦅"}
     },
     "defaultModels": {
         "default": "auto",
@@ -33,7 +34,8 @@
         "puter": "anthropic:anthropic/claude-sonnet-4-7",
         "perplexity": "turbo",
         "deepinfra": "google/gemma-4-26B-A4B-it",
-        "qwen": "qwen3.6-plus"
+        "qwen": "qwen3.6-plus",
+        "crow": "grok-4.3"
     },
     "providerLocalStorage": {
         "api.airforce": "ApiAirforce-api_key",
