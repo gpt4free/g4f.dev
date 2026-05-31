@@ -1,0 +1,36 @@
+# Wrangler configuration for G4F Torrent Download & AnonDrop Upload Worker
+# See https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "torrent"
+main = "torrent-worker.js"
+compatibility_date = "2025-05-30"
+compatibility_flags = ["nodejs_compat_v2"]
+
+# R2 Bucket for storing downloaded torrent files
+[[r2_buckets]]
+binding = "TORRENT_BUCKET"
+bucket_name = "g4f-torrents"
+
+# Environment variables
+[vars]
+ANONDROP_HOST = "https://anondrop.net"
+MAX_FILE_SIZE = "5368709120"  # 5GB
+DOWNLOAD_TIMEOUT = "1800000"   # 30 minutes
+
+# Routes - configure these to match your domain
+# routes = [
+#   { pattern = "torrent.g4f.dev/*", zone_name = "g4f.dev" }
+# ]
+
+# Development settings
+[dev]
+port = 8795
+
+# Production environment overrides
+[env.production]
+# Add production-specific settings here
+
+# Observability
+[observability]
+enabled = true
+head_sampling_rate = 1
