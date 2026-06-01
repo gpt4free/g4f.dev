@@ -1,6 +1,6 @@
 {
     "providers": {
-        "default": {"baseUrl": "https://g4f.space/v1", "backupUrl": "https://g4f.space/v1", "quotaEndpoint": "https://g4f.space/api/auto/chat/completions"},
+        "default": {"baseUrl": "https://g4f.space/v1", "backupUrl": "https://g4f.space/v1", "quotaEndpoint": null},
         "pollinations": {"backupUrl": "https://g4f.space/api/gen.pollinations", "label": "pollinations.ai", "tags": "🎨 👓", "provider": "PollinationsAI"},
         "api.airforce": {"baseUrl": "https://api.airforce/v1", "tags": "🎨 👓", "sleep": 60000},
         "master": {"label": "master by api.airforce", "baseUrl": "https://g4f.space/api/api.airforce", "backupUrl": "https://g4f.space/api/api.airforce", "tags": "🎨 👓", "sleep": 10000},
@@ -31,7 +31,7 @@
         "ollama": "nemotron-3-nano:30b",
         "ollama.pro": "deepseek-v4-flash",
         "groq": "openai/gpt-oss-120b",
-        "puter": "anthropic:anthropic/claude-sonnet-4-7",
+        "puter": "anthropic:anthropic/claude-opus-4-7",
         "perplexity": "turbo",
         "deepinfra": "google/gemma-4-26B-A4B-it",
         "qwen": "qwen3.6-plus",
