@@ -829,7 +829,14 @@ class Puter extends Client {
         for await (const item of await this.puter.ai.chat(messages, false, options)) {
           item.model = model;
           this.logCallback && this.logCallback({response: item, type: 'chat'});
-          if (item.text) {
+          if (item.type === 'tool_use') {
+            yield {choices: [{delta: {tool_calls: [{
+                type: 'function', function: {
+                    name: item.name,
+                    arguments: item.input
+                }
+            }]}}]};
+          } else if (item.text) {
             yield {choices: [{delta: {content: item.text}}]}
           } else if (item.reasoning) {
             yield {choices: [{delta: {reasoning: item.reasoning}}]}
