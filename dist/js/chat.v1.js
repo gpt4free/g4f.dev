@@ -4867,7 +4867,7 @@ async function get_quota(provider) {
         add_error(e, true);
         return;
     }
-    if (response.status == 401 || (data.error && data.error.code == 401)) {
+    if (response.status == 401 || (data && data.error && data.error.code == 401)) {
         let input = document.querySelector(`.${provider}-api_key`);
         if (!input) {
             input = document.getElementById(`${provider}-api_key`);
@@ -4914,6 +4914,9 @@ async function loadProviderModels(provider=null) {
     if (!provider) {
         modelSelect.classList.add("hidden");
         return;
+    }
+    if (isLoading && providerSelect) {
+        providerSelect.value = provider;
     }
     modelSelect.innerHTML = '';
     modelSelect.name = `model[${provider}]`;
