@@ -1254,7 +1254,7 @@
         const API_URL = 'https://g4f.space';
         const MEMBERS_API = `${API_BASE}/members/api`;
         const POLLINATIONS_APP_KEY = 'pk_7X0QLj0xijSd0xj7';
-        const POLLINATIONS_PERMISSIONS = 'profile,balance,usage';
+        const POLLINATIONS_PERMISSIONS = 'profile,balance,usage,keys';
 
         // DOM Elements
         const loginSection = document.getElementById('loginSection');
@@ -1558,8 +1558,7 @@
             const params = new URLSearchParams({
                 redirect_url: window.location.origin + '/members',
                 app_key: POLLINATIONS_APP_KEY,
-                permissions: POLLINATIONS_PERMISSIONS,
-                expiry: 7
+                permissions: POLLINATIONS_PERMISSIONS
             });
             window.location.href = `https://enter.pollinations.ai/authorize?${params}`;
         });
