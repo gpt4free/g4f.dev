@@ -1670,6 +1670,7 @@
             // Handle Pollinations OAuth (API key from URL hash)
             const hash = window.location.hash;
             if (hash && (hash.startsWith('#api_key='))) {
+                console.log('hash:', hash);
                 const pollinationsToken = hash.substring(9);
                 if (pollinationsToken) {
                     window.history.replaceState({}, document.title, window.location.pathname);
