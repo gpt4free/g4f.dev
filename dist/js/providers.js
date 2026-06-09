@@ -26,6 +26,8 @@ async function loadProviders() {
         let origin = "https://g4f.dev";
         if (window.location.hostname === "gpt4free.github.io") {
             origin = "";
+        } else if (window.location.origin === "http://localhost:8090") {
+            origin = "";
         }
         return fetch(origin + "/dist/js/providers.json")
             .then(res => res.json())
@@ -46,6 +48,7 @@ async function loadProviders() {
 }
 
 async function createClient(provider, options = {}) {
+    options.id = provider;
     if (provider.startsWith("custom:")) {
         const serverId = provider.substring(7);
         options.baseUrl = `https://g4f.space/custom/${serverId}`;

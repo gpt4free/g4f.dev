@@ -106,7 +106,8 @@ function convertModel(inputModel, options = {}) {
         model.free = true;
     }
     model.tags = getModelTags(model);
-    model.label = model.label + (model.requests > 1 ? ` (${model.requests}+)` : "") + (model.tags ? ` ${model.tags}` : "");
+    const count = model.count || model.requests || 0;
+    model.label = model.label + (count > 1 ? ` (${count}+)` : "") + (model.tags ? ` ${model.tags}` : "");
     return model;
 }
 

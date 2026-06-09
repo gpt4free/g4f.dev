@@ -117,6 +117,7 @@ class Client {
             options.baseUrl = "https://g4f.space/v1";
             options.sleep = 10000;
         }
+        this.id = options.id;
         this.proxyManager = new CorsProxyManager();
         this.baseUrl = options.baseUrl;
         this.apiEndpoint = options.apiEndpoint || `${this.baseUrl}/chat/completions`;
@@ -741,6 +742,7 @@ class Together extends Client {
 class Puter extends Client {
     constructor(options = {}) {
         super({});
+        this.id = 'puter';
         this.quotaEndpoint = options.quotaEndpoint || 'https://api.puter.com/metering/usage';
         this.extraHeaders = {
             "content-type": "application/json",

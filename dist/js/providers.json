@@ -13,11 +13,12 @@
         "nvidia": {"baseUrl": "https://integrate.api.nvidia.com/v1", "backupUrl": "https://g4f.space/api/nvidia", "tags": "📟"},
         "ollama": {"baseUrl": "https://ollama.g4f-dev.workers.dev", "backupUrl": "https://g4f.space/api/ollama", "tags": "🦙"},
         "ollama.pro": {"baseUrl": "https://ollama.g4f-dev.workers.dev", "backupUrl": "https://g4f.space/api/ollama.pro", "tags": "🦙 👑"},
+        "ollama.swarm": {"baseUrl": "https://ollama-swarm.g4f-dev.workers.dev", "tags": "🦙 🐝"},
         "openrouter": {"baseUrl": "https://openrouter.ai/api/v1", "backupUrl": "https://g4f.space/api/openrouter", "tags": "👓"},
         "puter": {"baseUrl": "https://puter.g4f-dev.workers.dev", "tags": "👓", "provider": "PuterJS"},
         "perplexity": {"baseUrl": "https://perplexity.g4f-dev.workers.dev", "tags": "🔎"},
         "qwen": {"baseUrl": "https://qwen.g4f-dev.workers.dev", "tags": "💡", "provider": "Qwen"},
-        "crow": {"baseUrl": "https://crowllm.com/v1", "backupUrl": "https://g4f.space/api/crowllm.com", "tags": "🦅"}
+        "crowllm": {"baseUrl": "https://crowllm.com/v1", "backupUrl": "https://g4f.space/api/crowllm.com", "tags": "🦅"}
     },
     "defaultModels": {
         "default": "auto",
@@ -29,13 +30,14 @@
         "openrouter": "nvidia/nemotron-3-super-120b-a12b:free",
         "nvidia": "nvidia/nemotron-3-nano-30b-a3b",
         "ollama": "nemotron-3-nano:30b",
-        "ollama.pro": "deepseek-v4-flash",
+        "ollama.pro": "deepseek-v4-pro",
+        "ollama.swarm": "deepseek-v4-pro:cloud",
         "groq": "openai/gpt-oss-120b",
         "puter": "anthropic:anthropic/claude-opus-4-7",
         "perplexity": "turbo",
         "deepinfra": "google/gemma-4-26B-A4B-it",
         "qwen": "qwen3.6-plus",
-        "crow": "grok-4.3"
+        "crowllm": "grok-4.3"
     },
     "providerLocalStorage": {
         "api.airforce": "ApiAirforce-api_key",

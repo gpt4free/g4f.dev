@@ -668,7 +668,7 @@ const register_message_buttons = async () => {
             await load_provider_parameters(el.dataset.provider);
             const provider_forms_container = document.querySelector(".provider_forms");
             provider_forms_container.querySelectorAll("form").forEach(form => form.classList.add("hidden"));
-            const provider_form = provider_forms_container.querySelector(`#${el.dataset.provider.replaceAll(':', '-')}-form`);
+            const provider_form = provider_forms_container.querySelector(`#${sanitizeSelector(el.dataset.provider)}-form`);
             if (provider_form) {
                 provider_form.classList.remove("hidden");
                 provider_forms_container.classList.remove("hidden");
@@ -1152,7 +1152,8 @@ const prepare_messages = (messages, message_index = -1, do_continue = false, do_
 }
 
 async function load_provider_parameters(provider) {
-    let form_id = `${provider.replaceAll(':', '-')}-form`;
+    console.debug("Load provider parameters:", provider);
+    let form_id = `${sanitizeSelector(provider)}-form`;
     if (!parameters_storage[provider]) {
         parameters_storage[provider] = JSON.parse(appStorage.getItem(form_id));
     }
@@ -1515,7 +1516,7 @@ function add_sources(data, message_id) {
     }
     if (data.sources) {
         const links = data.sources.map((source, index) => {
-            return `<p>[${index}] <a target="_blank" href="${source.link}">${source.title}</a></p>`;
+            return `<p>[${index}] <a target="_blank" href="${source.link || source.url}">${source.title || source.name}</a></p>`;
         }).join("");
         blockquote.innerHTML = links;
     }
@@ -1600,7 +1601,7 @@ const toUrl = async (file)=>{
 
 function getExtraBody(provider) {
     const extraBody = {};
-    for (el of document.getElementById(`${provider.replaceAll(':', '-')}-form`)?.querySelectorAll(".saved input, .saved textarea") || []) {
+    for (el of document.getElementById(`${sanitizeSelector(provider)}-form`)?.querySelectorAll(".saved input, .saved textarea") || []) {
         let value;
         if (el.type == "checkbox") {
             value = el.checked;
@@ -1620,6 +1621,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         model = get_selected_model();
         provider = providerSelect?.value;
     }
+    const selectedOption = modelSelect.options[modelSelect.selectedIndex];
+    const modelType = selectedOption?.dataset.type || 'chat';
     const is_youtube = provider == "YouTube";
     let conversation = await get_conversation(window.conversation_id);
     if (!conversation) {
@@ -1816,7 +1819,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             }
         });
     }
-    if (client) {
+    if (client && modelType === "chat") {
         for (const file of Object.values(image_storage)) {
             media.push({
                 "type": "image_url",
@@ -1899,10 +1902,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         }];
     }
     if (client) {
-        const selectedOption = modelSelect.options[modelSelect.selectedIndex];
         const providerSelectOption = providerSelect.options[providerSelect.selectedIndex];
         const selectedModel = get_selected_model() || client.defaultModel;
-        const modelType = selectedOption?.dataset.type || 'chat';
         const modelSeed = selectedOption?.dataset.seed;
         let providerLabel = providerSelectOption?.dataset.label || provider;
         const isAudio = selectedOption?.dataset.audio == "true";
@@ -1998,7 +1999,9 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     }
                     if (response.model) {
                         let provider;
-                        if (response.server && response.provider) {
+                        if (client.id) {
+                            provider = client.id;
+                        } else if (response.server && response.provider) {
                             provider = `custom:${response.server}`;
                         } else if (response.provider) {
                             provider = response.provider || provider;
@@ -2039,7 +2042,9 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     }
                     if (chunk.model && !hasModel) {
                         hasModel = true;
-                        if (chunk.server && chunk.provider) {
+                        if (client.id) {
+                            provider = client.id;
+                        } else if (chunk.server && chunk.provider) {
                             provider = `custom:${chunk.server}`;
                             providerLabel = chunk.provider;
                         } else if (chunk.provider) {
@@ -2079,8 +2084,10 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     if (chunk.citations) {
                         sources = {citations: chunk.citations};
                     }
-                    if (chunk.sources) {
-                       sources = {sources: chunk.sources};
+                    if (chunk.type == "sources") {
+                       sources = {sources: chunk.data};
+                    } else if (chunk.type == "followups") {
+                        suggestions = chunk.data;
                     }
                 }
                 if (sources) {
@@ -2132,6 +2139,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             web_search: searchButton.classList.contains("active"),
             provider: provider,
             messages: messages,
+            prompt: ["image", "image-edit", "video"].includes(modelType) ? message : null,
             action: action,
             download_media: downloadMedia,
             debug_mode: appStorage.getItem("debugMode") == "true",
@@ -2206,6 +2214,9 @@ function sanitize(input, replacement) {
     .replace(reservedRe, replacement)
     .replace(windowsReservedRe, replacement);
   return sanitized.replaceAll(/\/|#|\s{2,}/g, replacement).trim();
+}
+function sanitizeSelector(input) {
+    return input.replace(/([ #;?%&,.+*~\':"!^$[\]()=>|\/@])/g, '-');
 }
 
 async function set_conversation_title(conversation_id, title) {
@@ -2431,7 +2442,7 @@ const load_conversation = async (conversation, append = false) => {
         let next_i = parseInt(i) + 1;
         let next_provider = item.provider ? item.provider : (messages.length > next_i ? messages[next_i].provider : null);
         let provider_label = item.provider?.label ? item.provider.label : item.provider?.name;
-        let provider_link = item.provider?.name ? `<a href="${item.provider.modelUrl || item.provider.url || ('#' + item.provider.server) || ''}" target="_blank">${provider_label}</a>` : "";
+        let provider_link = item.provider?.name ? `<a href="${item.provider.modelUrl || item.provider.url || ('#' + item.provider.name) || ''}" target="_blank">${provider_label}</a>` : "";
         let provider = provider_link ? `
             <div class="provider" data-provider="${item.provider.name}">
                 ${provider_link}
@@ -2595,38 +2606,55 @@ const load_conversation = async (conversation, append = false) => {
         }
     });
 
-    if (suggestions) {
-        if (!Array.isArray(suggestions)) {
-            suggestions = [suggestions];
+    if (suggestions && suggestions.length > 0) {
+        try {
+                if (!Array.isArray(suggestions)) {
+                suggestions = [suggestions];
+            }
+            suggestions_el = document.createElement("div");
+            suggestions_el.classList.add("suggestions");
+            suggestions.forEach((suggestion)=> {
+                if (!suggestion || suggestion == "answer_guess") {
+                    return;
+                }
+                const el = document.createElement("button");
+                el.classList.add("suggestion");
+                el.innerHTML = `<span>${framework.escape(suggestion)}</span> <i class="fa-solid fa-turn-up"></i>`;
+                el.onclick = async () => {
+                    suggestions = null;
+                    suggestions_el = chatBody.querySelector('.suggestions');
+                    suggestions_el ? suggestions_el.remove() : null;
+                    await handle_ask(true, suggestion);
+                }
+                suggestions_el.appendChild(el);
+            });
+            chatBody.querySelectorAll('.suggestions').forEach((suggestions_el) => suggestions_el.remove());
+            chatBody.appendChild(suggestions_el);
+        } catch (e) {
+            add_error("Error showing suggestions:", e);
         }
-        suggestions_el = document.createElement("div");
-        suggestions_el.classList.add("suggestions");
-        suggestions.forEach((suggestion)=> {
-            const el = document.createElement("button");
-            el.classList.add("suggestion");
-            el.innerHTML = `<span>${framework.escape(suggestion)}</span> <i class="fa-solid fa-turn-up"></i>`;
-            el.onclick = async () => {
-                suggestions = null;
-                suggestions_el = chatBody.querySelector('.suggestions');
-                suggestions_el ? suggestions_el.remove() : null;
-                await handle_ask(true, suggestion);
+    } else if (countTokensEnabled && window.GPTTokenizer_o200k_base) {
+        try {
+            let total_tokens = 0;
+            for (const msg of messages) {
+                if (msg.usage) {
+                    total_tokens = msg.usage.total_tokens || msg.usage.prompt_tokens + msg.usage.completion_tokens;
+                }
             }
-            suggestions_el.appendChild(el);
-        });
-        chatBody.querySelectorAll('.suggestions').forEach((suggestions_el) => suggestions_el.remove());
-        chatBody.appendChild(suggestions_el);
-    } else if (countTokensEnabled && window.GPTTokenizer_cl100k_base) {
-        let filtered = prepare_messages(messages, null, true, false);
-        filtered = filtered.filter((item)=>!Array.isArray(item.content) && item.content);
-        if (filtered.length > 0) {
-            last_model = last_model?.startsWith("gpt-3") ? "gpt-3.5-turbo" : "gpt-4"
-            let count_total = GPTTokenizer_cl100k_base?.encodeChat(filtered, last_model).length
-            if (count_total > 0) {
-                const count_total_el = document.createElement("div");
-                count_total_el.classList.add("count_total");
-                count_total_el.innerText = framework.translate("{0} total tokens").replace("{0}", count_total);
-                chatBody.appendChild(count_total_el);
+            console.debug("Total tokens from usage:", total_tokens);
+            let filtered = prepare_messages(messages, null, true, false);
+            filtered = filtered.filter((item)=>!Array.isArray(item.content) && item.content);
+            if (filtered.length > 0 || total_tokens > 0) {
+                let count_total = total_tokens || GPTTokenizer_o200k_base.encodeChat(filtered, "gpt-5").length
+                if (count_total > 0) {
+                    const count_total_el = document.createElement("div");
+                    count_total_el.classList.add("count_total");
+                    count_total_el.innerText = framework.translate("{0} total tokens").replace("{0}", count_total);
+                    chatBody.appendChild(count_total_el);
+                }
             }
+        } catch (e) {
+            add_error("Error counting tokens:", e);
         }
     }
 
@@ -4821,6 +4849,9 @@ function setProviderModels(models, provider, quota=null) {
                 if (window.convertModel && model.id) convertModel(model);
                 option.value = model.id || model;
                 option.text = model.label || model.id || model;
+                if (model.type) {
+                    option.dataset.type = model.type;
+                }
                 if (model.audio) {
                     option.dataset.audio = "true";
                 }
