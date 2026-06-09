@@ -796,7 +796,7 @@ class Puter extends Client {
     }
 
     async getQuota() {
-        this.apiKey = localStorage.getItem("puter.auth.token");
+        this.apiKey = this.apiKey || (await this.signIn()).token;
         if (!this.apiKey) {
             throw new Error('Puter requires an API key to check quota. Please set the "puter.auth.token" in localStorage.');
         }

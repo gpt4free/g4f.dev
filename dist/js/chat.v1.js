@@ -4918,7 +4918,7 @@ async function loadProviderModels(provider=null) {
     modelSelect.innerHTML = '';
     modelSelect.name = `model[${provider}]`;
     modelSelect.classList.remove("hidden");
-    if (!isLoading && ["PuterJS", "puter"].includes(provider) && !appStorage.getItem("puter.auth.token") && window.Puter) {
+    if (!isLoading && ["PuterJS"].includes(provider) && !appStorage.getItem("puter.auth.token") && window.Puter) {
         try {
             await (new window.Puter()).signIn().then((res) => {
                 console.log('PuterJS signed in:', res);
