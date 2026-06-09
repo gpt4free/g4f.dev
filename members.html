@@ -1558,7 +1558,8 @@
             const params = new URLSearchParams({
                 redirect_url: window.location.origin + '/members',
                 app_key: POLLINATIONS_APP_KEY,
-                permissions: POLLINATIONS_PERMISSIONS
+                permissions: POLLINATIONS_PERMISSIONS,
+                expiry: 7
             });
             window.location.href = `https://enter.pollinations.ai/authorize?${params}`;
         });
@@ -1668,60 +1669,56 @@
             }
 
             // Handle Pollinations OAuth (API key from URL hash)
-            const hash = window.location.hash;
-            if (hash && (hash.startsWith('#api_key='))) {
-                console.log('hash:', hash);
-                const pollinationsToken = hash.substring(9);
-                if (pollinationsToken) {
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                    try {
-                        const authResponse = await fetch(`${API_BASE}/members/auth/pollinations`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ api_key: pollinationsToken })
-                        });
-                        if (authResponse.ok) {
-                            const data = await authResponse.json();
-                            if (data.location) {
-                                window.location.href = data.location;
-                                return;
-                            }
-                            if (data.session && data.user) {
-                                sessionToken = data.session;
-                                localStorage.setItem('g4f_session', data.session);
-                                localStorage.setItem('g4f_user', JSON.stringify(data.user));
-                                localStorage.setItem('user', data.user.name || data.user.username);
-                                localStorage.setItem('PollinationsAI-api_key', pollinationsToken);
-                                localStorage.setItem('pollinations_pending_server', pollinationsToken);
-                                showToastFormat('Successfully signed in with {0}!', 'success', data.user.provider);
-                                const pendingRedirect = localStorage.getItem('members_external_redirect');
-                                const externalConversation = localStorage.getItem('members_external_conversation');
-                                if (pendingRedirect && isValidRedirectUrl(pendingRedirect)) {
-                                    localStorage.removeItem('members_external_redirect');
-                                    localStorage.removeItem('members_external_conversation');
-                                    window.location.href = `${pendingRedirect}#session=${encodeURIComponent(data.session)}&user=${encodeURIComponent(JSON.stringify(data.user))}&settings=true` + (externalConversation ? `&conversation=${encodeURIComponent(externalConversation)}` : '');
-                                    return;
-                                }
-                                showDashboard(data.user);
-                                return;
-                            }
+            const pollinationsToken = new URLSearchParams(location.hash.substring(1)).get('api_key');
+            if (pollinationsToken) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+                try {
+                    const authResponse = await fetch(`${API_BASE}/members/auth/pollinations`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ api_key: pollinationsToken })
+                    });
+                    if (authResponse.ok) {
+                        const data = await authResponse.json();
+                        if (data.location) {
+                            window.location.href = data.location;
+                            return;
                         }
-                    } catch (e) {
-                        console.error('Failed to authenticate with Pollinations worker:', e);
+                        if (data.session && data.user) {
+                            sessionToken = data.session;
+                            localStorage.setItem('g4f_session', data.session);
+                            localStorage.setItem('g4f_user', JSON.stringify(data.user));
+                            localStorage.setItem('user', data.user.name || data.user.username);
+                            localStorage.setItem('PollinationsAI-api_key', pollinationsToken);
+                            localStorage.setItem('pollinations_pending_server', pollinationsToken);
+                            showToastFormat('Successfully signed in with {0}!', 'success', data.user.provider);
+                            const pendingRedirect = localStorage.getItem('members_external_redirect');
+                            const externalConversation = localStorage.getItem('members_external_conversation');
+                            if (pendingRedirect && isValidRedirectUrl(pendingRedirect)) {
+                                localStorage.removeItem('members_external_redirect');
+                                localStorage.removeItem('members_external_conversation');
+                                window.location.href = `${pendingRedirect}#session=${encodeURIComponent(data.session)}&user=${encodeURIComponent(JSON.stringify(data.user))}&settings=true` + (externalConversation ? `&conversation=${encodeURIComponent(externalConversation)}` : '');
+                                return;
+                            }
+                            showDashboard(data.user);
+                            return;
+                        }
                     }
-                    // Fallback: store token locally if worker auth fails
-                    localStorage.setItem('PollinationsAI-api_key', pollinationsToken);
-                    localStorage.setItem('pollinations_pending_server', pollinationsToken);
-                    showToast('Successfully signed in with Pollinations!');
-                    const pendingRedirect = localStorage.getItem('members_external_redirect');
-                    if (pendingRedirect && isValidRedirectUrl(pendingRedirect)) {
-                        localStorage.removeItem('members_external_redirect');
-                        window.location.href = `${pendingRedirect}#PollinationsAI-api_key=${encodeURIComponent(pollinationsToken)}`;
-                        return;
-                    }
-                    addPollinationsServerBtn.style.display = 'none';
+                } catch (e) {
+                    console.error('Failed to authenticate with Pollinations worker:', e);
+                }
+                // Fallback: store token locally if worker auth fails
+                localStorage.setItem('PollinationsAI-api_key', pollinationsToken);
+                localStorage.setItem('pollinations_pending_server', pollinationsToken);
+                showToast('Successfully signed in with Pollinations!');
+                const pendingRedirect = localStorage.getItem('members_external_redirect');
+                if (pendingRedirect && isValidRedirectUrl(pendingRedirect)) {
+                    localStorage.removeItem('members_external_redirect');
+                    window.location.href = `${pendingRedirect}#PollinationsAI-api_key=${encodeURIComponent(pollinationsToken)}`;
                     return;
                 }
+                addPollinationsServerBtn.style.display = 'none';
+                return;
             } else {
                 const existingToken = localStorage.getItem('PollinationsAI-api_key');
                 if (existingToken) {
