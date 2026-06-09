@@ -6481,8 +6481,8 @@ function handleCloudSyncCallback() {
                 if (user.pollinations?.api_key) {
                     appStorage.setItem("PollinationsAI-api_key", user.pollinations.api_key);
                 }
-                if (user.provider === "huggingface" && user.access_token) {
-                    appStorage.setItem("HuggingFace-api_key", user.access_token);
+                if (user.huggingface?.access_token) {
+                    appStorage.setItem("HuggingFace-api_key", user.huggingface.access_token);
                 }
                 if (user.airforce?.access_token) {
                     appStorage.setItem("ApiAirforce-api_key", user.airforce.access_token);
