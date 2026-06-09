@@ -23,22 +23,29 @@ function resolveModel(model) {
   return MODEL_ALIASES[model] || model;
 }
 
+async function getError(response) {
+  try {
+    const data = await response.clone().json();
+    if (data.error) {
+      let errorMessage = data.error.message || data.error;
+      errorMessage = errorMessage.replace(/\s*\([^)]+\)\s*/g, ' ').trim();
+      data.error = {};
+      data.error.message = errorMessage;
+    }
+    return data;
+  } catch (e) {
+    return {error: {message: await response.clone().text()}};
+  }
+}
+
 /**
  * Convert OpenAI messages format to Ollama format
  */
 function convertMessages(messages) {
-  return messages.map(msg => {
-    const converted = {
-      role: msg.role,
-      content: msg.content
-    };
-    // Handle tool calls in assistant messages
-    if (msg.tool_calls) {
-      converted.tool_calls = msg.tool_calls;
-    }
-    // Handle tool response messages
-    if (msg.role === "tool" && msg.tool_call_id) {
-      converted.tool_call_id = msg.tool_call_id;
+  return messages.filter(msg=>msg.content).map(msg => {
+    const converted = {...msg};
+    if (msg.role == "tool") {
+      converted.tool_name = msg.name;
     }
     return converted;
   });
@@ -109,9 +116,10 @@ async function handleListModels(request, env) {
  */
 async function handleChatCompletion(request, env, ctx) {
   const body = await request.json();
-  const model = resolveModel(body.model);
-  const messages = convertMessages(body.messages || []);
-  const stream = body.stream || false;
+  let {model, messages, tools, stream, response_format, reasoning_effort, ...options} = body;
+  model = resolveModel(model);
+  messages = convertMessages(messages || []);
+  stream = stream || false;
 
   // Extract API key from Authorization header or env
   const authHeader = request.headers.get("Authorization");
@@ -138,23 +146,35 @@ async function handleChatCompletion(request, env, ctx) {
     });
   }
 
-  return await handleOllamaComRequest(env, ctx, null, model, messages, stream, apiKey, body, null);
+  return await handleOllamaComRequest(env, ctx, null, model, messages, stream, apiKey, body, tools, options);
 }
 
 /**
  * Handle request to ollama.com
  */
-async function handleOllamaComRequest(env, ctx, clientIP, model, messages, stream, apiKey, body, userInfo = null) {
+async function handleOllamaComRequest(env, ctx, clientIP, model, messages, stream, apiKey, body, tools = null, options = null) {
   // Build request body
   const requestBody = {
-    model: model,
-    messages: messages,
-    stream: stream
+    model,
+    messages,
+    stream
   };
+
+  if (tools) {
+    requestBody.tools = tools;
+  }
+
+  if (options) {
+    requestBody.options = options;
+  }
 
   // Convert OpenAI response_format to Ollama format
   if (body.response_format?.type === "json_object") {
     requestBody.format = "json";
+  }
+
+  if (body.reasoning_effort) {
+    requestBody.think = body.reasoning_effort;
   }
 
   // Add tools if provided
@@ -177,29 +197,23 @@ async function handleOllamaComRequest(env, ctx, clientIP, model, messages, strea
   });
 
   if (!response.ok) {
-    return new Response(JSON.stringify({
-      error: {
-        message: `Ollama.com API error: ${response.status}`,
-        type: "api_error",
-        code: response.status
-      }
-    }), {
+    return new Response(JSON.stringify(await getError(response)), {
       status: response.status,
       headers: { "Content-Type": "application/json" }
     });
   }
 
   if (stream) {
-    return handleOllamaComStream(env, ctx, clientIP, response, model, userInfo);
+    return handleOllamaComStream(env, ctx, clientIP, response, model);
   } else {
-    return handleOllamaComNonStream(env, ctx, clientIP, response, model, userInfo);
+    return handleOllamaComNonStream(env, ctx, clientIP, response, model);
   }
 }
 
 /**
  * Handle streaming response from ollama.com
  */
-function handleOllamaComStream(env, ctx, clientIP, response, model, userInfo = null) {
+function handleOllamaComStream(env, ctx, clientIP, response, model) {
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
   const encoder = new TextEncoder();
@@ -228,6 +242,7 @@ function handleOllamaComStream(env, ctx, clientIP, response, model, userInfo = n
             const chunk = createStreamChunk(data, model);
             await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
           } catch (e) {
+            await writer.write(encoder.encode(`data: ${JSON.stringify({error: {message: e.message}})}\n\n`));
             console.error("Parse error:", e);
           }
         }
@@ -271,7 +286,7 @@ function handleOllamaComStream(env, ctx, clientIP, response, model, userInfo = n
 /**
  * Handle non-streaming response from ollama.com
  */
-async function handleOllamaComNonStream(env, ctx, clientIP, response, model, userInfo = null) {
+async function handleOllamaComNonStream(env, ctx, clientIP, response, model) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let fullContent = "";
@@ -303,7 +318,7 @@ async function handleOllamaComNonStream(env, ctx, clientIP, response, model, use
   }
 
   return new Response(JSON.stringify(createCompletionResponse(
-    env, ctx, clientIP, model, fullContent, thinkingContent, toolCalls, lastData, userInfo
+    env, ctx, clientIP, model, fullContent, thinkingContent, toolCalls, lastData
   )), {
     headers: { "Content-Type": "application/json" }
   });
@@ -361,7 +376,7 @@ function createStreamChunk(data, model) {
 /**
  * Create a completion response in OpenAI format
  */
-function createCompletionResponse(env, ctx, clientIP, model, content, thinkingContent, toolCalls, lastData, userInfo = null) {
+function createCompletionResponse(env, ctx, clientIP, model, content, thinkingContent, toolCalls, lastData) {
   const message = {
     role: "assistant",
     content: content

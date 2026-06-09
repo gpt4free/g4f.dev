@@ -6,27 +6,11 @@
  */
 
 const PUTER_API_ENDPOINT = "https://api.puter.com/drivers/call";
-const DEFAULT_MODEL = "google:google/gemini-3-flash-preview";
+const PUTER_USAGE_ENDPOINT = "https://api.puter.com/metering/usage";
 
 // Model aliases mapping (same as PuterJS.py)
-const MODEL_ALIASES = {};
-
-// OpenAI models that use openai-completion driver
-const OPENAI_MODELS = [
-  "gpt-4o", "gpt-4o-mini", "o1", "o1-mini", "o1-pro", "o3", "o3-mini", "o4-mini",
-  "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4.5-preview"
-];
-
-// Mistral models that use mistral driver
-const MISTRAL_MODELS = [
-  "ministral-3b-2410", "ministral-3b-latest", "ministral-8b-2410", "ministral-8b-latest",
-  "open-mistral-7b", "mistral-tiny", "mistral-tiny-2312", "open-mixtral-8x7b",
-  "mistral-small", "mistral-small-2312", "open-mixtral-8x22b", "open-mixtral-8x22b-2404",
-  "mistral-large-2411", "mistral-large-latest", "pixtral-large-2411", "pixtral-large-latest",
-  "mistral-large-pixtral-2411", "codestral-2501", "codestral-latest", "codestral-2412",
-  "codestral-2411-rc5", "pixtral-12b-2409", "pixtral-12b", "pixtral-12b-latest",
-  "mistral-small-2503", "mistral-small-latest"
-];
+const MODEL_ALIASES = {
+};
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -50,7 +34,6 @@ function estimateTokens(text) {
   // Simple heuristic: ~4 characters per token for English text
   // Adjust for whitespace and punctuation
   const charCount = text.length;
-  const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
   
   // Use a combination of character and word count for better accuracy
   // Tokens are roughly words + punctuation overhead
@@ -95,50 +78,6 @@ function estimatePromptTokens(messages) {
   totalTokens += messages.length * 3;
   
   return totalTokens;
-}
-
-/**
- * Determine the appropriate Puter driver based on model name
- * 
- * @param {string} model - Model name
- * @returns {string} Driver name
- */
-function getDriverForModel(model) {
-  if (model.includes("openrouter:")) {
-    return "openrouter";
-  } else if (OPENAI_MODELS.includes(model) || model.startsWith("gpt-")) {
-    return "openai-completion";
-  } else if (MISTRAL_MODELS.includes(model)) {
-    return "mistral";
-  } else if (model.includes("grok")) {
-    return "xai";
-  } else if (model.includes("claude")) {
-    return "claude";
-  } else if (model.includes("deepseek")) {
-    return "deepseek";
-  } else if (model.includes("gemini")) {
-    return "gemini";
-  } else {
-    return "openai-completion";
-  }
-}
-
-/**
- * Resolve model alias to actual model name
- * 
- * @param {string} model - User-provided model name
- * @returns {string} Resolved model name
- */
-function resolveModel(model) {
-  if (!model) return DEFAULT_MODEL;
-  
-  if (MODEL_ALIASES[model]) {
-    const alias = MODEL_ALIASES[model];
-    // If alias is array, pick first option
-    return Array.isArray(alias) ? alias[0] : alias;
-  }
-  
-  return model;
 }
 
 /**
@@ -196,23 +135,9 @@ function createChatCompletionResponse(id, model, content, finishReason, usage, r
 }
 
 /**
- * Parse SSE data from Puter API response
- */
-function parseSSEData(line) {
-  if (!line.startsWith('data: ')) return null;
-  const data = line.slice(6);
-  if (data === '[DONE]') return { done: true };
-  try {
-    return JSON.parse(data);
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Handle streaming response from Puter API
  */
-async function handleStreamingResponse(env, ctx, clientIP, response, model, promptTokens) {
+async function handleStreamingResponse(env, ctx, response, model, promptTokens) {
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
   const encoder = new TextEncoder();
@@ -226,7 +151,9 @@ async function handleStreamingResponse(env, ctx, clientIP, response, model, prom
     try {
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          break;
+        }
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
@@ -271,6 +198,15 @@ async function handleStreamingResponse(env, ctx, clientIP, response, model, prom
       await writer.close();
     }
   })();
+
+  return new Response(readable, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
 }
 
 /**
@@ -279,25 +215,25 @@ async function handleStreamingResponse(env, ctx, clientIP, response, model, prom
 function createStreamChunk(data, model) {
   const delta = {};
   
-  if (data.message?.thinking) {
-    // Include reasoning/thinking in the response
-    delta.reasoning_content = data.message.thinking;
+  if (data.reasoning) {
+    delta.reasoning_content = data.reasoning;
   }
   if (data.text) {
-    delta.content = data.text;
+    delta.content = Array.isArray(data.text) && data.text ? data.text[0].text : data.text;
   }
-  if (data.message?.role) {
-    delta.role = data.message.role;
-  }
-  if (data.message?.tool_calls) {
-    delta.tool_calls = data.message.tool_calls;
+  if (data.type === "tool_use") {
+    delta.tool_calls = [{
+        id: data.id,
+        type: 'function',
+        function: {
+            name: data.name,
+            arguments: data.input
+        }
+    }]
   }
 
   // Determine finish_reason
-  let finishReason = null;
-  if (data.done) {
-    finishReason = data.message?.tool_calls ? "tool_calls" : "stop";
-  }
+  let finishReason = data.tool_calls ? "tool_calls" : "stop";
 
   return {
     id: `chatcmpl-${Date.now()}`,
@@ -314,7 +250,7 @@ function createStreamChunk(data, model) {
 /**
  * Handle non-streaming response from Puter API
  */
-async function handleNonStreamingResponse(env, ctx, clientIP, response, requestId, model, promptTokens) {
+async function handleNonStreamingResponse(env, ctx, response, requestId, model, promptTokens) {
   const contentType = response.headers.get('content-type') || '';
   
   if (contentType.includes('application/json')) {
@@ -336,7 +272,7 @@ async function handleNonStreamingResponse(env, ctx, clientIP, response, requestI
         ? message.content.filter(i => i.type === 'text').map(i => i.text).join('')
         : '';
     
-    const reasoningContent = message.reasoning_content || null;
+    const reasoningContent = message.reasoning || null;
     const finishReason = choice.finish_reason || 'stop';
     
     // Use API-provided usage or estimate
@@ -351,68 +287,19 @@ async function handleNonStreamingResponse(env, ctx, clientIP, response, requestI
       const completionTokens = estimateTokens(content + (reasoningContent || ''));
       usage = createUsage(promptTokens, completionTokens);
     }
-
-
-    if (usage) {
-        ctx.waitUntil(persistUsageToDb(env, clientIP, "puter", model, usage.total_tokens, usage.prompt_tokens, usage.completion_tokens));
-    }
     
     const responseObj = createChatCompletionResponse(requestId, model, content, finishReason, usage, reasoningContent);
     
     // Add tool calls if present
-    if (message.tool_calls) {
-      responseObj.choices[0].message.tool_calls = message.tool_calls;
-    }
-    
-    return Response.json(responseObj, { headers: CORS_HEADERS });
-  }
-  
-  // Handle SSE response for non-streaming request (accumulate all chunks)
-  if (contentType.includes('text/event-stream')) {
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let completionText = '';
-    let reasoningText = '';
-    let finishReason = 'stop';
-    let apiUsage = null;
-    let toolCalls = null;
-    
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-      
-      for (const line of lines) {
-        const data = parseSSEData(line);
-        if (!data || data.done) continue;
-        
-        const choices = data.choices || [];
-        const choice = choices[0] || {};
-        const delta = choice.delta || {};
-        
-        if (delta.content) completionText += delta.content;
-        if (delta.reasoning_content) reasoningText += delta.reasoning_content;
-        if (delta.tool_calls) toolCalls = delta.tool_calls;
-        if (choice.finish_reason) finishReason = choice.finish_reason;
-        if (data.usage) apiUsage = data.usage;
-      }
-    }
-    
-    const completionTokens = apiUsage?.completion_tokens || estimateTokens(completionText + reasoningText);
-    const finalPromptTokens = apiUsage?.prompt_tokens || promptTokens;
-    const usage = createUsage(finalPromptTokens, completionTokens);
-    
-    const responseObj = createChatCompletionResponse(
-      requestId, model, completionText, finishReason, usage,
-      reasoningText || null
-    );
-    
-    if (toolCalls) {
-      responseObj.choices[0].message.tool_calls = toolCalls;
+    if (result.tool_use) {
+      responseObj.choices[0].message.tool_calls = [{
+          id: result.id,
+          type: 'function',
+          function: {
+              name: result.name,
+              arguments: result.input
+          }
+      }];
     }
     
     return Response.json(responseObj, { headers: CORS_HEADERS });
@@ -429,63 +316,21 @@ async function handleNonStreamingResponse(env, ctx, clientIP, response, requestI
  */
 async function handleChatCompletion(env, ctx, request, apiKey) {
   const body = await request.json();
-  const {
-    model: requestedModel,
-    messages,
-    stream = false,
-    temperature,
-    top_p,
-    presence_penalty,
-    frequency_penalty,
-    response_format,
-    tools,
-    tool_choice,
-    parallel_tool_calls,
-    reasoning_effort,
-    logit_bias,
-    voice,
-    modalities,
-    audio
-  } = body;
-  
-  // Resolve model and determine driver
-  const model = resolveModel(requestedModel);
-  const driver = getDriverForModel(model);
   
   // Estimate prompt tokens
-  const promptTokens = estimatePromptTokens(messages);
+  const promptTokens = estimatePromptTokens(body.messages);
   
   // Generate request ID
   const requestId = `chatcmpl-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   
   // Build Puter API request
   const puterRequest = {
-    interface: "puter-chat-completion",
-    driver: "ai-chat",
-    test_mode: messages[0]?.content === "test",
-    auth_token: apiKey,
-    method: "complete",
-    args: {
-      messages: messages,
-      model: model,
-      stream: stream
-    }
-  };
-  
-  // Add optional parameters
-  if (temperature !== undefined) puterRequest.args.temperature = temperature;
-  if (top_p !== undefined) puterRequest.args.top_p = top_p;
-  if (presence_penalty !== undefined) puterRequest.args.presence_penalty = presence_penalty;
-  if (frequency_penalty !== undefined) puterRequest.args.frequency_penalty = frequency_penalty;
-  if (response_format) puterRequest.args.response_format = response_format;
-  if (tools) puterRequest.args.tools = tools;
-  if (tool_choice) puterRequest.args.tool_choice = tool_choice;
-  if (parallel_tool_calls !== undefined) puterRequest.args.parallel_tool_calls = parallel_tool_calls;
-  if (reasoning_effort) puterRequest.args.reasoning_effort = reasoning_effort;
-  if (logit_bias) puterRequest.args.logit_bias = logit_bias;
-  if (voice) puterRequest.args.voice = voice;
-  if (modalities) puterRequest.args.modalities = modalities;
-  if (audio) puterRequest.args.audio = audio;
+    "interface": "puter-chat-completion",
+    "driver": "ai-chat",
+    "test_mode": body.messages[0].content != "test",
+    "method": "complete",
+    "args": body
+  }
   
   let response;
     response = await fetch(PUTER_API_ENDPOINT, {
@@ -493,7 +338,7 @@ async function handleChatCompletion(env, ctx, request, apiKey) {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json;charset=UTF-8',
-        'Accept': stream ? 'text/event-stream' : '*/*',
+        'Accept': body.stream ? 'text/event-stream' : '*/*',
         'Origin': 'http://docs.puter.com',
         'Referer': 'http://docs.puter.com/',
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36'
@@ -519,10 +364,10 @@ async function handleChatCompletion(env, ctx, request, apiKey) {
   
   const contentType = response.headers.get('content-type') || '';
   
-  if (stream && contentType.includes('application/x-ndjson')) {
-    return handleStreamingResponse(env, ctx, getClientIP(request), response, model, promptTokens);
+  if (body.stream && contentType.includes('application/x-ndjson')) {
+    return handleStreamingResponse(env, ctx, response, body.model, promptTokens);
   } else {
-    return handleNonStreamingResponse(env, ctx, getClientIP(request), response, requestId, model, promptTokens);
+    return handleNonStreamingResponse(env, ctx, response, requestId, body.model, promptTokens);
   }
 }
 
@@ -545,11 +390,16 @@ async function handleModels() {
     
     const data = await response.json();
     
-    const modelList = data.models.map(id => ({
+    let models = (data.models || []);
+    
+    // Add alias keys
+    models = [...new Set([...models, ...Object.keys(MODEL_ALIASES)])];
+    
+    const modelList = models.map(id => ({
       id: id,
       object: "model",
-      created: 0,
-      owned_by: id.includes(':') ? id.split(':')[1].split('/')[0] : "puter"
+      created: 1700000000,
+      owned_by: id.includes('openrouter:') ? id.split(':')[1].split('/')[0] : "puter"
     }));
     
     return Response.json({ object: "list", data: modelList }, { headers: CORS_HEADERS });
@@ -559,6 +409,10 @@ async function handleModels() {
       { status: 500, headers: CORS_HEADERS }
     );
   }
+}
+
+async function handleQuota(request) {
+  return await fetch(PUTER_USAGE_ENDPOINT, request);
 }
 
 /**
@@ -587,6 +441,10 @@ async function handleRequest(request, env, ctx) {
   // Routes
   if (pathname.endsWith('/models')) {
     return handleModels();
+  }
+
+   if (pathname.endsWith('/quota')) {
+    return handleQuota(request);
   }
   
   if (pathname.endsWith('/chat/completions')) {
@@ -639,9 +497,3 @@ export default {
     }
   }
 };
-
-function getClientIP(request) {
-  return request.headers.get('cf-connecting-ip') || 
-         request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-         'unknown';
-}

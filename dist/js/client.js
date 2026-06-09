@@ -833,6 +833,7 @@ class Puter extends Client {
           this.logCallback && this.logCallback({response: item, type: 'chat'});
           if (item.type === 'tool_use') {
             yield {choices: [{delta: {tool_calls: [{
+                id: item.id,
                 type: 'function', function: {
                     name: item.name,
                     arguments: item.input
