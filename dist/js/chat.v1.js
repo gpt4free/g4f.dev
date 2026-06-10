@@ -4646,7 +4646,7 @@ function get_api_key_by_provider(provider, single=false) {
     }
     if (provider) {
         const expires = appStorage.getItem("expires");
-        if (expires && isTokenExpired(expires)) {
+        if (isTokenExpired(expires)) {
             appStorage.removeItem("g4f_session");
             appStorage.removeItem("expires");
         }
@@ -6505,19 +6505,31 @@ function handleCloudSyncCallback() {
                 if (user.pollinations?.api_key) {
                     if (!isTokenExpired(user.pollinations.expires)) {
                         appStorage.setItem("PollinationsAI-api_key", user.pollinations.api_key);
-                        appStorage.setItem("PollinationsAI-expires", user.pollinations.expires);
+                        if (user.pollinations.expires) {
+                            appStorage.setItem("PollinationsAI-expires", user.pollinations.expires);
+                        } else {
+                            appStorage.removeItem("PollinationsAI-expires");
+                        }
                     }
                 }
                 if (user.huggingface?.access_token) {
                     if (!isTokenExpired(user.huggingface.expires)) {
                         appStorage.setItem("HuggingFace-api_key", user.huggingface.access_token);
-                        appStorage.setItem("HuggingFace-expires", user.huggingface.expires);
+                        if (user.huggingface.expires) {
+                            appStorage.setItem("HuggingFace-expires", user.huggingface.expires);
+                        } else {
+                            appStorage.removeItem("HuggingFace-expires");
+                        }
                     }
                 }
                 if (user.airforce?.access_token) {
                     if (!isTokenExpired(user.airforce.expires)) {
                         appStorage.setItem("ApiAirforce-api_key", user.airforce.access_token);
-                        appStorage.setItem("ApiAirforce-expires", user.airforce.expires);
+                        if (user.airforce.expires) {
+                            appStorage.setItem("ApiAirforce-expires", user.airforce.expires);
+                        } else {
+                            appStorage.removeItem("ApiAirforce-expires");
+                        }
                     }
                 }
                 showCloudSyncLoggedIn(user);
