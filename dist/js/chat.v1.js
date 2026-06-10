@@ -4645,10 +4645,10 @@ function get_api_key_by_provider(provider, single=false) {
         return appStorage.getItem(`pa:${provider.slice(3)}-api_key`) || appStorage.getItem("g4f_session");
     }
     if (provider) {
-        const expires = appStorage.getItem("expires");
+        const expires = appStorage.getItem("g4f_expires");
         if (isTokenExpired(expires)) {
             appStorage.removeItem("g4f_session");
-            appStorage.removeItem("expires");
+            appStorage.removeItem("g4f_expires");
         }
         if (provider === "custom:srv_ml2kr1wn9b1fb453079a") {
             return appStorage.getItem("DeepInfra-api_key") || appStorage.getItem("g4f_session");
@@ -6404,22 +6404,27 @@ async function checkCloudSyncSession() {
         return;
     }
     try {
-        const url = token.startsWith("g4f_") ? `${CLOUD_SYNC_API}/keys/validate` : `${CLOUD_SYNC_API}/user`;
+        const url = token.startsWith("g4f_") ? `${CLOUD_SYNC_API}/keys/validate` : `${CLOUD_SYNC_API}/session`;
         const response = await fetch(url, {
             headers: { "Authorization": `Bearer ${token}` }
         });
         if (response.ok) {
             const data = await response.json();
-            if (data.user || data.username) {
+            if (data.expires) {
+                appStorage.setItem("g4f_expires", data.expires);
+            }
+            if (data.authenticated || data.username) {
                 showCloudSyncLoggedIn(data.user || {name: data.username, tier: data.tier});
                 return;
             } else {
                 appStorage.removeItem("g4f_session");
+                appStorage.removeItem("g4f_expires");
                 showCloudSyncLogin();
                 return;
             }
         } else {
             appStorage.removeItem("g4f_session");
+            appStorage.removeItem("g4f_expires");
             showCloudSyncLogin();
             return;
         }
@@ -6491,7 +6496,7 @@ function handleCloudSyncCallback() {
         window.history.replaceState({}, document.title, location_url);
 
         if (!isTokenExpired(expires)) {
-            appStorage.setItem("expires", expires);
+            appStorage.setItem("g4f_expires", expires);
         } else if (expires) {
             console.warn("Received expired token, not saving.");
             return;

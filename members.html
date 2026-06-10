@@ -1585,7 +1585,38 @@
         });
 
         // Pollinations login from redirect section - save external redirect then start OAuth
-        redirectLoginPollinations.addEventListener('click', () => {
+        redirectLoginPollinations.addEventListener('click', async () => {
+            const pollinationsExpires = localStorage.getItem('PollinationsAI-expires');
+            const pollinationsToken = isTokenExpired(pollinationsExpires) ? null : localStorage.getItem('PollinationsAI-api_key');
+            if (pollinationsToken) {
+                const authResponse = await fetch(`${API_BASE}/members/auth/pollinations`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_key: pollinationsToken })
+                });
+                if (authResponse.ok) {
+                    const data = await authResponse.json();
+                    if (data.session && data.user) {
+                        sessionToken = data.session;
+                        localStorage.setItem('g4f_session', data.session);
+                        localStorage.setItem('g4f_user', JSON.stringify(data.user));
+                        localStorage.setItem('user', data.user.name || data.user.username);
+                        showToastFormat('Successfully signed in with {0}!', 'success', data.user.provider);
+                        if (externalRedirect && isValidRedirectUrl(externalRedirect)) {
+                            const hashQuery = new SearchParams({
+                                session: data.session,
+                                user: JSON.stringify(data.user),
+                                settings: 'true',
+                                conversation: externalConversation,
+                                expires: data.expires
+                            });
+                            window.location.href = `${externalRedirect}#${hashQuery.toString()}`;
+                            return;
+                        }
+                        return;
+                    }
+                }
+            }
             localStorage.setItem('members_external_redirect', externalRedirect);
             if (externalConversation) {
                 localStorage.setItem('members_external_conversation', externalConversation);
@@ -1597,6 +1628,12 @@
             });
             window.location.href = `https://enter.pollinations.ai/authorize?${params}`;
         });
+
+        function isTokenExpired(expires) {
+            if (!expires) return false;
+            const expiresMs = expires > 1e12 ? expires : expires * 1000;
+            return Date.now() > expiresMs;
+        }
 
         // Handle OAuth callback
         async function handleOAuthCallback() {
@@ -1622,18 +1659,27 @@
                     localStorage.setItem('g4f_user', JSON.stringify(user));
                     localStorage.setItem('user', user.name || user.username);
                     if (user.pollinations?.api_key) {
-                        if (user.pollinations.expires * 1000 > Date.now()) {
+                        if (!isTokenExpired(user.pollinations.expires)) {
                             localStorage.setItem('PollinationsAI-api_key', user.pollinations.api_key);
+                            if (user.pollinations.expires) {
+                                localStorage.setItem('PollinationsAI-expires', user.pollinations.expires);
+                            }
                         }
                     }
                     if (user.airforce?.access_token) {
-                        if (user.airforce.expires * 1000 > Date.now()) {
+                        if (!isTokenExpired(user.airforce.expires)) {
                             localStorage.setItem('ApiAirforce-api_key', user.airforce.access_token);
+                            if (user.airforce.expires) {
+                                localStorage.setItem('ApiAirforce-expires', user.airforce.expires);
+                            }
                         }
                     }
                     if (user.huggingface?.access_token) {
-                        if (user.huggingface.expires * 1000 > Date.now()) {
+                        if (!isTokenExpired(user.huggingface.expires)) {
                             localStorage.setItem('HuggingFace-api_key', user.huggingface.access_token);
+                            if (user.huggingface.expires) {
+                                localStorage.setItem('HuggingFace-expires', user.huggingface.expires);
+                            }
                         }
                     }
                     showToastFormat('Successfully signed in with {0}!', 'success', user.provider);
