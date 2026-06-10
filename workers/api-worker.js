@@ -36,8 +36,8 @@ var USER_TIER_LIMITS = {
     days: { perTwelveDays: 12 }
   },
   sponsor: {
-    tokens: { perMinute: 5e5, perHour: 25e5, perDay: 1e7 },
-    requests: { perMinute: 50, perHour: 500, perDay: 5e3 },
+    tokens: { perMinute: 1e6, perHour: 5e6, perDay: 2e7 },
+    requests: { perMinute: 100, perHour: 1e3, perDay: 1e4 },
     days: { perTwelveDays: 12 }
   },
   pro: {
@@ -51,8 +51,8 @@ var USER_TIER_LIMITS = {
     days: { perTwelveDays: 12 }
   },
   anonymous: {
-    tokens: { perMinute: 500000, perHour: 4000000, perDay: 100000000 },
-    requests: { perMinute: 100, perHour: 2000, perDay: 50000 },
+    tokens: { perMinute: 1e6, perHour: 5e6, perDay: 1e8 },
+    requests: { perMinute: 100, perHour: 2e3, perDay: 5e4 },
     days: { perTwelveDays: 12 }
   }
 };
@@ -79,16 +79,21 @@ var ACCESS_CONTROL_ALLOW_ORIGIN = {
 };
 var AUTO_PROVIDERS = [
   "srv_mkombumpae45db46dcb8", // nvidia
-  "srv_mnkjel2208cf770e5009", // ollama
-  "srv_mm0u9cua212491d78695", // openrouter
+  // "srv_mnkjel2208cf770e5009", // ollama
+  // "srv_mp2i8rco3148dd85bec1",
+  "srv_mq7ktfibad45c29f3839", // swarm
+  "srv_monk1pkz433a519ff2be", // openrouter
   "srv_mkoloq41e34074b6133e", // pollinations
 ]
 var DEFAULT_MODELS = {
   "srv_mkom688d57c76d8a3542": "moonshotai/kimi-k2-instruct-0905", // groq
-  "srv_mkombumpae45db46dcb8": "moonshotai/kimi-k2.6", // nvidia
+  "srv_mkombumpae45db46dcb8": "nvidia/nemotron-3-nano-30b-a3b", // nvidia
   "srv_mnkjel2208cf770e5009": "nemotron-3-nano:30b", // "deepseek-v4-pro", // ollama
+  "srv_mp2i8rco3148dd85bec1": "nemotron-3-nano:30b",
+  "srv_mq7ktfibad45c29f3839": "deepseek-v4-pro:cloud", // swarm
   "srv_mm0u9cua212491d78695": "openrouter/free", // openrouter
   "srv_mkolylnsaec61b86b9c2": "openrouter/free", // openrouter old
+  "srv_monk1pkz433a519ff2be": "nvidia/nemotron-3-super-120b-a12b:free", // openrouter
   "srv_mjlq1ncq8a3f7fe0aea0": "turbo", // perplexity
   "srv_mkol5tgcd33cc358ddbc": "models/gemini-flash-latest", // gemini
   "srv_mkoloq41e34074b6133e": "openai-fast", // pollinations
@@ -98,7 +103,7 @@ var DEFAULT_MODELS = {
 var SERVER_MAP = {
   //"api": "srv_mnkjel2208cf770e5009",
   "ollama": "srv_mnkjel2208cf770e5009",
-  "openrouter": "srv_mm0u9cua212491d78695",
+  "openrouter": "srv_monk1pkz433a519ff2be",
   "pollinations": "srv_mkoloq41e34074b6133e",
   "groq": "srv_mkom688d57c76d8a3542",
   "gemini": "srv_mkol5tgcd33cc358ddbc",
@@ -124,7 +129,8 @@ var BLOCKED_SERVERS = [
   "srv_mkoppbfq3a8158241c8e",
   "srv_mpd9iu48c8486a78fa7e",
   "srv_mph1a6fddd5cabca84a2",
-  "srv_mkopsm2y6983ddb87c90"
+  "srv_mkopsm2y6983ddb87c90",
+  "srv_mnpsn10w592d5e0fe2b0"
 ];
 // organizations (from Cloudflare `asOrganization`) that should be blocked
 // when the request is anonymous (no user/session or API key provided).
@@ -144,6 +150,7 @@ var BLOCKED_ORGS = [
   "DigitalOcean, LLC",
   "SEO Hosting LTD",
   "Cloudflare London, LLC",
+  "Cloudflare, Inc.",
   "Contabo GmbH",
   "Amazon Data Services Brazil",
   "Private Customer",
@@ -173,7 +180,14 @@ var BLOCKED_ORGS = [
   "Amazon Data Services Ireland Ltd",
   "QWINS Hosting",
   "Interhive OU",
-  "QWINS Hosting"
+  "QWINS Hosting",
+  "Datacamp Limited",
+  "UFO Hosting LLC",
+  "HOST4NERD LLC",
+  "FASTPLANET LTD",
+  "Yandex.Cloud LLC",
+  "Oracle Svenska AB",
+  "IONOS SE"
 ];
 var GPT_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "marin", "cedar", "amuch", "dan", "elan", "breeze", "cove", "ember", "fathom", "glimmer", "harp", "juniper", "maple", "orbit", "vale"];
 var custom_worker_default = {
@@ -372,7 +386,7 @@ var custom_worker_default = {
         }
         return handleModels(request, env, ctx, server.id, user, server, cacheKey);
       }
-      if (pathname === "/v1/chat/completions" || pathname === "/custom/srv_mkopytsj9b6425de1db8/chat/completions") {
+      if (pathname === "/v1/chat/completions" || pathname === "/v1/messages" || pathname === "/custom/srv_mkopytsj9b6425de1db8/chat/completions") {
         return handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, rateCheck);
       }
       if (pathname.match(/^\/custom\/[^/]+\/chat\/completions$/)) {
@@ -390,6 +404,25 @@ var custom_worker_default = {
           server = await getRandomPublicServer(env);
         } else {
           // honor prefix serverId:model if given
+          const prefixMatch = /^([^:]+):/.exec(label);
+          if (prefixMatch) {
+            server = await getServerById(env, prefixMatch[1], user);
+          }
+          if (!server) {
+            server = await getServerByLabel(env, label, user);
+          }
+        }
+        if (!server) {
+          return proxyToPassG4f(request, env, pathname, url.search, user, cacheKey, ctx);
+        }
+        return handleProxyToServer(request, env, ctx, server, "/chat/completions", cacheKey, user, pathname, userProvidedKey, rateCheck);
+      }
+      if (pathname.match(/^\/api\/.+\/messages$/)) {
+        const label = pathname.split("/")[2];
+        let server;
+        if (label === "auto") {
+          server = await getRandomPublicServer(env);
+        } else {
           const prefixMatch = /^([^:]+):/.exec(label);
           if (prefixMatch) {
             server = await getServerById(env, prefixMatch[1], user);
@@ -1765,7 +1798,11 @@ ${prompt}
 async function getRandomPublicServer(env) {
   const servers = AUTO_PROVIDERS;
   const serverId = servers[Math.floor(Math.random() * servers.length)];
-  return await getServerById(env, serverId);
+  const server =  await getServerById(env, serverId);
+  if (!server) {
+    throw Error(`Server with id '${serverId}' not found`)
+  }
+  return server;
 }
 function base64toBlob(base64Data) {
   const byteCharacters = atob(base64Data);
@@ -2130,7 +2167,11 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, ra
 
   let selectedServer = null;
   if (model === "auto" || !model) {
-    selectedServer = await getRandomPublicServer(env);
+    try {
+      selectedServer = await getRandomPublicServer(env);
+    } catch(e) {
+      return jsonResponse({ error: e.message }, 500);
+    }
   }
 
   // if prefix identified a server use it exclusively
@@ -2292,6 +2333,9 @@ async function getCachedResponse(request, cacheKey = null) {
 }
 async function setCachedResponse(request, response, cacheControl, cacheKey = null, ctx = null) {
   if (!response.ok) return;
+  if ((response.headers.get("Cache-Control") || "").includes("no-cache")) {
+    return;
+  }
   try {
     const key = cacheKey || generateCacheKey(request);
     const cacheRequest = new Request(`https://cache.example/${key}`, {
@@ -2311,6 +2355,14 @@ async function setCachedResponse(request, response, cacheControl, cacheKey = nul
   }
 }
 async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ctx) {
+  if (pathname.startsWith("/v1/v1beta/") || pathname.endsWith("/messages") || pathname.endsWith("/respones")) {
+    return jsonResponse({
+      error: {
+        message: `Url '${pathname}' not found`,
+        type: "not_found"
+      }
+    }, 404);
+  }
   const passApiKey = user ? env.PASS_API_KEY : null;
   const headers = new Headers(request.headers);
   const authHeader = request.headers.get("Authorization");

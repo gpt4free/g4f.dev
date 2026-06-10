@@ -112,7 +112,7 @@ function convertModel(inputModel, options = {}) {
 }
 
 function isValidModel(model) {
-    return !model.type || ["chat", "image", "text", "image-edit", "video"].includes(model.type);
+    return !model.type || ["chat", "image", "image-edit", "video"].includes(model.type);
 }
 
 export { modelTags, getModelLabel, getModelTags, convertModel, isValidModel };

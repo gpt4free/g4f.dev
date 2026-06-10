@@ -46,7 +46,7 @@ const translationSnipptes = [
     "Search Off", "Search On", "Recognition On", "Recognition Off", "Delete Conversation",
     "Favorite Models:", "Stop Recording", "Record Audio", "Upload Audio", "No Title", "1 Copy",
     "Delete all conversations?", "Error Occurred", "Remaining:", "Balance:", "Reasoning", "Credits:",
-    "Login", "Login to", "Enable", "Invalid API key", "Waiting for tool response..."
+    "Login", "Login to", "Enable", "Invalid API key", "Waiting for tool response...", "Hide Models with One Provider"
 ];
 
 let providers = [
@@ -3040,6 +3040,13 @@ const register_settings_storage = async () => {
                 updateCustomProviderOption(element.value);
             });
         }
+        // Handle hideOneProviderModels changes to refresh model list
+        if (element.id === "hideOneProviderModels") {
+            element.addEventListener('change', async (event) => {
+                // Refresh the current provider's models with the new filter applied
+                await refreshModels(providerSelect?.value);
+            });
+        }
     });
 }
 
@@ -4842,7 +4849,26 @@ function setQuotaInfo(models, quota) {
         });
     }
 }
+
+// Filter models based on provider count if hideOneProviderModels is enabled
+function filterModels(models, shouldFilter) {
+    if (!shouldFilter || !models) return models;
+    
+    function filterArray(arr) {
+        return arr.filter(model => !model.count || model.count !== 1);
+    }
+    
+    return filterArray(models);
+}
+
 function setProviderModels(models, provider, quota=null) {
+    const hideOneProvider = appStorage.getItem("hideOneProviderModels") === "true";
+    
+    // Filter models if the setting is enabled
+    if (hideOneProvider && models) {
+        models = filterModels(models, true);
+    }
+    
     modelSelect.innerHTML = '';
     const option = providerSelect.options[providerSelect.selectedIndex];
     if (option) option.text = option.text.replaceAll(" 🟢", "") + (quota ? " 🟢" : "");
