@@ -6388,7 +6388,7 @@ async function handleToolCalls(toolCalls, messages, model, provider, message_id,
 }
 
 // Cloud Sync Functions
-const CLOUD_SYNC_API = "https://auth.gpt4free.workers.dev/members/api";
+const CLOUD_SYNC_API = "https://auth.g4f.space/members/api";
 
 async function checkCloudSyncSession() {
     const token = appStorage.getItem("session_token");
