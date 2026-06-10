@@ -1591,7 +1591,8 @@
 
         // Pollinations login from redirect section - save external redirect then start OAuth
         redirectLoginPollinations.addEventListener('click', async () => {
-            const pollinationsExpires = localStorage.getItem('PollinationsAI-expires');
+            let pollinationsExpires = localStorage.getItem('PollinationsAI-expires');
+            pollinationsExpires = pollinationsExpires ? parseInt(pollinationsExpires) - 86400 : null;
             const pollinationsToken = isTokenExpired(pollinationsExpires) ? null : localStorage.getItem('PollinationsAI-api_key');
             if (pollinationsToken) {
                 const authResponse = await fetch(`${API_BASE}/members/auth/pollinations`, {
@@ -1608,7 +1609,7 @@
                         localStorage.setItem('user', data.user.name || data.user.username);
                         showToastFormat('Successfully signed in with {0}!', 'success', data.user.provider);
                         if (externalRedirect && isValidRedirectUrl(externalRedirect)) {
-                            const hashQuery = new SearchParams({
+                            const hashQuery = new URLSearchParams({
                                 session: data.session,
                                 user: JSON.stringify(data.user),
                                 settings: 'true',
@@ -1756,7 +1757,14 @@
                             if (pendingRedirect && isValidRedirectUrl(pendingRedirect)) {
                                 localStorage.removeItem('members_external_redirect');
                                 localStorage.removeItem('members_external_conversation');
-                                window.location.href = `${pendingRedirect}#session=${encodeURIComponent(data.session)}&user=${encodeURIComponent(JSON.stringify(data.user))}&settings=true` + (externalConversation ? `&conversation=${encodeURIComponent(externalConversation)}` : '');
+                                const hashQuery = new URLSearchParams({
+                                    session: data.session,
+                                    user: JSON.stringify(data.user),
+                                    settings: 'true',
+                                    conversation: externalConversation,
+                                    expires: data.expires
+                                });
+                                window.location.href = `${pendingRedirect}#${hashQuery.toString()}`;
                                 return;
                             }
                             showDashboard(data.user);
