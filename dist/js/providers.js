@@ -52,7 +52,7 @@ async function createClient(provider, options = {}) {
     if (provider.startsWith("custom:")) {
         const serverId = provider.substring(7);
         options.baseUrl = `https://g4f.space/custom/${serverId}`;
-        options.apiKey = options.apiKey || (typeof window !== "undefined" ? window?.localStorage.getItem("session_token") : undefined);
+        options.apiKey = options.apiKey || (typeof window !== "undefined" ? window?.localStorage.getItem("g4f_session") : undefined);
         provider = "custom";
     }
     
@@ -77,7 +77,7 @@ async function createClient(provider, options = {}) {
 
     if (!providers[provider]) {
         options.baseUrl = options.baseUrl || `https://g4f.space/api/${provider}`;
-        options.apiKey = options.apiKey || (typeof window !== "undefined" ? window?.localStorage.getItem("session_token") : undefined);
+        options.apiKey = options.apiKey || (typeof window !== "undefined" ? window?.localStorage.getItem("g4f_session") : undefined);
         options.sleep = options.sleep || 10000; // 10 seconds delay to avoid rate limiting
         return new Client(options);
     }
@@ -89,7 +89,7 @@ async function createClient(provider, options = {}) {
     
     if (backupUrl && !options.apiKey && !options.baseUrl) {
         options.baseUrl = backupUrl;
-        options.apiKey = (typeof window !== "undefined" ? window?.localStorage.getItem("session_token") : undefined);
+        options.apiKey = (typeof window !== "undefined" ? window?.localStorage.getItem("g4f_session") : undefined);
         options.sleep = 10000; // 10 seconds delay to avoid rate limiting
     }
 

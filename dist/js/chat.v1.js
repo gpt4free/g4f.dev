@@ -258,8 +258,8 @@ async function playVoicePreview(voice) {
     const previewText = 'Hello, how are you?';
     const audioUrl = `https://g4f.space/ai/audio/${encodeURIComponent(previewText)}?voice=${encodeURIComponent(voice)}`;
     const response = await fetch(audioUrl, {
-        headers: appStorage.getItem("session_token") ? {
-            'Authorization': `Bearer ${appStorage.getItem("session_token")}`
+        headers: appStorage.getItem("g4f_session") ? {
+            'Authorization': `Bearer ${appStorage.getItem("g4f_session")}`
         } : {}
     });
     const object = await response.blob();
@@ -761,8 +761,8 @@ const register_message_buttons = async () => {
                 el.classList.add("active");
                 if (message_el.dataset.synthesize_url.startsWith("https://g4f.space/ai/audio/")) {
                     const response = await fetch(message_el.dataset.synthesize_url, {
-                        headers: appStorage.getItem("session_token") ? {
-                            'Authorization': `Bearer ${appStorage.getItem("session_token")}`
+                        headers: appStorage.getItem("g4f_session") ? {
+                            'Authorization': `Bearer ${appStorage.getItem("g4f_session")}`
                         } : {}
                     });
                     window.captureUserTierHeaders?.(response.headers);
@@ -3076,13 +3076,13 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
     
     try {
         let privateData;
-        if (appStorage.getItem("session_token")) {
+        if (appStorage.getItem("g4f_session")) {
             const url = "https://g4f.space/custom/api/servers";
             const resp = await fetch(url, {
-                headers: {'Authorization': `Bearer ${appStorage.getItem("session_token") || ""}`}
+                headers: {'Authorization': `Bearer ${appStorage.getItem("g4f_session") || ""}`}
             });
             if (resp.status === 401) {
-                appStorage.removeItem("session_token");
+                appStorage.removeItem("g4f_session");
             }
             privateData = await resp.json();
         }
@@ -3464,7 +3464,7 @@ async function load_follow_up_questions(messages, new_response) {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                ...appStorage.getItem("session_token") ? {"Authorization": `Bearer ${appStorage.getItem("session_token")}`} : {}
+                ...appStorage.getItem("g4f_session") ? {"Authorization": `Bearer ${appStorage.getItem("g4f_session")}`} : {}
             },
             body: JSON.stringify({
                 messages: messages.concat(new_messages)
@@ -4642,23 +4642,23 @@ async function read_response(response, message_id, provider, finish_message) {
 function get_api_key_by_provider(provider, single=false) {
     let api_key = null;
     if (provider.startsWith("pa:")) {
-        return appStorage.getItem(`pa:${provider.slice(3)}-api_key`) || appStorage.getItem("session_token");
+        return appStorage.getItem(`pa:${provider.slice(3)}-api_key`) || appStorage.getItem("g4f_session");
     }
     if (provider) {
         if (provider === "custom:srv_ml2kr1wn9b1fb453079a") {
-            return appStorage.getItem("DeepInfra-api_key") || appStorage.getItem("session_token");
+            return appStorage.getItem("DeepInfra-api_key") || appStorage.getItem("g4f_session");
         }
         if (provider === "custom:srv_mkomfko63371049b6da6") {
-            return appStorage.getItem("ApiAirforce-api_key") || appStorage.getItem("session_token");
+            return appStorage.getItem("ApiAirforce-api_key") || appStorage.getItem("g4f_session");
         }
         if (["Azure"].includes(provider)) {
-            return appStorage.getItem("session_token");
+            return appStorage.getItem("g4f_session");
         }
         if (["custom"].includes(provider)) {
             return appStorage.getItem("Custom-api_key");
         }
         if (provider.startsWith("custom:")) {
-            return appStorage.getItem("session_token");
+            return appStorage.getItem("g4f_session");
         }
         if (!single && provider === "AnyProvider") {
             return {
@@ -4688,7 +4688,7 @@ function get_api_key_by_provider(provider, single=false) {
             return appStorage.getItem("puter.auth.token");
         }
         if (!api_key && ["GeminiPro", "Ollama", "Nvidia", "OpenRouterFree", "PollinationsAI", "Groq"].includes(provider)) {
-            return appStorage.getItem("session_token");
+            return appStorage.getItem("g4f_session");
         }
     }
     return api_key;
@@ -6391,7 +6391,7 @@ async function handleToolCalls(toolCalls, messages, model, provider, message_id,
 const CLOUD_SYNC_API = "https://auth.g4f.space/members/api";
 
 async function checkCloudSyncSession() {
-    const token = appStorage.getItem("session_token");
+    const token = appStorage.getItem("g4f_session");
     if (!token) {
         showCloudSyncLogin();
         return;
@@ -6407,12 +6407,12 @@ async function checkCloudSyncSession() {
                 showCloudSyncLoggedIn(data.user || {name: data.username, tier: data.tier});
                 return;
             } else {
-                appStorage.removeItem("session_token");
+                appStorage.removeItem("g4f_session");
                 showCloudSyncLogin();
                 return;
             }
         } else {
-            appStorage.removeItem("session_token");
+            appStorage.removeItem("g4f_session");
             showCloudSyncLogin();
             return;
         }
@@ -6475,7 +6475,7 @@ function handleCloudSyncCallback() {
     if (token) {
         const location_url = window.location.href.split("#")[0] + (hashParams.get("conversation") ? `#${hashParams.get("conversation")}` : "");
         window.history.replaceState({}, document.title, location_url);
-        appStorage.setItem("session_token", token);
+        appStorage.setItem("g4f_session", token);
 
         // Parse and use user info if provided
         if (userParam) {
@@ -6511,7 +6511,7 @@ function handleCloudSyncCallback() {
 }
 
 async function cloudSyncLogout() {
-    const token = appStorage.getItem("session_token");
+    const token = appStorage.getItem("g4f_session");
     if (token) {
         try {
             await fetch(`${CLOUD_SYNC_API}/logout`, {
@@ -6522,7 +6522,7 @@ async function cloudSyncLogout() {
             console.error("Logout failed:", e);
         }
     }
-    appStorage.removeItem("session_token");
+    appStorage.removeItem("g4f_session");
     showCloudSyncLogin();
 }
 
@@ -6550,7 +6550,7 @@ function hideCloudSyncLoading() {
 }
 
 async function syncConversationsToCloud() {
-    const token = appStorage.getItem("session_token");
+    const token = appStorage.getItem("g4f_session");
     if (!token) {
         cloudSyncLoginRedirect();
         return;
@@ -6588,7 +6588,7 @@ async function syncConversationsToCloud() {
 }
 
 async function syncConversationsFromCloud() {
-    const token = appStorage.getItem("session_token");
+    const token = appStorage.getItem("g4f_session");
     if (!token) {
         cloudSyncLoginRedirect();
         return;

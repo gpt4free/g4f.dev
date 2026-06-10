@@ -1370,6 +1370,10 @@
                         if (result.authenticated) {
                             showDashboard(result.user || userData);
                             return;
+                        } else {
+                            console.log('Session invalid, showing login');
+                            localStorage.removeItem("g4f_session");
+                            localStorage.removeItem('g4f_user');
                         }
                     } catch (e) {
                         console.log('Session verification failed, using cached data');
@@ -1617,13 +1621,18 @@
                     localStorage.setItem('g4f_session', session);
                     localStorage.setItem('g4f_user', JSON.stringify(user));
                     localStorage.setItem('user', user.name || user.username);
+                    if (user.pollinations?.api_key) {
+                        if (user.pollinations.expires * 1000 > Date.now()) {
+                            localStorage.setItem('PollinationsAI-api_key', user.pollinations.api_key);
+                        }
+                    }
                     if (user.airforce?.access_token) {
-                        if (user.airforce.created_at > Date.now() - user.airforce.expires_in * 1000) {
+                        if (user.airforce.expires * 1000 > Date.now()) {
                             localStorage.setItem('ApiAirforce-api_key', user.airforce.access_token);
                         }
                     }
                     if (user.huggingface?.access_token) {
-                        if (user.huggingface.created_at > Date.now() - user.huggingface.expires_in * 1000) {
+                        if (user.huggingface.expires * 1000 > Date.now()) {
                             localStorage.setItem('HuggingFace-api_key', user.huggingface.access_token);
                         }
                     }
