@@ -4645,14 +4645,16 @@ function get_api_key_by_provider(provider, single=false) {
         return appStorage.getItem(`pa:${provider.slice(3)}-api_key`) || appStorage.getItem("g4f_session");
     }
     if (provider) {
+        const expires = appStorage.getItem("expires");
+        if (expires && isTokenExpired(expires)) {
+            appStorage.removeItem("g4f_session");
+            appStorage.removeItem("expires");
+        }
         if (provider === "custom:srv_ml2kr1wn9b1fb453079a") {
             return appStorage.getItem("DeepInfra-api_key") || appStorage.getItem("g4f_session");
         }
         if (provider === "custom:srv_mkomfko63371049b6da6") {
             return appStorage.getItem("ApiAirforce-api_key") || appStorage.getItem("g4f_session");
-        }
-        if (["Azure"].includes(provider)) {
-            return appStorage.getItem("g4f_session");
         }
         if (["custom"].includes(provider)) {
             return appStorage.getItem("Custom-api_key");
@@ -4663,15 +4665,15 @@ function get_api_key_by_provider(provider, single=false) {
         if (!single && provider === "AnyProvider") {
             return {
                 "PollinationsAI": get_api_key_by_provider("PollinationsAI"),
-                "HuggingFace": appStorage.getItem("HuggingFace-api_key"),
-                "Together": appStorage.getItem("Together-api_key"),
+                "HuggingFace": get_api_key_by_provider("HuggingFace"),
+                "Together": get_api_key_by_provider("Together"),
                 "GeminiPro": get_api_key_by_provider("GeminiPro"),
-                "OpenRouter": appStorage.getItem("OpenRouter-api_key"),
+                "OpenRouter": get_api_key_by_provider("OpenRouter"),
                 "OpenRouterFree": get_api_key_by_provider("OpenRouterFree"),
                 "Groq": get_api_key_by_provider("Groq"),
-                "DeepInfra": appStorage.getItem("DeepInfra-api_key"),
-                "Replicate": appStorage.getItem("Replicate-api_key"),
-                "PuterJS": appStorage.getItem("puter.auth.token"),
+                "DeepInfra": get_api_key_by_provider("DeepInfra"),
+                "Replicate": get_api_key_by_provider("Replicate"),
+                "PuterJS": get_api_key_by_provider("PuterJS"),
                 "Azure": get_api_key_by_provider("Azure"),
                 "Nvidia": get_api_key_by_provider("Nvidia"),
                 "Ollama": get_api_key_by_provider("Ollama"),
@@ -4682,7 +4684,11 @@ function get_api_key_by_provider(provider, single=false) {
             api_key = document.getElementById(`${provider}-api_key`)?.id || null;
         }
         if (api_key) {
-            api_key = appStorage.getItem(api_key);
+            const expires = appStorage.getItem(api_key.replace("-api_key", "-expires"));
+            if (expires && isTokenExpired(expires)) {
+                appStorage.removeItem(api_key);
+                appStorage.removeItem(api_key.replace("-api_key", "-expires"));
+            }
         }
         if (!api_key && provider.startsWith("Puter")) {
             return appStorage.getItem("puter.auth.token");
@@ -6463,18 +6469,32 @@ function showCloudSyncLoggedIn(user) {
     }
 }
 
+function isTokenExpired(expires) {
+    if (!expires) return false;
+    const expiresMs = expires > 1e12 ? expires : expires * 1000;
+    return Date.now() > expiresMs;
+}
+
 function handleCloudSyncCallback() {
     // Check hash fragment for provider-specific API keys or session tokens
     const hashStr = window.location.hash ? decodeURIComponent(window.location.hash.substring(1)) : "";
     const hashParams = new URLSearchParams(hashStr);
     const token = hashParams.get("session");
     const userParam = hashParams.get("user");
+    const expires = hashParams.get("expires");
     const openSettings = hashParams.has("settings");
 
     // Handle provider API keys from URL hash (set by members page after OAuth)
     if (token) {
         const location_url = window.location.href.split("#")[0] + (hashParams.get("conversation") ? `#${hashParams.get("conversation")}` : "");
         window.history.replaceState({}, document.title, location_url);
+
+        if (!isTokenExpired(expires)) {
+            appStorage.setItem("expires", expires);
+        } else if (expires) {
+            console.warn("Received expired token, not saving.");
+            return;
+        }
         appStorage.setItem("g4f_session", token);
 
         // Parse and use user info if provided
@@ -6483,13 +6503,22 @@ function handleCloudSyncCallback() {
                 const user = JSON.parse(decodeURIComponent(userParam));
                 // Also store provider-specific API key if included in user info
                 if (user.pollinations?.api_key) {
-                    appStorage.setItem("PollinationsAI-api_key", user.pollinations.api_key);
+                    if (!isTokenExpired(user.pollinations.expires)) {
+                        appStorage.setItem("PollinationsAI-api_key", user.pollinations.api_key);
+                        appStorage.setItem("PollinationsAI-expires", user.pollinations.expires);
+                    }
                 }
                 if (user.huggingface?.access_token) {
-                    appStorage.setItem("HuggingFace-api_key", user.huggingface.access_token);
+                    if (!isTokenExpired(user.huggingface.expires)) {
+                        appStorage.setItem("HuggingFace-api_key", user.huggingface.access_token);
+                        appStorage.setItem("HuggingFace-expires", user.huggingface.expires);
+                    }
                 }
                 if (user.airforce?.access_token) {
-                    appStorage.setItem("ApiAirforce-api_key", user.airforce.access_token);
+                    if (!isTokenExpired(user.airforce.expires)) {
+                        appStorage.setItem("ApiAirforce-api_key", user.airforce.access_token);
+                        appStorage.setItem("ApiAirforce-expires", user.airforce.expires);
+                    }
                 }
                 showCloudSyncLoggedIn(user);
             } catch (e) {

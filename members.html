@@ -1432,7 +1432,7 @@
             // Update user info
             userName.textContent = user.name || user.username || framework.translate('User');
             const iframe = Object.assign(document.createElement('iframe'), {
-                src: 'render.html?prompt=Show custom welcome message in a h3 with emojies (no comments), (add info: Manage your API keys and monitor your usage) for user: ' + encodeURIComponent(userName.textContent) + ' in language: ' + encodeURIComponent(framework.language),
+                src: `render.html?prompt=Display a playful, teasing "roast-style" welcome message, wrap headline in <h3> using emojis (no code comments). Base the roast on the user\'s actual username ("${userName.textContent}") — be creative, lighthearted, and funny, never mean-spirited. Must also include the info: "Manage your API keys and monitor your usage." Tone: witty, no placeholder text in language: ${encodeURIComponent(framework.language)}`,
             })
             userName.parentNode.parentNode.replaceWith(iframe);
             framework.resizeIframes([iframe]);
