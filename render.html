@@ -479,20 +479,16 @@
                 `;
             }
 
+            function updateIframeHeight() {
+                if (window.parent !== window) {
+                    window.parent.postMessage({ type: 'g4f-content-rendered', height: contentArea.scrollHeight }, '*');
+                }
+            }
+
             function renderContent(rawText) {
                 const html = framework.markdown(rawText);
                 contentArea.innerHTML = `<div class="rendered-content">${html}</div>`;
-
-                // Notify parent window to resize iframe
-                if (window.parent !== window) {
-                    const height = Math.max(
-                        document.documentElement.scrollHeight,
-                        document.documentElement.offsetHeight,
-                        document.body.scrollHeight,
-                        document.body.offsetHeight
-                    );
-                    window.parent.postMessage({ type: 'g4f-content-rendered', height: height }, '*');
-                }
+                updateIframeHeight();
             }
 
             function renderHistory() {
@@ -600,6 +596,10 @@
             });
 
             clearBtn.addEventListener('click', clearAll);
+
+            window.addEventListener('resize', (e) => {
+                updateIframeHeight();
+            });
 
             // --- Initialize ---
             (async () => {
