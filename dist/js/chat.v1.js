@@ -4674,9 +4674,9 @@ function get_api_key_by_provider(provider, single=false) {
                 "DeepInfra": get_api_key_by_provider("DeepInfra"),
                 "Replicate": get_api_key_by_provider("Replicate"),
                 "PuterJS": get_api_key_by_provider("PuterJS"),
-                "Azure": get_api_key_by_provider("Azure"),
                 "Nvidia": get_api_key_by_provider("Nvidia"),
                 "Ollama": get_api_key_by_provider("Ollama"),
+                "ApiAirforce": get_api_key_by_provider("ApiAirforce"),
             }
         }
         api_key = document.querySelector(`.${provider}-api_key`)?.id || null;
@@ -4685,10 +4685,11 @@ function get_api_key_by_provider(provider, single=false) {
         }
         if (api_key) {
             const expires = appStorage.getItem(api_key.replace("-api_key", "-expires"));
-            if (expires && isTokenExpired(expires)) {
+            if (isTokenExpired(expires)) {
                 appStorage.removeItem(api_key);
                 appStorage.removeItem(api_key.replace("-api_key", "-expires"));
             }
+            api_key = appStorage.getItem(api_key);
         }
         if (!api_key && provider.startsWith("Puter")) {
             return appStorage.getItem("puter.auth.token");
@@ -6672,7 +6673,7 @@ handleCloudSyncCallback();
 checkCloudSyncSession();
 
 // Redirect to members login page
-function cloudSyncLoginRedirect(provider = "airforce") {
+function cloudSyncLoginRedirect(provider = null) {
     const returnUrl = encodeURIComponent(window.location.href.split("#")[0]);
     const conversation = window.conversation_id ? `&conversation=${encodeURIComponent(window.conversation_id)}` : "";
     const providerParam = provider ? `&provider=${encodeURIComponent(provider)}` : "";
@@ -6685,7 +6686,7 @@ const cloudSyncUploadBtn = document.getElementById("cloudSyncUpload");
 const cloudSyncDownloadBtn = document.getElementById("cloudSyncDownload");
 const cloudSyncLogoutBtn = document.getElementById("cloudSyncLogoutBtn");
 
-if (cloudSyncLoginBtn) cloudSyncLoginBtn.addEventListener("click", () => cloudSyncLoginRedirect(true));
+if (cloudSyncLoginBtn) cloudSyncLoginBtn.addEventListener("click", () => cloudSyncLoginRedirect());
 if (cloudSyncUploadBtn) cloudSyncUploadBtn.addEventListener("click", syncConversationsToCloud);
 if (cloudSyncDownloadBtn) cloudSyncDownloadBtn.addEventListener("click", syncConversationsFromCloud);
 if (cloudSyncLogoutBtn) cloudSyncLogoutBtn.addEventListener("click", cloudSyncLogout);
