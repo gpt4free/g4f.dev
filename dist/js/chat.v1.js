@@ -4823,6 +4823,10 @@ function setQuotaInfo(models, quota) {
         const creditsInfo = `${framework.translate("Credits:")} ${total.toFixed(2)}$, ${framework.translate("Remaining:")} ${percent.toFixed(2)}%` + (percent > 10 ? " ✅" : " ⚠️");
         models.unshift({id: "credits_info", label: creditsInfo, disabled: true});
     }
+    if (quota.total) {
+        const providerInfo = quota.total > quota.offset ? `${quota.offset}/${quota.total} ${framework.translate("servers loaded ⚠️")}` : `${quota.total} ${framework.translate("servers loaded ✅")}`;
+        models.unshift({id: "provider_info", label: providerInfo, disabled: true});
+    }
     if (!defaultModel && client && client.defaultModel) {
         defaultModel = client.defaultModel;
         models.forEach((model) => {

@@ -53,7 +53,7 @@ function convertModel(inputModel, options = {}) {
             model.type = "image";
         } else if (model.task?.name) {
             model.type = "unknown";
-        } else if (model.id.toLowerCase().includes("embedding")) {
+        } else if (model.id.toLowerCase().includes("embed")) {
             model.type = "embedding";
         } else if (model.id.toLowerCase().includes("tts") || model.id.toLowerCase().includes("whisper")) {
             model.type = "audio";
