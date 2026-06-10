@@ -1448,7 +1448,6 @@
             
             // Update provider badge
             const providerBadge = document.getElementById('accountProvider');
-            const provider = user.provider || 'huggingface';
             const providerIcons = {
                 github: '<i class="fab fa-github"></i> GitHub',
                 discord: '<i class="fab fa-discord"></i> Discord',
@@ -1456,7 +1455,13 @@
                 airforce: '✈️ Airforce',
                 pollinations: '🌸 Pollinations'
             };
-            providerBadge.innerHTML = `<span class="provider-badge ${provider}">${providerIcons[provider] || provider}</span>`;
+            const providers = [user.provider || 'huggingface'];
+            for (const provider of Object.keys(providerIcons)) {
+                if (!providers.includes(provider) && user[provider]) {
+                    providers.push(provider);
+                }
+            }
+            providerBadge.innerHTML = providers.map(provider => `<span class="provider-badge ${provider}">${providerIcons[provider] || provider}</span>`).join(' ');
             
             // Show nav user info
             navUserInfo.style.display = 'flex';
