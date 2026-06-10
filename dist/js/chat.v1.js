@@ -1467,14 +1467,11 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
                 tool_calls_storage[message_id] = [];
             }
             for (const toolCall of message.tool_calls) {
-                if (typeof toolCall.index === 'undefined') {
-                    toolCall.index = toolCall.function.index || 0;
-                }
-                if (!tool_calls_storage[message_id][toolCall.index]) {
-                    tool_calls_storage[message_id][toolCall.index] = toolCall
-                    tool_calls_storage[message_id][toolCall.index].function.arguments = tool_calls_storage[message_id][toolCall.index].function.arguments || '';
+                if (!tool_calls_storage[message_id][toolCall.id]) {
+                    tool_calls_storage[message_id][toolCall.id] = toolCall
+                    tool_calls_storage[message_id][toolCall.id].function.arguments = tool_calls_storage[message_id][toolCall.index].function.arguments || '';
                 } else if (toolCall.function?.arguments) {
-                    tool_calls_storage[message_id][toolCall.index].function.arguments += toolCall.function.arguments;
+                    tool_calls_storage[message_id][toolCall.id].function.arguments += toolCall.function.arguments;
                 }
             }
             // Show spinner/loading indicator in the message
