@@ -29,7 +29,6 @@ function add_error(event, log=false) {
             event.message = 'Event Error - target:' + event.target + ' srcElement:' + event.srcElement;
         }
     }
-    event.message = (event.message || "") + JSON.stringify(Object.keys(event));
     if (event.target && (event.target.src || event.target.href)) {
         p.innerText = `Resource failed to load: ${event.target.src || event.target.href}`;
     } else if (event.message) {
