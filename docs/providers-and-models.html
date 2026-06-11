@@ -321,7 +321,7 @@ console.log(result.choices[0].message.content);</code></pre>
             </div>
             <div id="code-curl" class="code-content">
                 <button class="copy-btn" onclick="copyCode('curl')">Copy</button>
-<pre><code id="code-curl-content" class="language-bash">curl https://g4f.space/api/auto/chat/completions \
+<pre><code id="code-curl-content" class="language-bash">curl https://g4f.space/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "auto",
@@ -342,7 +342,7 @@ console.log(result.choices[0].message.content);</code></pre>
 <pre><code class="language-javascript">
 import { createClient } from 'https://g4f.dev/dist/js/providers.js';
 
-const client = createClient("azure");
+const client = createClient("default");
 const result = await client.chat.completions.create({
     model: 'auto',
     messages: [{ role: 'user', content: 'Explain quantum computing' }]
@@ -354,7 +354,7 @@ console.log(result);
                 <div class="example-content" id="python-example">
                     <pre><code class="language-python">from g4f.client import ClientFactory
 
-client = ClientFactory.create_client("azure")
+client = ClientFactory.create_client("default")
 response = client.chat.completions.create(
     model="model-router",
     messages=[{"role": "user", "content": "Hello!"}],
@@ -364,7 +364,7 @@ print(response)
 </div>
 <button class="expand-btn" onclick="toggleExample('js-fetch-example')">Show JS fetch Example</button>
 <div class="example-content" id="js-fetch-example">
-<pre><code>fetch('https://g4f.space/api/azure/chat/completions', {
+<pre><code>fetch('https://g4f.space/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -379,7 +379,7 @@ print(response)
 <button class="expand-btn" onclick="toggleExample('python-requests-example')">Show Python requests Example</button>
 <div class="example-content" id="python-requests-example">
     <pre><code class="language-python">import requests
-url = 'https://g4f.space/api/azure/chat/completions'
+url = 'https://g4f.space/v1/chat/completions'
 payload = {
     'model': 'auto',
     'messages': [{ 'role': 'user', 'content': 'Explain quantum computing' }]
