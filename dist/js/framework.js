@@ -201,8 +201,8 @@ async function query(prompt, options={ json: false, cache: true }) {
     for (const provider of ['auto', 'pollinations', 'openrouter']) {
         queryUrl = `https://g4f.space/ai/${provider}/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
         try {
-            response = await fetch(queryUrl, { headers: localStorage.getItem("session_token") ? {
-                'Authorization': `Bearer ${localStorage.getItem("session_token")}`
+            response = await fetch(queryUrl, { headers: localStorage.getItem("g4f_session") ? {
+                'Authorization': `Bearer ${localStorage.getItem("g4f_session")}`
             } : {}});
             window.captureUserTierHeaders?.(response.headers);
         } catch (e) {

@@ -658,7 +658,7 @@ print(response)
             const tableId = "custom-providers-table";
             const url = "https://g4f.space/custom/api/servers";
             const resp = await fetch(url, {
-                headers: {'Authorization': `Bearer ${localStorage.getItem("session_token") || ""}`}
+                headers: {'Authorization': `Bearer ${localStorage.getItem("g4f_session") || ""}`}
             });
             const public_url = "https://g4f.space/custom/api/servers/public";
             const public_resp = await fetch(public_url);

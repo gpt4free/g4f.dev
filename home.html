@@ -186,7 +186,7 @@
             framework.connectToBackend(document.getElementById("connect_status"));
 
             // Check if user is logged in
-            const storedApiKey = appStorage.getItem("session_token");
+            const storedApiKey = appStorage.getItem("g4f_session");
             if (storedApiKey) {
                 loginBtn.classList.add("hidden");
                 logoutBtn.classList.remove("hidden");
@@ -204,7 +204,7 @@
             // Logout button
             logoutBtn.addEventListener("click", (e) => {
                 e.preventDefault();
-                appStorage.removeItem("session_token");
+                appStorage.removeItem("g4f_session");
                 loginBtn.classList.remove("hidden");
                 logoutBtn.classList.add("hidden");
                 userStatus.classList.add("hidden");
