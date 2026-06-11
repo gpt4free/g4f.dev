@@ -1477,7 +1477,7 @@
                 apiKeyInput.value = existingKey;
                 apiKeyInput.placeholder = framework.translate('API key loaded from storage');
                 if (expires) {
-                    apiKeyExpires.textContent = new Date(parseInt(expires)).toLocaleString();
+                    apiKeyExpires.textContent = new Date(parseInt(expires * 1000)).toLocaleString();
                 }
             }
             
@@ -1863,7 +1863,7 @@
                     localStorage.setItem('g4f_api_key', result.api_key);
                     if (result.expires) {
                         localStorage.setItem('g4f_api_key_expires', result.expires);
-                        apiKeyExpires.textContent = new Date(parseInt(result.expires)).toLocaleString();
+                        apiKeyExpires.textContent = new Date(parseInt(result.expires * 1000)).toLocaleString();
                     }
                     showToast('API key generated successfully! Save it now - you won\'t see it again.');
                 } else {
