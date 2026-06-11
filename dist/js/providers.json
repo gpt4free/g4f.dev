@@ -59,5 +59,10 @@
         "puter": "https://api.puter.com/metering/usage",
         "huggingface": "https://huggingface.co/api/whoami-v2",
         "groq": "https://api.groq.com/openai/v1/models"
+    },
+    "loginButtons": {
+        "huggingface": "huggingface",
+        "api.airforce": "airforce",
+        "pollinations": "pollinations"
     }
 }
