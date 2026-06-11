@@ -1064,6 +1064,7 @@
                     <div class="api-key-container">
                         <div class="api-key-display">
                             <input type="password" class="api-key-input" id="apiKeyInput" readonly placeholder="Click 'Generate' to create an API key">
+                            <p>Expires: <span id="apiKeyExpires">-</span></p>
                             <button class="btn btn-secondary btn-small" id="toggleKeyBtn" title="Show/Hide">
                                 <i class="fas fa-eye"></i>
                             </button>
@@ -1274,6 +1275,7 @@
         const userName = document.getElementById('userName');
         const generateKeyBtn = document.getElementById('generateKeyBtn');
         const apiKeyInput = document.getElementById('apiKeyInput');
+        const apiKeyExpires = document.getElementById('apiKeyExpires');
         const toggleKeyBtn = document.getElementById('toggleKeyBtn');
         const copyKeyBtn = document.getElementById('copyKeyBtn');
         const baseUrl = document.getElementById('baseUrl');
@@ -1470,9 +1472,13 @@
             
             // Load existing API key if any
             const existingKey = localStorage.getItem('g4f_api_key');
-            if (existingKey) {
+            const expires = localStorage.getItem('g4f_api_key_expires');
+            if (existingKey && !isTokenExpired(expires)) {
                 apiKeyInput.value = existingKey;
                 apiKeyInput.placeholder = framework.translate('API key loaded from storage');
+                if (expires) {
+                    apiKeyExpires.textContent = new Date(parseInt(expires)).toLocaleString();
+                }
             }
             
             // Update base URL
@@ -1855,6 +1861,9 @@
                     apiKeyInput.value = result.api_key;
                     apiKeyInput.type = 'password';
                     localStorage.setItem('g4f_api_key', result.api_key);
+                    if (result.expires) {
+                        localStorage.setItem('g4f_api_key_expires', expires);
+                    }
                     showToast('API key generated successfully! Save it now - you won\'t see it again.');
                 } else {
                     throw new Error('Failed to generate key');
