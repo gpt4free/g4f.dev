@@ -33,6 +33,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Clone Repository
         run: git clone --depth 1 https://github.com/gpt4free/playground.git
+        
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
