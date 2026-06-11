@@ -1862,7 +1862,8 @@
                     apiKeyInput.type = 'password';
                     localStorage.setItem('g4f_api_key', result.api_key);
                     if (result.expires) {
-                        localStorage.setItem('g4f_api_key_expires', expires);
+                        localStorage.setItem('g4f_api_key_expires', result.expires);
+                        apiKeyExpires.textContent = new Date(parseInt(result.expires)).toLocaleString();
                     }
                     showToast('API key generated successfully! Save it now - you won\'t see it again.');
                 } else {
