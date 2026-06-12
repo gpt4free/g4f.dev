@@ -551,7 +551,10 @@ async function testAllModels() {
   async function worker() {
     while (queue.length > 0 && !stopRequested) {
       const idx = queue.shift();
-      await testModel(idx);
+      await new Promise((resolve, reject) => {
+        testModel(idx).then(resolve).catch(reject);
+        setTimeout(() => resolve(), 5000); 
+      });
     }
   }
 
