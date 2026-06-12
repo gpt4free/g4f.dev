@@ -267,6 +267,7 @@
   <div class="stat success"><span>Passed:</span><span class="value" id="statPassed">0</span></div>
   <div class="stat fail"><span>Failed:</span><span class="value" id="statFailed">0</span></div>
   <div class="stat warn"><span>Pending:</span><span class="value" id="statPending">0</span></div>
+  <div class="stat testing"><span>Testing:</span><span class="value" id="statTesting">0</span></div>
   <div class="stat"><span>Avg Time:</span><span class="value" id="statAvgTime">-</span></div>
 </div>
 
@@ -450,6 +451,7 @@ function updateStats() {
   const passed = results.filter(r => r.status === 'ok').length;
   const failed = results.filter(r => r.status === 'error').length;
   const pending = results.filter(r => r.status === 'pending').length;
+  const testing = results.filter(r => r.status === 'testing').length;
   const tested = results.filter(r => r.timeMs != null);
   const avgTime = tested.length > 0
     ? Math.round(tested.reduce((s, r) => s + r.timeMs, 0) / tested.length)
@@ -459,6 +461,7 @@ function updateStats() {
   $('statPassed').textContent = passed;
   $('statFailed').textContent = failed;
   $('statPending').textContent = pending;
+  $('statTesting').textContent = testing;
   $('statAvgTime').textContent = avgTime != null ? `${avgTime}ms` : '-';
 
   const done = passed + failed;
