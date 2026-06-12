@@ -302,7 +302,8 @@
 // ── State ──
 const API_BASE =  prompt('Enter API base URL:', 'https://g4f.space').replace(/\/$/, '');
 const API_KEY = prompt('Enter your API key:', localStorage.getItem('g4f_session') || '');
-const CHAT_URL = `${API_BASE}/chat/completions`;
+const seed = Math.floor(Date.now()/1e3/60/60-494787); // hours since 2026-06-12
+const CHAT_URL = `${API_BASE}/chat/completions?seed=${seed}`;
 const MIN_REQUESTS = 5;
 const TEST_MESSAGE = 'Say "OK" exactly. No other text.';
 let API_KEYS = null
