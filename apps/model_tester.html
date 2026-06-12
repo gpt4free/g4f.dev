@@ -304,6 +304,7 @@ const API_BASE =  prompt('Enter API base URL:', 'https://g4f.space').replace(/\/
 const API_KEY = prompt('Enter your API key:', localStorage.getItem('g4f_session') || '');
 const SEED = Math.floor(Date.now()/1e3/60/60-494787); // hours since 2026-06-12
 const CHAT_URL = `${API_BASE}/chat/completions?seed=${SEED}`;
+const EMBEDDING_URL = `${API_BASE}/embeddings?seed=${SEED}`;
 const MIN_REQUESTS = 5;
 const TEST_MESSAGE = 'Say "OK" exactly. No other text.';
 let API_KEYS = null
@@ -475,13 +476,13 @@ async function testModel(index) {
   updateRow(index);
   updateStats();
 
-  const startTime = performance.now();
+  let startTime = performance.now();
   try {
-    const controller = new AbortController();
+    let controller = new AbortController();
     // Store for external abort
     r._controller = controller;
 
-    const resp = await fetch(CHAT_URL, {
+    let resp = await fetch(CHAT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(r.apiKey ? { 'Authorization': `Bearer ${r.apiKey}` } : {}) },
       body: JSON.stringify({
@@ -492,6 +493,22 @@ async function testModel(index) {
       }),
       signal: controller.signal
     });
+
+    if (resp.status === 400) {
+      startTime = performance.now();
+      controller = new AbortController();
+      // Store for external abort
+      r._controller = controller;
+      resp = await fetch(EMBEDDING_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(r.apiKey ? { 'Authorization': `Bearer ${r.apiKey}` } : {}) },
+        body: JSON.stringify({
+            model: r.model || r.id,
+            input: TEST_MESSAGE
+        }),
+        signal: controller.signal
+      });
+    }
 
     const elapsed = Math.round(performance.now() - startTime);
     r.timeMs = elapsed;
