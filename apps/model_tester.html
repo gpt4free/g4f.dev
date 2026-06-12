@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>G4F Top Models Tester</title>
+<style>
+  :root {
+    --bg: #0d0d12;
+    --surface: #16161f;
+    --surface2: #1e1e2a;
+    --border: #2a2a3a;
+    --text: #e0e0f0;
+    --text-dim: #9090a8;
+    --accent: #8b5cf6;
+    --accent-glow: rgba(139, 92, 246, 0.4);
+    --success: #22c55e;
+    --fail: #ef4444;
+    --warn: #f59e0b;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(12px);
+  }
+  header h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  /* ── Buttons ── */
+  button {
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 10px 20px;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+  .btn-primary:hover { background: #7c3aed; transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--accent); }
+  .btn-danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--fail);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+  .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
+
+  /* ── Stats Bar ── */
+  .stats-bar {
+    display: flex;
+    gap: 16px;
+    padding: 12px 24px;
+    flex-wrap: wrap;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .stat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+  }
+  .stat .value {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text);
+  }
+  .stat.success .value { color: var(--success); }
+  .stat.fail .value { color: var(--fail); }
+  .stat.warn .value { color: var(--warn); }
+
+  /* ── Progress ── */
+  .progress-wrap {
+    padding: 0 24px 12px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .progress-bar {
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #a78bfa);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+  .progress-label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-top: 6px;
+  }
+
+  /* ── Table ── */
+  .table-wrap {
+    flex: 1;
+    overflow: auto;
+    padding: 16px 24px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  th {
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    padding: 12px 14px;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+  }
+  td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  tr:hover td { background: rgba(139, 92, 246, 0.04); }
+
+  .model-name {
+    font-weight: 600;
+    color: var(--text);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.8rem;
+  }
+  .provider-label {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    display: block;
+    margin-top: 2px;
+  }
+  .req-count {
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  /* Status badges */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .badge-ok { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+  .badge-err { background: rgba(239, 68, 68, 0.15); color: var(--fail); }
+  .badge-pending { background: rgba(245, 158, 11, 0.15); color: var(--warn); }
+  .badge-testing { background: rgba(139, 92, 246, 0.15); color: var(--accent); }
+
+  .time-cell { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+  .response-preview {
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    cursor: pointer;
+  }
+  .response-preview:hover { color: var(--text); }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    font-size: 0.85rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    z-index: 100;
+    animation: slideUp 0.3s ease;
+    max-width: 400px;
+  }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    header { padding: 12px 16px; }
+    header h1 { font-size: 1.1rem; }
+    .stats-bar { padding: 10px 16px; gap: 10px; }
+    .table-wrap { padding: 8px 12px; }
+    th, td { padding: 8px 10px; font-size: 0.75rem; }
+    .response-preview { max-width: 140px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ G4F Top Models Tester</h1>
+  <div class="header-actions">
+    <button class="btn-secondary" onclick="fetchModels()" id="btnFetch">📡 Fetch Models</button>
+    <button class="btn-primary" onclick="testAllModels()" id="btnTestAll" disabled>▶ Test All</button>
+    <button class="btn-danger" onclick="stopTesting()" id="btnStop" disabled>⏹ Stop</button>
+  </div>
+</header>
+
+<div class="stats-bar">
+  <div class="stat"><span>Total:</span><span class="value" id="statTotal">-</span></div>
+  <div class="stat success"><span>Passed:</span><span class="value" id="statPassed">0</span></div>
+  <div class="stat fail"><span>Failed:</span><span class="value" id="statFailed">0</span></div>
+  <div class="stat warn"><span>Pending:</span><span class="value" id="statPending">0</span></div>
+  <div class="stat"><span>Avg Time:</span><span class="value" id="statAvgTime">-</span></div>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-label" id="progressLabel">Ready</div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Model</th>
+        <th>Provider</th>
+        <th>Requests</th>
+        <th>Status</th>
+        <th>Time</th>
+        <th>Response</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody">
+      <tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:40px;">
+        Click <strong>"Fetch Models"</strong> to load top models from g4f.space
+      </td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+// ── State ──
+const API_BASE =  prompt('Enter API base URL:', 'https://g4f.space');
+const API_KEY = prompt('Enter your API key:', localStorage.getItem('g4f_session') || '');
+const MODELS_URL = `${API_BASE}/models`;
+const CHAT_URL = `${API_BASE}/v1/chat/completions`;
+const MIN_REQUESTS = 5;
+const TEST_MESSAGE = 'Say "OK" exactly. No other text.';
+
+let models = [];
+let results = [];
+let abortController = null;
+let stopRequested = false;
+
+// ── DOM refs ──
+const $ = (id) => document.getElementById(id);
+const tableBody = $('tableBody');
+const btnFetch = $('btnFetch');
+const btnTestAll = $('btnTestAll');
+const btnStop = $('btnStop');
+const progressFill = $('progressFill');
+const progressLabel = $('progressLabel');
+
+// ── Toast ──
+function toast(msg, duration = 3000) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), duration);
+}
+
+// ── Fetch Models ──
+async function fetchModels() {
+  btnFetch.disabled = true;
+  btnFetch.textContent = '⏳ Loading...';
+  tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;">
+    <div style="font-size:2rem;margin-bottom:8px;">⏳</div>Fetching models from g4f.space/models...
+  </td></tr>`;
+
+  try {
+    const resp = await fetch(MODELS_URL);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const json = await resp.json();
+    const data = json.data || json;
+
+    // Filter: requests > MIN_REQUESTS, exclude "auto"
+    models = data
+      .filter(m => m.id !== 'auto' && (m.requests > MIN_REQUESTS || m.count > MIN_REQUESTS || !("requests" in m || "count" in m)));
+
+    // Initialize results
+    results = models.map(m => ({
+      ...m,
+      status: 'pending',
+      timeMs: null,
+      responsePreview: null,
+      error: null
+    }));
+
+    renderTable();
+    updateStats();
+    btnTestAll.disabled = false;
+    toast(`Loaded ${models.length} models (requests > ${MIN_REQUESTS})`);
+  } catch (err) {
+    tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--fail);padding:40px;">
+      ❌ Failed to fetch models: ${err.message}
+    </td></tr>`;
+    toast(`Error: ${err.message}`, 5000);
+  } finally {
+    btnFetch.disabled = false;
+    btnFetch.textContent = '📡 Fetch Models';
+  }
+}
+
+// ── Render Table ──
+function renderTable() {
+  if (results.length === 0) {
+    tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:40px;">
+      No models loaded
+    </td></tr>`;
+    return;
+  }
+
+  tableBody.innerHTML = results.map((r, i) => {
+    const statusClass = {
+      pending: 'badge-pending',
+      testing: 'badge-testing',
+      ok: 'badge-ok',
+      error: 'badge-err'
+    }[r.status] || 'badge-pending';
+    const statusLabel = {
+      pending: 'PENDING',
+      testing: 'TESTING',
+      ok: 'OK',
+      error: 'FAIL'
+    }[r.status] || r.status.toUpperCase();
+
+    const timeStr = r.timeMs != null ? `${r.timeMs}ms` : '-';
+    const respStr = r.responsePreview || r.error || '-';
+
+    return `
+      <tr id="row-${i}">
+        <td>${i + 1}</td>
+        <td><span class="model-name">${escHtml(r.model || r.id)}</span></td>
+        <td><span class="provider-label">${escHtml(r.label || '-')}</span></td>
+        <td><span class="req-count">${r.requests || r.count || '-'}</span></td>
+        <td><span class="badge ${statusClass}">${statusLabel}</span></td>
+        <td class="time-cell">${timeStr}</td>
+        <td class="response-preview" title="${escAttr(respStr)}" onclick="this.style.whiteSpace='normal';this.style.maxWidth='none';">${escHtml(respStr)}</td>
+      </tr>`;
+  }).join('');
+}
+
+function updateRow(i) {
+  const r = results[i];
+  const row = document.getElementById(`row-${i}`);
+  if (!row) return;
+  const cells = row.children;
+  const statusClass = {
+    pending: 'badge-pending', testing: 'badge-testing', ok: 'badge-ok', error: 'badge-err'
+  }[r.status] || 'badge-pending';
+  const statusLabel = {
+    pending: 'PENDING', testing: 'TESTING', ok: 'OK', error: 'FAIL'
+  }[r.status] || r.status.toUpperCase();
+
+  cells[4].innerHTML = `<span class="badge ${statusClass}">${statusLabel}</span>`;
+  cells[5].textContent = r.timeMs != null ? `${r.timeMs}ms` : '-';
+  const respStr = r.responsePreview || r.error || '-';
+  cells[6].innerHTML = `<span class="response-preview" title="${escAttr(respStr)}" onclick="this.style.whiteSpace='normal';this.style.maxWidth='none';">${escHtml(respStr)}</span>`;
+}
+
+// ── Update Stats ──
+function updateStats() {
+  const total = results.length;
+  const passed = results.filter(r => r.status === 'ok').length;
+  const failed = results.filter(r => r.status === 'error').length;
+  const pending = results.filter(r => r.status === 'pending').length;
+  const tested = results.filter(r => r.timeMs != null);
+  const avgTime = tested.length > 0
+    ? Math.round(tested.reduce((s, r) => s + r.timeMs, 0) / tested.length)
+    : null;
+
+  $('statTotal').textContent = total;
+  $('statPassed').textContent = passed;
+  $('statFailed').textContent = failed;
+  $('statPending').textContent = pending;
+  $('statAvgTime').textContent = avgTime != null ? `${avgTime}ms` : '-';
+
+  const done = passed + failed;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  progressFill.style.width = `${pct}%`;
+  progressLabel.textContent = `${done} / ${total} tested (${pct}%)`;
+}
+
+// ── Test Single Model ──
+async function testModel(index) {
+  if (stopRequested) return;
+  const r = results[index];
+  r.status = 'testing';
+  updateRow(index);
+  updateStats();
+
+  const startTime = performance.now();
+  try {
+    const controller = new AbortController();
+    // Store for external abort
+    r._controller = controller;
+
+    const resp = await fetch(CHAT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(API_KEY ? { 'Authorization': `Bearer ${API_KEY}` } : {}) },
+      body: JSON.stringify({
+        model: r.model || r.id,
+        messages: [{ role: 'user', content: TEST_MESSAGE }],
+        max_tokens: 10,
+        temperature: 0
+      }),
+      signal: controller.signal
+    });
+
+    const elapsed = Math.round(performance.now() - startTime);
+    r.timeMs = elapsed;
+
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => 'Unknown error');
+      throw new Error(`HTTP ${resp.status}: ${errText.slice(0, 120)}`);
+    }
+
+    const json = await resp.json();
+    const message = json.choices?.[0]?.message || '';
+    const content = message.content || message.reasoning || message.reasoning_content || JSON.stringify(json).slice(0, 1000);
+    r.responsePreview = content.trim();
+    r.status = 'ok';
+  } catch (err) {
+    const elapsed = Math.round(performance.now() - startTime);
+    r.timeMs = elapsed;
+    if (err.name === 'AbortError') {
+      r.error = 'Aborted';
+      r.status = 'error';
+    } else {
+      r.error = err.message.slice(0, 150);
+      r.status = 'error';
+    }
+  } finally {
+    delete r._controller;
+    updateRow(index);
+    updateStats();
+  }
+}
+
+// ── Test All (sequential with concurrency) ──
+async function testAllModels() {
+  if (results.length === 0) {
+    toast('Fetch models first!');
+    return;
+  }
+
+  stopRequested = false;
+  btnTestAll.disabled = true;
+  btnStop.disabled = false;
+  btnFetch.disabled = true;
+
+  // Reset results
+  results.forEach(r => {
+    r.status = 'pending';
+    r.timeMs = null;
+    r.responsePreview = null;
+    r.error = null;
+  });
+  renderTable();
+  updateStats();
+
+  const CONCURRENCY = 3; // Test 3 models at a time
+  const queue = results.map((_, i) => i);
+
+  async function worker() {
+    while (queue.length > 0 && !stopRequested) {
+      const idx = queue.shift();
+      await testModel(idx);
+    }
+  }
+
+  const workers = Array.from({ length: CONCURRENCY }, () => worker());
+  await Promise.all(workers);
+
+  const passed = results.filter(r => r.status === 'ok').length;
+  const failed = results.filter(r => r.status === 'error').length;
+  toast(`Done! ${passed} OK, ${failed} failed`);
+
+  btnTestAll.disabled = false;
+  btnStop.disabled = true;
+  btnFetch.disabled = false;
+}
+
+// ── Stop Testing ──
+function stopTesting() {
+  stopRequested = true;
+  // Abort any in-flight requests
+  results.forEach(r => {
+    if (r._controller) {
+      r._controller.abort();
+    }
+  });
+  btnStop.disabled = true;
+  toast('Testing stopped');
+}
+
+// ── Helpers ──
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function escAttr(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ── Keyboard shortcut ──
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.ctrlKey && !btnTestAll.disabled) {
+    e.preventDefault();
+    testAllModels();
+  }
+});
+</script>
+</body>
+</html>

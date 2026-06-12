@@ -61,6 +61,178 @@ const TIER_UPGRADE_HASHES = {
     "77178292713874715d758cab859024f2da6090ed11534eb369e7a5803335dff8": "anonymous",
 };
 
+// HTML templates for the revoke-by-key endpoint
+const REVOKE_BY_KEY_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Revoke API Key — G4F</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+      color: #c9d1d9;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .container {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 40px;
+      max-width: 480px;
+      width: 90%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+      color: #f0f6fc;
+    }
+    p.subtitle {
+      font-size: 0.9rem;
+      color: #8b949e;
+      margin-bottom: 24px;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #c9d1d9;
+      margin-bottom: 6px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 16px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: #c9d1d9;
+      font-size: 0.95rem;
+      font-family: monospace;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus {
+      border-color: #58a6ff;
+      box-shadow: 0 0 0 3px rgba(88,166,255,0.15);
+    }
+    button {
+      width: 100%;
+      margin-top: 20px;
+      padding: 12px;
+      background: #da3633;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #f85149; }
+    .note {
+      margin-top: 16px;
+      font-size: 0.8rem;
+      color: #8b949e;
+      text-align: center;
+    }
+    .note a { color: #58a6ff; text-decoration: none; }
+    .note a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔑 Revoke API Key</h1>
+    <p class="subtitle">Enter the full API key string to permanently revoke it. This action cannot be undone.</p>
+    <form method="POST" action="/members/api/keys/revoke-by-key">
+      <label for="api_key">API Key</label>
+      <input type="text" id="api_key" name="api_key" placeholder="g4f_xxxxxxxx_…" required autofocus>
+      <button type="submit">Revoke API Key</button>
+    </form>
+    <p class="note">
+      You can also <a href="/members/api/keys">list your keys</a> and revoke by key ID.
+    </p>
+  </div>
+</body>
+</html>`;
+
+function REVOKE_BY_KEY_RESULT_HTML(status, message) {
+  const isSuccess = status === "success";
+  const icon = isSuccess ? "✅" : "❌";
+  const title = isSuccess ? "Key Revoked" : "Revocation Failed";
+  const bgColor = isSuccess ? "#1a7f37" : "#da3633";
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title} — G4F</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+      color: #c9d1d9;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .container {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 40px;
+      max-width: 480px;
+      width: 90%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      text-align: center;
+    }
+    .icon { font-size: 3rem; margin-bottom: 16px; }
+    h1 { font-size: 1.4rem; color: #f0f6fc; margin-bottom: 12px; }
+    .message {
+      font-size: 0.95rem;
+      color: #8b949e;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+    .status-badge {
+      display: inline-block;
+      background: ${bgColor};
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    a.button {
+      display: inline-block;
+      padding: 10px 24px;
+      background: #21262d;
+      color: #c9d1d9;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    }
+    a.button:hover { background: #30363d; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">${icon}</div>
+    <div class="status-badge">${isSuccess ? "SUCCESS" : "ERROR"}</div>
+    <h1>${title}</h1>
+    <p class="message">${message}</p>
+    <a class="button" href="/members/api/keys/revoke-by-key">← Try another key</a>
+  </div>
+</body>
+</html>`;
+}
+
 function isValidRedirect(url) {
     try {
         const parsed = new URL(url);
@@ -72,9 +244,8 @@ function isValidRedirect(url) {
 
 function getSafeUser(user) {
     const safeUser = { ...user };
-    delete safeUser.pollinations;
-    delete safeUser.huggingface;
-    delete safeUser.airforce;
+    delete safeUser.api_keys;
+    delete safeUser.custom_servers;
     return safeUser;
 }
 
@@ -348,8 +519,8 @@ async function calculateUserTier(userData, contributors, sponsors) {
             }
   
             // Anonymous tier upgrade endpoint
-            if (pathname === "/members/api/anonymous/upgrade") {
-                return handleAnonymousTierUpgrade(request, env);
+            if (pathname.startsWith("/members/api/anonymous/")) {
+                return handleAnonymousTierUpgrade(pathname, request, env);
             }
   
             // API Key management endpoints
@@ -361,6 +532,9 @@ async function calculateUserTier(userData, contributors, sponsors) {
             }
             if (pathname === "/members/api/keys/revoke") {
                 return handleRevokeApiKey(request, env);
+            }
+            if (pathname === "/members/api/keys/revoke-by-key" || pathname === "/revoke") {
+                return handleRevokeApiKeyByKey(request, env);
             }
             if (pathname === "/members/api/keys/validate") {
                 return handleValidateApiKey(request, env);
@@ -610,7 +784,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
     });
   
     // Generate session token
-    const sessionToken = await createSession(env, user.id);
+    const { sessionToken, expires } = await createSession(env, user.id);
   
     // If external redirect is requested, redirect with session token for cloud sync
     if (externalRedirect) {
@@ -618,7 +792,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
         try {
             const redirectUrl = new URL(externalRedirect);
             if (isValidRedirect(redirectUrl)) {
-                return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation);
+                return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation, expires);
             }
         } catch (e) {
             console.error("Invalid redirect URL:", e);
@@ -626,7 +800,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
         return redirectWithTempApiKey(env, user, externalRedirect, stateData.conversation);
     }
   
-    return redirectWithSession(sessionToken, user);
+    return redirectWithSession(sessionToken, user, expires);
   }
   
   async function handleDiscordAuth(request, env, url) {
@@ -709,7 +883,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
         access_token: tokenData.access_token
     });
   
-    const sessionToken = await createSession(env, user.id);
+    const { sessionToken, expires } = await createSession(env, user.id);
   
     // If external redirect is requested, redirect with session token for cloud sync
     if (externalRedirect) {
@@ -717,7 +891,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
         try {
             const redirectUrl = new URL(externalRedirect);
             if (isValidRedirect(redirectUrl)) {
-                return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation);
+                return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation, expires);
             }
         } catch (e) {
             console.error("Invalid redirect URL:", e);
@@ -725,10 +899,11 @@ async function calculateUserTier(userData, contributors, sponsors) {
         return redirectWithTempApiKey(env, user, externalRedirect, stateData.conversation);
     }
   
-    return redirectWithSession(sessionToken, user);
+    return redirectWithSession(sessionToken, user, expires);
   }
   
   async function handleHuggingFaceAuth(request, env, url) {
+    const user = await authenticateRequest(request, env);
     const state = generateState();
     const scope = "inference-api";
     // Support both "redirect" and "redirect_chat" parameters
@@ -742,7 +917,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
     authUrl.searchParams.set("scope", scope);
     authUrl.searchParams.set("state", state);
   
-    const stateData = JSON.stringify({ provider: "huggingface", redirect, conversation });
+    const stateData = JSON.stringify({ provider: "huggingface", redirect, conversation, user: getSafeUser(user) });
     await env.MEMBERS_KV.put(`oauth_state:${state}`, stateData, { expirationTtl: 600 });
   
     return Response.redirect(authUrl.toString(), 302);
@@ -798,18 +973,19 @@ async function calculateUserTier(userData, contributors, sponsors) {
     const hfUser = await userResponse.json();
   
     const user = await createOrUpdateUser(env, {
-        provider: "huggingface",
-        username: hfUser.name,
-        name: hfUser.fullname || hfUser.name,
-        email: hfUser.email,
-        avatar: hfUser.avatarUrl,
+        provider: stateData.user?.provider || "huggingface",
+        username: stateData.user?.username || hfUser.name,
+        name: stateData.user?.name || hfUser.fullname || hfUser.name,
+        email: stateData.user?.email || hfUser.email,
+        avatar: stateData.user?.avatar || `https://huggingface.co${hfUser.avatarUrl}`,
         huggingface: {
+            ...hfUser,
             ...tokenData,
-            created_at: Date.now()
+            expires: Math.floor(Date.now() / 1000) + tokenData.expires_in
         }
     });
   
-    const sessionToken = await createSession(env, user.id);
+    const { sessionToken, expires } = await createSession(env, user.id);
   
     // If external redirect is requested, redirect with session token for cloud sync
     if (externalRedirect) {
@@ -817,7 +993,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
         try {
             const redirectUrl = new URL(externalRedirect);
             if (isValidRedirect(redirectUrl)) {
-                return redirectWithSessionToExternal(sessionToken, user, externalRedirect, tokenData.conversation);
+                return redirectWithSessionToExternal(sessionToken, user, externalRedirect, tokenData.conversation, expires);
             }
         } catch (e) {
             console.error("Invalid redirect URL:", e);
@@ -825,10 +1001,11 @@ async function calculateUserTier(userData, contributors, sponsors) {
         return redirectWithTempApiKey(env, user, externalRedirect, tokenData.conversation);
     }
   
-    return redirectWithSession(sessionToken, user);
+    return redirectWithSession(sessionToken, user, expires);
   }
 
   async function handleAirforceAuth(request, env, url) {
+    const user = await authenticateRequest(request, env);
     const state = generateState();
     const scope = "profile chat images";
     const redirect = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect") || null;
@@ -845,7 +1022,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
     authUrl.searchParams.set("code_challenge", codeChallenge);
     authUrl.searchParams.set("code_challenge_method", "S256");
 
-    const stateData = JSON.stringify({ provider: "airforce", redirect, conversation, codeVerifier });
+    const stateData = JSON.stringify({ provider: "airforce", redirect, conversation, codeVerifier, user: getSafeUser(user) });
     await env.MEMBERS_KV.put(`oauth_state:${state}`, stateData, { expirationTtl: 600 });
 
     return Response.redirect(authUrl.toString(), 302);
@@ -913,7 +1090,10 @@ async function calculateUserTier(userData, contributors, sponsors) {
     let provider;
     let username;
 
-    if (airforceUser.github_username) {
+    if (stateData.user) {
+        provider = stateData.user.provider;
+        username = stateData.user.username;
+    } else if (airforceUser.github_username) {
         provider = "github";
         username = airforceUser.github_username;
     } else if (airforceUser.discord_username) {
@@ -927,25 +1107,23 @@ async function calculateUserTier(userData, contributors, sponsors) {
     const user = await createOrUpdateUser(env, {
         provider,
         username,
-        name: airforceUser.name || username,
-        email: airforceUser.email,
-        avatar: airforceUser.picture || airforceUser.avatar_url || airforceUser.avatar
+        name: stateData.user?.name || airforceUser.name || username,
+        email: stateData.user?.email || airforceUser.email,
+        avatar: stateData.user?.avatar || airforceUser.picture || airforceUser.avatar_url || airforceUser.avatar,
+        airforce: {
+            ...airforceUser,
+            ...tokenData,
+            expires: Math.floor(Date.now() / 1000) + tokenData.expires_in
+        }
     });
 
-    user.airforce = {
-        ...tokenData,
-        created_at: Date.now()
-    };
-    user.updated_at = new Date().toISOString();
-    await saveUser(env, user);
-
-    const sessionToken = await createSession(env, user.id);
+    const { sessionToken, expires } = await createSession(env, user.id);
 
     if (externalRedirect) {
         try {
             const redirectUrl = new URL(externalRedirect);
             if (isValidRedirect(redirectUrl)) {
-                return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation);
+                return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation, expires);
             }
         } catch (e) {
             console.error("Invalid redirect URL:", e);
@@ -953,7 +1131,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
         return redirectWithTempApiKey(env, user, externalRedirect, stateData.conversation);
     }
 
-    return redirectWithSession(sessionToken, user);
+    return redirectWithSession(sessionToken, user, expires);
   }
   
   /**
@@ -962,6 +1140,18 @@ async function calculateUserTier(userData, contributors, sponsors) {
    * @returns {Promise<Object|null>} Profile object or null on failure
    */
   async function fetchPollinationsProfile(apiKey) {
+      let expires;
+      try {
+          const response = await fetch("https://gen.pollinations.ai/account/key", {
+              headers: {
+                  "Authorization": `Bearer ${apiKey}`
+              }
+          });
+          const key_data = response.ok ? (await response.json()) : null;
+          if (key_data.expiresAt) {
+              expires = Math.floor(Date.parse(key_data.expiresAt)/1000);
+          }
+      } catch (e) {}
       try {
           const response = await fetch("https://gen.pollinations.ai/account/profile", {
               headers: {
@@ -969,7 +1159,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
               }
           });
           if (!response.ok) return null;
-          return await response.json();
+          return {...await response.json(), expires}
       } catch (e) {
           console.error("Failed to fetch Pollinations profile:", e);
           return null;
@@ -1023,21 +1213,17 @@ async function calculateUserTier(userData, contributors, sponsors) {
           username: githubUsername,
           name: profile.name || githubUsername,
           email: profile.email || null,
-          avatar: profile.image || null
+          avatar: profile.image || null,
+          pollinations: {...profile, api_key: pollinationsKey}
       });
   
-      // Store the Pollinations key on the user for future profile refreshes
-      user.pollinations = { ...profile, api_key: pollinationsKey };
-      user.updated_at = new Date().toISOString();
-      await saveUser(env, user);
-  
-      const sessionToken = await createSession(env, user.id);
+      const { sessionToken, expires } = await createSession(env, user.id);
   
       // Return JSON session for programmatic use
       const safeUser = getSafeUser(user);
   
       const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
-      const cookie = `g4f_session=${sessionToken}; Path=/; Expires=${cookieExpiry}; SameSite=Lax; Secure`;
+      const cookie = `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=Lax; Secure`;
   
       return new Response(JSON.stringify({ session: sessionToken, user: safeUser }), {
           status: 200,
@@ -1064,11 +1250,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
         // Update existing user
         user = await getUser(env, userId);
         if (user) {
-            user.username = userData.username;
-            user.name = userData.name;
-            user.email = userData.email;
-            user.avatar = userData.avatar;
-            user.access_token = userData.access_token;
+            user = { ...user, ...userData }
             user.updated_at = now;
             user.last_login = now;
             // Tier is updated by scheduled handler, not on login
@@ -1080,12 +1262,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
         userId = generateUserId();
         user = {
             id: userId,
-            provider: userData.provider,
-            username: userData.username,
-            name: userData.name,
-            email: userData.email,
-            avatar: userData.avatar,
-            access_token: userData.access_token,
+            ...userData,
             tier: "new",  // Tier is updated by scheduled handler
             api_keys: [],
             created_at: now,
@@ -1219,42 +1396,39 @@ async function calculateUserTier(userData, contributors, sponsors) {
    * Upgrade anonymous tier based on username (calculates hash) or direct hash value
    * Body: { "username": "user_name" } OR { "hash": "hash_value" }
    */
-  async function handleAnonymousTierUpgrade(request, env) {
-    if (request.method !== "POST") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
-    }
-    
-    let body;
-    try {
-        body = await request.json();
-    } catch (e) {
-        return jsonResponse({ error: "Invalid JSON body" }, 400);
-    }
-    
-    let hashValue = body.hash;
-    
-    // If username provided, calculate hash from it
-    if (body.username && !hashValue) {
-        hashValue = await calculateHashFromUsername(body.username);
-    }
-    
-    if (!hashValue) {
-        return jsonResponse({ error: "Missing required field: username or hash" }, 400);
-    }
-    
-    // Validate hash and get upgraded tier
-    const upgradedTier = getUpgradedTierFromHash(hashValue);
-    
-    if (!upgradedTier) {
-        return jsonResponse({ error: "Invalid hash value or username" }, 400);
+  async function handleAnonymousTierUpgrade(pathname, request, env) {
+    let hashValue;
+    let username;
+    if (request.method === "POST") {
+        let body;
+        try {
+            body = await request.json();
+        } catch (e) {
+            return jsonResponse({ error: "Invalid JSON body" }, 400);
+        }
+        
+        hashValue = body.hash;
+
+        // If username provided, calculate hash from it
+        if (body.username && !hashValue) {
+            hashValue = await calculateHashFromUsername(body.username);
+        }
+        
+        if (!hashValue) {
+            return jsonResponse({ error: "Missing required field: username or hash" }, 400);
+        }
+    } else {
+        username = pathname.split("/").pop();
+        hashValue = await calculateHashFromUsername(username);
     }
     
     // Return tier information and limits
+    const upgradedTier = 'anonymous';
     const tierLimits = USER_TIER_LIMITS[upgradedTier];
     const tierInfo = {
+        hash: hashValue,
         tier: upgradedTier,
         limits: tierLimits,
-        legacy: USER_TIERS[upgradedTier]
     };
     
     return jsonResponse(tierInfo);
@@ -1342,6 +1516,8 @@ async function calculateUserTier(userData, contributors, sponsors) {
     const apiKey = await generateApiKey(env, user.id);
     const keyHash = await hashApiKey(apiKey);
     const keyPrefix = apiKey.substring(0, 8);
+    const expirationTtl = 90 * 24 * 60 * 60;
+    const expires = Date.now() + expirationTtl * 1000;
   
     const keyData = {
         id: generateKeyId(),
@@ -1350,6 +1526,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
         prefix: keyPrefix,
         user_id: user.id,
         created_at: new Date().toISOString(),
+        expires_at: new Date(expires).toISOString(), // 24 hour expiry
         last_used: null,
         usage: {
             requests: 0,
@@ -1362,8 +1539,10 @@ async function calculateUserTier(userData, contributors, sponsors) {
         user_id: user.id,
         key_id: keyData.id,
         tier: user.tier,
-        username: user.username
-    }));
+        username: user.username,
+        expires_at: keyData.expires_at,
+        expires: Math.floor(expires / 1000)
+    }), { expirationTtl: expirationTtl });
   
     // Add to user's API keys
     user.api_keys = user.api_keys || [];
@@ -1391,8 +1570,10 @@ async function calculateUserTier(userData, contributors, sponsors) {
             id: keyData.id,
             name: keyData.name,
             prefix: keyPrefix,
-            created_at: keyData.created_at
+            created_at: keyData.created_at,
+            expires_at: keyData.expires_at
         },
+        expires: Math.floor(expires / 1000),
         warning: "Save this API key now. You won't be able to see it again!"
     };
   
@@ -1450,7 +1631,108 @@ async function calculateUserTier(userData, contributors, sponsors) {
   
     return jsonResponse({ message: "API key revoked successfully" });
   }
-  
+
+  /**
+   * Handle GET/POST /members/api/keys/revoke-by-key
+   * GET: Returns an HTML form to input the API key string
+   * POST: Accepts the API key string, hashes it, looks up the owner, and revokes it
+   */
+  async function handleRevokeApiKeyByKey(request, env) {
+    if (request.method === "GET") {
+      return new Response(REVOKE_BY_KEY_HTML, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          ...CORS_HEADERS
+        }
+      });
+    }
+
+    if (request.method !== "POST") {
+      return jsonResponse({ error: "Method not allowed" }, 405);
+    }
+
+    let apiKey;
+    const contentType = request.headers.get("Content-Type") || "";
+
+    if (contentType.includes("application/json")) {
+      const body = await request.json();
+      apiKey = body.api_key;
+    } else {
+      // Parse form-encoded body
+      const formData = await request.formData();
+      apiKey = formData.get("api_key");
+    }
+
+    if (!apiKey || typeof apiKey !== "string" || !apiKey.trim()) {
+      return new Response(REVOKE_BY_KEY_RESULT_HTML("error", "No API key provided"), {
+        status: 400,
+        headers: { "Content-Type": "text/html; charset=utf-8", ...CORS_HEADERS }
+      });
+    }
+
+    apiKey = apiKey.trim();
+    const keyHash = await hashApiKey(apiKey);
+    const keyDataStr = await env.MEMBERS_KV.get(`api_key:${keyHash}`);
+
+    if (!keyDataStr) {
+      return new Response(REVOKE_BY_KEY_RESULT_HTML("error", "Invalid API key — not found in system"), {
+        status: 404,
+        headers: { "Content-Type": "text/html; charset=utf-8", ...CORS_HEADERS }
+      });
+    }
+
+    const { user_id, key_id } = JSON.parse(keyDataStr);
+    const user = await getUser(env, user_id);
+
+    if (!user) {
+      return new Response(REVOKE_BY_KEY_RESULT_HTML("error", "User associated with this key no longer exists"), {
+        status: 404,
+        headers: { "Content-Type": "text/html; charset=utf-8", ...CORS_HEADERS }
+      });
+    }
+
+    // Find the key in user's api_keys
+    const keyIndex = (user.api_keys || []).findIndex(k => k.id === key_id);
+    if (keyIndex === -1) {
+      // Key mapping exists but not in user's list — clean up the orphaned mapping
+      await env.MEMBERS_KV.delete(`api_key:${keyHash}`);
+      return new Response(REVOKE_BY_KEY_RESULT_HTML("error", "API key mapping was orphaned — cleaned up"), {
+        status: 404,
+        headers: { "Content-Type": "text/html; charset=utf-8", ...CORS_HEADERS }
+      });
+    }
+
+    const keyData = user.api_keys[keyIndex];
+
+    // Remove from KV lookup
+    await env.MEMBERS_KV.delete(`api_key:${keyHash}`);
+
+    // Remove from user's keys
+    user.api_keys.splice(keyIndex, 1);
+    user.updated_at = new Date().toISOString();
+    await saveUser(env, user);
+
+    // Archive in R2 for audit trail
+    await env.MEMBERS_BUCKET.put(
+      `api_keys/${user.id}/${keyData.id}_revoked.json`,
+      JSON.stringify({
+        ...keyData,
+        revoked_at: new Date().toISOString(),
+        revoked_reason: "revoked_by_key_value"
+      }, null, 2),
+      { httpMetadata: { contentType: "application/json" } }
+    );
+
+    return new Response(
+      REVOKE_BY_KEY_RESULT_HTML("success", `API key "${keyData.name}" (prefix: ${keyData.prefix}…) revoked successfully for user ${user.username}`),
+      {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8", ...CORS_HEADERS }
+      }
+    );
+  }
+
   async function handleValidateApiKey(request, env) {
     const apiKey = request.headers.get("X-API-Key") || 
                    request.headers.get("Authorization")?.replace("Bearer ", "");
@@ -1466,7 +1748,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
         return jsonResponse({ valid: false, error: "Invalid API key" }, 401);
     }
   
-    const { user_id, key_id, tier } = JSON.parse(keyData);
+    const { user_id, key_id, expires } = JSON.parse(keyData);
     const user = await getUser(env, user_id);
   
     if (!user) {
@@ -1485,7 +1767,8 @@ async function calculateUserTier(userData, contributors, sponsors) {
         user_id: user.id,
         tier: user.tier,
         username: user.username,
-        limits: USER_TIERS[user.tier] || USER_TIERS.new
+        limits: USER_TIERS[user.tier] || USER_TIERS.new,
+        expires
     });
   }
   
@@ -1672,10 +1955,11 @@ async function calculateUserTier(userData, contributors, sponsors) {
   async function createSession(env, userId) {
     const sessionToken = generateSessionToken();
     const user = await getUser(env, userId);
+    const expires = Date.now() + 7 * 24 * 60 * 60 * 1000;
     const sessionData = {
         user_id: userId,
         created_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
+        expires_at: new Date(expires).toISOString() // 7 days
     };
   
     await env.MEMBERS_KV.put(
@@ -1684,7 +1968,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
         { expirationTtl: 7 * 24 * 60 * 60 } // 7 days
     );
   
-    return sessionToken;
+    return {sessionToken, expires: Math.floor(expires/1000)}
   }
   
   async function authenticateRequest(request, env, refreshSession = false) {
@@ -1754,7 +2038,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
     }
   
     // Clear the session cookie
-    const clearCookie = "g4f_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure";
+    const clearCookie = "g4f_session=; domain=g4f.space; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure";
   
     return new Response(JSON.stringify({ message: "Logged out successfully" }), {
         status: 200,
@@ -1786,9 +2070,10 @@ async function calculateUserTier(userData, contributors, sponsors) {
     }
   
     // Set refreshed session cookie
-    const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
+    const expires = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    const cookieExpiry = new Date(expires).toUTCString();
     const cookieHeader = sessionToken 
-        ? `g4f_session=${sessionToken}; Path=/; Expires=${cookieExpiry}; SameSite=Lax; Secure`
+        ? `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=Lax; Secure`
         : null;
   
     const headers = {
@@ -1801,7 +2086,8 @@ async function calculateUserTier(userData, contributors, sponsors) {
   
     return new Response(JSON.stringify({ 
         authenticated: true,
-        user: safeUser
+        user: safeUser,
+        expires: Math.floor(expires / 1000)
     }), {
         status: 200,
         headers
@@ -1903,25 +2189,14 @@ async function calculateUserTier(userData, contributors, sponsors) {
     return Response.redirect(redirectUrl.toString(), 302);
   }
   
-  function redirectWithSession(sessionToken, user) {
+  function redirectWithSession(sessionToken, user, expires) {
     const redirectUrl = new URL(OAUTH_REDIRECT_URI);
     redirectUrl.searchParams.set("session", sessionToken);
-    redirectUrl.searchParams.set("user", encodeURIComponent(JSON.stringify({
-        id: user.id,
-        name: user.name,
-        username: user.username,
-        email: user.email,
-        avatar: user.avatar,
-        provider: user.provider,
-        tier: user.tier,
-        airforce: user.airforce,
-        pollinations: user.pollinations,
-        huggingface: user.huggingface
-    })));
-    
+    redirectUrl.searchParams.set("user", encodeURIComponent(JSON.stringify(getSafeUser(user))));
+    redirectUrl.searchParams.set("expires", String(expires));
     // Set session cookie with 7 day expiry
-    const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
-    const cookie = `g4f_session=${sessionToken}; Path=/; Expires=${cookieExpiry}; SameSite=Lax; Secure`;
+    const cookieExpiry = new Date(expires * 1000).toUTCString();
+    const cookie = `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=Lax; Secure`;
     
     return new Response(null, {
         status: 302,
@@ -1936,29 +2211,22 @@ async function calculateUserTier(userData, contributors, sponsors) {
    * Redirect to external URL with session token for cloud sync
    * Used for login redirects from chat interface
    */
-  function redirectWithSessionToExternal(sessionToken, user, externalRedirectUrl, conversation = null) {
+  function redirectWithSessionToExternal(sessionToken, user, externalRedirectUrl, conversation = null, expires = null) {
       const redirectUrl = new URL(externalRedirectUrl);
       const hashParams = new URLSearchParams();
       hashParams.set("session", sessionToken);
-      hashParams.set("user", encodeURIComponent(JSON.stringify({
-          id: user.id,
-          name: user.name,
-          username: user.username,
-          avatar: user.avatar,
-          provider: user.provider,
-          tier: user.tier,
-          airforce: user.airforce,
-          pollinations: user.pollinations,
-          huggingface: user.huggingface
-      })));
+      hashParams.set("user", encodeURIComponent(JSON.stringify(getSafeUser(user))));
       if (conversation) {
         hashParams.set("conversation", conversation);
+      }
+      if (expires) {
+        hashParams.set("expires", expires);
       }
       redirectUrl.hash = hashParams.toString();
       
       // Set session cookie with 7 day expiry
       const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
-      const cookie = `g4f_session=${sessionToken}; Path=/; Expires=${cookieExpiry}; SameSite=Lax; Secure`;
+      const cookie = `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=Lax; Secure`;
       
       return new Response(null, {
           status: 302,
@@ -1979,6 +2247,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
         const apiKey = await generateApiKey(env, user.id);
         const keyHash = await hashApiKey(apiKey);
         const keyPrefix = apiKey.substring(0, 8);
+        const expires = Date.now() + 24 * 60 * 60 * 1000;
   
         const keyData = {
             id: generateKeyId(),
@@ -1989,7 +2258,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
             created_at: new Date().toISOString(),
             last_used: null,
             is_temporary: true,
-            expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hour expiry
+            expires_at: new Date(expires).toISOString(), // 24 hour expiry
             usage: {
                 requests: 0,
                 tokens: 0
@@ -2002,7 +2271,8 @@ async function calculateUserTier(userData, contributors, sponsors) {
             key_id: keyData.id,
             tier: user.tier,
             is_temporary: true,
-            expires_at: keyData.expires_at
+            expires_at: keyData.expires_at,
+            expires: Math.floor(expires / 1000)
         }), { expirationTtl: 86400 }); // 24 hours
   
         // Add to user's API keys
@@ -2017,6 +2287,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
         if (conversation) {
             hashParams.set("conversation", conversation);
         }
+        hashParams.set("expires", String(Math.floor(expires / 1000)));
         redirectUrl.hash = hashParams.toString();
         return Response.redirect(redirectUrl.toString(), 302);
     } catch (error) {
