@@ -296,14 +296,16 @@
   </table>
 </div>
 
+<textarea id="apiKeys" style="width: 500px; height: 100px;"></textarea>
+
 <script>
 // ── State ──
-const API_BASE =  prompt('Enter API base URL:', 'https://g4f.space');
+const API_BASE =  prompt('Enter API base URL:', 'https://g4f.space').replace(/\/$/, '');
 const API_KEY = prompt('Enter your API key:', localStorage.getItem('g4f_session') || '');
-const MODELS_URL = `${API_BASE}/models`;
-const CHAT_URL = `${API_BASE}/v1/chat/completions`;
+const CHAT_URL = `${API_BASE}/chat/completions`;
 const MIN_REQUESTS = 5;
 const TEST_MESSAGE = 'Say "OK" exactly. No other text.';
+let API_KEYS = null
 
 let models = [];
 let results = [];
@@ -337,18 +339,31 @@ async function fetchModels() {
   </td></tr>`;
 
   try {
-    const resp = await fetch(MODELS_URL);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const json = await resp.json();
-    const data = json.data || json;
-
-    // Filter: requests > MIN_REQUESTS, exclude "auto"
-    models = data
-      .filter(m => m.id !== 'auto' && (m.requests > MIN_REQUESTS || m.count > MIN_REQUESTS || !("requests" in m || "count" in m)));
+    const MODELS_URL = prompt('Enter models URL:', `${API_BASE}/models`);
+    let models = [];
+    try {
+        new URL(MODELS_URL);
+        const resp = await fetch(MODELS_URL);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const json = await resp.json();
+        const data = json.data || json;
+        // Filter: requests > MIN_REQUESTS, exclude "auto"
+        models = data
+        .filter(m => m.id !== 'auto' && (m.requests > MIN_REQUESTS || m.count > MIN_REQUESTS || !("requests" in m || "count" in m)));
+    } catch {
+      if (API_KEYS) {
+        for (const key of API_KEYS) {
+            models.push({id: MODELS_URL, apiKey: key});
+        }
+      } else {
+        models.push({id: MODELS_URL});
+      }
+    }
 
     // Initialize results
     results = models.map(m => ({
       ...m,
+      id: m.id || m.model_name || m.name || 'unknown',
       status: 'pending',
       timeMs: null,
       responsePreview: null,
@@ -455,6 +470,7 @@ async function testModel(index) {
   if (stopRequested) return;
   const r = results[index];
   r.status = 'testing';
+  r.apiKey = r.apiKey || API_KEY;
   updateRow(index);
   updateStats();
 
@@ -466,7 +482,7 @@ async function testModel(index) {
 
     const resp = await fetch(CHAT_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(API_KEY ? { 'Authorization': `Bearer ${API_KEY}` } : {}) },
+      headers: { 'Content-Type': 'application/json', ...(r.apiKey ? { 'Authorization': `Bearer ${r.apiKey}` } : {}) },
       body: JSON.stringify({
         model: r.model || r.id,
         messages: [{ role: 'user', content: TEST_MESSAGE }],
@@ -579,6 +595,10 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     testAllModels();
   }
+});
+document.getElementById('apiKeys').addEventListener('change', (e) => {
+  API_KEYS= e.target.value.match(/(?:AIzaSy|AQ.Ab8RN6)[\w-]+/g);
+  e.target.value = API_KEYS ? [...new Set(API_KEYS)].join('\n') : '';
 });
 </script>
 </body>
