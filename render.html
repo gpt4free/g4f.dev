@@ -395,12 +395,6 @@
     </style>
 </head>
 <body>
-    <script>
-        // Detect if embedded in an iframe
-        if (window.self !== window.top) {
-            document.body.classList.add('in-iframe');
-        }
-    </script>
     <!-- Header -->
     <div class="header">
         <h1>📄 G4F Render</h1>
@@ -597,10 +591,6 @@
 
             clearBtn.addEventListener('click', clearAll);
 
-            window.addEventListener('resize', (e) => {
-                updateIframeHeight();
-            });
-
             // --- Initialize ---
             (async () => {
                 try {
@@ -615,6 +605,10 @@
                 if (queryPrompt) {
                     promptInput.value = queryPrompt;
                     generateContent();
+                    // Detect if embedded in an iframe
+                    if (window.self !== window.top) {
+                        document.body.classList.add('in-iframe');
+                    }
                 }
             })();
         })();

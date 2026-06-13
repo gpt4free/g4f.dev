@@ -81,7 +81,7 @@ var AUTO_PROVIDERS = [
   "srv_mkombumpae45db46dcb8", // nvidia
   // "srv_mnkjel2208cf770e5009", // ollama
   // "srv_mp2i8rco3148dd85bec1",
-  "srv_mq7ktfibad45c29f3839", // swarm
+  // "srv_mq7ktfibad45c29f3839", // swarm
   "srv_monk1pkz433a519ff2be", // openrouter
   "srv_mkoloq41e34074b6133e", // pollinations
 ]
@@ -362,7 +362,7 @@ var custom_worker_default = {
         const serverId = pathname.split("/")[4];
         return handleGetServerModels(request, env, serverId);
       }
-      if (pathname === "/v1/models" || pathname === "/custom/srv_mkopytsj9b6425de1db8/models") {
+      if (pathname === "/v1/models" || pathname === "/models") {
         return handleV1Models(request, env);
       }
       if (pathname.match(/^\/custom\/[^/]+\/models$/)) {
@@ -386,7 +386,7 @@ var custom_worker_default = {
         }
         return handleModels(request, env, ctx, server.id, user, server, cacheKey);
       }
-      if (pathname === "/v1/chat/completions" || pathname === "/v1/messages" || pathname === "/custom/srv_mkopytsj9b6425de1db8/chat/completions") {
+      if (pathname === "/v1/chat/completions" || pathname === "/custom/srv_mkopytsj9b6425de1db8/chat/completions") {
         return handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, rateCheck);
       }
       if (pathname.match(/^\/custom\/[^/]+\/chat\/completions$/)) {
@@ -404,25 +404,6 @@ var custom_worker_default = {
           server = await getRandomPublicServer(env);
         } else {
           // honor prefix serverId:model if given
-          const prefixMatch = /^([^:]+):/.exec(label);
-          if (prefixMatch) {
-            server = await getServerById(env, prefixMatch[1], user);
-          }
-          if (!server) {
-            server = await getServerByLabel(env, label, user);
-          }
-        }
-        if (!server) {
-          return proxyToPassG4f(request, env, pathname, url.search, user, cacheKey, ctx);
-        }
-        return handleProxyToServer(request, env, ctx, server, "/chat/completions", cacheKey, user, pathname, userProvidedKey, rateCheck);
-      }
-      if (pathname.match(/^\/api\/.+\/messages$/)) {
-        const label = pathname.split("/")[2];
-        let server;
-        if (label === "auto") {
-          server = await getRandomPublicServer(env);
-        } else {
           const prefixMatch = /^([^:]+):/.exec(label);
           if (prefixMatch) {
             server = await getServerById(env, prefixMatch[1], user);
@@ -884,6 +865,11 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey,
         });
       }
     }
+    const modelCount = await getModelsFromStats(env, server);
+    data.data.forEach(m=>{
+      m.requests = modelCount[m.id];
+    })
+    data.data.sort((a, b) => (b.requests || 0) - (a.requests || 0));
     const newResponse = new Response(JSON.stringify(data), response);
     for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
       newResponse.headers.set(key, value);
@@ -897,7 +883,7 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey,
     if (server.allowed_models && server.allowed_models.length > 0) {
       console.error(e);
       return jsonResponse({
-        data: server.allowed_models.map((m) => ({ id: m, audio: m.includes("audio") }))
+        data: server.allowed_models.map((m) => ({ id: m, audio: m.includes("audio"), m:e.message }))
       });
     }
     return jsonResponse({ error: `Failed to connect to server: ${e.message}` }, 502);
@@ -1078,7 +1064,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
         }
       }
     }
-    const totalTokens = parseInt(response.headers.get("X-Usage-Total-Tokens") || "0") || usage.total_tokens || 0;
+    const totalTokens = parseInt(response.headers.get("X-Usage-Total-Tokens") || "0") || usage.total_tokens || (usage.prompt_tokens + usage.completion_tokens) || 0;
     if (subPath === "/chat/completions" && response.ok || totalTokens > 0) {
       const geoLocation = request.cf?.asOrganization || request.cf?.country || null;
       const userAgent = request.headers.get("user-agent") || null;
@@ -1164,14 +1150,15 @@ async function createUsageTrackingStream(response, env, ctx, server, serverId, c
       break;
     }
   }
-  ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${serverId}`, requestModel, usage.total_tokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
-  ctx.waitUntil(updateServerUsage(env, server, usage.total_tokens, requestModel));
+  const totalUsage = usage.total_tokens || (usage.prompt_tokens + usage.completion_tokens) || 0;
+  ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${serverId}`, requestModel, totalUsage, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
+  ctx.waitUntil(updateServerUsage(env, server, totalUsage, requestModel));
   if (user) {
-    ctx.waitUntil(updateUserDailyUsage(env, user.id, usage.total_tokens, `custom:${serverId}`, requestModel));
+    ctx.waitUntil(updateUserDailyUsage(env, user.id, totalUsage, `custom:${serverId}`, requestModel));
   }
   const isCached = (response.headers.get("X-Cache") || usage.cache || "MISS") === "HIT";
   if (!userProvidedKey && !isCached) {
-    const totalTokens = getModelTokens(requestModel, usage.total_tokens);
+    const totalTokens = getModelTokens(requestModel, totalUsage);
     ctx.waitUntil(updateAnonymousTokenUsage(env, clientIP, totalTokens, ctx));
     if (user) {
       ctx.waitUntil(updateUserTokenUsage(env, user.id, totalTokens, ctx));
@@ -1203,7 +1190,7 @@ async function persistUsageToDb(env, clientIP, provider, model, tokensUsed, prom
       clientIP,
       provider || "unknown",
       model || "unknown",
-      tokensUsed || 0,
+      tokensUsed || (promptTokens + completionTokens) || 0,
       promptTokens || 0,
       completionTokens || 0,
       pathname || "unknown",
@@ -1767,15 +1754,16 @@ ${prompt}
     const userAgent = request.headers.get("user-agent") || null;
     const requestModel = data.model || queryBody.model;
     const firstMessage = prompt || getFirstMessage(queryBody.messages);
-    ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, queryBody.model, usage.total_tokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
+    const totalUsage = usage.total_tokens || (usage.prompt_tokens + usage.completion_tokens) || 0;
+    ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, queryBody.model, totalUsage, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
     if (response.ok) {
-      ctx.waitUntil(updateServerUsage(env, server, usage.total_tokens, queryBody.model));
+      ctx.waitUntil(updateServerUsage(env, server, totalUsage, queryBody.model));
     }
     if (user) {
-      ctx.waitUntil(updateUserDailyUsage(env, user.id, usage.total_tokens, `custom:${server.id}`, queryBody.model));
+      ctx.waitUntil(updateUserDailyUsage(env, user.id, totalUsage, `custom:${server.id}`, queryBody.model));
     }
     if (!userProvidedKey && response.headers.get("X-Cache") !== "HIT") {
-      const totalTokens = getModelTokens(queryBody.model, usage.total_tokens);
+      const totalTokens = getModelTokens(queryBody.model, totalUsage);
       if (totalTokens) {
         newResponse.headers.set("X-Usage-Total-Tokens", String(totalTokens));
       }
@@ -2142,6 +2130,9 @@ async function updateAnonymousTokenUsage(env, clientIP, tokens, ctx) {
   }
 }
 async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, rateCheck) {
+  if (!modelToServerCache) {
+    await handleV1Models(request, env);
+  }
   const user = await authenticateRequest(request, env);
   let requestBody;
   try {
@@ -2150,22 +2141,9 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, ra
     requestBody = {}
   }
 
-  // parse prefix syntax serverId:modelName if provided
-  let serverFromPrefix = null;
-  let model = requestBody.model;
-  const prefixMatch = /^([^:]+):(.+)$/.exec(model || "");
-  if (prefixMatch) {
-    const serverId = prefixMatch[1];
-    const modelName = prefixMatch[2];
-    const maybe = await getServerById(env, serverId, user);
-    if (maybe) {
-      serverFromPrefix = maybe;
-      model = modelName; // override for later checks
-      requestBody.model = modelName;
-    }
-  }
-
   let selectedServer = null;
+  let model = requestBody.model;
+
   if (model === "auto" || !model) {
     try {
       selectedServer = await getRandomPublicServer(env);
@@ -2173,10 +2151,30 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, ra
       return jsonResponse({ error: e.message }, 500);
     }
   }
+  if (model && modelToServerCache && modelToServerCache[model]) {
+    const serverId = modelToServerCache[model];
+    const maybe = await getServerById(env, serverId, user);
+    if (maybe) {
+      selectedServer = maybe;
+    }
+  }
+
+  // parse prefix syntax serverId:modelName if provided
+  let serverFromPrefix = null;
 
   // if prefix identified a server use it exclusively
-  if (!selectedServer && serverFromPrefix) {
-    selectedServer = serverFromPrefix;
+  if (!selectedServer) {
+    const prefixMatch = /^([^:]+):(.+)$/.exec(model || "");
+    if (prefixMatch) {
+      const serverId = prefixMatch[1];
+      const modelName = prefixMatch[2];
+      const maybe = await getServerById(env, serverId, user);
+      if (maybe) {
+        selectedServer = maybe;
+        model = modelName; // override for later checks
+        requestBody.model = modelName;
+      }
+    }
   }
 
   if (!selectedServer) {
@@ -2211,15 +2209,6 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, ra
   if (!selectedServer) {
     return jsonResponse({ error: `No server found that supports model '${model}'` }, 404);
   }
-
-  // // if we changed the model name (due to prefix) rewrite the request body
-  // if (serverFromPrefix && model !== requestBody.model) {
-  //   request = new Request(request.url, {
-  //     method: request.method,
-  //     headers: request.headers,
-  //     body: JSON.stringify(requestBody)
-  //   });
-  // }
 
   return handleProxyToServer(request, env, ctx, selectedServer, "/chat/completions", cacheKey, user, pathname, null, rateCheck, requestBody);
 }
@@ -2258,12 +2247,13 @@ async function getModelsFromStats(env, server) {
 // simple in‑memory cache for /v1/models responses
 let modelsCache = null;
 let modelsCacheTime = 0;
+let modelToServerCache = null;
 
 async function handleV1Models(request, env) {
   const now = Date.now();
 
   // return cached result if recent
-  if (modelsCache && now - modelsCacheTime < 60_000) {
+  if (modelsCache && now - modelsCacheTime < 60_000 * 60) {
     return jsonResponse(modelsCache.payload);
   }
 
@@ -2284,7 +2274,7 @@ async function handleV1Models(request, env) {
       for (const [m, cnt] of Object.entries(map)) {
         const key = `${server.id}:${m}`;
         if (!allModels[key]) {
-          allModels[key] = { id: key, label: `${server.label}:${m}`, server: server.id, requests: cnt };
+          allModels[key] = { id: key, model: m, label: `${server.label}:${m}`, server: server.id, requests: cnt };
         } else {
           allModels[key].requests = (allModels[key].requests || 0) + cnt;
         }
@@ -2296,6 +2286,12 @@ async function handleV1Models(request, env) {
   let result = Array.from(Object.values(allModels));
   result = result.filter(m => m.requests > 0); // only show models with usage for relevance
   result.sort((a, b) => (b.requests || 0) - (a.requests || 0));
+  modelToServerCache = {};
+  result.forEach(m => {
+    if (!(m.model in modelToServerCache)) {
+      modelToServerCache[m.model] = m.server;
+    }
+  });
   result.unshift({ id: "auto", label: "Auto (random public server)" });
 
   const payload = { data: result };
