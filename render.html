@@ -395,6 +395,14 @@
     </style>
 </head>
 <body>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const queryPrompt = params.get('prompt');
+        // Detect if embedded in an iframe
+        if (queryPrompt && window.self !== window.top) {
+            document.body.classList.add('in-iframe');
+        }
+    </script>
     <!-- Header -->
     <div class="header">
         <h1>📄 G4F Render</h1>
@@ -600,15 +608,9 @@
                 }
 
                 // Check for ?prompt= query parameter and auto-generate
-                const params = new URLSearchParams(window.location.search);
-                const queryPrompt = params.get('prompt');
                 if (queryPrompt) {
                     promptInput.value = queryPrompt;
                     generateContent();
-                    // Detect if embedded in an iframe
-                    if (window.self !== window.top) {
-                        document.body.classList.add('in-iframe');
-                    }
                 }
             })();
         })();
