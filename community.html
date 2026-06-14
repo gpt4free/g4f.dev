@@ -115,7 +115,8 @@
             
             try {
                 // Fetch JWT token for authentication
-                const jwtResponse = await fetch('https://auth.g4f.space/members/api/jwt');
+                const jwtResponse = await fetch('https://auth.g4f.space/members/api/jwt', { headers: { 'Authorization': `Bearer ${localStorage.getItem('g4f_session'}`}
+});
                 if (!jwtResponse.ok) throw new Error('Failed to fetch authentication token');
                 const { token } = await jwtResponse.json();
 
