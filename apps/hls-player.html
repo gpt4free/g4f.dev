@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HLS Stream Player</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0d0d0d;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #e0e0e0;
+        }
+
+        .player-container {
+            width: 100%;
+            max-width: 960px;
+            background: #1a1a2e;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            border: 1px solid #2a2a4a;
+        }
+
+        .player-header {
+            padding: 16px 24px;
+            background: linear-gradient(135deg, #16213e, #1a1a2e);
+            border-bottom: 1px solid #2a2a4a;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .live-badge {
+            background: #e74c3c;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .player-header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .video-wrapper {
+            position: relative;
+            background: #000;
+            aspect-ratio: 16 / 9;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.7);
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+        }
+
+        .overlay.hidden {
+            opacity: 0;
+        }
+
+        .overlay .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #3498db;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .overlay .status-text {
+            margin-top: 16px;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        .player-controls {
+            padding: 16px 24px;
+            background: #16213e;
+            border-top: 1px solid #2a2a4a;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #3aa3e8, #2c8fc9);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+            .btn-danger:hover {
+            background: linear-gradient(135deg, #ef5b4c, #d04434);
+        }
+
+        .btn-secondary {
+            background: #2a2a4a;
+            color: #ccc;
+            border: 1px solid #3a3a5a;
+        }
+
+        .btn-secondary:hover {
+            background: #3a3a5a;
+            color: #fff;
+        }
+
+        .status-bar {
+            padding: 12px 24px;
+            background: #111122;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+        }
+
+        .status-dot.connected {
+            background: #2ecc71;
+            box-shadow: 0 0 8px rgba(46, 204, 113, 0.5);
+        }
+
+        .status-dot.error {
+            background: #e74c3c;
+            box-shadow: 0 0 8px rgba(231, 76, 60, 0.5);
+        }
+
+        .status-dot.connecting {
+            background: #f39c12;
+            box-shadow: 0 0 8px rgba(243, 156, 18, 0.5);
+            animation: pulse 1s infinite;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .volume-control input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 80px;
+            height: 4px;
+            background: #3a3a5a;
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .volume-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #3498db;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .quality-select {
+            padding: 8px 12px;
+            background: #2a2a4a;
+            color: #ccc;
+            border: 1px solid #3a3a5a;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .quality-select:hover {
+            border-color: #3498db;
+        }
+    </style>
+</head>
+<body>
+
+<div class="player-container">
+    <div class="player-header">
+        <div class="live-badge">● LIVE</div>
+        <h1>HLS Stream Player</h1>
+    </div>
+
+    <div class="video-wrapper">
+        <video id="videoPlayer" playsinline></video>
+        <div class="overlay" id="overlay">
+            <div class="spinner" id="spinner"></div>
+            <div class="status-text" id="statusText">Ready to connect...</div>
+        </div>
+    </div>
+
+    <div class="player-controls">
+        <button class="btn btn-primary" id="playBtn" onclick="startPlayback()">▶ Play Stream</button>
+        <button class="btn btn-danger" id="stopBtn" onclick="stopPlayback()" style="display:none;">⏹ Stop</button>
+        <button class="btn btn-secondary" id="muteBtn" onclick="toggleMute()">🔇 Mute</button>
+        <label for="qualitySelect" style="font-size:13px; color:#888;">Quality:</label>
+        <select class="quality-select" id="qualitySelect" onchange="changeQuality()">
+            <option value="-1">Auto</option>
+        </select>
+        <div class="volume-control">
+            <span style="font-size:13px;">🔊</span>
+            <input type="range" id="volumeSlider" min="0" max="100" value="80" oninput="changeVolume(this.value)">
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-indicator">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="connectionStatus">Disconnected</span>
+        </div>
+        <span id="streamInfo">—</span>
+    </div>
+</div>
+
+<script>
+    const STREAM_URL = 'https://sdn-global-live-streaming-packager-cache.3qsdn.com/13456/13456_264_live.m3u8';
+
+    const video = document.getElementById('videoPlayer');
+    const overlay = document.getElementById('overlay');
+    const spinner = document.getElementById('spinner');
+    const statusText = document.getElementById('statusText');
+    const statusDot = document.getElementById('statusDot');
+    const connectionStatus = document.getElementById('connectionStatus');
+    const streamInfo = document.getElementById('streamInfo');
+    const playBtn = document.getElementById('playBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const muteBtn = document.getElementById('muteBtn');
+    const qualitySelect = document.getElementById('qualitySelect');
+    const volumeSlider = document.getElementById('volumeSlider');
+
+    let hls = null;
+    let isPlaying = false;
+
+    // Set initial volume
+    video.volume = 0.8;
+
+    function updateStatus(state, text) {
+        statusDot.className = 'status-dot ' + state;
+        connectionStatus.textContent = text || state;
+    }
+
+    function showOverlay(show, text) {
+        if (show) {
+            overlay.classList.remove('hidden');
+            if (text) statusText.textContent = text;
+        } else {
+            overlay.classList.add('hidden');
+        }
+    }
+
+    function startPlayback() {
+        if (isPlaying) return;
+
+        if (Hls.isSupported()) {
+            hls = new Hls({
+                debug: false,
+                enableWorker: true,
+                lowLatencyMode: true,
+            });
+
+            hls.loadSource(STREAM_URL);
+            hls.attachMedia(video);
+
+            updateStatus('connecting', 'Connecting...');
+            showOverlay(true, 'Connecting to stream...');
+
+            hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+                // Populate quality levels
+                qualitySelect.innerHTML = '<option value="-1">Auto</option>';
+                hls.levels.forEach((level, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    const bitrate = level.bitrate ? ` — ${(level.bitrate / 1000).toFixed(0)} kbps` : '';
+                    option.textContent = `${level.height}p${bitrate}`;
+                    qualitySelect.appendChild(option);
+                });
+
+                video.play().then(() => {
+                    isPlaying = true;
+                    playBtn.style.display = 'none';
+                    stopBtn.style.display = 'inline-block';
+                    updateStatus('connected', 'Live');
+                    showOverlay(false);
+                    updateStreamInfo();
+                }).catch(e => {
+                    showOverlay(true, 'Click play to start');
+                    isPlaying = true;
+                    playBtn.style.display = 'none';
+                    stopBtn.style.display = 'inline-block';
+                });
+            });
+
+            hls.on(Hls.Events.LEVEL_SWITCHED, function (event, data) {
+                updateStreamInfo();
+            });
+
+            hls.on(Hls.Events.ERROR, function (event, data) {
+                if (data.fatal) {
+                    switch (data.type) {
+                        case Hls.ErrorTypes.NETWORK_ERROR:
+                            showOverlay(true, 'Network error — retrying...');
+                            updateStatus('error', 'Network Error');
+                            hls.startLoad();
+                            break;
+                        case Hls.ErrorTypes.MEDIA_ERROR:
+                            showOverlay(true, 'Media error — recovering...');
+                            updateStatus('error', 'Media Error');
+                            hls.recoverMediaError();
+                            break;
+                        default:
+                            showOverlay(true, 'Fatal error occurred');
+                            updateStatus('error', 'Error');
+                            stopPlayback();
+                            break;
+                    }
+                }
+            });
+
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // Native HLS support (Safari)
+            video.src = STREAM_URL;
+            video.addEventListener('loadedmetadata', function () {
+                video.play();
+            });
+
+            isPlaying = true;
+            playBtn.style.display = 'none';
+            stopBtn.style.display = 'inline-block';
+            updateStatus('connected', 'Live (Native)');
+            showOverlay(false);
+
+        } else {
+            showOverlay(true, 'HLS is not supported in this browser.');
+            updateStatus('error', 'Not Supported');
+        }
+    }
+
+    function stopPlayback() {
+        if (hls) {
+            hls.destroy();
+            hls = null;
+        }
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+
+        isPlaying = false;
+        playBtn.style.display = 'inline-block';
+        stopBtn.style.display = 'none';
+        qualitySelect.innerHTML = '<option value="-1">Auto</option>';
+        updateStatus('', 'Disconnected');
+        showOverlay(true, 'Stream stopped');
+        spinner.style.display = 'none';
+        streamInfo.textContent = '—';
+    }
+
+    function toggleMute() {
+        video.muted = !video.muted;
+        muteBtn.textContent = video.muted ? '🔊 Unmute' : '🔇 Mute';
+    }
+
+    function changeVolume(val) {
+        video.volume = val / 100;
+        if (video.muted && val > 0) {
+            video.muted = false;
+            muteBtn.textContent = '🔇 Mute';
+        }
+    }
+
+    function changeQuality() {
+        if (!hls) return;
+        const level = parseInt(qualitySelect.value);
+        hls.currentLevel = level;
+    }
+
+    function updateStreamInfo() {
+        if (!hls) return;
+        const level = hls.levels[hls.currentLevel];
+        if (level) {
+            const bitrate = level.bitrate ? (level.bitrate / 1000).toFixed(0) : '?';
+            streamInfo.textContent = `${level.width}×${level.height} @ ${bitrate} kbps | FPS: ${level.details?.averagetargetduration?.toFixed(1) || '—'}`;
+        }
+    }
+
+    // Auto-hide overlay on play
+    video.addEventListener('playing', () => {
+        showOverlay(false);
+        updateStatus('connected', 'Live');
+    });
+
+    video.addEventListener('waiting', () => {
+        showOverlay(true, 'Buffering...');
+        updateStatus('connecting', 'Buffering...');
+        spinner.style.display = 'block';
+    });
+
+    video.addEventListener('canplay', () => {
+        if (isPlaying) {
+            showOverlay(false);
+            updateStatus('connected', 'Live');
+        }
+    });
+</script>
+
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0bba494cbba4195',t:'MTc4MTQ2NDMwNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

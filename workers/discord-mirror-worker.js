@@ -12,7 +12,13 @@
 export default {
     async fetch(request, env, ctx) {
         if (request.method === "OPTIONS") {
-            return new Response(null, { headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS" } });
+            return new Response(null, { 
+                headers: { 
+                    "Access-Control-Allow-Origin": "*", 
+                    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type, Authorization"
+                } 
+            });
         }
 
         if (request.method === "GET") {
@@ -25,7 +31,10 @@ export default {
         if (request.method === "POST") {
             const authHeader = request.headers.get("Authorization");
             if (!authHeader || !authHeader.startsWith("Bearer ")) {
-                return new Response("Unauthorized", { status: 401 });
+                return new Response("Unauthorized", { 
+                    status: 401, 
+                    headers: { "Access-Control-Allow-Origin": "*" } 
+                });
             }
             
             // Simple token validation (in production, verify JWT)
@@ -50,7 +59,10 @@ export default {
             );
 
             if (!isValid) {
-                return new Response("Unauthorized", { status: 401 });
+                return new Response("Unauthorized", { 
+                    status: 401, 
+                    headers: { "Access-Control-Allow-Origin": "*" } 
+                });
             }
             
             // Decode payload to get username
