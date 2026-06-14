@@ -115,6 +115,7 @@
         let userData = null;
         (async () => {
             await handleRedirectCallback();
+
             try {
                 userData = getUser();
             } catch (e) {
@@ -141,6 +142,18 @@
             });
         }
 
+        function renderMarkdown(text) {
+            if (!text) return '';
+            let html = escapeHtml(text);
+                    
+            html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+            html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; margin: 10px 0;">');
+            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+            return html;
+        }
+
         async function fetchPosts() {
             postsContainer.textContent = 'Loading posts...';
 
@@ -163,7 +176,7 @@
                     post.className = 'post';
 
                     const author = escapeHtml(message.author || 'Unknown');
-                    const content = escapeHtml(message.content || '');
+                    const content = renderMarkdown(message.content || '');
 
                     post.innerHTML = `
                         <strong>${author}</strong>
