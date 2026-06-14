@@ -88,7 +88,7 @@
             document.getElementById('loginStatus').innerHTML = `<p>Logged in as ${userData.username}</p>`;
             document.getElementById('postForm').style.display = 'block';
         } else {
-            document.getElementById('loginStatus').innerHTML = `<p><a href="members.html">Login to post</a></p>`;
+            document.getElementById('loginStatus').innerHTML = `<p><a href="members.html?redirect=community.html">Login to post</a></p>`;
         }
 
         async function fetchPosts() {
@@ -102,7 +102,7 @@
                 post.innerHTML = `
                     <strong>${m.author}</strong>
                     <p>${m.content}</p>
-                    <button class="copy-btn" onclick="copyToDiscord(this)">Copy for Discord</button>
+                    <button class="copy-btn" onclick="copyToDiscord(this)">Copy</button>
                 `;
                 posts.appendChild(post);
             });
