@@ -91,6 +91,7 @@
             opacity: 0.8;
         }
     </style>
+    <script src="dist/js/router.js"></script>
 </head>
 <body>
     <div class="container">
@@ -104,6 +105,7 @@
     </div>
 
     <script>
+        const { getUser, getCurrentUrl, handleRedirectCallback } = MembersAuth;
         const loginStatus = document.getElementById('loginStatus');
         const postForm = document.getElementById('postForm');
         const postContent = document.getElementById('postContent');
@@ -111,19 +113,21 @@
         const postsContainer = document.getElementById('posts');
 
         let userData = null;
-        try {
-            const storedUser = localStorage.getItem('g4f_user');
-            userData = storedUser ? JSON.parse(storedUser) : null;
-        } catch (e) {
-            console.error('Failed to parse user data', e);
-        }
+        (async () => {
+            await handleRedirectCallback();
+            try {
+                userData = getUser();
+            } catch (e) {
+                console.error('Failed to get user data', e);
+            }
 
-        if (userData && userData.username) {
-            loginStatus.textContent = `Logged in as ${userData.username}`;
-            postForm.style.display = 'block';
-        } else {
-            loginStatus.innerHTML = '<p><a href="members.html">Login to post</a></p>';
-        }
+            if (userData && userData.username) {
+                loginStatus.textContent = `Logged in as ${userData.username}`;
+                postForm.style.display = 'block';
+            } else {
+                loginStatus.innerHTML = `<p><a href="members.html?redirect=${encodeURIComponent(getCurrentUrl())}" target="_blank">Login to post</a></p>`;
+            }
+        })();
 
         function escapeHtml(value) {
             return String(value).replace(/[&<>'"]/g, function (char) {
@@ -191,7 +195,7 @@
 
         async function addPost() {
             const content = postContent.value.trim();
-            if (!content || !userData || !userData.username) {
+            if (!content || !localStorage.getItem('g4f_session')) {
                 return;
             }
 
@@ -255,5 +259,5 @@
 
         fetchPosts();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0babfa8a8cd3c61',t:'MTc4MTQ1NDkzMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
