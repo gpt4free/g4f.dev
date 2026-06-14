@@ -589,6 +589,10 @@ async function calculateUserTier(userData, contributors, sponsors) {
                     return handleDeleteConversation(request, env, conversationId);
                 }
             }
+
+            if (pathname === "/members/api/jwt") {
+                return handleJwtRequest(request, env);
+            }
   
             return jsonResponse({ error: "Not found" }, 404);
         } catch (error) {
@@ -1619,14 +1623,12 @@ async function calculateUserTier(userData, contributors, sponsors) {
   
     // Archive in R2 (don't delete for audit trail)
     await env.MEMBERS_BUCKET.put(
-        `api_keys/${user.id}/${keyData.id}_revoked.json`,
-        JSON.stringify({
-            ...keyData,
-            revoked_at: new Date().toISOString()
-        }, null, 2),
-        {
-            httpMetadata: { contentType: "application/json" }
-        }
+      `api_keys/${user.id}/${keyData.id}_revoked.json`,
+      JSON.stringify({
+        ...keyData,
+        revoked_at: new Date().toISOString()
+      }, null, 2),
+      { httpMetadata: { contentType: "application/json" } }
     );
   
     return jsonResponse({ message: "API key revoked successfully" });
@@ -1929,7 +1931,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
             requests: 0,
             tokens: 0,
             providers: {},
-            models: {},
+            models: {}
         };
     }
   
@@ -2843,4 +2845,65 @@ async function calculateUserTier(userData, contributors, sponsors) {
           return jsonResponse({ error: "Failed to delete conversation" }, 500);
       }
   }
-  
+
+  /**
+   * Handle GET /members/api/jwt - Generate a JWT token for the authenticated user
+   * The token is used for cross-worker authentication (e.g., discord-mirror-worker)
+   * 
+   * Returns: { token: "<jwt>", expires: <timestamp> }
+   */
+  async function handleJwtRequest(request, env) {
+    const user = await authenticateRequest(request, env);
+    if (!user) {
+        return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+
+    if (request.method !== "GET") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+    }
+
+    // JWT Expiry: 24 hours
+    const expires = Math.floor(Date.now() / 1000) + (24 * 60 * 60);
+    
+    const header = { alg: "HS256", typ: "JWT" };
+    const payload = {
+        sub: user.id,
+        username: user.username,
+        tier: user.tier,
+        exp: expires,
+        iat: Math.floor(Date.now() / 1000)
+    };
+
+    const encode = (obj) => btoa(JSON.stringify(obj)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    
+    const unsignedToken = `${encode(header)}.${encode(payload)}`;
+    
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(env.JWT_SECRET),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"]
+    );
+
+    const signatureBuffer = await crypto.subtle.sign(
+        "HMAC",
+        key,
+        encoder.encode(unsignedToken)
+    );
+    
+    const signature = Array.from(new Uint8Array(signatureBuffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+    
+    // Note: The discord-mirror-worker expects a standard JWT signature (base64url encoded bytes)
+    // Let's use the correct base64url encoding for the signature to match standard JWT
+    const signatureBase64 = toBase64Url(signatureBuffer);
+    const token = `${unsignedToken}.${signatureBase64}`;
+
+    return jsonResponse({
+        token,
+        expires
+    });
+  }
