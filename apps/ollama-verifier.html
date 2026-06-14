@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🦙 Ollama Node Verifier</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg-card: #161b22;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-dim: #8b949e;
+  --accent: #58a6ff;
+  --ok: #3fb950;
+  --fail: #f85149;
+  --warn: #d2991d;
+  --testing: #a371f7;
+  --radius: 8px;
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100vh;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.container { max-width: 1100px; width: 100%; }
+
+/* Header */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+header h1 { font-size: 1.6rem; font-weight: 700; }
+.header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Buttons */
+button {
+  padding: 10px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-card);
+  color: var(--text);
+  white-space: nowrap;
+}
+button:hover:not(:disabled) { filter: brightness(1.2); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-danger { background: var(--fail); color: #fff; border-color: var(--fail); }
+.btn-secondary { background: var(--bg-card); }
+
+/* Textarea */
+textarea {
+  width: 100%;
+  min-height: 140px;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(88,166,255,0.15); }
+textarea::placeholder { color: var(--text-dim); }
+
+/* Stats bar */
+.stats-bar {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.stat { display: flex; gap: 6px; align-items: center; font-size: 0.85rem; }
+.stat .value { font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat.success .value { color: var(--ok); }
+.stat.fail .value { color: var(--fail); }
+.stat.warn .value { color: var(--warn); }
+.stat.testing .value { color: var(--testing); }
+
+/* Progress */
+.progress-wrap { margin: 12px 0; display: flex; align-items: center; gap: 12px; }
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+.progress-label { font-size: 0.8rem; color: var(--text-dim); white-space: nowrap; }
+
+/* Table */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+thead th {
+  background: #1c2129;
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-dim);
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+}
+tbody td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+tbody tr:hover { background: rgba(255,255,255,0.02); }
+.model-name { font-weight: 600; color: var(--accent); }
+.provider-label { color: var(--text-dim); font-size: 0.8rem; }
+.req-count { font-variant-numeric: tabular-nums; }
+.time-cell { font-variant-numeric: tabular-nums; color: var(--text-dim); }
+.response-preview {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+.response-preview:hover { color: var(--text); }
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.badge-pending { background: #30363d; color: var(--text-dim); }
+.badge-testing { background: rgba(163,113,247,0.2); color: var(--testing); }
+.badge-ok { background: rgba(63,185,80,0.18); color: var(--ok); }
+.badge-err { background: rgba(248,81,73,0.18); color: var(--fail); }
+.badge-dead { background: rgba(248,81,73,0.12); color: #f85149; }
+.badge-models { background: rgba(88,166,255,0.15); color: var(--accent); }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #1c2129;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 12px 20px;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  z-index: 999;
+  animation: fadeInUp 0.3s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Section labels */
+.section-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 16px 0 6px;
+}
+
+/* Verified output area */
+.verified-output {
+  margin-top: 16px;
+  padding: 14px;
+  background: #0d2818;
+  border: 1px solid rgba(63,185,80,0.3);
+  border-radius: var(--radius);
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 0.82rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
+  color: var(--ok);
+}
+.verified-output.empty { background: var(--bg-card); border-color: var(--border); color: var(--text-dim); }
+
+/* Model count chip */
+.model-chip {
+  display: inline-block;
+  background: rgba(88,166,255,0.1);
+  color: var(--accent);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+/* Toggle labels */
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--bg-card);
+  color: var(--text-dim);
+  transition: all 0.15s;
+  user-select: none;
+}
+.toggle-label:hover { filter: brightness(1.15); }
+.toggle-label input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
+.toggle-label:has(input:checked) { color: var(--accent); border-color: var(--accent); }
+
+/* Verified model badge */
+.badge-verified { background: rgba(63,185,80,0.22); color: var(--ok); }
+.badge-unverified { background: rgba(210,153,29,0.18); color: var(--warn); }
+
+/* Responsive */
+@media (max-width: 700px) {
+  body { padding: 12px; }
+  header { flex-direction: column; align-items: flex-start; }
+  .stats-bar { gap: 10px; }
+  thead th, tbody td { padding: 6px 8px; font-size: 0.78rem; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>🦙 Ollama Node Verifier</h1>
+  <div class="header-actions">
+    <label class="toggle-label" title="Step 2: Test each model with /v1/chat/completions or /v1/embeddings">
+      <input type="checkbox" id="chkStep2" onchange="onStep2Toggle()">
+      <span>Step 2: Verify Models</span>
+    </label>
+    <label class="toggle-label" title="Output as JSON: {url: [verified_models], ...}">
+      <input type="checkbox" id="chkJsonOut" onchange="updateVerifiedOutput()">
+      <span>JSON Output</span>
+    </label>
+    <button class="btn-primary" onclick="verifyAll()" id="btnVerify" disabled>▶ Verify All</button>
+    <button class="btn-danger" onclick="stopVerify()" id="btnStop" disabled>⏹ Stop</button>
+    <button class="btn-secondary" onclick="clearAll()">🗑 Clear</button>
+  </div>
+</header>
+
+<div class="section-label">📋 Paste Ollama Instance URLs (one per line)</div>
+<textarea id="urlInput" placeholder="https://ollama.example.com&#10;http://192.168.1.100:11434&#10;https://my-ollama-server.com&#10;..."></textarea>
+
+<div class="stats-bar">
+  <div class="stat"><span>Total:</span><span class="value" id="statTotal">0</span></div>
+  <div class="stat success"><span>✅ Alive:</span><span class="value" id="statAlive">0</span></div>
+  <div class="stat fail"><span>❌ Dead:</span><span class="value" id="statDead">0</span></div>
+  <div class="stat warn"><span>⏳ Pending:</span><span class="value" id="statPending">0</span></div>
+  <div class="stat testing"><span>🔄 Testing:</span><span class="value" id="statTesting">0</span></div>
+  <div class="stat"><span>📦 Total Models:</span><span class="value" id="statModels">0</span></div>
+  <div class="stat success"><span>🧪 Verified:</span><span class="value" id="statVerified">0</span></div>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-label" id="progressLabel">Ready — paste URLs above</div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Instance URL</th>
+        <th>Models</th>
+        <th>Verified</th>
+        <th>Status</th>
+        <th>Latency</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody">
+      <tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:40px;">
+        Paste Ollama instance URLs and click <strong>"Verify All"</strong>
+      </td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section-label">✅ Verified Ollama Instances (copy-ready)</div>
+<div class="verified-output empty" id="verifiedOutput">No verified instances yet…</div>
+
+</div>
+
+<script>
+// ── State ──
+let instances = [];
+let abortController = null;
+let stopRequested = false;
+let step2Enabled = false;
+
+// ── DOM refs ──
+const $ = (id) => document.getElementById(id);
+const urlInput = $('urlInput');
+const tableBody = $('tableBody');
+const btnVerify = $('btnVerify');
+const btnStop = $('btnStop');
+const progressFill = $('progressFill');
+const progressLabel = $('progressLabel');
+const verifiedOutput = $('verifiedOutput');
+const chkStep2 = $('chkStep2');
+const chkJsonOut = $('chkJsonOut');
+
+// ── Step 2 toggle ──
+function onStep2Toggle() {
+  step2Enabled = chkStep2.checked;
+  // Re-render to show/hide verified column info
+  renderTable();
+  updateStats();
+  updateVerifiedOutput();
+}
+
+// ── URL validation ──
+function isValidURL(str) {
+  try {
+    const u = new URL(str.trim());
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function normalizeURL(str) {
+  let s = str.trim();
+  // Auto-add http:// if missing
+  if (!/^https?:\/\//i.test(s)) {
+    s = 'http://' + s;
+  }
+  try {
+    const u = new URL(s);
+    // Default Ollama port
+    if (!u.port && u.protocol === 'http:') u.port = '11434';
+    return u.toString().replace(/\/$/, '');
+  } catch {
+    return null;
+  }
+}
+
+// ── Parse input ──
+function parseInput() {
+  const raw = urlInput.value;
+  const urls = raw.match(/https?:\/\/[\w.-:]+/g) || [];
+  const seen = new Set();
+  urls.map(normalizeURL).filter(Boolean).forEach(url => seen.add(url));
+  const valid = [...seen];
+  urlInput.value = valid.join('\n');
+  return valid;
+}
+
+// ── Live input tracking ──
+urlInput.addEventListener('input', () => {
+  const urls = parseInput();
+  instances = urls.map((url, i) => ({
+    id: i,
+    url,
+    status: 'pending',
+    latencyMs: null,
+    models: [],
+    modelCount: null,
+    verifiedModels: null,
+    error: null
+  }));
+  renderTable();
+  updateStats();
+  btnVerify.disabled = instances.length === 0;
+});
+
+// ── Toast ──
+function toast(msg, duration = 3000) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), duration);
+}
+
+// ── Render Table ──
+function renderTable() {
+  if (instances.length === 0) {
+    tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:40px;">
+      Paste Ollama instance URLs and click <strong>"Verify All"</strong>
+    </td></tr>`;
+    return;
+  }
+
+  tableBody.innerHTML = instances.map((inst, i) => {
+    const statusClass = {
+      pending: 'badge-pending',
+      testing: 'badge-testing',
+      alive: 'badge-ok',
+      dead: 'badge-dead',
+      error: 'badge-err'
+    }[inst.status] || 'badge-pending';
+    const statusLabel = {
+      pending: 'PENDING',
+      testing: 'TESTING…',
+      alive: '✅ ALIVE',
+      dead: '❌ DEAD',
+      error: '⚠ ERROR'
+    }[inst.status] || inst.status.toUpperCase();
+
+    const latencyStr = inst.latencyMs != null ? `${inst.latencyMs}ms` : '-';
+    const modelStr = inst.modelCount != null
+      ? `${inst.modelCount} model${inst.modelCount !== 1 ? 's' : ''}`
+      : '-';
+
+    // Verified column
+    let verifiedStr = '-';
+    if (inst.verifiedModels != null) {
+      const v = inst.verifiedModels.length;
+      const t = inst.modelCount ?? 0;
+      verifiedStr = `<span class="badge badge-verified">${v}</span>`;
+      if (t > v) verifiedStr += ` <span class="badge badge-unverified">${t - v}</span>`;
+    } else if (inst.status === 'alive' && step2Enabled) {
+      verifiedStr = '<span class="badge badge-pending">…</span>';
+    }
+
+    const detailStr = inst.error
+      ? inst.error
+      : inst.models.length > 0
+        ? inst.models.slice(0, 8).join(', ') + (inst.models.length > 8 ? ` +${inst.models.length - 8} more` : '')
+        : '-';
+
+    return `
+      <tr id="row-${i}">
+        <td>${i + 1}</td>
+        <td><span class="model-name">${escHtml(inst.url)}</span></td>
+        <td>${modelStr}</td>
+        <td>${verifiedStr}</td>
+        <td><span class="badge ${statusClass}">${statusLabel}</span></td>
+        <td class="time-cell">${latencyStr}</td>
+        <td class="response-preview" title="${escAttr(detailStr)}" onclick="this.style.whiteSpace='normal';this.style.maxWidth='none';">${escHtml(detailStr)}</td>
+      </tr>`;
+  }).join('');
+}
+
+function updateRow(i) {
+  const inst = instances[i];
+  const row = document.getElementById(`row-${i}`);
+  if (!row) return;
+  const cells = row.children;
+  const statusClass = {
+    pending: 'badge-pending', testing: 'badge-testing', alive: 'badge-ok', dead: 'badge-dead', error: 'badge-err'
+  }[inst.status] || 'badge-pending';
+  const statusLabel = {
+    pending: 'PENDING', testing: 'TESTING…', alive: '✅ ALIVE', dead: '❌ DEAD', error: '⚠ ERROR'
+  }[inst.status] || inst.status.toUpperCase();
+
+  cells[2].textContent = inst.modelCount != null ? `${inst.modelCount} model${inst.modelCount !== 1 ? 's' : ''}` : '-';
+
+  // Verified column (index 3)
+  let verifiedStr = '-';
+  if (inst.verifiedModels != null) {
+    const v = inst.verifiedModels.length;
+    const t = inst.modelCount ?? 0;
+    verifiedStr = `<span class="badge badge-verified">${v}</span>`;
+    if (t > v) verifiedStr += ` <span class="badge badge-unverified">${t - v}</span>`;
+  } else if (inst.status === 'alive' && step2Enabled) {
+    verifiedStr = '<span class="badge badge-pending">…</span>';
+  }
+  cells[3].innerHTML = verifiedStr;
+
+  cells[4].innerHTML = `<span class="badge ${statusClass}">${statusLabel}</span>`;
+  cells[5].textContent = inst.latencyMs != null ? `${inst.latencyMs}ms` : '-';
+  const detailStr = inst.error
+    ? inst.error
+    : inst.models.length > 0
+      ? inst.models.slice(0, 8).join(', ') + (inst.models.length > 8 ? ` +${inst.models.length - 8} more` : '')
+      : '-';
+  cells[6].innerHTML = `<span class="response-preview" title="${escAttr(detailStr)}" onclick="this.style.whiteSpace='normal';this.style.maxWidth='none';">${escHtml(detailStr)}</span>`;
+}
+
+// ── Update Stats ──
+function updateStats() {
+  const total = instances.length;
+  const alive = instances.filter(i => i.status === 'alive').length;
+  const dead = instances.filter(i => i.status === 'dead' || i.status === 'error').length;
+  const pending = instances.filter(i => i.status === 'pending').length;
+  const testing = instances.filter(i => i.status === 'testing').length;
+  const totalModels = instances
+    .filter(i => i.status === 'alive' && i.modelCount != null)
+    .reduce((s, i) => s + i.modelCount, 0);
+  const totalVerified = instances
+    .filter(i => i.verifiedModels != null)
+    .reduce((s, i) => s + i.verifiedModels.length, 0);
+
+  $('statTotal').textContent = total;
+  $('statAlive').textContent = alive;
+  $('statDead').textContent = dead;
+  $('statPending').textContent = pending;
+  $('statTesting').textContent = testing;
+  $('statModels').textContent = totalModels;
+  $('statVerified').textContent = totalVerified;
+
+  const done = alive + dead;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  progressFill.style.width = `${pct}%`;
+  progressLabel.textContent = total > 0 ? `${done} / ${total} verified (${pct}%)` : 'Ready — paste URLs above';
+
+  // Update verified output
+  updateVerifiedOutput();
+}
+
+function updateVerifiedOutput() {
+  const alive = instances.filter(i => i.status === 'alive');
+
+  if (alive.length === 0) {
+    verifiedOutput.textContent = 'No verified instances yet…';
+    verifiedOutput.classList.add('empty');
+    return;
+  }
+
+  if (chkJsonOut.checked) {
+    // JSON format: {url: [verified_models], ...}
+    const obj = {};
+    for (const inst of alive) {
+      obj[inst.url] = inst.verifiedModels != null
+        ? inst.verifiedModels
+        : inst.models;
+    }
+    verifiedOutput.textContent = JSON.stringify(obj, null, 2);
+    verifiedOutput.classList.remove('empty');
+  } else {
+    const lines = alive.map(i => {
+      const v = i.verifiedModels;
+      const extra = v != null
+        ? `(${v.length}/${i.modelCount ?? '?'} verified, ${i.latencyMs}ms)`
+        : `(${i.modelCount ?? '?'} models, ${i.latencyMs}ms)`;
+      return `${i.url}  ${extra}`;
+    });
+    verifiedOutput.textContent = lines.join('\n');
+    verifiedOutput.classList.remove('empty');
+  }
+}
+
+// ── Step 2: Verify a single model via /v1/chat/completions (fallback: /v1/embeddings) ──
+async function verifyModel(inst, modelName, signal) {
+  // Try chat completions first
+  const chatBody = JSON.stringify({
+    model: modelName,
+    messages: [{ role: 'user', content: 'Hi' }],
+    max_tokens: 5,
+    stream: false
+  });
+
+  try {
+    const resp = await fetch(`${inst.url}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: chatBody,
+      signal
+    });
+    if (resp.ok) {
+      const json = await resp.json();
+      // Check for valid response structure
+      if (json.choices || json.response || json.message) return true;
+    }
+    // If chat returns non-ok or unexpected format, try embeddings
+  } catch (e) {
+    if (e.name === 'AbortError') throw e;
+    // Fall through to embeddings fallback
+  }
+
+  // Fallback: /v1/embeddings
+  try {
+    const embBody = JSON.stringify({
+      model: modelName,
+      input: 'test'
+    });
+    const resp = await fetch(`${inst.url}/v1/embeddings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: embBody,
+      signal
+    });
+    if (resp.ok) {
+      const json = await resp.json();
+      if (json.data || json.embeddings || json.embedding) return true;
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') throw e;
+  }
+
+  return false;
+}
+
+// ── Step 2: Verify all models for an instance ──
+async function verifyAllModels(index) {
+  const inst = instances[index];
+  if (!inst.models || inst.models.length === 0) {
+    inst.verifiedModels = [];
+    return;
+  }
+
+  inst.verifiedModels = [];
+  const controller = inst._controller;
+
+  for (const modelName of inst.models) {
+    if (stopRequested) break;
+    try {
+      const ok = await verifyModel(inst, modelName, controller ? controller.signal : undefined);
+      if (ok) inst.verifiedModels.push(modelName);
+    } catch (e) {
+      if (e.name === 'AbortError') break;
+    }
+    // Update row after each model check for live feedback
+    updateRow(index);
+    updateStats();
+  }
+}
+
+// ── Verify single instance ──
+async function verifyInstance(index) {
+  if (stopRequested) return;
+  const inst = instances[index];
+  inst.status = 'testing';
+  inst.models = [];
+  inst.modelCount = null;
+  inst.verifiedModels = null;
+  inst.error = null;
+  updateRow(index);
+  updateStats();
+
+  const startTime = performance.now();
+
+  try {
+    const controller = new AbortController();
+    inst._controller = controller;
+
+    // Step 1: GET /api/tags to fetch models
+    const tagsResp = await fetch(`${inst.url}/api/tags`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      signal: controller.signal
+    });
+
+    const elapsed = Math.round(performance.now() - startTime);
+    inst.latencyMs = elapsed;
+
+    if (!tagsResp.ok) {
+      const errText = await tagsResp.text().catch(() => '');
+      throw new Error(`HTTP ${tagsResp.status}${errText ? ': ' + errText.slice(0, 100) : ''}`);
+    }
+
+    const json = await tagsResp.json();
+    const models = json.models || json.data || [];
+
+    if (!Array.isArray(models)) {
+      throw new Error('Unexpected response format');
+    }
+
+    inst.models = models.map(m => m.name || m.model || m.id || '?').filter(Boolean);
+    inst.modelCount = inst.models.length;
+    inst.status = 'alive';
+
+    // Step 2: Verify models with API calls (if enabled)
+    if (step2Enabled && inst.models.length > 0) {
+      updateRow(index);
+      updateStats();
+      await verifyAllModels(index);
+    }
+
+  } catch (err) {
+    const elapsed = Math.round(performance.now() - startTime);
+    inst.latencyMs = elapsed;
+    if (err.name === 'AbortError') {
+      inst.error = 'Aborted';
+    } else if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+      inst.error = 'Connection refused / unreachable';
+    } else {
+      inst.error = err.message.slice(0, 150);
+    }
+    inst.status = 'dead';
+  } finally {
+    delete inst._controller;
+    updateRow(index);
+    updateStats();
+  }
+}
+
+// ── Verify All ──
+async function verifyAll() {
+  // Re-parse input fresh
+  const urls = parseInput();
+  if (urls.length === 0) {
+    toast('No valid URLs found in input!');
+    return;
+  }
+
+  instances = urls.map((url, i) => ({
+    id: i,
+    url,
+    status: 'pending',
+    latencyMs: null,
+    models: [],
+    modelCount: null,
+    verifiedModels: null,
+    error: null
+  }));
+
+  stopRequested = false;
+  btnVerify.disabled = true;
+  btnStop.disabled = false;
+  renderTable();
+  updateStats();
+
+  const CONCURRENCY = 5;
+  const queue = instances.map((_, i) => i);
+
+  async function worker() {
+    while (queue.length > 0 && !stopRequested) {
+      const idx = queue.shift();
+      await new Promise((resolve, reject) => {
+        verifyInstance(idx).then(resolve);
+        setTimeout(resolve, 5000);
+      });
+    }
+  }
+
+  const workers = Array.from({ length: CONCURRENCY }, () => worker());
+  await Promise.all(workers);
+
+  const alive = instances.filter(i => i.status === 'alive').length;
+  const dead = instances.filter(i => i.status === 'dead' || i.status === 'error').length;
+  toast(`Done! ${alive} alive, ${dead} dead`);
+
+  btnVerify.disabled = false;
+  btnStop.disabled = true;
+
+  // Auto-copy verified URLs to clipboard
+  const aliveUrls = instances.filter(i => i.status === 'alive').map(i => i.url);
+  if (aliveUrls.length > 0) {
+    try {
+      await navigator.clipboard.writeText(aliveUrls.join('\n'));
+      toast(`📋 ${aliveUrls.length} verified URLs copied to clipboard!`);
+    } catch { /* clipboard may be blocked */ }
+  }
+}
+
+// ── Stop ──
+function stopVerify() {
+  stopRequested = true;
+  instances.forEach(i => {
+    if (i._controller) i._controller.abort();
+  });
+  btnStop.disabled = true;
+  toast('Verification stopped');
+}
+
+// ── Clear ──
+function clearAll() {
+  urlInput.value = '';
+  instances = [];
+  stopRequested = false;
+  renderTable();
+  updateStats();
+  btnVerify.disabled = true;
+  btnStop.disabled = true;
+  verifiedOutput.textContent = 'No verified instances yet…';
+  verifiedOutput.classList.add('empty');
+  toast('Cleared');
+}
+
+// ── Helpers ──
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function escAttr(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ── Keyboard shortcut ──
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.ctrlKey && !btnVerify.disabled) {
+    e.preventDefault();
+    verifyAll();
+  }
+});
+
+// ── Initial parse on load ──
+urlInput.dispatchEvent(new Event('input'));
+</script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0ac9fdceee7c10d',t:'MTc4MTMwNjgyOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
