@@ -4,7 +4,7 @@ import Client from '@gpt4free/g4f.dev';
 // Update this URL based on your deployment:
 // - Local: http://localhost:8787
 // - Deployed: https://perplexity.gpt4free.workers.dev
-const WORKER_URL = process.env.WORKER_URL || "https://g4f.space/api/azure";
+const WORKER_URL = process.env.WORKER_URL || "https://g4f.space/v1";
 
 // Create a client pointing to the Perplexity worker
 const client = new Client({
@@ -35,7 +35,7 @@ async function testNonStreaming() {
   
   try {
     const response = await client.chat.completions.create({
-      model: "model-router3",
+      model: "auto", // Use "auto" to test model routing
       messages: testMessages,
       stream: false
     });
@@ -56,7 +56,7 @@ async function testStreaming() {
   
   try {
     const stream = await client.chat.completions.create({
-      model: "model-router3",
+      model: "auto", // Use "auto" to test model routing
       messages: testMessages,
       stream: true
     });
