@@ -29,6 +29,15 @@ export default {
         }
 
         if (request.method === "POST") {
+            // Rate limiting: 5 requests per minute per IP
+            const ip = request.headers.get("cf-connecting-ip") || "unknown";
+            const rateLimitKey = `rate_limit:${ip}`;
+            const count = parseInt(await env.COMMUNITY_KV.get(rateLimitKey) || "0");
+            if (count >= 5) {
+                return new Response("Too Many Requests", { status: 429 });
+            }
+            await env.COMMUNITY_KV.put(rateLimitKey, (count + 1).toString(), { expirationTtl: 60 });
+
             const authHeader = request.headers.get("Authorization");
             if (!authHeader || !authHeader.startsWith("Bearer ")) {
                 return new Response("Unauthorized", { 
@@ -36,7 +45,7 @@ export default {
                     headers: { "Access-Control-Allow-Origin": "*" } 
                 });
             }
-            
+
             // Simple token validation (in production, verify JWT)
             const token = authHeader.split(" ")[1];
             
@@ -68,12 +77,25 @@ export default {
             // Decode payload to get username
             const payloadData = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
             const author = payloadData.username;
+            const provider = payloadData.provider;
+
+            // Check if user is blocked
+            const blockedUsers = JSON.parse(await env.COMMUNITY_KV.get("blocked_users") || "[]");
+            if (blockedUsers.includes(`${provider}:${author}`)) {
+                return new Response("Forbidden", { status: 403 });
+            }
             
+            // Validate content length
             const data = await request.json();
+            if (!data.content || data.content.length > 1000) {
+                return new Response("Invalid content", { status: 400 });
+            }
+            const content = `${data.content} #report:${provider}:${author}`;
             const messages = JSON.parse(await env.COMMUNITY_KV.get("messages") || "[]");
             messages.unshift({
                 author: author,
-                content: data.content,
+                provider: provider,
+                content: content,
                 timestamp: new Date().toISOString()
             });
             await env.COMMUNITY_KV.put("messages", JSON.stringify(messages.slice(0, 20)));
@@ -85,8 +107,31 @@ export default {
                     "Authorization": `Bot ${env.DISCORD_TOKEN}`,
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ content: `**${author}**: ${data.content}` })
+                body: JSON.stringify({ content: `**${content}` })
             });
+
+            return new Response(JSON.stringify({ success: true }), {
+                headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+            });
+        }
+
+        if (request.method === "PUT" && request.url.endsWith("/report")) {
+            const data = await request.json();
+            // Log report to KV
+            await env.COMMUNITY_KV.put(`report:${data.provider}:${data.username}:${Date.now()}`, JSON.stringify({
+                provider: data.provider,
+                username: data.username,
+                reason: data.reason,
+                timestamp: new Date().toISOString()
+            }));
+
+            // Block the reported user
+            const blockedUsers = JSON.parse(await env.COMMUNITY_KV.get("blocked_users") || "[]");
+            const blockedKey = `${data.provider}:${data.username}`;
+            if (!blockedUsers.includes(blockedKey)) {
+                blockedUsers.push(blockedKey);
+                await env.COMMUNITY_KV.put("blocked_users", JSON.stringify(blockedUsers));
+            }
 
             return new Response(JSON.stringify({ success: true }), {
                 headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
@@ -105,7 +150,7 @@ export default {
             const messages = await response.json();
             const formatted = messages.map(m => ({
                 author: m.author.username,
-                content: m.content,
+                content: m.content + m.embeds.filter(e=>e.video).map(v=>`\n![](${v.video.url})`).join(' ') + m.attachments.map((a)=>`\n![](${a.url})`).join(' '),
                 timestamp: m.timestamp
             }));
             await env.COMMUNITY_KV.put("messages", JSON.stringify(formatted));

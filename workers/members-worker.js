@@ -2868,6 +2868,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
     const header = { alg: "HS256", typ: "JWT" };
     const payload = {
         sub: user.id,
+        provider: user.provider,
         username: user.username,
         tier: user.tier,
         exp: expires,

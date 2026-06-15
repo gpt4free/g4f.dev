@@ -49,7 +49,7 @@
             background: var(--primary);
             color: white;
             border: none;
-            padding: 0.6rem 1rem;
+            padding: 0.3rem 0.5rem;
             border-radius: 4px;
             cursor: pointer;
         }
@@ -156,7 +156,7 @@
             // 3. Images
             html = html.replace(
                 /!\[([^\]]*)\]\(([^)]+)\)/g, 
-                '<img src="$2" alt="$1" style="max-width: 400px; max-height: 400px; margin: 10px 0;">'
+                '<img src="$2" alt="$1" style="max-width: 100%; max-height: 400px; margin: 10px 0;">'
             );
             // 4. Bold (Added boundary checks to prevent matching inside other symbols)
             html = html.replace(
@@ -199,13 +199,42 @@
                     post.className = 'post';
 
                     const author = escapeHtml(message.author || 'Unknown');
-                    const content = renderMarkdown(message.content || '');
+                    let content = message.content || '';
+                    const match = message.content.match(/\#report:([^:\s]+):([^\s]+)$/);
+                    console.log('Report match:', match);
+                    if (match) {
+                        content = content.split(match[0])[0].trim(); // Remove report tag from content
+                    }
+                    content = renderMarkdown(content);
 
                     post.innerHTML = `
                         <strong>${author}</strong>
                         <p>${content}</p>
                         <button class="copy-btn" type="button">Copy</button>
+                        ${match ? `<button class="report-btn" type="button" style="position: absolute; bottom: 10px; right: 10px; background: var(--danger); font-size: 0.8rem;">Report</button>` : ''}
                     `;
+
+                    const reportBtn = post.querySelector('.report-btn');
+                    reportBtn?.addEventListener('click', async () => {
+                        const reason = prompt("Please enter the reason for reporting this post:");
+                        if (!reason) return;
+                        
+                        try {
+                            const response = await fetch('https://discord.g4f.space/report', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ provider: match[1], username: match[2], reason })
+                            });
+                            if (response.ok) {
+                                alert('Report submitted successfully.');
+                            } else {
+                                alert('Failed to submit report.');
+                            }
+                        } catch (err) {
+                            console.error('Report error', err);
+                            alert('Failed to submit report.');
+                        }
+                    });
 
                     const copyBtn = post.querySelector('.copy-btn');
                     copyBtn.addEventListener('click', async () => {
