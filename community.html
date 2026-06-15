@@ -142,12 +142,34 @@
         function renderMarkdown(text) {
             if (!text) return '';
             let html = escapeHtml(text);
-                    
+            // 1. Inline code (Must be first to prevent parsing markdown inside code blocks)
             html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
-            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-            html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-            html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; margin: 10px 0;">');
-            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+            // 2. Videos (Added support for webm/ogg/mov, and changed invalid 'alt' to 'title')
+            html = html.replace(
+                /!\[([^\]]*)\]\(([^)]+\.(?:mp4|webm|ogg|mov))\)/gi, 
+                '<video src="$2" title="$1" autoplay muted controls style="max-width: 400px; max-height: 400px; margin: 10px 0;"></video>'
+            );
+            // 3. Images
+            html = html.replace(
+                /!\[([^\]]*)\]\(([^)]+)\)/g, 
+                '<img src="$2" alt="$1" style="max-width: 400px; max-height: 400px; margin: 10px 0;">'
+            );
+            // 4. Bold (Added boundary checks to prevent matching inside other symbols)
+            html = html.replace(
+                /(?<=^|\s)\*\*(.+?)\*\*(?=[\s.,!?;:]|$)/g, 
+                '<strong>$1</strong>'
+            );
+            // 5. Italic (Added boundary checks so it doesn't break **bold** or a*b*c)
+            html = html.replace(
+                /(?<=^|\s)\*(?!\*)(.+?)\*(?=[\s.,!?;:]|$)/g, 
+                '<em>$1</em>'
+            );
+            // 6. URLs (Added lookbehind to prevent breaking HTML attributes like src="url")
+            html = html.replace(
+                /(^|[\<\s])\b(https?:\/\/[^\s<>"'()[\]{}|\\^`]+)\b/g,
+                (match, p1, p2) => `${p1}<a href="${p2}" target="_blank" rel="noopener noreferrer">${p2}</a>`
+            );
+
             return html;
         }
 
