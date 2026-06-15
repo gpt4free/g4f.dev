@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Radio - Global Tunes</title>
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #14141f;
+            --surface-light: #1e1e2d;
+            --text: #e0e0e0;
+            --text-secondary: #a0a0b8;
+            --accent: #ff6b6b;
+            --accent-glow: #ff6b6b66;
+            --gold: #f0c060;
+            --border: #2a2a3a;
+            --radius: 16px;
+            --radius-sm: 10px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            background-image:
+                radial-gradient(ellipse at 20% 20%, #1a1040 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 80%, #0d1b2a 0%, transparent 60%),
+                radial-gradient(ellipse at 50% 50%, #0f0f1a 0%, transparent 100%);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .radio-container {
+            width: 100%;
+            max-width: 520px;
+            background: var(--surface);
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            box-shadow:
+                0 25px 60px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+                0 0 80px rgba(100, 60, 200, 0.08);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            max-height: 90vh;
+        }
+
+        /* Header */
+        .radio-header {
+            padding: 24px 28px 16px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            position: relative;
+        }
+
+        .radio-header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-glow), var(--gold), var(--accent-glow), transparent);
+        }
+
+        .radio-title {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #ffffff 0%, #c0c0e0 40%, var(--gold) 70%, #ffaa60 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 4px;
+        }
+
+        .radio-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .globe-icon {
+            display: inline-block;
+            font-size: 1.4rem;
+            animation: gentle-spin 8s linear infinite;
+        }
+
+        @keyframes gentle-spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Now Playing */
+        .now-playing {
+            padding: 16px 28px;
+            background: rgba(255, 255, 255, 0.015);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-height: 60px;
+        }
+
+        .now-playing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .eq-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 18px;
+        }
+
+        .eq-bar {
+            width: 3px;
+            background: var(--accent);
+            border-radius: 2px;
+            animation: eq 1.2s ease-in-out infinite;
+        }
+
+        .eq-bar:nth-child(1) {
+            animation-delay: 0s;
+            height: 10px;
+        }
+        .eq-bar:nth-child(2) {
+            animation-delay: 0.15s;
+            height: 16px;
+        }
+        .eq-bar:nth-child(3) {
+            animation-delay: 0.3s;
+            height: 8px;
+        }
+        .eq-bar:nth-child(4) {
+            animation-delay: 0.45s;
+            height: 14px;
+        }
+        .eq-bar:nth-child(5) {
+            animation-delay: 0.6s;
+            height: 6px;
+        }
+
+        @keyframes eq {
+            0%,
+            100% {
+                transform: scaleY(1);
+            }
+            50% {
+                transform: scaleY(0.4);
+            }
+        }
+
+        .eq-bars.playing .eq-bar {
+            animation-play-state: running;
+            background: var(--accent);
+        }
+
+        .eq-bars.paused .eq-bar {
+            animation-play-state: paused;
+            background: #555;
+        }
+
+        .eq-bars.stopped .eq-bar {
+            animation: none;
+            background: #444;
+            height: 4px !important;
+        }
+
+        .now-playing-text {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .now-playing-station {
+            font-weight: 600;
+            color: #fff;
+            font-size: 1rem;
+        }
+
+        /* Station List */
+        .station-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            scroll-behavior: smooth;
+        }
+
+        .station-list::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .station-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .station-list::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 10px;
+        }
+
+        .station-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all var(--transition);
+            border: 1px solid transparent;
+            position: relative;
+            background: var(--surface-light);
+            user-select: none;
+        }
+
+        .station-item:hover {
+            background: #1f1f33;
+            border-color: #3a3a50;
+            transform: translateX(2px);
+        }
+
+        .station-item.active {
+            background: #1a1a2e;
+            border-color: var(--accent);
+            box-shadow: 0 0 20px var(--accent-glow), 0 0 40px rgba(255, 107, 107, 0.08);
+            transform: translateX(4px);
+        }
+
+        .station-item.active .station-icon {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 0 16px var(--accent-glow);
+        }
+
+        .station-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #252540;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            transition: all var(--transition);
+            color: #999;
+            font-weight: 700;
+        }
+
+        .station-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .station-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #ddd;
+            letter-spacing: 0.01em;
+        }
+
+        .station-location {
+            font-size: 0.75rem;
+            color: #777;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        .station-item.active .station-name {
+            color: #fff;
+        }
+
+        .station-item.active .station-location {
+            color: #c0a0a0;
+        }
+
+        .play-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #555;
+            flex-shrink: 0;
+            transition: all var(--transition);
+        }
+
+        .station-item.active .play-indicator {
+            background: #4f4;
+            box-shadow: 0 0 10px #4f4;
+            animation: pulse-dot 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%,
+            100% {
+                box-shadow: 0 0 6px #4f4;
+            }
+            50% {
+                box-shadow: 0 0 18px #8f8, 0 0 30px #4f4;
+            }
+        }
+
+        /* Controls */
+        .controls {
+            padding: 16px 28px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .play-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: none;
+            background: var(--accent);
+            color: #fff;
+            font-size: 1.3rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition);
+            flex-shrink: 0;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .play-btn:hover {
+            background: #ff5252;
+            box-shadow: 0 6px 25px rgba(255, 107, 107, 0.5);
+            transform: scale(1.05);
+        }
+
+        .play-btn:active {
+            transform: scale(0.95);
+        }
+
+        .play-btn.playing {
+            background: #2ed573;
+            box-shadow: 0 4px 15px rgba(46, 213, 115, 0.3);
+        }
+
+        .play-btn.playing:hover {
+            background: #26b863;
+            box-shadow: 0 6px 25px rgba(46, 213, 115, 0.5);
+        }
+
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .volume-icon {
+            font-size: 1.2rem;
+            color: #888;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: color var(--transition);
+        }
+
+        .volume-icon:hover {
+            color: #ccc;
+        }
+
+        .volume-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #333;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            border: 2px solid var(--accent);
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+            transition: all var(--transition);
+        }
+
+        .volume-slider::-webkit-slider-thumb:hover {
+            background: var(--accent);
+            border-color: #fff;
+        }
+
+        .status-text {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: center;
+            width: 100%;
+            margin-top: 4px;
+            letter-spacing: 0.04em;
+            min-height: 18px;
+        }
+
+        .status-text.error {
+            color: #ff6b6b;
+        }
+
+        .status-text.buffering {
+            color: #f0c060;
+            animation: blink 1s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        /* Footer */
+        .radio-footer {
+            padding: 10px 28px 16px;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #555;
+            letter-spacing: 0.05em;
+            border-top: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .radio-footer a {
+            color: #777;
+            text-decoration: none;
+            transition: color var(--transition);
+        }
+
+        .radio-footer a:hover {
+            color: var(--accent);
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .radio-container {
+                border-radius: 16px;
+                max-height: 95vh;
+            }
+            .radio-header {
+                padding: 18px 16px 12px;
+            }
+            .radio-title {
+                font-size: 1.5rem;
+            }
+            .station-list {
+                padding: 8px 10px;
+                gap: 4px;
+            }
+            .station-item {
+                padding: 10px 12px;
+                gap: 8px;
+            }
+            .station-icon {
+                width: 34px;
+                height: 34px;
+                font-size: 0.9rem;
+            }
+            .controls {
+                padding: 12px 16px 16px;
+                gap: 10px;
+            }
+            .play-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="radio-container">
+        <!-- Header -->
+        <div class="radio-header">
+            <div class="radio-title">
+                <span class="globe-icon">🌍</span> World Radio
+            </div>
+            <div class="radio-subtitle">Tune in · Anywhere · Anytime</div>
+        </div>
+
+        <!-- Now Playing -->
+        <div class="now-playing">
+            <div class="now-playing-indicator">
+                <div class="eq-bars stopped" id="eqBars">
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                </div>
+            </div>
+            <div class="now-playing-text">
+                <span id="nowPlayingStation" class="now-playing-station">Select a station</span>
+                <br>
+                <span id="nowPlayingStatus" style="font-size:0.75rem;">Ready to play</span>
+            </div>
+        </div>
+
+        <!-- Station List -->
+        <div class="station-list" id="stationList">
+            <!-- Stations will be injected by JS -->
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button class="play-btn" id="playBtn" title="Play / Pause">
+                ▶
+            </button>
+            <div class="volume-container">
+                <span class="volume-icon" id="volumeIcon" title="Mute / Unmute">🔊</span>
+                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="75" title="Volume">
+            </div>
+        </div>
+        <div class="status-text" id="statusText">Ready — choose a station</div>
+
+        <!-- Footer -->
+        <div class="radio-footer">
+            crafted with ❤️ · <a href="#" id="randomStationLink">🎲 random station</a>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // --- Station Data (parsed from M3U) ---
+            const stations = [{
+                name: 'BBC Radio 6 Music',
+                url: 'http://as-hls-ww-live.akamaized.net/pool_81827798/live/ww/bbc_6music/bbc_6music.isml/bbc_6music-audio%3d320000.norewind.m3u8',
+                location: 'London, UK',
+                icon: '🎸',
+                format: 'HLS'
+            }, {
+                name: 'dublab',
+                url: 'http://dublab.out.airtime.pro:8000/dublab_a',
+                location: 'Los Angeles, USA',
+                icon: '🌀',
+                format: 'MP3'
+            }, {
+                name: 'FIP',
+                url: 'http://icecast.radiofrance.fr/fip-hifi.aac',
+                location: 'Paris, France',
+                icon: '🎷',
+                format: 'AAC'
+            }, {
+                name: 'KEXP 90.3',
+                url: 'https://kexp.streamguys1.com/kexp160.aac',
+                location: 'Seattle, USA',
+                icon: '🎧',
+                format: 'AAC'
+            }, {
+                name: 'La Patate Douce',
+                url: 'http://listen.radioking.com/radio/285742/stream/331753',
+                location: 'France',
+                icon: '🥔',
+                format: 'MP3'
+            }, {
+                name: 'Nightwave Plaza',
+                url: 'https://radio.plaza.one/ogg',
+                location: 'Internet',
+                icon: '🌙',
+                format: 'OGG'
+            }, {
+                name: 'Radio Paradise',
+                url: 'http://stream-dc1.radioparadise.com/rp_192m.ogg',
+                location: 'California, USA',
+                icon: '🏝️',
+                format: 'OGG'
+            }, {
+                name: 'SomaFM - Groove Salad',
+                url: 'https://somafm.com/groovesalad256.pls',
+                location: 'San Francisco, USA',
+                icon: '🥗',
+                format: 'PLS'
+            }, {
+                name: 'WFMU 91.1',
+                url: 'https://wfmu.org/wfmu.pls',
+                location: 'New Jersey, USA',
+                icon: '📻',
+                format: 'PLS'
+            }, {
+                name: 'Worldwide FM',
+                url: 'https://worldwide-fm.radiocult.fm/stream',
+                location: 'London, UK',
+                icon: '🌐',
+                format: 'MP3'
+            }, {
+                name: 'WWOZ 90.7',
+                url: 'https://www.wwoz.org/listen/hi',
+                location: 'New Orleans, USA',
+                icon: '🎺',
+                format: 'MP3'
+            }];
+
+            // --- State ---
+            let currentStationIndex = -1;
+            let isPlaying = false;
+            let volume = 0.75;
+            let previousVolume = 0.75;
+            let audio = null;
+            let playAttemptTimeout = null;
+
+            // --- DOM Elements ---
+            const stationListEl = document.getElementById('stationList');
+            const playBtn = document.getElementById('playBtn');
+            const volumeSlider = document.getElementById('volumeSlider');
+            const volumeIcon = document.getElementById('volumeIcon');
+            const statusText = document.getElementById('statusText');
+            const nowPlayingStation = document.getElementById('nowPlayingStation');
+            const nowPlayingStatus = document.getElementById('nowPlayingStatus');
+            const eqBars = document.getElementById('eqBars');
+            const randomStationLink = document.getElementById('randomStationLink');
+
+            // --- Build Station List ---
+            function buildStationList() {
+                stationListEl.innerHTML = '';
+                stations.forEach((station, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'station-item';
+                    item.dataset.index = index;
+                    item.innerHTML = `
+                        <div class="station-icon">${station.icon}</div>
+                        <div class="station-info">
+                            <div class="station-name">${station.name}</div>
+                            <div class="station-location">${station.location} · ${station.format}</div>
+                        </div>
+                        <div class="play-indicator"></div>
+                    `;
+                    item.addEventListener('click', () => selectStation(index));
+                    stationListEl.appendChild(item);
+                });
+            }
+
+            // --- Update UI for active station ---
+            function updateActiveStationUI() {
+                const items = stationListEl.querySelectorAll('.station-item');
+                items.forEach((item, i) => {
+                    if (i === currentStationIndex) {
+                        item.classList.add('active');
+                    } else {
+                        item.classList.remove('active');
+                    }
+                });
+            }
+
+            // --- Update EQ bars visual ---
+            function updateEqBars() {
+                eqBars.classList.remove('playing', 'paused', 'stopped');
+                if (isPlaying && currentStationIndex >= 0) {
+                    eqBars.classList.add('playing');
+                } else if (currentStationIndex >= 0 && !isPlaying) {
+                    eqBars.classList.add('paused');
+                } else {
+                    eqBars.classList.add('stopped');
+                }
+            }
+
+            // --- Update Play Button ---
+            function updatePlayButton() {
+                if (isPlaying) {
+                    playBtn.innerHTML = '⏸';
+                    playBtn.classList.add('playing');
+                    playBtn.title = 'Pause';
+                } else {
+                    playBtn.innerHTML = '▶';
+                    playBtn.classList.remove('playing');
+                    playBtn.title = 'Play';
+                }
+            }
+
+            // --- Update Volume UI ---
+            function updateVolumeUI() {
+                volumeSlider.value = Math.round(volume * 100);
+                if (volume === 0) {
+                    volumeIcon.textContent = '🔇';
+                } else if (volume < 0.4) {
+                    volumeIcon.textContent = '🔉';
+                } else {
+                    volumeIcon.textContent = '🔊';
+                }
+                if (audio) {
+                    audio.volume = volume;
+                }
+            }
+
+            // --- Set Status Text ---
+            function setStatus(message, type = '') {
+                statusText.textContent = message;
+                statusText.className = 'status-text';
+                if (type === 'error') statusText.classList.add('error');
+                if (type === 'buffering') statusText.classList.add('buffering');
+            }
+
+            // --- Stop current audio ---
+            function stopAudio() {
+                if (audio) {
+                    audio.pause();
+                    audio.removeAttribute('src');
+                    audio.load();
+                    audio.oncanplay = null;
+                    audio.onplaying = null;
+                    audio.onerror = null;
+                    audio.onwaiting = null;
+                    audio.onstalled = null;
+                    audio = null;
+                }
+                if (playAttemptTimeout) {
+                    clearTimeout(playAttemptTimeout);
+                    playAttemptTimeout = null;
+                }
+                isPlaying = false;
+                updatePlayButton();
+                updateEqBars();
+            }
+
+            // --- Create and play audio for a station ---
+            function playStation(index) {
+                stopAudio();
+                currentStationIndex = index;
+                const station = stations[index];
+
+                setStatus(`Connecting to ${station.name}...`, 'buffering');
+                nowPlayingStation.textContent = station.name;
+                nowPlayingStatus.textContent = `${station.location} · ${station.format}`;
+                updateActiveStationUI();
+                updateEqBars();
+
+                audio = new Audio();
+                audio.volume = volume;
+                audio.preload = 'auto';
+                audio.crossOrigin = 'anonymous';
+
+                // Timeout for connection
+                playAttemptTimeout = setTimeout(() => {
+                    if (!isPlaying && currentStationIndex === index) {
+                        setStatus('Connection timed out. Try another station.', 'error');
+                        nowPlayingStatus.textContent = 'Connection failed';
+                        stopAudio();
+                        updateEqBars();
+                    }
+                }, 15000);
+
+                audio.onwaiting = () => {
+                    if (currentStationIndex === index) {
+                        setStatus('Buffering...', 'buffering');
+                    }
+                };
+
+                audio.onstalled = () => {
+                    if (currentStationIndex === index) {
+                        setStatus('Stream stalled. Retrying...', 'buffering');
+                    }
+                };
+
+                audio.onplaying = () => {
+                    if (currentStationIndex === index) {
+                        clearTimeout(playAttemptTimeout);
+                        playAttemptTimeout = null;
+                        isPlaying = true;
+                        updatePlayButton();
+                        updateEqBars();
+                        setStatus(`Now playing: ${station.name}`, '');
+                        nowPlayingStatus.textContent = `${station.location} · Live stream`;
+                    }
+                };
+
+                audio.onerror = (e) => {
+                    if (currentStationIndex === index) {
+                        clearTimeout(playAttemptTimeout);
+                        playAttemptTimeout = null;
+                        const errorMsg = getAudioErrorMessage(e);
+                        setStatus(`Error: ${errorMsg}`, 'error');
+                        nowPlayingStatus.textContent = 'Stream unavailable';
+                        isPlaying = false;
+                        updatePlayButton();
+                        updateEqBars();
+                        // Don't stop audio entirely - user might want to retry
+                    }
+                };
+
+                audio.oncanplay = () => {
+                    if (currentStationIndex === index && !isPlaying) {
+                        // Stream is ready to play
+                        setStatus(`Stream ready — press play`, '');
+                    }
+                };
+
+                // Set source and attempt playback
+                audio.src = station.url;
+                audio.load();
+
+                // Attempt autoplay
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        // Playback started successfully
+                        if (currentStationIndex === index) {
+                            clearTimeout(playAttemptTimeout);
+                            playAttemptTimeout = null;
+                            isPlaying = true;
+                            updatePlayButton();
+                            updateEqBars();
+                            setStatus(`Now playing: ${station.name}`, '');
+                            nowPlayingStatus.textContent = `${station.location} · Live stream`;
+                        }
+                    }).catch((err) => {
+                        // Autoplay was prevented
+                        if (currentStationIndex === index) {
+                            clearTimeout(playAttemptTimeout);
+                            playAttemptTimeout = null;
+                            isPlaying = false;
+                            updatePlayButton();
+                            updateEqBars();
+                            if (err.name === 'NotAllowedError') {
+                                setStatus('Click play to start (autoplay blocked)', '');
+                                nowPlayingStatus.textContent = 'Ready — press ▶';
+                            } else {
+                                setStatus(`Playback error: ${err.message}`, 'error');
+                                nowPlayingStatus.textContent = 'Error';
+                            }
+                        }
+                    });
+                }
+            }
+
+            function getAudioErrorMessage(e) {
+                if (!audio || !audio.error) return 'Unknown error';
+                const code = audio.error.code;
+                switch (code) {
+                    case 1:
+                        return 'MEDIA_ERR_ABORTED';
+                    case 2:
+                        return 'Network error';
+                    case 3:
+                        return 'Decode error';
+                    case 4:
+                        return 'Source not supported';
+                    default:
+                        return `Error code ${code}`;
+                }
+            }
+
+            // --- Select a station ---
+            function selectStation(index) {
+                if (index === currentStationIndex) {
+                    // Toggle play/pause for current station
+                    togglePlayPause();
+                    return;
+                }
+                // New station
+                playStation(index);
+            }
+
+            // --- Toggle Play/Pause ---
+            function togglePlayPause() {
+                if (currentStationIndex < 0) {
+                    // No station selected - select first
+                    if (stations.length > 0) {
+                        playStation(0);
+                    }
+                    return;
+                }
+
+                if (!audio) {
+                    // Audio object lost - restart
+                    playStation(currentStationIndex);
+                    return;
+                }
+
+                if (isPlaying) {
+                    audio.pause();
+                    isPlaying = false;
+                    updatePlayButton();
+                    updateEqBars();
+                    setStatus('Paused', '');
+                    nowPlayingStatus.textContent = 'Paused';
+                } else {
+                    const playPromise = audio.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            isPlaying = true;
+                            updatePlayButton();
+                            updateEqBars();
+                            setStatus(`Now playing: ${stations[currentStationIndex].name}`, '');
+                            nowPlayingStatus.textContent = `${stations[currentStationIndex].location} · Live stream`;
+                        }).catch((err) => {
+                            if (err.name === 'NotAllowedError') {
+                                setStatus('Click play to start', '');
+                            } else {
+                                setStatus(`Error: ${err.message}`, 'error');
+                                // Try to restart stream
+                                playStation(currentStationIndex);
+                            }
+                        });
+                    }
+                }
+            }
+
+            // --- Volume Change ---
+            function setVolume(newVolume) {
+                volume = Math.max(0, Math.min(1, newVolume));
+                updateVolumeUI();
+                if (volume > 0 && previousVolume === 0) {
+                    previousVolume = volume;
+                }
+            }
+
+            function toggleMute() {
+                if (volume > 0) {
+                    previousVolume = volume;
+                    setVolume(0);
+                } else {
+                    setVolume(previousVolume > 0 ? previousVolume : 0.75);
+                }
+            }
+
+            // --- Random Station ---
+            function playRandomStation() {
+                const randomIndex = Math.floor(Math.random() * stations.length);
+                playStation(randomIndex);
+                // Scroll to the station
+                const items = stationListEl.querySelectorAll('.station-item');
+                if (items[randomIndex]) {
+                    items[randomIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+
+            // --- Event Listeners ---
+            playBtn.addEventListener('click', togglePlayPause);
+
+            volumeSlider.addEventListener('input', () => {
+                setVolume(parseInt(volumeSlider.value) / 100);
+            });
+
+            volumeIcon.addEventListener('click', toggleMute);
+
+            randomStationLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                playRandomStation();
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                // Space for play/pause (only if not in an input)
+                if (e.code === 'Space' && e.target === document.body) {
+                    e.preventDefault();
+                    togglePlayPause();
+                }
+                // Arrow keys for station navigation
+                if (e.code === 'ArrowDown' && e.target === document.body) {
+                    e.preventDefault();
+                    if (currentStationIndex < stations.length - 1) {
+                        const nextIndex = currentStationIndex < 0 ? 0 : currentStationIndex + 1;
+                        playStation(nextIndex);
+                        const items = stationListEl.querySelectorAll('.station-item');
+                        if (items[nextIndex]) items[nextIndex].scrollIntoView({ behavior: 'smooth',
+                            block: 'center' });
+                    }
+                }
+                if (e.code === 'ArrowUp' && e.target === document.body) {
+                    e.preventDefault();
+                    if (currentStationIndex > 0) {
+                        const prevIndex = currentStationIndex - 1;
+                        playStation(prevIndex);
+                        const items = stationListEl.querySelectorAll('.station-item');
+                        if (items[prevIndex]) items[prevIndex].scrollIntoView({ behavior: 'smooth',
+                            block: 'center' });
+                    }
+                }
+                // M for mute
+                if (e.code === 'KeyM' && e.target === document.body) {
+                    e.preventDefault();
+                    toggleMute();
+                }
+                // R for random
+                if (e.code === 'KeyR' && e.target === document.body) {
+                    e.preventDefault();
+                    playRandomStation();
+                }
+            });
+
+            // --- Initialize ---
+            function init() {
+                buildStationList();
+                updateVolumeUI();
+                updatePlayButton();
+                updateEqBars();
+                setStatus('Ready — choose a station', '');
+                nowPlayingStation.textContent = 'Select a station';
+                nowPlayingStatus.textContent = 'Ready to play';
+            }
+
+            init();
+
+            // --- Handle page unload ---
+            window.addEventListener('beforeunload', () => {
+                stopAudio();
+            });
+
+            console.log('🌍 World Radio ready!');
+            console.log('  🎵 11 stations from around the globe');
+            console.log('  ⌨️  Keyboard shortcuts: Space=Play/Pause, ↑↓=Navigate, M=Mute, R=Random');
+            console.log('  📻  Click a station to tune in!');
+        })();
+    </script>
+</body>
+</html>
