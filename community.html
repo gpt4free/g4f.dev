@@ -147,12 +147,12 @@
             // 2. Videos (Added support for webm/ogg/mov, and changed invalid 'alt' to 'title')
             html = html.replace(
                 /!\[([^\]]*)\]\(([^)]+\.(?:mp4|webm|ogg|mov))\)/gi, 
-                '<video src="$2" title="$1" autoplay muted controls style="max-width: 400px; max-height: 400px; margin: 10px 0;"></video>'
+                '<video src="$2" title="$1" autoplay muted controls style="max-width: 100%; max-height: 400px; margin: 10px 0;"></video>'
             );
             // 3. Images
             html = html.replace(
                 /!\[([^\]]*)\]\(([^)]+)\)/g, 
-                '<img src="$2" alt="$1" style="max-width: 100%; max-height: 400px; margin: 10px 0;">'
+                '<img src="$2" alt="$1" style="max-width: 400px; max-height: 400px; margin: 10px 0;">'
             );
             // 4. Bold (Added boundary checks to prevent matching inside other symbols)
             html = html.replace(
