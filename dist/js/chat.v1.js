@@ -1829,17 +1829,13 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         const solveBucketContent = async (item) => {
             // Check if this is a media bucket (has url with /media/ path)
             if (item.bucket_id && item.url && item.url.includes('/media/')) {
-                // For media buckets, add as image_url when schema is https
-                if (window.location.protocol === 'https:') {
-                    return {
-                        type: "image_url",
-                        image_url: {
-                            url: item.url
-                        }
-                    };
-                }
-                // For non-https, skip media content
-                return null;
+                // Always pass media as image_url for the backend to resolve
+                return {
+                    type: "image_url",
+                    image_url: {
+                        url: item.url
+                    }
+                };
             }
             // Check if this is a text bucket (has bucket_id but no media url)
             if (item.bucket_id && !item.text) {
