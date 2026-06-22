@@ -3490,7 +3490,11 @@ window.addEventListener('DOMContentLoaded', async function () {
 
     if (window.conversation_id) {
         let conversation = await get_conversation(window.conversation_id);
-        if (conversation && !conversation.share) {
+        if (!conversation) {
+            // New conversation not yet in IndexedDB, nothing to load
+            return;
+        }
+        if (!conversation.share) {
             await load_conversation(conversation);
             await play_last_message();
             return;
@@ -4034,6 +4038,61 @@ async function on_api() {
                 document.body.classList.add("white");
             }
         });
+    }
+    const enableModelSearch = document.getElementById("enableModelSearch");
+    const searchProviderField = document.getElementById("searchProviderField");
+    const searchModelField = document.getElementById("searchModelField");
+    if (enableModelSearch) {
+        enableModelSearch.addEventListener('change', async (event) => {
+            appStorage.setItem("enableModelSearch", event.target.checked ? "true" : "false");
+            if (event.target.checked) {
+                document.getElementById("model_edit")?.parentElement.classList.remove("hidden");
+                if (searchProviderField) searchProviderField.style.display = "flex";
+                if (searchModelField) searchModelField.style.display = "flex";
+            } else {
+                document.getElementById("model_edit")?.parentElement.classList.add("hidden");
+                if (searchProviderField) searchProviderField.style.display = "none";
+                if (searchModelField) searchModelField.style.display = "none";
+                // Reset search UI if it was open
+                if (modelSelector && !modelSelector.classList.contains("hidden")) {
+                    providerSelect?.classList.remove("hidden");
+                    modelSelect?.classList.remove("hidden");
+                    modelSelector.classList.add("hidden");
+                }
+            }
+        });
+        if (appStorage.getItem("enableModelSearch") === "false") {
+            enableModelSearch.checked = false;
+            document.getElementById("model_edit")?.parentElement.classList.add("hidden");
+            if (searchProviderField) searchProviderField.style.display = "none";
+            if (searchModelField) searchModelField.style.display = "none";
+        } else {
+            enableModelSearch.checked = true;
+            if (searchProviderField) searchProviderField.style.display = "flex";
+            if (searchModelField) searchModelField.style.display = "flex";
+        }
+    }
+    const searchByProvider = document.getElementById("searchByProvider");
+    if (searchByProvider) {
+        searchByProvider.addEventListener('change', async (event) => {
+            appStorage.setItem("searchByProvider", event.target.checked ? "true" : "false");
+        });
+        if (appStorage.getItem("searchByProvider") !== "true") {
+            searchByProvider.checked = false;
+        } else {
+            searchByProvider.checked = true;
+        }
+    }
+    const searchByModel = document.getElementById("searchByModel");
+    if (searchByModel) {
+        searchByModel.addEventListener('change', async (event) => {
+            appStorage.setItem("searchByModel", event.target.checked ? "true" : "false");
+        });
+        if (appStorage.getItem("searchByModel") === "false") {
+            searchByModel.checked = false;
+        } else {
+            searchByModel.checked = true;
+        }
     }
     const liquid = document.getElementById("liquid");
     if (liquid) {
@@ -5063,24 +5122,50 @@ modelSearch?.addEventListener('input', function() {
 
   let matches = [];
   
+  const selectedProvider = providerSelect.value;
+  const filterByProvider = selectedProvider && selectedProvider !== "AnyProvider";
+  const allowProviderMatch = appStorage.getItem("searchByProvider") === "true";
+  const allowModelMatch = appStorage.getItem("searchByModel") !== "false";
+
   // Search across all models
   for (const [provider, modelList] of Object.entries(searchModels)) {
+    if (filterByProvider && provider !== selectedProvider) continue;
     if (!Array.isArray(modelList)) continue;
+    
+    const providerMatch = allowProviderMatch && provider.toLowerCase().includes(searchTerm);
+    
     modelList.forEach(model => {
       if (model.models) {
         model.models.forEach(subModel => {
-          if (subModel.model.toLowerCase().includes(searchTerm)) {
+          const modelMatch = allowModelMatch && subModel.model.toLowerCase().includes(searchTerm);
+          if (modelMatch || providerMatch) {
             matches.push({ provider, model: subModel });
           }
         });
-      } else if ((model.id || model).toLowerCase().includes(searchTerm)) {
-        matches.push({ provider, model });
+      } else {
+        const modelStr = model.id || model;
+        const modelMatch = allowModelMatch && modelStr.toLowerCase().includes(searchTerm);
+        if (modelMatch || providerMatch) {
+          matches.push({ provider, model });
+        }
       }
     });
   }
 
+  // Sort matches so that the currently selected provider is at the top
+  if (selectedProvider && selectedProvider !== "AnyProvider") {
+      matches.sort((a, b) => {
+          if (a.provider === selectedProvider && b.provider !== selectedProvider) return -1;
+          if (a.provider !== selectedProvider && b.provider === selectedProvider) return 1;
+          return 0;
+      });
+  }
+
+  // Limit matches to top 100 to prevent DOM rendering lag
+  const topMatches = matches.slice(0, 100);
+
   // Display matches
-  matches.forEach(match => {
+  topMatches.forEach(match => {
     const div = document.createElement('div');
     div.className = 'suggestion-item';
     div.innerHTML = `
@@ -6723,3 +6808,50 @@ window.cloudSyncLoginRedirect = cloudSyncLoginRedirect;
 window.syncConversationsToCloud = syncConversationsToCloud;
 window.syncConversationsFromCloud = syncConversationsFromCloud;
 window.cloudSyncLogout = cloudSyncLogout;
+
+// Settings Search Logic
+const settingsSearch = document.getElementById('settingsSearch');
+if (settingsSearch) {
+    settingsSearch.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        
+        document.querySelectorAll('.settings-tab-content .field').forEach(field => {
+            const text = field.textContent.toLowerCase();
+            if (text.includes(query)) {
+                field.style.display = '';
+            } else {
+                field.style.display = 'none';
+            }
+        });
+        
+        if (query.trim() !== '') {
+            document.querySelectorAll('.settings-tab-content').forEach(tab => tab.classList.add('active'));
+            document.querySelectorAll('.settings-tab').forEach(btn => btn.classList.remove('active'));
+        } else {
+            // Restore default view (just first tab active)
+            document.querySelectorAll('.settings-tab-content').forEach(tab => tab.classList.remove('active'));
+            document.getElementById('tab-general').classList.add('active');
+            const generalTab = document.querySelector('.settings-tab[data-tab="general"]');
+            if (generalTab) generalTab.classList.add('active');
+        }
+    });
+}
+
+// Sidebar Conversation Search Logic
+const conversationSearch = document.getElementById('conversationSearch');
+if (conversationSearch) {
+    conversationSearch.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        document.querySelectorAll('.conversations .convo').forEach(convo => {
+            const titleEl = convo.querySelector('.convo-title');
+            if (titleEl) {
+                const text = titleEl.textContent.toLowerCase();
+                if (text.includes(query)) {
+                    convo.style.display = '';
+                } else {
+                    convo.style.display = 'none';
+                }
+            }
+        });
+    });
+}

@@ -30,6 +30,8 @@
     <link rel="icon" type="image/png" sizes="32x32" href="../dist/img/g4f-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="../dist/img/g4f-16x16.png" />
     <link rel="manifest" href="../dist/img/site.webmanifest" />
+    <link rel="stylesheet" href="../dist/css/dracula.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe/dist/photoswipe.css" />
 
     <script src="../dist/js/framework.js?v={{ v }}" defer></script>
     <script src="../dist/js/chat.v1.js?v={{ v }}" defer></script>
@@ -143,6 +145,26 @@
                       <span class="label">Download Generated Media</span>
                       <input type="checkbox" id="download_media" checked aria-checked="true" />
                       <label for="download_media" class="toogle" title="Download and save generated images, audios, and videos"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Enable Dark Mode</span>
+                      <input type="checkbox" id="darkMode" checked />
+                      <label for="darkMode" class="toogle" title="Toggle Dark Mode"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Enable Model Search</span>
+                      <input type="checkbox" id="enableModelSearch" checked />
+                      <label for="enableModelSearch" class="toogle" title="Enable the model search overlay (pencil icon)"></label>
+                  </div>
+                  <div class="field" id="searchModelField" style="display: none; margin-left: 20px;">
+                      <span class="label">Search by Model</span>
+                      <input type="checkbox" id="searchByModel" checked />
+                      <label for="searchByModel" class="toogle" title="Enable searching for models by model name"></label>
+                  </div>
+                  <div class="field" id="searchProviderField" style="display: none; margin-left: 20px;">
+                      <span class="label">Search by Provider</span>
+                      <input type="checkbox" id="searchByProvider" />
+                      <label for="searchByProvider" class="toogle" title="Enable searching for models by provider name"></label>
                   </div>
                   <div class="field">
                       <span class="label">Report Errors</span>
