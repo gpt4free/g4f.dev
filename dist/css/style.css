@@ -1115,8 +1115,8 @@ form input:checked+label:after {
     justify-content: left;
     width: 100%;
     margin-bottom: 4px;
-    flex-wrap: nowrap;
-    overflow-x: auto;
+    flex-wrap: wrap;
+    overflow: visible;
     padding: 4px 4px 2px;
 }
 
@@ -3041,6 +3041,16 @@ form textarea {
 .suggestions-dropdown {
   max-height: 300px;
   overflow-y: scroll;
+  background-color: var(--input-bg);
+  border: 1px solid var(--blur-border);
+  border-radius: var(--border-radius-1);
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  margin-bottom: 5px;
 }
 
 .suggestion-item {
@@ -3049,6 +3059,12 @@ form textarea {
   display: flex;
   justify-content: space-between;
   font-size: 14px;
+  color: var(--colour-3);
+  border-bottom: 1px solid var(--blur-border);
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
 }
 
 .suggestion-item:hover {
@@ -3377,4 +3393,103 @@ form label.toogle {
     gap: 4px;
     display: flex;
     flex-direction: column;
+}
+
+/* Chat Empty State */
+.chat-empty-state {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+    height: 100%;
+    width: 100%;
+}
+
+.chat-empty-state.hidden {
+    display: none;
+}
+
+.empty-state-content {
+    text-align: center;
+    max-width: 600px;
+    padding: 20px;
+}
+
+.empty-state-icon {
+    font-size: 48px;
+    color: var(--accent);
+    margin-bottom: 20px;
+    animation: pulse 2s infinite;
+}
+
+.empty-state-title {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--colour-3);
+    margin-bottom: 30px;
+}
+
+.empty-state-suggestions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.suggestion-card {
+    background: var(--blur-bg);
+    border: 1px solid var(--blur-border);
+    border-radius: var(--border-radius-2);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--colour-3);
+}
+
+.suggestion-card i {
+    font-size: 24px;
+    color: var(--accent);
+}
+
+.suggestion-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Sidebar Search */
+.sidebar-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--blur-bg);
+    border: 1px solid var(--blur-border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin: 10px;
+    margin-bottom: 0;
+}
+
+.sidebar-search i {
+    color: var(--colour-3);
+    font-size: 14px;
+}
+
+.sidebar-search input {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    outline: none;
+    width: 100%;
+    font-size: 14px;
 }
