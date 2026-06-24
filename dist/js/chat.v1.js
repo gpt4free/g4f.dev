@@ -1944,7 +1944,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 }
                 if (response.choices && response.choices[0].message.audio) {
                     const audio = response.choices[0].message.audio;
-                    message_storage[message_id] = message_storage[message_id] || `<audio controls></audio>\n\n\n${audio.transcript}`;
+                    message_storage[message_id] = `<audio controls></audio>\n\n\n${audio.transcript}`;
                     content_data_storage[message_id] = `data:audio/mpeg;base64,${audio.data}`;
                 }
             } else {
@@ -4278,9 +4278,7 @@ audioButton.addEventListener('click', async (event) => {
         if (mediaRecorder.wavBlob) {
             if (modelSelect.selectedIndex >= 0 && modelSelect.options[modelSelect.selectedIndex].dataset.audio) {
                 await add_conversation(window.conversation_id);
-                provider = get_selected_provider();
-                model = get_selected_model();
-                await ask_gpt(get_message_id(), -1, false, provider, model, "next");
+                await ask_gpt(get_message_id(), -1, false, providerSelect.value, get_selected_model(), "next");
             } else {
                 await upload_audio(mediaRecorder.wavBlob);
             }

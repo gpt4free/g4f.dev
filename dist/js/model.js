@@ -78,7 +78,7 @@ function convertModel(inputModel, options = {}) {
     if (inputModalities.includes("image")) {
         model.vision = true;
     }
-    if (inputModalities.includes('audio')) {
+    if (inputModalities.includes("audio") || model.id.includes("audio")) {
         model.audio = true;
     }
     if (model.supports_tools) {
@@ -105,6 +105,7 @@ function convertModel(inputModel, options = {}) {
     if (model.multiplier === 1) {
         model.free = true;
     }
+    console.log(model)
     model.tags = getModelTags(model);
     const count = model.count || model.requests || 0;
     model.label = model.label + (count > 1 ? ` (${count}+)` : "") + (model.tags ? ` ${model.tags}` : "");
