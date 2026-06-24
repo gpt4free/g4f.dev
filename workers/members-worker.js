@@ -547,9 +547,9 @@ async function calculateUserTier(userData, contributors, sponsors) {
             if (pathname === "/members/api/usage/history") {
                 return handleGetUsageHistory(request, env);
             }
-            if (pathname === "/members/api/usage/track") {
-                return handleTrackUsage(request, env, ctx);
-            }
+            // if (pathname === "/members/api/usage/track") {
+            //     return handleTrackUsage(request, env, ctx);
+            // }
   
             // Extended rate limiting endpoints
             if (pathname === "/members/api/rate-limit") {
@@ -558,9 +558,9 @@ async function calculateUserTier(userData, contributors, sponsors) {
             if (pathname === "/members/api/rate-limit/check") {
                 return handleCheckRateLimit(request, env);
             }
-            if (pathname === "/members/api/rate-limit/update") {
-                return handleUpdateRateLimit(request, env, ctx);
-            }
+            // if (pathname === "/members/api/rate-limit/update") {
+            //     return handleUpdateRateLimit(request, env, ctx);
+            // }
   
             // Session management
             if (pathname === "/members/api/logout") {
@@ -1985,9 +1985,6 @@ async function calculateUserTier(userData, contributors, sponsors) {
         }
     }
   
-    // Also check for user ID header (from frontend)
-    const userId = request.headers.get("X-User-Id");
-  
     if (sessionToken) {
         const sessionData = await env.MEMBERS_KV.get(`session:${sessionToken}`);
         if (sessionData) {
@@ -2001,11 +1998,6 @@ async function calculateUserTier(userData, contributors, sponsors) {
                 return user;
             }
         }
-    }
-  
-    if (userId) {
-        // Direct user ID lookup (for internal use)
-        return await getUser(env, userId);
     }
   
     return null;

@@ -15,7 +15,7 @@ export default {
             return new Response(null, { 
                 headers: { 
                     "Access-Control-Allow-Origin": "*", 
-                    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                    "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
                     "Access-Control-Allow-Headers": "Content-Type, Authorization"
                 } 
             });
@@ -90,7 +90,7 @@ export default {
             if (!data.content || data.content.length > 1000) {
                 return new Response("Invalid content", { status: 400 });
             }
-            const content = `${data.content} #report:${provider}:${author}`;
+            const content = `${data.content.replace('@', '')} #report:${provider}:${author}`;
             const messages = JSON.parse(await env.COMMUNITY_KV.get("messages") || "[]");
             messages.unshift({
                 author: author,
@@ -107,7 +107,7 @@ export default {
                     "Authorization": `Bot ${env.DISCORD_TOKEN}`,
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ content: `**${content}` })
+                body: JSON.stringify({ content: `**${author}**: ${content}` })
             });
 
             return new Response(JSON.stringify({ success: true }), {

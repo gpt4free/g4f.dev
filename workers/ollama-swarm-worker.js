@@ -18,260 +18,1110 @@
 // Seed servers — public Ollama instances
 // Duplicates are deduplicated at runtime via Set.
 // ---------------------------------------------------------------------------
-const _SEED_LIST = [
-  "http://116.202.111.94.nip.io:11434",
-  "http://130.89.48.109.nip.io:11434",
-  "http://85.214.43.150.nip.io:11434",
-  "http://213.132.219.17.nip.io:11434",
-  "http://155.133.208.195.nip.io:11434",
-  "http://46.17.99.157.nip.io:11434",
-  "http://193.237.205.200.nip.io:11434",
-  "http://51.17.50.106.nip.io:2052",
-  "http://46.224.147.115.nip.io:11434",
-  "http://54.215.114.112.nip.io.nip.io:7547",
-  "http://43.210.64.106.nip.io.nip.io:7547",
-  "http://87.208.240.33.nip.io:11434",
-  "http://64.176.39.95.nip.io:11434",
-  "http://46.224.156.158.nip.io:11434",
-  "http://185.100.232.224.nip.io:11434",
-  "http://38.76.189.45.nip.io:11434",
-  "http://38.76.189.41.nip.io:11434",
-  "http://116.203.177.162.nip.io:11434",
-  "http://204.168.244.123.nip.io:11434",
-  "http://195.201.234.76.nip.io:11434",
-  "http://194.62.157.184.nip.io:11434",
-  "http://185.45.193.80.nip.io:11434",
-  "http://199.79.202.22.nip.io:11434",
-  "http://78.46.41.183.nip.io:11434",
-  "http://1.243.43.248.nip.io:11434",
-  "http://38.76.189.74.nip.io:11434",
-  "http://213.136.76.182.nip.io:11434",
-  "http://89.58.3.79.nip.io:11434",
-  "http://116.203.112.201.nip.io:11434",
-  "http://100.30.6.43.nip.io:11434",
-  "http://146.0.72.136.nip.io:11434",
-  "http://44.244.46.70.nip.io:7547",
-  "http://193.237.153.60.nip.io:11434",
-  "http://79.137.197.6.nip.io:11434",
-  "http://220.249.186.40.nip.io:11434",
-  "http://103.235.75.117.nip.io:11434",
-  "http://202.141.161.50.nip.io:11434",
-  "http://66.94.124.143.nip.io:11434",
-  "http://94.141.160.99.nip.io:11434",
-  "http://38.180.104.127.nip.io:11434",
-  "http://147.93.183.134.nip.io:11434",
-  "http://82.135.28.45.nip.io:11434",
-  "http://152.53.93.215.nip.io:11434",
-  "http://45.145.42.104.nip.io:11434",
-  "http://203.176.113.216.nip.io:11434",
-  "http://133.4.188.2.nip.io:11434",
-  "http://116.202.197.155.nip.io:11434",
-  "http://57.128.123.135.nip.io:11434",
-  "http://63.177.73.22.nip.io:7547",
-  "http://211.23.87.144.nip.io:11434",
-  "http://204.168.139.0.nip.io:11434",
-  "http://16.26.230.113.nip.io:7547",
-  "http://46.224.83.114.nip.io:11434",
-  "http://20.246.91.177.nip.io:11434",
-  "http://168.235.74.31.nip.io:11434",
-  "http://84.22.103.64.nip.io:11434",
-  "http://223.113.66.126.nip.io:11434",
-  "http://38.76.189.19.nip.io:11434",
-  "http://81.4.125.240.nip.io:11434",
-  "http://209.97.173.219.nip.io:11434",
-  "http://163.172.212.132.nip.io:11434",
-  "http://18.223.75.148.nip.io:11434",
-  "http://139.129.25.182.nip.io:11434",
-  "http://62.45.168.106.nip.io:11434",
-  "http://46.4.216.118.nip.io:11434",
-  "http://117.55.199.23.nip.io:11434",
-  "http://31.172.78.56.nip.io:11434",
-  "http://62.171.155.8.nip.io:11434",
-  "http://49.13.48.26.nip.io:11434",
-  "http://82.165.174.61.nip.io:11434",
-  "http://116.203.53.120.nip.io:11434",
-  "http://108.160.206.30.nip.io:11434",
-  "http://116.203.219.128.nip.io:11434",
-  "http://161.153.32.111.nip.io:11434",
-  "http://217.174.245.24.nip.io:11434",
-  "http://77.239.123.2.nip.io:11434",
-  "http://5.75.180.13.nip.io:11434",
-  "http://34.31.140.94.nip.io:11434",
-  "http://204.168.198.89.nip.io:11434",
-  "http://45.87.137.100.nip.io:11434",
-  "http://107.175.125.166.nip.io:11434",
-  "http://178.105.145.53.nip.io:11434",
-  "http://64.156.70.180.nip.io:11434",
-  "http://165.1.76.13.nip.io:11434",
-  "http://158.101.214.195.nip.io:11434",
-  "http://5.9.1.80.nip.io:11434",
-  "http://51.178.49.219.nip.io:11434",
-  "http://116.203.198.188.nip.io:11434",
-  "http://38.76.189.18.nip.io:11434",
-  "http://216.70.69.75.nip.io:11434",
-  "http://88.168.52.207.nip.io:11434",
-  "http://62.238.14.177.nip.io:11434",
-  "http://142.132.252.21.nip.io:11434",
-  "http://38.76.189.9.nip.io:11434",
-  "http://167.71.147.184.nip.io:11434",
-  "http://35.221.126.180.nip.io:11434",
-  "http://63.179.110.87.nip.io:2082",
-  "http://3.67.10.231.nip.io:8080",
-  "http://178.104.205.2.nip.io:11434",
-  "http://165.1.78.194.nip.io:11434",
-  "http://5.129.226.192.nip.io:11434",
-  "http://198.206.133.250.nip.io:11434",
-  "http://178.254.28.95.nip.io:11434",
-  "http://16.63.120.43.nip.io:7547",
-  "http://204.168.196.150.nip.io:11434",
-  "http://46.224.186.78.nip.io:11434",
-  "http://136.243.60.49.nip.io:11434",
-  "http://116.202.9.89.nip.io:11434",
-  "http://38.76.189.31.nip.io:11434",
-  "http://75.128.229.121.nip.io:11434",
-  "http://52.201.213.145.nip.io:11434",
-  "http://5.78.200.46.nip.io:11434",
-  "http://2.59.170.202.nip.io:11434",
-  "http://185.191.127.178.nip.io:11434",
-  "http://81.131.169.17.nip.io:11434",
-  "http://116.203.212.217.nip.io:11434",
-  "http://54.215.114.112.nip.io:7547",
-  "http://178.104.197.254.nip.io:11434",
-  "http://18.61.29.191.nip.io:7547",
-  "http://54.36.111.107.nip.io:11434",
-  "http://103.66.120.232.nip.io:11434",
-  "http://27.92.231.18.nip.io:11434",
-  "http://178.105.62.143.nip.io:11434",
-  "http://101.111.228.63.nip.io:11434",
-  "http://150.230.164.69.nip.io:11434",
-  "http://85.214.44.11.nip.io:11434",
-  "http://178.104.163.52.nip.io:11434",
-  "http://34.16.62.196.nip.io:11434",
-  "http://49.13.102.77.nip.io:11434",
-  "http://38.76.189.21.nip.io:11434",
-  "http://145.239.207.5.nip.io:11434",
-  "http://38.76.189.97.nip.io:11434",
-  "http://45.139.77.246.nip.io:11434",
-  "http://45.154.87.43.nip.io:11434",
-  "http://64.188.91.237.nip.io:11434",
-  "http://178.105.147.204.nip.io:11434",
-  "http://77.68.10.64.nip.io:11434",
-  "http://125.138.77.111.nip.io:11434",
-  "http://223.85.216.230.nip.io:11434",
-  "http://57.128.64.100.nip.io:11434",
-  "http://178.219.166.81.nip.io:2082",
-  "http://37.59.98.74.nip.io:11434",
-  "http://71.251.218.102.nip.io:11434",
-  "http://210.59.176.82.nip.io:11434",
-  "http://223.113.254.84.nip.io:11434",
-  "http://113.44.194.208.nip.io:11434",
-  "http://3.237.237.228.nip.io:2077",
-  "http://13.140.143.210.nip.io:11434",
-  "http://204.168.149.141.nip.io:11434",
-  "http://51.254.134.96.nip.io:11434",
-  "http://109.86.166.86.nip.io:11434",
-  "http://178.105.66.185.nip.io:11434",
-  "http://104.54.238.64.nip.io:11434",
-  "http://116.202.66.86.nip.io:11434",
-  "http://129.80.194.194.nip.io:11434",
-  "http://45.140.140.26.nip.io:11434",
-  "http://199.204.135.71.nip.io:11434",
-  "http://135.237.98.245.nip.io:11434",
-  "http://23.95.148.22.nip.io:11434",
-  "http://78.13.53.95.nip.io:2077",
-  "http://31.70.86.211.nip.io:11434",
-  "http://83.86.59.188.nip.io:11434",
-  "http://69.243.159.16.nip.io:11434",
-  "http://51.158.152.190.nip.io:11434",
-  "http://167.86.113.188.nip.io:11434",
-  "http://51.77.188.225.nip.io:11434",
-  "http://90.149.239.71.nip.io:11434",
-  "http://51.254.130.116.nip.io:11434",
-  "http://180.110.147.114.nip.io:11434",
-  "http://47.79.39.175.nip.io:11434",
-  "http://20.107.59.198.nip.io:11434",
-  "http://114.34.180.200.nip.io:11434",
-  "http://84.86.220.240.nip.io:11434",
-  "http://204.168.175.197.nip.io:11434",
-  "http://129.80.43.33.nip.io:11434",
-  "http://207.148.68.227.nip.io:11434",
-  "http://117.50.171.144.nip.io:11434",
-  "http://46.243.3.122.nip.io:11434",
-  "http://220.135.48.55.nip.io:11434",
-  "http://18.136.206.156.nip.io:11434",
-  "http://58.127.230.165.nip.io:11434",
-  "http://188.166.254.32.nip.io:11434",
-  "http://201.137.77.153.nip.io:11434",
-  "http://103.137.250.43.nip.io:11434",
-  "http://204.168.254.120.nip.io:11434",
-  "http://150.136.60.84.nip.io:11434",
-  "http://220.134.52.221.nip.io:11434",
-  "http://217.182.133.168.nip.io:11434",
-  "http://35.208.40.227.nip.io:11434",
-  "http://54.93.197.63.nip.io.nip.io:7547",
-  "http://13.140.25.193.nip.io:11434",
-  "http://152.53.251.120.nip.io:11434",
-  "http://1.255.85.149.nip.io:11434",
-  "http://31.70.78.250.nip.io:11434",
-  "http://160.16.60.183.nip.io:11434",
-  "http://64.176.229.210.nip.io:11434",
-  "http://125.227.28.166.nip.io:11434",
-  "http://147.93.139.24.nip.io:11434",
-  "http://217.182.67.5.nip.io:11434",
-  "http://5.101.168.158.nip.io:11434",
-  "http://147.93.183.23.nip.io:11434",
-  "http://46.224.203.89.nip.io:11434",
-  "http://87.98.145.87.nip.io:11434",
-  "http://24.236.158.179.nip.io:11434",
-  "http://64.225.38.49.nip.io:11434",
-  "http://79.157.228.102.nip.io:11434",
-  "http://185.237.206.241.nip.io:11434",
-  "http://151.80.21.134.nip.io:11434",
-  "http://158.69.27.163.nip.io:11434",
-  "http://152.53.251.120.nip.io:11434",
-  "http://62.68.75.4.nip.io:11434",
-];
+const _SEED_LIST = {
+  "http://38.76.189.31.nip.io:11434": [
+    "qwen3-embedding:0.6b",
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "deepseek-v4-pro:cloud",
+    "WhiteRabbitNeo/Llama-3.1-WhiteRabbitNeo-2-8B:latest",
+    "wrn-33b:latest"
+  ],
+  "http://38.76.189.74.nip.io:11434": [
+    "qwen3-embedding:0.6b",
+    "nomic-embed-text-v2-moe:latest",
+    "nomic-embed-text:latest",
+    "deepseek-v4-pro:cloud",
+    "WhiteRabbitNeo/Llama-3.1-WhiteRabbitNeo-2-8B:latest",
+    "wrn-33b:latest"
+  ],
+  "http://62.238.14.177.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "llama3.2:3b"
+  ],
+  "http://13.140.143.210.nip.io:11434": [
+    "nemesis-ia-v3:latest",
+    "nemesis-ia:latest",
+    "llama3.2:3b"
+  ],
+  "http://38.76.189.45.nip.io:11434": [
+    "qwen3-embedding:0.6b",
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "deepseek-v4-pro:cloud",
+    "WhiteRabbitNeo/Llama-3.1-WhiteRabbitNeo-2-8B:latest",
+    "wrn-33b:latest"
+  ],
+  "http://167.71.147.184.nip.io:11434": [
+    "deepseek-r1:671b",
+    "llama3.3:70b",
+    "dolphin-mixtral:8x7b",
+    "wizard-vicuna-uncensored:13b",
+    "qwen2.5:72b",
+    "codestral:22b",
+    "llama3:8b",
+    "mistral:7b",
+    "deepseek-r1:7b",
+    "gemma3:27b",
+    "phi-4:14b",
+    "dolphin-2.9-llama3:8b",
+    "llama3.1-abliterated:8b",
+    "qwen3:235b-a22b"
+  ],
+  "http://136.243.60.49.nip.io:11434": [
+    "qwen2.5:0.5b"
+  ],
+  "http://213.136.76.182.nip.io:11434": [
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud",
+    "llama3.2:latest",
+    "mistral-nemo:latest"
+  ],
+  "http://38.76.189.19.nip.io:11434": [
+    "qwen3-embedding:0.6b",
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "deepseek-v4-pro:cloud",
+    "WhiteRabbitNeo/Llama-3.1-WhiteRabbitNeo-2-8B:latest",
+    "wrn-33b:latest"
+  ],
+  "http://90.149.239.71.nip.io:11434": [
+    "huihui_ai/qwen3.5-abliterated:27b",
+    "gemma4:26b",
+    "nomic-embed-text-v2-moe:latest",
+    "huihui_ai/gemma-4-abliterated:26b",
+    "huihui_ai/qwen3.6-abliterated:27b",
+    "huihui_ai/gpt-oss-abliterated:latest",
+    "nomic-embed-text:latest",
+    "qwen3-embedding:0.6b",
+    "x/flux2-klein:latest",
+    "minimax-m3:cloud",
+    "kimi-k2.6:cloud",
+    "qwen3-coder-next:cloud",
+    "deepseek-v4-flash:cloud",
+    "kimi-k2.5:cloud",
+    "qwen3.5:cloud",
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://155.133.208.195.nip.io:11434": [
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "qwen3-embedding:0.6b",
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud",
+    "gemma3:4b",
+    "phi3:mini"
+  ],
+  "http://38.76.189.21.nip.io:11434": [
+    "qwen3-embedding:0.6b",
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "deepseek-v4-pro:cloud",
+    "WhiteRabbitNeo/Llama-3.1-WhiteRabbitNeo-2-8B:latest",
+    "wrn-33b:latest"
+  ],
+  "http://38.76.189.9.nip.io:11434": [
+    "qwen3-embedding:0.6b",
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "deepseek-v4-pro:cloud",
+    "WhiteRabbitNeo/Llama-3.1-WhiteRabbitNeo-2-8B:latest",
+    "wrn-33b:latest"
+  ],
+  "http://46.224.203.89.nip.io:11434": [
+    "llama3.2:3b",
+    "llava:latest",
+    "llama3.1:8b"
+  ],
+  "http://38.76.189.41.nip.io:11434": [
+    "qwen3-embedding:0.6b",
+    "nomic-embed-text-v2-moe:latest",
+    "nomic-embed-text:latest",
+    "deepseek-v4-pro:cloud",
+    "WhiteRabbitNeo/Llama-3.1-WhiteRabbitNeo-2-8B:latest",
+    "wrn-33b:latest"
+  ],
+  "http://38.76.189.97.nip.io:11434": [
+    "qwen3-embedding:0.6b",
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "deepseek-v4-pro:cloud",
+    "WhiteRabbitNeo/Llama-3.1-WhiteRabbitNeo-2-8B:latest",
+    "wrn-33b:latest"
+  ],
+  "http://27.92.231.18.nip.io:11434": [
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://75.128.229.121.nip.io:11434": [
+    "glm-4.7-flash:Q8_0",
+    "megatron:latest",
+    "xploiter/pentester:latest",
+    "artifish/llama3.2-uncensored:latest",
+    "MFDoom/deepseek-coder-v2-tool-calling:16b",
+    "hf.co/mradermacher/gpt-oss-20b-uncensored-GGUF:Q8_0"
+  ],
+  "http://193.237.205.200.nip.io:11434": [
+    "gemma4:latest",
+    "deepseek-v4-pro:cloud",
+    "llama3:latest",
+    "gpt-oss:120b-cloud",
+    "phi3:latest",
+    "mapler/gpt2:latest",
+    "mistral:latest",
+    "qwen3:latest",
+    "gemma3:latest",
+    "mistral-small3.2:latest",
+    "devstral:latest",
+    "phi4:latest",
+    "deepseek-coder-v2:latest",
+    "deepseek-r1:latest",
+    "llama3.1:latest"
+  ],
+  "http://38.76.189.18.nip.io:11434": [
+    "qwen3-embedding:0.6b",
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "deepseek-v4-pro:cloud",
+    "WhiteRabbitNeo/Llama-3.1-WhiteRabbitNeo-2-8B:latest",
+    "wrn-33b:latest"
+  ],
+  "http://158.101.214.195.nip.io:11434": [
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://51.254.130.116.nip.io:11434": [
+    "qwen3:8b-q4_K_M",
+    "qwen2.5:14b-instruct-q4_K_M",
+    "llama3.1:8b-instruct-q4_K_M",
+    "llama3.2:1b-instruct-q4_K_M",
+    "qwen2.5:7b-instruct-q4_K_M",
+    "llama3.2:3b-instruct-q4_K_M",
+    "tinyllama:1.1b-chat-v1-q4_K_M",
+    "qwen3:32b-q4_K_M",
+    "qwen3:14b-q4_K_M",
+    "205.237.106.117:8443/attacker/leak_model_5_026fc3:latest",
+    "205.237.106.117:8443/attacker/leak_model_4_026fc3:latest",
+    "205.237.106.117:8443/attacker/leak_model_3_026fc3:latest",
+    "205.237.106.117:8443/attacker/leak_model_2_026fc3:latest",
+    "205.237.106.117:8443/attacker/leak_model_1_026fc3:latest",
+    "205.237.106.117:8443/attacker/leak_model_0_026fc3:latest",
+    "deepseek-v4-pro:cloud",
+    "minimax-m2.7:cloud",
+    "llama3.2:3b",
+    "smollm2:135m",
+    "devstral-2:123b-cloud",
+    "deepseek-v3.1:671b-cloud",
+    "llama3:latest"
+  ],
+  "http://42.2.14.131.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "qwen2.5:7b-memorypro",
+    "qwen2.5:7b",
+    "nomic-embed-text:v1.5",
+    "mxbai-embed-large:latest"
+  ],
+  "http://116.208.212.11.nip.io:11434": [
+    "nomic-embed-text:latest"
+  ],
+  "http://61.140.16.147.nip.io:11434": [
+    "nomic-embed-text-v2-moe:latest",
+    "nomic-embed-text:latest"
+  ],
+  "http://114.254.25.58.nip.io:11434": [],
+  "http://203.111.214.218.nip.io:11434": [
+    "llama3.1:latest",
+    "llama3.2-vision:latest",
+    "qwen2.5:7b",
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://1.64.254.40.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "llama3.2:3b"
+  ],
+  "http://120.126.17.106.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "my-ai:latest",
+    "deepseek-r1:32b"
+  ],
+  "http://220.133.154.29.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "minimax-m3:cloud",
+    "qwen3.6:35b",
+    "minimax-m2.7:cloud",
+    "glm-4.7-flash:latest",
+    "llama3.2:3b",
+    "smollm2:135m",
+    "quentinz/bge-small-zh-v1.5:latest",
+    "deepseek-v3.1:671b-cloud",
+    "llama3.1:8b",
+    "huihui_ai/deepseek-r1-abliterated:14b",
+    "gemma3:12b",
+    "gemma3:latest",
+    "gpt-oss:20b",
+    "huihui_ai/deepseek-r1-abliterated:7b"
+  ],
+  "http://47.83.22.245.nip.io:11434": [
+    "minimax-m3:cloud",
+    "deepseek-v4-flash:cloud",
+    "kimi-k2.5:cloud",
+    "qwen3-coder-next:cloud",
+    "qwen3.5:cloud",
+    "kimi-k2.6:cloud",
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://49.213.207.138.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "qwen2.5:7b",
+    "llama3.2-vision:11b",
+    "qwen3-coder:30b",
+    "qwen2.5-coder:7b",
+    "qwen2.5:72b",
+    "llama3.1:8b"
+  ],
+  "http://116.49.62.25.nip.io:11434": [
+    "qwen3.6:35b-a3b",
+    "hermes_copy:latest",
+    "hermes_pwn:latest",
+    "gpt-oss:latest",
+    "smollm2:135m",
+    "gpt-oss:120b",
+    "qwen3:14b",
+    "ministral-3:14b-instruct-2512-q8_0",
+    "gemma3:4b-it-q4_K_M",
+    "gpt-oss:20b",
+    "llama3.2:3b-instruct-q5_K_M",
+    "deepseek-r1:14b",
+    "tinyllama:latest",
+    "vicuna:latest",
+    "llama3.3:latest",
+    "deepseek-v2:latest",
+    "llama3.2-vision:11b",
+    "qwen2:7b",
+    "phi3:14b",
+    "nemotron-mini:latest",
+    "llama3:latest",
+    "llama3.2:latest",
+    "llama3.1:8b"
+  ],
+  "http://180.109.253.192.nip.io:11434": [
+    "qwen3-embedding:0.6b",
+    "nomic-embed-text:latest",
+    "huihui_ai/gpt-oss-abliterated:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "leaktest_0_13_0:latest",
+    "hermes_pwn:latest",
+    "nemotron-3-ultra:cloud",
+    "minimax-m3:cloud",
+    "kimi-k2.5:cloud",
+    "kimi-k2.6:cloud",
+    "qwen3-coder-next:cloud",
+    "qwen3.5:cloud",
+    "deepseek-v4-flash:cloud",
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://140.112.99.178.nip.io:11434": [],
+  "http://223.84.152.142.nip.io:11434": [],
+  "http://182.40.33.227.nip.io:11434": [
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://106.12.155.130.nip.io:11434": [],
+  "http://212.227.162.96.nip.io:11434": [
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud",
+    "phi3:latest"
+  ],
+  "http://46.101.110.71.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://142.132.199.240.nip.io:11434": [
+    "huihui_ai/gemma-4-abliterated:26b",
+    "huihui_ai/gemma-4-abliterated:12b",
+    "huihui_ai/gpt-oss-abliterated:latest",
+    "huihui_ai/qwen3.5-abliterated:27b",
+    "qwen3-embedding:0.6b",
+    "huihui_ai/qwen3.6-abliterated:27b",
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://78.46.72.53.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://92.5.49.200.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "qwen3.6:27b"
+  ],
+  "http://87.118.114.254.nip.io:11434": [
+    "huihui_ai/gemma-4-abliterated:12b",
+    "huihui_ai/gemma-4-abliterated:26b",
+    "huihui_ai/qwen3.5-abliterated:27b",
+    "huihui_ai/gpt-oss-abliterated:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "qwen3-embedding:0.6b",
+    "nomic-embed-text:latest",
+    "huihui_ai/qwen3.6-abliterated:27b",
+    "phi3:3.8b",
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://51.89.6.222.nip.io:11434": [
+    "x/flux2-klein:latest"
+  ],
+  "http://45.90.121.7.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://2.56.246.156.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://92.5.66.2.nip.io:11434": [
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://84.46.254.215.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://155.133.208.198.nip.io:11434": [
+    "qwen3-embedding:0.6b",
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud",
+    "gemma3:4b",
+    "phi3:mini"
+  ],
+  "http://51.75.64.79.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "qwen3-embedding:0.6b",
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "llama3.1:latest",
+    "qwen2.5:3b",
+    "mxbai-embed-large:latest",
+    "llama3.2:3b",
+    "qwen3:4b",
+    "phi3.5:latest",
+    "moondream:latest"
+  ],
+  "http://92.5.2.87.nip.io:11434": [
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud",
+    "llama3.2:3b",
+    "MFDoom/deepseek-coder-v2-tool-calling:latest",
+    "gemma4:e4b",
+    "llama3.1:8b",
+    "qwen2.5-coder:7b",
+    "qwen2.5-coder:7b-instruct-q4_K_M"
+  ],
+  "http://87.118.115.254.nip.io:11434": [
+    "huihui_ai/gemma-4-abliterated:12b",
+    "huihui_ai/gemma-4-abliterated:26b",
+    "huihui_ai/qwen3.6-abliterated:27b",
+    "huihui_ai/qwen3.5-abliterated:27b",
+    "huihui_ai/gpt-oss-abliterated:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "qwen3-embedding:0.6b",
+    "nomic-embed-text:latest",
+    "phi3:3.8b",
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://37.46.19.85.nip.io:11434": [
+    "gemma4:31b-cloud",
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://85.215.239.154.nip.io:11434": [
+    "llama3.2:3b",
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://167.86.80.58.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://159.195.73.99.nip.io:11434": [
+    "llama3.2:3b"
+  ],
+  "http://5.9.86.204.nip.io:11434": [
+    "huihui_ai/gpt-oss-abliterated:latest",
+    "huihui_ai/qwen3.5-abliterated:27b",
+    "huihui_ai/qwen3.6-abliterated:27b",
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "huihui_ai/gemma-4-abliterated:12b",
+    "huihui_ai/gemma-4-abliterated:26b",
+    "smollm2:135m",
+    "ilsp/meltemi-instruct:latest",
+    "llama3.2:3b",
+    "mistral:latest"
+  ],
+  "http://49.12.80.87.nip.io:11434": [
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://46.4.69.107.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "gemma4:e4b",
+    "gemma4:26b",
+    "gemma3:12b",
+    "gemma3:27b",
+    "gemma3:4b"
+  ],
+  "http://164.92.193.44.nip.io:11434": [
+    "huihui_ai/gpt-oss-abliterated:latest",
+    "huihui_ai/qwen3.5-abliterated:27b",
+    "huihui_ai/qwen3.6-abliterated:27b",
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "qwen3-embedding:0.6b",
+    "huihui_ai/gemma-4-abliterated:26b",
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://212.227.49.17.nip.io:11434": [],
+  "http://178.105.63.139.nip.io:11434": [
+    "llama3.2:3b",
+    "deepseek-v4-pro:cloud",
+    "llama3.2:latest"
+  ],
+  "http://162.55.84.42.nip.io:11434": [
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud",
+    "qwen2.5:32b",
+    "command-r:latest"
+  ],
+  "http://94.103.173.64.nip.io:11434": [
+    "qwen2.5-coder:7b",
+    "qwen2.5-coder:3b",
+    "qwen2.5-coder:1.5b-base",
+    "deepseek-v4-pro:cloud",
+    "llama3.2:latest"
+  ],
+  "http://89.168.67.184.nip.io:11434": [
+    "llama3.2:3b",
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "qwen3-embedding:0.6b",
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://46.224.197.52.nip.io:11434": [
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://178.104.247.221.nip.io:11434": [
+    "qwen2.5-coder:1.5b",
+    "huihui_ai/qwen3.6-abliterated:27b",
+    "qwen3-embedding:0.6b",
+    "huihui_ai/gemma-4-abliterated:26b",
+    "huihui_ai/gpt-oss-abliterated:latest",
+    "huihui_ai/qwen3.5-abliterated:27b",
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud",
+    "gemma4:e4b"
+  ],
+  "http://158.101.181.50.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "qwen2.5:7b-64k",
+    "qwen2.5:7b",
+    "llama3:8b",
+    "qwen2.5:3b"
+  ],
+  "http://178.105.164.192.nip.io:11434": [
+    "mistral:latest"
+  ],
+  "http://92.5.134.191.nip.io:11434": [
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud",
+    "llama3.2:3b",
+    "MFDoom/deepseek-coder-v2-tool-calling:latest",
+    "gemma4:e4b",
+    "llama3.1:8b",
+    "qwen2.5-coder:7b",
+    "qwen2.5-coder:7b-instruct-q4_K_M"
+  ],
+  "http://138.199.216.235.nip.io:11434": [
+    "minimax-m2.7:cloud",
+    "deepseek-v4-pro:cloud",
+    "llama3.2:3b"
+  ],
+  "http://136.243.81.62.nip.io:11434": [],
+  "http://46.224.108.17.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://217.154.83.136.nip.io:11434": [
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud",
+    "qwen3.6:35b",
+    "llama3.2:3b",
+    "qwen3-coder:latest"
+  ],
+  "http://130.61.30.59.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "codellama:7b-instruct",
+    "llama3.2:1b",
+    "llama3.2:latest",
+    "dolphin-llama3:8b"
+  ],
+  "http://188.245.175.189.nip.io:11434": [
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://87.120.166.139.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://148.251.137.44.nip.io:11434": [
+    "huihui_ai/gemma-4-abliterated:12b",
+    "huihui_ai/gpt-oss-abliterated:latest",
+    "huihui_ai/qwen3.5-abliterated:27b",
+    "huihui_ai/qwen3.6-abliterated:27b",
+    "nomic-embed-text-v2-moe:latest",
+    "qwen3-embedding:0.6b",
+    "huihui_ai/gemma-4-abliterated:26b",
+    "nomic-embed-text:latest",
+    "deepseek-v4-pro:cloud",
+    "qwen2.5:7b"
+  ],
+  "http://148.251.136.233.nip.io:11434": [
+    "huihui_ai/gpt-oss-abliterated:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "nomic-embed-text:latest",
+    "qwen3-embedding:0.6b",
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://46.4.57.97.nip.io:11434": [
+    "fdv06-v2:latest",
+    "Fonte-Llama-v1:latest",
+    "Fonte-Qwen-v1:latest",
+    "qwen3:8b",
+    "fdv06-v7:latest",
+    "fdv06-v2-bak-20260602:latest",
+    "llama3:8b-instruct-q8_0"
+  ],
+  "http://195.201.100.12.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://78.159.122.2.nip.io:11434": [
+    "nomic-embed-text-v2-moe:latest",
+    "qwen3-embedding:0.6b",
+    "huihui_ai/gpt-oss-abliterated:latest",
+    "nomic-embed-text:latest",
+    "x/flux2-klein:latest"
+  ],
+  "http://217.20.124.139.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://91.98.64.45.nip.io:11434": [],
+  "http://5.9.85.18.nip.io:11434": [
+    "huihui_ai/gpt-oss-abliterated:latest",
+    "huihui_ai/gemma-4-abliterated:26b",
+    "huihui_ai/qwen3.6-abliterated:27b",
+    "qwen3-embedding:0.6b",
+    "huihui_ai/gemma-4-abliterated:12b",
+    "huihui_ai/qwen3.5-abliterated:27b",
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "qwen3.6:27b",
+    "glm-4.7-flash:latest",
+    "llama3.2:3b",
+    "mistral-small3.2:24b",
+    "qwen3.5:27b",
+    "qwen3.5:9b",
+    "smollm2:135m",
+    "nemotron-3-nano:latest",
+    "translategemma:27b",
+    "deepseek-r1:32b",
+    "deepseek-ocr:3b",
+    "mistral:latest",
+    "llama3.1:latest",
+    "gpt-oss:20b",
+    "llama3.2:latest"
+  ],
+  "http://91.98.65.172.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://85.214.231.56.nip.io:11434": [
+    "qwen3:32b-q4_K_M",
+    "qwen3:14b-q4_K_M",
+    "qwen3:8b-q4_K_M",
+    "qwen2.5:14b-instruct-q4_K_M",
+    "llama3.2:1b-instruct-q4_K_M",
+    "qwen2.5:7b-instruct-q4_K_M",
+    "llama3.2:3b-instruct-q4_K_M",
+    "tinyllama:1.1b-chat-v1-q4_K_M",
+    "Qwen3.5:122b-a10b",
+    "llama3.1:70b-instruct-q4_K_M",
+    "kimi-k2.6:cloud",
+    "kimi-k2.5:cloud",
+    "deepseek-v4-flash:cloud",
+    "deepseek-v4-pro:cloud",
+    "qwen3-coder-next:cloud",
+    "qwen3-next:80b-cloud",
+    "sparksammy/qwen3.5-27b-unsloth:small-hotfixed",
+    "gemma4:31b-it-q4_K_M",
+    "hf.co/unsloth/gemma-4-31B-it-GGUF:Q4_K_M",
+    "deepseek-r1:1.5b",
+    "qwen2.5:3b",
+    "deepseek-r1:7b",
+    "deepseek-coder:latest",
+    "phi3:latest",
+    "gemma-4-E4B-it-Q5-K-M:latest",
+    "gemma4-e2b-it-Q5_K_M-2:latest",
+    "gemma4-e2b-it-Q5_K_M:latest",
+    "gemma4-vision-local:latest",
+    "gemma4-local:latest",
+    "gemma-vision-E4B-it--Q5_K_M:latest",
+    "gemma2:2b",
+    "gemma4-fast:latest",
+    "gemma4:e2b",
+    "functiongemma:latest",
+    "mistral:latest",
+    "llama3.2:latest",
+    "gemma3:4b"
+  ],
+  "http://188.245.166.90.nip.io:11434": [
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://167.99.135.175.nip.io:11434": [],
+  "http://162.19.244.62.nip.io:11434": [],
+  "http://178.105.4.216.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "mistral:latest",
+    "qwen2.5:7b"
+  ],
+  "http://2.56.246.214.nip.io:11434": [],
+  "http://155.133.208.196.nip.io:11434": [
+    "qwen3-embedding:0.6b",
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud",
+    "gemma3:4b",
+    "phi3:mini"
+  ],
+  "http://155.133.208.194.nip.io:11434": [
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "qwen3-embedding:0.6b",
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud",
+    "gemma3:4b",
+    "phi3:mini"
+  ],
+  "http://178.104.64.166.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  
+  "http://91.98.200.119.nip.io:11434": [
+    "nomic-embed-text-v2-moe:latest",
+    "huihui_ai/gpt-oss-abliterated:latest",
+    "huihui_ai/qwen3.6-abliterated:27b",
+    "nomic-embed-text:latest",
+    "qwen3-embedding:0.6b",
+    "huihui_ai/gemma-4-abliterated:26b",
+    "huihui_ai/qwen3.5-abliterated:27b",
+    "deepseek-v4-pro:cloud",
+    "llama3.2:1b"
+  ],
+  "http://217.160.69.10.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://45.84.197.109.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://178.105.30.2.nip.io:11434": [
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://5.9.73.92.nip.io:11434": [
+    "qwen3.5:4b",
+    "mxbai-embed-large:latest",
+    "ministral-3:8b",
+    "qwen3.5:0.8b"
+  ],
+  "http://57.129.77.185.nip.io:11434": [
+    "x/flux2-klein:latest"
+  ],
+  "http://83.229.84.234.nip.io:11434": [],
+  "http://213.165.73.127.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "test-copy:latest",
+    "llama3.2:3b",
+    "devstral-2:123b-cloud",
+    "smollm2:135m",
+    "deepseek-v3.1:671b-cloud",
+    "hf.co/bartowski/Dolphin3.0-Qwen2.5-3b-GGUF:Q4_K_M",
+    "mario:latest",
+    "llama3-backup:latest",
+    "mattw/pygmalion:latest",
+    "llama3:instruct",
+    "llama3.1:8b-instruct-q4_K_M",
+    "llama3.2:latest",
+    "mxbai-embed-large:latest"
+  ],
+  "http://188.245.40.20.nip.io:11434": [
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud",
+    "mistral:7b",
+    "qwen2.5:7b"
+  ],
+  "http://148.251.179.45.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "gemma3:4b",
+    "gemma3:27b",
+    "gemma4:26b",
+    "gemma4:e4b",
+    "gemma3:12b"
+  ],
+  "http://87.106.223.47.nip.io:11434": [
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://188.245.250.200.nip.io:11434": [],
+  "http://45.157.234.103.nip.io:11434": [
+    "huihui_ai/glm-4.7-flash-abliterated:latest",
+    "qwen3-embedding:0.6b",
+    "nomic-embed-text:latest",
+    "huihui_ai/gpt-oss-abliterated:latest",
+    "huihui_ai/gemma-4-abliterated:12b",
+    "huihui_ai/qwen3.5-abliterated:27b",
+    "huihui_ai/qwen3.6-abliterated:27b",
+    "nomic-embed-text-v2-moe:latest",
+    "huihui_ai/gemma-4-abliterated:26b",
+    "deepseek-v4-pro:cloud",
+    "qwen3.5:9b",
+    "qwen3.6:35b",
+    "gemma4:26b",
+    "qwen3-embedding:4b",
+    "x/flux2-klein:latest"
+  ],
+  "http://88.198.64.194.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "hc_dbusd:latest",
+    "mitarbeiter-fast:latest",
+    "llama3-groq-tool-use:70b",
+    "RobiLabs/lexa-rho:8b",
+    "qwen3-coder:latest",
+    "aya-expanse:8b",
+    "gemma3:12b",
+    "mistral-nemo:12b",
+    "qwen3:14b",
+    "qwen3:8b",
+    "qwen3:4b",
+    "llama3.2:latest"
+  ],
+  "http://162.55.176.246.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "llama3.2:3b",
+    "minimax-m2.7:cloud",
+    "embeddinggemma:300m"
+  ],
+  "http://167.172.170.114.nip.io:11434": [],
+  "http://5.9.65.28.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://80.147.139.148.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "qwen3.5:9b",
+    "qwen3.5:latest",
+    "qwen2.5:7b"
+  ],
+  "http://85.214.180.6.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://91.99.156.133.nip.io:11434": [
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://88.198.51.59.nip.io:11434": [
+    "huihui_ai/gpt-oss-abliterated:latest",
+    "huihui_ai/qwen3.5-abliterated:27b",
+    "nomic-embed-text-v2-moe:latest",
+    "qwen3-embedding:0.6b",
+    "huihui_ai/gemma-4-abliterated:12b",
+    "nomic-embed-text:latest",
+    "huihui_ai/glm-4.7-flash-abliterated:latest",
+    "huihui_ai/qwen3.6-abliterated:27b",
+    "huihui_ai/gemma-4-abliterated:26b",
+    "nemotron-3-ultra:cloud",
+    "nemotron-3-nano:30b-cloud",
+    "qwen3-coder-next:cloud",
+    "rnj-1:8b-cloud",
+    "cogito-2.1:671b-cloud",
+    "deepseek-v3.1:671b-cloud",
+    "deepseek-v4-pro:cloud",
+    "minimax-m2:cloud",
+    "minimax-m3:cloud",
+    "ministral-3:8b-cloud",
+    "qwen3-next:80b-cloud",
+    "qwen3.5:397b-cloud",
+    "glm-4.7:cloud",
+    "glm-5.1:cloud",
+    "minimax-m2.1:cloud",
+    "minimax-m2.5:cloud",
+    "devstral-small-2:24b-cloud",
+    "deepseek-v4-flash:cloud",
+    "glm-5:cloud",
+    "kimi-k2.6:cloud",
+    "ministral-3:14b-cloud",
+    "devstral-2:123b-cloud",
+    "glm-4.6:cloud",
+    "gemini-3-flash-preview:cloud",
+    "gemma4:31b-cloud",
+    "kimi-k2:1t-cloud",
+    "minimax-m2.7:cloud",
+    "ministral-3:3b-cloud",
+    "qwen3-coder:480b-cloud",
+    "nemotron-3-super:cloud",
+    "gpt-oss:20b-cloud",
+    "qwen3.5:cloud",
+    "mistral-large-3:675b-cloud",
+    "gpt-oss:120b-cloud",
+    "kimi-k2.5:cloud",
+    "deepseek-v3.2:cloud",
+    "kimi-k2-thinking:cloud",
+    "x/flux2-klein:latest",
+    "qwen3:32b-q4_K_M",
+    "qwen3:14b-q4_K_M",
+    "qwen3:8b-q4_K_M",
+    "qwen2.5:14b-instruct-q4_K_M",
+    "llama3.1:8b-instruct-q4_K_M",
+    "llama3.2:1b-instruct-q4_K_M",
+    "qwen2.5:7b-instruct-q4_K_M",
+    "llama3.2:3b-instruct-q4_K_M",
+    "tinyllama:1.1b-chat-v1-q4_K_M",
+    "all-minilm:latest",
+    "mxbai-embed-large:latest",
+    "qwen3.5:35b-a3b",
+    "qwen3.5:122b-a10b",
+    "llama3.1:70b-instruct-q4_K_M",
+    "ministral-3:14b",
+    "glm-4.7-flash:latest",
+    "qwen2.5vl:7b",
+    "llama3.2:3b",
+    "smollm:135m",
+    "qwen2.5:7b"
+  ],
+  "http://27.123.245.129.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://135.125.219.74.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://178.104.85.109.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "phi3:mini",
+    "deepseek-r1:7b",
+    "qwen2.5-coder:7b",
+    "qwen2.5:7b"
+  ],
+  "http://46.225.154.68.nip.io:11434": [
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud",
+    "nemotron-3-super:cloud",
+    "gemma4:31b-cloud",
+    "publisher-observing-appetite.ngrok-free.dev/attacker/leak_model_0:latest",
+    "deepseek-r1:8b",
+    "nomic-embed-text:latest",
+    "kimi-k2.5:cloud"
+  ],
+  "http://87.106.217.148.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "llama3.2:3b",
+    "x/flux2-klein:latest"
+  ],
+  "http://148.251.14.46.nip.io:11434": [
+    "huihui_ai/qwen3.6-abliterated:27b",
+    "huihui_ai/gemma-4-abliterated:12b",
+    "huihui_ai/gpt-oss-abliterated:latest",
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest"
+  ],
+  "http://88.99.101.247.nip.io:11434": [
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://91.98.138.15.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://168.119.164.92.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "hc_dbusd:latest",
+    "llama3.2:3b",
+    "phi3:mini",
+    "phi3.5:latest",
+    "qwen2.5:3b",
+    "qwen2.5:1.5b",
+    "qwen2.5:7b"
+  ],
+  "http://88.99.67.122.nip.io:11434": [
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud",
+    "minimax-m3:cloud"
+  ],
+  "http://79.76.125.155.nip.io:11434": [
+    "qwen3.5:4b-q4_K_M",
+    "deepseek-v4-pro:cloud",
+    "qwen3:14b"
+  ],
+  "http://178.104.175.204.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://167.86.72.234.nip.io:11434": [
+    "mistral-evo:latest",
+    "codellama-evo:latest",
+    "llamavision-evo:latest",
+    "gemma3-evo:latest",
+    "phi4-evo:latest",
+    "qwen3-evo:latest",
+    "qwen-coder-evo:latest",
+    "deepseek-r1-evo:latest",
+    "qwen3-coder:30b",
+    "qwen2.5-coder:14b",
+    "phi4:latest",
+    "deepseek-r1:14b",
+    "gemma3:12b",
+    "llama3.2-vision:11b",
+    "bge-m3:latest",
+    "mxbai-embed-large:latest",
+    "mistral:7b",
+    "codellama:7b",
+    "all-minilm:latest",
+    "nomic-embed-text:latest",
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud",
+    "evolunys-prime:latest"
+  ],
+  "http://167.235.75.8.nip.io:11434": [
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://49.12.145.53.nip.io:11434": [
+    "huihui_ai/gemma-4-abliterated:26b",
+    "huihui_ai/gpt-oss-abliterated:latest",
+    "huihui_ai/qwen3.5-abliterated:27b",
+    "nomic-embed-text-v2-moe:latest",
+    "huihui_ai/gemma-4-abliterated:12b",
+    "huihui_ai/qwen3.6-abliterated:27b",
+    "nomic-embed-text:latest",
+    "qwen3-embedding:0.6b",
+    "llama3.2:3b",
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://88.99.98.12.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://212.227.21.255.nip.io:11434": [
+    "qwen3.5:9b",
+    "deepseek-v4-pro:cloud",
+    "llama3.2:3b"
+  ],
+  "http://116.202.156.222.nip.io:11434": [
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud",
+    "minimax-m2.7:cloud",
+    "qwen3.6:35b",
+    "qwen3.6:35b-a3b-q4_K_M",
+    "llama3.2:3b",
+    "llama3.1:8b",
+    "llama3.2:latest"
+  ],
+  "http://88.198.7.117.nip.io:11434": [
+    "nomic-embed-text:latest",
+    "nomic-embed-text-v2-moe:latest",
+    "qwen3-embedding:0.6b",
+    "gpt-oss:20b-cloud",
+    "rnj-1:8b-cloud",
+    "ministral-3:3b-cloud",
+    "mistral-large-3:675b-cloud",
+    "gpt-oss:120b-cloud",
+    "ministral-3:8b-cloud",
+    "devstral-2:123b-cloud",
+    "minimax-m3:cloud",
+    "ministral-3:14b-cloud",
+    "kimi-k2-thinking:cloud",
+    "cogito-2.1:671b-cloud",
+    "devstral-small-2:24b-cloud",
+    "glm-5.1:cloud",
+    "qwen3.5:397b-cloud",
+    "glm-5:cloud",
+    "qwen3.5:cloud",
+    "deepseek-v4-flash:cloud",
+    "glm-4.7:cloud",
+    "kimi-k2.5:cloud",
+    "nemotron-3-nano:30b-cloud",
+    "minimax-m2.5:cloud",
+    "qwen3-next:80b-cloud",
+    "deepseek-v3.2:cloud",
+    "kimi-k2:1t-cloud",
+    "minimax-m2:cloud",
+    "qwen3-coder-next:cloud",
+    "deepseek-v4-pro:cloud",
+    "minimax-m2.1:cloud",
+    "nemotron-3-super:cloud",
+    "qwen3-coder:480b-cloud",
+    "deepseek-v3.1:671b-cloud",
+    "gemini-3-flash-preview:cloud",
+    "gemma4:31b-cloud",
+    "kimi-k2.6:cloud",
+    "minimax-m2.7:cloud",
+    "glm-4.6:cloud"
+  ],
+  "http://5.45.101.216.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "llama3.1:latest"
+  ],
+  "http://167.86.80.235.nip.io:11434": [],
+  "http://78.47.201.172.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "llama3.2:latest"
+  ],
+  "http://46.225.60.15.nip.io:11434": [],
+  "http://46.225.67.36.nip.io:11434": [
+    "deepseek-v4-pro:cloud",
+    "x/flux2-klein:latest"
+  ],
+  "http://130.61.46.60.nip.io:11434": [
+    "deepseek-v4-pro:cloud"
+  ],
+  "http://212.56.46.225.nip.io:11434": [
+    "huihui_ai/gemma-4-abliterated:12b",
+    "nomic-embed-text:latest",
+    "huihui_ai/gpt-oss-abliterated:latest",
+    "huihui_ai/qwen3.5-abliterated:27b",
+    "huihui_ai/qwen3.6-abliterated:27b",
+    "qwen3-embedding:0.6b",
+    "huihui_ai/gemma-4-abliterated:26b",
+    "nomic-embed-text-v2-moe:latest",
+    "x/flux2-klein:latest",
+    "deepseek-v4-pro:cloud"
+  ]
+};
 
 // Deduplicate at module load time
-const DEFAULT_SEED_SERVERS = [...new Set(_SEED_LIST)];
+const DEFAULT_SEED_SERVERS = [...new Set(Object.keys(_SEED_LIST))];
 
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 const PROBE_TIMEOUT_MS = 5_000;
 const TTFT_TIMEOUT_MS = 10_000;
-const CACHE_TTL_SECONDS = 86_400; // 1 day — matches Python's daily cache pattern
-const DEFAULT_MODEL = "qwen3:14b";
-const PROBE_BATCH_SIZE = 50; // CF Workers: max ~50 simultaneous outbound connections
-
-// ---------------------------------------------------------------------------
-// KV cache helpers
-// ---------------------------------------------------------------------------
-
-/** Returns the KV key for today's server cache. */
-function todayKey() {
-  return `ollama-swarm:${new Date().toISOString().slice(0, 10)}`;
-}
-
-async function loadCachedServers(env) {
-  if (!env.OLLAMA_CACHE) return null;
-  try {
-    const data = await env.OLLAMA_CACHE.get(todayKey(), "json");
-    if (data && typeof data === "object" && Object.keys(data).length > 0) {
-      return data;
-    }
-  } catch {}
-  return null;
-}
-
-async function saveCachedServers(env, alive) {
-  if (!env.OLLAMA_CACHE) return;
-  try {
-    await env.OLLAMA_CACHE.put(todayKey(), JSON.stringify(alive), {
-      expirationTtl: CACHE_TTL_SECONDS,
-    });
-  } catch {}
-}
+const DEFAULT_MODEL = {
+  "/v1/chat/completions": "deepseek-v4-pro:cloud",
+  "/v1/images/generations": "x/flux2-klein:latest",
+  "/v1/embeddings": "nomic-embed-text:latest"
+};
+const PROBE_BATCH_SIZE = 15; // CF Workers: max ~50 simultaneous outbound connections
 
 // ---------------------------------------------------------------------------
 // Server probing
@@ -283,7 +1133,7 @@ async function probeServer(url) {
     const resp = await fetch(`${url}/api/tags`, {
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
     });
-    if (!resp.ok) return null;
+    if (!resp.ok) return { url, error: resp.status};
     const data = await resp.json();
     const models = (data.models || [])
       .map((m) => m.name || "")
@@ -291,27 +1141,26 @@ async function probeServer(url) {
         (name) =>
           name &&
           !name.includes("/attacker/") &&
-          !name.startsWith("model-b") &&
-          !name.includes("embed")
+          !name.startsWith("model-b")
       );
     if (models.length > 0) return { url, models };
-  } catch {}
-  return null;
+    else return {url, error: data}
+  } catch(e) {
+      return { url, error: e.message};
+  }
 }
 
 /**
  * Run probe on a list of candidates in PROBE_BATCH_SIZE batches,
  * respecting CF Workers' concurrent-connection limit.
  */
-async function probeBatched(candidates) {
+async function probeBatched(candidates, step = 0) {
   const alive = {};
-  for (let i = 0; i < candidates.length; i += PROBE_BATCH_SIZE) {
-    const batch = candidates.slice(i, i + PROBE_BATCH_SIZE);
-    const results = await Promise.allSettled(batch.map(probeServer));
-    for (const r of results) {
-      if (r.status === "fulfilled" && r.value) {
-        alive[r.value.url] = r.value.models;
-      }
+  const batch = candidates.slice(step * PROBE_BATCH_SIZE, (step * PROBE_BATCH_SIZE) + PROBE_BATCH_SIZE);
+  const results = await Promise.allSettled(batch.map(probeServer));
+  for (const r of results) {
+    if (r.status === "fulfilled" && r.value.models) {
+      alive[r.value.url] = r.value.models;
     }
   }
   return alive;
@@ -321,19 +1170,55 @@ async function probeBatched(candidates) {
  * Return alive servers → models map.
  * Uses KV daily cache when available, falls back to live probing.
  */
-let cachedAlive = null; // In-memory cache for the duration of the worker instance
+let cachedAlive = {}; // In-memory cache for the duration of the worker instance
+let cachedStep = 0;
+let workingModels = null;
+function shuffleObject(obj) {
+    const entries = Object.entries(obj);
+    for (let i = entries.length - 1; i > 0; i--) {
+        const j = 
+            Math.floor(Math.random() * (i + 1));
+        [entries[i], entries[j]] = 
+            [entries[j], entries[i]];
+    }
+    return Object.fromEntries(entries);
+}
+function shuffleArray(array) {
+    for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+    return array;
+}
 async function discoverServers(env) {
-  cachedAlive = cachedAlive || await loadCachedServers(env);
-  if (cachedAlive) return cachedAlive;
+  const cacheRequest = new Request(`https://cache.example/servers`, {
+    method: "GET"
+  });
+  if (!cachedStep) {
+    const cachedResponse = await caches.default.match(cacheRequest);
+    if (cachedResponse) {
+      const cachedData = await cachedResponse.json();
+      cachedStep = cachedData.cachedStep;
+      cachedAlive = shuffleObject(cachedData.cachedAlive);
+    }
+  }
+  
+  if (cachedStep * PROBE_BATCH_SIZE >= DEFAULT_SEED_SERVERS.length) return false;
 
-  const alive = await probeBatched(DEFAULT_SEED_SERVERS);
+  const alive = await probeBatched(DEFAULT_SEED_SERVERS, cachedStep);
 
   if (Object.keys(alive).length > 0) {
-    cachedAlive = alive;
-    await saveCachedServers(env, alive);
+    cachedAlive = Object.assign(cachedAlive, alive);
   }
 
-  return alive;
+  const responseToCache = Response.json({cachedAlive, cachedStep})
+  responseToCache.headers.set("Cache-Control", "public, max-age=86400");
+  await caches.default.put(cacheRequest, responseToCache);
+
+  cachedStep += 1;
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -368,10 +1253,10 @@ function buildModelMap(alive) {
  * Throws an object with `{ statusCode, responseText }` for HTTP errors, or a
  * plain Error for timeouts and network failures.
  */
-async function forwardToServer(serverUrl, model, bodyObj) {
+async function forwardToServer(serverUrl, model, bodyObj, pathname) {
   const controller = new AbortController();
 
-  const upResp = await fetch(`${serverUrl}/v1/chat/completions`, {
+  const upResp = await fetch(`${serverUrl}${pathname}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...bodyObj, model }),
@@ -379,11 +1264,7 @@ async function forwardToServer(serverUrl, model, bodyObj) {
   });
 
   if (!upResp.ok) {
-    const responseText = await upResp.text();
-    const err = new Error(`HTTP ${upResp.status}`);
-    err.statusCode = upResp.status;
-    err.responseText = responseText;
-    throw err;
+    return upResp;
   }
 
   // Non-streaming: return the response directly
@@ -457,8 +1338,8 @@ async function forwardToServer(serverUrl, model, bodyObj) {
 // ---------------------------------------------------------------------------
 
 async function handleModels(env) {
-  const alive = await discoverServers(env);
-  const { modelCount } = buildModelMap(alive);
+  const isLoading = await discoverServers(env);
+  const { modelCount } = buildModelMap(cachedAlive);
 
   const ts = Math.floor(Date.now() / 1000);
   const data = Object.entries(modelCount)
@@ -471,10 +1352,28 @@ async function handleModels(env) {
       count: c
     }));
 
-  return Response.json({ object: "list", data });
+  return Response.json({ object: "list", data }, {headers: isLoading ? {"Cache-Control": "no-cache, no-store, must-revalidate"} : {}});
 }
 
-async function handleChatCompletions(request, env) {
+async function handleServers(env, all = false) {
+  const loading = await discoverServers(env);
+  const data = all ? cachedAlive : Object.keys(cachedAlive)
+  return Response.json({
+    data,
+    loading,
+    offset: cachedStep * PROBE_BATCH_SIZE,
+    total: DEFAULT_SEED_SERVERS.length,
+    working: await getWorkingModels()
+  });
+}
+async function getWorkingModels() {
+  const cachedResponse = await caches.default.match(new Request(`https://cache.example/working`));
+  if (cachedResponse) {
+    return await cachedResponse.json();
+  }
+}
+let modelToServersCache = null;
+async function handleChatCompletions(request, env, pathname, ctx) {
   let bodyObj;
   try {
     bodyObj = await request.json();
@@ -485,13 +1384,19 @@ async function handleChatCompletions(request, env) {
     );
   }
 
-  const model = bodyObj.model || DEFAULT_MODEL;
-  const alive = await discoverServers(env);
-  const { modelToServers } = buildModelMap(alive);
-
-  const serverUrls = modelToServers[model];
+  const model = bodyObj.model || DEFAULT_MODEL[pathname];
+  if (!model) {
+    return Response.json(
+      { error: { message: "Missing model name", type: "invalid_request_error" } },
+      { status: 400 }
+    );
+  }
+  const loading = await discoverServers(env);
+  const { modelToServers } = buildModelMap(cachedAlive);
+  
+  const serverUrls = shuffleArray(modelToServers[model]);
   if (!serverUrls || serverUrls.length === 0) {
-    const available = Object.keys(modelToServers).slice(0, 15).join(", ");
+    const available = Object.keys(modelToServersCache).slice(0, 15).join(", ");
     return Response.json(
       {
         error: {
@@ -503,25 +1408,69 @@ async function handleChatCompletions(request, env) {
     );
   }
 
-  let lastError = null;
+  let lastError = "";
+  let errorCount = 0;
+  if (!workingModels) {
+      workingModels = await getWorkingModels();
+  }
+  let workingServers = shuffleArray((workingModels && workingModels[model]) ? workingModels[model] : []);
   for (const serverUrl of serverUrls) {
     try {
-      const resp = await forwardToServer(serverUrl, model, bodyObj);
+      if ((loading || errorCount > 5) && workingServers.length > 0) {
+        for (const workingServer of workingServers) {
+          const resp = await forwardToServer(workingServer, model, bodyObj, pathname);
+          if (!resp.ok) {
+            let message;
+            try {
+              message = (await resp.clone().json()).error?.message;
+            } catch {}
+            lastError = message || await resp.text();
+            errorCount += 1;
+            continue;
+          }
+          return resp;
+        }
+        workingServers = [];
+      }
+      const resp = await forwardToServer(serverUrl, model, bodyObj, pathname);
+      if (!resp.ok) {
+        let message;
+        try {
+          message = (await resp.clone().json()).error?.message;
+        } catch {}
+        throw Object.assign(new Error(message || await resp.text()), { status: resp.status})
+      }
+      if (!workingModels) {
+        workingModels = {};
+      }
+      if (!workingModels[model]) {
+        workingModels[model] = [];
+      }
+      if (!workingModels[model].includes(serverUrl)) {
+        workingModels[model].push(serverUrl);
+        const responseToCache = Response.json(workingModels);
+        responseToCache.headers.set("Cache-Control", "public, max-age=86400");
+        ctx.waitUntil(caches.default.put(new Request(`https://cache.example/working`), responseToCache));
+      }
       return resp;
     } catch (e) {
       // 400 = server alive but model invalid — no point retrying other servers
-      if (e.statusCode === 400) {
+      if (e.status === 400) {
         return Response.json(
           {
             error: {
-              message: e.responseText || "Bad request",
+              message: e.message || "Bad request",
               type: "invalid_request_error",
             },
           },
           { status: 400 }
         );
       }
-      lastError = e;
+      lastError = e.message;
+      errorCount += 1;
+      if (errorCount >= (loading ? 5 : 20)) {
+        break;
+      }
       // Try next server
     }
   }
@@ -529,26 +1478,12 @@ async function handleChatCompletions(request, env) {
   return Response.json(
     {
       error: {
-        message: lastError?.message || "All servers failed",
+        message: `All servers failed (${errorCount}/${serverUrls.length}): ${lastError}`,
         type: "server_error",
       },
     },
     { status: 503 }
   );
-}
-
-/** Force-refresh the server cache (useful for cron warm-up or manual trigger). */
-async function handleRefresh(env) {
-  const alive = await probeBatched(DEFAULT_SEED_SERVERS);
-  if (Object.keys(alive).length > 0) {
-    await saveCachedServers(env, alive);
-  }
-  const { modelCount } = buildModelMap(alive);
-  return Response.json({
-    servers: Object.keys(alive).length,
-    models: Object.keys(modelCount).length,
-    refreshed: new Date().toISOString(),
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -586,7 +1521,7 @@ function withCors(response) {
 
 export default {
   /** HTTP fetch handler */
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
@@ -605,13 +1540,26 @@ export default {
 
     if (pathname.endsWith("/models") && request.method === "GET") {
       response = await handleModels(env);
+    } else if ((pathname === "/servers" || pathname === "/quota") && request.method === "GET") {
+      response = await handleServers(env);
+    } else if (pathname === "/servers/all" && request.method === "GET") {
+      response = await handleServers(env, true);
     } else if (
-      pathname.endsWith("/chat/completions") &&
+      (pathname.endsWith("/chat/completions") || pathname === "/") &&
       request.method === "POST"
     ) {
-      response = await handleChatCompletions(request, env);
-    } else if (pathname === "/refresh" && request.method === "POST") {
-      response = await handleRefresh(env);
+      response = await handleChatCompletions(request, env, '/v1/chat/completions', ctx);
+    } else if (
+      pathname.endsWith("/images/generations") &&
+      request.method === "POST"
+    ) {
+      response = await handleChatCompletions(request, env, '/v1/images/generations', ctx);
+      ///v1/embeddings
+    }  else if (
+      pathname.endsWith("/embeddings") &&
+      request.method === "POST"
+    ) {
+      response = await handleChatCompletions(request, env, '/v1/embeddings', ctx);
     } else if (pathname === "/" || pathname === "/health") {
       response = Response.json({ status: "ok", service: "ollama-swarm" });
     } else {
@@ -619,10 +1567,5 @@ export default {
     }
 
     return withCors(response);
-  },
-
-  /** Cron trigger — warms the KV cache once per day */
-  async scheduled(_event, env) {
-    await handleRefresh(env);
-  },
+  }
 };
