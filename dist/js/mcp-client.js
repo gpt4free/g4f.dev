@@ -143,25 +143,52 @@ class MCPClient {
     async fetchTools(serverUrl) {
         try {
             // JSON-RPC request to list tools
-            const response = await fetch(serverUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
+            const accept = this._getDefaultAcceptHeader();
+            const response = await this._fetchWithAccept(
+                serverUrl,
+                {
                     jsonrpc: '2.0',
                     method: 'tools/list',
                     params: {},
                     id: Date.now()
-                })
-            });
+                },
+                accept
+            );
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch tools: ${response.status}`);
             }
 
-            const data = await response.json();
+            // Some servers may return SSE (text/event-stream) instead of JSON.
+            // Prevent JSON.parse() crashes by collecting the stream and
+            // extracting the last JSON payload from `data:` lines.
+            const contentType = response.headers.get('content-type') || '';
+            const isEventStream = contentType.includes('text/event-stream');
+
+            let data;
+            if (isEventStream && response.body) {
+                const reader = response.body.getReader();
+                let chunks = '';
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    chunks += new TextDecoder().decode(value, { stream: true });
+                }
+
+                try {
+                    data = JSON.parse(chunks);
+                } catch {
+                    const lines = chunks.split(/\r?\n/);
+                    const dataLines = lines
+                        .filter(l => l.trim().startsWith('data:'))
+                        .map(l => l.replace(/^\s*data:\s?/, '').trim())
+                        .filter(Boolean);
+                    const last = dataLines[dataLines.length - 1];
+                    data = last ? JSON.parse(last) : { result: { tools: [] } };
+                }
+            } else {
+                data = await response.json();
+            }
             
             // Handle JSON-RPC response
             if (data.error) {
@@ -304,7 +331,7 @@ class MCPClient {
             );
 
             const contentType = response.headers.get('content-type') || '';
-            const isEventStream = contentType.includes('text/event-stream') || accept.includes('text/event-stream');
+            const isEventStream = contentType.includes('text/event-stream');
 
             // If server returns SSE, collect the full stream into a single string.
             // (If you want true incremental streaming into the UI, we need to
@@ -318,11 +345,18 @@ class MCPClient {
                     if (done) break;
                     chunks += new TextDecoder().decode(value, { stream: true });
                 }
-                // Try to parse as JSON-RPC if possible, otherwise keep raw SSE.
+                // Try to parse as JSON-RPC if possible.
+                // If it’s SSE, extract the last JSON payload from `data:` lines.
                 try {
                     data = JSON.parse(chunks);
                 } catch {
-                    data = { result: { content: chunks } };
+                    const lines = chunks.split(/\r?\n/);
+                    const dataLines = lines
+                        .filter(l => l.trim().startsWith('data:'))
+                        .map(l => l.replace(/^\s*data:\s?/, '').trim())
+                        .filter(Boolean);
+                    const last = dataLines[dataLines.length - 1];
+                    data = last ? JSON.parse(last) : { result: { content: chunks } };
                 }
             } else {
                 data = await response.json();
