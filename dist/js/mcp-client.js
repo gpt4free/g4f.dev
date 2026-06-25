@@ -11,6 +11,36 @@ class MCPClient {
     }
 
     /**
+     * Default headers for tool execution
+     */
+    _getDefaultAcceptHeader() {
+        return 'application/json, text/event-stream';
+    }
+
+    /**
+     * SSE/stream fetch helper.
+     * Uses a different Accept header when communicating with servers that stream
+     * (e.g. text/event-stream). If the server does not actually stream, it will
+     * likely still return JSON.
+     */
+    async _fetchWithAccept(serverUrl, jsonRpcBody, acceptHeader) {
+        const response = await fetch(serverUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': acceptHeader
+            },
+            body: JSON.stringify(jsonRpcBody)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Request failed: ${response.status}`);
+        }
+
+        return response;
+    }
+
+    /**
      * Load MCP servers from localStorage
      */
     loadServers() {
@@ -182,6 +212,9 @@ class MCPClient {
                     serverId: server.id,
                     serverName: server.name,
                     serverUrl: server.url,
+                    // Optional per-server Accept header for streaming tool execution.
+                    // If absent, we fall back to application/json.
+                    serverSseAcceptHeader: server.serverSseAcceptHeader,
                     toolId: `${server.id}:${tool.name}`
                 });
             }
@@ -255,13 +288,10 @@ class MCPClient {
 
         try {
             // JSON-RPC request to execute tool
-            const response = await fetch(tool.serverUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
+            const accept = tool.serverSseAcceptHeader || this._getDefaultAcceptHeader();
+            const response = await this._fetchWithAccept(
+                tool.serverUrl,
+                {
                     jsonrpc: '2.0',
                     method: 'tools/call',
                     params: {
@@ -269,14 +299,34 @@ class MCPClient {
                         arguments: args
                     },
                     id: Date.now()
-                })
-            });
+                },
+                accept
+            );
 
-            if (!response.ok) {
-                throw new Error(`Tool execution failed: ${response.status}`);
+            const contentType = response.headers.get('content-type') || '';
+            const isEventStream = contentType.includes('text/event-stream') || accept.includes('text/event-stream');
+
+            // If server returns SSE, collect the full stream into a single string.
+            // (If you want true incremental streaming into the UI, we need to
+            // wire the consumer to read from response.body.)
+            let data;
+            if (isEventStream && response.body) {
+                const reader = response.body.getReader();
+                let chunks = '';
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    chunks += new TextDecoder().decode(value, { stream: true });
+                }
+                // Try to parse as JSON-RPC if possible, otherwise keep raw SSE.
+                try {
+                    data = JSON.parse(chunks);
+                } catch {
+                    data = { result: { content: chunks } };
+                }
+            } else {
+                data = await response.json();
             }
-
-            const data = await response.json();
             
             // Handle JSON-RPC response
             if (data.error) {
