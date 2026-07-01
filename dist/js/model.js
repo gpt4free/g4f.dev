@@ -105,7 +105,6 @@ function convertModel(inputModel, options = {}) {
     if (model.multiplier === 1) {
         model.free = true;
     }
-    console.log(model)
     model.tags = getModelTags(model);
     const count = model.count || model.requests || 0;
     model.label = model.label + (count > 1 ? ` (${count}+)` : "") + (model.tags ? ` ${model.tags}` : "");

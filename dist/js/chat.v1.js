@@ -2037,7 +2037,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                         hasModel = true;
                         if (client.id) {
                             provider = client.id;
-                        } else if (chunk.server && chunk.provider) {
+                        }
+                        if (chunk.server && chunk.provider) {
                             provider = `custom:${chunk.server}`;
                             providerLabel = chunk.provider;
                         } else if (chunk.provider) {

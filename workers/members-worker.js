@@ -14,6 +14,7 @@
  * - AIRFORCE_CLIENT_ID: Airforce OAuth Client ID
  * - AIRFORCE_CLIENT_SECRET: Airforce OAuth Client Secret
  * - JWT_SECRET: Secret for signing JWT tokens
+ * - SELF_OAUTH_CLIENTS: JSON string mapping client_id -> { secret, redirect_uris[], name } for self-hosted OAuth server
  * - MEMBERS_BUCKET: R2 bucket binding for user data
  * - MEMBERS_KV: KV namespace binding for caching
  * - API_KEY_SALT: Salt for generating API keys
@@ -506,7 +507,24 @@ async function calculateUserTier(userData, contributors, sponsors) {
             if (pathname === "/members/auth/pollinations" || pathname === "/members/oauth/pollinations") {
                 return handlePollinationsAuth(request, env, url);
             }
-  
+
+            // Self-hosted OAuth server endpoints
+            if (pathname === "/members/oauth/authorize") {
+                return handleSelfOAuthAuthorize(request, env, url);
+            }
+            if (pathname === "/members/oauth/authorize/callback") {
+                return handleSelfOAuthAuthorizeCallback(request, env, url);
+            }
+            if (pathname === "/members/oauth/token") {
+                return handleSelfOAuthToken(request, env, url);
+            }
+            if (pathname === "/members/oauth/revoke") {
+                return handleSelfOAuthRevoke(request, env);
+            }
+            if (pathname === "/members/oauth/userinfo") {
+                return handleSelfOAuthUserInfo(request, env);
+            }
+
             // User management endpoints
             if (pathname === "/members/api/user") {
                 return handleGetUser(request, env);
@@ -1239,6 +1257,503 @@ async function calculateUserTier(userData, contributors, sponsors) {
       });
   }
   
+  // ============================================
+  // Self-hosted OAuth Server
+  // ============================================
+
+  /**
+   * GET /members/oauth/authorize
+   *
+   * Standard OAuth 2.0 authorization endpoint. Third-party clients redirect
+   * users here to log in with their g4f.dev account.
+   *
+   * Required query params:
+   *   response_type=code
+   *   client_id=<registered_client_id>
+   *   redirect_uri=<pre-registered redirect URI>
+   *
+   * Optional:
+   *   state=<opaque string echoed back>
+   *   scope=<space-separated scopes, currently ignored>
+   *   code_challenge + code_challenge_method=S256  (PKCE)
+   *
+   * Flow:
+   *  - If the user already has a valid g4f_session cookie, immediately issue
+   *    a code and redirect back.
+   *  - Otherwise, render a minimal login-chooser page that lets the user pick
+   *    a provider (GitHub / Discord / HuggingFace / Airforce).  Each link
+   *    kicks off the corresponding provider flow with an extra "oauth_state"
+   *    param that ties it back to this authorization request.
+   */
+  async function handleSelfOAuthAuthorize(request, env, url) {
+      const responseType = url.searchParams.get("response_type");
+      const clientId = url.searchParams.get("client_id");
+      const redirectUri = url.searchParams.get("redirect_uri");
+      const state = url.searchParams.get("state") || "";
+      const codeChallenge = url.searchParams.get("code_challenge") || null;
+      const codeChallengeMethod = url.searchParams.get("code_challenge_method") || null;
+
+      // Validate required parameters
+      if (responseType !== "code") {
+          return jsonResponse({ error: "unsupported_response_type" }, 400);
+      }
+      if (!clientId) {
+          return jsonResponse({ error: "invalid_request", error_description: "client_id is required" }, 400);
+      }
+      if (!redirectUri) {
+          return jsonResponse({ error: "invalid_request", error_description: "redirect_uri is required" }, 400);
+      }
+
+      // Look up registered client
+      const client = await getSelfOAuthClient(env, clientId);
+      if (!client) {
+          return jsonResponse({ error: "invalid_client", error_description: "Unknown client_id" }, 401);
+      }
+
+      // Validate redirect_uri
+      if (!client.redirect_uris.includes(redirectUri)) {
+          return jsonResponse({ error: "invalid_request", error_description: "redirect_uri mismatch" }, 400);
+      }
+
+      // Pending authorization context stored in KV
+      const authRequestId = generateState();
+      const authRequest = { clientId, redirectUri, state, codeChallenge, codeChallengeMethod };
+      await env.MEMBERS_KV.put(
+          `self_oauth_req:${authRequestId}`,
+          JSON.stringify(authRequest),
+          { expirationTtl: 600 } // 10 minutes
+      );
+
+      // If the user already has a session, skip the login page
+      const user = await authenticateRequest(request, env);
+      if (user) {
+          return issueSelfOAuthCode(env, authRequestId, authRequest, user);
+      }
+
+      // Render a login-chooser page
+      const base = `${url.origin}/members`;
+      const callbackUrl = `${url.origin}/members/oauth/authorize/callback?self_oauth_req=${authRequestId}`;
+      const q = `?redirect=${encodeURIComponent(callbackUrl)}`;
+
+      const clientName = escapeHtml(client.name || clientId);
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in to ${clientName} — G4F</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+      color: #c9d1d9;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 40px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      text-align: center;
+    }
+    h1 { font-size: 1.3rem; color: #f0f6fc; margin-bottom: 8px; }
+    .sub { font-size: 0.85rem; color: #8b949e; margin-bottom: 28px; }
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      color: #fff;
+      margin-bottom: 12px;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn.github { background: #238636; }
+    .btn.discord { background: #5865f2; }
+    .btn.huggingface { background: #ff9d00; color: #000; }
+    .btn.airforce { background: #0a84ff; }
+    .divider { margin: 8px 0 20px; font-size: 0.75rem; color: #484f58; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Sign in to G4F</h1>
+    <p class="sub">to continue to <strong>${clientName}</strong></p>
+    <a class="btn github" href="${base}/auth/github${q}">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      Continue with GitHub
+    </a>
+    <a class="btn discord" href="${base}/auth/discord${q}">
+      <svg width="18" height="18" viewBox="0 0 127.14 96.36" fill="currentColor"><path d="M107.7 8.07A105.15 105.15 0 0081.47 0a72.06 72.06 0 00-3.36 6.83 97.68 97.68 0 00-29.11 0A72.37 72.37 0 0045.64 0a105.89 105.89 0 00-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21a105.73 105.73 0 0032.17 16.15 77.7 77.7 0 006.89-11.11 68.42 68.42 0 01-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0064.32 0c.87.71 1.76 1.39 2.66 2a68.68 68.68 0 01-10.87 5.19 77 77 0 006.89 11.1 105.25 105.25 0 0032.19-16.14c2.64-27.38-4.51-51.11-18.9-72.15zM42.45 65.69C36.18 65.69 31 60 31 53s5-12.74 11.43-12.74S54 46 53.89 53s-5.05 12.69-11.44 12.69zm42.24 0C78.41 65.69 73.25 60 73.25 53s5-12.74 11.44-12.74S96.23 46 96.12 53s-5.04 12.69-11.43 12.69z"/></svg>
+      Continue with Discord
+    </a>
+    <a class="btn huggingface" href="${base}/auth/huggingface${q}">
+      🤗 Continue with HuggingFace
+    </a>
+    <a class="btn airforce" href="${base}/auth/airforce${q}">
+      ✈️ Continue with Airforce
+    </a>
+    <div class="divider">By signing in you agree to G4F's terms of service</div>
+  </div>
+</body>
+</html>`;
+
+      return new Response(html, {
+          status: 200,
+          headers: { "Content-Type": "text/html; charset=utf-8", ...CORS_HEADERS }
+      });
+  }
+
+  /**
+   * GET /members/oauth/authorize/callback
+   *
+   * Internal redirect target used by the login-chooser page above.
+   * After a provider's callback sets the g4f_session cookie and redirects here,
+   * we authenticate the now-logged-in user and complete the authorization flow.
+   */
+  async function handleSelfOAuthAuthorizeCallback(request, env, url) {
+      const authRequestId = url.searchParams.get("self_oauth_req");
+      if (!authRequestId) {
+          return jsonResponse({ error: "invalid_request", error_description: "Missing self_oauth_req" }, 400);
+      }
+
+      const authRequestRaw = await env.MEMBERS_KV.get(`self_oauth_req:${authRequestId}`);
+      if (!authRequestRaw) {
+          return jsonResponse({ error: "invalid_request", error_description: "Authorization request expired or not found" }, 400);
+      }
+
+      const authRequest = JSON.parse(authRequestRaw);
+
+      const user = await authenticateRequest(request, env);
+      if (!user) {
+          // Not yet authenticated — redirect back to the authorize page
+          const authorizeUrl = new URL(`${url.origin}/members/oauth/authorize`);
+          authorizeUrl.searchParams.set("response_type", "code");
+          authorizeUrl.searchParams.set("client_id", authRequest.clientId);
+          authorizeUrl.searchParams.set("redirect_uri", authRequest.redirectUri);
+          if (authRequest.state) authorizeUrl.searchParams.set("state", authRequest.state);
+          if (authRequest.codeChallenge) {
+              authorizeUrl.searchParams.set("code_challenge", authRequest.codeChallenge);
+              authorizeUrl.searchParams.set("code_challenge_method", authRequest.codeChallengeMethod);
+          }
+          return Response.redirect(authorizeUrl.toString(), 302);
+      }
+
+      return issueSelfOAuthCode(env, authRequestId, authRequest, user);
+  }
+
+  /**
+   * Issue an authorization code and redirect back to the client's redirect_uri.
+   */
+  async function issueSelfOAuthCode(env, authRequestId, authRequest, user) {
+      const code = generateState(); // cryptographically random 64-char hex string
+      const codeData = {
+          userId: user.id,
+          clientId: authRequest.clientId,
+          redirectUri: authRequest.redirectUri,
+          codeChallenge: authRequest.codeChallenge || null,
+          codeChallengeMethod: authRequest.codeChallengeMethod || null,
+          issuedAt: Date.now()
+      };
+
+      await env.MEMBERS_KV.put(
+          `self_oauth_code:${code}`,
+          JSON.stringify(codeData),
+          { expirationTtl: 120 } // 2 minutes — code must be exchanged quickly
+      );
+
+      // Clean up the pending authorization request
+      await env.MEMBERS_KV.delete(`self_oauth_req:${authRequestId}`);
+
+      const redirect = new URL(authRequest.redirectUri);
+      redirect.searchParams.set("code", code);
+      if (authRequest.state) redirect.searchParams.set("state", authRequest.state);
+
+      return Response.redirect(redirect.toString(), 302);
+  }
+
+  /**
+   * POST /members/oauth/token
+   *
+   * Standard OAuth 2.0 token endpoint. Supports:
+   *   grant_type=authorization_code  — exchange a code for an access token
+   *   grant_type=refresh_token       — not supported (stateless sessions)
+   *   grant_type=client_credentials  — issue a token for the client itself
+   *
+   * Returns a JSON body compatible with RFC 6749 §5.1:
+   *   { access_token, token_type, expires_in, scope }
+   *
+   * The issued access_token is a g4f session token that can be used in
+   *   Authorization: Bearer <access_token>
+   * on all other /members/api/* endpoints.
+   */
+  async function handleSelfOAuthToken(request, env, url) {
+      if (request.method !== "POST") {
+          return jsonResponse({ error: "method_not_allowed" }, 405);
+      }
+
+      // Parse body — accept both application/json and application/x-www-form-urlencoded
+      let params = {};
+      const contentType = request.headers.get("Content-Type") || "";
+      try {
+          if (contentType.includes("application/json")) {
+              params = await request.json();
+          } else {
+              const form = await request.formData();
+              for (const [k, v] of form.entries()) params[k] = v;
+          }
+      } catch {
+          return jsonResponse({ error: "invalid_request", error_description: "Could not parse request body" }, 400);
+      }
+
+      const grantType = params.grant_type;
+      const clientId = params.client_id;
+      const clientSecret = params.client_secret;
+
+      if (!clientId || !clientSecret) {
+          return jsonResponse({ error: "invalid_client", error_description: "client_id and client_secret are required" }, 401);
+      }
+
+      const client = await getSelfOAuthClient(env, clientId);
+      if (!client || client.secret !== clientSecret) {
+          return jsonResponse({ error: "invalid_client", error_description: "Invalid client credentials" }, 401);
+      }
+
+      // ── authorization_code grant ───────────────────────────────────────────
+      if (grantType === "authorization_code") {
+          const code = params.code;
+          const redirectUri = params.redirect_uri;
+          const codeVerifier = params.code_verifier || null;
+
+          if (!code || !redirectUri) {
+              return jsonResponse({ error: "invalid_request", error_description: "code and redirect_uri are required" }, 400);
+          }
+
+          const codeDataRaw = await env.MEMBERS_KV.get(`self_oauth_code:${code}`);
+          if (!codeDataRaw) {
+              return jsonResponse({ error: "invalid_grant", error_description: "Authorization code expired or not found" }, 400);
+          }
+
+          const codeData = JSON.parse(codeDataRaw);
+
+          // Verify binding claims
+          if (codeData.clientId !== clientId) {
+              return jsonResponse({ error: "invalid_grant", error_description: "code was issued to a different client" }, 400);
+          }
+          if (codeData.redirectUri !== redirectUri) {
+              return jsonResponse({ error: "invalid_grant", error_description: "redirect_uri mismatch" }, 400);
+          }
+
+          // PKCE verification
+          if (codeData.codeChallenge) {
+              if (!codeVerifier) {
+                  return jsonResponse({ error: "invalid_grant", error_description: "code_verifier required" }, 400);
+              }
+              const expectedChallenge = await generateCodeChallenge(codeVerifier);
+              if (expectedChallenge !== codeData.codeChallenge) {
+                  return jsonResponse({ error: "invalid_grant", error_description: "code_verifier mismatch" }, 400);
+              }
+          }
+
+          // Codes are single-use
+          await env.MEMBERS_KV.delete(`self_oauth_code:${code}`);
+
+          const user = await getUser(env, codeData.userId);
+          if (!user) {
+              return jsonResponse({ error: "invalid_grant", error_description: "User not found" }, 400);
+          }
+
+          const { sessionToken, expires } = await createSession(env, user.id);
+
+          return jsonResponse({
+              access_token: sessionToken,
+              token_type: "bearer",
+              expires_in: expires - Math.floor(Date.now() / 1000),
+              scope: "profile",
+              user: getSafeUser(user)
+          });
+      }
+
+      // ── client_credentials grant ───────────────────────────────────────────
+      if (grantType === "client_credentials") {
+          // Issue a session for the g4f user linked to this client, if configured
+          if (!client.user_id) {
+              return jsonResponse({ error: "unauthorized_client", error_description: "No user linked to this client" }, 400);
+          }
+
+          const user = await getUser(env, client.user_id);
+          if (!user) {
+              return jsonResponse({ error: "invalid_client", error_description: "Linked user not found" }, 400);
+          }
+
+          const { sessionToken, expires } = await createSession(env, user.id);
+
+          return jsonResponse({
+              access_token: sessionToken,
+              token_type: "bearer",
+              expires_in: expires - Math.floor(Date.now() / 1000),
+              scope: "profile"
+          });
+      }
+
+      return jsonResponse({ error: "unsupported_grant_type" }, 400);
+  }
+
+  /**
+   * Look up a registered OAuth client from the SELF_OAUTH_CLIENTS env var.
+   *
+   * SELF_OAUTH_CLIENTS should be a JSON object:
+   * {
+   *   "<client_id>": {
+   *     "secret": "<client_secret>",
+   *     "redirect_uris": ["https://example.com/callback"],
+   *     "name": "My App",
+   *     "user_id": "<optional g4f user id for client_credentials>"
+   *   }
+   * }
+   */
+  async function getSelfOAuthClient(env, clientId) {
+      try {
+          if (!env.SELF_OAUTH_CLIENTS) return null;
+          const clients = JSON.parse(env.SELF_OAUTH_CLIENTS);
+          return clients[clientId] || null;
+      } catch {
+          return null;
+      }
+  }
+
+  /**
+   * POST /members/oauth/revoke  (RFC 7009)
+   *
+   * Revokes an active access token (session token).  The client must
+   * authenticate itself with client_id + client_secret.  Revoking an
+   * already-expired or unknown token returns 200 per the RFC.
+   *
+   * Body (form-encoded or JSON):
+   *   token          — the access_token to revoke
+   *   token_type_hint — optional, "access_token" assumed
+   *   client_id
+   *   client_secret
+   */
+  async function handleSelfOAuthRevoke(request, env) {
+      if (request.method !== "POST") {
+          return jsonResponse({ error: "method_not_allowed" }, 405);
+      }
+
+      let params = {};
+      const contentType = request.headers.get("Content-Type") || "";
+      try {
+          if (contentType.includes("application/json")) {
+              params = await request.json();
+          } else {
+              const form = await request.formData();
+              for (const [k, v] of form.entries()) params[k] = v;
+          }
+      } catch {
+          return jsonResponse({ error: "invalid_request", error_description: "Could not parse request body" }, 400);
+      }
+
+      const clientId = params.client_id;
+      const clientSecret = params.client_secret;
+
+      if (!clientId || !clientSecret) {
+          return jsonResponse({ error: "invalid_client", error_description: "client_id and client_secret are required" }, 401);
+      }
+
+      const client = await getSelfOAuthClient(env, clientId);
+      if (!client || client.secret !== clientSecret) {
+          return jsonResponse({ error: "invalid_client", error_description: "Invalid client credentials" }, 401);
+      }
+
+      const token = params.token;
+      if (token) {
+          // Delete the session — per RFC 7009 §2.2 we always return 200
+          await env.MEMBERS_KV.delete(`session:${token}`);
+      }
+
+      return new Response(null, { status: 200, headers: CORS_HEADERS });
+  }
+
+  /**
+   * GET /members/oauth/userinfo  (OpenID Connect §5.3 / OAuth 2.0)
+   *
+   * Returns claims about the authenticated user.  Accepts the access token
+   * either as a Bearer token in the Authorization header or as a query/body
+   * parameter named `access_token`.
+   *
+   * Response fields follow the OIDC standard claims naming:
+   *   sub, name, email, picture, preferred_username, profile
+   */
+  async function handleSelfOAuthUserInfo(request, env) {
+      // Extract token from Authorization header or query param
+      let token = request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
+      if (!token) {
+          const reqUrl = new URL(request.url);
+          token = reqUrl.searchParams.get("access_token") || null;
+      }
+      if (!token && request.method === "POST") {
+          try {
+              const ct = request.headers.get("Content-Type") || "";
+              if (ct.includes("application/json")) {
+                  const body = await request.json();
+                  token = body.access_token || null;
+              } else {
+                  const form = await request.formData();
+                  token = form.get("access_token") || null;
+              }
+          } catch { /* ignore */ }
+      }
+
+      if (!token) {
+          return jsonResponse({ error: "invalid_token", error_description: "Missing access token" }, 401);
+      }
+
+      // Validate the session
+      const sessionData = await env.MEMBERS_KV.get(`session:${token}`);
+      if (!sessionData) {
+          return jsonResponse({ error: "invalid_token", error_description: "Token not found or expired" }, 401);
+      }
+
+      const session = JSON.parse(sessionData);
+      if (new Date(session.expires_at) <= new Date()) {
+          return jsonResponse({ error: "invalid_token", error_description: "Token expired" }, 401);
+      }
+
+      const user = await getUser(env, session.user_id);
+      if (!user) {
+          return jsonResponse({ error: "invalid_token", error_description: "User not found" }, 401);
+      }
+
+      return jsonResponse({
+          sub: user.id,
+          name: user.name || user.username,
+          preferred_username: user.username,
+          email: user.email || null,
+          picture: user.avatar || null,
+          profile: `https://g4f.dev/members.html`,
+          provider: user.provider,
+          tier: user.tier
+      });
+  }
+
+  /** Escape HTML special chars for safe insertion into templates */
+  function escapeHtml(str) {
+      return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+  }
+
   // ============================================
   // User Management
   // ============================================
