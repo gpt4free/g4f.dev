@@ -643,7 +643,6 @@ async function calculateUserTier(userData, contributors, sponsors) {
             let errorCount = 0;
             
             while (listResult && Array.isArray(listResult.objects)) {
-                console.log(listResult.objects.length)
                 for (const object of listResult.objects) {
                     try {
                         // Skip non-JSON files
@@ -1571,10 +1570,10 @@ async function calculateUserTier(userData, contributors, sponsors) {
               return jsonResponse({ error: "invalid_grant", error_description: "User not found" }, 400);
           }
 
-          const { sessionToken, expires } = await createSession(env, user.id);
+          const { apiKey, expires } = await createTempLoginKey(env, user);
 
           return jsonResponse({
-              access_token: sessionToken,
+              access_token: apiKey,
               token_type: "bearer",
               expires_in: expires - Math.floor(Date.now() / 1000),
               scope: "profile",
@@ -1584,7 +1583,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
 
       // ── client_credentials grant ───────────────────────────────────────────
       if (grantType === "client_credentials") {
-          // Issue a session for the g4f user linked to this client, if configured
+          // Issue a temp key for the g4f user linked to this client, if configured
           if (!client.user_id) {
               return jsonResponse({ error: "unauthorized_client", error_description: "No user linked to this client" }, 400);
           }
@@ -1594,10 +1593,10 @@ async function calculateUserTier(userData, contributors, sponsors) {
               return jsonResponse({ error: "invalid_client", error_description: "Linked user not found" }, 400);
           }
 
-          const { sessionToken, expires } = await createSession(env, user.id);
+          const { apiKey, expires } = await createTempLoginKey(env, user);
 
           return jsonResponse({
-              access_token: sessionToken,
+              access_token: apiKey,
               token_type: "bearer",
               expires_in: expires - Math.floor(Date.now() / 1000),
               scope: "profile"
@@ -1605,6 +1604,90 @@ async function calculateUserTier(userData, contributors, sponsors) {
       }
 
       return jsonResponse({ error: "unsupported_grant_type" }, 400);
+  }
+
+  /**
+   * Create a Temporary Login Key (an API key with is_temporary: true) for a
+   * user and persist it in KV + the user record.  Used by the self-hosted
+   * OAuth token endpoint as the access_token issued to clients.
+   *
+   * @returns {Promise<{apiKey: string, expires: number}>} the raw API key
+   *   string (to return as access_token) and the expiry as a unix timestamp.
+   */
+  async function createTempLoginKey(env, user) {
+      const apiKey = await generateApiKey(env, user.id);
+      const keyHash = await hashApiKey(apiKey);
+      const keyPrefix = apiKey.substring(0, 8);
+      const expirationTtl = 7 * 24 * 60 * 60;
+      const expires = Date.now() + expirationTtl;
+
+      const keyData = {
+          id: generateKeyId(),
+          name: "Temporary Login Key",
+          key_hash: keyHash,
+          prefix: keyPrefix,
+          user_id: user.id,
+          created_at: new Date().toISOString(),
+          last_used: null,
+          is_temporary: true,
+          expires_at: new Date(expires).toISOString(),
+          usage: { requests: 0, tokens: 0 }
+      };
+
+      // Store API key mapping in KV for fast lookup (24h TTL)
+      await env.MEMBERS_KV.put(
+          `api_key:${keyHash}`,
+          JSON.stringify({
+              user_id: user.id,
+              key_id: keyData.id,
+              tier: user.tier,
+              is_temporary: true,
+              expires_at: keyData.expires_at,
+              expires: Math.floor(expires / 1000)
+          }),
+          { expirationTtl }
+      );
+
+      // Add to user's API keys
+      user.api_keys = user.api_keys || [];
+      user.api_keys.push(keyData);
+      user.updated_at = new Date().toISOString();
+      await saveUser(env, user);
+
+      return { apiKey, expires: Math.floor(expires / 1000) };
+  }
+
+  /**
+   * Resolve a bearer access_token to a user by treating it as a Temporary
+   * Login Key (API key).  Returns null if the key is missing, expired, or
+   * not marked temporary.
+   */
+  async function resolveTempLoginKey(env, token) {
+      if (!token || !token.startsWith("g4f_")) return null;
+
+      const keyHash = await hashApiKey(token);
+      const keyDataStr = await env.MEMBERS_KV.get(`api_key:${keyHash}`);
+      if (!keyDataStr) return null;
+
+      let keyInfo;
+      try {
+          keyInfo = JSON.parse(keyDataStr);
+      } catch {
+          return null;
+      }
+
+      // Only temporary login keys are valid as OAuth access tokens
+      if (!keyInfo.is_temporary) return null;
+
+      // Check expiry
+      if (keyInfo.expires_at && new Date(keyInfo.expires_at) <= new Date()) {
+          return null;
+      }
+
+      const user = await getUser(env, keyInfo.user_id);
+      if (!user) return null;
+
+      return { user, keyHash, keyId: keyInfo.key_id };
   }
 
   /**
@@ -1675,8 +1758,19 @@ async function calculateUserTier(userData, contributors, sponsors) {
 
       const token = params.token;
       if (token) {
-          // Delete the session — per RFC 7009 §2.2 we always return 200
-          await env.MEMBERS_KV.delete(`session:${token}`);
+          // Resolve as a temp login key and revoke it — per RFC 7009 §2.2 always return 200
+          const resolved = await resolveTempLoginKey(env, token);
+          if (resolved) {
+              await env.MEMBERS_KV.delete(`api_key:${resolved.keyHash}`);
+              // Remove from user's api_keys list
+              const user = resolved.user;
+              const keyIndex = (user.api_keys || []).findIndex(k => k.id === resolved.keyId);
+              if (keyIndex !== -1) {
+                  user.api_keys.splice(keyIndex, 1);
+                  user.updated_at = new Date().toISOString();
+                  await saveUser(env, user);
+              }
+          }
       }
 
       return new Response(null, { status: 200, headers: CORS_HEADERS });
@@ -1716,21 +1810,13 @@ async function calculateUserTier(userData, contributors, sponsors) {
           return jsonResponse({ error: "invalid_token", error_description: "Missing access token" }, 401);
       }
 
-      // Validate the session
-      const sessionData = await env.MEMBERS_KV.get(`session:${token}`);
-      if (!sessionData) {
-          return jsonResponse({ error: "invalid_token", error_description: "Token not found or expired" }, 401);
+      // Validate as a temporary login key (issued by the OAuth token endpoint)
+      const resolved = await resolveTempLoginKey(env, token);
+      if (!resolved) {
+          return jsonResponse({ error: "invalid_token", error_description: "Token not found, expired, or not a valid OAuth token" }, 401);
       }
 
-      const session = JSON.parse(sessionData);
-      if (new Date(session.expires_at) <= new Date()) {
-          return jsonResponse({ error: "invalid_token", error_description: "Token expired" }, 401);
-      }
-
-      const user = await getUser(env, session.user_id);
-      if (!user) {
-          return jsonResponse({ error: "invalid_token", error_description: "User not found" }, 401);
-      }
+      const user = resolved.user;
 
       return jsonResponse({
           sub: user.id,
