@@ -1,6 +1,6 @@
 ## GPT4Free Documentation 
 
-
+<img width="1536" height="1024" alt="1000066426" src="https://github.com/user-attachments/assets/55c52184-1998-403b-aae1-afe02fb2e3e8" />
 
 Welcome to the official docs for **GPT4Free** – free and convenient AI endpoints you can use directly in your apps, scripts, and even right in your browser.
 Here you’ll find a clear overview, quick examples, and entry points to deeper docs for every major feature.
