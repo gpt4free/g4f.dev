@@ -898,6 +898,124 @@
             margin-bottom: 1rem;
             opacity: 0.5;
         }
+
+        /* API Keys Management */
+        .api-keys-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .api-key-item {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.2s;
+        }
+
+        .api-key-item:hover {
+            background: rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .api-key-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .api-key-name {
+            font-weight: 600;
+            margin-bottom: 0.2rem;
+        }
+
+        .api-key-masked {
+            font-family: 'Courier New', monospace;
+            font-size: 0.82rem;
+            color: rgba(255, 255, 255, 0.55);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .api-key-meta {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.38);
+            margin-top: 0.25rem;
+        }
+
+        .api-key-item-actions {
+            display: flex;
+            gap: 0.4rem;
+            flex-shrink: 0;
+        }
+
+        .api-key-item-actions button {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: var(--light);
+            padding: 0.45rem 0.6rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 0.85rem;
+        }
+
+        .api-key-item-actions button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .api-key-item-actions button.delete:hover {
+            background: rgba(220, 53, 69, 0.3);
+            color: var(--danger);
+        }
+
+        .key-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.2rem 0.65rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .key-status.active {
+            background: rgba(40, 167, 69, 0.2);
+            color: var(--success);
+        }
+
+        .key-status.expired {
+            background: rgba(220, 53, 69, 0.2);
+            color: var(--danger);
+        }
+
+        .empty-keys {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .empty-keys i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 600px) {
+            .api-key-item {
+                flex-wrap: wrap;
+            }
+            .api-key-item-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+        }
     </style>
     <link rel="stylesheet" href="dist/css/all.min.css">
     <script src="dist/js/framework.js" defer></script>
@@ -1212,6 +1330,72 @@
                     </div>
                 </div>
 
+                <!-- API Keys Management Card -->
+                <div class="card" style="grid-column: 1 / -1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <h2 style="margin: 0;"><span class="icon">🗝️</span> Manage API Keys</h2>
+                        <button class="btn btn-small" id="addApiKeyBtn">
+                            <i class="fas fa-plus"></i> New Key
+                        </button>
+                    </div>
+                    <p style="color: rgba(255,255,255,0.6); margin-bottom: 1rem; font-size: 0.9rem;">
+                        Create and manage multiple API keys for different applications or environments.
+                    </p>
+                    <div id="apiKeysList" class="api-keys-list">
+                        <p style="color: rgba(255,255,255,0.5); text-align: center; padding: 2rem;">Loading API keys...</p>
+                    </div>
+                </div>
+
+                <!-- Add / Edit API Key Modal -->
+                <div class="modal" id="apiKeyModal" style="display: none;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="apiKeyModalTitle">Create API Key</h3>
+                            <button class="modal-close" id="closeApiKeyModalBtn">&times;</button>
+                        </div>
+
+                        <!-- Shown after successful create / rotate -->
+                        <div id="apiKeyNewDisplay" style="display: none;">
+                            <div class="validation-status success" style="margin-bottom: 1rem;">
+                                <i class="fas fa-check-circle"></i> Key ready — copy it now, it won't be shown again.
+                            </div>
+                            <div class="api-key-display">
+                                <input type="text" class="api-key-input" id="newApiKeyValue" readonly>
+                                <button class="btn btn-secondary btn-small" id="copyNewApiKeyBtn" title="Copy">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                            <div class="form-actions">
+                                <button class="btn" id="doneApiKeyBtn"><i class="fas fa-check"></i> Done</button>
+                            </div>
+                        </div>
+
+                        <!-- Create / Edit form -->
+                        <form id="apiKeyForm">
+                            <div class="form-group">
+                                <label for="apiKeyName">Name / Label</label>
+                                <input type="text" id="apiKeyName" class="form-input" placeholder="e.g. My App, Production, Testing" maxlength="80" required>
+                            </div>
+                            <div class="form-group" id="apiKeyExpiryGroup">
+                                <label for="apiKeyExpiry">Expiry</label>
+                                <select id="apiKeyExpiry" class="form-input">
+                                    <option value="30">30 days</option>
+                                    <option value="90" selected>90 days</option>
+                                    <option value="365">1 year</option>
+                                    <option value="0">No expiry</option>
+                                </select>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" id="cancelApiKeyModalBtn">Cancel</button>
+                                <button type="submit" class="btn" id="saveApiKeyBtn">
+                                    <i class="fas fa-plus"></i> Create Key
+                                </button>
+                            </div>
+                            <input type="hidden" id="editApiKeyId" value="">
+                        </form>
+                    </div>
+                </div>
+
                 <!-- Quick Links Card -->
                 <div class="card" style="grid-column: 1 / -1;">
                     <h2><span class="icon">🚀</span> Quick Actions</h2>
@@ -1492,6 +1676,9 @@
             
             // Load custom servers
             await loadServers();
+
+            // Load API keys
+            await loadApiKeys();
         }
 
         // Load usage stats from API
@@ -1934,6 +2121,9 @@
             
             // Initialize custom servers module
             initCustomServers();
+
+            // Initialize API keys module
+            initApiKeys();
         });
         
         // ============================================
@@ -2566,6 +2756,270 @@
             return div.innerHTML;
         }
 
+        // ============================================
+        // API Keys Management
+        // ============================================
+
+        function initApiKeys() {
+            const addApiKeyBtn      = document.getElementById('addApiKeyBtn');
+            const closeBtn         = document.getElementById('closeApiKeyModalBtn');
+            const cancelBtn        = document.getElementById('cancelApiKeyModalBtn');
+            const apiKeyForm       = document.getElementById('apiKeyForm');
+            const copyNewBtn       = document.getElementById('copyNewApiKeyBtn');
+            const doneBtn          = document.getElementById('doneApiKeyBtn');
+            const apiKeyModalEl    = document.getElementById('apiKeyModal');
+
+            if (addApiKeyBtn) addApiKeyBtn.addEventListener('click', () => openApiKeyModal());
+            if (closeBtn)     closeBtn.addEventListener('click', closeApiKeyModal);
+            if (cancelBtn)    cancelBtn.addEventListener('click', closeApiKeyModal);
+            if (apiKeyForm)   apiKeyForm.addEventListener('submit', handleApiKeySubmit);
+            if (copyNewBtn) {
+                copyNewBtn.addEventListener('click', async () => {
+                    const val = document.getElementById('newApiKeyValue').value;
+                    try {
+                        await navigator.clipboard.writeText(val);
+                        showToast('API key copied!');
+                    } catch { showToast('Failed to copy', 'error'); }
+                });
+            }
+            if (doneBtn) {
+                doneBtn.addEventListener('click', async () => {
+                    closeApiKeyModal();
+                    await loadApiKeys();
+                });
+            }
+            if (apiKeyModalEl) {
+                apiKeyModalEl.addEventListener('click', (e) => {
+                    if (e.target === apiKeyModalEl) closeApiKeyModal();
+                });
+            }
+        }
+
+        function closeApiKeyModal() {
+            const modal = document.getElementById('apiKeyModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function openApiKeyModal(key = null) {
+            const modal      = document.getElementById('apiKeyModal');
+            const form       = document.getElementById('apiKeyForm');
+            const newDisplay = document.getElementById('apiKeyNewDisplay');
+            const modalTitle = document.getElementById('apiKeyModalTitle');
+            const saveBtn    = document.getElementById('saveApiKeyBtn');
+            const expiryGrp  = document.getElementById('apiKeyExpiryGroup');
+            if (!modal) return;
+
+            form.reset();
+            form.style.display = '';
+            newDisplay.style.display = 'none';
+            document.getElementById('editApiKeyId').value = '';
+
+            if (key) {
+                modalTitle.textContent = framework.translate('Edit API Key');
+                document.getElementById('apiKeyName').value = key.name || key.label || '';
+                document.getElementById('editApiKeyId').value = key.id;
+                expiryGrp.style.display = 'none';
+                saveBtn.innerHTML = '<i class="fas fa-check"></i> ' + framework.translate('Save Changes');
+            } else {
+                modalTitle.textContent = framework.translate('Create API Key');
+                expiryGrp.style.display = '';
+                saveBtn.innerHTML = '<i class="fas fa-plus"></i> ' + framework.translate('Create Key');
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        async function handleApiKeySubmit(e) {
+            e.preventDefault();
+            const saveBtn    = document.getElementById('saveApiKeyBtn');
+            const origHtml   = saveBtn.innerHTML;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="loading"></span>';
+
+            const keyId      = document.getElementById('editApiKeyId').value;
+            const name       = document.getElementById('apiKeyName').value.trim();
+            const expiryDays = parseInt(document.getElementById('apiKeyExpiry').value || '90');
+
+            try {
+                if (keyId) {
+                    // Rename
+                    const result = await apiRequest('/keys/update', {
+                        method: 'POST',
+                        body: JSON.stringify({ key_id: keyId, name })
+                    });
+                    if (result.error) throw new Error(result.error);
+                    showToast('API key updated!');
+                    closeApiKeyModal();
+                    await loadApiKeys();
+                } else {
+                    // Create
+                    const body = { name };
+                    if (expiryDays > 0) body.expires_days = expiryDays;
+                    const result = await apiRequest('/keys/generate', {
+                        method: 'POST',
+                        body: JSON.stringify(body)
+                    });
+                    if (result.error) throw new Error(result.error);
+                    if (!result.api_key) throw new Error('No key returned');
+
+                    // Show new key once
+                    document.getElementById('apiKeyForm').style.display = 'none';
+                    document.getElementById('apiKeyNewDisplay').style.display = '';
+                    document.getElementById('apiKeyModalTitle').textContent = framework.translate('Key Created');
+                    document.getElementById('newApiKeyValue').value = result.api_key;
+
+                    // Backward compat – keep single-key card in sync
+                    apiKeyInput.value = result.api_key;
+                    apiKeyInput.type = 'password';
+                    localStorage.setItem('g4f_api_key', result.api_key);
+                    if (result.expires) {
+                        localStorage.setItem('g4f_api_key_expires', result.expires);
+                        apiKeyExpires.textContent = new Date(parseInt(result.expires * 1000)).toLocaleString();
+                    }
+                    await loadApiKeys();
+                }
+            } catch (err) {
+                showToastFormat('Error: {0}', 'error', err.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = origHtml;
+            }
+        }
+
+        async function loadApiKeys() {
+            const listEl = document.getElementById('apiKeysList');
+            if (!listEl) return;
+
+            try {
+                const result = await apiRequest('/keys');
+                if (result.error) {
+                    listEl.innerHTML = `<p style="color:var(--danger);text-align:center;padding:1rem;">${escapeHtml(result.error)}</p>`;
+                    return;
+                }
+
+                const keys = result.keys || result.api_keys || [];
+
+                if (keys.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="empty-keys">
+                            <i class="fas fa-key"></i>
+                            <p>${framework.translate('No API keys yet')}</p>
+                            <p style="font-size:0.9rem;">${framework.translate('Create your first key to get started')}</p>
+                        </div>`;
+                    return;
+                }
+
+                listEl.innerHTML = keys.map(k => renderApiKeyItem(k)).join('');
+
+                keys.forEach(k => {
+                    const copyBtn   = document.getElementById(`ak-copy-${k.id}`);
+                    const editBtn   = document.getElementById(`ak-edit-${k.id}`);
+                    const rotateBtn = document.getElementById(`ak-rotate-${k.id}`);
+                    const deleteBtn = document.getElementById(`ak-delete-${k.id}`);
+
+                    if (copyBtn)   copyBtn.addEventListener('click',   () => copyApiKeyValue(k));
+                    if (editBtn)   editBtn.addEventListener('click',   () => openApiKeyModal(k));
+                    if (rotateBtn) rotateBtn.addEventListener('click', () => rotateApiKey(k.id));
+                    if (deleteBtn) deleteBtn.addEventListener('click', () => deleteApiKey(k.id));
+                });
+
+            } catch (err) {
+                console.error('Failed to load API keys:', err);
+                listEl.innerHTML = `
+                    <div class="empty-keys">
+                        <i class="fas fa-key"></i>
+                        <p>${framework.translate('No API keys yet')}</p>
+                        <p style="font-size:0.9rem;">${framework.translate('Create your first key to get started')}</p>
+                    </div>`;
+            }
+        }
+
+        function renderApiKeyItem(key) {
+            const isExpired = key.expires && Date.now() > new Date(key.expires).getTime() * (key.expires > 1e12 ? 1 : 1000);
+            const prefix    = key.prefix || (key.api_key ? key.api_key.substring(0, 10) : null);
+            const masked    = prefix ? `${prefix}${'•'.repeat(18)}` : '••••••••••••••••••••••••••••';
+            const created   = key.created_at ? new Date(key.created_at).toLocaleDateString() : '-';
+            const expires   = key.expires    ? new Date(key.expires > 1e12 ? key.expires : key.expires * 1000).toLocaleDateString() : 'Never';
+
+            return `
+                <div class="api-key-item" data-key-id="${escapeHtml(String(key.id))}">
+                    <div class="api-key-info">
+                        <div class="api-key-name">${escapeHtml(key.name || key.label || 'Unnamed Key')}</div>
+                        <div class="api-key-masked">${escapeHtml(masked)}</div>
+                        <div class="api-key-meta">Created: ${created} &bull; Expires: ${expires}</div>
+                    </div>
+                    <span class="key-status ${isExpired ? 'expired' : 'active'}">
+                        <i class="fas fa-circle" style="font-size:0.45rem;"></i>
+                        ${isExpired ? framework.translate('Expired') : framework.translate('Active')}
+                    </span>
+                    <div class="api-key-item-actions">
+                        <button id="ak-copy-${escapeHtml(String(key.id))}" title="${framework.translate('Copy key')}">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        <button id="ak-edit-${escapeHtml(String(key.id))}" title="${framework.translate('Rename key')}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button id="ak-rotate-${escapeHtml(String(key.id))}" title="${framework.translate('Rotate key')}">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <button id="ak-delete-${escapeHtml(String(key.id))}" class="delete" title="${framework.translate('Delete key')}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>`;
+        }
+
+        async function copyApiKeyValue(key) {
+            const value = key.api_key || key.prefix;
+            if (!value) {
+                showToast(framework.translate('Key value unavailable — use Rotate to get a new value'), 'error');
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(value);
+                showToast(framework.translate('API key copied!'));
+            } catch { showToast(framework.translate('Failed to copy'), 'error'); }
+        }
+
+        async function rotateApiKey(keyId) {
+            if (!confirm(framework.translate('Rotate this key? The current key will stop working immediately.'))) return;
+            try {
+                const result = await apiRequest('/keys/rotate', {
+                    method: 'POST',
+                    body: JSON.stringify({ key_id: keyId })
+                });
+                if (result.error) throw new Error(result.error);
+                if (!result.api_key) throw new Error('No key returned');
+
+                // Show new value in modal
+                const modal = document.getElementById('apiKeyModal');
+                document.getElementById('apiKeyForm').style.display = 'none';
+                document.getElementById('apiKeyNewDisplay').style.display = '';
+                document.getElementById('apiKeyModalTitle').textContent = framework.translate('Key Rotated');
+                document.getElementById('newApiKeyValue').value = result.api_key;
+                modal.style.display = 'flex';
+
+                await loadApiKeys();
+            } catch (err) {
+                showToastFormat('Failed to rotate key: {0}', 'error', err.message);
+            }
+        }
+
+        async function deleteApiKey(keyId) {
+            if (!confirm(framework.translate('Delete this API key? All apps using it will stop working.'))) return;
+            try {
+                const result = await apiRequest('/keys/delete', {
+                    method: 'POST',
+                    body: JSON.stringify({ key_id: keyId })
+                });
+                if (result.error) throw new Error(result.error);
+                showToast(framework.translate('API key deleted'));
+                await loadApiKeys();
+            } catch (err) {
+                showToastFormat('Failed to delete key: {0}', 'error', err.message);
+            }
+        }
+
         // Restore session from localStorage
         const storedSession = localStorage.getItem('g4f_session');
         if (storedSession) {
@@ -2616,6 +3070,29 @@
 <template>Generating...</template>
 <template>Failed to delete server: {0}</template>
 <template>Validating...</template>
+<template>Edit API Key</template>
+<template>Save Changes</template>
+<template>Create API Key</template>
+<template>Create Key</template>
+<template>Key Created</template>
+<template>Key Rotated</template>
+<template>No API keys yet</template>
+<template>Create your first key to get started</template>
+<template>Active</template>
+<template>Expired</template>
+<template>Copy key</template>
+<template>Rename key</template>
+<template>Rotate key</template>
+<template>Delete key</template>
+<template>API key copied!</template>
+<template>Key value unavailable — use Rotate to get a new value</template>
+<template>Failed to copy</template>
+<template>Rotate this key? The current key will stop working immediately.</template>
+<template>Failed to rotate key: {0}</template>
+<template>Delete this API key? All apps using it will stop working.</template>
+<template>API key deleted</template>
+<template>Failed to delete key: {0}</template>
+<template>API key updated!</template>
 <template>You will be redirected to:</template>
 <template>You will be redirected back to the application.</template>
 </body>
