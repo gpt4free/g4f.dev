@@ -49,7 +49,7 @@ const ADMIN_USERS = {
     airforce: []
 };
 
-const EXTRA_CONTRIBUTERS = ["Screenmax1234", "kirill670", "georgedorn", "yakovexplorer", "tak-gamingYT", "sasaiber", "redac1ed", "AskingAcake"];
+const EXTRA_CONTRIBUTERS = ["Screenmax1234", "kirill670", "georgedorn", "yakovexplorer", "tak-gamingYT", "sasaiber", "redac1ed", "AskingAcake", "tringtoblinbus"];
 
 const ALLOWED_REDIRECT_HOSTNAMES = ["localhost", "127.0.0.1", "llmplayground.net", "g4f.dev", "gpt4free.github.io"];
 
