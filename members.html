@@ -2905,11 +2905,11 @@
         }
 
         function renderApiKeyItem(key) {
-            const isExpired = key.expires && Date.now() > new Date(key.expires).getTime() * (key.expires > 1e12 ? 1 : 1000);
+            const isExpired = key.expires_at && Date.now() > new Date(key.expires_at).getTime();
             const prefix    = key.prefix || (key.api_key ? key.api_key.substring(0, 10) : null);
             const masked    = prefix ? `${prefix}${'•'.repeat(18)}` : '••••••••••••••••••••••••••••';
             const created   = key.created_at ? new Date(key.created_at).toLocaleDateString() : '-';
-            const expires   = key.expires    ? new Date(key.expires > 1e12 ? key.expires : key.expires * 1000).toLocaleDateString() : 'Never';
+            const expires   = key.expires_at ? new Date(key.expires_at).toLocaleDateString() : 'Never';
 
             return `
                 <div class="api-key-item" data-key-id="${escapeHtml(String(key.id))}">
