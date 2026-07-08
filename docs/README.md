@@ -1,6 +1,9 @@
-## GPT4Free Documentation Hub
-<img src="https://g4f.dev/docs/images/pico.jpeg" alt="Welcome to the official docs for **GPT4Free** – free and convenient AI endpoints you can use directly in your apps, scripts, and even right in your browser.
-Here you’ll find a clear overview, quick examples, and entry points to deeper docs for every major feature."/>
+## GPT4Free Documentation 
+
+
+
+Welcome to the official docs for **GPT4Free** – free and convenient AI endpoints you can use directly in your apps, scripts, and even right in your browser.
+Here you’ll find a clear overview, quick examples, and entry points to deeper docs for every major feature.
 
 ---
 
