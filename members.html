@@ -1391,8 +1391,7 @@
                                     <i class="fas fa-plus"></i> Create Key
                                 </button>
                             </div>
-                            <input type="hidden" id="editApiKeyId" value="">
-                        </form>
+                            </form>
                     </div>
                 </div>
 
@@ -2800,31 +2799,20 @@
             if (modal) modal.style.display = 'none';
         }
 
-        function openApiKeyModal(key = null) {
+        function openApiKeyModal() {
             const modal      = document.getElementById('apiKeyModal');
             const form       = document.getElementById('apiKeyForm');
             const newDisplay = document.getElementById('apiKeyNewDisplay');
             const modalTitle = document.getElementById('apiKeyModalTitle');
             const saveBtn    = document.getElementById('saveApiKeyBtn');
-            const expiryGrp  = document.getElementById('apiKeyExpiryGroup');
             if (!modal) return;
 
             form.reset();
             form.style.display = '';
             newDisplay.style.display = 'none';
-            document.getElementById('editApiKeyId').value = '';
 
-            if (key) {
-                modalTitle.textContent = framework.translate('Edit API Key');
-                document.getElementById('apiKeyName').value = key.name || key.label || '';
-                document.getElementById('editApiKeyId').value = key.id;
-                expiryGrp.style.display = 'none';
-                saveBtn.innerHTML = '<i class="fas fa-check"></i> ' + framework.translate('Save Changes');
-            } else {
-                modalTitle.textContent = framework.translate('Create API Key');
-                expiryGrp.style.display = '';
-                saveBtn.innerHTML = '<i class="fas fa-plus"></i> ' + framework.translate('Create Key');
-            }
+            modalTitle.textContent = framework.translate('Create API Key');
+            saveBtn.innerHTML = '<i class="fas fa-plus"></i> ' + framework.translate('Create Key');
 
             modal.style.display = 'flex';
         }
@@ -2836,48 +2824,34 @@
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<span class="loading"></span>';
 
-            const keyId      = document.getElementById('editApiKeyId').value;
             const name       = document.getElementById('apiKeyName').value.trim();
             const expiryDays = parseInt(document.getElementById('apiKeyExpiry').value || '90');
 
             try {
-                if (keyId) {
-                    // Rename
-                    const result = await apiRequest('/keys/update', {
-                        method: 'POST',
-                        body: JSON.stringify({ key_id: keyId, name })
-                    });
-                    if (result.error) throw new Error(result.error);
-                    showToast('API key updated!');
-                    closeApiKeyModal();
-                    await loadApiKeys();
-                } else {
-                    // Create
-                    const body = { name };
-                    if (expiryDays > 0) body.expires_days = expiryDays;
-                    const result = await apiRequest('/keys/generate', {
-                        method: 'POST',
-                        body: JSON.stringify(body)
-                    });
-                    if (result.error) throw new Error(result.error);
-                    if (!result.api_key) throw new Error('No key returned');
+                const body = { name };
+                if (expiryDays > 0) body.expires_days = expiryDays;
+                const result = await apiRequest('/keys/generate', {
+                    method: 'POST',
+                    body: JSON.stringify(body)
+                });
+                if (result.error) throw new Error(result.error);
+                if (!result.api_key) throw new Error('No key returned');
 
-                    // Show new key once
-                    document.getElementById('apiKeyForm').style.display = 'none';
-                    document.getElementById('apiKeyNewDisplay').style.display = '';
-                    document.getElementById('apiKeyModalTitle').textContent = framework.translate('Key Created');
-                    document.getElementById('newApiKeyValue').value = result.api_key;
+                // Show new key once
+                document.getElementById('apiKeyForm').style.display = 'none';
+                document.getElementById('apiKeyNewDisplay').style.display = '';
+                document.getElementById('apiKeyModalTitle').textContent = framework.translate('Key Created');
+                document.getElementById('newApiKeyValue').value = result.api_key;
 
-                    // Backward compat – keep single-key card in sync
-                    apiKeyInput.value = result.api_key;
-                    apiKeyInput.type = 'password';
-                    localStorage.setItem('g4f_api_key', result.api_key);
-                    if (result.expires) {
-                        localStorage.setItem('g4f_api_key_expires', result.expires);
-                        apiKeyExpires.textContent = new Date(parseInt(result.expires * 1000)).toLocaleString();
-                    }
-                    await loadApiKeys();
+                // Backward compat – keep single-key card in sync
+                apiKeyInput.value = result.api_key;
+                apiKeyInput.type = 'password';
+                localStorage.setItem('g4f_api_key', result.api_key);
+                if (result.expires) {
+                    localStorage.setItem('g4f_api_key_expires', result.expires);
+                    apiKeyExpires.textContent = new Date(parseInt(result.expires * 1000)).toLocaleString();
                 }
+                await loadApiKeys();
             } catch (err) {
                 showToastFormat('Error: {0}', 'error', err.message);
             } finally {
@@ -2913,13 +2887,9 @@
 
                 keys.forEach(k => {
                     const copyBtn   = document.getElementById(`ak-copy-${k.id}`);
-                    const editBtn   = document.getElementById(`ak-edit-${k.id}`);
-                    const rotateBtn = document.getElementById(`ak-rotate-${k.id}`);
                     const deleteBtn = document.getElementById(`ak-delete-${k.id}`);
 
                     if (copyBtn)   copyBtn.addEventListener('click',   () => copyApiKeyValue(k));
-                    if (editBtn)   editBtn.addEventListener('click',   () => openApiKeyModal(k));
-                    if (rotateBtn) rotateBtn.addEventListener('click', () => rotateApiKey(k.id));
                     if (deleteBtn) deleteBtn.addEventListener('click', () => deleteApiKey(k.id));
                 });
 
@@ -2956,13 +2926,7 @@
                         <button id="ak-copy-${escapeHtml(String(key.id))}" title="${framework.translate('Copy key')}">
                             <i class="fas fa-copy"></i>
                         </button>
-                        <button id="ak-edit-${escapeHtml(String(key.id))}" title="${framework.translate('Rename key')}">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button id="ak-rotate-${escapeHtml(String(key.id))}" title="${framework.translate('Rotate key')}">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
-                        <button id="ak-delete-${escapeHtml(String(key.id))}" class="delete" title="${framework.translate('Delete key')}">
+                        <button id="ak-delete-${escapeHtml(String(key.id))}" class="delete" title="${framework.translate('Revoke key')}">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -2972,7 +2936,7 @@
         async function copyApiKeyValue(key) {
             const value = key.api_key || key.prefix;
             if (!value) {
-                showToast(framework.translate('Key value unavailable — use Rotate to get a new value'), 'error');
+                showToast(framework.translate('Key value unavailable \u2014 copy it immediately after creation'), 'error');
                 return;
             }
             try {
@@ -2981,42 +2945,18 @@
             } catch { showToast(framework.translate('Failed to copy'), 'error'); }
         }
 
-        async function rotateApiKey(keyId) {
-            if (!confirm(framework.translate('Rotate this key? The current key will stop working immediately.'))) return;
-            try {
-                const result = await apiRequest('/keys/rotate', {
-                    method: 'POST',
-                    body: JSON.stringify({ key_id: keyId })
-                });
-                if (result.error) throw new Error(result.error);
-                if (!result.api_key) throw new Error('No key returned');
-
-                // Show new value in modal
-                const modal = document.getElementById('apiKeyModal');
-                document.getElementById('apiKeyForm').style.display = 'none';
-                document.getElementById('apiKeyNewDisplay').style.display = '';
-                document.getElementById('apiKeyModalTitle').textContent = framework.translate('Key Rotated');
-                document.getElementById('newApiKeyValue').value = result.api_key;
-                modal.style.display = 'flex';
-
-                await loadApiKeys();
-            } catch (err) {
-                showToastFormat('Failed to rotate key: {0}', 'error', err.message);
-            }
-        }
-
         async function deleteApiKey(keyId) {
-            if (!confirm(framework.translate('Delete this API key? All apps using it will stop working.'))) return;
+            if (!confirm(framework.translate('Revoke this API key? All apps using it will stop working.'))) return;
             try {
-                const result = await apiRequest('/keys/delete', {
+                const result = await apiRequest('/keys/revoke', {
                     method: 'POST',
                     body: JSON.stringify({ key_id: keyId })
                 });
                 if (result.error) throw new Error(result.error);
-                showToast(framework.translate('API key deleted'));
+                showToast(framework.translate('API key revoked'));
                 await loadApiKeys();
             } catch (err) {
-                showToastFormat('Failed to delete key: {0}', 'error', err.message);
+                showToastFormat('Failed to revoke key: {0}', 'error', err.message);
             }
         }
 
@@ -3070,29 +3010,21 @@
 <template>Generating...</template>
 <template>Failed to delete server: {0}</template>
 <template>Validating...</template>
-<template>Edit API Key</template>
-<template>Save Changes</template>
 <template>Create API Key</template>
 <template>Create Key</template>
 <template>Key Created</template>
-<template>Key Rotated</template>
 <template>No API keys yet</template>
 <template>Create your first key to get started</template>
 <template>Active</template>
 <template>Expired</template>
 <template>Copy key</template>
-<template>Rename key</template>
-<template>Rotate key</template>
-<template>Delete key</template>
+<template>Revoke key</template>
 <template>API key copied!</template>
-<template>Key value unavailable — use Rotate to get a new value</template>
+<template>Key value unavailable — copy it immediately after creation</template>
 <template>Failed to copy</template>
-<template>Rotate this key? The current key will stop working immediately.</template>
-<template>Failed to rotate key: {0}</template>
-<template>Delete this API key? All apps using it will stop working.</template>
-<template>API key deleted</template>
-<template>Failed to delete key: {0}</template>
-<template>API key updated!</template>
+<template>Revoke this API key? All apps using it will stop working.</template>
+<template>API key revoked</template>
+<template>Failed to revoke key: {0}</template>
 <template>You will be redirected to:</template>
 <template>You will be redirected back to the application.</template>
 </body>

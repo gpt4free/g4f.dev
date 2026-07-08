@@ -2056,6 +2056,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
         prefix: k.prefix,
         created_at: k.created_at,
         last_used: k.last_used,
+        expires_at: k.expires_at,
         usage: k.usage
     }));
   
@@ -2121,7 +2122,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
     const apiKey = await generateApiKey(env, user.id);
     const keyHash = await hashApiKey(apiKey);
     const keyPrefix = apiKey.substring(0, 8);
-    const expirationTtl = 90 * 24 * 60 * 60;
+    const expirationTtl = (body.expires_days || 90) * 24 * 60 * 60;
     const expires = Date.now() + expirationTtl * 1000;
   
     const keyData = {
@@ -2131,7 +2132,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
         prefix: keyPrefix,
         user_id: user.id,
         created_at: new Date().toISOString(),
-        expires_at: new Date(expires).toISOString(), // 24 hour expiry
+        expires_at: new Date(expires).toISOString(),
         last_used: null,
         usage: {
             requests: 0,
