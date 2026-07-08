@@ -2,7 +2,7 @@
     "providers": {
         "default": {"baseUrl": "https://g4f.space/v1", "backupUrl": "https://g4f.space/v1", "quotaEndpoint": null},
         "pollinations": {"backupUrl": "https://g4f.space/api/gen.pollinations", "label": "pollinations.ai", "tags": "🎨 👓", "provider": "PollinationsAI"},
-        "api.airforce": {"baseUrl": "https://api.airforce/v1", "tags": "🎨 👓", "sleep": 60000},
+        "airforce": {"baseUrl": "https://api.airforce/v1", "tags": "🎨 👓"},
         "master": {"label": "master by api.airforce", "baseUrl": "https://g4f.space/api/api.airforce", "backupUrl": "https://g4f.space/api/api.airforce", "tags": "🎨 👓", "sleep": 10000},
         "audio": {"label": "audio by g4f.dev", "baseUrl": "https://g4f.space/api/audio", "backupUrl": "https://g4f.space/api/audio", "tags": "🎧", "sleep": 10000},
         "deepinfra": {"baseUrl": "https://api.deepinfra.com/v1/openai", "tags": "🎨 👓", "modelsEndpoint": "https://api.deepinfra.com/models/featured"},
@@ -21,23 +21,23 @@
     "defaultModels": {
         "default": "auto",
         "pollinations": "openai-fast",
-        "api.airforce": "gpt-4o-mini",
+        "airforce": "gpt-4o-mini",
         "master": "gpt-4o-mini",
         "gemini": "models/gemini-3-flash-preview",
         "openrouter": "openroter/free",
         "nvidia": "z-ai/glm-5.2",
         "ollama": "nemotron-3-nano:30b",
-        "ollama.pro": "deepseek-v4-pro",
+        "ollama.pro": "glm-5.2",
         "ollama.swarm": "deepseek-v4-pro:cloud",
         "groq": "openai/gpt-oss-120b",
         "puter": "anthropic:anthropic/claude-opus-4-7",
         "perplexity": "turbo",
-        "deepinfra": "google/gemma-4-26B-A4B-it",
+        "deepinfra": "zai-org/GLM-5.2",
         "qwen": "qwen3.6-plus",
         "crowllm": "grok-4.3"
     },
     "providerLocalStorage": {
-        "api.airforce": "ApiAirforce-api_key",
+        "airforce": "ApiAirforce-api_key",
         "deepinfra": "DeepInfra-api_key",
         "huggingface": "HuggingFace-api_key",
         "gemini": "GeminiPro-api_key",
@@ -59,7 +59,7 @@
     },
     "loginButtons": {
         "huggingface": "huggingface",
-        "api.airforce": "airforce",
+        "airforce": "airforce",
         "pollinations": "pollinations"
     }
 }
