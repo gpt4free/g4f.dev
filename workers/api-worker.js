@@ -84,11 +84,11 @@ var ACCESS_CONTROL_ALLOW_ORIGIN = {
 };
 var AUTO_PROVIDERS = [
   "srv_mkombumpae45db46dcb8", // nvidia
-  // "srv_mnkjel2208cf770e5009", // ollama
+  "srv_mnkjel2208cf770e5009", // ollama
   // "srv_mp2i8rco3148dd85bec1",
   // "srv_mq7ktfibad45c29f3839", // swarm
   "srv_monk1pkz433a519ff2be", // openrouter
-  "srv_mkoloq41e34074b6133e", // pollinations
+  // "srv_mkoloq41e34074b6133e", // pollinations
 ]
 var DEFAULT_MODELS = {
   "srv_mkom688d57c76d8a3542": "moonshotai/kimi-k2-instruct-0905", // groq
@@ -123,7 +123,9 @@ var SERVER_TO_PROVIDER = {
 }
 var URL_MAP = {
   "https://gen.pollinations.ai/quota": "https://gen.pollinations.ai/account/balance",
-  "https://generativelanguage.googleapis.com/v1beta/openai/quota": "https://generativelanguage.googleapis.com/v1beta/openai/models"
+  "https://generativelanguage.googleapis.com/v1beta/openai/quota": "https://generativelanguage.googleapis.com/v1beta/openai/models",
+  "https://openrouter.ai/api/v1/quota": "https://openrouter.ai/api/v1/key",
+  "https://api.featherless.ai/v1/models": null
 }
 var BLOCKED_SERVERS = [
   "srv_mkrzs4lg75588992eb03",
@@ -276,7 +278,7 @@ var custom_worker_default = {
     try {
     let rateCheck;
     try {
-      if (!userProvidedKey && !pathname.endsWith("/models") && !pathname.endsWith("/quota") && !pathname.startsWith("/custom/api/") && !pathname.startsWith("/chat/") && !pathname.startsWith("/backend-api/") && !pathname.startsWith("/pa/"))
+      if (!userProvidedKey && !pathname.endsWith("/models") && !pathname.endsWith("/quota") && !pathname.startsWith("/custom/api/") && !pathname.startsWith("/chat/") && !pathname.startsWith("/backend-api/") && !pathname.startsWith("/pa/") && !["/logs", "/api/logs"].includes(pathname))
         if (user) {
           rateCheck = await checkUserRateLimits(env, user, request);
           if (!rateCheck.allowed) {
@@ -335,7 +337,8 @@ var custom_worker_default = {
         return jsonResponse({ error: "Rate check error: " + error.message || "Internal server error" }, 500);
       }
       const cacheKey = url.toString();
-      if ((!userProvidedKey || pathname.endsWith("/models")) && request.method === "GET") {
+      if (request.headers.get("cache-control") !== "no-cache")
+      if ((!userProvidedKey || pathname.endsWith("/models")) && pathname != "/api/logs" && request.method === "GET") {
         const cachedResponse = await getCachedResponse(request, cacheKey);
         if (cachedResponse) {
           const newResponse = new Response(cachedResponse.body, cachedResponse);
@@ -635,7 +638,6 @@ async function handleCreateServer(request, env) {
     label: body.label || `Server ${(user.custom_servers || []).length + 1}`,
     base_url: normalizedBaseUrl,
     api_keys: body.api_keys || "",
-    expires: body.expires || null,
     // Line-separated API keys
     allowed_models: allowedModels,
     auto_update_models: autoUpdateModels,
@@ -883,15 +885,22 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey,
     headers["Authorization"] = `Bearer ${apiKey}`;
   }
   try {
-    const targetUrl = server.base_url.includes("/chat/completions") ? server.base_url.replace("/chat/completions", "/models") : `${server.base_url}/models`;
-    const response = await fetch(targetUrl, {
-      method: request.method,
-      headers
-    });
-    if (!response.ok) {
-      throw Error(`Error ${response.status}: ${await response.text()}`);
+    let targetUrl = server.base_url.includes("/chat/completions") ? server.base_url.replace("/chat/completions", "/models") : `${server.base_url}/models`;
+    if (targetUrl in URL_MAP) {
+      targetUrl = URL_MAP[targetUrl];
     }
-    const data = await response.json();
+    let response;
+    let data = {data: []};
+    if (targetUrl) {
+      response = await fetch(targetUrl, {
+        method: request.method,
+        headers
+      });
+      if (!response.ok) {
+        throw Error(`Error ${response.status}: ${await response.text()}`);
+      }
+      data = await response.json();
+    }
     if (server.allowed_models && server.allowed_models.length > 0) {
       data.data = data.data.filter((model) => server.allowed_models.includes(model.id));
       if (!data.data.length) {
@@ -905,7 +914,7 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey,
       m.requests = modelCount[m.id];
     })
     data.data.sort((a, b) => (b.requests || 0) - (a.requests || 0));
-    const newResponse = new Response(JSON.stringify(data), response);
+    const newResponse = Response.json(data, response);
     for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
       newResponse.headers.set(key, value);
     }
@@ -2392,7 +2401,11 @@ async function setCachedResponse(request, response, cacheControl, cacheKey = nul
   }
 }
 async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ctx) {
-  if (pathname.startsWith("/v1/v1beta/") || pathname.endsWith("/messages") || pathname.endsWith("/respones") || ["/api/azure/models", "/api/auto/models", "/api/grok/models", "/v1/chat/completions"].includes(pathname)) {
+  if (pathname.startsWith("/v1/v1beta/") || pathname.endsWith("/messages") || pathname.endsWith("/respones") || [
+    "/api/azure/models", "/api/auto/models",
+    "/api/grok/models", "/v1/chat/completions",
+    "/api/azure/chat/completions"
+  ].includes(pathname)) {
     return jsonResponse({
       error: {
         message: `Url '${pathname}' not found`,
@@ -2400,16 +2413,9 @@ async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ct
       }
     }, 404);
   }
-  const passApiKey = user ? env.PASS_API_KEY : null;
   const headers = new Headers(request.headers);
-  const authHeader = request.headers.get("Authorization");
-  if (passApiKey) {
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      const existingKey = authHeader.substring(7);
-      headers.set("Authorization", `Bearer ${passApiKey} ${existingKey}`);
-    } else {
-      headers.set("Authorization", `Bearer ${passApiKey}`);
-    }
+  if (user && pathname.startsWith("/api/") && !pathname.endsWith("/models")) {
+    headers.set("g4f-api-key", env.PASS_API_KEY);
   }
   const targetUrl = `https://pass.g4f.space${pathname}${search || ""}`;
   const fetchOptions = {
@@ -2422,7 +2428,7 @@ async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ct
   const response = await fetch(targetUrl, fetchOptions);
   const newResponse = new Response(response.body, response);
   newResponse.headers.set("Access-Control-Allow-Origin", "*");
-  if (request.method === "GET" && !authHeader && !request.headers.get("x-api-key") && !request.headers.get("x-ignored")) {
+  if (request.method === "GET" && !headers.get("g4f-api-key") && !request.headers.get("x-api-key") && !request.headers.get("x-ignored")) {
     ctx.waitUntil(setCachedResponse(request, newResponse.clone(), CACHE_HEADERS.SHORT, cacheKey, ctx));
   }
   return newResponse;
