@@ -150,6 +150,10 @@ class Client {
         // Caching for models
         this._models = [];
     }
+
+    _route(url) {
+        return window.framework?.getRoutedUrl(url) ?? url;
+    }
     
     async _fetchWithProxyRotation(targetUrl, requestConfig={}) {
         const maxAttempts = this.proxyManager.proxies.length;
@@ -214,13 +218,13 @@ class Client {
                     signal: signal
                 };
                 await this._sleep();
-                let response = await fetch(this.apiEndpoint.replace('{model}', orginalModel), requestOptions);
+                let response = await fetch(this._route(this.apiEndpoint.replace('{model}', orginalModel)), requestOptions);
                 if (response.status === 429) {
                     const delay = parseInt(response.headers.get('Retry-After'), 10) || extractRetryDelay(await response.clone().text()) || this.sleep / 1000 || 10;
                     if (delay > 0 && delay <= 30) {
                         console.log(`Retrying after ${delay} seconds...`);
                         await new Promise(resolve => setTimeout(resolve, delay * 1000));
-                        response = await fetch(this.apiEndpoint.replace('{model}', orginalModel), requestOptions);
+                        response = await fetch(this._route(this.apiEndpoint.replace('{model}', orginalModel)), requestOptions);
                     }
                 }
                 if (params.stream) {
@@ -236,7 +240,7 @@ class Client {
     get models() {
       return {
         list: async () => {
-          const response = await fetch(this.modelsEndpoint.replace('{model}', 'auto'), {
+          const response = await fetch(this._route(this.modelsEndpoint.replace('{model}', 'auto')), {
             method: 'GET',
             headers: this.extraHeaders
           });
@@ -285,7 +289,7 @@ class Client {
         Object.entries(params).forEach(([key, value]) => {
             formData.append(key, value);
         });
-        const response = await fetch(imageEndpoint, {
+        const response = await fetch(this._route(imageEndpoint), {
             method: 'POST',
             body: formData,
             ...requestOptions
@@ -303,7 +307,7 @@ class Client {
             throw new Error("Quota endpoint is not defined");
         }
 
-        const response = await fetch(this.quotaEndpoint, {
+        const response = await fetch(this._route(this.quotaEndpoint), {
             method: 'GET',
             headers: this.apiKey ? { "Authorization": `Bearer ${this.apiKey}` } : {}
         });
@@ -447,7 +451,7 @@ class Client {
         const encodedParams = new URLSearchParams(payload);
         const url = imageEndpoint.replace('{prompt}', prompt) + '?' + encodedParams.toString();
         await this._sleep();
-        const response = await fetch(url, requestOptions);
+        const response = await fetch(this._route(url), requestOptions);
         this.logCallback && this.logCallback({response: response, type: 'image'});
         if (!response.ok) {
             if (response.headers.get('Retry-After')) {
@@ -474,14 +478,14 @@ class Client {
         };
         this.logCallback && this.logCallback({request: params, type: 'image'});
         await this._sleep();
-        let response = await fetch(imageEndpoint, requestOptions);
+        let response = await fetch(this._route(imageEndpoint), requestOptions);
         captureUserTierHeaders(response.headers);
         if (!response.ok) {
             const delay = parseInt(response.headers.get('Retry-After'), 10) || extractRetryDelay(await response.clone().text()) || this.sleep / 1000;
             if (delay > 0 && delay <= 30) {
                 console.log(`Retrying after ${delay} seconds...`);
                 await new Promise(resolve => setTimeout(resolve, delay * 1000));
-                response = await fetch(imageEndpoint, requestOptions);
+                response = await fetch(this._route(imageEndpoint), requestOptions);
             }
         }
         if (!response.ok) {
@@ -561,7 +565,7 @@ class PollinationsAI extends Client {
             let imageModelsResponse;
             try {
                 await this._sleep();
-                textModelsResponse = await fetch(this.modelsEndpoint);
+                textModelsResponse = await fetch(this._route(this.modelsEndpoint));
                 if (!textModelsResponse.ok) {
                     throw new Error(`Status ${textModelsResponse.status}: ${await textModelsResponse.text()}`);
                 }
@@ -573,13 +577,13 @@ class PollinationsAI extends Client {
             }
             try {
                 const imageModelsUrl = 'https://gen.pollinations.ai/image/models';
-                imageModelsResponse = await fetch(imageModelsUrl);
+                imageModelsResponse = await fetch(this._route(imageModelsUrl));
                 if (!imageModelsResponse.ok) {
                     const delay = parseInt(response.headers.get('Retry-After'), 10);
                     if (delay > 0) {
                         console.log(`Retrying after ${delay} seconds...`);
                         await new Promise(resolve => setTimeout(resolve, delay * 1000));
-                        imageModelsResponse = await fetch(imageModelsUrl);
+                        imageModelsResponse = await fetch(this._route(imageModelsUrl));
                     }
                     if (!imageModelsResponse.ok) {
                        throw new Error(`Status ${imageModelsResponse.status}: ${await imageModelsResponse.text()}`);
@@ -667,12 +671,12 @@ class Audio extends Client {
                         throw new Error('No baseUrl defined');
                     }
                     requestOptions.body = JSON.stringify(options);
-                    response = await fetch(`${this.baseUrl}/chat/completions`, requestOptions);
+                    response = await fetch(this._route(`${this.baseUrl}/chat/completions`), requestOptions);
                     this.logCallback && this.logCallback({request: options, type: 'chat'});
                 } catch(e) {
                     options.model = this.defaultModel;
                     requestOptions.body = JSON.stringify(options);
-                    response = await fetch(this.apiEndpoint, requestOptions);
+                    response = await fetch(this._route(this.apiEndpoint), requestOptions);
                     this.logCallback && this.logCallback({request: options, type: 'chat'});
                 }
                 if (isStream) {

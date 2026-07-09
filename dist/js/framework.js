@@ -78,6 +78,8 @@ async function checkUrl(url, connectStatus) {
 }
 
 framework.backendUrl = localStorage.getItem('backendUrl') || '';
+framework.logUrl = localStorage.getItem('log_routing') === 'true' ? `${framework.backendUrl}/api` : '';
+framework.getRoutedUrl = (url) => framework.logUrl ? `${framework.logUrl}/${url}` : url;
 framework.language = navigator.language === "de" ? 'de-DE' : navigator.language === "es" ? 'es-ES' : navigator.language;
 framework.language = !framework.language || framework.language.startsWith("en") ? "en-US" : framework.language;
 

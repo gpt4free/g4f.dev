@@ -1,20 +1,21 @@
 {
     "providers": {
-        "default": {"baseUrl": "https://g4f.space/v1", "backupUrl": "https://g4f.space/v1", "quotaEndpoint": null},
+        "default": {"backupUrl": "https://g4f.space/v1", "quotaEndpoint": null},
         "pollinations": {"backupUrl": "https://g4f.space/api/gen.pollinations", "label": "pollinations.ai", "tags": "🎨 👓", "provider": "PollinationsAI"},
         "airforce": {"baseUrl": "https://api.airforce/v1", "backupUrl": "https://g4f.space/api/api.airforce", "tags": "🎨 👓"},
+        "community": {"backupUrl": "https://g4f.space/api/community", "tags": "🤝"},
         "audio": {"label": "audio by g4f.dev", "baseUrl": "https://g4f.space/api/audio", "backupUrl": "https://g4f.space/api/audio", "tags": "🎧", "sleep": 10000},
         "deepinfra": {"baseUrl": "https://api.deepinfra.com/v1/openai", "backupUrl": "https://g4f.space/api/deepinfra", "tags": "🎨 👓", "modelsEndpoint": "https://api.deepinfra.com/models/featured"},
         "gemini": {"baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai", "backupUrl": "https://g4f.space/api/gemini-v1beta", "tags": "👓"},
         "huggingface": {"baseUrl": "https://router.huggingface.co/v1", "tags": "🤗", "provider": "HuggingFace"},
         "nvidia": {"baseUrl": "https://integrate.api.nvidia.com/v1", "backupUrl": "https://g4f.space/api/nvidia", "tags": "📟"},
         "ollama": {"baseUrl": "https://ollama.g4f-dev.workers.dev", "backupUrl": "https://g4f.space/api/ollama", "tags": "🦙"},
-        "ollama.pro": {"baseUrl": "https://ollama.g4f-dev.workers.dev", "backupUrl": "https://g4f.space/api/ollama.pro", "tags": "🦙 👑"},
-        "ollama.swarm": {"baseUrl": "https://ollama-swarm.g4f-dev.workers.dev", "tags": "🦙 🐝"},
+        "ollama.pro": {"backupUrl": "https://g4f.space/api/ollama.pro", "tags": "🦙 👑"},
+        "ollama.swarm": {"backupUrl": "https://g4f.space/api/ollama.swarm", "tags": "🦙 🐝"},
         "openrouter": {"baseUrl": "https://openrouter.ai/api/v1", "backupUrl": "https://g4f.space/api/openrouter", "tags": "👓"},
         "puter": {"baseUrl": "https://puter.g4f-dev.workers.dev", "tags": "👓", "provider": "PuterJS"},
-        "perplexity": {"baseUrl": "https://perplexity.g4f-dev.workers.dev", "tags": "🔎"},
-        "qwen": {"baseUrl": "https://qwen.g4f-dev.workers.dev", "tags": "💡", "provider": "Qwen"},
+        "perplexity": {"backupUrl": "https://g4f.space/api/perplexity", "tags": "🔎"},
+        "qwen": {"backupUrl": "https://g4f.space/api/qwen", "tags": "💡", "provider": "Qwen"},
         "crowllm": {"baseUrl": "https://crowllm.com/v1", "backupUrl": "https://g4f.space/api/crowllm.com", "tags": "🦅"}
     },
     "defaultModels": {

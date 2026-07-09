@@ -3040,6 +3040,13 @@ const register_settings_storage = async () => {
                 updateCustomProviderOption(element.value);
             });
         }
+        // Handle log_routing toggle to enable/disable routing
+        if (element.id === "log_routing") {
+            element.addEventListener('change', (event) => {
+                framework.logUrl = element.checked ? 'http://localhost:8090/api' : '';
+                localStorage.setItem('log_routing', element.checked);
+            });
+        }
         // Handle hideOneProviderModels changes to refresh model list
         if (element.id === "hideOneProviderModels") {
             element.addEventListener('change', async (event) => {

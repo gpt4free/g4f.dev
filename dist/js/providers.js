@@ -91,6 +91,8 @@ async function createClient(provider, options = {}) {
         options.baseUrl = backupUrl;
         options.apiKey = (typeof window !== "undefined" ? window?.localStorage.getItem("g4f_session") : undefined);
         options.sleep = 10000; // 10 seconds delay to avoid rate limiting
+    } else if (!options.baseUrl) {
+        options.baseUrl = backupUrl;
     }
 
     if (defaultModels[provider]) {

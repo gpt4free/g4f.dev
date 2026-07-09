@@ -389,6 +389,11 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
 
                   <!-- Advanced Tab -->
                   <div class="settings-tab-content" id="tab-advanced" role="tabpanel" aria-labelledby="tab-advanced">
+                  <div class="field">
+                      <span class="label">Log/Routing URL</span>
+                      <input type="checkbox" id="log_routing" />
+                      <label for="log_routing" class="toogle" title="Route all requests through local backend for logging"></label>
+                  </div>
                   <div class="field hidden">
                       <span class="label">Refine Files with spaCy</span>
                       <input type="checkbox" id="refine" />
