@@ -302,8 +302,11 @@ const renderMarkdown = (content) => {
                 if (item.text) {
                     return item.text;
                 }
-                size = parseInt(appStorage.getItem(`bucket:${item.bucket_id}`), 10);
-                return `**Bucket:** [[${item.bucket_id}]](${item.url})${size ? ` (${formatFileSize(size)})` : ""}`
+                if (item.bucket_id) {
+                    size = parseInt(appStorage.getItem(`bucket:${item.bucket_id}`), 10);
+                    return `**Bucket:** [[${item.bucket_id}]](${item.url})${size ? ` (${formatFileSize(size)})` : ""}`
+                }
+                return `![](${item.image_url?.url})`
             }
             if (item.name.endsWith(".wav") || item.name.endsWith(".mp3")) {
                 return `<audio controls src="${item.url}"></audio>` + (item.text ? `\n${item.text}` : "");

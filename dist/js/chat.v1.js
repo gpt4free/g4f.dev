@@ -1716,7 +1716,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             // It is not regenerated, if it is the first response to a new question
             if (regenerate && message_index == -1) {
                 let conversation = await get_conversation(window.conversation_id);
-                regenerate = conversation.items[conversation.items.length-1]["role"] != "user";
+                regenerate = conversation.items[conversation.items.length-1]?.role != "user";
             }
             // Create final message content
             final_message = message_storage[message_id]
@@ -1827,6 +1827,9 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         }
         // Helper function to solve bucket content
         const solveBucketContent = async (item) => {
+            if (item.type) {
+                return item;
+            }
             // Check if this is a media bucket (has url with /media/ path)
             if (item.bucket_id && item.url && item.url.includes('/media/')) {
                 // Always pass media as image_url for the backend to resolve
@@ -4151,6 +4154,46 @@ async function load_version() {
     setTimeout(load_version, 1000 * 60 * 60); // 1 hour
 }
 
+async function upload_image(file) {
+    if (file instanceof File) {
+        try {
+            const url = "https://media.pollinations.ai/upload";
+            const response = await fetch(url, {
+                method: 'POST',
+                body: file,
+                headers: {"Authorization": "Bearer pk_qYqyuR9tJOcWaKNQ"}
+            });
+            if (!response.ok) {
+                throw new Error(`Error uploading image: ${await response.text()}`);
+            }
+            return await response.json();
+        } catch (error) {
+            if (window.location.protocol == "https:") {
+                const formData = new FormData();
+                formData.append('files', file);
+                const response = await fetch(framework.backendUrl + "/backend-api/v2/files/" + bucket_id, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!response.ok) {
+                    throw error;
+                }
+                const result = await response.json()
+                if (result.media) {
+                    result.media.forEach((part)=> {
+                        part = part.name ? part : {name: part};
+                        let url = framework.backendUrl ? framework.backendUrl : window.location.origin;
+                        url = `${url}/files/${bucket_id}/media/${part.name}`;
+                        object_url = url.replaceAll("/media/", "/thumbnail/");
+                        return { bucket_id: bucket_id, url: url, ...part };
+                    });
+                }
+            }
+            throw error;
+        }
+    }
+}
+
 function renderMediaSelect() {
     const oldImages = mediaSelect.querySelectorAll("a:has(img)");
     oldImages.forEach((el)=>el.remove());
@@ -4174,26 +4217,12 @@ function renderMediaSelect() {
         }
         link.appendChild(img);
         mediaSelect.appendChild(link);
-        if (file instanceof File && window.location.protocol == "https:") {
-            const formData = new FormData();
-            formData.append('files', file);
-            const response = await fetch(framework.backendUrl + "/backend-api/v2/files/" + bucket_id, {
-                method: 'POST',
-                body: formData
-            });
-            const result = await response.json()
-            if (result.media) {
-                const media = [];
-                result.media.forEach((part)=> {
-                    part = part.name ? part : {name: part};
-                    let url = framework.backendUrl ? framework.backendUrl : window.location.origin;
-                    url = `${url}/files/${bucket_id}/media/${part.name}`;
-                    delete image_storage[object_url];
-                    object_url = url.replaceAll("/media/", "/thumbnail/");
-                    image_storage[object_url] = {bucket_id: bucket_id, url: url, ...part};
-                });
-            }
-        }
+        upload_image(file).then((result) => {
+            delete image_storage[object_url];
+            image_storage[result.url] = result;
+        }).catch((error) => {
+            add_error("Error uploading image:", error);
+        });
     });
 }
 
@@ -4428,6 +4457,20 @@ async function upload_files(fileInput) {
     try {
         const bucket_id = generateUUID();
         paperclip.classList.add("blink");
+
+        // Handle image files
+        const imageFiles = Array.from(fileInput.files).filter(file => 
+            file.type.startsWith('image/')
+        );
+        
+        if (imageFiles.length > 0) {
+            const urls = await Promise.all(imageFiles.map(async file => upload_image(file)));
+            const media = urls.map((part)=> {
+                return {type: "image_url", image_url: {url: part.url}}
+            });
+            await handle_ask(false, media);
+            return;
+        }
 
         const formData = new FormData();
         Array.from(fileInput.files).forEach(file => {
@@ -4973,7 +5016,7 @@ function setProviderModels(models, provider, quota=null) {
     }
 }
 async function get_quota(provider) {
-    if (!provider || provider == "AnyProvider") {
+    if (!provider || provider == "AnyProvider" || provider.startsWith("custom:") || provider.startsWith("pa:")) {
         return;
     }
     const url = `${framework.backendUrl}/backend-api/v2/quota/${provider}`;
@@ -5840,7 +5883,14 @@ function setupDragAndDrop() {
             
             if (imageFiles.length > 0) {
                 imageFiles.forEach(file => {
-                    image_storage[URL.createObjectURL(file)] = file;
+                    const objectUrl = URL.createObjectURL(file);
+                    image_storage[objectUrl] = file;
+                    upload_image(file).then(result=>{
+                        image_storage[result.url] = result;
+                        delete image_storage[objectUrl];
+                    }).catch(err => {
+                        add_error(err, true);
+                    });
                 });
                 renderMediaSelect();
                 mediaSelect.classList.remove('hidden');

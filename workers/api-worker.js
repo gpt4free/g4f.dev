@@ -74,6 +74,11 @@ var CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key, x-user, x-ignored, x-secret, x-recognition-language, if-none-match",
   "Access-Control-Expose-Headers": "Content-Type, X-User-Id, X-User-Tier, X-Provider, X-Model, X-Server, X-Url, X-Usage-Total-Tokens, X-Stream, X-Ratelimit-Model-Factor, X-Ratelimit-Remaining-Requests, X-Ratelimit-Remaining-Tokens, X-Ratelimit-Limit-Requests, X-Ratelimit-Limit-Tokens"
 };
+var EXTRA_HEADERS = {
+  "HTTP-Referer": "https://g4f.dev",
+  "X-OpenRouter-Title": "GPT4Free (g4f.dev)",
+  "X-OpenRouter-Categories": "cli-agent,cloud-agent,roleplay,general-chat",
+};
 var ACCESS_CONTROL_ALLOW_ORIGIN = {
   "Access-Control-Allow-Origin": "*"
 };
@@ -110,6 +115,12 @@ var SERVER_MAP = {
   "nvidia": "srv_mkombumpae45db46dcb8",
   "azure": "srv_mks0cusg6010f87029ea",
 }
+var SERVER_TO_PROVIDER = {
+  //"srv_mkoloq41e34074b6133e": "pollinations",
+  //"srv_mp5miql908c8738d71be": "pollinations",
+  //"srv_mqdvrlod81f0b2db504a": "huggingface",
+  //"srv_mp3lmkuad07322459f47": "airforce"
+}
 var URL_MAP = {
   "https://gen.pollinations.ai/quota": "https://gen.pollinations.ai/account/balance",
   "https://generativelanguage.googleapis.com/v1beta/openai/quota": "https://generativelanguage.googleapis.com/v1beta/openai/models"
@@ -130,7 +141,8 @@ var BLOCKED_SERVERS = [
   "srv_mpd9iu48c8486a78fa7e",
   "srv_mph1a6fddd5cabca84a2",
   "srv_mkopsm2y6983ddb87c90",
-  "srv_mnpsn10w592d5e0fe2b0"
+  "srv_mnpsn10w592d5e0fe2b0",
+  "srv_mqrlxup3fd91a47d98e6"
 ];
 // organizations (from Cloudflare `asOrganization`) that should be blocked
 // when the request is anonymous (no user/session or API key provided).
@@ -187,7 +199,31 @@ var BLOCKED_ORGS = [
   "FASTPLANET LTD",
   "Yandex.Cloud LLC",
   "Oracle Svenska AB",
-  "IONOS SE"
+  "IONOS SE",
+  "AEZA GROUP LLC",
+  "The Constant Company, LLC",
+  "Next Tech BD",
+  "Vultr Holdings, LLC",
+  "BitCommand LLC",
+  "M-Cloud LLC",
+  "OVH SAS",
+  "Microsoft Corporation",
+  "Microsoft Limited",
+  "Meta Platforms Ireland Limited",
+  "HostPapa",
+  "AlphaVPS LLC",
+  "NetCrafters OU",
+  "Amazon Data Services Northern Virginia",
+  "FIRST SERVER, SOCIEDAD LIMITADA",
+  "Hetzner Online GmbH",
+  "Amazon Technologies Inc.",
+  "31173 Services AB infrastructure in Amsterdam, NL.",
+  "IPLUS LLC",
+  "Amazon Corporate Services Pty Ltd"
+];
+var BLOCKED_USERS = [
+  "mamakumko", "mamkokumko", "MahmutHizal", "LucaBasri",
+  "SteamPunk001", "steampunk001", "steeampunk002-cmyk", "steeampunk004-cmyk"
 ];
 var GPT_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "marin", "cedar", "amuch", "dan", "elan", "breeze", "cove", "ember", "fathom", "glimmer", "harp", "juniper", "maple", "orbit", "vale"];
 var custom_worker_default = {
@@ -197,7 +233,7 @@ var custom_worker_default = {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS });
     }
-    if (pathname === "/" || pathname === "/v1/responses") {
+    if (pathname === "/") {
       return Response.redirect("https://g4f.dev", 302);
     }
     if (pathname == "/api/audio/models") {
@@ -205,13 +241,18 @@ var custom_worker_default = {
         return { id: voice, audio: true };
       })] }, { headers: ACCESS_CONTROL_ALLOW_ORIGIN });
     }
-    if (pathname == "/api/auto/models" || pathname == "/api/azure/quota") {
-      return Response.json({ data: [{id: "auto"}] }, { headers: ACCESS_CONTROL_ALLOW_ORIGIN });
-    }
     let userProvidedKey = null;
     let user = null;
     try {
       user = await authenticateRequest(request, env);
+      if (user && BLOCKED_USERS.includes(user.username)) {
+        return jsonResponse({
+          error: {
+            message: "Blocked user",
+            type: "authentication_required"
+          }
+        }, 403);
+      }
       const authHeader = request.headers.get("authorization");
       if (authHeader && authHeader.startsWith("Bearer ")) {
         const tokens = authHeader.substring(7).split(/\s+/);
@@ -219,7 +260,7 @@ var custom_worker_default = {
       }
       // block anonymous requests originating from certain cloud providers
       // (Cloudflare sets `request.cf.asOrganization` for the source ASN/org).
-      const org = request.cf?.asOrganization || null;
+      const org = request.cf?.asOrganization || request.cf?.country || null;
       if (!user && !userProvidedKey && org && BLOCKED_ORGS.includes(org)) {
         return jsonResponse({
           error: {
@@ -341,7 +382,7 @@ var custom_worker_default = {
         return handleCustomAiRoute(request, pathname, cacheKey, rateCheck, env, ctx);
       }
       if (pathname === "/custom/api/servers") {
-        return handleListServers(request, env);
+        return handleListServers(request, env, user);
       }
       if (pathname === "/custom/api/servers/create") {
         return handleCreateServer(request, env);
@@ -360,10 +401,10 @@ var custom_worker_default = {
       }
       if (pathname.match(/^\/custom\/api\/servers\/[^/]+\/models$/)) {
         const serverId = pathname.split("/")[4];
-        return handleGetServerModels(request, env, serverId);
+        return handleGetServerModels(request, env, serverId, user);
       }
-      if (pathname === "/v1/models" || pathname === "/models") {
-        return handleV1Models(request, env);
+      if (!userProvidedKey && (pathname === "/v1/models" || pathname === "/models")) {
+        return handleV1Models(request, env, user);
       }
       if (pathname.match(/^\/custom\/[^/]+\/models$/)) {
         const serverId = pathname.split("/")[2];
@@ -386,8 +427,8 @@ var custom_worker_default = {
         }
         return handleModels(request, env, ctx, server.id, user, server, cacheKey);
       }
-      if (pathname === "/v1/chat/completions" || pathname === "/custom/srv_mkopytsj9b6425de1db8/chat/completions") {
-        return handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, rateCheck);
+      if (!userProvidedKey && (pathname === "/v1/chat/completions" || pathname === "/chat/completions")) {
+        return handleV1ChatCompletions(request, env, ctx, pathname, user, cacheKey, rateCheck);
       }
       if (pathname.match(/^\/custom\/[^/]+\/chat\/completions$/)) {
         const serverId = pathname.split("/")[2];
@@ -421,23 +462,21 @@ var custom_worker_default = {
         const parts = pathname.split("/");
         const serverId = parts[2];
         const subPath = "/" + parts.slice(3).join("/");
-        const user2 = await authenticateRequest(request, env);
-        const server = await getServerById(env, serverId, user2);
+        const server = await getServerById(env, serverId, user);
         if (!server) {
           return jsonResponse({ error: "Server not found" }, 404);
         }
-        return handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user2, pathname, userProvidedKey, rateCheck);
+        return handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user, pathname, userProvidedKey, rateCheck);
       }
       if (pathname.startsWith("/api/") && pathname.split("/").length >= 3) {
         const parts = pathname.split("/");
         const label = parts[2];
         const subPath = "/" + parts.slice(3).join("/");
-        const user2 = await authenticateRequest(request, env);
-        const server = await getServerByLabel(env, label, user2);
+        const server = await getServerByLabel(env, label, user);
         if (!server) {
-          return proxyToPassG4f(request, env, pathname, url.search, user2, cacheKey, ctx);
+          return proxyToPassG4f(request, env, pathname, url.search, user, cacheKey, ctx);
         }
-        return handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user2, pathname, userProvidedKey, rateCheck);
+        return handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user, pathname, userProvidedKey, rateCheck);
       }
       return proxyToPassG4f(request, env, pathname, url.search, user, cacheKey, ctx);
     } catch (error) {
@@ -538,11 +577,7 @@ async function saveUser(env, user) {
     await env.MEMBERS_KV.put(`user:${user.id}`, JSON.stringify(user), { expirationTtl: 3600 });
   }
 }
-async function handleListServers(request, env) {
-  const user = await authenticateRequest(request, env);
-  if (!user) {
-    return jsonResponse({ error: "Unauthorized" }, 401);
-  }
+async function handleListServers(request, env, user) {
   const servers = user.custom_servers || [];
   const safeServers = servers.map((s) => ({
     id: s.id,
@@ -793,14 +828,13 @@ async function handleListPublicServers(request, env) {
   }));
   return jsonResponse({ servers: safeServers });
 }
-async function handleGetServerModels(request, env, serverId) {
-  const user = await authenticateRequest(request, env);
+async function handleGetServerModels(request, env, serverId, user) {
   const server = await getServerById(env, serverId, user);
   if (!server) {
     return jsonResponse({ error: "Server not found" }, 404);
   }
   try {
-    const apiKey = getRandomApiKey(server.api_keys);
+    const apiKey = server.api_key || getRandomApiKey(server.api_keys);
     const headers = { "Content-Type": "application/json" };
     if (apiKey) {
       headers["Authorization"] = apiKey.includes("Bearer") ? apiKey : `Bearer ${apiKey}`;
@@ -842,7 +876,7 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey,
   if (!server) {
     return jsonResponse({ error: "Server not found" }, 404);
   }
-  const apiKey = userProvidedKey || getRandomApiKey(server.api_keys);
+  const apiKey = userProvidedKey|| server.api_key || getRandomApiKey(server.api_keys);
   const headers = { "Content-Type": "application/json" };
   if (apiKey) {
     headers["Authorization"] = `Bearer ${apiKey}`;
@@ -959,15 +993,13 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     } catch (e) {
     }
   }
-  const apiKey = getRandomApiKey(server.api_keys);
-  const tokens = apiKey ? apiKey.split(/\s+/) : [];
+  const apiKey = userProvidedKey || server.api_key || getRandomApiKey(server.api_keys);
   const proxyHeaders = {
     "User-Agent": null,
-    "Content-Type": request.headers.get("Content-Type") || "application/json"
+    "Content-Type": request.headers.get("Content-Type") || "application/json",
+    ...EXTRA_HEADERS
   };
-  if (userProvidedKey) {
-    proxyHeaders["Authorization"] = `Bearer ${tokens.length > 1 ? tokens[0] + ' ' : ''}${userProvidedKey}`;
-  } else if (apiKey) {
+  if (apiKey) {
     proxyHeaders["Authorization"] = `Bearer ${apiKey}`;
   }
   let targetUrl;
@@ -1065,10 +1097,10 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       }
     }
     const totalTokens = parseInt(response.headers.get("X-Usage-Total-Tokens") || "0") || usage.total_tokens || (usage.prompt_tokens + usage.completion_tokens) || 0;
-    if (subPath === "/chat/completions" && response.ok || totalTokens > 0) {
+    if (totalTokens > 0 || (response.ok && requestModel)) {
       const geoLocation = request.cf?.asOrganization || request.cf?.country || null;
       const userAgent = request.headers.get("user-agent") || null;
-      ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, requestModel, totalTokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
+      ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, requestModel, totalTokens, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent, userProvidedKey));
       if (totalTokens > 0) {
         ctx.waitUntil(updateServerUsage(env, server, totalTokens, requestModel));
       }
@@ -1151,7 +1183,7 @@ async function createUsageTrackingStream(response, env, ctx, server, serverId, c
     }
   }
   const totalUsage = usage.total_tokens || (usage.prompt_tokens + usage.completion_tokens) || 0;
-  ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${serverId}`, requestModel, totalUsage, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
+  ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${serverId}`, requestModel, totalUsage, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent, userProvidedKey));
   ctx.waitUntil(updateServerUsage(env, server, totalUsage, requestModel));
   if (user) {
     ctx.waitUntil(updateUserDailyUsage(env, user.id, totalUsage, `custom:${serverId}`, requestModel));
@@ -1180,7 +1212,7 @@ function getFirstMessage(messages, fallback = "") {
 function getClientIP(request) {
   return request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 }
-async function persistUsageToDb(env, clientIP, provider, model, tokensUsed, promptTokens, completionTokens, pathname = null, firstMessage = null, userInfo = null, geoLocation = null, userAgent = null) {
+async function persistUsageToDb(env, clientIP, provider, model, tokensUsed, promptTokens, completionTokens, pathname = null, firstMessage = null, userInfo = null, geoLocation = null, userAgent = null, userProvidedKey = null) {
   if (!env.USAGE_DB) return;
   try {
     await env.USAGE_DB.prepare(
@@ -1197,7 +1229,7 @@ async function persistUsageToDb(env, clientIP, provider, model, tokensUsed, prom
       firstMessage ? firstMessage.substring(0, 5000) : null,
       userInfo?.user_id || userInfo?.id || null,
       userInfo?.tier || null,
-      userInfo?.username || null,
+      userInfo?.username || String(userProvidedKey).substring(0, 16),
       geoLocation || null,
       userAgent ? userAgent.substring(0, 500) : null,
       (/* @__PURE__ */ new Date()).toISOString()
@@ -1281,17 +1313,27 @@ async function updateUserDailyUsage(env, userId, tokens, provider, model) {
     console.error("Failed to update user daily usage:", e);
   }
 }
+function isTokenExpired(expires) {
+    if (!expires) return false;
+    const expiresMs = expires > 1e12 ? expires : expires * 1000;
+    return Date.now() > expiresMs;
+}
 async function getServerById(env, serverId, user = null) {
+  const provider = SERVER_TO_PROVIDER[serverId];
+  let api_key;
+  if (user && provider && user[provider] && !isTokenExpired(user[provider].expires)) {
+    api_key = user[provider].access_token || user[provider].api_key
+  }
   if (user && user.custom_servers) {
     const ownedServer = user.custom_servers.find((s) => s.id === serverId);
     if (ownedServer) {
-      return { ...ownedServer, owner_id: user.id };
+      return { ...ownedServer, owner_id: user.id, api_key };
     }
   }
   if (env.MEMBERS_KV) {
     const cached = await env.MEMBERS_KV.get(`server:${serverId}`);
     if (cached) {
-      return JSON.parse(cached);
+      return { ...JSON.parse(cached), api_key };
     }
   }
   let publicServers = await getPublicServers(env);
@@ -1308,7 +1350,7 @@ async function getServerById(env, serverId, user = null) {
             JSON.stringify(fullServer),
             { expirationTtl: 300 }
           );
-          return fullServer;
+          return { ...fullServer, api_key };;
         }
       }
       return server;
@@ -1595,7 +1637,8 @@ ${prompt}
     }
   }
   const proxyHeaders = {
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
+    ...EXTRA_HEADERS
   };
   if (userProvidedKey) {
     proxyHeaders["Authorization"] = userProvidedKey.includes("Bearer") ? userProvidedKey : `Bearer ${userProvidedKey}`;
@@ -1755,7 +1798,7 @@ ${prompt}
     const requestModel = data.model || queryBody.model;
     const firstMessage = prompt || getFirstMessage(queryBody.messages);
     const totalUsage = usage.total_tokens || (usage.prompt_tokens + usage.completion_tokens) || 0;
-    ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, queryBody.model, totalUsage, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent));
+    ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, queryBody.model, totalUsage, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent, userProvidedKey));
     if (response.ok) {
       ctx.waitUntil(updateServerUsage(env, server, totalUsage, queryBody.model));
     }
@@ -2129,11 +2172,10 @@ async function updateAnonymousTokenUsage(env, clientIP, tokens, ctx) {
     await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
   }
 }
-async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, rateCheck) {
+async function handleV1ChatCompletions(request, env, ctx, pathname, user, cacheKey, rateCheck) {
   if (!modelToServerCache) {
-    await handleV1Models(request, env);
+    await handleV1Models(request, env, user);
   }
-  const user = await authenticateRequest(request, env);
   let requestBody;
   try {
     requestBody = await request.clone().json();
@@ -2158,9 +2200,6 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, cacheKey, ra
       selectedServer = maybe;
     }
   }
-
-  // parse prefix syntax serverId:modelName if provided
-  let serverFromPrefix = null;
 
   // if prefix identified a server use it exclusively
   if (!selectedServer) {
@@ -2218,23 +2257,25 @@ async function getModelsFromStats(env, server) {
   const modelCounts = {};
   if (!env.MEMBERS_BUCKET || !server || !server.owner_id) return modelCounts;
   try {
-    const now = new Date();
-    const dateKey = now.toISOString().split("T")[0];
-    const prefix = `custom_servers/${server.owner_id}/${server.id}/usage/${dateKey}.json`;
-    const list = await env.MEMBERS_BUCKET.list({ prefix });
-    if (list && list.objects) {
-      for (const entry of list.objects) {
-        try {
-          const rec = await env.MEMBERS_BUCKET.get(entry.key);
-          if (!rec) continue;
-          const json = await rec.json();
-          if (json && json.models) {
-            for (const [m, cnt] of Object.entries(json.models)) {
-              modelCounts[m] = (modelCounts[m] || 0) + (cnt || 0);
+    const dates = [(d =>new Date(d.setDate(d.getDate()-1)))(new Date()), new Date()];
+    for (const date of dates) {
+      const dateKey = date.toISOString().split("T")[0];
+      const prefix = `custom_servers/${server.owner_id}/${server.id}/usage/${dateKey}.json`;
+      const list = await env.MEMBERS_BUCKET.list({ prefix });
+      if (list && list.objects) {
+        for (const entry of list.objects) {
+          try {
+            const rec = await env.MEMBERS_BUCKET.get(entry.key);
+            if (!rec) continue;
+            const json = await rec.json();
+            if (json && json.models) {
+              for (const [m, cnt] of Object.entries(json.models)) {
+                modelCounts[m] = (modelCounts[m] || 0) + (cnt || 0);
+              }
             }
+          } catch (e) {
+            // ignore individual read errors
           }
-        } catch (e) {
-          // ignore individual read errors
         }
       }
     }
@@ -2249,7 +2290,7 @@ let modelsCache = null;
 let modelsCacheTime = 0;
 let modelToServerCache = null;
 
-async function handleV1Models(request, env) {
+async function handleV1Models(request, env, user) {
   const now = Date.now();
 
   // return cached result if recent
@@ -2257,7 +2298,6 @@ async function handleV1Models(request, env) {
     return jsonResponse(modelsCache.payload);
   }
 
-  const user = await authenticateRequest(request, env);
   let privateServers = [];
   if (user && user.custom_servers) {
     privateServers = user.custom_servers.filter((s) => !s.is_public);
@@ -2274,7 +2314,7 @@ async function handleV1Models(request, env) {
       for (const [m, cnt] of Object.entries(map)) {
         const key = `${server.id}:${m}`;
         if (!allModels[key]) {
-          allModels[key] = { id: key, model: m, label: `${server.label}:${m}`, server: server.id, requests: cnt };
+          allModels[key] = { id: key, owned_by: server.label, model: m, label: `${server.label}:${m}`, server: server.id, requests: cnt };
         } else {
           allModels[key].requests = (allModels[key].requests || 0) + cnt;
         }
@@ -2351,7 +2391,7 @@ async function setCachedResponse(request, response, cacheControl, cacheKey = nul
   }
 }
 async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ctx) {
-  if (pathname.startsWith("/v1/v1beta/") || pathname.endsWith("/messages") || pathname.endsWith("/respones")) {
+  if (pathname.startsWith("/v1/v1beta/") || pathname.endsWith("/messages") || pathname.endsWith("/respones") || ["/api/azure/models", "/api/auto/models", "/api/grok/models", "/v1/chat/completions"].includes(pathname)) {
     return jsonResponse({
       error: {
         message: `Url '${pathname}' not found`,
