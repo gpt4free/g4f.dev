@@ -5051,9 +5051,8 @@ async function refreshModels(provider) {
         const paEntry = window._paProviders && window._paProviders.find(p => p.id === paId);
         console.log("PA provider entry for provider:", provider, paEntry);
         if (paEntry && Array.isArray(paEntry.models) && paEntry.models.length > 0) {
-            const models = paEntry.models.map(m => ({ name: m, model: m }));
-            console.log("Setting PA provider models for provider:", provider, models);
-            setProviderModels(models, provider);
+            console.log("Setting PA provider models for provider:", provider, paEntry.models);
+            setProviderModels(paEntry.models, provider);
         }
         return;
     }
