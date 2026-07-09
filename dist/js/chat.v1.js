@@ -4623,11 +4623,6 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
             signal: providerModelSignal.signal,
         });
     } else if (ressource == "conversation") {
-        // Route PA providers to their dedicated backend endpoint
-        if (args && args.provider && String(args.provider).startsWith("pa:")) {
-            args = { ...args, provider: args.provider.slice(3) };
-            url = `${framework.backendUrl}/pa/backend-api/v2/conversation`;
-        }
         let body = JSON.stringify(args);
         headers = {
             accept: 'text/event-stream',
