@@ -2,10 +2,9 @@
     "providers": {
         "default": {"baseUrl": "https://g4f.space/v1", "backupUrl": "https://g4f.space/v1", "quotaEndpoint": null},
         "pollinations": {"backupUrl": "https://g4f.space/api/gen.pollinations", "label": "pollinations.ai", "tags": "🎨 👓", "provider": "PollinationsAI"},
-        "airforce": {"baseUrl": "https://api.airforce/v1", "tags": "🎨 👓"},
-        "master": {"label": "master by api.airforce", "baseUrl": "https://g4f.space/api/api.airforce", "backupUrl": "https://g4f.space/api/api.airforce", "tags": "🎨 👓", "sleep": 10000},
+        "airforce": {"baseUrl": "https://api.airforce/v1", "backupUrl": "https://g4f.space/api/api.airforce", "tags": "🎨 👓"},
         "audio": {"label": "audio by g4f.dev", "baseUrl": "https://g4f.space/api/audio", "backupUrl": "https://g4f.space/api/audio", "tags": "🎧", "sleep": 10000},
-        "deepinfra": {"baseUrl": "https://api.deepinfra.com/v1/openai", "tags": "🎨 👓", "modelsEndpoint": "https://api.deepinfra.com/models/featured"},
+        "deepinfra": {"baseUrl": "https://api.deepinfra.com/v1/openai", "backupUrl": "https://g4f.space/api/deepinfra", "tags": "🎨 👓", "modelsEndpoint": "https://api.deepinfra.com/models/featured"},
         "gemini": {"baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai", "backupUrl": "https://g4f.space/api/gemini-v1beta", "tags": "👓"},
         "huggingface": {"baseUrl": "https://router.huggingface.co/v1", "tags": "🤗", "provider": "HuggingFace"},
         "nvidia": {"baseUrl": "https://integrate.api.nvidia.com/v1", "backupUrl": "https://g4f.space/api/nvidia", "tags": "📟"},
