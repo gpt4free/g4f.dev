@@ -635,6 +635,7 @@ async function handleCreateServer(request, env) {
     label: body.label || `Server ${(user.custom_servers || []).length + 1}`,
     base_url: normalizedBaseUrl,
     api_keys: body.api_keys || "",
+    expires: body.expires || null,
     // Line-separated API keys
     allowed_models: allowedModels,
     auto_update_models: autoUpdateModels,
@@ -682,7 +683,7 @@ async function handleUpdateServer(request, env) {
   const server = user.custom_servers[serverIndex];
   const wasPublic = server.is_public;
   const now = (/* @__PURE__ */ new Date()).toISOString();
-  const allowedFields = ["label", "base_url", "api_keys", "allowed_models", "auto_update_models", "is_public"];
+  const allowedFields = ["label", "base_url", "api_keys", "allowed_models", "auto_update_models", "is_public", "expires"];
   for (const field of allowedFields) {
     if (body[field] !== void 0) {
       if (field === "base_url") {

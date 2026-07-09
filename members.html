@@ -1942,6 +1942,7 @@
                             localStorage.setItem('g4f_user', JSON.stringify(data.user));
                             localStorage.setItem('user', data.user.name || data.user.username);
                             localStorage.setItem('PollinationsAI-api_key', pollinationsToken);
+                            localStorage.setItem('PollinationsAI-expires', data.expires);
                             localStorage.setItem('pollinations_pending_server', pollinationsToken);
                             showToastFormat('Successfully signed in with {0}!', 'success', data.user.provider);
                             const pendingRedirect = localStorage.getItem('members_external_redirect');
@@ -2286,6 +2287,18 @@
         
         async function createOrUpdatePollinationsServer(apiKey) {
             try {
+                let expires;
+                try {
+                    const response = await fetch("https://gen.pollinations.ai/account/key", {
+                        headers: {
+                            "Authorization": `Bearer ${apiKey}`
+                        }
+                    });
+                    const key_data = response.ok ? (await response.json()) : null;
+                    if (key_data.expiresAt) {
+                        expires = Math.floor(Date.parse(key_data.expiresAt)/1000);
+                    }
+                } catch (e) {}
                 // First, check if a Pollinations server already exists
                 const result = await customApiRequest('/servers');
                 const servers = result.servers || [];
@@ -2298,7 +2311,8 @@
                     base_url: 'https://pollinations.g4f-dev.workers.dev',
                     api_keys: apiKey,
                     allowed_models: [],
-                    is_public: false
+                    is_public: false,
+                    expires: expires || null
                 };
                 
                 if (existingServer) {
