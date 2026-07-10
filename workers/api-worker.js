@@ -89,6 +89,7 @@ var AUTO_PROVIDERS = [
   // "srv_mq7ktfibad45c29f3839", // swarm
   "srv_monk1pkz433a519ff2be", // openrouter
   // "srv_mkoloq41e34074b6133e", // pollinations
+  "srv_mrdypihj16e8b1776409" // community
 ]
 var DEFAULT_MODELS = {
   "srv_mkom688d57c76d8a3542": "moonshotai/kimi-k2-instruct-0905", // groq
@@ -103,7 +104,8 @@ var DEFAULT_MODELS = {
   "srv_mkol5tgcd33cc358ddbc": "models/gemini-flash-latest", // gemini
   "srv_mkoloq41e34074b6133e": "openai-fast", // pollinations
   "srv_mkomfko63371049b6da6": "deepseek-v3.2:free", // api.airforce
-  "srv_mks0cusg6010f87029ea": "model-router3",// azure
+  "srv_mks0cusg6010f87029ea": "model-router3" ,// azure
+  "srv_mrdypihj16e8b1776409": "zai-org/GLM-5.2" // community
 };
 var SERVER_MAP = {
   //"api": "srv_mnkjel2208cf770e5009",
@@ -144,7 +146,14 @@ var BLOCKED_SERVERS = [
   "srv_mph1a6fddd5cabca84a2",
   "srv_mkopsm2y6983ddb87c90",
   "srv_mnpsn10w592d5e0fe2b0",
-  "srv_mqrlxup3fd91a47d98e6"
+  "srv_mqrlxup3fd91a47d98e6",
+  "srv_mn1y956u9e6cfd0c1b4b",
+  "srv_movtsa449e5973774803",
+  "srv_mq43490w779222be0b07",
+  "srv_mr1ruv123345d3ceb8a1",
+  "srv_mr6vtpu754b4393be8e8",
+  "srv_mrc5xtamce61d5c8b302",
+  "srv_mkol5tgcd33cc358ddbc"
 ];
 // organizations (from Cloudflare `asOrganization`) that should be blocked
 // when the request is anonymous (no user/session or API key provided).
@@ -221,11 +230,18 @@ var BLOCKED_ORGS = [
   "Amazon Technologies Inc.",
   "31173 Services AB infrastructure in Amsterdam, NL.",
   "IPLUS LLC",
-  "Amazon Corporate Services Pty Ltd"
+  "Amazon Corporate Services Pty Ltd",
+  "Hostinger International Limited",
+  "Senko Digital LLC - DE Network",
+  "Space Hosting"
 ];
 var BLOCKED_USERS = [
   "mamakumko", "mamkokumko", "MahmutHizal", "LucaBasri",
-  "SteamPunk001", "steampunk001", "steeampunk002-cmyk", "steeampunk004-cmyk"
+  "SteamPunk001", "steampunk001", "steeampunk002-cmyk", "steeampunk004-cmyk",
+  "MahmutHizal", "LucaBasri", "mamkokumko", "mamakumko",
+  "denmos221-cpu", "vlintz",
+  "luciazamora99", "valrab_",
+  "mamakumko", "MahmutHizal", "LucaBasri"
 ];
 var GPT_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "marin", "cedar", "amuch", "dan", "elan", "breeze", "cove", "ember", "fathom", "glimmer", "harp", "juniper", "maple", "orbit", "vale"];
 var custom_worker_default = {
