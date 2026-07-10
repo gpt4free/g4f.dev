@@ -1,0 +1,22 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [],
+        "components": [
+          {
+            "/": "/chat/*",
+            "comment": "Opens the G4F chat interface"
+          },
+          {
+            "/": "/docs/*",
+            "comment": "Opens the G4F documentation"
+          }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": []
+  }
+}

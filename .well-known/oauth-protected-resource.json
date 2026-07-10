@@ -1,0 +1,7 @@
+{
+  "resource": "https://g4f.dev",
+  "authorization_servers": ["https://g4f.dev"],
+  "jwks_uri": "https://g4f.dev/.well-known/jwks.json",
+  "bearer_methods_supported": ["header"],
+  "resource_documentation": "https://g4f.dev/docs/authentication.html"
+}

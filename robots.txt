@@ -5,6 +5,7 @@
 User-agent: *
 Disallow: /private/
 Disallow: /dist/
+Allow: /.well-known/
 Allow: /
 Crawl-delay: 1
 
