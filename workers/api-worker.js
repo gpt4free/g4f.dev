@@ -149,11 +149,11 @@ var BLOCKED_SERVERS = [
   "srv_mqrlxup3fd91a47d98e6",
   "srv_mn1y956u9e6cfd0c1b4b",
   "srv_movtsa449e5973774803",
-  "srv_mq43490w779222be0b07",
-  "srv_mr1ruv123345d3ceb8a1",
-  "srv_mr6vtpu754b4393be8e8",
+  "srv_mq43490w779222be0b07",//
+  "srv_mr1ruv123345d3ceb8a1",//
+  "srv_mr6vtpu754b4393be8e8",//
   "srv_mrc5xtamce61d5c8b302",
-  "srv_mkol5tgcd33cc358ddbc"
+  "srv_mkol5tgcd33cc358ddbc"//
 ];
 // organizations (from Cloudflare `asOrganization`) that should be blocked
 // when the request is anonymous (no user/session or API key provided).
@@ -820,13 +820,16 @@ async function handleGetServerUsage(request, env) {
     history
   });
 }
-async function getPublicServers(env) {
+async function getPublicServers(env, blocklist = true) {
   let publicServers = [];
   if (env.MEMBERS_KV) {
     const indexStr = await env.MEMBERS_KV.get("public_servers_index");
     if (indexStr) {
-      publicServers = JSON.parse(indexStr).filter((s) => !BLOCKED_SERVERS.includes(s.id));
+      publicServers = JSON.parse(indexStr);
     }
+  }
+  if (blocklist) {
+    publicServers = publicServers.filter((s) => !BLOCKED_SERVERS.includes(s.id));
   }
   publicServers.sort((a, b) => {
     const aCreated = new Date(a.created_at || a.updated_at || 0).getTime();
@@ -836,7 +839,7 @@ async function getPublicServers(env) {
   return publicServers;
 }
 async function handleListPublicServers(request, env) {
-  const publicServers = await getPublicServers(env);
+  const publicServers = await getPublicServers(env, false);
   const safeServers = publicServers.map((s) => ({
     id: s.id,
     label: s.label,
@@ -845,7 +848,10 @@ async function handleListPublicServers(request, env) {
     owner_id: s.owner_id,
     usage: s.usage || { requests: 0, tokens: 0 }
   }));
-  return jsonResponse({ servers: safeServers });
+  return jsonResponse({
+    servers: safeServers.filter((s) => !BLOCKED_SERVERS.includes(s.id)),
+    offline: safeServers.filter((s) => BLOCKED_SERVERS.includes(s.id))
+  });
 }
 async function handleGetServerModels(request, env, serverId, user) {
   const server = await getServerById(env, serverId, user);
@@ -2219,6 +2225,7 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, user, cacheK
       return jsonResponse({ error: e.message }, 500);
     }
   }
+  if (!selectedServer)
   if (model && modelToServerCache && modelToServerCache[model]) {
     const serverId = modelToServerCache[model];
     const maybe = await getServerById(env, serverId, user);
