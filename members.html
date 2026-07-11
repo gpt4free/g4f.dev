@@ -534,6 +534,97 @@
             background: rgba(30, 136, 255, 0.25);
             color: #76b6ff;
         }
+
+        /* Linked provider row with unlink button */
+        .linked-provider {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0.25rem 0;
+        }
+
+        .unlink-btn {
+            background: rgba(220, 53, 69, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.7rem;
+            padding: 0;
+            transition: all 0.2s ease;
+        }
+
+        .unlink-btn:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .unlink-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* Danger Zone */
+        .danger-zone {
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            background: rgba(220, 53, 69, 0.05);
+        }
+
+        .danger-zone h3 {
+            color: var(--danger);
+            margin: 0 0 0.5rem 0;
+            font-size: 1.1rem;
+        }
+
+        .danger-zone p {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.85rem;
+            margin: 0 0 1rem 0;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-danger:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .deletion-countdown {
+            background: rgba(255, 193, 7, 0.15);
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            color: var(--warning);
+            font-size: 0.9rem;
+        }
+
+        .deletion-countdown strong {
+            display: block;
+            font-size: 1rem;
+            margin-bottom: 0.25rem;
+        }
         
         /* Loading Spinner */
         .loading {
@@ -1413,6 +1504,27 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Danger Zone Card -->
+                <div class="card" style="grid-column: 1 / -1;">
+                    <h2><span class="icon">⚠️</span> Danger Zone</h2>
+                    <div id="dangerZoneContent" class="danger-zone">
+                        <div id="scheduledDeletionNotice" class="deletion-countdown" style="display: none;">
+                            <strong>⏳ Account deletion scheduled</strong>
+                            <span id="deletionCountdownText">Your account will be deleted in...</span>
+                        </div>
+                        <h3>Delete Account</h3>
+                        <p>Permanently delete your account, API keys, and all associated data. A 24-hour grace period applies — you can cancel during this time.</p>
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                            <button class="btn-danger" id="deleteAccountBtn">
+                                <i class="fas fa-trash"></i> Delete Account
+                            </button>
+                            <button class="btn btn-secondary" id="cancelDeleteAccountBtn" style="display: none;">
+                                <i class="fas fa-undo"></i> Cancel Deletion
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
     </main>
@@ -1467,6 +1579,10 @@
         const navAvatar = document.getElementById('navAvatar');
         const navUsername = document.getElementById('navUsername');
         const redirectTarget = document.getElementById('redirectTarget');
+        const deleteAccountBtn = document.getElementById('deleteAccountBtn');
+        const cancelDeleteAccountBtn = document.getElementById('cancelDeleteAccountBtn');
+        const scheduledDeletionNotice = document.getElementById('scheduledDeletionNotice');
+        const deletionCountdownText = document.getElementById('deletionCountdownText');
 
         // Session token storage
         let sessionToken = localStorage.getItem('g4f_session') || null;
@@ -1640,18 +1756,33 @@
                 airforce: '✈️ Airforce',
                 pollinations: '🌸 Pollinations'
             };
-            const providers = [user.provider || 'huggingface'];
+            const mainProvider = user.provider || 'huggingface';
+            const providers = [mainProvider];
             for (const provider of Object.keys(providerIcons)) {
                 if (!providers.includes(provider) && user[provider]) {
                     providers.push(provider);
                 }
             }
-            providerBadge.innerHTML = providers.map(provider => `<span class="provider-badge ${provider}">${providerIcons[provider] || provider}</span>`).join(' ');
-            
+            providerBadge.innerHTML = providers.map(provider => {
+                const isMain = provider === mainProvider;
+                const unlinkBtn = isMain
+                    ? ''
+                    : `<button class="unlink-btn" data-provider="${provider}" title="Unlink ${provider}"><i class="fas fa-times"></i></button>`;
+                return `<span class="linked-provider"><span class="provider-badge ${provider}">${providerIcons[provider] || provider}</span>${unlinkBtn}</span>`;
+            }).join(' ');
+
+            // Attach unlink event listeners
+            providerBadge.querySelectorAll('.unlink-btn').forEach(btn => {
+                btn.addEventListener('click', () => unlinkProvider(btn.dataset.provider));
+            });
+
             // Show nav user info
             navUserInfo.style.display = 'flex';
             navAvatar.src = user.avatar || 'dist/img/g4f-32x32.png';
             navUsername.textContent = user.name || user.username;
+
+            // Update danger zone (scheduled deletion state)
+            updateDangerZone(user);
             
             // Load existing API key if any
             const existingKey = localStorage.getItem('g4f_api_key');
@@ -2020,6 +2151,132 @@
             showToast('Successfully signed out');
             showLogin();
         });
+
+        // ============================================
+        // Account Deletion (with 24h grace period)
+        // ============================================
+
+        let deletionCountdownInterval = null;
+
+        function updateDangerZone(user) {
+            if (user.scheduled_deletion) {
+                scheduledDeletionNotice.style.display = 'block';
+                cancelDeleteAccountBtn.style.display = 'inline-flex';
+                deleteAccountBtn.style.display = 'none';
+                startDeletionCountdown(user.scheduled_deletion);
+            } else {
+                scheduledDeletionNotice.style.display = 'none';
+                cancelDeleteAccountBtn.style.display = 'none';
+                deleteAccountBtn.style.display = 'inline-flex';
+                stopDeletionCountdown();
+            }
+        }
+
+        function startDeletionCountdown(deletionDate) {
+            stopDeletionCountdown();
+            const update = () => {
+                const remaining = new Date(deletionDate) - new Date();
+                if (remaining <= 0) {
+                    deletionCountdownText.textContent = 'Deletion is being processed...';
+                    return;
+                }
+                const hours = Math.floor(remaining / (1000 * 60 * 60));
+                const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+                deletionCountdownText.textContent = `Your account will be deleted in ${hours}h ${minutes}m ${seconds}s. Click "Cancel Deletion" to stop this.`;
+            };
+            update();
+            deletionCountdownInterval = setInterval(update, 1000);
+        }
+
+        function stopDeletionCountdown() {
+            if (deletionCountdownInterval) {
+                clearInterval(deletionCountdownInterval);
+                deletionCountdownInterval = null;
+            }
+        }
+
+        deleteAccountBtn.addEventListener('click', async () => {
+            const user = JSON.parse(localStorage.getItem('g4f_user') || '{}');
+            const username = user.username || user.name || 'your account';
+            const confirmed = confirm(
+                `Are you sure you want to delete ${username}?\n\n` +
+                `Your account, API keys, and all associated data will be permanently deleted.\n\n` +
+                `A 24-hour grace period applies — you can cancel the deletion during this time. ` +
+                `After 24 hours, the deletion is irreversible.`
+            );
+            if (!confirmed) return;
+
+            deleteAccountBtn.disabled = true;
+            deleteAccountBtn.innerHTML = '<span class="loading"></span> Scheduling...';
+            try {
+                const result = await apiRequest('/user/delete', { method: 'POST', body: JSON.stringify({}) });
+                if (result.error) throw new Error(result.error);
+                // Update cached user
+                user.scheduled_deletion = result.scheduled_deletion;
+                localStorage.setItem('g4f_user', JSON.stringify(user));
+                updateDangerZone(user);
+                showToast('Account deletion scheduled. You have 24 hours to cancel.');
+            } catch (error) {
+                console.error('Error scheduling deletion:', error);
+                showToastFormat('Error: {0}', 'error', error.message);
+            } finally {
+                deleteAccountBtn.disabled = false;
+                deleteAccountBtn.innerHTML = '<i class="fas fa-trash"></i> Delete Account';
+            }
+        });
+
+        cancelDeleteAccountBtn.addEventListener('click', async () => {
+            cancelDeleteAccountBtn.disabled = true;
+            cancelDeleteAccountBtn.innerHTML = '<span class="loading"></span> Cancelling...';
+            try {
+                const result = await apiRequest('/user/delete/cancel', { method: 'POST', body: JSON.stringify({}) });
+                if (result.error) throw new Error(result.error);
+                // Update cached user
+                const user = JSON.parse(localStorage.getItem('g4f_user') || '{}');
+                delete user.scheduled_deletion;
+                localStorage.setItem('g4f_user', JSON.stringify(user));
+                updateDangerZone(user);
+                showToast('Account deletion cancelled successfully');
+            } catch (error) {
+                console.error('Error cancelling deletion:', error);
+                showToastFormat('Error: {0}', 'error', error.message);
+            } finally {
+                cancelDeleteAccountBtn.disabled = false;
+                cancelDeleteAccountBtn.innerHTML = '<i class="fas fa-undo"></i> Cancel Deletion';
+            }
+        });
+
+        // ============================================
+        // Unlink Provider
+        // ============================================
+
+        async function unlinkProvider(provider) {
+            const confirmed = confirm(
+                `Unlink ${provider} from your account?\n\n` +
+                `You can re-link it later by signing in with ${provider} again. ` +
+                `Your main provider cannot be unlinked.`
+            );
+            if (!confirmed) return;
+
+            try {
+                const result = await apiRequest('/user/unlink', {
+                    method: 'POST',
+                    body: JSON.stringify({ provider })
+                });
+                if (result.error) throw new Error(result.error);
+
+                // Update cached user
+                if (result.user) {
+                    localStorage.setItem('g4f_user', JSON.stringify(result.user));
+                    showDashboard(result.user);
+                }
+                showToastFormat('{0} unlinked successfully', 'success', provider);
+            } catch (error) {
+                console.error('Error unlinking provider:', error);
+                showToastFormat('Error: {0}', 'error', error.message);
+            }
+        }
 
         // Generate API Key using worker
         generateKeyBtn.addEventListener('click', async () => {

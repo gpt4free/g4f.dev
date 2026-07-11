@@ -534,6 +534,12 @@ async function calculateUserTier(userData, contributors, sponsors) {
             if (pathname === "/members/api/user/delete") {
                 return handleDeleteUser(request, env);
             }
+            if (pathname === "/members/api/user/delete/cancel") {
+                return handleCancelDeleteUser(request, env);
+            }
+            if (pathname === "/members/api/user/unlink") {
+                return handleUnlinkProvider(request, env);
+            }
   
             // Anonymous tier upgrade endpoint
             if (pathname.startsWith("/members/api/anonymous/")) {
@@ -640,6 +646,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
             let listResult = await env.MEMBERS_BUCKET.list({ prefix: "users/", limit: 100 });
             let updatedCount = 0;
             let errorCount = 0;
+            let deletedCount = 0;
             
             while (listResult && Array.isArray(listResult.objects)) {
                 for (const object of listResult.objects) {
@@ -651,6 +658,18 @@ async function calculateUserTier(userData, contributors, sponsors) {
                         if (!userObject) continue;
                         
                         const user = await userObject.json();
+
+                        // Process scheduled account deletions after the 24h grace period
+                        if (user.scheduled_deletion) {
+                            const deletionTime = new Date(user.scheduled_deletion);
+                            if (deletionTime <= new Date()) {
+                                console.log(`Deleting user ${user.username} (${user.provider}) — grace period elapsed`);
+                                await performUserDeletion(env, user);
+                                deletedCount++;
+                                continue;
+                            }
+                        }
+
                         const newTier = await calculateUserTier(user, contributors, sponsors);
                         
                         if (user.tier !== newTier) {
@@ -700,7 +719,7 @@ async function calculateUserTier(userData, contributors, sponsors) {
                 listResult = await env.MEMBERS_BUCKET.list({ prefix: "users/", limit: 100, cursor: listResult.cursor });
             }
             
-            console.log(`Scheduled tier update complete: ${updatedCount} users updated, ${errorCount} errors`);
+            console.log(`Scheduled tier update complete: ${updatedCount} users updated, ${deletedCount} deleted, ${errorCount} errors`);
         } catch (error) {
             console.error("Scheduled tier update failed:", error);
         }
@@ -1979,10 +1998,71 @@ async function calculateUserTier(userData, contributors, sponsors) {
         return jsonResponse({ error: "Method not allowed" }, 405);
     }
   
+    // Parse body to check for immediate flag (admin override) or confirm flag
+    let body = {};
+    try {
+        body = await request.json();
+    } catch {
+        // No body or invalid JSON — default to scheduled deletion
+    }
+  
+    // Schedule deletion with a 24-hour grace period so the user can cancel
+    const now = new Date();
+    const deletionAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    user.scheduled_deletion = deletionAt.toISOString();
+    user.updated_at = now.toISOString();
+    await saveUser(env, user);
+  
+    return jsonResponse({
+        message: "Account deletion scheduled. You have 24 hours to cancel.",
+        scheduled_deletion: user.scheduled_deletion,
+        can_cancel_until: user.scheduled_deletion
+    });
+  }
+  
+  /**
+   * POST /members/api/user/delete/cancel
+   * Cancel a previously scheduled account deletion.
+   */
+  async function handleCancelDeleteUser(request, env) {
+    const user = await authenticateRequest(request, env);
+    if (!user) {
+        return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+  
+    if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+    }
+  
+    if (!user.scheduled_deletion) {
+        return jsonResponse({ error: "No scheduled deletion to cancel" }, 400);
+    }
+  
+    delete user.scheduled_deletion;
+    user.updated_at = new Date().toISOString();
+    await saveUser(env, user);
+  
+    return jsonResponse({ message: "Account deletion cancelled" });
+  }
+  
+  /**
+   * Actually perform the deletion of a user. Called by the scheduled handler
+   * once the grace period has elapsed, or by handleDeleteUser for immediate
+   * admin overrides.
+   */
+  async function performUserDeletion(env, user) {
     // Delete user data
     await env.MEMBERS_BUCKET.delete(`users/${user.id}.json`);
     await env.MEMBERS_KV.delete(`user:${user.id}`);
     await env.MEMBERS_KV.delete(`user_lookup:${user.provider}:${user.username}`);
+  
+    // Delete lookups for any linked providers
+    const linkedProviders = ["github", "discord", "huggingface", "airforce", "pollinations"];
+    for (const provider of linkedProviders) {
+        if (user[provider] && user[provider].username) {
+            await env.MEMBERS_KV.delete(`user_lookup:${provider}:${user[provider].username}`);
+        }
+    }
   
     // Delete all API keys
     for (const keyData of user.api_keys || []) {
@@ -1991,8 +2071,55 @@ async function calculateUserTier(userData, contributors, sponsors) {
   
     // Delete sessions
     await env.MEMBERS_KV.delete(`session:${user.id}`);
+  }
   
-    return jsonResponse({ message: "User deleted successfully" });
+  /**
+   * POST /members/api/user/unlink
+   * Remove the link to a secondary provider while keeping the main provider.
+   * Body: { "provider": "<github|discord|huggingface|airforce|pollinations>" }
+   */
+  async function handleUnlinkProvider(request, env) {
+    const user = await authenticateRequest(request, env);
+    if (!user) {
+        return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+  
+    if (request.method !== "POST") {
+        return jsonResponse({ error: "Method not allowed" }, 405);
+    }
+  
+    let body;
+    try {
+        body = await request.json();
+    } catch {
+        return jsonResponse({ error: "Invalid JSON body" }, 400);
+    }
+  
+    const provider = body.provider;
+    if (!provider) {
+        return jsonResponse({ error: "Missing required field: provider" }, 400);
+    }
+  
+    // The main provider cannot be unlinked
+    if (provider === user.provider) {
+        return jsonResponse({ error: "Cannot unlink the main provider. Set a different main provider first." }, 400);
+    }
+  
+    if (!user[provider]) {
+        return jsonResponse({ error: `Provider ${provider} is not linked to your account` }, 400);
+    }
+  
+    // Remove the provider link and its lookup index
+    const linkedData = user[provider];
+    if (linkedData && linkedData.username) {
+        await env.MEMBERS_KV.delete(`user_lookup:${provider}:${linkedData.username}`);
+    }
+    delete user[provider];
+    user.updated_at = new Date().toISOString();
+    await saveUser(env, user);
+  
+    const safeUser = getSafeUser(user);
+    return jsonResponse({ user: safeUser, message: `Provider ${provider} unlinked successfully` });
   }
   
   /**
