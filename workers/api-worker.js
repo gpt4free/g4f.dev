@@ -416,7 +416,7 @@ var custom_worker_default = {
         return handleGetServerUsage(request, env);
       }
       if (pathname === "/custom/api/servers/public") {
-        return handleListPublicServers(request, env);
+        return handleListPublicServers(request, env, user);
       }
       if (pathname.match(/^\/custom\/api\/servers\/[^/]+\/models$/)) {
         const serverId = pathname.split("/")[4];
@@ -838,8 +838,8 @@ async function getPublicServers(env, blocklist = true) {
   });
   return publicServers;
 }
-async function handleListPublicServers(request, env) {
-  const publicServers = await getPublicServers(env, false);
+async function handleListPublicServers(request, env, user) {
+  const publicServers = await getPublicServers(env);
   const safeServers = publicServers.map((s) => ({
     id: s.id,
     label: s.label,
@@ -849,8 +849,7 @@ async function handleListPublicServers(request, env) {
     usage: s.usage || { requests: 0, tokens: 0 }
   }));
   return jsonResponse({
-    servers: safeServers.filter((s) => !BLOCKED_SERVERS.includes(s.id)),
-    offline: safeServers.filter((s) => BLOCKED_SERVERS.includes(s.id))
+    servers: safeServers
   });
 }
 async function handleGetServerModels(request, env, serverId, user) {
@@ -1896,8 +1895,6 @@ async function checkUserRateLimits(env, user, request) {
   const userId = user.id;
   const now = Date.now();
   const windows = [
-    { name: "minute", duration: RATE_LIMITS.windows.minute, tokenLimit: limits.tokens.perMinute, requestLimit: limits.requests.perMinute },
-    { name: "hour", duration: RATE_LIMITS.windows.hour, tokenLimit: limits.tokens.perHour, requestLimit: limits.requests.perHour },
     { name: "day", duration: RATE_LIMITS.windows.day, tokenLimit: limits.tokens.perDay, requestLimit: limits.requests.perDay }
   ];
   if (!env.MEMBERS_KV) {
@@ -2059,8 +2056,6 @@ async function updateUserRateLimit(env, userId, ctx) {
   if (!env.MEMBERS_KV) return;
   const now = Date.now();
   const windows = [
-    { name: "minute", duration: RATE_LIMITS.windows.minute },
-    { name: "hour", duration: RATE_LIMITS.windows.hour },
     { name: "day", duration: RATE_LIMITS.windows.day }
   ];
   for (const window of windows) {
@@ -2439,6 +2434,9 @@ async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ct
   const headers = new Headers(request.headers);
   if (user && pathname.startsWith("/api/") && !pathname.endsWith("/models")) {
     headers.set("g4f-api-key", env.PASS_API_KEY);
+  }
+  if (user) {
+    headers.set("x-user", user.username);
   }
   const targetUrl = `https://pass.g4f.space${pathname}${search || ""}`;
   const fetchOptions = {
