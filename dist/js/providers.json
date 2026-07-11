@@ -16,7 +16,7 @@
         "puter": {"baseUrl": "https://puter.g4f-dev.workers.dev", "tags": "👓", "provider": "PuterJS"},
         "perplexity": {"backupUrl": "https://g4f.space/api/perplexity", "tags": "🔎"},
         "qwen": {"backupUrl": "https://g4f.space/api/qwen", "tags": "💡", "provider": "Qwen"},
-        "crowllm": {"baseUrl": "https://crowllm.com/v1", "backupUrl": "https://g4f.space/api/crowllm.com", "tags": "🦅"}
+        "opencode": {"backupUrl": "https://g4f.space/custom/srv_mrf03bs1e103ccfaabb1", "tags": "💻"}
     },
     "defaultModels": {
         "default": "auto",
