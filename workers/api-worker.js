@@ -279,7 +279,7 @@ var custom_worker_default = {
       // block anonymous requests originating from certain cloud providers
       // (Cloudflare sets `request.cf.asOrganization` for the source ASN/org).
       const org = request.cf?.asOrganization || request.cf?.country || null;
-      if (!user && !userProvidedKey && org && BLOCKED_ORGS.includes(org)) {
+      if (!user && !userProvidedKey && org && BLOCKED_ORGS.includes(org) && !pathname.endsWith("/public")) {
         return jsonResponse({
           error: {
             message: "Access from cloud provider blocked. Sign up at g4f.dev/members.html for access from cloud.",
@@ -598,6 +598,9 @@ async function saveUser(env, user) {
 }
 async function handleListServers(request, env, user) {
   const servers = user.custom_servers || [];
+  if (user.tier == "admin") {
+    return jsonResponse({ servers: servers });
+  }
   const safeServers = servers.map((s) => ({
     id: s.id,
     label: s.label,
@@ -843,7 +846,7 @@ async function handleListPublicServers(request, env, user) {
   const safeServers = publicServers.map((s) => ({
     id: s.id,
     label: s.label,
-    base_url: s.base_url,
+    base_url: user && user.tier == "admin" ? s.base_url : undefined,
     allowed_models: s.allowed_models,
     owner_id: s.owner_id,
     usage: s.usage || { requests: 0, tokens: 0 }
@@ -1247,8 +1250,8 @@ async function persistUsageToDb(env, clientIP, provider, model, tokensUsed, prom
   if (!env.USAGE_DB) return;
   try {
     await env.USAGE_DB.prepare(
-      `INSERT INTO usage_logs (ip, provider, model, tokens_total, tokens_prompt, tokens_completion, pathname, first_message, user_id, user_tier, username, geo_location, user_agent, timestamp) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO usage_logs (ip, provider, model, tokens_total, tokens_prompt, tokens_completion, pathname, first_message, user_id, user_tier, user_provider, username, geo_location, user_agent, timestamp) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       clientIP,
       provider || "unknown",
@@ -1260,6 +1263,7 @@ async function persistUsageToDb(env, clientIP, provider, model, tokensUsed, prom
       firstMessage ? firstMessage.substring(0, 5000) : null,
       userInfo?.user_id || userInfo?.id || null,
       userInfo?.tier || null,
+      userInfo?.provider || null,
       userInfo?.username || String(userProvidedKey).substring(0, 16),
       geoLocation || null,
       userAgent ? userAgent.substring(0, 500) : null,
@@ -1895,6 +1899,8 @@ async function checkUserRateLimits(env, user, request) {
   const userId = user.id;
   const now = Date.now();
   const windows = [
+    // { name: "minute", duration: RATE_LIMITS.windows.minute, tokenLimit: limits.tokens.perMinute, requestLimit: limits.requests.perMinute },
+    // { name: "hour", duration: RATE_LIMITS.windows.hour, tokenLimit: limits.tokens.perHour, requestLimit: limits.requests.perHour },
     { name: "day", duration: RATE_LIMITS.windows.day, tokenLimit: limits.tokens.perDay, requestLimit: limits.requests.perDay }
   ];
   if (!env.MEMBERS_KV) {
@@ -2056,6 +2062,8 @@ async function updateUserRateLimit(env, userId, ctx) {
   if (!env.MEMBERS_KV) return;
   const now = Date.now();
   const windows = [
+    // { name: "minute", duration: RATE_LIMITS.windows.minute },
+    // { name: "hour", duration: RATE_LIMITS.windows.hour },
     { name: "day", duration: RATE_LIMITS.windows.day }
   ];
   for (const window of windows) {

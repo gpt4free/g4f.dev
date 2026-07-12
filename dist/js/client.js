@@ -149,6 +149,17 @@ class Client {
 
         // Caching for models
         this._models = [];
+
+        // Optional custom fetch function (e.g. routed through a Web Worker
+        // so streaming continues when the tab is backgrounded).
+        this.fetchFn = options.fetchFn || null;
+    }
+
+    /**
+     * Internal: use the custom fetch function if provided, otherwise global fetch.
+     */
+    _fetch(url, options) {
+        return this.fetchFn ? this.fetchFn(url, options) : fetch(url, options);
     }
 
     _route(url) {
@@ -218,13 +229,13 @@ class Client {
                     signal: signal
                 };
                 await this._sleep();
-                let response = await fetch(this._route(this.apiEndpoint.replace('{model}', orginalModel)), requestOptions);
+                let response = await this._fetch(this._route(this.apiEndpoint.replace('{model}', orginalModel)), requestOptions);
                 if (response.status === 429) {
                     const delay = parseInt(response.headers.get('Retry-After'), 10) || extractRetryDelay(await response.clone().text()) || this.sleep / 1000 || 10;
                     if (delay > 0 && delay <= 30) {
                         console.log(`Retrying after ${delay} seconds...`);
                         await new Promise(resolve => setTimeout(resolve, delay * 1000));
-                        response = await fetch(this._route(this.apiEndpoint.replace('{model}', orginalModel)), requestOptions);
+                        response = await this._fetch(this._route(this.apiEndpoint.replace('{model}', orginalModel)), requestOptions);
                     }
                 }
                 if (params.stream) {
@@ -289,7 +300,7 @@ class Client {
         Object.entries(params).forEach(([key, value]) => {
             formData.append(key, value);
         });
-        const response = await fetch(this._route(imageEndpoint), {
+        const response = await this._fetch(this._route(imageEndpoint), {
             method: 'POST',
             body: formData,
             ...requestOptions
@@ -478,14 +489,14 @@ class Client {
         };
         this.logCallback && this.logCallback({request: params, type: 'image'});
         await this._sleep();
-        let response = await fetch(this._route(imageEndpoint), requestOptions);
+        let response = await this._fetch(this._route(imageEndpoint), requestOptions);
         captureUserTierHeaders(response.headers);
         if (!response.ok) {
             const delay = parseInt(response.headers.get('Retry-After'), 10) || extractRetryDelay(await response.clone().text()) || this.sleep / 1000;
             if (delay > 0 && delay <= 30) {
                 console.log(`Retrying after ${delay} seconds...`);
                 await new Promise(resolve => setTimeout(resolve, delay * 1000));
-                response = await fetch(this._route(imageEndpoint), requestOptions);
+                response = await this._fetch(this._route(imageEndpoint), requestOptions);
             }
         }
         if (!response.ok) {
@@ -671,12 +682,12 @@ class Audio extends Client {
                         throw new Error('No baseUrl defined');
                     }
                     requestOptions.body = JSON.stringify(options);
-                    response = await fetch(this._route(`${this.baseUrl}/chat/completions`), requestOptions);
+                    response = await this._fetch(this._route(`${this.baseUrl}/chat/completions`), requestOptions);
                     this.logCallback && this.logCallback({request: options, type: 'chat'});
                 } catch(e) {
                     options.model = this.defaultModel;
                     requestOptions.body = JSON.stringify(options);
-                    response = await fetch(this._route(this.apiEndpoint), requestOptions);
+                    response = await this._fetch(this._route(this.apiEndpoint), requestOptions);
                     this.logCallback && this.logCallback({request: options, type: 'chat'});
                 }
                 if (isStream) {
