@@ -843,13 +843,16 @@ class Puter extends Client {
 
     async *_streamPuter(model, messages, options = {}) {
         this.logCallback && this.logCallback({request: {messages, ...options}, type: 'chat'});
+        let idx = 0;
         for await (const item of await this.puter.ai.chat(messages, false, options)) {
           item.model = model;
           this.logCallback && this.logCallback({response: item, type: 'chat'});
           if (item.type === 'tool_use') {
             yield {choices: [{delta: {tool_calls: [{
                 id: item.id,
-                type: 'function', function: {
+                index: idx++,
+                type: 'function',
+                function: {
                     name: item.name,
                     arguments: item.input
                 }
