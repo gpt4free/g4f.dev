@@ -2084,9 +2084,17 @@ var USER_TIER_LIMITS = {
     for (const keyData of user.api_keys || []) {
         await env.MEMBERS_KV.delete(`api_key:${keyData.key_hash}`);
     }
-  
-    // Delete sessions
-    await env.MEMBERS_KV.delete(`session:${user.id}`);
+
+    // Delete all sessions for this user (tracked via user_sessions index)
+    const sessionsKey = `user_sessions:${user.id}`;
+    const sessionsList = await env.MEMBERS_KV.get(sessionsKey);
+    if (sessionsList) {
+        const sessionTokens = JSON.parse(sessionsList);
+        for (const token of sessionTokens) {
+            await env.MEMBERS_KV.delete(`session:${token}`);
+        }
+    }
+    await env.MEMBERS_KV.delete(sessionsKey);
   }
   
   /**
@@ -2137,7 +2145,7 @@ var USER_TIER_LIMITS = {
     const safeUser = getSafeUser(user);
     return jsonResponse({ user: safeUser, message: `Provider ${provider} unlinked successfully` });
   }
-  
+
   /**
    * Handle POST /members/api/anonymous/upgrade
    * Upgrade anonymous tier based on username (calculates hash) or direct hash value
@@ -2711,6 +2719,18 @@ var USER_TIER_LIMITS = {
     await env.MEMBERS_KV.put(
         `session:${sessionToken}`,
         JSON.stringify(sessionData),
+        { expirationTtl: 7 * 24 * 60 * 60 } // 7 days
+    );
+
+    // Track this session token under the user's session index so we can
+    // clean up all sessions on account deletion or provider disconnect.
+    const sessionsKey = `user_sessions:${userId}`;
+    const existing = await env.MEMBERS_KV.get(sessionsKey);
+    const sessions = existing ? JSON.parse(existing) : [];
+    sessions.push(sessionToken);
+    await env.MEMBERS_KV.put(
+        sessionsKey,
+        JSON.stringify(sessions),
         { expirationTtl: 7 * 24 * 60 * 60 } // 7 days
     );
   
