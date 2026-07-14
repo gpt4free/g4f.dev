@@ -490,7 +490,7 @@ const highlight = (container) => {
                 hljs_loaded = true;
             }
         }
-        container.querySelectorAll('code:not(.hljs').forEach((el) => {
+        container.querySelectorAll('code:not(.hljs)').forEach((el) => {
             if (el.className != "hljs") {
                 hljs.highlightElement(el);
             }
@@ -1490,43 +1490,43 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
             let cursorDiv = content_map.inner.querySelector(".cursor");
             if (cursorDiv) cursorDiv.parentNode.removeChild(cursorDiv);
         } else if (message.content) {
-            const contentInnerPre = content_map.innerPre || content_map.inner;
-            if (Math.floor(Math.random() * 100) === 0) {
-                setTimeout(() => {
-                    contentInnerPre.innerHTML = contentInnerPre.innerHTML; // Trigger re-render to prevent freezing on long messages
-                }, 100);
-            }
-            try {
-                let lastChild = contentInnerPre.querySelector(".cursor") || contentInnerPre.lastChild;
-                if (appStorage.getItem("simulateTyping") === "false") {
-                    contentInnerPre.insertBefore(document.createTextNode(message.content), lastChild);
-                } else {
-                    let firstLine = true;
-                    for (line of message.content.split("\n")) {
-                        if (firstLine) {
-                            firstLine = false;
-                        } else {
-                            contentInnerPre.insertBefore(document.createElement("br"), lastChild);
-                        }
-                        if (line.length > 0) {
-                            let firstToken = true;
-                            for (token of line.split(' ')) {
-                                if (token) {
-                                    await new Promise(resolve => setTimeout(resolve, (Math.random() * (20 - 40) + 20)))
-                                }
-                                if (firstToken) {
-                                    firstToken = false;
-                                } else {
-                                    token = ' ' + token
-                                }
-                                contentInnerPre.insertBefore(document.createTextNode(token), lastChild);
-                            }
-                        }
-                    };
-                }
-            } catch (e) {
-                add_error("Error updating content:", e);
-            }
+            // const contentInnerPre = content_map.innerPre || content_map.inner;
+            // if (Math.floor(Math.random() * 100) === 0) {
+            //     setTimeout(() => {
+            //         contentInnerPre.innerHTML = contentInnerPre.innerHTML; // Trigger re-render to prevent freezing on long messages
+            //     }, 100);
+            // }
+            // try {
+            //     let lastChild = contentInnerPre.querySelector(".cursor") || contentInnerPre.lastChild;
+            //     if (appStorage.getItem("simulateTyping") === "false") {
+            //         contentInnerPre.insertBefore(document.createTextNode(message.content), lastChild);
+            //     } else {
+            //         let firstLine = true;
+            //         for (line of message.content.split("\n")) {
+            //             if (firstLine) {
+            //                 firstLine = false;
+            //             } else {
+            //                 contentInnerPre.insertBefore(document.createElement("br"), lastChild);
+            //             }
+            //             if (line.length > 0) {
+            //                 let firstToken = true;
+            //                 for (token of line.split(' ')) {
+            //                     if (token) {
+            //                         await new Promise(resolve => setTimeout(resolve, (Math.random() * (20 - 40) + 20)))
+            //                     }
+            //                     if (firstToken) {
+            //                         firstToken = false;
+            //                     } else {
+            //                         token = ' ' + token
+            //                     }
+            //                     contentInnerPre.insertBefore(document.createTextNode(token), lastChild);
+            //                 }
+            //             }
+            //         };
+            //     }
+            // } catch (e) {
+            //     add_error("Error updating content:", e);
+            // }
         }
     } else if (message.type == "log") {
         let p = document.createElement("p");
@@ -1791,10 +1791,6 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
     }
     async function finish_message() {
         let final_message  = null;
-        if (!error_storage[message_id] && message_storage[message_id]) {
-            content_map.inner.innerHTML = renderer(message_storage[message_id]);
-            highlight(content_map.inner);
-        }
         // Handle tool calls if any
         if (tool_calls_storage[message_id] && tool_calls_storage[message_id].length > 0 && mcpClient) {
             const tool_calls = tool_calls_storage[message_id];
@@ -2224,6 +2220,12 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         }
         return;
     }
+    let updateInterval = setInterval(() => {
+        if (message_storage[message_id]) {
+            content_storage[message_id].inner.innerHTML = renderer(message_storage[message_id]);
+            highlight(content_storage[message_id].inner);
+        }
+    }, 100);
     try {
         const apiKey = get_api_key_by_provider(provider);
         const downloadMedia = document.getElementById("download_media")?.checked;
@@ -2267,6 +2269,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         }, Object.values(image_storage), message_id, finish_message);
     } catch (e) {
         add_error(e, true);
+    } finally {
+        clearInterval(updateInterval);
     }
 };
 
