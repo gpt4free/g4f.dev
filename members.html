@@ -506,6 +506,36 @@
             color: white;
         }
         
+        /* Tier Limits */
+        .tier-limits {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+        
+        .tier-limits span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: rgba(255,255,255,0.08);
+            color: var(--light);
+            cursor: default;
+            transition: background 0.2s;
+        }
+        
+        .tier-limits span:hover {
+            background: rgba(255,255,255,0.15);
+        }
+        
+        .tier-limits i {
+            color: var(--primary);
+        }
+        
         /* Provider Badge */
         .provider-badge {
             display: inline-flex;
@@ -1316,6 +1346,15 @@
                             </span>
                         </div>
                         <div class="info-row">
+                            <span class="info-label">Tier Limits</span>
+                            <span class="info-value">
+                                <div class="tier-limits" id="tier-limits-row">
+                                    <span id="max-tokens-text" title="Tokens: loading..."><i class="fa-solid fa-coins" aria-hidden="true"></i> —</span>
+                                    <span id="max-requests-text" title="Requests: loading..."><i class="fa-solid fa-list" aria-hidden="true"></i> —</span>
+                                </div>
+                            </span>
+                        </div>
+                        <div class="info-row">
                             <span class="info-label">Member Since</span>
                             <span class="info-value" id="accountJoined">-</span>
                         </div>
@@ -1630,6 +1669,9 @@
                 headers
             });
             
+            // Capture tier headers from response
+            window.captureUserTierHeaders?.(response.headers);
+            
             return response.json();
         }
 
@@ -1821,9 +1863,36 @@
                     document.getElementById('statImages').textContent = formatNumber(result.usage.images_today || 0);
                     document.getElementById('statChats').textContent = formatNumber(result.usage.total_requests || 0);
                     
-                    // Update remaining limits display if needed
+                    // Update tier limits display
                     if (result.remaining) {
-                        console.log('Remaining:', result.remaining);
+                        const r = result.remaining;
+                        const tokensRemaining = r.tokens_remaining ?? r.tokens ?? null;
+                        const tokensMax = r.max_tokens ?? r.tokens_limit ?? null;
+                        const requestsRemaining = r.requests_remaining ?? r.requests ?? null;
+                        const requestsMax = r.max_requests ?? r.requests_limit ?? null;
+                        
+                        const tokensEl = document.getElementById('max-tokens-text');
+                        const requestsEl = document.getElementById('max-requests-text');
+                        
+                        if (tokensEl) {
+                            if (tokensRemaining != null && tokensMax != null) {
+                                tokensEl.innerHTML = `<i class="fa-solid fa-coins" aria-hidden="true"></i> ${formatNumber(tokensRemaining)}/${formatNumber(tokensMax)}`;
+                                tokensEl.title = `Tokens: ${tokensRemaining.toLocaleString()} remaining of ${tokensMax.toLocaleString()}`;
+                            } else {
+                                tokensEl.innerHTML = `<i class="fa-solid fa-coins" aria-hidden="true"></i> ∞`;
+                                tokensEl.title = 'Tokens: unlimited';
+                            }
+                        }
+                        
+                        if (requestsEl) {
+                            if (requestsRemaining != null && requestsMax != null) {
+                                requestsEl.innerHTML = `<i class="fa-solid fa-list" aria-hidden="true"></i> ${formatNumber(requestsRemaining)}/${formatNumber(requestsMax)}`;
+                                requestsEl.title = `Requests: ${requestsRemaining.toLocaleString()} remaining of ${requestsMax.toLocaleString()}`;
+                            } else {
+                                requestsEl.innerHTML = `<i class="fa-solid fa-list" aria-hidden="true"></i> ∞`;
+                                requestsEl.title = 'Requests: unlimited';
+                            }
+                        }
                     }
                 }
             } catch (e) {
