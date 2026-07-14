@@ -1867,10 +1867,11 @@
                     // Update tier limits display
                     if (result.remaining) {
                         const r = result.remaining;
+                        const l = result.limits || {};
                         const tokensRemaining = r.tokens_remaining ?? r.tokens ?? null;
-                        const tokensMax = r.max_tokens ?? r.tokens_limit ?? null;
+                        const tokensMax = l.tokens_per_day ?? r.max_tokens ?? r.tokens_limit ?? null;
                         const requestsRemaining = r.requests_remaining ?? r.requests ?? null;
-                        const requestsMax = r.max_requests ?? r.requests_limit ?? null;
+                        const requestsMax = l.requests_per_day ?? r.max_requests ?? r.requests_limit ?? null;
                         
                         const tokensEl = document.getElementById('max-tokens-text');
                         const requestsEl = document.getElementById('max-requests-text');
@@ -1897,13 +1898,7 @@
                     }
                 }
             } catch (e) {
-                console.log('Failed to load usage stats from API, using local storage');
-                // Fallback to localStorage
-                const stats = JSON.parse(localStorage.getItem('g4f_stats') || '{}');
-                document.getElementById('statRequests').textContent = formatNumber(stats.requests || 0);
-                document.getElementById('statTokens').textContent = formatNumber(stats.tokens || 0);
-                document.getElementById('statImages').textContent = formatNumber(stats.images || 0);
-                document.getElementById('statChats').textContent = formatNumber(stats.chats || 0);
+                console.error('Error loading usage stats:', e);
             }
         }
 

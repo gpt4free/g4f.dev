@@ -405,38 +405,49 @@ async function calculateUserTier(userData, contributors, sponsors) {
 }
   
   // Rate limits for different user tiers (tokens and requests per window)
-  const USER_TIER_LIMITS = {
-      new: {
-          tokens: { perMinute: 20000, perHour: 50000, perDay: 100000 },
-          requests: { perMinute: 5, perHour: 20, perDay: 50 },
-          api_keys: 1,
-          burstMultiplier: 1.2
-      },
-      free: {
-          tokens: { perMinute: 150000, perHour: 500000, perDay: 1000000 },
-          requests: { perMinute: 20, perHour: 200, perDay: 2000 },
-          api_keys: 1,
-          burstMultiplier: 2
-      },
-      sponsor: {
-          tokens: { perMinute: 1000000, perHour: 5000000, perDay: 20000000 },
-          requests: { perMinute: 100, perHour: 1000, perDay: 10000 },
-          api_keys: 10,
-          burstMultiplier: 1.5
-      },
-      pro: {
-          tokens: { perMinute: 1000000, perHour: 5000000, perDay: 20000000 },
-          requests: { perMinute: 100, perHour: 1000, perDay: 10000 },
-          api_keys: 10,
-          burstMultiplier: 1.5
-      },
-      anonymous: {
-          tokens: { perMinute: 500000, perHour: 4000000, perDay: 100000000 },
-          requests: { perMinute: 100, perHour: 2000, perDay: 50000 },
-          api_keys: 1,
-          burstMultiplier: 1.5
-      }
-  };
+var USER_TIER_LIMITS = {
+  new: {
+    tokens: { perMinute: 1e5, perHour: 3e5, perDay: 1e6 },
+    requests: { perMinute: 10, perHour: 100, perDay: 1e3 },
+    days: { perTwelveDays: 12 },
+    api_keys: 1,
+    burstMultiplier: 1.5
+  },
+  free: {
+    tokens: { perMinute: 2e5, perHour: 1e6, perDay: 5e6 },
+    requests: { perMinute: 20, perHour: 200, perDay: 2e3 },
+    days: { perTwelveDays: 12 },
+    api_keys: 3,
+    burstMultiplier: 1.5
+  },
+  sponsor: {
+    tokens: { perMinute: 1e6, perHour: 5e6, perDay: 2e7 },
+    requests: { perMinute: 100, perHour: 1e3, perDay: 1e4 },
+    days: { perTwelveDays: 12 },
+    api_keys: 10,
+    burstMultiplier: 2
+  },
+  pro: {
+    tokens: { perMinute: 1e6, perHour: 5e6, perDay: 2e7 },
+    requests: { perMinute: 100, perHour: 1e3, perDay: 1e4 },
+    days: { perTwelveDays: 12 },
+    api_keys: 10,
+    burstMultiplier: 2
+  },
+  admin: {
+    tokens: { perMinute: 1e6, perHour: 5e6, perDay: 2e7 },
+    requests: { perMinute: 100, perHour: 1e3, perDay: 1e4 },
+    days: { perTwelveDays: 12 },
+    api_keys: 10,
+    burstMultiplier: 2
+  },
+  anonymous: {
+    tokens: { perMinute: 1e6, perHour: 5e6, perDay: 1e8 },
+    requests: { perMinute: 100, perHour: 2e3, perDay: 5e4 },
+    days: { perTwelveDays: 12 },
+    burstMultiplier: 1.5
+  }
+};
   
   // Legacy USER_TIERS for backwards compatibility
   const USER_TIERS = {
@@ -459,6 +470,11 @@ async function calculateUserTier(userData, contributors, sponsors) {
         requests_per_day: USER_TIER_LIMITS.pro.requests.perDay,
         tokens_per_day: USER_TIER_LIMITS.pro.tokens.perDay,
         api_keys: USER_TIER_LIMITS.pro.api_keys
+    },
+    admin: {
+        requests_per_day: USER_TIER_LIMITS.admin.requests.perDay,
+        tokens_per_day: USER_TIER_LIMITS.admin.tokens.perDay,
+        api_keys: USER_TIER_LIMITS.admin.api_keys
     },
     anonymous: {
         requests_per_day: USER_TIER_LIMITS.anonymous.requests.perDay,
