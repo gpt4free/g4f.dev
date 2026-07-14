@@ -1778,7 +1778,8 @@
                 src: `render.html?prompt=Display a playful, teasing "roast-style" welcome message, wrap headline in <h3> using emojis (no code comments). Base the roast on the user\'s actual username ("${userName.textContent}") — be creative, lighthearted, and funny, never mean-spirited. Must also include the info: "Manage your API keys and monitor your usage." Tone: witty, no placeholder text in language: ${encodeURIComponent(framework.language)}`,
                 style: 'width: 100%; border: none; background: transparent;'
             })
-            document.querySelector('.welcome-header div').replaceWith(iframe);
+            const welcomeContent = document.querySelector('.welcome-header div') || document.querySelector('.welcome-header iframe');
+            if (welcomeContent) welcomeContent.replaceWith(iframe);
             document.getElementById('accountUsername').textContent = user.username || user.name || '-';
             document.getElementById('accountEmail').textContent = user.email || framework.translate('Not provided');
             document.getElementById('accountJoined').textContent = user.created_at ? new Date(user.created_at).toLocaleDateString() : (user.joinedAt || new Date().toLocaleDateString());

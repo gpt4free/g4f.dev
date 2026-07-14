@@ -282,7 +282,7 @@ const sanitizedConfig = () => {
         allowedAttributes: {
             a: [ 'href', 'title', 'target', 'rel', 'data-width', 'data-height', 'data-src' ],
             i: [ 'class' ],
-            span: [ 'class' ],
+            span: [ 'class', 'style' ],
             code: [ 'class' ],
             img: [ 'src', 'alt', 'width', 'height' ],
             iframe: [ 'src', 'type', 'frameborder', 'allow', 'height', 'width' ],
