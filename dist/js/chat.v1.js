@@ -3233,7 +3233,7 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
         
         data.forEach(server => {
             // Check if this server already exists in dropdown
-            const existingOption = customOptgroup.querySelector(`option[data-server-id="${server.id}"]`);
+            const existingOption = providerSelect.querySelector(`option[data-server-id="${server.id}"]`);
             if (!existingOption) {
                 const option = document.createElement("option");
                 option.value = `custom:${server.id}`;
@@ -4086,6 +4086,9 @@ async function on_api() {
                     option.value = name;
                     option.dataset.live = "true";
                     option.text = (config.label || name) + (config.tags ? ` ${config.tags} 🟢` : " 🟢");
+                    if (config.id) {
+                        option.dataset.serverId = config.id;
+                    }
                     optgroup.appendChild(option);
                 });
                 providerSelect.value = "default";
@@ -6173,6 +6176,7 @@ async function initClient() {
         client = null;
         return;
     }
+    const serverId = providerSelect.options[providerSelect.selectedIndex]?.dataset?.serverId;
     let messageId = null;
     let count = 0;
     function logCallback(event) {
@@ -6188,6 +6192,9 @@ async function initClient() {
     const provider = providerSelect?.value;
     const apiKey = get_api_key_by_provider(provider);
     const options = apiKey ? { apiKey } : {};
+    if (serverId && options.backupUrl) {
+        options.baseUrl = `https://g4f.space/custom/${serverId}`;
+    }
     if (appStorage.getItem("debugMode") == "true") {
         options.logCallback = logCallback;
     }

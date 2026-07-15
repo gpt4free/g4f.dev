@@ -18,7 +18,7 @@
         "groq": {"id": "srv_mkom688d57c76d8a3542", "baseUrl": "https://api.groq.com/openai/v1", "backupUrl": "https://g4f.space/api/groq", "tags": "🦾"},
         "qwen": {"id": "srv_mrgymq8534d9ea96920d", "backupUrl": "https://g4f.space/api/qwen", "tags": "💡", "provider": "Qwen"},
         "crowllm": {"id": "srv_mrgynwuz08a167112109", "backupUrl": "https://g4f.space/custom/srv_mrgynwuz08a167112109", "tags": "🦅"},
-        "opencode": {"id": "srv_mrgy2d2493c3e1dc3b74", "baseUrl": "https://opencode.ai/zen/v1", "tags": "💻"}
+        "opencode": {"id": "srv_mrgy2d2493c3e1dc3b74", "backupUrl": "https://g4f.space/custom/srv_mrgy2d2493c3e1dc3b74", "tags": "💻"}
     },
     "defaultModels": {
         "default": "auto",
