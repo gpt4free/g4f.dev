@@ -443,6 +443,11 @@
                 <div class="stat-label">Models Used</div>
             </div>
             <div class="stat-card">
+                <div class="icon"><i class="fas fa-bolt"></i></div>
+                <div class="stat-value" id="cachedTokens">—</div>
+                <div class="stat-label">Cached Tokens</div>
+            </div>
+            <div class="stat-card">
                 <div class="icon"><i class="fas fa-cut"></i></div>
                 <div class="stat-value" id="savedTokens">—</div>
                 <div class="stat-label">Saved by Prompt Optimisation</div>
@@ -475,10 +480,11 @@
                         <th data-sort="tokens">Total Tokens <span class="sort-arrow"></span></th>
                         <th data-sort="prompt">Prompt <span class="sort-arrow"></span></th>
                         <th data-sort="completion">Completion <span class="sort-arrow"></span></th>
+                        <th data-sort="cached">Cached <span class="sort-arrow"></span></th>
                     </tr>
                 </thead>
                 <tbody id="providerBody">
-                    <tr><td colspan="5" class="loading"><div class="spinner"></div></td></tr>
+                    <tr><td colspan="6" class="loading"><div class="spinner"></div></td></tr>
                 </tbody>
             </table>
         </div>
@@ -494,10 +500,11 @@
                         <th data-sort="tokens">Total Tokens <span class="sort-arrow"></span></th>
                         <th data-sort="prompt">Prompt <span class="sort-arrow"></span></th>
                         <th data-sort="completion">Completion <span class="sort-arrow"></span></th>
+                        <th data-sort="cached">Cached <span class="sort-arrow"></span></th>
                     </tr>
                 </thead>
                 <tbody id="modelBody">
-                    <tr><td colspan="5" class="loading"><div class="spinner"></div></td></tr>
+                    <tr><td colspan="6" class="loading"><div class="spinner"></div></td></tr>
                 </tbody>
             </table>
         </div>
@@ -561,6 +568,7 @@
                     totalPrompt: 0,
                     totalCompletion: 0,
                     savedTokens: 0,
+                    cachedTokens: 0,
                     providers: {},
                     models: {},
                     daily: {},
@@ -570,28 +578,39 @@
                     const prompt = r.prompt_tokens || 0;
                     const completion = r.completion_tokens || 0;
                     const total = r.total_tokens || (prompt + completion);
+                    // Extract cached tokens from either OpenAI-style
+                    // (prompt_tokens_details.cached_tokens) or Anthropic-style
+                    // (cache_read_input_tokens) usage fields.
+                    const cached =
+                        (r.prompt_tokens_details && r.prompt_tokens_details.cached_tokens) ||
+                        r.cache_read_input_tokens ||
+                        r.cached_tokens ||
+                        0;
                     stats.totalTokens += total;
                     stats.totalPrompt += prompt;
                     stats.totalCompletion += completion;
                     stats.savedTokens += r.saved_tokens || 0;
+                    stats.cachedTokens += cached;
 
                     const provider = r.provider || 'unknown';
                     if (!stats.providers[provider]) {
-                        stats.providers[provider] = { name: provider, requests: 0, tokens: 0, prompt: 0, completion: 0 };
+                        stats.providers[provider] = { name: provider, requests: 0, tokens: 0, prompt: 0, completion: 0, cached: 0 };
                     }
                     stats.providers[provider].requests++;
                     stats.providers[provider].tokens += total;
                     stats.providers[provider].prompt += prompt;
                     stats.providers[provider].completion += completion;
+                    stats.providers[provider].cached += cached;
 
                     const model = r.model || 'unknown';
                     if (!stats.models[model]) {
-                        stats.models[model] = { name: model, requests: 0, tokens: 0, prompt: 0, completion: 0 };
+                        stats.models[model] = { name: model, requests: 0, tokens: 0, prompt: 0, completion: 0, cached: 0 };
                     }
                     stats.models[model].requests++;
                     stats.models[model].tokens += total;
                     stats.models[model].prompt += prompt;
                     stats.models[model].completion += completion;
+                    stats.models[model].cached += cached;
                 }
 
                 return stats;
@@ -617,6 +636,9 @@
 
                 // Tokens saved by prompt optimisation, reported by the backend
                 document.getElementById('savedTokens').textContent = formatNumber(stats.savedTokens);
+
+                // Cached tokens (prompt caching / cache reads)
+                document.getElementById('cachedTokens').textContent = formatNumber(stats.cachedTokens);
 
                 // Estimated cost saved if these tokens had gone through a paid API
                 const cost = stats.totalPrompt * PROMPT_RATE + stats.totalCompletion * COMPLETION_RATE;
@@ -664,7 +686,7 @@
             function renderTable(tbodyId, items, sortState, maxTokens) {
                 const tbody = document.getElementById(tbodyId);
                 if (!items.length) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No data available</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No data available</td></tr>';
                     return;
                 }
 
@@ -684,6 +706,7 @@
                         <td><span class="token-bar" style="width: ${barWidth}px;"></span>${formatNumber(item.tokens)}</td>
                         <td>${formatNumber(item.prompt)}</td>
                         <td>${formatNumber(item.completion)}</td>
+                        <td>${formatNumber(item.cached)}</td>
                     </tr>`;
                 }).join('');
             }
@@ -704,8 +727,8 @@
             async function load() {
                 const chart = document.getElementById('dailyChart');
                 chart.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-                document.getElementById('providerBody').innerHTML = '<tr><td colspan="5" class="loading"><div class="spinner"></div></td></tr>';
-                document.getElementById('modelBody').innerHTML = '<tr><td colspan="5" class="loading"><div class="spinner"></div></td></tr>';
+                document.getElementById('providerBody').innerHTML = '<tr><td colspan="6" class="loading"><div class="spinner"></div></td></tr>';
+                document.getElementById('modelBody').innerHTML = '<tr><td colspan="6" class="loading"><div class="spinner"></div></td></tr>';
 
                 try {
                     const days = parseInt(rangeSelect.value, 10);
