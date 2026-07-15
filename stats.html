@@ -377,7 +377,7 @@
             .stat-value { font-size: 1.5rem; }
         }
     </style>
-    <script src="/dist/js/framework.js" defer></script>
+    <script src="/dist/js/framework.js"></script>
 </head>
 <body class="translate">
     <header class="navbar" role="banner">
@@ -533,7 +533,7 @@
 
                 const results = await Promise.allSettled(
                     dates.map(date =>
-                        fetch(`/backend-api/v2/usage/${date}`).then(r =>
+                        fetch(`${framework.backendUrl}/backend-api/v2/usage/${date}`).then(r =>
                             r.ok ? r.text() : null
                         )
                     )
@@ -719,7 +719,7 @@
 
                     const results = await Promise.allSettled(
                         dates.map(date =>
-                            fetch(`/backend-api/v2/usage/${date}`).then(r =>
+                            fetch(`${framework.backendUrl}/backend-api/v2/usage/${date}`).then(r =>
                                 r.ok ? r.text().then(text => ({ date, text })) : null
                             )
                         )
