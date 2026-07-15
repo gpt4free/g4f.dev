@@ -6,7 +6,7 @@
         "community": {"id": "srv_mrdypihj16e8b1776409", "backupUrl": "https://g4f.space/api/community", "tags": "🤝"},
         "audio": {"id": "srv_mkoqob5pfb6ff5ec61c2", "label": "audio by g4f.dev", "baseUrl": "https://g4f.space/api/audio", "backupUrl": "https://g4f.space/api/audio", "tags": "🎧", "sleep": 10000},
         "deepinfra": {"id": "srv_mp2huzrg06e426ad12f3", "baseUrl": "https://api.deepinfra.com/v1/openai", "backupUrl": "https://g4f.space/api/deepinfra", "tags": "🎨 👓", "modelsEndpoint": "https://api.deepinfra.com/models/featured"},
-        "gemini": {"id": "srv_mrgy0nmbc8a86c407f17", "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai", "backupUrl": "https://g4f.space/api/gemini-v1beta", "tags": "👓"},
+        "gemini": {"id": "srv_mrgy0nmbc8a86c407f17", "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai", "backupUrl": "https://g4f.space/api/gemini", "tags": "👓"},
         "huggingface": {"baseUrl": "https://router.huggingface.co/v1", "tags": "🤗", "provider": "HuggingFace"},
         "nvidia": {"id": "srv_mkombumpae45db46dcb8", "baseUrl": "https://integrate.api.nvidia.com/v1", "backupUrl": "https://g4f.space/api/nvidia", "tags": "📟"},
         "ollama": {"id": "srv_mrgykg8eea645e7bb006", "baseUrl": "https://ollama.g4f-dev.workers.dev", "backupUrl": "https://g4f.space/api/ollama", "tags": "🦙"},

@@ -6193,7 +6193,7 @@ async function initClient() {
     const apiKey = get_api_key_by_provider(provider);
     const options = apiKey ? { apiKey } : {};
     if (serverId && options.backupUrl) {
-        options.baseUrl = `https://g4f.space/custom/${serverId}`;
+        options.backupUrl = `https://g4f.space/custom/${serverId}`;
     }
     if (appStorage.getItem("debugMode") == "true") {
         options.logCallback = logCallback;
