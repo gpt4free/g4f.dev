@@ -1871,7 +1871,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 delete variant_storage[message_id];
             }
             // Send usage to the server
-            if (!usage_storage[message_id] || !usage_storage[message_id].prompt_tokens) {
+            if ((!framework.logUrl && isLive()) || !usage_storage[message_id] || !usage_storage[message_id].prompt_tokens) {
                 usage = {
                     model: message_provider?.model,
                     provider: message_provider?.name,
@@ -3165,7 +3165,7 @@ const register_settings_storage = async () => {
         // Handle log_routing toggle to enable/disable routing
         if (element.id === "log_routing") {
             element.addEventListener('change', (event) => {
-                framework.logUrl = element.checked ? 'http://localhost:8090/api' : '';
+                framework.logUrl = element.checked ? `${framework.backendUrl}/log` : '';
                 localStorage.setItem('log_routing', element.checked);
             });
         }
