@@ -2011,6 +2011,12 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             content: media.length > 0 ? media : message || ""
         }];
     }
+    let updateInterval = setInterval(() => {
+        if (message_storage[message_id]) {
+            content_storage[message_id].inner.innerHTML = renderer(message_storage[message_id]);
+            highlight(content_storage[message_id].inner);
+        }
+    }, 100);
     if (client) {
         const providerSelectOption = providerSelect.options[providerSelect.selectedIndex];
         const selectedModel = get_selected_model() || client.defaultModel;
@@ -2210,22 +2216,17 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     await handleToolCalls(toolCalls, messages, selectedModel, provider, message_id, finish_message);
                 }
             }
-            await finish_message();
         } catch (err) {
             add_error(err, true);
             safe_remove_cancel_button();
             error_storage[message_id] = `${err.message || err}`;
             content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${error_storage[message_id]}`);
+        } finally {
+            clearInterval(updateInterval);
             await finish_message();
         }
         return;
     }
-    let updateInterval = setInterval(() => {
-        if (message_storage[message_id]) {
-            content_storage[message_id].inner.innerHTML = renderer(message_storage[message_id]);
-            highlight(content_storage[message_id].inner);
-        }
-    }, 100);
     try {
         const apiKey = get_api_key_by_provider(provider);
         const downloadMedia = document.getElementById("download_media")?.checked;

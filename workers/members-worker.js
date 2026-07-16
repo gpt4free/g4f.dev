@@ -13,6 +13,7 @@
  * - HUGGINGFACE_CLIENT_SECRET: HuggingFace OAuth Client Secret
  * - AIRFORCE_CLIENT_ID: Airforce OAuth Client ID
  * - AIRFORCE_CLIENT_SECRET: Airforce OAuth Client Secret
+ * - POLLINATIONS_CLIENT_ID: Pollinations App Key (pk_...) for OAuth authorization-code flow
  * - JWT_SECRET: Secret for signing JWT tokens
  * - SELF_OAUTH_CLIENTS: JSON string mapping client_id -> { secret, redirect_uris[], name } for self-hosted OAuth server
  * - MEMBERS_BUCKET: R2 bucket binding for user data
@@ -521,6 +522,12 @@ var USER_TIER_LIMITS = {
             }
             if (pathname === "/members/auth/pollinations" || pathname === "/members/oauth/pollinations") {
                 return handlePollinationsAuth(request, env, url);
+            }
+            if (pathname === "/members/auth/pollinations/authorize" || pathname === "/members/oauth/pollinations/authorize") {
+                return handlePollinationsOAuthAuth(request, env, url);
+            }
+            if (pathname === "/members/auth/pollinations/callback" || pathname === "/members/oauth/pollinations/callback") {
+                return handlePollinationsOAuthCallback(request, env, url);
             }
 
             // Self-hosted OAuth server endpoints
@@ -1289,6 +1296,145 @@ var USER_TIER_LIMITS = {
           }
       });
   }
+
+  /**
+   * GET /members/auth/pollinations/authorize
+   * Redirects the user to Pollinations' OAuth 2.0 authorization endpoint
+   * using the authorization-code flow with PKCE (S256).
+   *
+   * Requires the POLLINATIONS_CLIENT_ID env var (a pk_... publishable key).
+   * Supports the same "redirect" / "redirect_chat" and "conversation" params
+   * as the other providers.
+   */
+  async function handlePollinationsOAuthAuth(request, env, url) {
+      if (!env.POLLINATIONS_CLIENT_ID) {
+          return redirectWithError("Pollinations OAuth is not configured (missing POLLINATIONS_CLIENT_ID)");
+      }
+
+      const state = generateState();
+      const scope = "profile usage";
+      const redirect = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect") || null;
+      const conversation = url.searchParams.get("conversation") || null;
+      const codeVerifier = generateCodeVerifier();
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+      const authUrl = new URL("https://enter.pollinations.ai/authorize");
+      authUrl.searchParams.set("response_type", "code");
+      authUrl.searchParams.set("client_id", env.POLLINATIONS_CLIENT_ID);
+      authUrl.searchParams.set("redirect_uri", `${url.origin}/members/auth/pollinations/callback`);
+      authUrl.searchParams.set("scope", scope);
+      authUrl.searchParams.set("state", state);
+      authUrl.searchParams.set("code_challenge", codeChallenge);
+      authUrl.searchParams.set("code_challenge_method", "S256");
+
+      const stateData = JSON.stringify({ provider: "pollinations", redirect, conversation, codeVerifier });
+      await env.MEMBERS_KV.put(`oauth_state:${state}`, stateData, { expirationTtl: 600 });
+
+      return Response.redirect(authUrl.toString(), 302);
+  }
+
+  /**
+   * GET /members/auth/pollinations/callback
+   * Handles the OAuth 2.0 authorization-code callback from Pollinations.
+   * Exchanges the code for an access_token (sk_...), fetches the userinfo,
+   * and creates/updates the g4f user account.
+   */
+  async function handlePollinationsOAuthCallback(request, env, url) {
+      const code = url.searchParams.get("code");
+      const state = url.searchParams.get("state");
+      const error = url.searchParams.get("error");
+
+      if (error) {
+          return redirectWithError(error);
+      }
+
+      if (!code || !state) {
+          return redirectWithError("Missing code or state parameter");
+      }
+
+      const storedStateData = await env.MEMBERS_KV.get(`oauth_state:${state}`);
+      let stateData;
+      try {
+          stateData = JSON.parse(storedStateData);
+      } catch {
+          stateData = { provider: storedStateData, redirect: null };
+      }
+      if (stateData.provider !== "pollinations" || !stateData.codeVerifier) {
+          return redirectWithError("Invalid state parameter");
+      }
+      await env.MEMBERS_KV.delete(`oauth_state:${state}`);
+      const externalRedirect = stateData.redirect;
+
+      // Exchange the authorization code for an access token
+      const tokenResponse = await fetch("https://enter.pollinations.ai/api/oauth/token", {
+          method: "POST",
+          headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              "Accept": "application/json"
+          },
+          body: new URLSearchParams({
+              grant_type: "authorization_code",
+              code,
+              client_id: env.POLLINATIONS_CLIENT_ID,
+              redirect_uri: `${url.origin}/members/auth/pollinations/callback`,
+              code_verifier: stateData.codeVerifier
+          })
+      });
+
+      const tokenData = await tokenResponse.json();
+      if (!tokenResponse.ok || tokenData.error || !tokenData.access_token) {
+          return redirectWithError(tokenData.error_description || tokenData.error || "Failed to exchange authorization code");
+      }
+
+      // Fetch user info from Pollinations userinfo endpoint
+      const userResponse = await fetch("https://enter.pollinations.ai/api/oauth/userinfo", {
+          headers: {
+              "Authorization": `Bearer ${tokenData.access_token}`,
+              "Accept": "application/json"
+          }
+      });
+      const pollinationsUser = await userResponse.json();
+
+      if (!userResponse.ok) {
+          return redirectWithError(pollinationsUser.error_description || pollinationsUser.error || "Failed to fetch user profile");
+      }
+
+      // Pollinations uses GitHub as identity provider; userinfo returns
+      // sub (user-id), preferred_username, name, email, picture
+      const username = pollinationsUser.preferred_username || pollinationsUser.sub;
+      if (!username) {
+          return redirectWithError("Pollinations profile missing username");
+      }
+
+      const user = await createOrUpdateUser(env, {
+          provider: "github", // Pollinations identity is backed by GitHub
+          username,
+          name: pollinationsUser.name || username,
+          email: pollinationsUser.email || null,
+          avatar: pollinationsUser.picture || null,
+          pollinations: {
+              ...pollinationsUser,
+              ...tokenData,
+              expires: Math.floor(Date.now() / 1000) + (tokenData.expires_in || 604800)
+          }
+      });
+
+      const { sessionToken, expires } = await createSession(env, user.id);
+
+      if (externalRedirect) {
+          try {
+              const redirectUrl = new URL(externalRedirect);
+              if (isValidRedirect(redirectUrl)) {
+                  return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation, expires);
+              }
+          } catch (e) {
+              console.error("Invalid redirect URL:", e);
+          }
+          return redirectWithTempApiKey(env, user, externalRedirect, stateData.conversation);
+      }
+
+      return redirectWithSession(sessionToken, user, expires);
+  }
   
   // ============================================
   // Self-hosted OAuth Server
@@ -1369,6 +1515,61 @@ var USER_TIER_LIMITS = {
       const q = `?redirect=${encodeURIComponent(callbackUrl)}`;
 
       const clientName = escapeHtml(client.name || clientId);
+
+      // Provider button definitions (label, css class, href suffix, inner HTML)
+      const PROVIDER_BUTTONS = {
+          github: {
+              label: "Continue with GitHub",
+              cls: "github",
+              href: `${base}/auth/github${q}`,
+              icon: `<svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>`
+          },
+          discord: {
+              label: "Continue with Discord",
+              cls: "discord",
+              href: `${base}/auth/discord${q}`,
+              icon: `<svg width="18" height="18" viewBox="0 0 127.14 96.36" fill="currentColor"><path d="M107.7 8.07A105.15 105.15 0 0081.47 0a72.06 72.06 0 00-3.36 6.83 97.68 97.68 0 00-29.11 0A72.37 72.37 0 0045.64 0a105.89 105.89 0 00-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21a105.73 105.73 0 0032.17 16.15 77.7 77.7 0 006.89-11.11 68.42 68.42 0 01-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0064.32 0c.87.71 1.76 1.39 2.66 2a68.68 68.68 0 01-10.87 5.19 77 77 0 006.89 11.1 105.25 105.25 0 0032.19-16.14c2.64-27.38-4.51-51.11-18.9-72.15zM42.45 65.69C36.18 65.69 31 60 31 53s5-12.74 11.43-12.74S54 46 53.89 53s-5.05 12.69-11.44 12.69zm42.24 0C78.41 65.69 73.25 60 73.25 53s5-12.74 11.44-12.74S96.23 46 96.12 53s-5.04 12.69-11.43 12.69z"/></svg>`
+          },
+          huggingface: {
+              label: "Continue with HuggingFace",
+              cls: "huggingface",
+              href: `${base}/auth/huggingface${q}`,
+              icon: "🤗"
+          },
+          airforce: {
+              label: "Continue with Airforce",
+              cls: "airforce",
+              href: `${base}/auth/airforce${q}`,
+              icon: "✈️"
+          },
+          pollinations: {
+              label: "Continue with Pollinations",
+              cls: "pollinations",
+              href: `${base}/auth/pollinations/authorize${q}`,
+              icon: "🌻"
+          }
+      };
+
+      // Determine which providers to show.
+      // client.provider can be a string (single provider) or an array.
+      // When omitted, all providers are shown.
+      let providersToShow = Object.keys(PROVIDER_BUTTONS);
+      if (client.provider) {
+          const requested = Array.isArray(client.provider) ? client.provider : [client.provider];
+          providersToShow = requested.filter(p => PROVIDER_BUTTONS[p]);
+          if (providersToShow.length === 0) {
+              return jsonResponse({ error: "invalid_client", error_description: "Client configured with no valid providers" }, 500);
+          }
+      }
+
+      const buttonsHtml = providersToShow.map(p => {
+          const b = PROVIDER_BUTTONS[p];
+          return `    <a class="btn ${b.cls}" href="${b.href}">
+      ${b.icon}
+      ${b.label}
+    </a>`;
+      }).join("\n");
+
       const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1413,6 +1614,7 @@ var USER_TIER_LIMITS = {
     .btn.discord { background: #5865f2; }
     .btn.huggingface { background: #ff9d00; color: #000; }
     .btn.airforce { background: #0a84ff; }
+    .btn.pollinations { background: #f59e0b; color: #000; }
     .divider { margin: 8px 0 20px; font-size: 0.75rem; color: #484f58; }
   </style>
 </head>
@@ -1420,20 +1622,7 @@ var USER_TIER_LIMITS = {
   <div class="card">
     <h1>Sign in to G4F</h1>
     <p class="sub">to continue to <strong>${clientName}</strong></p>
-    <a class="btn github" href="${base}/auth/github${q}">
-      <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-      Continue with GitHub
-    </a>
-    <a class="btn discord" href="${base}/auth/discord${q}">
-      <svg width="18" height="18" viewBox="0 0 127.14 96.36" fill="currentColor"><path d="M107.7 8.07A105.15 105.15 0 0081.47 0a72.06 72.06 0 00-3.36 6.83 97.68 97.68 0 00-29.11 0A72.37 72.37 0 0045.64 0a105.89 105.89 0 00-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21a105.73 105.73 0 0032.17 16.15 77.7 77.7 0 006.89-11.11 68.42 68.42 0 01-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0064.32 0c.87.71 1.76 1.39 2.66 2a68.68 68.68 0 01-10.87 5.19 77 77 0 006.89 11.1 105.25 105.25 0 0032.19-16.14c2.64-27.38-4.51-51.11-18.9-72.15zM42.45 65.69C36.18 65.69 31 60 31 53s5-12.74 11.43-12.74S54 46 53.89 53s-5.05 12.69-11.44 12.69zm42.24 0C78.41 65.69 73.25 60 73.25 53s5-12.74 11.44-12.74S96.23 46 96.12 53s-5.04 12.69-11.43 12.69z"/></svg>
-      Continue with Discord
-    </a>
-    <a class="btn huggingface" href="${base}/auth/huggingface${q}">
-      🤗 Continue with HuggingFace
-    </a>
-    <a class="btn airforce" href="${base}/auth/airforce${q}">
-      ✈️ Continue with Airforce
-    </a>
+${buttonsHtml}
     <div class="divider">By signing in you agree to G4F's terms of service</div>
   </div>
 </body>
@@ -1733,7 +1922,8 @@ var USER_TIER_LIMITS = {
    *     "secret": "<client_secret>",
    *     "redirect_uris": ["https://example.com/callback"],
    *     "name": "My App",
-   *     "user_id": "<optional g4f user id for client_credentials>"
+   *     "user_id": "<optional g4f user id for client_credentials>",
+   *     "provider": "<optional: single provider to show on the login-chooser page>"
    *   }
    * }
    */
