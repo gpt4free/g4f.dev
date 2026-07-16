@@ -115,7 +115,7 @@
             videoFeed.onerror = (e) => {
                 videoFeed.classList.add("hidden");
                 errorVideo += 1;
-                if (errorVideo > 2) {
+                if (errorVideo > 1) {
                     gradient.classList.remove("hidden");
                     return;
                 }
@@ -178,14 +178,14 @@
                 }
             });
             setInterval(() => {
-                if ((framework.backendUrl && errorVideo < 3) || !refreshOnHide) {
+                if ((framework.backendUrl && errorVideo < 2) || !refreshOnHide) {
                     return;
                 }
                 if (skipRefresh > 0) {
                     skipRefresh -= 1;
                     return;
                 }
-                if (framework.backendUrl && errorImage < 3) {
+                if (framework.backendUrl && errorImage < 2) {
                     imageFeed.src = framework.backendUrl + "/search/image+g4f?skip=" + skipImage;
                     skipImage++;
                     return;
