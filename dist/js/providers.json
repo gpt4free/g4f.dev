@@ -1,7 +1,7 @@
 {
     "providers": {
         "default": {"backupUrl": "https://g4f.space/v1", "quotaEndpoint": null},
-        "pollinations": {"backupUrl": "https://g4f.space/api/gen.pollinations", "label": "pollinations.ai", "tags": "🎨 👓", "provider": "PollinationsAI"},
+        "pollinations": {"id": "srv_mp5miql908c8738d71be", "backupUrl": "https://g4f.space/api/gen.pollinations", "label": "pollinations.ai", "tags": "🎨 👓", "provider": "PollinationsAI"},
         "airforce": {"id": "srv_mp3lmkuad07322459f47", "baseUrl": "https://api.airforce/v1", "backupUrl": "https://g4f.space/api/api.airforce", "tags": "🎨 👓"},
         "community": {"id": "srv_mrdypihj16e8b1776409", "backupUrl": "https://g4f.space/api/community", "tags": "🤝"},
         "audio": {"id": "srv_mkoqob5pfb6ff5ec61c2", "label": "audio by g4f.dev", "baseUrl": "https://g4f.space/api/audio", "backupUrl": "https://g4f.space/api/audio", "tags": "🎧", "sleep": 10000},
