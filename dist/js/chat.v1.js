@@ -1875,6 +1875,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 usage = {
                     model: message_provider?.model,
                     provider: message_provider?.name,
+                    label: message_provider?.label,
                     ...usage
                 };
                 const user = appStorage.getItem("user");
@@ -4131,7 +4132,7 @@ async function on_api() {
         paOptgroup.label = framework.translate('PA Providers');
         providerSelect.appendChild(paOptgroup);
 
-        await Promise.all([updateLiveProviderOptions(), loadCustomProvidersSelect(), loadPaProviderSelect(paOptgroup)]);
+        Promise.all([updateLiveProviderOptions(), loadCustomProvidersSelect(), loadPaProviderSelect(paOptgroup)]);
 
         let provider_options = [];
         await api("providers").then(async (providers) => {

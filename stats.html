@@ -601,6 +601,9 @@
                     stats.providers[provider].prompt += prompt;
                     stats.providers[provider].completion += completion;
                     stats.providers[provider].cached += cached;
+                    if (r.label) {
+                        stats.providers[provider].label = r.label;
+                    }
 
                     const model = r.model || 'unknown';
                     if (!stats.models[model]) {
@@ -701,7 +704,7 @@
                 tbody.innerHTML = sorted.map(item => {
                     const barWidth = maxTokens > 0 ? (item.tokens / maxTokens) * 100 : 0;
                     return `<tr>
-                        <td><span class="${tbodyId === 'providerBody' ? 'provider-badge' : 'model-badge'}">${item.name}</span></td>
+                        <td><span class="${tbodyId === 'providerBody' ? 'provider-badge' : 'model-badge'}">${item.label||item.name}</span></td>
                         <td>${item.requests}</td>
                         <td><span class="token-bar" style="width: ${barWidth}px;"></span>${formatNumber(item.tokens)}</td>
                         <td>${formatNumber(item.prompt)}</td>
