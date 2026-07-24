@@ -1,4 +1,4 @@
-const chatBody          = document.getElementById(`chatBody`);
+reqconst chatBody          = document.getElementById(`chatBody`);
 const userInput         = document.getElementById("userInput");
 const codeButton        = document.querySelector(".code");
 const box_conversations = document.querySelector(`#box_conversations, .top`);
@@ -40,7 +40,7 @@ const translationSnipptes = [
     "Hello! How can I assist you today?", "words", "chars", "tokens", "{0} total tokens",
     "{0} Messages were imported", "{0} File(s) uploaded successfully",
     "{0} Conversations/Settings were imported successfully",
-    "No content found", "Files are loaded successfully",
+    "No content found", "Files are loaded successfully",i
     "Importing conversations...", "New version:", "Providers API key", "Providers (Enable/Disable)",
     "Get API key", "Uploading files...", "Invalid link", "Loading...", "Live Providers", "Custom Providers",
     "Search Off", "Search On", "Recognition On", "Recognition Off", "Delete Conversation",
@@ -4751,7 +4751,7 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
         }
         const ignored = Array.from(settings.querySelectorAll("input.provider:not(:checked)")).map((el)=>el.value);
         if (ignored) {
-            headers['x-ignored'] = ignored.join(" ");
+            args += '?ignored=' + encodeURIComponent(ignored.join(" "));
         }
         url = `${framework.backendUrl}/backend-api/v2/${ressource}/${args}`;
         headers['content-type'] = 'application/json';
