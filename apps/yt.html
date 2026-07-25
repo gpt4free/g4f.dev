@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>90s Hits - Swipe Player</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            height: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #ff00cc, #3333ff); /* 90s vibe gradient */
+            overflow: hidden;
+            color: white;
+        }
+
+        #app {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .header {
+            position: absolute;
+            top: 20px;
+            text-align: center;
+            z-index: 10;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .header p {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        /* The Swipe Card */
+        .card-container {
+            position: relative;
+            width: 90%;
+            max-width: 380px;
+            aspect-ratio: 3 / 4;
+            background: #000;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6), 0 0 20px rgba(255,0,204,0.4);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            overflow: hidden;
+            touch-action: none; /* Prevents default browser scrolling */
+            z-index: 20;
+        }
+
+        /* YouTube Iframe sits under the overlay */
+        #player {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Crucial: lets the overlay catch swipe/tap events */
+        }
+
+        /* Overlay for gestures and track info */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            cursor: grab;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 25px;
+            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 30%, transparent 100%);
+        }
+
+        .overlay:active {
+            cursor: grabbing;
+        }
+
+        .track-info {
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        .title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+            line-height: 1.2;
+            text-shadow: 1px 1px 3px #000;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: #00ffff;
+            text-shadow: 1px 1px 3px #000;
+        }
+
+        /* Status Icon (Play/Pause) */
+        .status-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 30;
+            filter: drop-shadow(0 0 10px rgba(0,0,0,0.8));
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            display: flex;
+            justify-content: space-evenly;
+            z-index: 10;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            color: white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .btn:active {
+            transform: scale(0.9);
+            background: rgba(255, 255, 255, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Load YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+
+    <div id="app">
+        <div class="header">
+            <h1>90s Hits</h1>
+            <p>Swipe Left/Right • Tap to Play/Pause</p>
+        </div>
+
+        <div class="card-container" id="card">
+            <div id="player"></div>
+            <div class="overlay" id="overlay">
+                <div class="status-icon" id="status-icon">▶️</div>
+                <div class="track-info">
+                    <div class="title" id="track-title">Loading...</div>
+                    <div class="subtitle" id="track-artist">90s Classics</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="btn" onclick="changeTrack(-1)">⏮</div>
+            <div class="btn" onclick="changeTrack(1)">⏭</div>
+        </div>
+    </div>
+
+    <script>
+        // 90s Hits curated playlist
+        const playlist = [
+            { id: 'hTWKbfoikeg', title: 'Smells Like Teen Spirit', artist: 'Nirvana' },
+            { id: 'C-u5WLJ9Yk4', title: '...Baby One More Time', artist: 'Britney Spears' },
+            { id: '4fndeDfaWCg', title: 'I Want It That Way', artist: 'Backstreet Boys' },
+            { id: 'otCpCn0l4Ro', title: "U Can't Touch This", artist: 'MC Hammer' },
+            { id: 'gJLIiF15wjQ', title: 'Wannabe', artist: 'Spice Girls' },
+            { id: '6hzrDeceEKc', title: 'Wonderwall', artist: 'Oasis' },
+            { id: 'FrLequ6dUdM', title: 'No Scrubs', artist: 'TLC' },
+            { id: 'rog8ou-ZepE', title: 'Ice Ice Baby', artist: 'Vanilla Ice' },
+            { id: 'w-RUyAQgctE', title: 'Gangsta\'s Paradise', artist: 'Coolio' },
+            { id: 'y6y_4_b6RS8', title: 'Losing My Religion', artist: 'R.E.M.' }
+        ];
+
+        let currentIndex = 0;
+        let player;
+
+        // --- YouTube API Setup ---
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('player', {
+                videoId: playlist[currentIndex].id,
+                playerVars: {
+                    'playsinline': 1,
+                    'controls': 0, // Hide YT controls
+                    'disablekb': 1,
+                    'fs': 0,
+                    'rel': 0,
+                    'modestbranding': 1
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onError': onPlayerError
+                }
+            });
+        }
+
+        function onPlayerReady(event) {
+            updateTrackInfo();
+        }
+
+        // If a video is blocked from embedding by a copyright holder, auto-skip to the next one
+        function onPlayerError(event) {
+            console.warn("Video blocked or unavailable. Skipping to next track...");
+            changeTrack(1);
+        }
+
+        // --- UI Updates ---
+        function updateTrackInfo() {
+            document.getElementById('track-title').innerText = playlist[currentIndex].title;
+            document.getElementById('track-artist').innerText = playlist[currentIndex].artist;
+        }
+
+        function showIcon(icon) {
+            const iconEl = document.getElementById('status-icon');
+            iconEl.innerText = icon;
+            iconEl.style.opacity = 1;
+            setTimeout(() => { iconEl.style.opacity = 0; }, 600);
+        }
+
+        // --- Swipe & Interaction Logic ---
+        const card = document.getElementById('card');
+        const overlay = document.getElementById('overlay');
+        
+        let startX = 0;
+        let currentX = 0;
+        let isDragging = false;
+        let startTime = 0;
+
+        // Get coordinates for both Mouse and Touch events
+        function getClientX(e) {
+            return e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+        }
+
+        function dragStart(e) {
+            if (e.type === 'touchstart') e.preventDefault();
+            isDragging = true;
+            startX = getClientX(e);
+            currentX = startX; // Reset currentX
+            startTime = Date.now();
+            card.style.transition = 'none';
+        }
+
+        function dragMove(e) {
+            if (!isDragging) return;
+            currentX = getClientX(e);
+            const deltaX = currentX - startX;
+            // Add a slight rotation for physical realism
+            card.style.transform = `translateX(${deltaX}px) rotate(${deltaX * 0.04}deg)`;
+        }
+
+        function dragEnd(e) {
+            if (!isDragging) return;
+            isDragging = false;
+            
+            const deltaX = currentX - startX;
+            const timeElapsed = Date.now() - startTime;
+
+            // Tap detection (little movement, quick release)
+            if (Math.abs(deltaX) < 10 && timeElapsed < 300) {
+                card.style.transition = 'transform 0.3s ease';
+                card.style.transform = 'translateX(0) rotate(0)';
+                handleTap();
+                return;
+            }
+
+            // Swipe Thresholds
+            if (deltaX < -100) {
+                changeTrack(1); // Swiped Left -> Next
+            } else if (deltaX > 100) {
+                changeTrack(-1); // Swiped Right -> Previous
+            } else {
+                // Snap back to center if swipe wasn't far enough
+                card.style.transition = 'transform 0.3s ease-out';
+                card.style.transform = 'translateX(0) rotate(0)';
+            }
+        }
+
+        function handleTap() {
+            if (player && player.getPlayerState) {
+                const state = player.getPlayerState();
+                if (state === YT.PlayerState.PLAYING) {
+                    player.pauseVideo();
+                    showIcon('⏸️');
+                } else {
+                    player.playVideo();
+                    showIcon('▶️');
+                }
+            }
+        }
+
+        // Change track and animate the card
+        window.changeTrack = function(direction) {
+            currentIndex += direction;
+            
+            // Loop array
+            if (currentIndex >= playlist.length) currentIndex = 0;
+            if (currentIndex < 0) currentIndex = playlist.length - 1;
+
+            // Throw animation off-screen
+            card.style.transition = 'transform 0.3s ease-in';
+            const throwX = direction === 1 ? -window.innerWidth : window.innerWidth;
+            card.style.transform = `translateX(${throwX}px) rotate(${throwX * 0.05}deg)`;
+
+            // Wait for animation to finish, then swap track and bring back
+            setTimeout(() => {
+                updateTrackInfo();
+                
+                if (player && player.loadVideoById) {
+                    player.loadVideoById(playlist[currentIndex].id);
+                }
+
+                // Move instantly to the opposite side off-screen
+                card.style.transition = 'none';
+                card.style.transform = `translateX(${-throwX}px) rotate(${-throwX * 0.05}deg)`;
+
+                // Animate back to the center
+                setTimeout(() => {
+                    card.style.transition = 'transform 0.4s ease-out';
+                    card.style.transform = 'translateX(0) rotate(0)';
+                    showIcon('▶️'); 
+                }, 50);
+
+            }, 300);
+        }
+
+        // Event Listeners (Mouse)
+        overlay.addEventListener('mousedown', dragStart);
+        window.addEventListener('mousemove', dragMove);
+        window.addEventListener('mouseup', dragEnd);
+
+        // Event Listeners (Touch)
+        overlay.addEventListener('touchstart', dragStart, { passive: false });
+        window.addEventListener('touchmove', dragMove, { passive: false });
+        window.addEventListener('touchend', dragEnd);
+        
+        // Initialize textual display
+        updateTrackInfo();
+    </script>
+</body>
+</html>
