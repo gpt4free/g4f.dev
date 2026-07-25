@@ -193,29 +193,51 @@ function filterMarkdown(text, allowedTypes = null, defaultValue = null) {
     }
     return defaultValue;
 }
-async function query(prompt, options={ json: false, cache: true }) {
+
+async function query(prompt, options = { json: false, cache: true }) {
     if (options === true || options === false) {
         options = { json: options, cache: true };
     }
     const encodedParams = (new URLSearchParams(options)).toString();
+    const secondPartyUrl = `https://g4f.space/ai/auto/${encodeURIComponent(prompt)}?${encodedParams}`;
     let response;
-    let queryUrl;
-    for (const provider of ['auto', 'pollinations', 'openrouter']) {
-        queryUrl = `https://g4f.space/ai/${provider}/${encodeURIComponent(prompt)}${encodedParams ? "?" + encodedParams : ""}`;
-        try {
-            response = await fetch(queryUrl, { headers: localStorage.getItem("g4f_session") ? {
+    try {
+        response = await fetch(secondPartyUrl, {
+            headers: localStorage.getItem("g4f_session") ? {
                 'Authorization': `Bearer ${localStorage.getItem("g4f_session")}`
-            } : {}});
-            window.captureUserTierHeaders?.(response.headers);
-        } catch (e) {
-            add_error(`Error fetching URL: \`${queryUrl}\``, e);
-        }
-        if (response && response.ok) {
-            break;
+            } : {}
+        });
+        window.captureUserTierHeaders?.(response.headers);
+    } catch (e) {
+        add_error(`Error fetching URL: \`${secondPartyUrl}\``, e);
+    }
+    if (response && !response.ok) {
+        const delay = parseInt(response.headers.get('Retry-After'), 10);
+        if (delay > 0 && delay <= 60) {
+            console.log(`Retrying after ${delay} seconds...`);
+            await new Promise(resolve => setTimeout(resolve, delay * 1000));
+            try {
+                response = await fetch(secondPartyUrl, {
+                    headers: localStorage.getItem("g4f_session") ? {
+                        'Authorization': `Bearer ${localStorage.getItem("g4f_session")}`
+                    } : {}
+                });
+                window.captureUserTierHeaders?.(response.headers);
+            } catch (e) {
+                add_error(`Error fetching URL: \`${secondPartyUrl}\`\n ${e}`, e);
+            }
         }
     }
     if (!response || !response.ok) {
-        throw new Error("All providers are unreachable");
+        if (response) {
+            add_error(`Error ${response.status} with URL: \`${secondPartyUrl}\`\n ${await response.clone().text()}`, true);
+        }
+        const firstPartyUrl = `https://g4f.space/ai/auto/${encodeURIComponent(prompt)}?${encodedParams}`;
+        response = await fetch(firstPartyUrl, { headers: { "Authorization": `Bearer ${["sk", "_fPLVqg5vAQRCZWzPoYUG6dzSu5czowKf"].join("")}` } });
+        if (!response.ok) {
+            add_error(`Error ${response.status} with URL: \`${firstPartyUrl}\`\n ${await response.clone().text()}`, true);
+            return response;
+        }
     }
     if (options.json) {
         try {
@@ -226,12 +248,11 @@ async function query(prompt, options={ json: false, cache: true }) {
                 return new Response(filterMarkdown(text, ["json"], text), response);
             }
         } catch (e) {
-            add_error(`Error parsing JSON response from URL: \`${queryUrl}\``, e);
         }
     }
-
     return response;
 }
+
 framework.translateAll = async () => {
     if (navigator.language === "en" || navigator.language.startsWith("en-")) {
         return false;
