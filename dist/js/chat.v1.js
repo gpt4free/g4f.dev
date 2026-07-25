@@ -4877,7 +4877,7 @@ async function read_response(response, message_id, provider, finish_message) {
 function get_api_key_by_provider(provider, single=false) {
     let api_key = null;
     if (provider.startsWith("pa:")) {
-        return appStorage.getItem(`pa:${provider.slice(3)}-api_key`) || appStorage.getItem("g4f_session");
+        return appStorage.getItem(`pa:${provider.slice(3)}-api_key`);
     }
     if (provider) {
         const expires = appStorage.getItem("g4f_expires");
