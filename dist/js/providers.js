@@ -117,7 +117,7 @@ function mergeToolCalls(accumulator, toolCalls) {
     for (const call of calls) {
         const normalized = normalizeToolCall(call);
         if (!normalized) continue;
-        const key = normalized.index || normalized.id || "null";
+        const key = "index" in normalized ? normalized.index : (normalized.id || "null");
         if (!accumulator[key]) {
             accumulator[key] = normalized;
             continue;
