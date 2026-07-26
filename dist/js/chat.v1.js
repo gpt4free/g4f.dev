@@ -3171,7 +3171,7 @@ const register_settings_storage = async () => {
         // Handle log_routing toggle to enable/disable routing
         if (element.id === "log_routing") {
             element.addEventListener('change', (event) => {
-                framework.logUrl = element.checked ? `${framework.backendUrl}/log` : '';
+                framework.logUrl = element.checked ? `${framework.backendUrl}/api` : '';
                 localStorage.setItem('log_routing', element.checked);
             });
         }
