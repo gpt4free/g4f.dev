@@ -1407,6 +1407,7 @@ async function load_provider_parameters(provider) {
 }
 
 async function add_message_chunk(message, message_id, provider, finish_message=null) {
+    console.debug("Message chunk received:", message);
     content_map = content_storage[message_id];
     if (message.type == "conversation") {
         const conversation = await get_conversation(window.conversation_id);
@@ -1582,16 +1583,9 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         // Handle tool calls and show spinner
         if (message.tool_calls) {
             if (!tool_calls_storage[message_id]) {
-                tool_calls_storage[message_id] = [];
+                tool_calls_storage[message_id] = {};
             }
-            for (const toolCall of message.tool_calls) {
-                if (!tool_calls_storage[message_id][toolCall.index]) {
-                    tool_calls_storage[message_id][toolCall.index] = toolCall
-                    tool_calls_storage[message_id][toolCall.index].function.arguments = tool_calls_storage[message_id][toolCall.index].function.arguments || '';
-                } else if (toolCall.function?.arguments) {
-                    tool_calls_storage[message_id][toolCall.index].function.arguments += toolCall.function.arguments;
-                }
-            }
+            window.mergeToolCalls?.(tool_calls_storage[message_id], message.tool_calls);
             // Show spinner/loading indicator in the message
             if (content_storage[message_id] && content_storage[message_id].inner) {
                 let spinner = content_storage[message_id].inner.querySelector('.tool-call-spinner');
@@ -1792,8 +1786,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
     async function finish_message() {
         let final_message  = null;
         // Handle tool calls if any
-        if (tool_calls_storage[message_id] && tool_calls_storage[message_id].length > 0 && mcpClient) {
-            const tool_calls = tool_calls_storage[message_id];
+        if (tool_calls_storage[message_id] && mcpClient) {
+            const tool_calls = Object.values(tool_calls_storage[message_id]);
             delete tool_calls_storage[message_id];
             await handleToolCalls(tool_calls, messages, model, provider, message_id, finish_message);
             // Remove spinner/loading indicator after tool call is handled
@@ -2216,8 +2210,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 if (sources) {
                     add_sources(sources, message_id);
                 }
-                if (tool_calls_storage[message_id] && tool_calls_storage[message_id].length > 0 && mcpClient) {
-                    const toolCalls = tool_calls_storage[message_id];
+                if (tool_calls_storage[message_id] && mcpClient) {
+                    const toolCalls = Object.values(tool_calls_storage[message_id]);
                     delete tool_calls_storage[message_id];
                     await handleToolCalls(toolCalls, messages, selectedModel, provider, message_id, finish_message);
                 }
@@ -2275,8 +2269,6 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         }, Object.values(image_storage), message_id, finish_message);
     } catch (e) {
         add_error(e, true);
-    } finally {
-        clearInterval(updateInterval);
     }
 };
 
@@ -4750,7 +4742,7 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
             headers['x-api-base'] = api_base;
         }
         const ignored = Array.from(settings.querySelectorAll("input.provider:not(:checked)")).map((el)=>el.value);
-        if (ignored) {
+        if (ignored.length > 0 && args == "AnyProvider") {
             args += '?ignored=' + encodeURIComponent(ignored.join(" "));
         }
         url = `${framework.backendUrl}/backend-api/v2/${ressource}/${args}`;
@@ -6615,6 +6607,7 @@ document.getElementById('refresh-pa-providers-btn')?.addEventListener('click', l
  */
 async function handleToolCalls(toolCalls, messages, model, provider, message_id, finish_message=()=>{}) {
     try {
+        console.debug('Handling tool calls:', toolCalls);
         // Display tool calls in the chat
         for (const toolCall of toolCalls) {
             const toolName = toolCall.function.name;

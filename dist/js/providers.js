@@ -103,4 +103,36 @@ async function createClient(provider, options = {}) {
     return new ClientClass({ ...config, ...options });
 }
 
-export { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, Puter };
+function normalizeToolCall(toolCall) {
+    if (!toolCall) return null;
+    const normalized = { ...toolCall };
+    if (!normalized.function && normalized.tool_call) normalized.function = normalized.tool_call;
+    if (!normalized.function && normalized.function_call) normalized.function = normalized.function_call;
+    return normalized;
+}
+
+function mergeToolCalls(accumulator, toolCalls) {
+    if (!toolCalls) return accumulator;
+    const calls = Array.isArray(toolCalls) ? toolCalls : [toolCalls];
+    for (const call of calls) {
+        const normalized = normalizeToolCall(call);
+        if (!normalized) continue;
+        const key = `${normalized.id}-${normalized.index || 0}`;
+        if (!accumulator[key]) {
+            accumulator[key] = normalized;
+            continue;
+        }
+        const existing = accumulator[key];
+        const existingFn = existing.function || {};
+        const incomingFn = normalized.function || {};
+        existing.function = existingFn;
+        if (incomingFn.name) existing.function.name = incomingFn.name;
+        if (incomingFn.arguments) {
+            existing.function.arguments = (existingFn.arguments || '') + incomingFn.arguments;
+        }
+        if (incomingFn.description) existing.function.description = incomingFn.description;
+    }
+    return accumulator;
+}
+
+export { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls, Puter };

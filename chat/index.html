@@ -46,11 +46,12 @@
     <script src="https://cdn.jsdelivr.net/npm/jsencrypt/bin/jsencrypt.min.js" defer></script>
     <script src="../dist/js/sanitize-html.js" async></script>
     <script type="module" defer>
-        import { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, Puter }  from "../dist/js/providers.js";
+        import { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls, Puter }  from "../dist/js/providers.js";
         window.loadProviders = loadProviders;
         window.createClient = createClient;
         window.providerLocalStorage = providerLocalStorage;
         window.captureUserTierHeaders = captureUserTierHeaders;
+        window.mergeToolCalls = mergeToolCalls;
         window.Puter = Puter;
     </script>
     <script type="module" async>
