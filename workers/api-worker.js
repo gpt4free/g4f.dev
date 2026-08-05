@@ -27,33 +27,43 @@ var RATE_LIMITS = {
 var USER_TIER_LIMITS = {
   new: {
     tokens: { perMinute: 1e5, perHour: 3e5, perDay: 1e6 },
-    requests: { perMinute: 10, perHour: 100, perDay: 1e3 },
-    days: { perTwelveDays: 12 }
+    requests: { perMinute: 10, perHour: 100, perDay: 250 },
+    days: { perTwelveDays: 12 },
+    api_keys: 1,
+    burstMultiplier: 1.5
   },
   free: {
     tokens: { perMinute: 2e5, perHour: 1e6, perDay: 5e6 },
-    requests: { perMinute: 20, perHour: 200, perDay: 2e3 },
-    days: { perTwelveDays: 12 }
+    requests: { perMinute: 20, perHour: 200, perDay: 500 },
+    days: { perTwelveDays: 12 },
+    api_keys: 3,
+    burstMultiplier: 1.5
   },
   sponsor: {
     tokens: { perMinute: 1e6, perHour: 5e6, perDay: 2e7 },
-    requests: { perMinute: 100, perHour: 1e3, perDay: 1e4 },
-    days: { perTwelveDays: 12 }
+    requests: { perMinute: 100, perHour: 500, perDay: 2e3 },
+    days: { perTwelveDays: 12 },
+    api_keys: 10,
+    burstMultiplier: 2
   },
   pro: {
     tokens: { perMinute: 1e6, perHour: 5e6, perDay: 2e7 },
-    requests: { perMinute: 100, perHour: 1e3, perDay: 1e4 },
-    days: { perTwelveDays: 12 }
+    requests: { perMinute: 100, perHour: 1e3, perDay: 2e3 },
+    days: { perTwelveDays: 12 },
+    api_keys: 10,
+    burstMultiplier: 2
   },
   admin: {
-    tokens: { perMinute: 1e6, perHour: 5e6, perDay: 2e7 },
+    tokens: { perMinute: 1e6, perHour: 5e6, perDay: 5e7 },
     requests: { perMinute: 100, perHour: 1e3, perDay: 1e4 },
     days: { perTwelveDays: 12 }
   },
   anonymous: {
     tokens: { perMinute: 1e6, perHour: 5e6, perDay: 1e8 },
     requests: { perMinute: 100, perHour: 2e3, perDay: 5e4 },
-    days: { perTwelveDays: 12 }
+    days: { perTwelveDays: 12 },
+    api_keys: 10,
+    burstMultiplier: 2
   }
 };
 var CACHE_HEADERS = {
@@ -84,7 +94,8 @@ var ACCESS_CONTROL_ALLOW_ORIGIN = {
 };
 var AUTO_PROVIDERS = [
   "srv_mkombumpae45db46dcb8", // nvidia
-  "srv_mnkjel2208cf770e5009", // ollama
+  "srv_mrgykg8eea645e7bb006", // ollama
+  "srv_mrgy0nmbc8a86c407f17", // gemini
   // "srv_mp2i8rco3148dd85bec1",
   // "srv_mq7ktfibad45c29f3839", // swarm
   "srv_monk1pkz433a519ff2be", // openrouter
@@ -94,14 +105,14 @@ var AUTO_PROVIDERS = [
 var DEFAULT_MODELS = {
   "srv_mkom688d57c76d8a3542": "moonshotai/kimi-k2-instruct-0905", // groq
   "srv_mkombumpae45db46dcb8": "nvidia/nemotron-3-nano-30b-a3b", // nvidia
-  "srv_mnkjel2208cf770e5009": "nemotron-3-nano:30b", // "deepseek-v4-pro", // ollama
+  "srv_mrgykg8eea645e7bb006": "nemotron-3-nano:30b", // "deepseek-v4-pro", // ollama
   "srv_mp2i8rco3148dd85bec1": "nemotron-3-nano:30b",
   "srv_mq7ktfibad45c29f3839": "deepseek-v4-pro:cloud", // swarm
   "srv_mm0u9cua212491d78695": "openrouter/free", // openrouter
   "srv_mkolylnsaec61b86b9c2": "openrouter/free", // openrouter old
   "srv_monk1pkz433a519ff2be": "nvidia/nemotron-3-super-120b-a12b:free", // openrouter
   "srv_mjlq1ncq8a3f7fe0aea0": "turbo", // perplexity
-  "srv_mkol5tgcd33cc358ddbc": "models/gemini-flash-latest", // gemini
+  "srv_mrgy0nmbc8a86c407f17": "models/gemini-flash-latest", // gemini
   "srv_mkoloq41e34074b6133e": "openai-fast", // pollinations
   "srv_mkomfko63371049b6da6": "deepseek-v3.2:free", // api.airforce
   "srv_mks0cusg6010f87029ea": "model-router3" ,// azure
@@ -109,19 +120,32 @@ var DEFAULT_MODELS = {
 };
 var SERVER_MAP = {
   //"api": "srv_mnkjel2208cf770e5009",
-  "ollama": "srv_mnkjel2208cf770e5009",
+  "ollama": "srv_mrgykg8eea645e7bb006",
   "openrouter": "srv_monk1pkz433a519ff2be",
   "pollinations": "srv_mkoloq41e34074b6133e",
   "groq": "srv_mkom688d57c76d8a3542",
-  "gemini": "srv_mkol5tgcd33cc358ddbc",
+  "gemini": "srv_mrgy0nmbc8a86c407f17",
   "nvidia": "srv_mkombumpae45db46dcb8",
   "azure": "srv_mks0cusg6010f87029ea",
 }
+let providers = {};
+let waitForProviders = ()=>fetch("https://g4f.dev/dist/js/providers.json")
+  .then(r=>r.json()).then(p=>{
+    providers = p.providers;
+    for (const [key, provider] of Object.entries(providers)) {
+      if (provider.id) {
+        SERVER_MAP[key] = provider.id;
+      }
+      if (p.defaultModels[key] && provider.id) {
+        DEFAULT_MODELS[provider.id] = p.defaultModels[key];
+      }
+    }
+  });
 var SERVER_TO_PROVIDER = {
-  //"srv_mkoloq41e34074b6133e": "pollinations",
-  //"srv_mp5miql908c8738d71be": "pollinations",
-  //"srv_mqdvrlod81f0b2db504a": "huggingface",
-  //"srv_mp3lmkuad07322459f47": "airforce"
+  "srv_mkoloq41e34074b6133e": "pollinations",
+  "srv_mp5miql908c8738d71be": "pollinations",
+  "srv_mrm4kpled882efdc423e": "huggingface",
+  "srv_mp3lmkuad07322459f47": "airforce"
 }
 var URL_MAP = {
   "https://gen.pollinations.ai/quota": "https://gen.pollinations.ai/account/balance",
@@ -153,7 +177,9 @@ var BLOCKED_SERVERS = [
   "srv_mr1ruv123345d3ceb8a1",//
   "srv_mr6vtpu754b4393be8e8",//
   "srv_mrc5xtamce61d5c8b302",
-  "srv_mkol5tgcd33cc358ddbc"//
+  "srv_mkol5tgcd33cc358ddbc",//
+  "srv_mrg0irw9741b298290d7",
+  "srv_mpsmwmt5fa6174293958"
 ];
 // organizations (from Cloudflare `asOrganization`) that should be blocked
 // when the request is anonymous (no user/session or API key provided).
@@ -233,15 +259,15 @@ var BLOCKED_ORGS = [
   "Amazon Corporate Services Pty Ltd",
   "Hostinger International Limited",
   "Senko Digital LLC - DE Network",
-  "Space Hosting"
+  "Space Hosting",
+  "Amazon Data Services Singapore",
+  "500 Oracle Parkway"
 ];
 var BLOCKED_USERS = [
   "mamakumko", "mamkokumko", "MahmutHizal", "LucaBasri",
   "SteamPunk001", "steampunk001", "steeampunk002-cmyk", "steeampunk004-cmyk",
-  "MahmutHizal", "LucaBasri", "mamkokumko", "mamakumko",
   "denmos221-cpu", "vlintz",
   "luciazamora99", "valrab_",
-  "mamakumko", "MahmutHizal", "LucaBasri"
 ];
 var GPT_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "marin", "cedar", "amuch", "dan", "elan", "breeze", "cove", "ember", "fathom", "glimmer", "harp", "juniper", "maple", "orbit", "vale"];
 var custom_worker_default = {
@@ -251,8 +277,8 @@ var custom_worker_default = {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS });
     }
-    if (pathname === "/") {
-      return Response.redirect("https://g4f.dev", 302);
+    if (["/", "/chat", "/chat/", "/playground", "/playground/", "/docs"].includes(pathname)) {
+      return Response.redirect(`https://g4f.dev${pathname}`, 302);
     }
     if (pathname == "/api/audio/models") {
       return Response.json({ data: [{ id: "gpt-audio", audio: true }, ...GPT_AUDIO_VOICES.map((voice) => {
@@ -279,10 +305,11 @@ var custom_worker_default = {
       // block anonymous requests originating from certain cloud providers
       // (Cloudflare sets `request.cf.asOrganization` for the source ASN/org).
       const org = request.cf?.asOrganization || request.cf?.country || null;
-      if (!user && !userProvidedKey && org && BLOCKED_ORGS.includes(org) && !pathname.endsWith("/public")) {
+      if ( request.headers.get("host") != "api.gpt4free.workers.dev")
+      if (!user && !userProvidedKey && org && BLOCKED_ORGS.includes(org) && !pathname.endsWith("/public") && !pathname.endsWith("/logs")) {
         return jsonResponse({
           error: {
-            message: "Access from cloud provider blocked. Sign up at g4f.dev/members.html for access from cloud.",
+            message: "Access to cloud provider blocked. Sign up at g4f.dev/members.html for access from cloud.",
             type: "authentication_required"
           }
         }, 403);
@@ -368,12 +395,13 @@ var custom_worker_default = {
           return newResponse;
         }
       }
-      if (!userProvidedKey && !pathname.startsWith("/custom/api/")) {
-        if (user) {
-          ctx.waitUntil(updateUserRateLimit(env, user.id, ctx));
-        }
-        ctx.waitUntil(updateAnonymousRateLimit(env, getClientIP(request), ctx));
+      if (user) {
+        ctx.waitUntil(updateUserRateLimit(env, user.id, ctx));
+      } else {
+        ctx.waitUntil(updateAnonymousRateLimit(env, getClientIP(request), user));
       }
+      await waitForProviders();
+      waitForProviders = ()=>{};
       const serverLabel = url.hostname.split(".")[0];
       try {
         if (serverLabel in SERVER_MAP) {
@@ -415,7 +443,7 @@ var custom_worker_default = {
       if (pathname === "/custom/api/servers/usage" || pathname === "/usage") {
         return handleGetServerUsage(request, env);
       }
-      if (pathname === "/custom/api/servers/public") {
+      if (pathname === "/custom/api/servers/public" || pathname === "/public") {
         return handleListPublicServers(request, env, user);
       }
       if (pathname.match(/^\/custom\/api\/servers\/[^/]+\/models$/)) {
@@ -446,6 +474,20 @@ var custom_worker_default = {
         }
         return handleModels(request, env, ctx, server.id, user, server, cacheKey);
       }
+      if (!user || user.tier != "admin") {
+        const { success } = await env.RATE_LIMIT.limit({ key: user ? user.id : pathname }) // key can be any string of your choosing
+        if (!success) {
+          const newResponse = Response.json({
+            error: {
+              message: "Rate limit 10s exceeded",
+              type: "rate_limit_exceeded",
+              retry_after: "10",
+            }
+          }, { status: 429, headers: { "Retry-After": "10", ...CORS_HEADERS } });
+          updateResponsefromRateCheck(newResponse, rateCheck);
+          return newResponse;
+        }
+      }
       if (!userProvidedKey && (pathname === "/v1/chat/completions" || pathname === "/chat/completions")) {
         return handleV1ChatCompletions(request, env, ctx, pathname, user, cacheKey, rateCheck);
       }
@@ -455,7 +497,7 @@ var custom_worker_default = {
         if (!server) {
           return jsonResponse({ error: "Server not found" }, 404);
         }
-        return handleProxyToServer(request, env, ctx, server, "/chat/completions", cacheKey, user, pathname, userProvidedKey, rateCheck);
+        return handleProxyToServer(request, env, ctx, server, "/chat/completions", cacheKey, user, pathname, userProvidedKey, rateCheck, null, serverLabel == "log");
       }
       if (pathname.match(/^\/api\/.+\/chat\/completions$/)) {
         const label = pathname.split("/")[2];
@@ -475,7 +517,7 @@ var custom_worker_default = {
         if (!server) {
           return proxyToPassG4f(request, env, pathname, url.search, user, cacheKey, ctx);
         }
-        return handleProxyToServer(request, env, ctx, server, "/chat/completions", cacheKey, user, pathname, userProvidedKey, rateCheck);
+        return handleProxyToServer(request, env, ctx, server, "/chat/completions", cacheKey, user, pathname, userProvidedKey, rateCheck, null, serverLabel == "log");
       }
       if (pathname.startsWith("/custom/") && pathname.split("/").length >= 3) {
         const parts = pathname.split("/");
@@ -485,9 +527,9 @@ var custom_worker_default = {
         if (!server) {
           return jsonResponse({ error: "Server not found" }, 404);
         }
-        return handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user, pathname, userProvidedKey, rateCheck);
+        return handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user, pathname, userProvidedKey, rateCheck, null, serverLabel == "log");
       }
-      if (pathname.startsWith("/api/") && pathname.split("/").length >= 3) {
+      if (pathname.startsWith("/api/") && pathname.split("/").length >= 3 && !pathname.startsWith("/api/https://")) {
         const parts = pathname.split("/");
         const label = parts[2];
         const subPath = "/" + parts.slice(3).join("/");
@@ -495,7 +537,7 @@ var custom_worker_default = {
         if (!server) {
           return proxyToPassG4f(request, env, pathname, url.search, user, cacheKey, ctx);
         }
-        return handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user, pathname, userProvidedKey, rateCheck);
+        return handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user, pathname, userProvidedKey, rateCheck, null, serverLabel == "log");
       }
       return proxyToPassG4f(request, env, pathname, url.search, user, cacheKey, ctx);
     } catch (error) {
@@ -541,7 +583,7 @@ async function authenticateRequest(request, env) {
   if (!apiKey && xApiKey && xApiKey.startsWith("g4f_")) {
     apiKey = xApiKey;
   }
-  if (apiKey && env.MEMBERS_KV) {
+  if (apiKey && env.MEMBERS_KV && apiKey.startsWith("g4f_")) {
     const keyHash = await hashString(apiKey);
     const keyDataStr = await env.MEMBERS_KV.get(`api_key:${keyHash}`);
     if (keyDataStr) {
@@ -597,8 +639,12 @@ async function saveUser(env, user) {
   }
 }
 async function handleListServers(request, env, user) {
-  const servers = user.custom_servers || [];
-  if (user.tier == "admin") {
+  let servers = [];
+  if (user) {
+    servers = user.custom_servers || [];
+  }
+  if (user && user.tier == "admin") {
+    servers.forEach(s=>{s.api_key_count=(s.api_keys || "").split("\n").filter((k) => k.trim()).length});
     return jsonResponse({ servers: servers });
   }
   const safeServers = servers.map((s) => ({
@@ -846,7 +892,7 @@ async function handleListPublicServers(request, env, user) {
   const safeServers = publicServers.map((s) => ({
     id: s.id,
     label: s.label,
-    base_url: user && user.tier == "admin" ? s.base_url : undefined,
+    base_url: user && user.tier == "admin" ? s.base_url : "",
     allowed_models: s.allowed_models,
     owner_id: s.owner_id,
     usage: s.usage || { requests: 0, tokens: 0 }
@@ -957,11 +1003,13 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey,
     return jsonResponse({ error: `Failed to connect to server: ${e.message}` }, 502);
   }
 }
-async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user = null, pathname = null, userProvidedKey = null, rateCheck = null, requestBody = null) {
+async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user = null, pathname = null, userProvidedKey = null, rateCheck = null, requestBody = null, logging = false) {
   if (!server) {
     return jsonResponse({ error: "Server not found" }, 404);
   }
   let requestModel = null;
+  let savedBytes = 0;
+  let logs = {};
   if (request.method === "POST") {
     if (!requestBody) {
       requestBody = await request.clone().json();
@@ -992,15 +1040,373 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
             return jsonResponse({ "choices": [{ "message": { "content": r } }] });
           }
         }
+        const searchVSC = /Follow the user's requirements carefully & to the letter.\nFollow Microsoft content policies.\n[\s\S]*? simple code examples or demonstrations; debugging <\/description>/gi;
+        const replaceVSC = "### Core Rules\n- Follow user requirements strictly and to the letter.\n- Keep answers short and impersonal.\n\n### Role & Context\nYou are an expert automated coding agent. \n- **Gather context first:** Don\'t make assumptions. Use tools to read files and understand the workspace before acting. Don\'t give up if a task seems hard; explore creatively to find a solution.\n- **Be efficient:** Read large file chunks to minimize tool calls. Use provided context/attachments if relevant. Don\'t re-read files already in context.\n- **Infer project type:** Use languages, frameworks, and libraries inferred from the context to guide your changes.\n\n### Tool Usage\n- **Direct answers:** Answer direct code sample requests without using tools.\n- **Schema & permissions:** Follow JSON schemas strictly. Include ALL required properties. No need to ask permission before using a tool.\n- **Parallelization:** Call independent tools in parallel. Run terminal commands sequentially (never in parallel).\n- **Transparency:** Never mention tool names to the user (e.g., say \"I\'ll run the command\" not \"I\'ll use run_in_terminal\").\n- **Best practices:** Use absolute paths/URIs. Use `grep_search` for file overviews. Use browser tools for front-end UI validation. Only use currently available tools.\n- **Continuity:** Don\'t repeat yourself after a tool call; pick up where you left off.\n\n### Editing & Execution\n- **No codeblocks:** NEVER print codeblocks for file changes or terminal commands. Use the respective tools directly.\n- **Read before edit:** Ensure a file is in context before editing. Use `replace_string_in_file` (preferred) or `insert_edit_into_file`. Group changes by file. Never pass omitted line markers (e.g., `/* Lines 123-456 omitted */`) to edit tools.\n- **Insert edits:** For `insert_edit_into_file`, use `// ...existing code...` comments to omit unchanged code. Be as concise as possible.\n- **No terminal edits:** Never edit files via terminal commands unless explicitly asked.\n- **Dependencies & UI:** Use popular external libraries when appropriate (install via `npm install`, etc.). Build modern, beautiful UIs from scratch.\n- **Error fixing:** Fix new errors resulting from your edits. Max 3 attempts per file; if the third fails, stop and ask the user.\n\n### Notebooks\n- Use `edit_notebook_file` and `run_notebook_cell` for notebooks. NEVER use terminal commands or `insert_edit_into_file` for notebooks.\n- Use `copilot_getNotebookSummary` for overviews. Refer to cells by number, not ID. Markdown cells cannot be executed.\n\n### Output Formatting\n- Use Markdown. Wrap filenames/symbols in backticks (e.g., `src/models/person.ts`).\n- Use `$` for inline math and `$$` for block math (KaTeX).\n- Use ```mermaid fenced code blocks for Mermaid diagrams.\n\n### Memory\nConsult memory files for past insights. Keep entries concise and update existing files over creating new ones.\n- **User (`/memories/`):** Persistent, auto-loaded. Store preferences and general insights.\n- **Session (`/memories/session/`):** Current conversation only. Store task-specific state.\n- **Repository (`/memories/repo/`):** Local workspace facts, conventions, and build commands.\n\n### Workspace & Skills\n- This is a multi-root workspace. Apply folder-specific instructions to their respective folders.\n- **Skills:** Use `read_file` to load detailed skill instructions when a task matches a skill\'s domain (e.g., use `project-setup-info-local` for scaffolding new projects from scratch, not for adding individual files).";
+        const firstMessage = messages[0];
+        if (firstMessage && firstMessage.content && firstMessage.role == "system") {
+          const startLen = firstMessage.content.length;
+          firstMessage.content = firstMessage.content.replace(searchVSC, replaceVSC);
+          savedBytes += startLen - firstMessage.content.length
+          requestBody.messages[0] = firstMessage;
+        }
+        const removeTools = [
+          "create_directory",
+          "terminal_last_command",
+          "terminal_selection",
+          "resolve_memory_file_uri",
+          "testFailure",
+          "vscode_searchExtensions_internal",
+          "get_vscode_api",
+          "session_store_sql",
+          "get_python_environment_details",
+          "get_python_executable_details",
+          "mcp_provides_tool_pylanceFileSyntaxErrors",  // get_errors covers this
+          "mcp_provides_tool_pylanceSyntaxErrors",      // Rarely needed
+          "mcp_provides_tool_pylanceSettings",          // Rarely needed by LLM
+          "mcp_provides_tool_pylanceImports",           // grep_search can find imports
+          "mcp_provides_tool_pylanceInstalledTopLevelModules", // Rarely needed
+          "mcp_provides_tool_pylanceWorkspaceRoots",    // list_dir / file_search cover this
+          "mcp_provides_tool_pylanceWorkspaceUserFiles", // file_search covers this
+          "mcp_provides_tool_pylancePythonEnvironments", // get_python_environment_details covers this
+          "mcp_provides_tool_pylanceUpdatePythonEnvironment", // Rarely needed
+          "mcp_provides_tool_pylanceRunCodeSnippet",    // run_in_terminal with python covers this
+          "mcp_provides_tool_pylanceDocString",         // read_file + grep_search cover this
+          "mcp_provides_tool_pylanceDocuments",         // Web search covers Pylance docs
+          "mcp_provides_tool_pylanceInvokeRefactoring",  // insert_edit_into_file covers this
+          "run_playwright_code",
+          "create_and_run_task",
+          "get_task_output",
+          "install_extension",
+          "run_vscode_command",
+          "get_vscode_api",
+          "run_playwright_code",
+          "drag_element",
+          "hover_element",
+          "handle_dialog"
+        ];
+        const replacements = [
+          // ── Remove excessive ALL-CAPS emphasis ──
+          {
+            search: /\bIMPORTANT:\s*/gi,
+            replace: "",
+            reason: "Remove ALL-CAPS emphasis that adds noise without value"
+          },
+          {
+            search: /\bCRITICAL:?\s*/gi,
+            replace: "",
+            reason: "Remove ALL-CAPS emphasis"
+          },
+          {
+            search: /\bWARNING:\s*/gi,
+            replace: "Note: ",
+            reason: "Soften ALL-CAPS warnings to notes"
+          },
+          {
+            search: /\bNEVER\b/g,
+            replace: "Do not",
+            reason: "Soften absolute language"
+          },
+          {
+            search: /\bMUST\b/g,
+            replace: "should",
+            reason: "Soften absolute language"
+          },
+
+          // ── Remove redundant "When NOT to use" boilerplate ──
+          // Many tools have generic "When NOT to use" sections that just restate
+          // the inverse of "When to use". Remove the generic ones.
+          {
+            search: /When NOT to use this tool: creating single files or small code snippets; adding individual files to existing projects; making modifications to existing codebases; user asks to \"create a file\" or \"add a component\"; simple code examples or demonstrations; debugging/gi,
+            replace: "",
+            reason: "Remove generic boilerplate 'When NOT to use' section"
+          },
+
+          // ── Trim overly long run_in_terminal description ──
+          {
+            search: /This tool allows you to execute shell commands in a persistent bash terminal session, preserving environment variables, working directory, and other context across multiple commands\./gi,
+            replace: "Execute shell commands in a persistent terminal. State (env vars, cwd) is preserved across calls.",
+            reason: "Shorten verbose opening paragraph"
+          },
+          {
+            search: /For ALL one-shot commands \(builds, tests, installs, compilation, linting, downloads, scripts\), use mode='sync' and omit timeout\. The tool waits for the command to complete and returns full output inline\. This is the default and strongly preferred mode\./gi,
+            replace: "Use mode='sync' (default) for all one-shot commands. Output is returned inline.",
+            reason: "Condense verbose mode explanation"
+          },
+          {
+            search: /Use mode='async' ONLY for processes that must keep running indefinitely while you do other work \(servers, watchers, dev daemons\)\. Async waits for an initial idle\/output signal, then returns a terminal ID and output snapshot while the process continues running\./gi,
+            replace: "Use mode='async' only for long-running processes (servers, watchers, daemons). Returns a terminal ID for later use.",
+            reason: "Condense verbose async explanation"
+          },
+          {
+            search: /In sync mode, the full output is returned when the command completes — you do NOT need to call get_terminal_output afterward\. Only use get_terminal_output if the tool result explicitly says the command was moved to background, timed out, or needs input\./gi,
+            replace: "In sync mode, output is returned inline. Only use get_terminal_output if the result indicates the command was moved to background or needs input.",
+            reason: "Condense sync output explanation"
+          },
+          {
+            search: /Sync output is final: When a sync command completes, the full output is returned inline — do NOT call get_terminal_output afterward\. Only use get_terminal_output if the tool result explicitly indicates the command was moved to background, timed out, or needs input\. Do NOT tell the user to check the terminal panel — all command output is already included in the tool result\./gi,
+            replace: "Sync output is final and returned inline.",
+            reason: "Remove redundant paragraph entirely restating the sync behavior"
+          },
+          {
+            search: /Terminal notifications: When an async command finishes or a sync command times out, you will be automatically notified on your next turn with the exit code and terminal output\. You will also be notified if the terminal needs input\. Do NOT poll or sleep to wait for completion\./gi,
+            replace: "For async/timeout commands, you'll be auto-notified on completion. Do not poll.",
+            reason: "Condense notification explanation"
+          },
+          {
+            search: /NEVER run sleep or similar wait commands in a terminal\. You will be automatically notified on your next turn when async terminal commands or timed-out sync commands complete or need input\. Do NOT poll for completion\./gi,
+            replace: "Do not run sleep or wait commands. You'll be auto-notified on completion.",
+            reason: "Condense sleep prohibition"
+          },
+          {
+            search: /NEVER pipe interactive commands through tail, head, grep, or other filters — this hides prompts and prevents the terminal from detecting when input is needed\. Run interactive commands without pipes\./gi,
+            replace: "Do not pipe interactive commands through filters — this hides prompts.",
+            reason: "Condense pipe warning"
+          },
+          {
+            search: /When a terminal command is waiting for interactive input, do NOT suggest alternatives or ask the user whether to proceed\. Instead, use the vscode_askQuestions tool to collect the needed values from the user, then send them\./gi,
+            replace: "For interactive input prompts, use vscode_askQuestions to collect values from the user.",
+            reason: "Condense interactive input guidance"
+          },
+          {
+            search: /NEVER use vscode_askQuestions to request sensitive input such as passwords, passphrases, API keys, tokens, or other secrets — answers to that tool are sent through the model\. If the prompt requires a secret, tell the user to type it directly into the terminal and stop; do not call vscode_askQuestions or send_to_terminal for that prompt\./gi,
+            replace: "For secrets (passwords, API keys), tell the user to type directly into the terminal.",
+            reason: "Condense secret handling guidance"
+          },
+          {
+            search: /Send exactly one answer per prompt using send_to_terminal\. Never send multiple answers in a single send\./gi,
+            replace: "Send one answer per prompt.",
+            reason: "Condense send guidance"
+          },
+          {
+            search: /After each send, call get_terminal_output to read the next prompt before sending the next answer\./gi,
+            replace: "After sending, call get_terminal_output to read the next prompt.",
+            reason: "Condense output reading guidance"
+          },
+          {
+            search: /Continue one prompt at a time until the command finishes\./gi,
+            replace: "",
+            reason: "Remove obvious restatement"
+          },
+          {
+            search: /Use \[\[ \]\] for conditional tests instead of \[ \]/gi,
+            replace: "Use [[ ]] for conditionals",
+            reason: "Simplify"
+          },
+          {
+            search: /Prefer \$\(\) over backticks for command substitution/gi,
+            replace: "Prefer $() over backticks",
+            reason: "Simplify"
+          },
+          {
+            search: /Use which or command -v to verify command availability/gi,
+            replace: "Use `which` to verify command availability.",
+            reason: "Add backtick formatting"
+          },
+
+          // ── Fix insert_edit_into_file verbose example ──
+          {
+            search: /The system is very smart and can understand how to apply your edits to the files, you just need to provide minimal hints\./gi,
+            replace: "Provide minimal hints — the system applies edits intelligently.",
+            reason: "Condense boilerplate"
+          },
+          {
+            search: /Avoid repeating existing code, instead use comments to represent regions of unchanged code\. Be as concise as possible\. For example:\n\/\/ \.\.\.existing code\.\.\.\n\{ changed code \}\n\/\/ \.\.\.existing code\.\.\.\n\{ changed code \}\n\/\/ \.\.\.existing code\.\.\./gi,
+            replace: "Use `// ...existing code...` comments for unchanged regions. Be concise.",
+            reason: "Condense verbose example"
+          },
+          {
+            search: /Here is an example of how you should use format an edit to an existing Person class:[\s\S]*?class Person \{[\s\S]*?getAge\(\) \{[\s\S]*?return this\.age;[\s\S]*?\}[\s\S]*?\}/gi,
+            replace: "",
+            reason: "Remove redundant full code example"
+          },
+
+          // ── Fix replace_string_in_file verbose warnings ──
+          {
+            search: /CRITICAL for \\?`oldString\\?`: Must uniquely identify the single instance to change\. Include at least 3 lines of context BEFORE and AFTER the target text, matching whitespace and indentation precisely\. If this string matches multiple locations, or does not match exactly, the tool will fail\. Never use 'Lines 123-456 omitted' from summarized documents or \.\.\.existing code\.\.\. comments in the oldString or newString\./gi,
+            replace: "oldString must uniquely identify one location. Include 3+ lines of surrounding context.",
+            reason: "Condense critical warning"
+          },
+
+          // ── Fix manage_todo_list verbose CRITICAL workflow ──
+          {
+            search: /CRITICAL workflow:\s*\n1\. Plan tasks by writing todo list with specific, actionable items\s*\n2\. Mark ONE todo as in-progress before starting work\s*\n3\. Complete the work for that specific todo\s*\n4\. Mark that todo as completed IMMEDIATELY\s*\n5\. Move to next todo and repeat/gi,
+            replace: "Workflow: write todos → mark one as in-progress → complete it → mark completed → repeat.",
+            reason: "Condense verbose workflow steps"
+          },
+
+          // ── Fix open_browser_page verbose note ──
+          {
+            search: /May prompt the user to share a page if there is a similar one already open, unless "forceNew" is true\./gi,
+            replace: "Set forceNew=true to force a new page; otherwise reuses existing pages.",
+            reason: "Condense"
+          },
+
+          // ── Fix runSubagent verbose preamble ──
+          {
+            search: /This tool is good at researching complex questions, searching for code, and executing multi-step tasks\. When you are searching for a keyword or file and are not confident that you will find the right match in the first few tries, use this agent to perform the search for you\./gi,
+            replace: "Use for complex multi-step research, code search, or tasks that may need multiple attempts.",
+            reason: "Condense verbose preamble"
+          },
+          {
+            search: /Agents do not run async or in the background, you will wait for the agent's result\./gi,
+            replace: "Agents run synchronously — wait for results.",
+            reason: "Condense"
+          },
+          {
+            search: /When the agent is done, it will return a single message back to you\. The result returned by the agent is not visible to the user\. To show the user the result, you should send a text message back to the user with a concise summary of the result\./gi,
+            replace: "Agent results aren't shown to users — summarize results in your reply.",
+            reason: "Condense"
+          },
+          {
+            search: /Each agent invocation is stateless\. You will not be able to send additional messages to the agent, nor will the agent be able to communicate with you outside of its final report\. Therefore, your prompt should contain a highly detailed task description for the agent to perform autonomously and you should specify exactly what information the agent should return back to you in its final and only message to you\./gi,
+            replace: "Agents are stateless. Provide a detailed, self-contained prompt specifying what to return.",
+            reason: "Condense statelessness explanation"
+          },
+          {
+            search: /The agent's outputs should generally be trusted\n/gi,
+            replace: "",
+            reason: "Remove unnecessary trust statement"
+          },
+          {
+            search: /Clearly tell the agent whether you expect it to write code or just to do research \(search, file reads, web fetches, etc\.\), since it is not aware of the user's intent\n/gi,
+            replace: "Specify whether the agent should write code or only research.",
+            reason: "Condense"
+          },
+          {
+            search: /If the user asks for a certain agent, you MUST provide that EXACT agent name \(case-sensitive\) to invoke that specific agent\./gi,
+            replace: "Use exact agent names (case-sensitive) when specified.",
+            reason: "Condense"
+          },
+
+          // ── Fix vscode_askQuestions verbose parameter docs ──
+          {
+            search: /Users can always provide a freeform text answer alongside options unless you set allowFreeformInput to false\./gi,
+            replace: "",
+            reason: "Remove — already documented in parameter schema"
+          },
+
+          // ── Fix configure_python_environment verbose ALL-CAPS ──
+          {
+            search: /ALWAYS Use this tool to set up the user's chosen environment and ALWAYS call this tool before using any other Python related tools or running any Python command in the terminal\./gi,
+            replace: "Call this before any other Python tool or command.",
+            reason: "Condense ALL-CAPS emphasis"
+          },
+
+          // ── Fix get_terminal_output verbose preamble ──
+          {
+            search: /Get output from a terminal execution that was moved to background \(identified by the `id` returned from run_in_terminal\)\. Use this ONLY when the run_in_terminal result explicitly says the command was moved to background, timed out, or needs input\. Do NOT call this after a sync command that completed normally — sync commands return full output inline\. If a background command has not yet completed, you will be automatically notified when it finishes — do NOT poll; end your turn and wait\./gi,
+            replace: "Get output from a backgrounded/timed-out terminal. Don't call after successful sync commands. For pending commands, wait for auto-notification.",
+            reason: "Condense verbose preamble"
+          },
+
+          // ── Fix memory tool verbose preamble ──
+          {
+            search: /IMPORTANT: Before creating new memory files, first view the \/memories\/ directory to understand what already exists\. This helps avoid duplicates and maintain organized notes\./gi,
+            replace: "Check existing files in /memories/ before creating new ones.",
+            reason: "Condense"
+          },
+
+          // ── Fix create_new_workspace verbose When NOT to use ──
+          {
+            search: /When NOT to use this tool:\s*\n\s*- Creating (?:single files|single files or small code snippets)\s*\n\s*- Adding individual files to existing projects\s*\n\s*- Making modifications to existing codebases\s*\n\s*- User asks for "create a file" or "add a component"\s*\n\s*- Simple code examples or demonstrations\s*\n\s*- Debugging or fixing existing code\s*\n/gi,
+            replace: "",
+            reason: "Remove generic 'When NOT to use' boilerplate"
+          },
+
+          // ── Remove standalone "Do NOT" lines that restate earlier rules ──
+          {
+            search: /Do NOT tell the user to check the terminal panel — all command output is already included in the tool result\./gi,
+            replace: "",
+            reason: "Redundant with sync output explanation"
+          },
+
+          // ── Fix navigate_page description ──
+          {
+            search: /Navigation type: "url" to navigate to a URL \(default, requires "url" param\), "back" or "forward" for history, "reload" to refresh\./gi,
+            replace: "",
+            reason: "Already documented in parameter schema"
+          },
+
+          // ── Fix create_file description ──
+          {
+            search: /This is a tool for creating a new file in the workspace\. The file will be created with the specified content\. The directory will be created if it does not already exist\. Never use this tool to edit a file that already exists\./gi,
+            replace: "Create a new file. Directories are auto-created. Do not use for editing existing files.",
+            reason: "Condense verbose description"
+          },
+
+          // ── Fix read_file description ──
+          {
+            search: /You must specify the line range you're interested in\. Line numbers are 1-indexed\. If the file contents returned are insufficient for your task, you may call this tool again to retrieve more content\. Prefer reading larger ranges over doing many small reads\. Binary files use startLine\/endLine as byte offsets\./gi,
+            replace: "Specify 1-indexed line ranges. Prefer larger reads over many small ones. For binary files, ranges are byte offsets.",
+            reason: "Condense"
+          },
+
+          // ── Fix grep_search verbose preamble ──
+          {
+            search: /Do a fast text search in the workspace\. Use this tool when you want to search with an exact string or regex\. If you are not sure what words will appear in the workspace, prefer using regex patterns with alternation \(\|\) or character classes to search for multiple potential words at once instead of making separate searches\. For example, use 'function\|method\|procedure' to look for all of those words at once\. Use includePattern to search within files matching a specific pattern, or in a specific file, using a relative path\. Use 'includeIgnoredFiles' to include files normally ignored by \.gitignore, other ignore files, and `files.exclude` and `search.exclude` settings\. Warning: using this may cause the search to be slower, only set it when you want to search in ignored folders like node_modules or build outputs\. Use this tool when you want to see an overview of a particular file, instead of using read_file many times to look for code within a file\./gi,
+            replace: "Fast text/regex search across workspace files. Use regex alternation (e.g. 'word1|word2') for broad searches. Use includePattern to scope to specific files. Set includeIgnoredFiles=true to search node_modules/build outputs (slower).",
+            reason: "Condense verbose preamble"
+          },
+
+          // ── Fix file_search verbose examples ──
+          {
+            search: /Search for files in the workspace by glob pattern\. This only returns the paths of matching files\. Use this tool when you know the exact filename pattern of the files you're searching for\. Glob patterns match from the root of the workspace folder\. Examples:\s*\n\s*- \*\*\/\*\.\{js,ts\} to match all js\/ts files in the workspace\.\s*\n\s*- src\/\*\* to match all files under the top-level src folder\.\s*\n\s*- \*\*\/foo\/\*\*\/\*\.js to match all js files under any foo folder in the workspace\.\s*\n\s*In a multi-root workspace, you can scope the search to a specific workspace folder by using the absolute path to the folder as the query, e\.g\. \/path\/to\/folder\/\*\*\/\*\.ts\./gi,
+            replace: "Find files by glob pattern (e.g. '**/*.ts', 'src/**'). Returns matching paths only.",
+            reason: "Condense verbose examples"
+          },
+
+          // ── Fix session_store_sql verbose preamble ──
+          {
+            search: /Query the local session store containing history from past coding sessions\. Uses SQLite syntax \(NOT DuckDB or Postgres\)\. SQL queries are read-only — only SELECT and WITH are allowed\. Use `datetime\('now', '-1 day'\)` for date math \(NOT `now\(\) - INTERVAL '1 day'`\), FTS5 `MATCH` for text search\./gi,
+            replace: "Read-only SQLite queries against session history. Only SELECT/WITH allowed. Use datetime('now','-1 day') for dates, FTS5 MATCH for text search.",
+            reason: "Condense"
+          },
+        ];
+        if (requestBody.tools && savedBytes > 0) {
+            const startLen = JSON.stringify(requestBody.tools).length;
+            requestBody.tools = requestBody.tools.map(tool => {
+            if (tool.type !== "function" || !tool.function?.description) return tool;
+
+            let desc = tool.function.description;
+
+            let i = 0;
+            for (const rule of replacements) {
+              const matches = desc.match(rule.search);
+              if (matches) {
+                logs[`-${i<10?'0':''}${i}#`] = rule.reason;
+                desc = desc.replace(rule.search, rule.replace);
+              }
+              i++;
+            }
+
+            desc = desc.replace(/ {2,}/g, " ");
+            desc = desc.replace(/\n{3,}/g, "\n\n");
+            
+            tool.function.description = desc;
+            return tool;
+          });
+          let i = 0;
+          requestBody.tools = requestBody.tools.filter(t=>{
+            i++;
+            if (removeTools.includes(t.function?.name)) {
+              logs[`tool-${i<10?'0':''}${i}-`] = t.function?.name;
+              return false;
+            }
+            logs[`tool-${i<10?'0':''}${i}+`] = t.function?.name;
+            return true;
+        });
+          savedBytes += startLen - JSON.stringify(requestBody.tools).length;
+        }
       }
     } catch (e) {
+      return jsonResponse({e:e.message}, 500);
     }
   } else {
     requestBody = {}
   }
   if (subPath === "/chat/completions") {
     if (!user && server.base_url.includes("pass.g4f.space")) {
-      return jsonResponse({ error: { message: "Authentication required for this server", type: "authentication_required" } }, 401);
+      return jsonResponse({ error: { message: "Authentication required for this server. Sign up at g4f.dev/members.html", type: "authentication_required" } }, 401);
     }
     try {
       if (!requestModel || requestModel === "auto") {
@@ -1011,7 +1417,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
         }
       }
       requestBody.model = requestModel;
-      if (server.allowed_models && server.allowed_models.length > 0) {
+      if (!server.auto_update_models && server.allowed_models && server.allowed_models.length > 0) {
         if (!server.allowed_models.includes(requestModel)) {
           return jsonResponse({
             error: {
@@ -1027,6 +1433,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     } catch (e) {
     }
   }
+
   const apiKey = userProvidedKey || server.api_key || getRandomApiKey(server.api_keys);
   const proxyHeaders = {
     "User-Agent": null,
@@ -1046,6 +1453,10 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   }
   if (targetUrl in URL_MAP) {
     targetUrl = URL_MAP[targetUrl];
+  }
+  if (logging && !targetUrl.startsWith("https://pass.g4f.space/")) {
+    targetUrl = `https://pass.g4f.space/api/${targetUrl}`;
+    proxyHeaders["g4f-api-key"] = env.PASS_API_KEY;
   }
   const clientIP = getClientIP(request);
   try {
@@ -1103,6 +1514,12 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
         newResponse2.headers.set("X-Url", targetUrl);
         newResponse2.headers.set("X-Server", server.id);
         newResponse2.headers.set("X-Provider", server.label);
+        if (savedBytes) {
+          newResponse2.headers.set("X-Saved", String(Math.round(savedBytes/4)));
+        }
+        for (const [k, v] of Object.entries(logs)) {
+          newResponse2.headers.set(`X-Removed-${k}`, v);
+        }
         if (requestModel) {
           newResponse2.headers.set("X-Model", requestModel);
         }
@@ -1142,11 +1559,12 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
         ctx.waitUntil(updateUserDailyUsage(env, user.id, totalTokens, `custom:${server.id}`, requestModel));
       }
       const isCached = (response.headers.get("X-Cache") || usage.cache || "MISS") === "HIT";
-      if (!userProvidedKey && !isCached) {
+      if (!userProvidedKey && !isCached && !server.api_key) {
         const modelTotalTokens = getModelTokens(requestModel, totalTokens);
-        ctx.waitUntil(updateAnonymousTokenUsage(env, clientIP, modelTotalTokens, ctx));
         if (user) {
           ctx.waitUntil(updateUserTokenUsage(env, user.id, modelTotalTokens, ctx));
+        } else {
+          ctx.waitUntil(updateAnonymousTokenUsage(env, clientIP, modelTotalTokens, ctx));
         }
       }
     }
@@ -1223,11 +1641,12 @@ async function createUsageTrackingStream(response, env, ctx, server, serverId, c
     ctx.waitUntil(updateUserDailyUsage(env, user.id, totalUsage, `custom:${serverId}`, requestModel));
   }
   const isCached = (response.headers.get("X-Cache") || usage.cache || "MISS") === "HIT";
-  if (!userProvidedKey && !isCached) {
+  if (!userProvidedKey && !isCached && !server.api_key) {
     const totalTokens = getModelTokens(requestModel, totalUsage);
-    ctx.waitUntil(updateAnonymousTokenUsage(env, clientIP, totalTokens, ctx));
     if (user) {
       ctx.waitUntil(updateUserTokenUsage(env, user.id, totalTokens, ctx));
+    } else {
+      ctx.waitUntil(updateAnonymousTokenUsage(env, clientIP, totalTokens, ctx));
     }
   }
 }
@@ -1394,11 +1813,17 @@ async function getServerById(env, serverId, user = null) {
   return null;
 }
 async function getServerByLabel(env, label, user = null) {
+  if (label.endsWith("/v1")) {
+    label = label.substring(0, label.length-3);
+  }
   if (user && user.custom_servers) {
     const ownedServer = user.custom_servers.find((s) => s.label.toLowerCase().includes(label.toLowerCase()));
     if (ownedServer) {
       return { ...ownedServer, owner_id: user.id };
     }
+  }
+  if (SERVER_MAP[label]) {
+    return await getServerById(env, SERVER_MAP[label], user);
   }
   const publicServers = await getPublicServers(env);
   if (publicServers) {
@@ -1647,7 +2072,7 @@ ${prompt}
         queryBody = { messages: [{ role: "user", content: query }] };
       } else {
         instructions = `Today is: ${new Date(Date.now()).toLocaleString().split(",")[0]}, User language: ${request.headers.get("accept-language") || "en"}`;
-        queryBody = { messages: [{ role: "system", content: instructions }, { role: "user", content: prompt }] };
+        queryBody = { messages: [{ role: "system", content: instructions }, { role:  "user", content: prompt }] };
       }
     }
   }
@@ -1665,7 +2090,7 @@ ${prompt}
     }
   }
   if (server.allowed_models && server.allowed_models.length > 0 && queryBody.model && serverLabel != "audio") {
-    if (!server.allowed_models.includes(queryBody.model)) {
+    if (!server.auto_update_models && !server.allowed_models.includes(queryBody.model) && queryBody.model != DEFAULT_MODELS[server.id]) {
       return jsonResponse({
         error: `Model '${queryBody.model}' not allowed. Available models: ${server.allowed_models.join(", ")}`
       }, 400);
@@ -1840,14 +2265,15 @@ ${prompt}
     if (user) {
       ctx.waitUntil(updateUserDailyUsage(env, user.id, totalUsage, `custom:${server.id}`, queryBody.model));
     }
-    if (!userProvidedKey && response.headers.get("X-Cache") !== "HIT") {
+    if (!userProvidedKey && response.headers.get("X-Cache") !== "HIT" && !server.api_key) {
       const totalTokens = getModelTokens(queryBody.model, totalUsage);
       if (totalTokens) {
         newResponse.headers.set("X-Usage-Total-Tokens", String(totalTokens));
       }
-      ctx.waitUntil(updateAnonymousTokenUsage(env, clientIP, totalTokens, ctx));
       if (user) {
         ctx.waitUntil(updateUserTokenUsage(env, user.id, totalTokens, ctx));
+      } else {
+        ctx.waitUntil(updateAnonymousTokenUsage(env, clientIP, totalTokens, ctx));
       }
     }
     if (rateCheck) {
@@ -1888,6 +2314,9 @@ function filterMarkdown(text, type, fallback) {
   return fallback;
 }
 function updateResponsefromRateCheck(newResponse, rateCheck) {
+  if (!rateCheck) {
+    return;
+  }
   newResponse.headers.set("X-Ratelimit-Remaining-Requests", String(rateCheck.maxRequests));
   newResponse.headers.set("X-Ratelimit-Remaining-Tokens", String(rateCheck.maxTokens));
   newResponse.headers.set("X-Ratelimit-Limit-Requests", String(rateCheck.limitRequests));
@@ -1906,8 +2335,8 @@ async function checkUserRateLimits(env, user, request) {
   if (!env.MEMBERS_KV) {
     return { allowed: true };
   }
-  let maxTokens = parseInt(request.headers.get("x-ratelimit-remaining-tokens") || "0") || USER_TIER_LIMITS.pro.tokens.perDay;
-  let maxRequests = parseInt(request.headers.get("x-ratelimit-remaining-requests") || "0") || USER_TIER_LIMITS.pro.requests.perDay;
+  let maxTokens = parseInt(request.headers.get("x-ratelimit-remaining-tokens") || "0") || limits.tokens.perDay;
+  let maxRequests = parseInt(request.headers.get("x-ratelimit-remaining-requests") || "0") || limits.requests.perDay;
   let limitTokens = parseInt(request.headers.get("x-ratelimit-limit-tokens") || "0");
   let limitRequests = parseInt(request.headers.get("x-ratelimit-limit-tokens") || "0");
   for (const window of windows) {
@@ -1966,8 +2395,8 @@ async function checkAnonymousRateLimits(env, request) {
   const clientIP = getClientIP(request);
   const now = Date.now();
   const windows = [
-    { name: "minute", duration: RATE_LIMITS.windows.minute, tokenLimit: RATE_LIMITS.tokens.perMinute, requestLimit: RATE_LIMITS.requests.perMinute },
-    { name: "hour", duration: RATE_LIMITS.windows.hour, tokenLimit: RATE_LIMITS.tokens.perHour, requestLimit: RATE_LIMITS.requests.perHour },
+    // { name: "minute", duration: RATE_LIMITS.windows.minute, tokenLimit: RATE_LIMITS.tokens.perMinute, requestLimit: RATE_LIMITS.requests.perMinute },
+    // { name: "hour", duration: RATE_LIMITS.windows.hour, tokenLimit: RATE_LIMITS.tokens.perHour, requestLimit: RATE_LIMITS.requests.perHour },
     { name: "day", duration: RATE_LIMITS.windows.day, tokenLimit: RATE_LIMITS.tokens.perDay, requestLimit: RATE_LIMITS.requests.perDay }
   ];
   if (!env.MEMBERS_KV) {
@@ -2085,14 +2514,16 @@ async function updateUserRateLimit(env, userId, ctx) {
     await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
   }
 }
-async function updateAnonymousRateLimit(env, clientIP, ctx) {
+async function updateAnonymousRateLimit(env, clientIP, user) {
   if (!env.MEMBERS_KV) return;
   const now = Date.now();
   const windows = [
-    { name: "minute", duration: RATE_LIMITS.windows.minute },
-    { name: "hour", duration: RATE_LIMITS.windows.hour },
+    // { name: "minute", duration: RATE_LIMITS.windows.minute },
     { name: "day", duration: RATE_LIMITS.windows.day }
   ];
+  if (!user) {
+    windows.unshift({ name: "hour", duration: RATE_LIMITS.windows.hour });
+  }
   for (const window of windows) {
     const key = `rate_limit_ip:${clientIP}:${window.name}`;
     const dataStr = await env.MEMBERS_KV.get(key);
@@ -2146,6 +2577,8 @@ function getModelFactor(model) {
   } else if (model.includes("sonnet")) {
     return 3;
   } else if (model.includes("gemini-3-pro") || model.includes("model-router")) {
+    return 2;
+  } if (model.toLowerCase().includes("glm-5.2")) {
     return 2;
   }
   return 1;
@@ -2427,9 +2860,13 @@ async function setCachedResponse(request, response, cacheControl, cacheKey = nul
   }
 }
 async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ctx) {
+  if (!user && !pathname.startsWith("/pa/") && !pathname.startsWith("/backend-api/") && !["/logs", "/api/logs"].includes(pathname)) {
+    return jsonResponse({ error: { message: "Authentication required for this server", type: "authentication_required" } }, 401);
+  }
   if (pathname.startsWith("/v1/v1beta/") || pathname.endsWith("/messages") || pathname.endsWith("/respones") || [
-    "/api/azure/models", "/api/auto/models",
-    "/api/grok/models", "/v1/chat/completions",
+    "/api/azure/models",
+    "/api/auto/models",
+    "/api/grok/models",
     "/api/azure/chat/completions"
   ].includes(pathname)) {
     return jsonResponse({
@@ -2440,11 +2877,13 @@ async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ct
     }, 404);
   }
   const headers = new Headers(request.headers);
-  if (user && pathname.startsWith("/api/") && !pathname.endsWith("/models")) {
-    headers.set("g4f-api-key", env.PASS_API_KEY);
-  }
   if (user) {
     headers.set("x-user", user.username);
+    headers.set("x-user-provider", user.provider);
+    headers.set("x-user-tier", user.tier);
+  }
+  if (user && pathname.startsWith("/api/") && !pathname.endsWith("/models")) {
+    headers.set("g4f-api-key", env.PASS_API_KEY);
   }
   const targetUrl = `https://pass.g4f.space${pathname}${search || ""}`;
   const fetchOptions = {
@@ -2457,7 +2896,7 @@ async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ct
   const response = await fetch(targetUrl, fetchOptions);
   const newResponse = new Response(response.body, response);
   newResponse.headers.set("Access-Control-Allow-Origin", "*");
-  if (request.method === "GET" && !headers.get("g4f-api-key") && !request.headers.get("x-api-key") && !request.headers.get("x-ignored")) {
+  if (request.method === "GET" && (!headers.get("g4f-api-key") && !request.headers.get("x-api-key") && !request.headers.get("x-ignored")) || ["/pa/providers"].includes(pathname)) {
     ctx.waitUntil(setCachedResponse(request, newResponse.clone(), CACHE_HEADERS.SHORT, cacheKey, ctx));
   }
   return newResponse;

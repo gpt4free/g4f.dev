@@ -878,7 +878,6 @@ class HuggingFace extends Client {
             }
         }
         super({
-            baseUrl: 'https://router.huggingface.co/v1',
             modelAliases: {
                 // Chat //
                 "llama-3": "meta-llama/Llama-3.3-70B-Instruct",
@@ -903,6 +902,7 @@ class HuggingFace extends Client {
                 "sd-3.5-large": "stabilityai/stable-diffusion-3.5-large",
             },
             ...options,
+            baseUrl: options.baseUrl || 'https://router.huggingface.co/v1',
             quotaEndpoint: options.quotaEndpoint
         });
     }
