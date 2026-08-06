@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Community Day 2026</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0f;
+    color: #fff;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  #slideshow {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: none;
+    background: #0a0a0f;
+  }
+
+  .slide img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 0 80px rgba(0,0,0,0.8);
+    transform: scale(1);
+    transition: transform 8s ease-out;
+  }
+
+  /* Transition classes */
+  .slide.active {
+    opacity: 1;
+    z-index: 2;
+  }
+
+  .slide.fade-in {
+    animation: fadeIn 0.7s ease forwards;
+  }
+
+  .slide.fade-out {
+    animation: fadeOut 0.7s ease forwards;
+    z-index: 1;
+  }
+
+  .slide.zoom-in {
+    animation: zoomIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .slide.slide-left {
+    animation: slideLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .slide.slide-right {
+    animation: slideRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; } to { opacity: 1; }
+  }
+  @keyframes fadeOut {
+    from { opacity: 1; } to { opacity: 0; }
+  }
+  @keyframes zoomIn {
+    from { opacity: 0; transform: scale(1.06); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes slideLeft {
+    from { opacity: 0; transform: translateX(60px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes slideRight {
+    from { opacity: 0; transform: translateX(-60px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* Ken Burns subtle pan on active slide image */
+  .slide.active img {
+    animation: kenBurns 8s ease-out forwards;
+  }
+  @keyframes kenBurns {
+    from { transform: scale(1.03) translate(0, 0); }
+    to   { transform: scale(1) translate(0, 0); }
+  }
+
+  /* UI overlays */
+  #counter {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    cursor: pointer;
+    transition: background 0.3s, transform 0.3s;
+  }
+  .dot.active {
+    background: #fff;
+    transform: scale(1.4);
+  }
+
+  #controls {
+    position: fixed;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    display: flex;
+    gap: 16px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  body:hover #controls { opacity: 1; }
+
+  button {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    padding: 8px 22px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 14px;
+    backdrop-filter: blur(8px);
+    transition: background 0.2s;
+  }
+  button:hover { background: rgba(255,255,255,0.25); }
+
+  #slide-label {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  body:hover #slide-label { opacity: 1; }
+
+  #progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #6366f1, #a78bfa);
+    z-index: 200;
+    transition: width 0.4s ease;
+  }
+
+  #auto-indicator {
+    position: fixed;
+    top: 14px;
+    right: 20px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.35);
+    z-index: 100;
+    cursor: pointer;
+    transition: color 0.3s;
+  }
+  #auto-indicator:hover { color: rgba(255,255,255,0.8); }
+  #auto-indicator.on { color: #a78bfa; }
+
+  /* Fullscreen hint */
+  #hint {
+    position: fixed;
+    bottom: 110px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: rgba(255,255,255,0.2);
+    z-index: 100;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<div id="slide-label">Slide <span id="current">1</span> / <span id="total">0</span></div>
+<div id="auto-indicator" title="Toggle auto-advance (A)">⏸ auto off</div>
+
+<div id="slideshow"></div>
+
+<div id="counter"></div>
+<div id="controls">
+  <button id="btn-prev">← Prev</button>
+  <button id="btn-next">Next →</button>
+</div>
+<div id="hint">F = fullscreen &nbsp;·&nbsp; ← → arrows &nbsp;·&nbsp; A = auto-play &nbsp;·&nbsp; click to advance</div>
+
+<script>
+  const images = [
+    '1. welcome.png',
+    '2. stats.png',
+    '3. new version.png',
+    '4. tray.webp',
+    '5. deepinfra.png',
+    '6. logs.png',
+    '7. example-pa-provider.png',
+    '8. new repo.png',
+  ];
+
+  const transitions = ['zoom-in', 'fade-in', 'slide-left', 'slide-right', 'zoom-in', 'fade-in'];
+
+  let current = 0;
+  let autoPlay = false;
+  let autoTimer = null;
+  const AUTO_DELAY = 5000;
+
+  const container = document.getElementById('slideshow');
+  const counter = document.getElementById('counter');
+  const progress = document.getElementById('progress');
+  const autoInd = document.getElementById('auto-indicator');
+  document.getElementById('total').textContent = images.length;
+
+  // Build slides
+  const slides = images.map((src, i) => {
+    const div = document.createElement('div');
+    div.className = 'slide';
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = src.replace(/\.\w+$/, '');
+    div.appendChild(img);
+    container.appendChild(div);
+
+    const dot = document.createElement('div');
+    dot.className = 'dot';
+    dot.addEventListener('click', () => goTo(i, i > current ? 'slide-left' : 'slide-right'));
+    counter.appendChild(dot);
+    return div;
+  });
+
+  function updateDots() {
+    document.querySelectorAll('.dot').forEach((d, i) => {
+      d.classList.toggle('active', i === current);
+    });
+  }
+
+  function updateProgress() {
+    progress.style.width = ((current + 1) / images.length * 100) + '%';
+    document.getElementById('current').textContent = current + 1;
+  }
+
+  function goTo(idx, effect) {
+    if (idx === current) return;
+    const prev = slides[current];
+    const next = slides[idx];
+
+    // Exit current
+    prev.classList.remove('active', ...transitions);
+    prev.classList.add('fade-out');
+    setTimeout(() => {
+      prev.classList.remove('fade-out');
+      prev.style.opacity = 0;
+      prev.style.zIndex = '';
+    }, 700);
+
+    // Enter next
+    next.style.opacity = '';
+    next.classList.remove(...transitions);
+    void next.offsetWidth; // reflow
+    next.classList.add('active', effect || transitions[idx % transitions.length]);
+
+    current = idx;
+    updateDots();
+    updateProgress();
+  }
+
+  function next() { goTo((current + 1) % images.length, 'slide-left'); }
+  function prev() { goTo((current - 1 + images.length) % images.length, 'slide-right'); }
+
+  // Init first slide
+  slides[0].classList.add('active', 'zoom-in');
+  updateDots();
+  updateProgress();
+
+  // Controls
+  document.getElementById('btn-next').addEventListener('click', () => { next(); resetAuto(); });
+  document.getElementById('btn-prev').addEventListener('click', () => { prev(); resetAuto(); });
+
+  // Click on slideshow to advance
+  container.addEventListener('click', () => { next(); resetAuto(); });
+
+  // Keyboard
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { next(); resetAuto(); }
+    else if (e.key === 'ArrowLeft') { prev(); resetAuto(); }
+    else if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+    else if (e.key === 'a' || e.key === 'A') toggleAuto();
+    else if (e.key === 'Escape' && document.fullscreenElement) document.exitFullscreen();
+  });
+
+  // Auto-play
+  function toggleAuto() {
+    autoPlay = !autoPlay;
+    autoInd.textContent = autoPlay ? '▶ auto on' : '⏸ auto off';
+    autoInd.classList.toggle('on', autoPlay);
+    if (autoPlay) autoTimer = setInterval(next, AUTO_DELAY);
+    else clearInterval(autoTimer);
+  }
+
+  function resetAuto() {
+    if (autoPlay) {
+      clearInterval(autoTimer);
+      autoTimer = setInterval(next, AUTO_DELAY);
+    }
+  }
+
+  autoInd.addEventListener('click', toggleAuto);
+
+  // Fullscreen
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  }
+</script>
+</body>
+</html>
