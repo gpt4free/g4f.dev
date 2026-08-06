@@ -1,7 +1,7 @@
 {
     "providers": {
         "default": {"label": "default", "backupUrl": "https://g4f.space/v1", "quotaEndpoint": null},
-        "pollinations": {"id": "srv_mp5miql908c8738d71be", "backupUrl": "https://g4f.space/api/gen.pollinations", "label": "pollinations", "tags": "🌸", "provider": "PollinationsAI"},
+        "pollinations": {"id": "srv_mp5miql908c8738d71be", "label": "pollinations", "tags": "🌸", "provider": "Pollinations"},
         "airforce": {"id": "srv_mp3lmkuad07322459f47", "baseUrl": "https://api.airforce/v1", "backupUrl": "https://g4f.space/api/api.airforce", "label": "airforce", "tags": "✈️"},
         "community": {"id": "srv_mrdypihj16e8b1776409", "backupUrl": "https://g4f.space/api/community", "tags": "🤝"},
         "audio": {"id": "srv_mkoqob5pfb6ff5ec61c2", "label": "audio by g4f.dev", "baseUrl": "https://g4f.space/api/audio", "backupUrl": "https://g4f.space/api/audio", "tags": "🎧", "sleep": 10000},
@@ -12,7 +12,7 @@
         "ollama": {"id": "srv_mrgykg8eea645e7bb006", "baseUrl": "https://ollama.g4f-dev.workers.dev", "backupUrl": "https://g4f.space/api/ollama", "tags": "🦙"},
         "ollama.swarm": {"id": "srv_mrgxy5xec5aa99a83657", "backupUrl": "https://g4f.space/api/ollama.swarm", "tags": "🦙 🐝"},
         "openrouter": {"id": "srv_monk1pkz433a519ff2be", "baseUrl": "https://openrouter.ai/api/v1", "backupUrl": "https://g4f.space/api/openrouter", "tags": "👓"},
-        "puter": {"baseUrl": "https://puter.g4f-dev.workers.dev", "tags": "👓", "provider": "PuterJS"},
+        "puter": {"baseUrl": "https://puter.g4f-dev.workers.dev", "tags": "👓", "provider": "Puter"},
         "perplexity": {"id": "srv_mkopv2kp2e0038cdf550", "backupUrl": "https://g4f.space/api/perplexity", "tags": "🔎"},
         "groq": {"id": "srv_mkom688d57c76d8a3542", "baseUrl": "https://api.groq.com/openai/v1", "backupUrl": "https://g4f.space/api/groq", "tags": "🦾"},
         "qwen": {"id": "srv_mrgymq8534d9ea96920d", "backupUrl": "https://g4f.space/api/qwen", "tags": "💡", "provider": "Qwen"},

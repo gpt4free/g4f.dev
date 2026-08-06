@@ -4128,18 +4128,25 @@ async function on_api() {
         paOptgroup.label = framework.translate('PA Providers');
         providerSelect.appendChild(paOptgroup);
 
-        Promise.all([updateLiveProviderOptions(), loadCustomProvidersSelect(), loadPaProviderSelect(paOptgroup)]);
+        async function loadCoreProvidersSelect() {
+            let provider_options = [];
+            await api("providers").then(async (providers) => {
+                await load_providers(providers, provider_options, providersListContainer, providersToggleContainer);
+            }).catch(async (e)=>{
+                add_error(e, true);
+                providerSelect.querySelectorAll("option:not([data-live])").forEach((el)=>el.remove());
+                await load_provider_login_urls(providersListContainer, providers);
+                await load_settings(provider_options);
+            });
+        }
 
-        let provider_options = [];
-        await api("providers").then(async (providers) => {
-            await load_providers(providers, provider_options, providersListContainer, providersToggleContainer);
+        await Promise.all([
+            updateLiveProviderOptions(),
+            loadCustomProvidersSelect(),
+            loadPaProviderSelect(paOptgroup),
+            loadCoreProvidersSelect()
+        ]).then(() => {
             loadProviderModels(appStorage.getItem("provider"));
-        }).catch(async (e)=>{
-            console.log(e)
-            providerSelect.querySelectorAll("option:not([data-live])").forEach((el)=>el.remove());
-            await load_provider_login_urls(providersListContainer, providers);
-            await load_settings(provider_options);
-            await loadProviderModels(appStorage.getItem("provider"));
         });
 
         set_favorite_providers();

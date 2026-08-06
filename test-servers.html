@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G4F - Server Tester</title>
+    <meta name="description" content="Test all public g4f.space custom servers and identify working providers." />
+    <link rel="icon" href="/dist/img/g4f.svg" type="image/svg+xml">
+    <link rel="shortcut icon" href="/dist/img/g4f.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/dist/img/g4f.svg">
+    <link rel="manifest" href="/dist/img/site.webmanifest">
+    <style>
+        :root {
+            --primary: #6e48aa;
+            --secondary: #9d50bb;
+            --accent: #4776E6;
+            --dark: #1a1a2e;
+            --light: #f8f9fa;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --card-bg: rgba(255,255,255,0.05);
+            --card-border: rgba(255,255,255,0.1);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, var(--dark), #16213e);
+            color: var(--light);
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-decoration: none;
+        }
+
+        .nav-links { display: flex; gap: 2rem; align-items: center; }
+        .nav-links a {
+            color: var(--light);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .nav-links a:hover { color: var(--secondary); }
+
+        .main-container {
+            padding: 6rem 2rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle { color: rgba(255,255,255,0.6); margin-bottom: 2rem; }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .controls input[type="password"] {
+            flex: 1;
+            min-width: 280px;
+            padding: 0.7rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+            background: rgba(0,0,0,0.3);
+            color: var(--light);
+            font-size: 0.95rem;
+        }
+
+        .controls input[type="number"] {
+            width: 90px;
+            padding: 0.7rem 0.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+            background: rgba(0,0,0,0.3);
+            color: var(--light);
+            font-size: 0.95rem;
+        }
+
+        .controls label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.8);
+        }
+
+        button {
+            padding: 0.7rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        button.primary {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+        }
+        button.primary:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(157, 80, 187, 0.4); }
+        button.primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        button.secondary {
+            background: rgba(255,255,255,0.1);
+            color: var(--light);
+            border: 1px solid var(--card-border);
+        }
+        button.secondary:hover { background: rgba(255,255,255,0.2); }
+
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            padding: 1.2rem;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0.3rem 0;
+        }
+        .stat-card .label {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .stat-card.ok .value { color: var(--success); }
+        .stat-card.fail .value { color: var(--danger); }
+        .stat-card.pending .value { color: var(--warning); }
+        .stat-card.total .value { color: var(--accent); }
+
+        .progress-bar {
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+        .progress-bar > div {
+            height: 100%;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .filter-row button {
+            padding: 0.4rem 1rem;
+            font-size: 0.85rem;
+        }
+        .filter-row button.active {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        th, td {
+            padding: 0.8rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--card-border);
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: rgba(0,0,0,0.3);
+            font-weight: 600;
+            color: rgba(255,255,255,0.8);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background: rgba(255,255,255,0.03); }
+
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge.ok { background: rgba(40, 167, 69, 0.2); color: var(--success); }
+        .badge.fail { background: rgba(220, 53, 69, 0.2); color: var(--danger); }
+        .badge.pending { background: rgba(255, 193, 7, 0.2); color: var(--warning); }
+
+        .error-text {
+            color: rgba(255, 150, 150, 0.85);
+            font-family: monospace;
+            font-size: 0.8rem;
+            max-width: 400px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .error-text:hover { white-space: normal; }
+
+        .response-text {
+            color: rgba(150, 255, 150, 0.85);
+            font-family: monospace;
+            font-size: 0.8rem;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .response-text:hover { white-space: normal; }
+
+        .id-text {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .empty { text-align: center; padding: 3rem; color: rgba(255,255,255,0.4); }
+
+        .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .actions button { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            z-index: 2000;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        @media (max-width: 768px) {
+            .main-container { padding: 5rem 1rem 1rem; }
+            .controls { flex-direction: column; align-items: stretch; }
+            .controls input[type="password"] { min-width: 0; }
+            table { font-size: 0.8rem; }
+            th, td { padding: 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="logo">G4F</a>
+        <div class="nav-links">
+            <a href="/stats.html">Stats</a>
+            <a href="/test-servers.html">Server Tester</a>
+            <a href="/chat/">Chat</a>
+            <a href="/docs/">Docs</a>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <h1>Server Tester</h1>
+        <p class="subtitle">Test all public g4f.space custom servers and identify working providers.</p>
+
+        <div class="controls">
+            <input type="password" id="apiKey" placeholder="G4F_SPACE_API_KEY (optional)" />
+            <label>Concurrency
+                <input type="number" id="concurrency" value="5" min="1" max="20" />
+            </label>
+            <label>Timeout (s)
+                <input type="number" id="timeout" value="30" min="5" max="120" />
+            </label>
+            <button class="primary" id="runBtn">Run Tests</button>
+            <button class="secondary" id="exportBtn" disabled>Export JSON</button>
+            <button class="secondary" id="copyHiddenBtn" disabled>Copy Hidden List</button>
+        </div>
+
+        <div class="progress-bar"><div id="progress"></div></div>
+
+        <div class="summary">
+            <div class="stat-card total"><div class="value" id="statTotal">0</div><div class="label">Total</div></div>
+            <div class="stat-card ok"><div class="value" id="statOk">0</div><div class="label">Working</div></div>
+            <div class="stat-card fail"><div class="value" id="statFail">0</div><div class="label">Not Working</div></div>
+            <div class="stat-card pending"><div class="value" id="statPending">0</div><div class="label">Pending</div></div>
+        </div>
+
+        <div class="filter-row">
+            <button class="secondary active" data-filter="all">All</button>
+            <button class="secondary" data-filter="ok">Working</button>
+            <button class="secondary" data-filter="fail">Not Working</button>
+            <button class="secondary" data-filter="pending">Pending</button>
+        </div>
+
+        <table id="resultsTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Status</th>
+                    <th>Label</th>
+                    <th>Server ID</th>
+                    <th>Base URL</th>
+                    <th>Models</th>
+                    <th>Model Used</th>
+                    <th>Elapsed</th>
+                    <th>Response / Error</th>
+                </tr>
+            </thead>
+            <tbody id="resultsBody">
+                <tr><td colspan="9">
+                <tr><td colspan="9" class="empty">Click "Run Tests" to start.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const SERVERS_URL = "https://g4f.space/custom/api/servers/public";
+        const BASE_URL = "https://g4f.space/custom";
+        const DEFAULT_MODELS = ["gpt-4o-mini", "gpt-4o", "glm-5.2", "default", "auto"];
+
+        let allResults = [];
+        let currentFilter = "all";
+        let running = false;
+
+        const $ = (id) => document.getElementById(id);
+
+        function toast(msg) {
+            const t = $("toast");
+            t.textContent = msg;
+            t.classList.add("show");
+            setTimeout(() => t.classList.remove("show"), 2500);
+        }
+
+        function updateStats() {
+            const total = allResults.length;
+            const ok = allResults.filter(r => r.working === true).length;
+            const fail = allResults.filter(r => r.working === false).length;
+            const pending = total - ok - fail;
+            $("statTotal").textContent = total;
+            $("statOk").textContent = ok;
+            $("statFail").textContent = fail;
+            $("statPending").textContent = pending;
+            const pct = total ? (ok + fail) / total * 100 : 0;
+            $("progress").style.width = pct + "%";
+            $("exportBtn").disabled = total === 0;
+            $("copyHiddenBtn").disabled = fail === 0;
+        }
+
+        function render() {
+            const body = $("resultsBody");
+            const filtered = allResults.filter(r => {
+                if (currentFilter === "all") return true;
+                if (currentFilter === "ok") return r.working === true;
+                if (currentFilter === "fail") return r.working === false;
+                if (currentFilter === "pending") return r.working === null;
+                return true;
+            });
+            if (filtered.length === 0) {
+                body.innerHTML = '<tr><td colspan="9" class="empty">No results.</td></tr>';
+                return;
+            }
+            body.innerHTML = filtered.map((r, i) => {
+                const status = r.working === true
+                    ? '<span class="badge ok">OK</span>'
+                    : r.working === false
+                    ? '<span class="badge fail">FAIL</span>'
+                    : '<span class="badge pending">…</span>';
+                const detail = r.working
+                    ? `<div class="response-text" title="${escapeHtml(r.response_preview || "")}">${escapeHtml(r.response_preview || "")}</div>`
+                    : `<div class="error-text" title="${escapeHtml(r.error || "")}">${escapeHtml(r.error || "")}</div>`;
+                return `<tr>
+                    <td>${i + 1}</td>
+                    <td>${status}</td>
+                    <td>${escapeHtml(r.label || "")}</td>
+                    <td><span class="id-text">${escapeHtml(r.id || "")}</span></td>
+                    <td><span class="id-text" title="${escapeHtml(r.base_url || "")}">${escapeHtml(r.base_url || "—")}</span></td>
+                    <td>${r.allowed_models_count ?? 0}</td>
+                    <td>${escapeHtml(r.model_used || "—")}</td>
+                    <td>${r.elapsed != null ? r.elapsed + "s" : "—"}</td>
+                    <td>${detail}</td>
+                </tr>`;
+            }).join("");
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({
+                "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+            }[c]));
+        }
+
+        async function fetchModels(apiKey, sid, timeout) {
+            try {
+                const headers = apiKey ? { "Authorization": `Bearer ${apiKey}` } : {};
+                const ctrl = new AbortController();
+                const t = setTimeout(() => ctrl.abort(), timeout * 1000);
+                const r = await fetch(`${BASE_URL}/${sid}/models`, { headers, signal: ctrl.signal });
+                clearTimeout(t);
+                if (!r.ok) return [];
+                const data = await r.json();
+                return (data.data || []).map(m => m.id).filter(Boolean);
+            } catch { return []; }
+        }
+
+        async function testServer(apiKey, server, timeout) {
+            const sid = server.id;
+            const label = server.label || sid;
+            const allowed = server.allowed_models || [];
+            const result = {
+                id: sid,
+                label,
+                base_url: server.base_url || "",
+                allowed_models_count: allowed.length,
+                working: null,
+                model_used: null,
+                error: null,
+                response_preview: null,
+                elapsed: null,
+            };
+
+            // Always try default model first, then allowed, then fetched
+            let candidates = [...DEFAULT_MODELS, ...allowed];
+            if (allowed.length === 0) {
+                const fetched = await fetchModels(apiKey, sid, timeout);
+                candidates = [...candidates, ...fetched];
+            }
+            // De-duplicate, keep order; null (auto-routing) is tried via "auto"/"default"
+            const seen = new Set();
+            const modelsToTry = candidates.filter(m => {
+                if (m === null) return false;
+                if (seen.has(m)) return false;
+                seen.add(m);
+                return true;
+            }).slice(0, 5);
+            // Always allow null (auto-routing) as a final fallback
+            modelsToTry.push(null);
+
+            const headers = { "Content-Type": "application/json" };
+            if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+
+            for (const model of modelsToTry) {
+                const payload = {
+                    messages: [{ role: "user", content: "Say 'ok' if you can hear me." }],
+                    stream: false,
+                    ...(model ? { model } : {}),
+                };
+                try {
+                    const t0 = performance.now();
+                    const ctrl = new AbortController();
+                    const t = setTimeout(() => ctrl.abort(), timeout * 1000);
+                    const r = await fetch(`${BASE_URL}/${sid}/chat/completions`, {
+                        method: "POST",
+                        headers,
+                        body: JSON.stringify(payload),
+                        signal: ctrl.signal,
+                    });
+                    clearTimeout(t);
+                    const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
+                    if (r.ok) {
+                        const data = await r.json();
+                        const content = data?.choices?.[0]?.message?.content || "";
+                        if (content) {
+                            result.working = true;
+                            result.model_used = model || "(auto)";
+                            result.response_preview = String(content).slice(0, 100);
+                            result.elapsed = parseFloat(elapsed);
+                            return result;
+                        }
+                        result.error = `200 but empty content (${model || "auto"})`;
+                        result.elapsed = parseFloat(elapsed);
+                    } else {
+                        const text = await r.text();
+                        result.error = `HTTP ${r.status} (${model || "auto"}): ${text.slice(0, 150)}`;
+                        result.elapsed = parseFloat(elapsed);
+                    }
+                } catch (e) {
+                    result.error = `${e.name} (${model || "auto"}): ${e.message.slice(0, 120)}`;
+                }
+            }
+            result.working = false;
+            return result;
+        }
+
+        async function runTests() {
+            if (running) return;
+            running = true;
+            $("runBtn").disabled = true;
+            $("runBtn").textContent = "Running…";
+            const apiKey = $("apiKey").value.trim() || localStorage.getItem("g4f_session") || "";
+            const concurrency = Math.max(1, parseInt($("concurrency").value) || 5);
+            const timeout = Math.max(5, parseInt($("timeout").value) || 30);
+
+            try {
+                toast("Fetching server list…");
+                const r = await fetch(SERVERS_URL, { headers: apiKey ? { "Authorization": `Bearer ${apiKey}` } : {} });
+                const data = await r.json();
+                const servers = data.servers || data;
+                allResults = servers.map(s => ({
+                    id: s.id, label: s.label || s.id, base_url: s.base_url || "",
+                    allowed_models_count: (s.allowed_models || []).length,
+                    working: null, model_used: null, error: null,
+                    response_preview: null, elapsed: null,
+                }));
+                updateStats();
+                render();
+
+                // Run with limited concurrency
+                let idx = 0;
+                const queue = servers.slice();
+                async function worker() {
+                    while (queue.length) {
+                        const server = queue.shift();
+                        const myIdx = idx++;
+                        const res = await testServer(apiKey, server, timeout);
+                        allResults[myIdx] = res;
+                        updateStats();
+                        render();
+                    }
+                }
+                await Promise.all(Array.from({ length: concurrency }, worker));
+                toast("Tests complete.");
+            } catch (e) {
+                toast(`Error: ${e.message}`);
+            } finally {
+                running = false;
+                $("runBtn").disabled = false;
+                $("runBtn").textContent = "Run Tests";
+            }
+        }
+
+        function exportJson() {
+            const blob = new Blob([JSON.stringify(allResults, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "g4f_servers_results.json";
+            a.click();
+            URL.revokeObjectURL(url);
+            toast("Exported JSON.");
+        }
+
+        function copyHiddenList() {
+            const failed = allResults.filter(r => r.working === false).map(r => r.id);
+            navigator.clipboard.writeText(JSON.stringify(failed, null, 2));
+            toast(`Copied ${failed.length} hidden server IDs.`);
+        }
+
+        $("runBtn").addEventListener("click", runTests);
+        $("exportBtn").addEventListener("click", exportJson);
+        $("copyHiddenBtn").addEventListener("click", copyHiddenList);
+        document.querySelectorAll(".filter-row button").forEach(btn => {
+            btn.addEventListener("click", () => {
+                document.querySelectorAll(".filter-row button").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                currentFilter = btn.dataset.filter;
+                render();
+            });
+        });
+
+        // Pre-fill API key from localStorage
+        const savedKey = localStorage.getItem("g4f_space_api_key");
+        if (savedKey) $("apiKey").value = savedKey;
+        $("apiKey").addEventListener("change", () => {
+            localStorage.setItem("g4f_space_api_key", $("apiKey").value.trim());
+        });
+    </script>
+</body>
+</html>

@@ -518,17 +518,17 @@ class Client {
     }
 }
 
-class PollinationsAI extends Client {
+class Pollinations extends Client {
     constructor(options = {}) {
         super({
             ...options,
-            apiKey: options.apiKey || "p" + "k_i0NJnRMi1nHDjerf",
-            baseUrl: options.baseUrl || 'https://gen.pollinations.ai/v1',
+            apiKey: options.apiKey,
+            baseUrl: options.baseUrl || 'https://text.pollinations.ai/v1',
             imageEndpoint: options.imageEndpoint || 'https://gen.pollinations.ai/image/{prompt}',
             modelsEndpoint: options.modelsEndpoint || 'https://gen.pollinations.ai/text/models',
             quotaEndpoint: options.quotaEndpoint || 'https://g4f.space/api/pollinations/quota',
             imageModelsEndpoint: options.imageModelsEndpoint || 'https://gen.pollinations.ai/image/models',
-            defaultModel: options.defaultModel || 'openai',
+            defaultModel: options.defaultModel || 'openai-fast',
             extraBody: options.extraBody,
             modelAliases: {
                 "sdxl-turbo": "turbo",
@@ -640,7 +640,7 @@ class PollinationsAI extends Client {
     }
 }
 
-class Pollinations extends PollinationsAI {}
+class PollinationsAI extends Pollinations {}
 
 class Audio extends Client {
     constructor(options = {}) {
