@@ -38,7 +38,20 @@
         "qwen": "qwen3.6-plus",
         "crowllm": "glm-5.2",
         "eaon": "auto",
-        "opencode": "glm-5.2",
+        "opencode": "glm-5.2"
+    },
+    "serverDefaultModels": {
+        "srv_mkom688d57c76d8a3542": "moonshotai/kimi-k2-instruct-0905", // groq
+        "srv_mkombumpae45db46dcb8": "nvidia/nemotron-3-nano-30b-a3b", // nvidia
+        "srv_mrgykg8eea645e7bb006": "nemotron-3-nano:30b",
+        "srv_mq7ktfibad45c29f3839": "deepseek-v4-pro:cloud",
+        "srv_mm0u9cua212491d78695": "openrouter/free",
+        "srv_monk1pkz433a519ff2be": "nvidia/nemotron-3-super-120b-a12b:free",
+        "srv_mjlq1ncq8a3f7fe0aea0": "turbo",
+        "srv_mrgy0nmbc8a86c407f17": "models/gemini-flash-latest",
+        "srv_mkoloq41e34074b6133e": "openai-fast",
+        "srv_mkomfko63371049b6da6": "deepseek-v3.2:free",
+        "srv_mrdypihj16e8b1776409": "zai-org/GLM-5.2",
         "srv_mlj8gd8y789d112ec50d": "zai-glm-4.7"
     },
     "providerLocalStorage": {
@@ -60,11 +73,21 @@
         "gemini": "https://generativelanguage.googleapis.com/v1beta/models",
         "puter": "https://api.puter.com/metering/usage",
         "huggingface": "https://huggingface.co/api/whoami-v2",
-        "groq": "https://api.groq.com/openai/v1/models"
+        "groq": "https://api.groq.com/openai/v1/models",
+        "openrouter": "https://openrouter.ai/api/v1/key"
     },
     "loginButtons": {
         "huggingface": "huggingface",
         "airforce": "airforce",
         "pollinations": "pollinations"
+    },
+    "autoProviders": {      
+        "srv_mkombumpae45db46dcb8": "nvidia",
+        "srv_mrgykg8eea645e7bb006": "ollama",
+        "srv_mrgy0nmbc8a86c407f17": "gemini",
+        "srv_mq7ktfibad45c29f3839": "-swarm",
+        "srv_monk1pkz433a519ff2be": "openrouter",
+        "srv_mkoloq41e34074b6133e": "-pollinations",
+        "srv_mrdypihj16e8b1776409": "community"
     }
 }

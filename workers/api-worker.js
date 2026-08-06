@@ -92,46 +92,20 @@ var EXTRA_HEADERS = {
 var ACCESS_CONTROL_ALLOW_ORIGIN = {
   "Access-Control-Allow-Origin": "*"
 };
-var AUTO_PROVIDERS = [
-  "srv_mkombumpae45db46dcb8", // nvidia
-  "srv_mrgykg8eea645e7bb006", // ollama
-  "srv_mrgy0nmbc8a86c407f17", // gemini
-  // "srv_mp2i8rco3148dd85bec1",
-  // "srv_mq7ktfibad45c29f3839", // swarm
-  "srv_monk1pkz433a519ff2be", // openrouter
-  // "srv_mkoloq41e34074b6133e", // pollinations
-  "srv_mrdypihj16e8b1776409" // community
-]
-var DEFAULT_MODELS = {
-  "srv_mkom688d57c76d8a3542": "moonshotai/kimi-k2-instruct-0905", // groq
-  "srv_mkombumpae45db46dcb8": "nvidia/nemotron-3-nano-30b-a3b", // nvidia
-  "srv_mrgykg8eea645e7bb006": "nemotron-3-nano:30b", // "deepseek-v4-pro", // ollama
-  "srv_mp2i8rco3148dd85bec1": "nemotron-3-nano:30b",
-  "srv_mq7ktfibad45c29f3839": "deepseek-v4-pro:cloud", // swarm
-  "srv_mm0u9cua212491d78695": "openrouter/free", // openrouter
-  "srv_mkolylnsaec61b86b9c2": "openrouter/free", // openrouter old
-  "srv_monk1pkz433a519ff2be": "nvidia/nemotron-3-super-120b-a12b:free", // openrouter
-  "srv_mjlq1ncq8a3f7fe0aea0": "turbo", // perplexity
-  "srv_mrgy0nmbc8a86c407f17": "models/gemini-flash-latest", // gemini
-  "srv_mkoloq41e34074b6133e": "openai-fast", // pollinations
-  "srv_mkomfko63371049b6da6": "deepseek-v3.2:free", // api.airforce
-  "srv_mks0cusg6010f87029ea": "model-router3" ,// azure
-  "srv_mrdypihj16e8b1776409": "zai-org/GLM-5.2" // community
-};
-var SERVER_MAP = {
-  //"api": "srv_mnkjel2208cf770e5009",
-  "ollama": "srv_mrgykg8eea645e7bb006",
-  "openrouter": "srv_monk1pkz433a519ff2be",
-  "pollinations": "srv_mkoloq41e34074b6133e",
-  "groq": "srv_mkom688d57c76d8a3542",
-  "gemini": "srv_mrgy0nmbc8a86c407f17",
-  "nvidia": "srv_mkombumpae45db46dcb8",
-  "azure": "srv_mks0cusg6010f87029ea",
-}
+var AUTO_PROVIDERS = []
+var DEFAULT_MODELS = {};
+var SERVER_MAP = {}
 let providers = {};
-let waitForProviders = ()=>fetch("https://g4f.dev/dist/js/providers.json")
+let waitForProviders = ()=>fetch("https://github.com/gpt4free/g4f.dev/raw/refs/heads/main/dist/js/providers.json")
   .then(r=>r.json()).then(p=>{
     providers = p.providers;
+    DEFAULT_MODELS = p.serverDefaultModels || DEFAULT_MODELS;
+    const autoProvidersList = Object.fromEntries(
+      Object.entries(p.autoProviders||{}).filter(
+        ([key, provider]) => !provider.startsWith(".")
+      )
+    );
+    AUTO_PROVIDERS = Object.keys(autoProvidersList) || AUTO_PROVIDERS;
     for (const [key, provider] of Object.entries(providers)) {
       if (provider.id) {
         SERVER_MAP[key] = provider.id;
@@ -153,33 +127,12 @@ var URL_MAP = {
   "https://openrouter.ai/api/v1/quota": "https://openrouter.ai/api/v1/key",
   "https://api.featherless.ai/v1/models": null
 }
-var BLOCKED_SERVERS = [
-  "srv_mkrzs4lg75588992eb03",
-  "srv_mm4b22wq6142dcde995b",
-  "srv_mmaeaqcwf1c31c3fb25d",
-  "srv_mku7zugs5088a704d608",
-  "srv_mn0rn0i5dfde3b0eaea5",
-  "srv_mmze6r2y3ef94fe04216",
-  "srv_mkolabu46aa55fc6f003",
-  "srv_mlk9nas87e67219356a6",
-  "srv_mkopytsj9b6425de1db8",
-  "srv_mopbpkq354c09bdbbd48",
-  "srv_mm0u3dj0b6a1d9becaaf",
-  "srv_mkoppbfq3a8158241c8e",
-  "srv_mpd9iu48c8486a78fa7e",
-  "srv_mph1a6fddd5cabca84a2",
-  "srv_mkopsm2y6983ddb87c90",
-  "srv_mnpsn10w592d5e0fe2b0",
-  "srv_mqrlxup3fd91a47d98e6",
-  "srv_mn1y956u9e6cfd0c1b4b",
-  "srv_movtsa449e5973774803",
-  "srv_mq43490w779222be0b07",//
-  "srv_mr1ruv123345d3ceb8a1",//
-  "srv_mr6vtpu754b4393be8e8",//
-  "srv_mrc5xtamce61d5c8b302",
-  "srv_mkol5tgcd33cc358ddbc",//
-  "srv_mrg0irw9741b298290d7",
-  "srv_mpsmwmt5fa6174293958"
+var BLOCKED_SERVERS = [];
+var HIDDEN_SERVERS = [
+  "srv_mkoloq41e34074b6133e",
+  "srv_mp7i458w1b1b1f3920b3",
+  "srv_msgba2af3938f6f6b015",
+  "srv_mksdsdwy7c6526ebabc3"
 ];
 // organizations (from Cloudflare `asOrganization`) that should be blocked
 // when the request is anonymous (no user/session or API key provided).
@@ -678,14 +631,20 @@ async function handleCreateServer(request, env) {
   } catch (e) {
     return jsonResponse({ error: "Invalid base_url format" }, 400);
   }
-  const normalizedBaseUrl = body.base_url.replace(/\/$/, "");
-  const validationResult = await validateServer(normalizedBaseUrl, body.api_keys);
+  const ipv4 = 
+      /^(\d{1,3}\.){3}\d{1,3}$/;
+  if(ipv4.test(baseUrl.hostname)) {
+    baseUrl.hostname = `${baseUrl.hostname}.nip.io`;
+  }
+  body.base_url = body.base_url.replace(/\/$/, "");
+  const validationResult = await validateServer(body.base_url, body.api_keys);
   if (!validationResult.valid) {
     return jsonResponse({
       error: `Server validation failed: ${validationResult.error}`,
       details: validationResult.details
     }, 400);
   }
+
   const maxServers = user.tier === "pro" ? 50 : user.tier === "sponsor" ? 10 : 3;
   if (user.tier !== "admin" && (user.custom_servers || []).length >= maxServers) {
     return jsonResponse({
@@ -701,12 +660,13 @@ async function handleCreateServer(request, env) {
   const server = {
     id: serverId,
     label: body.label || `Server ${(user.custom_servers || []).length + 1}`,
-    base_url: normalizedBaseUrl,
+    base_url: body.base_url,
     api_keys: body.api_keys || "",
     // Line-separated API keys
     allowed_models: allowedModels,
     auto_update_models: autoUpdateModels,
     is_public: body.is_public || false,
+    is_ollama: await isOllama(body.base_url),
     created_at: now,
     updated_at: now,
     validated_at: now,
@@ -776,6 +736,7 @@ async function handleUpdateServer(request, env) {
       console.error("Failed to refresh models on update:", e);
     }
   }
+  server.is_ollama = await isOllama(body.base_url);
   server.updated_at = now;
   user.updated_at = now;
   await saveUser(env, user);
@@ -889,13 +850,50 @@ async function getPublicServers(env, blocklist = true) {
 }
 async function handleListPublicServers(request, env, user) {
   const publicServers = await getPublicServers(env);
+  let ct = 0;
+  for (const s of publicServers) {
+    const updated_at = new Date(s.updated_at);
+    updated_at.setHours(updated_at.getHours() + 1)
+    if (new Date() > updated_at || !("is_online" in s)) {
+      s.updated_at = new Date().toISOString();
+      try {
+        const fullServer = await getServerById(env, s.id, user);
+        const validationResult = await validateServer(fullServer.base_url, fullServer.api_keys);
+        if (validationResult.valid) {
+          s.is_online = true;
+          s.auto_update_models = fullServer.auto_update_models;
+          if (fullServer.auto_update_models !== false && validationResult.models && validationResult.models.length > 0) {
+            s.allowed_models = validationResult.models;
+          }
+        } else {
+          s.is_online = false;
+        }
+      } catch(e) {console.error(e)}
+      try {
+        s.is_ollama = await isOllama(s.base_url);
+      } catch(e) {console.error(e)}
+      ct++;
+    }
+    if (ct > 10) {
+      break;
+    }
+  }
+  if (ct > 0) {
+    await env.MEMBERS_KV.put("public_servers_index", JSON.stringify(publicServers));
+  }
   const safeServers = publicServers.map((s) => ({
     id: s.id,
     label: s.label,
-    base_url: user && user.tier == "admin" ? s.base_url : "",
+    base_url: (s.is_ollama || (user && user.tier == "admin")) ? s.base_url : "",
     allowed_models: s.allowed_models,
+    auto_update_models: s.auto_update_models,
     owner_id: s.owner_id,
-    usage: s.usage || { requests: 0, tokens: 0 }
+    is_ollama: s.is_ollama,
+    is_online: "is_online" in s ? s.is_online : true,
+    is_public: true,
+    is_hidden: HIDDEN_SERVERS.includes(s.id),
+    updated_at: s.updated_at,
+    usage: s.usage || { requests: 0, tokens: 0 },
   }));
   return jsonResponse({
     servers: safeServers
@@ -1804,7 +1802,7 @@ async function getServerById(env, serverId, user = null) {
             JSON.stringify(fullServer),
             { expirationTtl: 300 }
           );
-          return { ...fullServer, api_key };;
+          return { ...fullServer, api_key };
         }
       }
       return server;
@@ -1869,6 +1867,17 @@ function generateServerId() {
   const randomStr = Array.from(randomPart, (byte) => byte.toString(16).padStart(2, "0")).join("");
   return `srv_${timestamp}${randomStr}`;
 }
+async function isOllama(url) {
+  url = new URL(url);
+  url.pathname = '/';
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 2000);
+  const response = await fetch(url, {
+    signal: controller.signal
+  });
+  clearTimeout(timeout);
+  return response.ok && (await response.text()).startsWith("Ollama");
+}
 async function validateServer(baseUrl, apiKeysStr) {
   const apiKey = getRandomApiKey(apiKeysStr);
   const headers = {
@@ -1880,7 +1889,6 @@ async function validateServer(baseUrl, apiKeysStr) {
   }
   const modelsEndpoints = [
     "/models",
-    "/v1/models",
     ""
   ];
   if (baseUrl.includes("/chat/completions")) {
@@ -1924,6 +1932,7 @@ async function validateServer(baseUrl, apiKeysStr) {
   }
   for (const endpoint of modelsEndpoints) {
     try {
+      baseUrl = baseUrl.includes("/chat/completions") ? baseUrl.replace("/chat/completions", "/models") : baseUrl
       const url = baseUrl + endpoint;
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 1e4);
@@ -2867,7 +2876,8 @@ async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ct
     "/api/azure/models",
     "/api/auto/models",
     "/api/grok/models",
-    "/api/azure/chat/completions"
+    "/api/azure/chat/completions",
+    "/api/ollama.pro/v1/chat/completions"
   ].includes(pathname)) {
     return jsonResponse({
       error: {
