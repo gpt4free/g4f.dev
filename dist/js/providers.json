@@ -50,7 +50,7 @@
         "ollama": "Ollama-api_key",
         "ollama.pro": "Ollama-api_key",
         "openrouter": "OpenRouter-api_key",
-        "pollinations": "PollinationsAI-api_key",
+        "pollinations": "Pollinations-api_key",
         "together": "Together-api_key",
         "puter": "puter.auth.token",
         "custom": "Custom-api_key"
