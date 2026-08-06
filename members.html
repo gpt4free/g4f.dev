@@ -1140,6 +1140,7 @@
     </style>
     <link rel="stylesheet" href="dist/css/all.min.css">
     <script src="dist/js/framework.js" defer></script>
+    <script src="dist/js/cake-baker.js?v={{ v }}" defer></script>
     <script type="importmap">
         {
             "imports": {
@@ -1279,6 +1280,10 @@
                         <div class="stat-item">
                             <div class="stat-value" id="statChats">0</div>
                             <div class="stat-label">Chat Sessions</div>
+                        </div>
+                        <div class="stat-item" title="Credits earned by baking proof-of-work cakes. Each baked cake = $0.05.">
+                            <div class="stat-value" id="statCredits">$0.00</div>
+                            <div class="stat-label">Cake Credits</div>
                         </div>
                     </div>
                     <div class="usage-chart">
@@ -1863,7 +1868,16 @@
                     document.getElementById('statTokens').textContent = formatNumber(result.usage.tokens_today || 0);
                     document.getElementById('statImages').textContent = formatNumber(result.usage.images_today || 0);
                     document.getElementById('statChats').textContent = formatNumber(result.usage.total_requests || 0);
-                    
+
+                    // Update cake credits display (baked-cake proof-of-work balance)
+                    const creditsEl = document.getElementById('statCredits');
+                    if (creditsEl) {
+                        const cents = (result.usage && result.usage.cake_credits_cents) || 0;
+                        const cakes = (result.usage && result.usage.cakes_baked) || 0;
+                        creditsEl.textContent = '$' + (cents / 100).toFixed(2);
+                        creditsEl.title = cakes + ' cakes baked';
+                    }
+
                     // Update tier limits display
                     if (result.remaining) {
                         const r = result.remaining;

@@ -1,0 +1,24 @@
+name = "g4f-cake"
+main = "cake-worker.js"
+compatibility_date = "2024-09-23"
+
+# R2 bucket for storing issued UUIDs, baked cakes, and IP counters
+[[r2_buckets]]
+binding = "CAKE_BUCKET"
+bucket_name = "g4f-cake"
+
+# KV namespace for fast IP rate-limit lookups and salt rotation
+[[kv_namespaces]]
+binding = "CAKE_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Environment variables
+[vars]
+CAKE_DIFFICULTY = "4"            # number of leading zero bits in the SHA-256 digest
+CAKES_PER_IP_PER_DAY = "50"      # max cakes a single IP can bake per day
+CAKE_CREDIT_CENTS = "5"          # 5 cents ($0.05) per accepted cake
+SALT_ROTATE_INTERVAL = "3600"   # rotate the global salt every 3600 seconds
+MEMBERS_API_BASE = "https://g4f.dev/members/api"
+
+# Secret bindings (set via `wrangler secret put`):
+# - MEMBERS_JWT_SECRET: shared secret with members-worker for cross-worker auth
