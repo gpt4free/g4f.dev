@@ -15,153 +15,28 @@
  */
 
 // ---------------------------------------------------------------------------
-// Seed servers — public Ollama instances
+// Seed servers — public Ollama instances (fetched from remote JSON)
 // ---------------------------------------------------------------------------
-const DEFAULT_SEED_SERVERS = [
-    "http://38.76.189.31.nip.io:11434",
-    "http://38.76.189.74.nip.io:11434",
-    "http://62.238.14.177.nip.io:11434",
-    "http://13.140.143.210.nip.io:11434",
-    "http://38.76.189.45.nip.io:11434",
-    "http://167.71.147.184.nip.io:11434",
-    "http://136.243.60.49.nip.io:11434",
-    "http://213.136.76.182.nip.io:11434",
-    "http://38.76.189.19.nip.io:11434",
-    "http://90.149.239.71.nip.io:11434",
-    "http://155.133.208.195.nip.io:11434",
-    "http://38.76.189.21.nip.io:11434",
-    "http://38.76.189.9.nip.io:11434",
-    "http://46.224.203.89.nip.io:11434",
-    "http://38.76.189.41.nip.io:11434",
-    "http://38.76.189.97.nip.io:11434",
-    "http://27.92.231.18.nip.io:11434",
-    "http://75.128.229.121.nip.io:11434",
-    "http://193.237.205.200.nip.io:11434",
-    "http://38.76.189.18.nip.io:11434",
-    "http://158.101.214.195.nip.io:11434",
-    "http://51.254.130.116.nip.io:11434",
-    "http://42.2.14.131.nip.io:11434",
-    "http://116.208.212.11.nip.io:11434",
-    "http://61.140.16.147.nip.io:11434",
-    "http://114.254.25.58.nip.io:11434",
-    "http://203.111.214.218.nip.io:11434",
-    "http://1.64.254.40.nip.io:11434",
-    "http://120.126.17.106.nip.io:11434",
-    "http://220.133.154.29.nip.io:11434",
-    "http://47.83.22.245.nip.io:11434",
-    "http://49.213.207.138.nip.io:11434",
-    "http://116.49.62.25.nip.io:11434",
-    "http://180.109.253.192.nip.io:11434",
-    "http://140.112.99.178.nip.io:11434",
-    "http://223.84.152.142.nip.io:11434",
-    "http://182.40.33.227.nip.io:11434",
-    "http://106.12.155.130.nip.io:11434",
-    "http://212.227.162.96.nip.io:11434",
-    "http://46.101.110.71.nip.io:11434",
-    "http://142.132.199.240.nip.io:11434",
-    "http://78.46.72.53.nip.io:11434",
-    "http://92.5.49.200.nip.io:11434",
-    "http://87.118.114.254.nip.io:11434",
-    "http://51.89.6.222.nip.io:11434",
-    "http://45.90.121.7.nip.io:11434",
-    "http://2.56.246.156.nip.io:11434",
-    "http://92.5.66.2.nip.io:11434",
-    "http://84.46.254.215.nip.io:11434",
-    "http://155.133.208.198.nip.io:11434",
-    "http://51.75.64.79.nip.io:11434",
-    "http://92.5.2.87.nip.io:11434",
-    "http://87.118.115.254.nip.io:11434",
-    "http://37.46.19.85.nip.io:11434",
-    "http://85.215.239.154.nip.io:11434",
-    "http://167.86.80.58.nip.io:11434",
-    "http://159.195.73.99.nip.io:11434",
-    "http://5.9.86.204.nip.io:11434",
-    "http://49.12.80.87.nip.io:11434",
-    "http://46.4.69.107.nip.io:11434",
-    "http://164.92.193.44.nip.io:11434",
-    "http://212.227.49.17.nip.io:11434",
-    "http://178.105.63.139.nip.io:11434",
-    "http://162.55.84.42.nip.io:11434",
-    "http://94.103.173.64.nip.io:11434",
-    "http://89.168.67.184.nip.io:11434",
-    "http://46.224.197.52.nip.io:11434",
-    "http://178.104.247.221.nip.io:11434",
-    "http://158.101.181.50.nip.io:11434",
-    "http://178.105.164.192.nip.io:11434",
-    "http://92.5.134.191.nip.io:11434",
-    "http://138.199.216.235.nip.io:11434",
-    "http://136.243.81.62.nip.io:11434",
-    "http://46.224.108.17.nip.io:11434",
-    "http://217.154.83.136.nip.io:11434",
-    "http://130.61.30.59.nip.io:11434",
-    "http://188.245.175.189.nip.io:11434",
-    "http://87.120.166.139.nip.io:11434",
-    "http://148.251.137.44.nip.io:11434",
-    "http://148.251.136.233.nip.io:11434",
-    "http://46.4.57.97.nip.io:11434",
-    "http://195.201.100.12.nip.io:11434",
-    "http://78.159.122.2.nip.io:11434",
-    "http://217.20.124.139.nip.io:11434",
-    "http://91.98.64.45.nip.io:11434",
-    "http://5.9.85.18.nip.io:11434",
-    "http://91.98.65.172.nip.io:11434",
-    "http://85.214.231.56.nip.io:11434",
-    "http://188.245.166.90.nip.io:11434",
-    "http://167.99.135.175.nip.io:11434",
-    "http://162.19.244.62.nip.io:11434",
-    "http://178.105.4.216.nip.io:11434",
-    "http://2.56.246.214.nip.io:11434",
-    "http://155.133.208.196.nip.io:11434",
-    "http://155.133.208.194.nip.io:11434",
-    "http://178.104.64.166.nip.io:11434",
-    "http://91.98.200.119.nip.io:11434",
-    "http://217.160.69.10.nip.io:11434",
-    "http://45.84.197.109.nip.io:11434",
-    "http://178.105.30.2.nip.io:11434",
-    "http://5.9.73.92.nip.io:11434",
-    "http://57.129.77.185.nip.io:11434",
-    "http://83.229.84.234.nip.io:11434",
-    "http://213.165.73.127.nip.io:11434",
-    "http://188.245.40.20.nip.io:11434",
-    "http://148.251.179.45.nip.io:11434",
-    "http://87.106.223.47.nip.io:11434",
-    "http://188.245.250.200.nip.io:11434",
-    "http://45.157.234.103.nip.io:11434",
-    "http://88.198.64.194.nip.io:11434",
-    "http://162.55.176.246.nip.io:11434",
-    "http://167.172.170.114.nip.io:11434",
-    "http://5.9.65.28.nip.io:11434",
-    "http://80.147.139.148.nip.io:11434",
-    "http://85.214.180.6.nip.io:11434",
-    "http://91.99.156.133.nip.io:11434",
-    "http://88.198.51.59.nip.io:11434",
-    "http://27.123.245.129.nip.io:11434",
-    "http://135.125.219.74.nip.io:11434",
-    "http://178.104.85.109.nip.io:11434",
-    "http://46.225.154.68.nip.io:11434",
-    "http://87.106.217.148.nip.io:11434",
-    "http://148.251.14.46.nip.io:11434",
-    "http://88.99.101.247.nip.io:11434",
-    "http://91.98.138.15.nip.io:11434",
-    "http://168.119.164.92.nip.io:11434",
-    "http://88.99.67.122.nip.io:11434",
-    "http://79.76.125.155.nip.io:11434",
-    "http://178.104.175.204.nip.io:11434",
-    "http://167.86.72.234.nip.io:11434",
-    "http://167.235.75.8.nip.io:11434",
-    "http://49.12.145.53.nip.io:11434",
-    "http://88.99.98.12.nip.io:11434",
-    "http://212.227.21.255.nip.io:11434",
-    "http://116.202.156.222.nip.io:11434",
-    "http://88.198.7.117.nip.io:11434",
-    "http://5.45.101.216.nip.io:11434",
-    "http://167.86.80.235.nip.io:11434",
-    "http://78.47.201.172.nip.io:11434",
-    "http://46.225.60.15.nip.io:11434",
-    "http://46.225.67.36.nip.io:11434",
-    "http://130.61.46.60.nip.io:11434",
-    "http://212.56.46.225.nip.io:11434"
-];
+const SEED_URL = "https://raw.githubusercontent.com/gpt4free/g4f.dev/refs/heads/main/dist/js/swarm_seeds.json";
+let seedServers = []; // populated lazily by fetchSeedServers()
+
+/** Fetch and cache the seed list from SEED_URL. Returns an array of URLs. */
+async function fetchSeedServers() {
+  if (seedServers.length > 0) return seedServers;
+  try {
+    const resp = await fetch(SEED_URL);
+    if (resp.ok) {
+      const data = await resp.json();
+      const servers = Array.isArray(data) ? data : data.servers;
+      if (Array.isArray(servers)) {
+        seedServers = servers.filter((s) => typeof s === "string" && s);
+      }
+    }
+  } catch (e) {
+    console.error("Failed to fetch seed list:", e);
+  }
+  return seedServers;
+}
 
 // ---------------------------------------------------------------------------
 // Config
@@ -226,6 +101,7 @@ let cachedAlive = {}; // In-memory cache for the duration of the worker instance
 let cachedStep = 0;
 let workingModels = null;
 let publicServers = null;
+let cachedSeedServers = null;
 function shuffleObject(obj) {
     const entries = Object.entries(obj);
     for (let i = entries.length - 1; i > 0; i--) {
@@ -245,6 +121,25 @@ function shuffleArray(array) {
     }
     return array;
 }
+async function getSeedServers() {
+  if (cachedSeedServers) return cachedSeedServers;
+  try {
+    const resp = await fetch(SEED_SERVERS_URL, { signal: AbortSignal.timeout(10_000) });
+    if (resp.ok) {
+      const data = await resp.json();
+      const servers = Array.isArray(data) ? data : data.servers;
+      if (Array.isArray(servers) && servers.length > 0) {
+        cachedSeedServers = [...new Set(servers)];
+        return cachedSeedServers;
+      }
+    }
+  } catch (e) {
+    console.error("Failed to fetch seed servers:", e);
+  }
+  cachedSeedServers = [];
+  return cachedSeedServers;
+}
+
 async function discoverServers(env) {
   const cacheRequest = new Request(`https://cache.example/servers`, {
     method: "GET"
@@ -257,10 +152,11 @@ async function discoverServers(env) {
       cachedAlive = shuffleObject(cachedData.cachedAlive);
     }
   }
-  
-  if (cachedStep * PROBE_BATCH_SIZE >= DEFAULT_SEED_SERVERS.length) return false;
 
-  const alive = await probeBatched(DEFAULT_SEED_SERVERS, cachedStep);
+  const seedServers = await getSeedServers();
+  if (cachedStep * PROBE_BATCH_SIZE >= seedServers.length) return false;
+
+  const alive = await probeBatched(seedServers, cachedStep);
 
   if (Object.keys(alive).length > 0) {
     cachedAlive = Object.assign(cachedAlive, alive);
@@ -434,12 +330,13 @@ async function handleModels(env) {
 async function handleServers(env, all = false) {
   const loading = await discoverServers(env);
   const data = all ? cachedAlive : Object.keys(cachedAlive)
+  const seedServers = await getSeedServers();
   return Response.json({
     data,
     public_servers: publicServers.map(s=>new URL(s.base_url).origin),
     loading,
     offset: cachedStep * PROBE_BATCH_SIZE,
-    total: DEFAULT_SEED_SERVERS.length,
+    total: seedServers.length,
     working: await getWorkingModels()
   }, { headers: NO_CACHE_HEADER});
 }
