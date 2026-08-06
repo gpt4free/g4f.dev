@@ -3230,6 +3230,9 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
         window.customServers = data;
         
         data.forEach(server => {
+            if (server.is_public && (!server.is_online || server.is_ollama || server.is_hidden)) {
+                return;
+            }
             // Check if this server already exists in dropdown
             const existingOption = providerSelect.querySelector(`option[data-server-id="${server.id}"]`);
             if (!existingOption) {
