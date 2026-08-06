@@ -38,7 +38,8 @@
         "qwen": "qwen3.6-plus",
         "crowllm": "glm-5.2",
         "eaon": "auto",
-        "opencode": "glm-5.2"
+        "opencode": "glm-5.2",
+        "srv_mlj8gd8y789d112ec50d": "zai-glm-4.7"
     },
     "providerLocalStorage": {
         "airforce": "ApiAirforce-api_key",
