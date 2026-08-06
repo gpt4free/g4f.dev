@@ -166,7 +166,11 @@ async function addCredit(env, ip, cents) {
 
 async function handleIssue(request, env) {
     const ip = getClientIP(request);
-    const batch = Number(env.CAKE_ISSUE_BATCH || 5);
+    const url = new URL(request.url);
+    const defaultBatch = Number(env.CAKE_ISSUE_BATCH || 5);
+    // Honor the client's requested batch size, capped to 50 to prevent abuse.
+    const requestedN = Number(url.searchParams.get("n")) || 0;
+    const batch = Math.min(Math.max(requestedN, defaultBatch, 1), 50);
     const perDay = Number(env.CAKE_PER_IP_PER_DAY || 100);
 
     const daily = await getDailyCount(env, ip);
@@ -174,7 +178,8 @@ async function handleIssue(request, env) {
         return json(
             { error: "daily_limit_reached", baked_today: daily.count, limit: perDay },
             429,
-            { "Retry-After": "3600" }
+            { "Retry-After": "3600" },
+            request
         );
     }
 
@@ -199,7 +204,7 @@ async function handleIssue(request, env) {
         credit_cents: Number(env.CAKE_CREDIT_CENTS || 5),
         baked_today: daily.count,
         limit_per_day: perDay,
-    });
+    }, 200, {}, request);
 }
 
 async function handleBake(request, env) {
@@ -212,31 +217,31 @@ async function handleBake(request, env) {
     try {
         body = await request.json();
     } catch {
-        return json({ error: "invalid_json" }, 400);
+        return json({ error: "invalid_json" }, 400, {}, request);
     }
     const { uuid, salt, nonce, hash } = body;
     const nonceStr = nonce == null ? "" : String(nonce);
     if (!uuid || !salt || !hash) {
-        return json({ error: "missing_fields", required: ["uuid", "salt", "nonce", "hash"] }, 400);
+        return json({ error: "missing_fields", required: ["uuid", "salt", "nonce", "hash"] }, 400, {}, request);
     }
     if (typeof uuid !== "string" || typeof salt !== "string" || typeof hash !== "string") {
-        return json({ error: "invalid_field_types" }, 400);
+        return json({ error: "invalid_field_types" }, 400, {}, request);
     }
     if (uuid.length > 64 || salt.length > 256 || nonceStr.length > 256 || hash.length !== 64) {
-        return json({ error: "invalid_field_lengths" }, 400);
+        return json({ error: "invalid_field_lengths" }, 400, {}, request);
     }
 
-    // 1. Verify the UUID was actually issued to this IP.
+    // 1. Verify the UUID was issued to this IP.ually issued to this IP.
     const issued = await getIssuedList(env, ip);
     const match = issued.find((e) => e.uuid === uuid);
     if (!match) {
-        return json({ error: "uuid_not_issued", ip }, 403);
+        return json({ error: "uuid_not_issued", ip }, 403, {}, request);
     }
 
     // 2. Verify the hash is correct.
     const computed = await sha256Hex(`${uuid}:${salt}:${nonceStr}`);
     if (computed !== hash) {
-        return json({ error: "hash_mismatch", expected_input: `${uuid}:${salt}:${nonceStr}` }, 400);
+        return json({ error: "hash_mismatch", expected_input: `${uuid}:${salt}:${nonceStr}` }, 400, {}, request);
     }
 
     // 3. Verify the proof-of-work difficulty.
@@ -244,21 +249,23 @@ async function handleBake(request, env) {
     if (bits < difficulty) {
         return json(
             { error: "insufficient_difficulty", required_bits: difficulty, actual_bits: bits },
-            400
+            400,
+            {},
+            request
         );
     }
 
     // 4. Enforce daily limit.
     const daily = await getDailyCount(env, ip);
     if (daily.count >= perDay) {
-        return json({ error: "daily_limit_reached", limit: perDay }, 429, { "Retry-After": "3600" });
+        return json({ error: "daily_limit_reached", limit: perDay }, 429, { "Retry-After": "3600" }, request);
     }
 
     // 5. Persist the baked cake in R2 (dedup by uuid).
     const cakeKey = `cake:${uuid}`;
     const existing = await env.CAKE_BUCKET.get(cakeKey);
     if (existing) {
-        return json({ error: "cake_already_baked", uuid }, 409);
+        return json({ error: "cake_already_baked", uuid }, 409, {}, request);
     }
     await env.CAKE_BUCKET.put(
         cakeKey,
@@ -331,7 +338,7 @@ async function handleBake(request, env) {
         limit_per_day: perDay,
         bound_to_ip: ip,
         user_credited: userCredited,
-    });
+    }, 200, {}, request);
 }
 
 async function handleStatus(request, env) {
@@ -345,17 +352,17 @@ async function handleStatus(request, env) {
         credit_cents: credit,
         credit_usd: (credit / 100).toFixed(4),
         difficulty: Number(env.CAKE_DIFFICULTY || 16),
-    });
+    }, 200, {}, request);
 }
 
 async function handleCreditByIP(request, env, ip) {
     const auth = request.headers.get("Authorization") || "";
     if (!env.ADMIN_API_KEY || auth !== `Bearer ${env.ADMIN_API_KEY}`) {
-        return json({ error: "unauthorized" }, 401);
+        return json({ error: "unauthorized" }, 401, {}, request);
     }
     const credit = await getCredit(env, ip);
     const daily = await getDailyCount(env, ip);
-    return json({ ip, credit_cents: credit, baked_today: daily.count });
+    return json({ ip, credit_cents: credit, baked_today: daily.count }, 200, {}, request);
 }
 
 // ---------------------------------------------------------------------------
@@ -368,7 +375,7 @@ export default {
         const pathname = url.pathname;
 
         if (request.method === "OPTIONS") {
-            return new Response(null, { headers: CORS_HEADERS });
+            return new Response(null, { headers: corsHeaders(request) });
         }
 
         try {
@@ -386,11 +393,11 @@ export default {
                 return handleCreditByIP(request, env, ip);
             }
             if (pathname === "/cake/health") {
-                return json({ ok: true, service: "cake-worker" });
+                return json({ ok: true, service: "cake-worker" }, 200, {}, request);
             }
-            return json({ error: "not_found", endpoints: ["/cake/issue", "/cake/bake", "/cake/status"] }, 404);
+            return json({ error: "not_found", endpoints: ["/cake/issue", "/cake/bake", "/cake/status"] }, 404, {}, request);
         } catch (err) {
-            return json({ error: "internal", message: String(err) }, 500);
+            return json({ error: "internal", message: String(err) }, 500, {}, request);
         }
     },
 };

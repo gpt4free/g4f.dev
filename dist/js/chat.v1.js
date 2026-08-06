@@ -70,6 +70,9 @@ const modelTags = {
 document.addEventListener("DOMContentLoaded", (event) => {
     translationSnipptes.forEach((text) => framework.translate(text));
     
+    // Shared DOM refs used by tier/cake UI below
+    const tierLimitsRow = document.getElementById('tier-limits-row');
+
     // Listen for user tier updates from API responses
     window.addEventListener('userTierUpdate', (event) => {
         const userInfo = event.detail;
@@ -77,7 +80,6 @@ document.addEventListener("DOMContentLoaded", (event) => {
         const tierText = document.getElementById('user-tier-text');
         const maxTokensText = document.getElementById('max-tokens-text');
         const maxRequestsText = document.getElementById('max-requests-text');
-        const tierLimitsRow = document.getElementById('tier-limits-row');
         
         if (infoBar && (userInfo.tier || userInfo.remainingTokens !== null || userInfo.remainingRequests !== null)) {
             if (userInfo.tier) {
@@ -104,6 +106,50 @@ document.addEventListener("DOMContentLoaded", (event) => {
             }
         }
     });
+
+    // --- Baked credits (proof-of-work cakes) ---------------------------
+    const cakeCreditsText = document.getElementById('cake-credits-text');
+
+    function formatCakeCredits(cents, cakes) {
+        const dollars = (cents / 100).toFixed(2);
+        const label = cakes != null ? ` · ${cakes} 🎂` : '';
+        return `<i class="fa-solid fa-cake-candles" aria-hidden="true"></i> $${dollars}${label}`;
+    }
+
+    function updateCakeCredits(cents, cakes) {
+        if (!cakeCreditsText) return;
+        cakeCreditsText.innerHTML = formatCakeCredits(cents || 0, cakes);
+        cakeCreditsText.title = `Baked credits: $${((cents || 0) / 100).toFixed(2)}${cakes != null ? ` (${cakes} cakes)` : ''}`;
+        if (tierLimitsRow) tierLimitsRow.classList.remove('hidden');
+    }
+
+    // Listen for accepted cakes from the cake-baker module
+    window.addEventListener('g4f:cake:accepted', (event) => {
+        const detail = event.detail || {};
+        updateCakeCredits(detail.total, detail.accepted);
+    });
+
+    // Poll the cake worker status endpoint and the local baker state
+    async function refreshCakeStatus() {
+        try {
+            const res = await fetch('https://g4f.space/cake/status', { credentials: 'include' });
+            if (res.ok) {
+                const data = await res.json();
+                updateCakeCredits(data.credit_cents, data.baked_today);
+            }
+        } catch (e) { /* network blocked — fall back to local state */ }
+        if (window.G4FCakeBaker && typeof window.G4FCakeBaker.status === 'function') {
+            const s = window.G4FCakeBaker.status();
+            if (s && s.total && (s.total.credits || s.session.credits)) {
+                const cents = (s.total.credits || 0) + (s.session.credits || 0);
+                const cakes = (s.total.accepted || 0) + (s.session.accepted || 0);
+                updateCakeCredits(cents, cakes);
+            }
+        }
+    }
+
+    refreshCakeStatus();
+    setInterval(refreshCakeStatus, 30000);
     
     function formatNumber(num) {
         if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
