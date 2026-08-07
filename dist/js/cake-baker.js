@@ -91,10 +91,39 @@
         return Math.min(Math.max(value, min), max);
     }
 
+    // Safe storage wrappers ------------------------------------------------
+    // Some mobile browsers (iOS Safari private mode, several in-app browsers)
+    // throw on ANY localStorage access. That used to crash acquireLock()
+    // inside start(), so baking silently never began on phones. Fall back to
+    // an in-memory store so the lock, settings and progress still work for
+    // the lifetime of the tab.
+    const memoryStore = new Map();
+    function storageGet(key) {
+        try {
+            return localStorage.getItem(key);
+        } catch (err) {
+            return memoryStore.has(key) ? memoryStore.get(key) : null;
+        }
+    }
+    function storageSet(key, value) {
+        try {
+            localStorage.setItem(key, value);
+        } catch (err) {
+            memoryStore.set(key, value);
+        }
+    }
+    function storageRemove(key) {
+        try {
+            localStorage.removeItem(key);
+        } catch (err) {
+            memoryStore.delete(key);
+        }
+    }
+
     function loadSettings() {
         let saved = {};
         try {
-            saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") || {};
+            saved = JSON.parse(storageGet(SETTINGS_KEY) || "{}") || {};
         } catch (err) {
             saved = {};
         }
@@ -102,23 +131,25 @@
             enabled: saved.enabled !== false,
             workers: clampInt(saved.workers, 1, MAX_WORKERS, DEFAULT_WORKERS),
             throttleMs: clampInt(saved.throttleMs, 0, THROTTLE_MAX_MS, POLL_INTERVAL_MS),
+            pos:
+                saved.pos &&
+                typeof saved.pos.x === "number" &&
+                typeof saved.pos.y === "number"
+                    ? { x: saved.pos.x, y: saved.pos.y }
+                    : null,
         };
     }
 
     const settings = loadSettings();
 
     function saveSettings() {
-        try {
-            localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-        } catch (err) {
-            console.warn("[G4FCakeBaker] could not persist settings", err);
-        }
+        storageSet(SETTINGS_KEY, JSON.stringify(settings));
     }
 
     // Persistence ---------------------------------------------------------
     function loadState() {
         try {
-            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+            const saved = JSON.parse(storageGet(STORAGE_KEY) || "{}");
             return {
                 baked: saved.baked || 0,
                 submitted: saved.submitted || 0,
@@ -150,24 +181,24 @@
         state.submitted = 0;
         state.accepted = 0;
         state.credits = 0;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+        storageSet(STORAGE_KEY, JSON.stringify(saved));
     }
 
     // Heartbeat: only one tab bakes at a time -----------------------------
     function acquireLock() {
         const now = Date.now();
-        const existing = parseInt(localStorage.getItem(HEARTBEAT_KEY) || "0", 10);
+        const existing = parseInt(storageGet(HEARTBEAT_KEY) || "0", 10);
         if (existing && now - existing < 30000) {
             // another tab is baking
             return false;
         }
-        localStorage.setItem(HEARTBEAT_KEY, String(now));
+        storageSet(HEARTBEAT_KEY, String(now));
         return true;
     }
 
     function refreshLock() {
         if (state.running) {
-            localStorage.setItem(HEARTBEAT_KEY, String(Date.now()));
+            storageSet(HEARTBEAT_KEY, String(Date.now()));
         }
     }
 
@@ -286,6 +317,8 @@
         const w = new Worker(url);
         w.workerId = workerId;
         w.busy = false;
+        w.busyAt = 0;   // timestamp when the worker was last handed a UUID
+        w.idleAt = 0;   // timestamp when it last finished its job
         w.onmessage = (e) => {
             const data = e.data;
             if (data.type === "progress") {
@@ -306,12 +339,14 @@
             if (data.type === "request") {
                 // worker finished its UUID and is asking for more work
                 w.busy = false;
+                w.idleAt = Date.now();
                 state.inFlight = Math.max(0, state.inFlight - 1);
                 bakeNext();
                 return;
             }
             if (data.ok) {
                 w.busy = false;
+                w.idleAt = Date.now();
                 state.inFlight = Math.max(0, state.inFlight - 1);
                 state.baked += 1;
                 console.log(
@@ -329,6 +364,7 @@
         w.onerror = (err) => {
             console.warn("[G4FCakeBaker] worker error", err);
             w.busy = false;
+            w.idleAt = Date.now();
             state.inFlight = Math.max(0, state.inFlight - 1);
             // fallback: retry after delay
             setTimeout(bakeNext, 5000);
@@ -347,13 +383,41 @@
         return Math.round(hps) + " h/s";
     }
 
+    // Effective throughput over a rolling window. The raw per-worker h/s
+    // measures how fast a worker hashes *while it has work*, but the baker
+    // idles between UUID batches (throttle + adaptive backoff), so the raw
+    // number stays flat no matter how high the throttle is set. Scaling by
+    // the duty cycle — the fraction of the window the workers were actually
+    // hashing — makes the displayed h/s drop as the throttle is raised.
+    const RATE_WINDOW_MS = 10000;
+    function effectiveHashRate() {
+        const workers = state.workers || [];
+        if (!workers.length) return 0;
+        const now = Date.now();
+        const start = now - RATE_WINDOW_MS;
+        let total = 0;
+        for (const w of workers) {
+            // Active time within the window: from dispatch (busyAt) until
+            // either now (still hashing) or completion (idleAt).
+            let activeMs;
+            if (w.busy && w.busyAt) {
+                activeMs = now - Math.max(w.busyAt, start);
+            } else if (w.busyAt && w.idleAt) {
+                activeMs = Math.max(0, Math.min(w.idleAt, now) - Math.max(w.busyAt, start));
+            } else {
+                activeMs = 0; // fresh worker, never handed a UUID yet
+            }
+            const duty = Math.min(1, activeMs / RATE_WINDOW_MS);
+            total += (state.workerRates[w.workerId] || 0) * duty;
+        }
+        return total;
+    }
+
     function updateHashRate() {
         // Sum the last-reported h/s of every *live* worker only, so rates
-        // from terminated or re-spawned workers never leak into the total.
-        let total = 0;
-        for (const w of state.workers || []) {
-            total += state.workerRates[w.workerId] || 0;
-        }
+        // from terminated or re-spawned workers never leak into the total,
+        // then scale by the duty cycle so throttle pauses are reflected.
+        const total = effectiveHashRate();
         state.hashRate = total;
         const el = document.getElementById("input-count");
         if (!el) return;
@@ -402,9 +466,9 @@
     function authHeaders(extra = {}) {
         const headers = { ...extra };
         const token =
-            localStorage.getItem("g4f_session") ||
-            localStorage.getItem("g4f_token") ||
-            localStorage.getItem("jwt");
+            storageGet("g4f_session") ||
+            storageGet("g4f_token") ||
+            storageGet("jwt");
         if (token) headers["Authorization"] = `Bearer ${token}`;
         return headers;
     }
@@ -428,6 +492,7 @@
                     console.info(
                         `[G4FCakeBaker] daily limit reached; retrying in ${retryAfter}s`
                     );
+                    updatePanelStatus();
                 } else {
                     console.warn("[G4FCakeBaker] issue failed", res.status);
                 }
@@ -436,6 +501,7 @@
             // A successful issue clears any prior daily-limit backoff.
             state.dailyLimitReached = false;
             state.dailyLimitRetryAt = 0;
+            updatePanelStatus();
             const data = await res.json();
             if (data.difficulty) state.difficulty = data.difficulty;
             if (data.salt) state.salt = data.salt;
@@ -444,6 +510,7 @@
             if (data.uuids && data.uuids.length) {
                 state.queue.push(...data.uuids);
             }
+            updatePanelStatus();
             return true;
         } catch (err) {
             console.warn("[G4FCakeBaker] issue error", err);
@@ -465,6 +532,7 @@
             if (typeof data.credit_cents === "number") state.credits = data.credit_cents;
             if (typeof data.baked_today === "number") state.dailyBaked = data.baked_today;
             if (typeof data.limit_per_day === "number") state.limitPerDay = data.limit_per_day;
+            updatePanelStatus();
             return data;
         } catch (err) {
             console.warn("[G4FCakeBaker] status error", err);
@@ -556,6 +624,7 @@
                         // next fetchBatch re-arm it if still limited.
                         state.dailyLimitReached = false;
                         state.dailyLimitRetryAt = 0;
+                        updatePanelStatus();
                         delay = computePollInterval();
                     }
                 }
@@ -573,6 +642,8 @@
             if (state.queue.length === 0) break;
             const uuid = state.queue.shift();
             w.busy = true;
+            w.busyAt = Date.now();
+            w.idleAt = 0;
             state.inFlight += 1;
             w.postMessage({
                 uuid,
@@ -634,11 +705,19 @@
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
             backdrop-filter: blur(8px);
             user-select: none;
+            transition: border-radius 0.2s, padding 0.2s, width 0.2s;
+        }
+        #g4f-cake-panel.g4f-cake-dragging .g4f-cake-card {
+            transition: none; opacity: 0.9;
         }
         #g4f-cake-panel .g4f-cake-head {
             display: flex; align-items: center; justify-content: space-between;
             margin-bottom: 8px;
+            cursor: grab;
+            touch-action: none;          /* drag on touch instead of scrolling */
+            -webkit-user-select: none; user-select: none;
         }
+        #g4f-cake-panel.g4f-cake-dragging .g4f-cake-head { cursor: grabbing; }
         #g4f-cake-panel .g4f-cake-title {
             font-weight: 600; font-size: 11px; letter-spacing: 0.06em;
             text-transform: uppercase; color: #9ca3af;
@@ -673,6 +752,19 @@
             display: flex; justify-content: space-between; gap: 6px;
             overflow: hidden; white-space: nowrap;
         }
+        /* Daily limit banner — shown while the server returns 429 */
+        #g4f-cake-panel .g4f-cake-limit {
+            display: flex; align-items: center; gap: 6px;
+            margin-top: 8px; padding: 5px 8px;
+            font-size: 10px; line-height: 1.35; color: #fbbf24;
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        #g4f-cake-panel .g4f-cake-limit[hidden] { display: none; }
+        #g4f-cake-panel .g4f-cake-limit-icon { flex: 0 0 auto; }
+        #g4f-cake-panel.minimized .g4f-cake-limit { display: none; }
         /* Minimized pill — collapsed when baking is off */
         #g4f-cake-panel.minimized .g4f-cake-card {
             width: auto; min-width: 0; padding: 5px 10px;
@@ -688,6 +780,8 @@
         if (panelEl && panelEl.isConnected) return panelEl;
         if (document.getElementById("g4f-cake-panel")) {
             panelEl = document.getElementById("g4f-cake-panel");
+            if (settings.pos) applyPanelPosition(settings.pos.x, settings.pos.y);
+            makePanelDraggable();
             return panelEl;
         }
         const style = document.createElement("style");
@@ -714,6 +808,10 @@
                     <span data-role="status-state"></span>
                     <span data-role="status-rate"></span>
                 </div>
+                <div class="g4f-cake-limit" data-role="daily-limit" hidden>
+                    <span class="g4f-cake-limit-icon">⚠</span>
+                    <span data-role="daily-limit-text"></span>
+                </div>
             </div>`;
         document.body.appendChild(panelEl);
 
@@ -738,8 +836,110 @@
             setThrottle(secs * 1000);
         });
 
+        // Restore a previously dragged position (default is bottom-right).
+        if (settings.pos) {
+            applyPanelPosition(settings.pos.x, settings.pos.y);
+        }
+        makePanelDraggable();
+
         syncControlPanel();
         return panelEl;
+    }
+
+    // Drag and drop --------------------------------------------------------
+    // The whole header is the grab handle (the ON/OFF toggle is excluded).
+    // Pointer Events unify mouse and touch so the same code works on
+    // desktops and phones; touch-action: none on the head stops the page
+    // from scrolling/zooming while dragging.
+    let dragState = null;
+
+    function applyPanelPosition(x, y) {
+        if (!panelEl) return;
+        panelEl.style.right = "auto";
+        panelEl.style.bottom = "auto";
+        panelEl.style.left = Math.round(x) + "px";
+        panelEl.style.top = Math.round(y) + "px";
+    }
+
+    function clampPanelPos(x, y) {
+        if (!panelEl) return { x, y };
+        const w = panelEl.offsetWidth;
+        const h = panelEl.offsetHeight;
+        const margin = 8;
+        const maxX = Math.max(margin, window.innerWidth - w - margin);
+        const maxY = Math.max(margin, window.innerHeight - h - margin);
+        return {
+            x: Math.min(Math.max(x, margin), maxX),
+            y: Math.min(Math.max(y, margin), maxY),
+        };
+    }
+
+    function savePanelPos() {
+        if (!panelEl) return;
+        const rect = panelEl.getBoundingClientRect();
+        const pos = clampPanelPos(rect.left, rect.top);
+        applyPanelPosition(pos.x, pos.y);
+        settings.pos = pos;
+        saveSettings();
+    }
+
+    function onPanelPointerDown(e) {
+        // Left button / any touch; ignore the ON/OFF toggle and inputs.
+        if (typeof e.button === "number" && e.button !== 0) return;
+        if (e.target.closest(".g4f-cake-toggle")) return;
+        if (e.target.closest("input, select, textarea, a, button")) return;
+        const rect = panelEl.getBoundingClientRect();
+        applyPanelPosition(rect.left, rect.top);
+        dragState = {
+            pointerId: e.pointerId,
+            startX: e.clientX,
+            startY: e.clientY,
+            left: rect.left,
+            top: rect.top,
+        };
+        panelEl.classList.add("g4f-cake-dragging");
+        try { panelEl.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        e.preventDefault();
+    }
+
+    function onPanelPointerMove(e) {
+        if (!dragState || e.pointerId !== dragState.pointerId) return;
+        const pos = clampPanelPos(
+            dragState.left + (e.clientX - dragState.startX),
+            dragState.top + (e.clientY - dragState.startY)
+        );
+        applyPanelPosition(pos.x, pos.y);
+        e.preventDefault();
+    }
+
+    function onPanelPointerUp(e) {
+        if (!dragState || e.pointerId !== dragState.pointerId) return;
+        panelEl.classList.remove("g4f-cake-dragging");
+        try { panelEl.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        dragState = null;
+        savePanelPos();
+    }
+
+    function makePanelDraggable() {
+        if (!panelEl || panelEl.dataset.dragReady) return;
+        panelEl.dataset.dragReady = "1";
+        const head = panelEl.querySelector(".g4f-cake-head");
+        if (!head) return;
+        head.addEventListener("pointerdown", onPanelPointerDown);
+        // move/up on the window so the drag keeps tracking even if the
+        // pointer leaves the small panel (pointer capture makes this work
+        // even when the events are retargeted to the panel element).
+        window.addEventListener("pointermove", onPanelPointerMove);
+        window.addEventListener("pointerup", onPanelPointerUp);
+        window.addEventListener("pointercancel", onPanelPointerUp);
+        // Re-clamp after rotation/resize so the panel never ends up off-screen.
+        window.addEventListener("resize", () => {
+            if (panelEl && settings.pos) {
+                const pos = clampPanelPos(settings.pos.x, settings.pos.y);
+                applyPanelPosition(pos.x, pos.y);
+                settings.pos = pos;
+            }
+        });
     }
 
     function syncControlPanel() {
@@ -775,6 +975,41 @@
         if (rateEl) {
             rateEl.textContent = formatHashRate(state.hashRate) || "";
         }
+
+        // Daily limit banner ------------------------------------------------
+        const limitEl = panelEl.querySelector('[data-role="daily-limit"]');
+        const limitText = panelEl.querySelector('[data-role="daily-limit-text"]');
+        if (!limitEl || !limitText) return;
+        if (state.running && state.dailyLimitReached && state.dailyLimitRetryAt) {
+            const remaining = Math.max(
+                0,
+                Math.ceil((state.dailyLimitRetryAt - Date.now()) / 1000)
+            );
+            limitEl.hidden = false;
+            if (remaining > 0) {
+                const limit = state.limitPerDay || 0;
+                const baked = state.dailyBaked || 0;
+                const count = limit && baked ? ` (${baked}/${limit})` : "";
+                limitText.textContent =
+                    "Daily limit reached" + count + " — retry in " + fmtDuration(remaining);
+            } else {
+                limitText.textContent = "Daily limit reached — waiting for server…";
+            }
+        } else {
+            limitEl.hidden = true;
+        }
+    }
+
+    // "5m 03s" style countdown helper.
+    function fmtDuration(totalSeconds) {
+        const m = Math.floor(totalSeconds / 60);
+        const s = Math.round(totalSeconds % 60);
+        if (m >= 60) {
+            const h = Math.floor(m / 60);
+            return `${h}h ${String(m % 60).padStart(2, "0")}m`;
+        }
+        if (m > 0) return `${m}m ${String(s).padStart(2, "0")}s`;
+        return `${s}s`;
     }
 
     // Public API ----------------------------------------------------------
@@ -803,7 +1038,7 @@
         // persist on unload
         window.addEventListener("beforeunload", () => {
             saveState();
-            localStorage.removeItem(HEARTBEAT_KEY);
+            storageRemove(HEARTBEAT_KEY);
         });
         // persist periodically
         setInterval(saveState, 60000);
@@ -832,7 +1067,7 @@
             state.workers = [];
         }
         state.inFlight = 0;
-        localStorage.removeItem(HEARTBEAT_KEY);
+        storageRemove(HEARTBEAT_KEY);
         saveState();
     }
 
