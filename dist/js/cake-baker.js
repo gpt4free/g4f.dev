@@ -26,6 +26,8 @@
     const POLL_INTERVAL_MS = 15000; // base re-fetch interval when queue empty
     const STORAGE_KEY = "g4f_cake_baker";
     const HEARTBEAT_KEY = "g4f_cake_heartbeat";
+    const SETTINGS_KEY = "g4f_cake_settings"; // persisted user controls
+    const THROTTLE_MAX_MS = 120000;           // throttle slider max (0 = no wait)
 
     // Adaptive throttling ------------------------------------------------
     // As the user bakes more cakes today, we slow down to avoid hammering
@@ -35,16 +37,24 @@
     const THROTTLE_SOFT_AT = 0.5;     // begin backing off once 50% of daily limit reached
     const THROTTLE_HARD_AT = 0.9;    // near the limit, wait the full cap
 
+    // Base wait between batch fetches. Uses the user's throttle setting
+    // (0 = fetch again immediately); adaptive backing-off still applies
+    // on top of it when the daily limit is approached.
+    function throttleBase() {
+        return settings ? settings.throttleMs : POLL_INTERVAL_MS;
+    }
+
     function computePollInterval() {
         const limit = state.limitPerDay || 100;
         const baked = state.dailyBaked || 0;
-        if (limit <= 0 || baked <= 0) return POLL_INTERVAL_MS;
+        const base = throttleBase();
+        if (limit <= 0 || baked <= 0) return base;
         const frac = baked / limit;
-        if (frac < THROTTLE_SOFT_AT) return POLL_INTERVAL_MS;
+        if (frac < THROTTLE_SOFT_AT) return base;
         if (frac >= THROTTLE_HARD_AT) return THROTTLE_CAP_MS;
         // linear interpolation between soft and hard thresholds
         const t = (frac - THROTTLE_SOFT_AT) / (THROTTLE_HARD_AT - THROTTLE_SOFT_AT);
-        return Math.round(POLL_INTERVAL_MS + t * (THROTTLE_CAP_MS - POLL_INTERVAL_MS));
+        return Math.round(base + t * (THROTTLE_CAP_MS - base));
     }
 
     // State ---------------------------------------------------------------
@@ -68,6 +78,42 @@
         hashRate: 0,                // aggregated hash rate across all workers (h/s)
         rateTimer: null,           // interval that refreshes the #input-count display
     };
+
+    // User settings -------------------------------------------------------
+    // Persistent, user-adjustable knobs: on/off, worker count, throttle.
+    // Edited live from the floating control panel injected into the page.
+    const MAX_WORKERS = Math.min(Math.max(navigator.hardwareConcurrency || 4, 2), 16);
+    const DEFAULT_WORKERS = Math.ceil(Math.min(Math.max(navigator.hardwareConcurrency || 4, 2), 8) / 2);
+
+    function clampInt(value, min, max, fallback) {
+        value = parseInt(value, 10);
+        if (isNaN(value)) return fallback;
+        return Math.min(Math.max(value, min), max);
+    }
+
+    function loadSettings() {
+        let saved = {};
+        try {
+            saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") || {};
+        } catch (err) {
+            saved = {};
+        }
+        return {
+            enabled: saved.enabled !== false,
+            workers: clampInt(saved.workers, 1, MAX_WORKERS, DEFAULT_WORKERS),
+            throttleMs: clampInt(saved.throttleMs, 0, THROTTLE_MAX_MS, POLL_INTERVAL_MS),
+        };
+    }
+
+    const settings = loadSettings();
+
+    function saveSettings() {
+        try {
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        } catch (err) {
+            console.warn("[G4FCakeBaker] could not persist settings", err);
+        }
+    }
 
     // Persistence ---------------------------------------------------------
     function loadState() {
@@ -230,10 +276,9 @@
         };
     `;
 
-    // Number of parallel hashing workers — one per logical CPU core, capped
-    // to avoid overwhelming low-end devices. Falls back to 4 if unavailable.
-    const NUM_WORKERS = Math.ceil(Math.min(Math.max(navigator.hardwareConcurrency || 4, 2), 8) / 2);
-    const WORKER_STRIDE = NUM_WORKERS; // each worker steps by this many nonces
+    // Parallel hashing workers are now user-configurable via the control
+    // panel (settings.workers), bounded by MAX_WORKERS/DEFAULT_WORKERS
+    // defined in the settings section above.
 
     function createWorker(workerId) {
         const blob = new Blob([WORKER_SOURCE], { type: "application/javascript" });
@@ -303,9 +348,11 @@
     }
 
     function updateHashRate() {
+        // Sum the last-reported h/s of every *live* worker only, so rates
+        // from terminated or re-spawned workers never leak into the total.
         let total = 0;
-        for (const id in state.workerRates) {
-            total += state.workerRates[id] || 0;
+        for (const w of state.workers || []) {
+            total += state.workerRates[w.workerId] || 0;
         }
         state.hashRate = total;
         const el = document.getElementById("input-count");
@@ -317,15 +364,35 @@
         } else if (!state.running) {
             text.innerText = "";
         }
+        updatePanelStatus();
     }
 
-    // Lazily create the worker pool (shared across all UUIDs).
+    // Lazily create the worker pool (shared across all UUIDs), sized to the
+    // user's configured worker count.
     function ensureWorkers() {
-        if (!state.workers || state.workers.length === 0) {
-            state.workers = [];
-            for (let i = 0; i < NUM_WORKERS; i++) {
-                state.workers.push(createWorker(i));
+        resizeWorkers(settings.workers);
+        return state.workers;
+    }
+
+    // Grow or shrink the pool to match the configured count. When a busy
+    // worker is terminated its in-flight slot is released so the dispatch
+    // loop doesn't stall waiting for a message that will never arrive.
+    function resizeWorkers(count) {
+        count = clampInt(count, 1, MAX_WORKERS, DEFAULT_WORKERS);
+        settings.workers = count;
+        if (!state.workers) state.workers = [];
+        while (state.workers.length < count) {
+            state.workers.push(createWorker(state.workers.length));
+        }
+        while (state.workers.length > count) {
+            const w = state.workers.pop();
+            if (w.busy) state.inFlight = Math.max(0, state.inFlight - 1);
+            try {
+                w.terminate();
+            } catch (err) {
+                /* already dead */
             }
+            delete state.workerRates[w.workerId];
         }
         return state.workers;
     }
@@ -516,6 +583,200 @@
         }
     }
 
+    // Settings controls ---------------------------------------------------
+    function setWorkers(count) {
+        resizeWorkers(count);
+        saveSettings();
+        syncControlPanel();
+        bakeNext(); // dispatch queued UUIDs to any newly spawned workers
+    }
+
+    function setThrottle(ms) {
+        settings.throttleMs = clampInt(ms, 0, THROTTLE_MAX_MS, POLL_INTERVAL_MS);
+        saveSettings();
+        syncControlPanel();
+    }
+
+    function setEnabled(on) {
+        settings.enabled = !!on;
+        saveSettings();
+        if (settings.enabled) {
+            start();
+        } else {
+            stop();
+        }
+        syncControlPanel();
+    }
+
+    function getSettings() {
+        return {
+            enabled: settings.enabled,
+            workers: settings.workers,
+            throttleMs: settings.throttleMs,
+        };
+    }
+
+    // Control panel UI ----------------------------------------------------
+    // Small floating widget injected into the page so the user can pause
+    // baking, pick how many workers to run, and set a manual throttle.
+    let panelEl = null;
+    const PANEL_CSS = `
+        #g4f-cake-panel {
+            position: fixed; right: 16px; bottom: 16px; z-index: 2147483000;
+            font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+            color-scheme: dark;
+        }
+        #g4f-cake-panel .g4f-cake-card {
+            width: 224px; padding: 10px 12px;
+            background: rgba(15, 17, 23, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px; color: #e5e7eb;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(8px);
+            user-select: none;
+        }
+        #g4f-cake-panel .g4f-cake-head {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        #g4f-cake-panel .g4f-cake-title {
+            font-weight: 600; font-size: 11px; letter-spacing: 0.06em;
+            text-transform: uppercase; color: #9ca3af;
+        }
+        #g4f-cake-panel .g4f-cake-toggle {
+            border: 0; border-radius: 999px; padding: 3px 12px;
+            font-size: 11px; font-weight: 700; cursor: pointer;
+            letter-spacing: 0.04em; transition: background 0.15s, color 0.15s;
+        }
+        #g4f-cake-panel .g4f-cake-toggle.on {
+            background: rgba(34, 197, 94, 0.18); color: #4ade80;
+        }
+        #g4f-cake-panel .g4f-cake-toggle.off {
+            background: rgba(239, 68, 68, 0.18); color: #f87171;
+        }
+        #g4f-cake-panel .g4f-cake-row { margin: 7px 0; }
+        #g4f-cake-panel .g4f-cake-row label {
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 11px; color: #d1d5db; margin-bottom: 3px;
+        }
+        #g4f-cake-panel .g4f-cake-val {
+            font-variant-numeric: tabular-nums; color: #a1a1aa;
+            font-size: 10px; background: rgba(255, 255, 255, 0.06);
+            border-radius: 4px; padding: 1px 5px;
+        }
+        #g4f-cake-panel input[type="range"] {
+            width: 100%; height: 4px; margin: 0; cursor: pointer;
+            accent-color: #22c55e;
+        }
+        #g4f-cake-panel .g4f-cake-status {
+            font-size: 10px; color: #6b7280; margin-top: 8px;
+            display: flex; justify-content: space-between; gap: 6px;
+            overflow: hidden; white-space: nowrap;
+        }
+        /* Minimized pill — collapsed when baking is off */
+        #g4f-cake-panel.minimized .g4f-cake-card {
+            width: auto; min-width: 0; padding: 5px 10px;
+            border-radius: 999px;
+            transition: border-radius 0.2s, padding 0.2s, width 0.2s;
+        }
+        #g4f-cake-panel.minimized .g4f-cake-head { margin-bottom: 0; }
+        #g4f-cake-panel.minimized .g4f-cake-row,
+        #g4f-cake-panel.minimized .g4f-cake-status { display: none; }
+    `;
+
+    function ensureControlPanel() {
+        if (panelEl && panelEl.isConnected) return panelEl;
+        if (document.getElementById("g4f-cake-panel")) {
+            panelEl = document.getElementById("g4f-cake-panel");
+            return panelEl;
+        }
+        const style = document.createElement("style");
+        style.textContent = PANEL_CSS;
+        document.head.appendChild(style);
+
+        panelEl = document.createElement("div");
+        panelEl.id = "g4f-cake-panel";
+        panelEl.innerHTML = `
+            <div class="g4f-cake-card">
+                <div class="g4f-cake-head">
+                    <span class="g4f-cake-title">Cake Baker</span>
+                    <button class="g4f-cake-toggle" type="button">ON</button>
+                </div>
+                <div class="g4f-cake-row">
+                    <label>Workers <span class="g4f-cake-val" data-role="workers-val"></span></label>
+                    <input type="range" data-role="workers" min="1" max="${MAX_WORKERS}" step="1">
+                </div>
+                <div class="g4f-cake-row">
+                    <label>Throttle <span class="g4f-cake-val" data-role="throttle-val"></span></label>
+                    <input type="range" data-role="throttle" min="0" max="${THROTTLE_MAX_MS / 1000}" step="1">
+                </div>
+                <div class="g4f-cake-status">
+                    <span data-role="status-state"></span>
+                    <span data-role="status-rate"></span>
+                </div>
+            </div>`;
+        document.body.appendChild(panelEl);
+
+        const toggle = panelEl.querySelector(".g4f-cake-toggle");
+        const workersSlider = panelEl.querySelector('input[data-role="workers"]');
+        const throttleSlider = panelEl.querySelector('input[data-role="throttle"]');
+
+        toggle.addEventListener("click", () => setEnabled(!settings.enabled));
+        // Apply the worker count on release; just preview the value while
+        // dragging so we don't spawn/terminate threads on every tick.
+        workersSlider.addEventListener("input", () => {
+            const val = panelEl.querySelector('[data-role="workers-val"]');
+            if (val) val.textContent = workersSlider.value + "×";
+        });
+        workersSlider.addEventListener("change", () => {
+            setWorkers(parseInt(workersSlider.value, 10) || 1);
+        });
+        throttleSlider.addEventListener("input", () => {
+            const secs = parseInt(throttleSlider.value, 10) || 0;
+            const val = panelEl.querySelector('[data-role="throttle-val"]');
+            if (val) val.textContent = secs + "s";
+            setThrottle(secs * 1000);
+        });
+
+        syncControlPanel();
+        return panelEl;
+    }
+
+    function syncControlPanel() {
+        if (!panelEl) return;
+        const toggle = panelEl.querySelector(".g4f-cake-toggle");
+        const workersSlider = panelEl.querySelector('input[data-role="workers"]');
+        const throttleSlider = panelEl.querySelector('input[data-role="throttle"]');
+        const workersVal = panelEl.querySelector('[data-role="workers-val"]');
+        const throttleVal = panelEl.querySelector('[data-role="throttle-val"]');
+
+        // Collapse to a small pill while off; expand when re-enabled.
+        panelEl.classList.toggle("minimized", !settings.enabled);
+
+        if (toggle) {
+            toggle.textContent = settings.enabled ? "ON" : "OFF";
+            toggle.classList.toggle("on", settings.enabled);
+            toggle.classList.toggle("off", !settings.enabled);
+        }
+        if (workersSlider) workersSlider.value = String(settings.workers);
+        if (workersVal) workersVal.textContent = settings.workers + "×";
+        if (throttleSlider) throttleSlider.value = String(Math.round(settings.throttleMs / 1000));
+        if (throttleVal) throttleVal.textContent = Math.round(settings.throttleMs / 1000) + "s";
+        updatePanelStatus();
+    }
+
+    function updatePanelStatus() {
+        if (!panelEl) return;
+        const stateEl = panelEl.querySelector('[data-role="status-state"]');
+        const rateEl = panelEl.querySelector('[data-role="status-rate"]');
+        if (stateEl) {
+            stateEl.textContent = state.running ? "● baking" : "○ idle";
+        }
+        if (rateEl) {
+            rateEl.textContent = formatHashRate(state.hashRate) || "";
+        }
+    }
+
     // Public API ----------------------------------------------------------
     function start() {
         if (state.running) return;
@@ -592,7 +853,7 @@
         };
     }
 
-    window.G4FCakeBaker = { start, stop, status };
+    window.G4FCakeBaker = { start, stop, status, setWorkers, setThrottle, setEnabled, getSettings };
 
     // Auto-start on chat and members pages --------------------------------
     // Matches both the production routes (/chat, /members) and the local
@@ -628,11 +889,17 @@
     const shouldAutoStart = !optedOut && (pathMatch || rootMatch || featureMatch);
 
     if (shouldAutoStart) {
-        // wait for page load
+        // wait for page load, then show the control panel and (unless the
+        // user disabled baking) auto-start.
+        const boot = () => {
+            ensureControlPanel();
+            syncControlPanel();
+            if (settings.enabled) start();
+        };
         if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", () => setTimeout(start, 2000));
+            document.addEventListener("DOMContentLoaded", () => setTimeout(boot, 2000));
         } else {
-            setTimeout(start, 2000);
+            setTimeout(boot, 2000);
         }
     }
 })();
