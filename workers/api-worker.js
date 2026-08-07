@@ -227,19 +227,28 @@ var custom_worker_default = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    // Set the module-level request context so jsonResponse can persist any
+    // error response (status >= 400) to ERRORS_DB. Reset on every fetch.
+    currentRequestContext = { request, env, ctx, pathname, skipErrorLog: false };
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS });
     }
     if (["/", "/chat", "/chat/", "/playground", "/playground/", "/docs"].includes(pathname)) {
       return Response.redirect(`https://g4f.dev${pathname}`, 302);
     }
+    if (pathname == "/api/pollinations/quota") {
+      return Response.json({ balance: 0 }, { headers: ACCESS_CONTROL_ALLOW_ORIGIN });
+    }
     if (pathname == "/api/audio/models") {
       return Response.json({ data: [{ id: "gpt-audio", audio: true }, ...GPT_AUDIO_VOICES.map((voice) => {
         return { id: voice, audio: true };
       })] }, { headers: ACCESS_CONTROL_ALLOW_ORIGIN });
     }
-    let userProvidedKey = null;
     let user = null;
+    if (pathname === "/api/errors" && request.method === "GET") {
+      return handleApiErrors(request, env, user);
+    }
+    let userProvidedKey = null;
     try {
       user = await authenticateRequest(request, env);
       if (user && BLOCKED_USERS.includes(user.username)) {
@@ -262,13 +271,23 @@ var custom_worker_default = {
       if (!user && !userProvidedKey && org && BLOCKED_ORGS.includes(org) && !pathname.endsWith("/public") && !pathname.endsWith("/logs")) {
         return jsonResponse({
           error: {
-            message: "Access to cloud provider blocked. Sign up at g4f.dev/members.html for access from cloud.",
+            message: `Access from "${org}" blocked. Sign up at g4f.dev/members.html for access from cloud.`,
             type: "authentication_required"
           }
         }, 403);
       }
     } catch (error) {
         console.error("User error:", error);
+        ctx.waitUntil(persistErrorToDb(env, error, {
+          source: "authenticate",
+          status: 500,
+          pathname,
+          method: request.method,
+          ip: getClientIP(request),
+          userAgent: request.headers.get("user-agent"),
+          requestId: request.headers.get("cf-ray") || null
+        }));
+        currentRequestContext.skipErrorLog = true;
         return jsonResponse({ error: "User error: " + error.message || "Internal server error" }, 500);
     }
     try {
@@ -302,34 +321,24 @@ var custom_worker_default = {
             return newResponse;
           }
         } else {
-          rateCheck = await checkAnonymousRateLimits(env, request);
-          if (!rateCheck.allowed) {
-            const windowLabels = { minute: "per minute", hour: "per hour", day: "per day", twelveDays: "per 12 days" };
-            let message;
-            if (rateCheck.reason === "tokens") {
-              message = `Token limit (${rateCheck.limit.toLocaleString()} ${windowLabels[rateCheck.window]}) exceeded. Used: ${rateCheck.used.toLocaleString()} tokens. Sign up at g4f.dev/members.html for higher limits.`;
-            } else if (rateCheck.reason === "days") {
-              message = `Active day limit (${rateCheck.limit} days ${windowLabels[rateCheck.window]}) exceeded. Used: ${rateCheck.used} active days. Sign up at g4f.dev/members.html for unlimited daily access.`;
-            } else {
-              message = `Request limit (${rateCheck.limit} ${windowLabels[rateCheck.window]}) exceeded. Made: ${rateCheck.used} requests. Sign up at g4f.dev/members.html for higher limits.`;
-            }
-            const newResponse = Response.json({
-              error: {
-                message,
-                type: "rate_limit_exceeded",
-                window: rateCheck.window,
-                limit: rateCheck.limit,
-                used: rateCheck.used,
-                retry_after: rateCheck.retryAfter,
-                upgrade_url: "https://g4f.dev/members.html"
-              }
-            }, { status: 429, headers: { "Retry-After": rateCheck.retryAfter.toString(), ...CORS_HEADERS } });
-            updateResponsefromRateCheck(newResponse, rateCheck);
-            return newResponse;
-          }
+          // Anonymous requests are no longer capped by a fixed daily rate
+          // limit. Instead, usage is gated by the caller's baked cake
+          // credits inside handleV1ChatCompletions, where the request body
+          // (messages, tools, media) is available to estimate prompt tokens.
+          rateCheck = { allowed: true };
         }
       } catch (error) {
         console.error("Rate check error:", error);
+        ctx.waitUntil(persistErrorToDb(env, error, {
+          source: "rate_check",
+          status: 500,
+          pathname,
+          method: request.method,
+          ip: getClientIP(request),
+          userAgent: request.headers.get("user-agent"),
+          requestId: request.headers.get("cf-ray") || null
+        }));
+        currentRequestContext.skipErrorLog = true;
         return jsonResponse({ error: "Rate check error: " + error.message || "Internal server error" }, 500);
       }
       const cacheKey = url.toString();
@@ -350,8 +359,6 @@ var custom_worker_default = {
       }
       if (user) {
         ctx.waitUntil(updateUserRateLimit(env, user.id, ctx));
-      } else {
-        ctx.waitUntil(updateAnonymousRateLimit(env, getClientIP(request), user));
       }
       await waitForProviders();
       waitForProviders = ()=>{};
@@ -366,6 +373,16 @@ var custom_worker_default = {
             try {
               return await handleModels(request, env, ctx, server.id, user, server, cacheKey, userProvidedKey);
             } catch(error) {
+              ctx.waitUntil(persistErrorToDb(env, error, {
+                source: "server_model",
+                status: 500,
+                pathname,
+                method: request.method,
+                ip: getClientIP(request),
+                userAgent: request.headers.get("user-agent"),
+                requestId: request.headers.get("cf-ray") || null
+              }));
+              currentRequestContext.skipErrorLog = true;
               return jsonResponse({ error: "Server model error: " + error.message || "Internal server error" }, 500);
             }
           }
@@ -376,6 +393,16 @@ var custom_worker_default = {
         }
       } catch (error) {
         console.error("Server map error:", error);
+        ctx.waitUntil(persistErrorToDb(env, error, {
+          source: "server_map",
+          status: 500,
+          pathname,
+          method: request.method,
+          ip: getClientIP(request),
+          userAgent: request.headers.get("user-agent"),
+          requestId: request.headers.get("cf-ray") || null
+        }));
+        currentRequestContext.skipErrorLog = true;
         return jsonResponse({ error: "Server map error: " + pathname + error.message || "Internal server error" }, 500);
       }
       if (pathname.startsWith("/ai/")) {
@@ -495,6 +522,16 @@ var custom_worker_default = {
       return proxyToPassG4f(request, env, pathname, url.search, user, cacheKey, ctx);
     } catch (error) {
       console.error("Custom worker error:", error);
+      ctx.waitUntil(persistErrorToDb(env, error, {
+        source: "fetch",
+        status: 500,
+        pathname,
+        method: request.method,
+        ip: getClientIP(request),
+        userAgent: request.headers.get("user-agent"),
+        requestId: request.headers.get("cf-ray") || null
+      }));
+      currentRequestContext.skipErrorLog = true;
       return jsonResponse({ error: "Custom worker error: " + error.message || "Internal server error" }, 500);
     }
   },
@@ -509,6 +546,18 @@ var custom_worker_default = {
         console.log(`Cron cleanup: Deleted ${result.meta?.changes || 0} usage logs older than 14 days`);
       } catch (e) {
         console.error("Failed to cleanup old usage logs:", e);
+      }
+    }
+    // Delete error logs older than 30 days
+    if (env.ERRORS_DB) {
+      try {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const result = await env.ERRORS_DB.prepare(
+          `DELETE FROM error_logs WHERE timestamp < ?`
+        ).bind(thirtyDaysAgo).run();
+        console.log(`Cron cleanup: Deleted ${result.meta?.changes || 0} error logs older than 30 days`);
+      } catch (e) {
+        console.error("Failed to cleanup old error logs:", e);
       }
     }
   }
@@ -1402,6 +1451,17 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   } else {
     requestBody = {}
   }
+  // Anonymous users are gated by cake credits on ALL proxy paths (gemini,
+  // ollama, azure, ...), not just /v1/chat/completions. This populates
+  // rateCheck with credit-based maxTokens/maxRequests/limitTokens/limitRequests
+  // so the X-Ratelimit-* headers are set instead of "undefined". Returns a
+  // 402 response directly when the IP has no credit or the request exceeds the
+  // budget; signed-in users skip the gate entirely.
+  if (!user && request.method === "POST" && subPath === "/chat/completions") {
+    const gateResult = await applyAnonymousCreditGate(env, ctx, request, user, requestBody, rateCheck);
+    if (gateResult instanceof Response) return gateResult;  // 402 error response
+    if (gateResult) rateCheck = gateResult;  // updated rateCheck with credit fields
+  }
   if (subPath === "/chat/completions") {
     if (!user && server.base_url.includes("pass.g4f.space")) {
       return jsonResponse({ error: { message: "Authentication required for this server. Sign up at g4f.dev/members.html", type: "authentication_required" } }, 401);
@@ -1688,6 +1748,78 @@ async function persistUsageToDb(env, clientIP, provider, model, tokensUsed, prom
     ).run();
   } catch (e) {
     console.error("Failed to persist usage:", e);
+  }
+}
+// Persist an error event to the ERRORS_DB D1 table so it can be inspected
+// via the /api/errors endpoint. Mirrors persistUsageToDb but stores error
+// metadata (status, message, stack, source) instead of token usage. Best-effort:
+// never throws to the caller.
+async function persistErrorToDb(env, error, context = {}) {
+  if (!env.ERRORS_DB) return;
+  try {
+    const ts = (/* @__PURE__ */ new Date()).toISOString();
+    await env.ERRORS_DB.prepare(
+      `INSERT INTO error_logs (timestamp, source, status, message, stack, pathname, method, ip, user_id, user_tier, user_agent, request_id, context)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      ts,
+      context.source || "unknown",
+      context.status || 500,
+      (error && error.message) ? String(error.message).substring(0, 1000) : String(error).substring(0, 1000),
+      (error && error.stack) ? String(error.stack).substring(0, 4000) : null,
+      context.pathname || null,
+      context.method || null,
+      context.ip || null,
+      context.userId || null,
+      context.userTier || null,
+      context.userAgent ? String(context.userAgent).substring(0, 500) : null,
+      context.requestId || null,
+      context.context ? JSON.stringify(context.context).substring(0, 2000) : null
+    ).run();
+  } catch (e) {
+    console.error("Failed to persist error:", e);
+  }
+}
+// GET /api/errors — list recent tracked errors from the ERRORS_DB D1 table.
+// Query params:
+//   limit  (1-200, default 50)  — max rows to return
+//   source (string)             — filter by source (fetch, handleV1ChatCompletions, ...)
+//   status (number)             — filter by HTTP status code
+//   since  (ISO 8601)           — only rows newer than this timestamp
+// Requires a signed-in user (the same gate as /api/logs). Returns newest first.
+async function handleApiErrors(request, env, user) {
+  if (!env.ERRORS_DB) {
+    return jsonResponse({ error: "Error tracking not configured (ERRORS_DB binding missing)" }, 503);
+  }
+  const url = new URL(request.url);
+  const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "50", 10) || 50, 1), 200);
+  const where = [];
+  const binds = [];
+  const source = url.searchParams.get("source");
+  if (source) { where.push("source = ?"); binds.push(source); }
+  const status = url.searchParams.get("status");
+  if (status) { where.push("status = ?"); binds.push(parseInt(status, 10)); }
+  const since = url.searchParams.get("since");
+  if (since) { where.push("timestamp > ?"); binds.push(since); }
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  try {
+    const result = await env.ERRORS_DB.prepare(
+      `SELECT id, timestamp, source, status, message, pathname, method, ip, user_id, user_tier, request_id, context
+       FROM error_logs ${whereSql}
+       ORDER BY timestamp DESC
+       LIMIT ?`
+    ).bind(...binds, limit).all();
+    const countResult = await env.ERRORS_DB.prepare(
+      `SELECT COUNT(*) AS total FROM error_logs ${whereSql}`
+    ).bind(...binds).first();
+    return jsonResponse({
+      data: result.results || [],
+      total: countResult?.total || 0,
+      limit
+    });
+  } catch (e) {
+    console.error("Failed to query error logs:", e);
+    return jsonResponse({ error: "Failed to query error logs: " + e.message }, 500);
   }
 }
 async function updateServerUsage(env, server, tokens, model) {
@@ -2400,101 +2532,158 @@ async function checkUserRateLimits(env, user, request) {
   }
   return { allowed: true, maxTokens, maxRequests, limitTokens, limitRequests };
 }
-async function checkAnonymousRateLimits(env, request) {
+// Each baked cake grants a small credit (in cents) to the IP that baked it.
+// Anonymous users have no fixed daily rate limit; instead their usage is
+// gated by their cake credit balance. The credit (in cents) is converted
+// into a prompt-token budget: 1 cent -> 1e3 prompt tokens. The estimated
+// prompt tokens of every request (messages + tools + media) are charged
+// against that budget and decremented from the IP's credit on success.
+//   5 cents per cake * 50 cakes/day = 250 cents -> 250k prompt tokens/day
+var CAKE_CREDIT_TOKENS_PER_CENT = 1e3;  // prompt-token budget per cent of credit
+
+// Read the caller's accumulated cake credit (in cents) from the shared
+// CAKE_KV namespace. Returns 0 when the binding is absent or the IP has no
+// credit record, so the feature degrades gracefully (no anonymous usage).
+async function getCakeCreditCents(env, clientIP) {
+  if (!env.CAKE_KV || !clientIP) return 0;
+  try {
+    const raw = await env.CAKE_KV.get(`cakes:credit:${clientIP}`);
+    if (!raw) return 0;
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+// Decrement the caller's cake credit (in cents) by the spent prompt tokens.
+// Uses a simple compare-and-swap over CAKE_KV. Best-effort: if the CAS fails
+// (concurrent bake/charge) we leave the credit untouched rather than retry.
+async function chargeCakeCreditCents(env, clientIP, centsToCharge) {
+  if (!env.CAKE_KV || !clientIP || !centsToCharge || centsToCharge <= 0) return;
+  try {
+    const key = `cakes:credit:${clientIP}`;
+    const raw = await env.CAKE_KV.get(key);
+    if (!raw) return;
+    const current = Number(raw);
+    if (!Number.isFinite(current)) return;
+    const next = Math.max(0, current - centsToCharge);
+    await env.CAKE_KV.put(key, String(next));
+  } catch {
+    // non-fatal — the request already succeeded
+  }
+}
+
+// Estimate the prompt tokens of a chat-completion request body by summing
+// the serialized length of messages, tools, and any media/image payloads.
+// Uses the common ~4 chars/token heuristic. Media items are charged at a
+// fixed cost per image (85 tokens) when present as image_url parts.
+function estimatePromptTokens(requestBody) {
+  if (!requestBody) return 0;
+  let chars = 0;
+  let images = 0;
+  const messages = Array.isArray(requestBody.messages) ? requestBody.messages : [];
+  for (const msg of messages) {
+    if (!msg) continue;
+    const content = msg.content;
+    if (typeof content === "string") {
+      chars += content.length;
+    } else if (Array.isArray(content)) {
+      for (const part of content) {
+        if (!part) continue;
+        if (typeof part === "string") {
+          chars += part.length;
+        } else if (typeof part.text === "string") {
+          chars += part.text.length;
+        } else if (part.type === "image_url" || part.image_url) {
+          images += 1;
+        }
+      }
+    }
+    if (typeof msg.name === "string") chars += msg.name.length;
+    if (typeof msg.role === "string") chars += msg.role.length;
+  }
+  // tools / tool_calls / functions contribute to the prompt too
+  if (Array.isArray(requestBody.tools)) {
+    try { chars += JSON.stringify(requestBody.tools).length; } catch {}
+  }
+  if (Array.isArray(requestBody.functions)) {
+    try { chars += JSON.stringify(requestBody.functions).length; } catch {}
+  }
+  // system / response_format / other string fields
+  if (typeof requestBody.system === "string") chars += requestBody.system.length;
+  const textTokens = Math.ceil(chars / 4);
+  const imageTokens = images * 85;
+  return textTokens + imageTokens;
+}
+
+// Gate an anonymous (non-signed-in) request on the caller's baked cake
+// credits and populate the OpenAI-style ratelimit fields on `rateCheck` so
+// the response headers (X-Ratelimit-*) reflect remaining quota. Returns
+// `null` when the request is allowed, or a 402 Response to send back when
+// the IP has no credit or the prompt exceeds the budget. Signed-in users
+// (user != null) are skipped — they fall through to the tier limits.
+//
+// Shared by handleV1ChatCompletions and handleProxyToServer so that every
+// anonymous proxy path (gemini, ollama, azure, auto, ...) reports the same
+// credit-based rate-limit headers instead of "undefined".
+async function applyAnonymousCreditGate(env, ctx, request, user, requestBody, rateCheck) {
+  if (user) return null;
   const clientIP = getClientIP(request);
-  const now = Date.now();
-  const windows = [
-    // { name: "minute", duration: RATE_LIMITS.windows.minute, tokenLimit: RATE_LIMITS.tokens.perMinute, requestLimit: RATE_LIMITS.requests.perMinute },
-    // { name: "hour", duration: RATE_LIMITS.windows.hour, tokenLimit: RATE_LIMITS.tokens.perHour, requestLimit: RATE_LIMITS.requests.perHour },
-    { name: "day", duration: RATE_LIMITS.windows.day, tokenLimit: RATE_LIMITS.tokens.perDay, requestLimit: RATE_LIMITS.requests.perDay }
-  ];
-  if (!env.MEMBERS_KV) {
-    return { allowed: true };
+  const creditCents = await getCakeCreditCents(env, clientIP);
+  const tokenBudget = Math.floor(creditCents * CAKE_CREDIT_TOKENS_PER_CENT);
+  const promptTokens = estimatePromptTokens(requestBody);
+  if (tokenBudget <= 0) {
+    return jsonResponse({
+      error: {
+        message: "No cake credits. Bake proof-of-work cakes at g4f.dev/chat to earn anonymous usage, or sign up at g4f.dev/members.html.",
+        type: "insufficient_credits",
+        upgrade_url: "https://g4f.dev/members.html",
+        bake_url: "https://g4f.dev/chat"
+      }
+    }, 402);
   }
-  let maxTokens = parseInt(request.headers.get("x-ratelimit-remaining-tokens") || "0") || RATE_LIMITS.tokens.perDay;
-  let maxRequests = parseInt(request.headers.get("x-ratelimit-remaining-requests") || "0") || RATE_LIMITS.requests.perDay;
-  let limitTokens = parseInt(request.headers.get("x-ratelimit-limit-tokens") || "0");
-  let limitRequests = parseInt(request.headers.get("x-ratelimit-limit-tokens") || "0");
-  for (const window of windows) {
-    const key = `rate_limit_ip:${clientIP}:${window.name}`;
-    const stored = await env.MEMBERS_KV.get(key);
-    const usage = stored ? JSON.parse(stored) : { tokens: 0, requests: 0, timestamp: now };
-    if (now - usage.timestamp > window.duration) {
-      usage.tokens = 0;
-      usage.requests = 0;
-      usage.timestamp = now;
-    }
-    const tokenLimit = window.tokenLimit - usage.tokens;
-    const requestLimit = window.requestLimit - usage.requests;
-    if (maxTokens > tokenLimit) {
-      maxTokens = tokenLimit;
-      limitTokens = window.tokenLimit;
-    }
-    if (maxRequests > requestLimit) {
-      maxRequests = requestLimit;
-      limitRequests = window.requestLimit;
-    }
-    if (usage.requests >= window.requestLimit) {
-      return {
-        allowed: false,
-        reason: "requests",
-        window: window.name,
-        limit: window.requestLimit,
-        used: usage.requests,
-        retryAfter: Math.ceil((window.duration - (now - usage.timestamp)) / 1e3),
-        maxTokens,
-        maxRequests,
-        limitTokens,
-        limitRequests
-      };
-    }
-    if (usage.tokens >= window.tokenLimit) {
-      return {
-        allowed: false,
-        reason: "tokens",
-        window: window.name,
-        limit: window.tokenLimit,
-        used: usage.tokens,
-        retryAfter: Math.ceil((window.duration - (now - usage.timestamp)) / 1e3),
-        maxTokens,
-        maxRequests,
-        limitTokens,
-        limitRequests
-      };
-    }
+  if (promptTokens > tokenBudget) {
+    return jsonResponse({
+      error: {
+        message: `Cake credit budget exceeded. This request needs ~${promptTokens} prompt tokens but your IP has ${tokenBudget} available (${creditCents}¢). Bake more cakes at g4f.dev/chat or sign up at g4f.dev/members.html.`,
+        type: "insufficient_credits",
+        required_tokens: promptTokens,
+        available_tokens: tokenBudget,
+        credit_cents: creditCents,
+        upgrade_url: "https://g4f.dev/members.html",
+        bake_url: "https://g4f.dev/chat"
+      }
+    }, 402);
   }
-  // Check 12-day window rate limit (3 active days per 12 days)
-  const dayLimit = RATE_LIMITS.days.perTwelveDays;
-  const twelveDayKey = `rate_limit_ip:${clientIP}:twelveDays`;
-  const twelveDayStored = await env.MEMBERS_KV.get(twelveDayKey);
-  const twelveDayUsage = twelveDayStored ? JSON.parse(twelveDayStored) : { activeDays: [], timestamp: now };
-  // Clean up days older than 12 days
-  const twelveDaysAgo = now - RATE_LIMITS.windows.twelveDays;
-  twelveDayUsage.activeDays = twelveDayUsage.activeDays.filter(dayTimestamp => dayTimestamp > twelveDaysAgo);
-  // Get today's date (start of day in UTC)
-  const todayStart = new Date(now).setUTCHours(0, 0, 0, 0);
-  const isNewDay = !twelveDayUsage.activeDays.some(dayTimestamp => {
-    const dayStart = new Date(dayTimestamp).setUTCHours(0, 0, 0, 0);
-    return dayStart === todayStart;
-  });
-  if (isNewDay && twelveDayUsage.activeDays.length >= dayLimit) {
-    // Find the oldest active day to calculate retry time
-    const oldestDay = Math.min(...twelveDayUsage.activeDays);
-    const retryAfter = Math.ceil((oldestDay + RATE_LIMITS.windows.twelveDays - now) / 1e3);
-    return {
-      allowed: false,
-      reason: "days",
-      window: "twelveDays",
-      limit: dayLimit,
-      used: twelveDayUsage.activeDays.length,
-      retryAfter,
-      maxTokens,
-      maxRequests,
-      limitTokens,
-      limitRequests
-    };
-  }
-  return { allowed: true, maxTokens, maxRequests, limitTokens, limitRequests };
+  // Charge the estimated prompt tokens against the IP's credit (1 token =
+  // 1/CAKE_CREDIT_TOKENS_PER_CENT cent). Done in the background so the
+  // response isn't delayed; non-fatal if it fails.
+  const centsToCharge = promptTokens / CAKE_CREDIT_TOKENS_PER_CENT;
+  ctx.waitUntil(chargeCakeCreditCents(env, clientIP, centsToCharge));
+  // Derive the OpenAI-style ratelimit headers from the credit budget so
+  // clients can display remaining quota. The token limit is the full
+  // budget purchased with the credit; the request limit is an estimate of
+  // how many requests of the current size that budget would cover. Each
+  // request consumes both prompt AND completion tokens, so assume a
+  // completion budget (the request's max_tokens, or a default) on top of
+  // the prompt — this keeps maxRequests conservative rather than
+  // overcounting how many requests the credit will absorb.
+  const completionTokens = Math.max(
+    Number(requestBody && requestBody.max_tokens) || 0,
+    512
+  );
+  const avgRequestTokens = Math.max(promptTokens + completionTokens, 1);
+  const remainingTokens = Math.max(0, tokenBudget - promptTokens);
+  rateCheck = rateCheck || {};
+  rateCheck.cakeCreditCents = creditCents;
+  rateCheck.promptTokens = promptTokens;
+  rateCheck.tokenBudget = tokenBudget;
+  rateCheck.limitTokens = tokenBudget;
+  rateCheck.maxTokens = remainingTokens;
+  rateCheck.limitRequests = Math.max(1, Math.floor(tokenBudget / avgRequestTokens));
+  rateCheck.maxRequests = Math.floor(remainingTokens / avgRequestTokens);
+  return rateCheck;
 }
 async function updateUserRateLimit(env, userId, ctx) {
   if (!env.MEMBERS_KV) return;
@@ -2522,60 +2711,6 @@ async function updateUserRateLimit(env, userId, ctx) {
     const ttl = Math.max(60, Math.ceil((window.duration - elapsed) / 1e3) + 60);
     await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
   }
-}
-async function updateAnonymousRateLimit(env, clientIP, user) {
-  if (!env.MEMBERS_KV) return;
-  const now = Date.now();
-  const windows = [
-    // { name: "minute", duration: RATE_LIMITS.windows.minute },
-    { name: "day", duration: RATE_LIMITS.windows.day }
-  ];
-  if (!user) {
-    windows.unshift({ name: "hour", duration: RATE_LIMITS.windows.hour });
-  }
-  for (const window of windows) {
-    const key = `rate_limit_ip:${clientIP}:${window.name}`;
-    const dataStr = await env.MEMBERS_KV.get(key);
-    let data;
-    if (dataStr) {
-      data = JSON.parse(dataStr);
-      if (now - data.timestamp >= window.duration) {
-        data = { requests: 1, tokens: 0, timestamp: now };
-      } else {
-        data.requests += 1;
-      }
-    } else {
-      data = { requests: 1, tokens: 0, timestamp: now };
-    }
-    const elapsed = now - data.timestamp;
-    const ttl = Math.max(60, Math.ceil((window.duration - elapsed) / 1e3) + 60);
-    await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
-  }
-  // Update 12-day active days tracking
-  const twelveDayKey = `rate_limit_ip:${clientIP}:twelveDays`;
-  const twelveDayDataStr = await env.MEMBERS_KV.get(twelveDayKey);
-  let twelveDayData;
-  if (twelveDayDataStr) {
-    twelveDayData = JSON.parse(twelveDayDataStr);
-  } else {
-    twelveDayData = { activeDays: [], timestamp: now };
-  }
-  // Clean up days older than 12 days
-  const twelveDaysAgo = now - RATE_LIMITS.windows.twelveDays;
-  twelveDayData.activeDays = twelveDayData.activeDays.filter(dayTimestamp => dayTimestamp > twelveDaysAgo);
-  // Get today's date (start of day in UTC)
-  const todayStart = new Date(now).setUTCHours(0, 0, 0, 0);
-  const isTodayRecorded = twelveDayData.activeDays.some(dayTimestamp => {
-    const dayStart = new Date(dayTimestamp).setUTCHours(0, 0, 0, 0);
-    return dayStart === todayStart;
-  });
-  if (!isTodayRecorded) {
-    twelveDayData.activeDays.push(now);
-  }
-  twelveDayData.timestamp = now;
-  // TTL of 12 days + 1 day buffer
-  const twelveDayTtl = Math.ceil(RATE_LIMITS.windows.twelveDays / 1e3) + 86400;
-  await env.MEMBERS_KV.put(twelveDayKey, JSON.stringify(twelveDayData), { expirationTtl: twelveDayTtl });
 }
 function getModelFactor(model) {
   if (!model) {
@@ -2658,6 +2793,15 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, user, cacheK
     requestBody = await request.clone().json();
   } catch (e) {
     requestBody = {}
+  }
+
+  // Anonymous users are gated by their baked cake credits instead of a fixed
+  // daily rate limit. Signed-in users (user != null) skip this check and fall
+  // through to the normal tier limits.
+  if (!user) {
+    const result = await applyAnonymousCreditGate(env, ctx, request, user, requestBody, rateCheck);
+    if (result instanceof Response) return result;  // 402 error response
+    if (result) rateCheck = result;  // updated rateCheck with credit fields
   }
 
   let selectedServer = null;
@@ -2817,7 +2961,31 @@ async function handleV1Models(request, env, user) {
   modelsCacheTime = now;
   return jsonResponse(payload);
 }
+// Module-level request context set at the start of each fetch. jsonResponse
+// reads this to persist any error response (status >= 400) to ERRORS_DB.
+// catch blocks that already call persistErrorToDb set `skipErrorLog` to avoid
+// double-logging the same event.
+var currentRequestContext = null;
 function jsonResponse(data, status = 200) {
+  if (status >= 400 && currentRequestContext && !currentRequestContext.skipErrorLog) {
+    const ctx = currentRequestContext.ctx;
+    const env = currentRequestContext.env;
+    const request = currentRequestContext.request;
+    if (ctx && env) {
+      const message = typeof data?.error === "string"
+        ? data.error
+        : (data?.error?.message || JSON.stringify(data?.error || data));
+      ctx.waitUntil(persistErrorToDb(env, new Error(message), {
+        source: "jsonResponse",
+        status,
+        pathname: currentRequestContext.pathname,
+        method: request.method,
+        ip: getClientIP(request),
+        userAgent: request.headers.get("user-agent"),
+        requestId: request.headers.get("cf-ray") || null
+      }));
+    }
+  }
   return new Response(JSON.stringify(data), {
     status,
     headers: {

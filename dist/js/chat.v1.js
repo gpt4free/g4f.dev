@@ -90,14 +90,14 @@ document.addEventListener("DOMContentLoaded", (event) => {
                     if (tierText) tierText.textContent = userInfo.tier;
                 }
             }
-            if (maxTokensText && (userInfo.remainingTokens !== null || userInfo.limitTokens !== null)) {
+            if (maxTokensText && (userInfo.remainingTokens !== null || userInfo.limitTokens !== null) && (userInfo.remainingTokens && userInfo.limitTokens)) {
                 const remaining = userInfo.remainingTokens !== null ? formatNumber(userInfo.remainingTokens) : '-';
                 const limit = userInfo.limitTokens !== null ? formatNumber(userInfo.limitTokens) : '-';
                 maxTokensText.innerHTML = `<i class="fa-solid fa-coins" aria-hidden="true"></i> ${remaining}/${limit}`;
                 maxTokensText.title = `Tokens: ${remaining} remaining of ${limit}`;
                 if (tierLimitsRow) tierLimitsRow.classList.remove('hidden');
             }
-            if (maxRequestsText && (userInfo.remainingRequests !== null || userInfo.limitRequests !== null)) {
+            if (maxRequestsText && (userInfo.remainingRequests !== null || userInfo.limitRequests !== null) && (userInfo.remainingRequests && userInfo.limitRequests)) {
                 let remaining = userInfo.remainingRequests !== null ? userInfo.remainingRequests : '-';
                 let limit = userInfo.limitRequests !== null ? userInfo.limitRequests : '-';
                 remaining = remaining > 1e3 ? (remaining / 1e3).toFixed(1) + 'K' : remaining;

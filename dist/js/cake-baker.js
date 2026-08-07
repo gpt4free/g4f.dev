@@ -22,8 +22,8 @@
 
     // Configuration -------------------------------------------------------
     const CAKE_ENDPOINT = "https://g4f.space/cake"; // same-origin via route
-    const BATCH_SIZE = 20;         // UUIDs fetched per request (feeds all workers)
-    const POLL_INTERVAL_MS = 5000; // base re-fetch interval when queue empty
+    const BATCH_SIZE = 50;         // UUIDs fetched per request (server caps at 50)
+    const POLL_INTERVAL_MS = 15000; // base re-fetch interval when queue empty
     const STORAGE_KEY = "g4f_cake_baker";
     const HEARTBEAT_KEY = "g4f_cake_heartbeat";
 
@@ -62,6 +62,8 @@
         salt: null,         // per-session salt; updated from server
         dailyBaked: 0,      // cakes baked by this IP today (from server)
         limitPerDay: 100,   // server-imposed daily limit (from server)
+        dailyLimitReached: false,   // server returned 429 daily_limit_reached
+        dailyLimitRetryAt: 0,       // epoch ms when Retry-After elapses
     };
 
     // Persistence ---------------------------------------------------------
@@ -312,9 +314,25 @@
                 headers: authHeaders(),
             });
             if (!res.ok) {
-                console.warn("[G4FCakeBaker] issue failed", res.status);
+                // The server returns 429 with Retry-After once the per-IP
+                // daily cake limit is reached. Stop hammering /cake/issue
+                // every poll cycle — schedule a single retry after the
+                // server's hint (default 1h) and idle the baker meanwhile.
+                if (res.status === 429) {
+                    const retryAfter = Number(res.headers.get("Retry-After")) || 3600;
+                    state.dailyLimitReached = true;
+                    state.dailyLimitRetryAt = Date.now() + retryAfter * 1000;
+                    console.info(
+                        `[G4FCakeBaker] daily limit reached; retrying in ${retryAfter}s`
+                    );
+                } else {
+                    console.warn("[G4FCakeBaker] issue failed", res.status);
+                }
                 return false;
             }
+            // A successful issue clears any prior daily-limit backoff.
+            state.dailyLimitReached = false;
+            state.dailyLimitRetryAt = 0;
             const data = await res.json();
             if (data.difficulty) state.difficulty = data.difficulty;
             if (data.salt) state.salt = data.salt;
@@ -424,7 +442,20 @@
         // Refill the queue when it runs low.
         if (state.queue.length === 0) {
             if (state.inFlight === 0 && !state.timer) {
-                const delay = computePollInterval();
+                // When the server has told us the daily limit is reached,
+                // don't poll on the short adaptive interval — wait until the
+                // server's Retry-After elapses before asking for more work.
+                let delay = computePollInterval();
+                if (state.dailyLimitReached && state.dailyLimitRetryAt) {
+                    delay = Math.max(delay, state.dailyLimitRetryAt - Date.now());
+                    if (delay <= 0) {
+                        // Retry-After elapsed — clear the flag and let the
+                        // next fetchBatch re-arm it if still limited.
+                        state.dailyLimitReached = false;
+                        state.dailyLimitRetryAt = 0;
+                        delay = computePollInterval();
+                    }
+                }
                 state.timer = setTimeout(async () => {
                     state.timer = null;
                     await fetchBatch();
