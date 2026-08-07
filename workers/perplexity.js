@@ -78,9 +78,10 @@ class PerplexityWorker {
       "cache-control": "no-cache",
       "content-type": "application/json",
       "origin": this.url,
-      "referer": `${this.url}/`,
-      "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-      "x-perplexity-request-reason": "perplexity-query-state-provider",
+      "referer": `${this.url}/?login-new=false&login-source=oneTapHome`,
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0",
+      "x-perplexity-request-reason": "ask-query-state-provider",
+      "x-perplexity-request-try-number": "1",
       "x-request-id": requestId,
     };
 
@@ -98,11 +99,42 @@ class PerplexityWorker {
       }
     }
 
+    // Refresh edge cookies via bot security beacon (refreshes pplx.edge-vid and pplx.edge-sid)
+    try {
+      const beaconHeaders = {
+        "accept": "*/*",
+        "cache-control": "no-cache",
+        "pragma": "no-cache",
+        "origin": "https://count.perplexity.ai",
+        "referer": "https://count.perplexity.ai/bs",
+        "user-agent": headers["user-agent"],
+      };
+      if (cookies) {
+        beaconHeaders["cookie"] = cookies;
+      }
+      await fetch("https://count.perplexity.ai/api/v1/bs?iv=6", {
+        method: "POST",
+        headers: beaconHeaders,
+      });
+    } catch (e) {
+      console.error("Perplexity: Bot security beacon failed:", e);
+    }
+
     // Get user session if needed
     if (conversation.user_id === null) {
-      const sessionResponse = await fetch(`${this.url}/api/auth/session`, {
-        headers: headers,
-      });
+      const sessionHeaders = {
+        ...headers,
+        "accept": "*/*",
+        "x-app-apiclient": "default",
+        "x-app-apiversion": "2.18",
+        "x-perplexity-request-reason": "getSession",
+        "x-perplexity-request-try-number": "1",
+      };
+
+      const sessionResponse = await fetch(
+        `${this.url}/api/auth/session?version=2.18&source=default`,
+        { headers: sessionHeaders }
+      );
       
       if (sessionResponse.ok) {
         const userData = await sessionResponse.json();
@@ -168,6 +200,11 @@ class PerplexityWorker {
             const jsonData = JSON.parse(jsonStr);
             // yield { type: "raw_response", data: jsonData };
 
+            // Detect auth wall / upsell
+            if (jsonData.upsell_information?.upsell_type === "LOGIN") {
+              throw new Error(`Authentication required: ${jsonData.upsell_information.title || "Sign in to continue using Perplexity"}`);
+            }
+
             // Process blocks
             for (const block of jsonData.blocks || []) {
               // Handle sources
@@ -201,6 +238,60 @@ class PerplexityWorker {
                 });
                 yield { type: "media", data: processedMedia };
                 continue;
+              }
+
+              // Handle initial markdown_block (first response with chunks)
+              if (block.intended_usage === "ask_text" && block.markdown_block && !block.diff_block) {
+                const mb = block.markdown_block;
+
+                // Yield initial chunks (first streaming response)
+                if (mb.chunks && mb.progress === "IN_PROGRESS" && !fullResponse) {
+                  const text = mb.chunks.join("");
+                  if (text) {
+                    fullResponse = text;
+                    yield { choices: [{ delta: { content: text } }] };
+                  }
+                }
+
+                // Yield final answer (check for any missing content)
+                if (mb.answer && mb.progress === "DONE") {
+                  const answer = mb.answer;
+                  if (answer.startsWith(fullResponse)) {
+                    const remaining = answer.slice(fullResponse.length);
+                    if (remaining) {
+                      fullResponse = answer;
+                      yield { choices: [{ delta: { content: remaining } }] };
+                    }
+                  } else if (!fullResponse) {
+                    fullResponse = answer;
+                    yield { choices: [{ delta: { content: answer } }] };
+                  }
+                }
+
+                continue;
+              }
+
+              // Handle markdown_block (initial text or final answer)
+              if (block.markdown_block) {
+                const mb = block.markdown_block;
+                let text = "";
+                if (mb.answer) {
+                  text = mb.answer;
+                } else if (mb.chunks) {
+                  text = mb.chunks.join("");
+                }
+                if (text && typeof text === "string") {
+                  if (!fullResponse) {
+                    fullResponse = text;
+                    yield {choices: [{delta: {content: text}}]};
+                  } else if (text.startsWith(fullResponse)) {
+                    const diff = text.slice(fullResponse.length);
+                    if (diff) {
+                      fullResponse = text;
+                      yield {choices: [{delta: {content: diff}}]};
+                    }
+                  }
+                }
               }
 
               // Handle diff blocks
@@ -275,6 +366,9 @@ class PerplexityWorker {
   }
 
   buildRequestData(model, query, conversation) {
+    const requestId = crypto.randomUUID();
+    const isFollowup = conversation.last_backend_uuid != null;
+
     const baseParams = {
       attachments: [],
       language: "en-US",
@@ -282,43 +376,57 @@ class PerplexityWorker {
       search_focus: "internet",
       sources: ["web"],
       search_recency_filter: null,
-      frontend_uuid: conversation.frontend_uid,
+      frontend_uuid: requestId,
       model_preference: model,
       is_related_query: false,
       is_sponsored: false,
-      visitor_id: conversation.visitor_id,
       prompt_source: "user",
+      query_source: "home",
       is_incognito: false,
-      time_from_first_type: 0,
+      time_from_first_type: Math.floor(Math.random() * 10000),
       local_search_enabled: false,
       use_schematized_api: true,
       send_back_text_in_streaming_api: false,
       supported_block_use_cases: [
         "answer_modes", "media_items", "knowledge_cards", "inline_entity_cards",
-        "place_widgets", "finance_widgets", "sports_widgets", "shopping_widgets",
-        "jobs_widgets", "search_result_widgets", "clarification_responses",
-        "inline_images", "inline_assets", "inline_finance_widgets",
-        "placeholder_cards", "diff_blocks", "inline_knowledge_cards",
-        "entity_group_v2", "refinement_filters", "canvas_mode"
+        "place_widgets", "finance_widgets", "sports_widgets", "news_widgets",
+        "shopping_widgets", "jobs_widgets", "search_result_widgets",
+        "inline_images", "inline_assets", "placeholder_cards", "diff_blocks",
+        "inline_knowledge_cards", "entity_group_v2", "refinement_filters",
+        "canvas_mode", "maps_preview", "answer_tabs", "price_comparison_widgets",
+        "preserve_latex", "generic_onboarding_widgets", "in_context_suggestions",
+        "pending_followups", "inline_claims", "unified_assets", "workflow_steps",
+        "workflow_widgets", "navigation_results", "background_agents"
       ],
       client_coordinates: null,
       mentions: [],
-      skip_search_enabled: false,
+      dsl_query: query,
+      skip_search_enabled: true,
       is_nav_suggestions_disabled: false,
+      source: "default",
       always_search_override: false,
       override_no_search: false,
-      comet_max_assistant_enabled: false,
-      version: "2.18"
+      should_ask_for_mcp_tool_confirmation: true,
+      supports_tool_approval_modal: true,
+      browser_agent_allow_once_from_toggle: false,
+      force_enable_browser_agent: false,
+      supported_features: ["browser_agent_permission_banner_v1.1"],
+      extended_context: false,
+      version: "2.18",
+      rum_session_id: crypto.randomUUID(),
     };
 
-    if (conversation.user_id === null) {
+    if (isFollowup) {
       return {
         params: {
           ...baseParams,
+          last_backend_uuid: conversation.last_backend_uuid,
+          read_write_token: conversation.read_write_token || null,
           frontend_context_uuid: conversation.frontend_context_uuid,
-          mode: "concise",
-          query_source: "home",
-          dsl_query: query,
+          mode: "copilot",
+          query_source: "followup",
+          followup_source: "link",
+          client_search_results_cache_key: requestId,
         },
         query_str: query
       };
@@ -326,14 +434,9 @@ class PerplexityWorker {
       return {
         params: {
           ...baseParams,
-          last_backend_uuid: null,
-          read_write_token: null,
+          frontend_context_uuid: conversation.frontend_context_uuid,
           mode: "copilot",
-          user_nextauth_id: conversation.user_id,
-          query_source: "followup",
-          time_from_first_type: Math.floor(Math.random() * 1000),
-          skip_search_enabled: true,
-          followup_source: "link",
+          client_search_results_cache_key: requestId,
         },
         query_str: query
       };
