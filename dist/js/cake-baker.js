@@ -225,7 +225,7 @@
 
     // Number of parallel hashing workers — one per logical CPU core, capped
     // to avoid overwhelming low-end devices. Falls back to 4 if unavailable.
-    const NUM_WORKERS = Math.min(Math.max(navigator.hardwareConcurrency || 4, 2), 8);
+    const NUM_WORKERS = Math.ceil(Math.min(Math.max(navigator.hardwareConcurrency || 4, 2), 8) / 2);
     const WORKER_STRIDE = NUM_WORKERS; // each worker steps by this many nonces
 
     function createWorker(workerId) {
@@ -330,6 +330,27 @@
         }
     }
 
+    // Read fresh status from /cake/status --------------------------------
+    // Called after each accepted bake so the UI reflects the authoritative
+    // server-side credit + daily-baked counters on every bake cycle.
+    async function fetchStatus() {
+        try {
+            const res = await fetch(`${CAKE_ENDPOINT}/status`, {
+                credentials: "include",
+                headers: authHeaders(),
+            });
+            if (!res.ok) return null;
+            const data = await res.json();
+            if (typeof data.credit_cents === "number") state.credits = data.credit_cents;
+            if (typeof data.baked_today === "number") state.dailyBaked = data.baked_today;
+            if (typeof data.limit_per_day === "number") state.limitPerDay = data.limit_per_day;
+            return data;
+        } catch (err) {
+            console.warn("[G4FCakeBaker] status error", err);
+            return null;
+        }
+    }
+
     // Submit a baked cake -------------------------------------------------
     async function submitCake(cake) {
         state.submitted += 1;
@@ -362,9 +383,16 @@
                     " accepted=" + state.accepted + " credits=" + state.credits,
                     "color:#22c55e;font-weight:bold", "color:inherit"
                 );
-                // notify UI
+                // Read authoritative status on each bake so the UI credits
+                // counter stays in sync with the server.
+                const status = await fetchStatus();
+                // notify UI with fresh status (fallback to bake response)
                 window.dispatchEvent(new CustomEvent("g4f:cake:accepted", {
-                    detail: { credit: data.credit, total: data.total_credits },
+                    detail: {
+                        credit: data.credit,
+                        total: status ? status.credit_cents : data.total_credits,
+                        baked_today: status ? status.baked_today : data.baked_today,
+                    },
                 }));
             } else if (data.rotate) {
                 // salt rotated; re-fetch
