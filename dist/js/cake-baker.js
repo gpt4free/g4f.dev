@@ -22,7 +22,7 @@
 
     // Configuration -------------------------------------------------------
     const CAKE_ENDPOINT = "https://g4f.space/cake"; // same-origin via route
-    const BATCH_SIZE = 50;         // UUIDs fetched per request (server caps at 50)
+    const BATCH_SIZE = 20;         // UUIDs fetched per request (server caps at 50)
     const POLL_INTERVAL_MS = 15000; // base re-fetch interval when queue empty
     const STORAGE_KEY = "g4f_cake_baker";
     const HEARTBEAT_KEY = "g4f_cake_heartbeat";
@@ -64,6 +64,9 @@
         limitPerDay: 100,   // server-imposed daily limit (from server)
         dailyLimitReached: false,   // server returned 429 daily_limit_reached
         dailyLimitRetryAt: 0,       // epoch ms when Retry-After elapses
+        workerRates: {},            // workerId -> last reported h/s
+        hashRate: 0,                // aggregated hash rate across all workers (h/s)
+        rateTimer: null,           // interval that refreshes the #input-count display
     };
 
     // Persistence ---------------------------------------------------------
@@ -218,8 +221,10 @@
                         );
                         lastLogAt = now;
                         lastScanned = scanned;
+                        self.postMessage({ type: "progress", nonce, workerId, scanned, rate: Number(rate) });
+                    } else {
+                        self.postMessage({ type: "progress", nonce, workerId, scanned });
                     }
-                    self.postMessage({ type: "progress", nonce, workerId, scanned });
                 }
             }
         };
@@ -241,6 +246,9 @@
             if (data.type === "progress") {
                 // periodically refresh lock so other tabs don't take over
                 refreshLock();
+                if (typeof data.rate === "number" && data.rate > 0) {
+                    state.workerRates[data.workerId] = data.rate;
+                }
                 console.log(
                     "%c[G4FCakeBaker] hashing%c " +
                     "worker=" + data.workerId + " scanned=" + data.scanned +
@@ -281,6 +289,34 @@
             setTimeout(bakeNext, 5000);
         };
         return w;
+    }
+
+    // Aggregate per-worker hash rates into a single h/s figure and render
+    // it into the chat's #input-count element (the token-count display).
+    // When the baker is idle or stopped, the element is cleared so the
+    // normal token/word count can take over.
+    function formatHashRate(hps) {
+        if (!hps || hps <= 0) return null;
+        if (hps >= 1e6) return (hps / 1e6).toFixed(2) + "M h/s";
+        if (hps >= 1e3) return (hps / 1e3).toFixed(1) + "k h/s";
+        return Math.round(hps) + " h/s";
+    }
+
+    function updateHashRate() {
+        let total = 0;
+        for (const id in state.workerRates) {
+            total += state.workerRates[id] || 0;
+        }
+        state.hashRate = total;
+        const el = document.getElementById("input-count");
+        if (!el) return;
+        const text = el.querySelector(".text") || el;
+        const formatted = formatHashRate(total);
+        if (formatted) {
+            text.innerText = formatted;
+        } else if (!state.running) {
+            text.innerText = "";
+        }
     }
 
     // Lazily create the worker pool (shared across all UUIDs).
@@ -498,6 +534,11 @@
         fetchBatch().then(() => bakeNext());
         // lock refresh interval
         state.lockInterval = setInterval(refreshLock, 10000);
+        // refresh the #input-count hash-rate display every 2s
+        if (!state.rateTimer) {
+            state.rateTimer = setInterval(updateHashRate, 2000);
+            updateHashRate();
+        }
         // persist on unload
         window.addEventListener("beforeunload", () => {
             saveState();
@@ -518,6 +559,13 @@
             clearInterval(state.lockInterval);
             state.lockInterval = null;
         }
+        if (state.rateTimer) {
+            clearInterval(state.rateTimer);
+            state.rateTimer = null;
+        }
+        state.workerRates = {};
+        state.hashRate = 0;
+        updateHashRate();
         if (state.workers && state.workers.length) {
             for (const w of state.workers) w.terminate();
             state.workers = [];
