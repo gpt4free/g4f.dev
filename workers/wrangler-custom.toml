@@ -10,6 +10,38 @@ compatibility_date = "2024-01-01"
 binding = "MEMBERS_KV"
 id = "87b74eadf8124782a9b10dda75a872b6"
 
+# KV Namespace (shared with cake worker — read baked credits to grant
+# anonymous users extra usage proportional to their proof-of-work cakes)
+[[kv_namespaces]]
+binding = "CAKE_KV"
+id = "REPLACE_WITH_CAKE_KV_NAMESPACE_ID"
+
+# D1 Database for error tracking (error_logs table). Schema:
+#   CREATE TABLE error_logs (
+#     id INTEGER PRIMARY KEY AUTOINCREMENT,
+#     timestamp TEXT NOT NULL,
+#     source TEXT,
+#     status INTEGER,
+#     message TEXT,
+#     stack TEXT,
+#     pathname TEXT,
+#     method TEXT,
+#     ip TEXT,
+#     user_id TEXT,
+#     user_tier TEXT,
+#     user_agent TEXT,
+#     request_id TEXT,
+#     context TEXT
+#   );
+#   CREATE INDEX idx_error_logs_timestamp ON error_logs(timestamp);
+#   CREATE INDEX idx_error_logs_source ON error_logs(source);
+# Create via: wrangler d1 create errors_db
+# Then: wrangler d1 execute errors_db --file=./schema-errors.sql
+[[d1_databases]]
+binding = "ERRORS_DB"
+database_name = "errors_db"
+database_id = "5028af48-43c0-4520-a094-b51b08f8ffae"
+
 # R2 Bucket for server data storage (shared with members worker)
 [[r2_buckets]]
 binding = "MEMBERS_BUCKET"
