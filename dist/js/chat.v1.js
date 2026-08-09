@@ -1523,44 +1523,6 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
             content_map.inner.appendChild(div);
             let cursorDiv = content_map.inner.querySelector(".cursor");
             if (cursorDiv) cursorDiv.parentNode.removeChild(cursorDiv);
-        } else if (message.content) {
-            // const contentInnerPre = content_map.innerPre || content_map.inner;
-            // if (Math.floor(Math.random() * 100) === 0) {
-            //     setTimeout(() => {
-            //         contentInnerPre.innerHTML = contentInnerPre.innerHTML; // Trigger re-render to prevent freezing on long messages
-            //     }, 100);
-            // }
-            // try {
-            //     let lastChild = contentInnerPre.querySelector(".cursor") || contentInnerPre.lastChild;
-            //     if (appStorage.getItem("simulateTyping") === "false") {
-            //         contentInnerPre.insertBefore(document.createTextNode(message.content), lastChild);
-            //     } else {
-            //         let firstLine = true;
-            //         for (line of message.content.split("\n")) {
-            //             if (firstLine) {
-            //                 firstLine = false;
-            //             } else {
-            //                 contentInnerPre.insertBefore(document.createElement("br"), lastChild);
-            //             }
-            //             if (line.length > 0) {
-            //                 let firstToken = true;
-            //                 for (token of line.split(' ')) {
-            //                     if (token) {
-            //                         await new Promise(resolve => setTimeout(resolve, (Math.random() * (20 - 40) + 20)))
-            //                     }
-            //                     if (firstToken) {
-            //                         firstToken = false;
-            //                     } else {
-            //                         token = ' ' + token
-            //                     }
-            //                     contentInnerPre.insertBefore(document.createTextNode(token), lastChild);
-            //                 }
-            //             }
-            //         };
-            //     }
-            // } catch (e) {
-            //     add_error("Error updating content:", e);
-            // }
         }
     } else if (message.type == "log") {
         let p = document.createElement("p");
@@ -1602,6 +1564,9 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         if (message.status || message.token || message.label) {
             const reasoning_body = content_map.inner;
             reasoning_body.innerHTML = render_reasoning(reasoning_storage[message_id]);
+            if (autoScrollEnabled) {
+                chatBody.scrollTop = chatBody.scrollHeight;
+            }
         }
     } else if (message.type == "parameters") {
         if (!parameters_storage[provider]) {
