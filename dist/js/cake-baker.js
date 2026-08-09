@@ -417,17 +417,7 @@
         // Sum the last-reported h/s of every *live* worker only, so rates
         // from terminated or re-spawned workers never leak into the total,
         // then scale by the duty cycle so throttle pauses are reflected.
-        const total = effectiveHashRate();
-        state.hashRate = total;
-        const el = document.getElementById("input-count");
-        if (!el) return;
-        const text = el.querySelector(".text") || el;
-        const formatted = formatHashRate(total);
-        if (formatted) {
-            text.innerText = formatted;
-        } else if (!state.running) {
-            text.innerText = "";
-        }
+        state.hashRate = effectiveHashRate();
         updatePanelStatus();
     }
 
@@ -547,7 +537,10 @@
             const res = await fetch(`${CAKE_ENDPOINT}/bake`, {
                 method: "POST",
                 credentials: "include",
-                headers: authHeaders({ "Content-Type": "application/json" }),
+                headers: authHeaders({
+                    "Content-Type": "application/json",
+                    "X-User": storageGet("user") || undefined,
+                }),
                 body: JSON.stringify({
                     uuid: cake.uuid,
                     salt: cake.salt,

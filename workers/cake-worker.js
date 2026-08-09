@@ -12,6 +12,7 @@
  *   POST /cake/bake                 — submit a baked cake { uuid, salt, hash } for validation + credit
  *   GET  /cake/status               — current IP's daily quota and earned credit
  *   GET  /cake/credit/:ip           — total credit earned by an IP (admin only)
+ *   GET  /cake/users                — all users with total + today's cakes (admin only)
  *
  * Storage (R2: CAKE_BUCKET, KV: CAKE_KV):
  *   cakes:issued:<ip>               — KV list of issued UUIDs + timestamps (TTL = issue TTL)
@@ -54,7 +55,7 @@ function corsHeaders(request) {
         "Access-Control-Allow-Origin": allowed ? origin : "null",
         "Access-Control-Allow-Credentials": "true",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Forwarded-For",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Forwarded-For, X-User",
         "Access-Control-Expose-Headers": "X-Cake-Credit",
         "Vary": "Origin",
     };
@@ -121,21 +122,22 @@ function dayKey() {
     return `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}`;
 }
 
-async function getDailyCount(env, ip) {
+async function getDailyCount(env, ip, user) {
     const key = `cakes:baked:${ip}`;
     const raw = await env.CAKE_KV.get(key);
-    if (!raw) return { count: 0, day: dayKey() };
+    if (!raw) return { count: 0, day: dayKey(), user };
     try {
         const parsed = JSON.parse(raw);
-        if (parsed.day !== dayKey()) return { count: 0, day: dayKey() };
+        parsed.user = parsed.user || user;
+        if (parsed.day !== dayKey()) return { count: 0, day: dayKey(), user };
         return parsed;
     } catch {
-        return { count: 0, day: dayKey() };
+        return { count: 0, day: dayKey(), user };
     }
 }
 
-async function setDailyCount(env, ip, count) {
-    await env.CAKE_KV.put(`cakes:baked:${ip}`, JSON.stringify({ count, day: dayKey() }), { expirationTtl: 86400 });
+async function setDailyCount(env, ip, count, user) {
+    await env.CAKE_KV.put(`cakes:baked:${ip}`, JSON.stringify({ count, day: dayKey(), user }), { expirationTtl: 86400 });
 }
 
 async function getIssuedList(env, ip) {
@@ -154,7 +156,7 @@ async function getCredit(env, ip) {
     return raw ? Number(raw) : 0;
 }
 
-async function addCredit(env, ip, cents) {
+async function addCredit(env, ip, cents, user) {
     const current = await getCredit(env, ip);
     await env.CAKE_KV.put(`cakes:credit:${ip}`, String(current + cents));
     return current + cents;
@@ -256,7 +258,8 @@ async function handleBake(request, env) {
     }
 
     // 4. Enforce daily limit.
-    const daily = await getDailyCount(env, ip);
+    const user = request.headers.get("x-user");
+    const daily = await getDailyCount(env, ip, user);
     if (daily.count >= perDay) {
         return json({ error: "daily_limit_reached", limit: perDay }, 429, { "Retry-After": "3600" }, request);
     }
@@ -287,8 +290,8 @@ async function handleBake(request, env) {
     await setIssuedList(env, ip, remaining);
 
     // 7. Increment daily counter and credit.
-    await setDailyCount(env, ip, daily.count + 1);
-    const totalCents = await addCredit(env, ip, creditCents);
+    await setDailyCount(env, ip, daily.count + 1, daily.user);
+    const totalCents = await addCredit(env, ip, creditCents, user);
 
     // 8. If the request carries a members JWT, forward the credit to the
     //    members worker so it lands on the user's account too. Failures
@@ -365,6 +368,65 @@ async function handleCreditByIP(request, env, ip) {
     return json({ ip, credit_cents: credit, baked_today: daily.count }, 200, {}, request);
 }
 
+/** Admin-only: list every baker with total cakes and cakes baked today.
+ *  Aggregates from the R2 bucket (each baked cake is one object carrying
+ *  customMetadata { ip, baked_day }), paginating until all objects are seen.
+ *  The `user` label (from the x-user header) is only persisted in today's
+ *  per-IP KV counter, so it is attached best-effort for IPs active today. */
+async function handleUsers(request, env) {
+    const auth = request.headers.get("Authorization") || "";
+    if (!env.ADMIN_API_KEY || auth !== `Bearer ${env.ADMIN_API_KEY}`) {
+        return json({ error: "unauthorized" }, 401, {}, request);
+    }
+    const today = dayKey();
+    const agg = new Map(); // ip -> { total, today, user }
+
+    let cursor;
+    do {
+        const listArgs = { include: ["customMetadata"] };
+        if (cursor) listArgs.cursor = cursor;
+        const listed = await env.CAKE_BUCKET.list(listArgs);
+        for (const obj of listed.objects) {
+            const md = obj.customMetadata || {};
+            const ip = md.ip || "unknown";
+            const day = md.baked_day || "";
+            let entry = agg.get(ip);
+            if (!entry) {
+                entry = { total: 0, today: 0, user: null };
+                agg.set(ip, entry);
+            }
+            entry.total += 1;
+            if (day === today) entry.today += 1;
+        }
+        cursor = listed.truncated ? listed.cursor : null;
+    } while (cursor);
+
+    // Attach the x-user label only for IPs active today (bounds KV calls).
+    const users = [];
+    for (const [ip, entry] of agg) {
+        if (entry.today > 0) {
+            try {
+                const raw = await env.CAKE_KV.get(`cakes:baked:${ip}`);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed.day === today) entry.user = parsed.user || null;
+                }
+            } catch {
+                // Best-effort: ignore KV lookup failures.
+            }
+        }
+        users.push({ ip, user: entry.user, total: entry.total, today: entry.today });
+    }
+    users.sort((a, b) => b.total - a.total || b.today - a.today);
+
+    return json({
+        generated_at: Date.now(),
+        day: today,
+        count: users.length,
+        users,
+    }, 200, {}, request);
+}
+
 // ---------------------------------------------------------------------------
 // Entrypoint
 // ---------------------------------------------------------------------------
@@ -392,10 +454,13 @@ export default {
                 const ip = decodeURIComponent(pathname.slice("/cake/credit/".length));
                 return handleCreditByIP(request, env, ip);
             }
+            if (pathname === "/cake/users" && request.method === "GET") {
+                return handleUsers(request, env);
+            }
             if (pathname === "/cake/health") {
                 return json({ ok: true, service: "cake-worker" }, 200, {}, request);
             }
-            return json({ error: "not_found", endpoints: ["/cake/issue", "/cake/bake", "/cake/status"] }, 404, {}, request);
+            return json({ error: "not_found", endpoints: ["/cake/issue", "/cake/bake", "/cake/status", "/cake/users"] }, 404, {}, request);
         } catch (err) {
             return json({ error: "internal", message: String(err) }, 500, {}, request);
         }
