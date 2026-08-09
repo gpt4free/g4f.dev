@@ -534,12 +534,18 @@
     async function submitCake(cake) {
         state.submitted += 1;
         try {
+            let user = {};
+            try {
+                user = JSON.parse(storageGet("g4f_user") || "{}");
+            } catch (err) {
+                console.warn("[G4FCakeBaker] parse user error", err);
+            }
             const res = await fetch(`${CAKE_ENDPOINT}/bake`, {
                 method: "POST",
                 credentials: "include",
                 headers: authHeaders({
                     "Content-Type": "application/json",
-                    "X-User": storageGet("user") || undefined,
+                    "X-User": user.username || user.id,
                 }),
                 body: JSON.stringify({
                     uuid: cake.uuid,

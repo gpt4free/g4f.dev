@@ -50,10 +50,10 @@ const translationSnipptes = [
 ];
 
 let providers = [
-    {"name": "ApiAirforce", "label": "Api.Airforce", "login_url": "https://panel.api.airforce/dashboard", "active_by_default": true},
+    {"name": "Airforce", "label": "Api.Airforce", "login_url": "https://panel.api.airforce/dashboard", "active_by_default": true},
     {"name": "HuggingFace", "login_url": "https://huggingface.co/settings/tokens", "active_by_default": true},
     {"name": "HuggingFaceMedia", "parent": "HuggingFace", "active_by_default": true},
-    {"name": "PollinationsAI", "label": "Pollinations AI", "login_url": "https://enter.pollinations.ai", "active_by_default": true},
+    {"name": "Pollinations", "label": "Pollinations AI", "login_url": "https://enter.pollinations.ai", "active_by_default": true},
     {"name": "PuterJS", "label": "Puter.js", "login_url": "https://discord.gg/qXA4Wf4Fsm", "active_by_default": true},
 ];
 
@@ -2047,6 +2047,10 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             content_storage[message_id].inner.innerHTML = renderer(message_storage[message_id]);
             highlight(content_storage[message_id].inner);
             lastValue = message_storage[message_id];
+            // Auto-scroll if enabled
+            if (autoScrollEnabled) {
+                chatBody.scrollTop = chatBody.scrollHeight;
+            }
         }
         requestAnimationFrame(update);
     });
@@ -2314,13 +2318,6 @@ async function scroll_to_bottom() {
 }
 
 let autoScrollEnabled = true;
-
-setInterval(() => {
-    // Auto-scroll if enabled
-    if (autoScrollEnabled) {
-        chatBody.scrollTop = chatBody.scrollHeight;
-    }
-}, 200);
 
 chatBody.addEventListener('scroll', () => {
     const atBottom = chatBody.scrollTop + chatBody.clientHeight >= chatBody.scrollHeight - 40;
@@ -3937,7 +3934,7 @@ function load_provider_login_urls(providersListContainer, providers = []) {
             oauthButton = `<button class="oauth-btn" data-provider="${provider.name}" data-login-url="/backend-api/v2/oauth/${provider.name}" title="${framework.translate("Login to")} ${framework.escape(label)}">${framework.translate('Login')}</button>`;
         }
 
-        const apiKeyLink = ["PollinationsAI", "HuggingFace", "ApiAirforce"].includes(provider.name)
+        const apiKeyLink = ["Pollinations", "HuggingFace", "Airforce"].includes(provider.name)
             ? `<a href="https://g4f.dev/members?provider=${login_provider}&redirect=${encodeURIComponent(window.location.href.split("#")[0])}" title="${framework.translate("Login to")} ${framework.escape(label)}">${framework.translate('Login')}</a>`
             : (provider.login_url ? `<a href="${framework.escape(provider.login_url)}" target="_blank" title="${framework.translate("Login to")} ${framework.escape(label)}">${framework.translate('Get API key')}</a>` : "");
         const inputId = `${provider.name}-api_key`;
@@ -4924,7 +4921,7 @@ function get_api_key_by_provider(provider, single=false) {
             return appStorage.getItem("DeepInfra-api_key") || appStorage.getItem("g4f_session");
         }
         if (provider === "custom:srv_mkomfko63371049b6da6") {
-            return appStorage.getItem("ApiAirforce-api_key") || appStorage.getItem("g4f_session");
+            return appStorage.getItem("Airforce-api_key") || appStorage.getItem("g4f_session");
         }
         if (["custom"].includes(provider)) {
             return appStorage.getItem("Custom-api_key");
@@ -4934,7 +4931,7 @@ function get_api_key_by_provider(provider, single=false) {
         }
         if (!single && provider === "AnyProvider") {
             return {
-                "PollinationsAI": get_api_key_by_provider("PollinationsAI"),
+                "Pollinations": get_api_key_by_provider("Pollinations"),
                 "HuggingFace": get_api_key_by_provider("HuggingFace"),
                 "Together": get_api_key_by_provider("Together"),
                 "GeminiPro": get_api_key_by_provider("GeminiPro"),
@@ -4946,7 +4943,7 @@ function get_api_key_by_provider(provider, single=false) {
                 "PuterJS": get_api_key_by_provider("PuterJS"),
                 "Nvidia": get_api_key_by_provider("Nvidia"),
                 "Ollama": get_api_key_by_provider("Ollama"),
-                "ApiAirforce": get_api_key_by_provider("ApiAirforce"),
+                "Airforce": get_api_key_by_provider("Airforce"),
             }
         }
         api_key = document.querySelector(`.${provider}-api_key`)?.id || null;
@@ -4964,7 +4961,7 @@ function get_api_key_by_provider(provider, single=false) {
         if (!api_key && provider.startsWith("Puter")) {
             return appStorage.getItem("puter.auth.token");
         }
-        if (!api_key && ["GeminiPro", "Ollama", "Nvidia", "OpenRouterFree", "PollinationsAI", "Groq"].includes(provider)) {
+        if (!api_key && ["GeminiPro", "Ollama", "Nvidia", "OpenRouterFree", "Pollinations", "Groq"].includes(provider)) {
             return appStorage.getItem("g4f_session");
         }
     }
@@ -6765,12 +6762,14 @@ async function checkCloudSyncSession() {
                 return;
             } else {
                 appStorage.removeItem("g4f_session");
+                appStorage.removeItem("g4f_user");
                 appStorage.removeItem("g4f_expires");
                 showCloudSyncLogin();
                 return;
             }
         } else {
             appStorage.removeItem("g4f_session");
+            appStorage.removeItem("g4f_user");
             appStorage.removeItem("g4f_expires");
             showCloudSyncLogin();
             return;
@@ -6854,14 +6853,15 @@ function handleCloudSyncCallback() {
         if (userParam) {
             try {
                 const user = JSON.parse(decodeURIComponent(userParam));
+                appStorage.setItem("g4f_user", JSON.stringify(user));
                 // Also store provider-specific API key if included in user info
                 if (user.pollinations?.api_key) {
                     if (!isTokenExpired(user.pollinations.expires)) {
-                        appStorage.setItem("PollinationsAI-api_key", user.pollinations.api_key);
+                        appStorage.setItem("Pollinations-api_key", user.pollinations.api_key);
                         if (user.pollinations.expires) {
-                            appStorage.setItem("PollinationsAI-expires", user.pollinations.expires);
+                            appStorage.setItem("Pollinations-expires", user.pollinations.expires);
                         } else {
-                            appStorage.removeItem("PollinationsAI-expires");
+                            appStorage.removeItem("Pollinations-expires");
                         }
                     }
                 }
@@ -6877,11 +6877,11 @@ function handleCloudSyncCallback() {
                 }
                 if (user.airforce?.access_token) {
                     if (!isTokenExpired(user.airforce.expires)) {
-                        appStorage.setItem("ApiAirforce-api_key", user.airforce.access_token);
+                        appStorage.setItem("Airforce-api_key", user.airforce.access_token);
                         if (user.airforce.expires) {
-                            appStorage.setItem("ApiAirforce-expires", user.airforce.expires);
+                            appStorage.setItem("Airforce-expires", user.airforce.expires);
                         } else {
-                            appStorage.removeItem("ApiAirforce-expires");
+                            appStorage.removeItem("Airforce-expires");
                         }
                     }
                 }
@@ -6917,6 +6917,8 @@ async function cloudSyncLogout() {
         }
     }
     appStorage.removeItem("g4f_session");
+    appStorage.removeItem("g4f_user");
+    appStorage.removeItem("g4f_expires");
     showCloudSyncLogin();
 }
 
