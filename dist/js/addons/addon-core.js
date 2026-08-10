@@ -26,7 +26,6 @@
     // Storage keys
     // ------------------------------------------------------------------
     const ENABLED_KEY = 'chat.addons.enabled.v1';
-    const TRUSTED_KEY = 'chat.addons.trusted.v1';
 
     // ------------------------------------------------------------------
     // Permission model
@@ -60,7 +59,6 @@
     const registry = new Map();        // id -> addon descriptor
     const state = {
         enabled: new Set(),
-        trusted: new Set(),
         ready: false,
         bootPromise: null,
     };
@@ -69,8 +67,6 @@
         try {
             const raw = localStorage.getItem(ENABLED_KEY);
             if (raw) state.enabled = new Set(JSON.parse(raw));
-            const trusted = localStorage.getItem(TRUSTED_KEY);
-            if (trusted) state.trusted = new Set(JSON.parse(trusted));
         } catch (e) {
             console.error('[addons] failed to load state', e);
         }
@@ -79,22 +75,15 @@
     function persistState() {
         try {
             localStorage.setItem(ENABLED_KEY, JSON.stringify([...state.enabled]));
-            localStorage.setItem(TRUSTED_KEY, JSON.stringify([...state.trusted]));
         } catch (e) {
             console.error('[addons] failed to persist state', e);
         }
     }
 
     function isEnabled(id) { return state.enabled.has(id); }
-    function isTrusted(id) { return state.trusted.has(id); }
 
     function setEnabled(id, value) {
         if (value) state.enabled.add(id); else state.enabled.delete(id);
-        persistState();
-    }
-
-    function setTrusted(id, value) {
-        if (value) state.trusted.add(id); else state.trusted.delete(id);
         persistState();
     }
 
@@ -253,8 +242,6 @@
     async function loadOne(id) {
         const addon = registry.get(id);
         if (!addon) throw new Error(`[addons] unknown addon "${id}"`);
-        if (addon._active) return;
-
         if (addon.source) {
             screenSource(addon.source, id);
             const api = executeSandboxed(addon);
@@ -292,12 +279,7 @@
     }
 
     async function enable(id) {
-        const addon = registry.get(id);
-        if (!addon) throw new Error(`[addons] unknown addon "${id}"`);
-        // Permission gate: workspace addons must be explicitly trusted.
-        if (!addon.builtin && !isTrusted(id)) {
-            throw Object.assign(new Error('not-trusted'), { code: 'NOT_TRUSTED', addon });
-        }
+        console.log('[addons] enabling addon', id);
         await loadOne(id);
         setEnabled(id, true);
     }
@@ -308,11 +290,8 @@
     }
 
     async function enableAll() {
-        loadState();
-        // First run (or if boot() ran before addons registered): auto-enable
-        // all built-in addons. The registry is fully populated by the time
-        // enableAll() runs (it's called from a microtask after all defer
-        // scripts evaluate), so this is safe.
+        // State is already loaded by boot(). Re-loading here would overwrite
+        // any migration performed during workspace discovery.
         if (state.enabled.size === 0) {
             for (const addon of registry.values()) {
                 if (addon.builtin) state.enabled.add(addon.id);
@@ -420,8 +399,6 @@
         enableAll,
         boot,
         isEnabled,
-        isTrusted,
-        setTrusted,
         discoverWorkspaceAddons,
         parseAddonHeader,
         _state: state,

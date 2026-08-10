@@ -42,8 +42,6 @@
 #chat-addon-manager .am-empty { opacity: .55; font-size: 13px; padding: 12px 4px; }
 #chat-addon-manager .am-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--border, #333); }
 #chat-addon-manager .am-error { color: #ff6b6b; font-size: 12px; margin-top: 8px; }
-#chat-addon-manager .am-trust-panel { border: 1px solid rgba(139,92,246,.5); background: rgba(139,92,246,.08); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
-#chat-addon-manager .am-trust-panel .am-perm-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 `;
 
     // ------------------------------------------------------------------
@@ -63,7 +61,7 @@
         btn.setAttribute('aria-label', 'Open Addon Manager');
         btn.innerHTML = '<i class="fa-solid fa-puzzle-piece" aria-hidden="true"></i>';
         btn.style.cssText = `
-            position: fixed; bottom: 84px; right: 18px; z-index: 9000;
+            position: fixed; bottom: 38px; right: 18px; z-index: 9000;
             width: 44px; height: 44px; border-radius: 50%;
             border: 1px solid var(--border, #333); cursor: pointer;
             background: var(--background, #1e1e2e); color: var(--text, #e0e0e0);
@@ -86,7 +84,6 @@
     function renderCard(addon, requestedPerms) {
         const { ChatAddons } = global;
         const enabled = ChatAddons.isEnabled(addon.id);
-        const trusted = ChatAddons.isTrusted(addon.id);
         const perms = requestedPerms && requestedPerms.length
             ? requestedPerms
             : (addon.permissions || []);
@@ -97,7 +94,7 @@
 
         const permsHtml = perms.length
             ? `<div class="am-perms">${perms.map(p =>
-                `<span class="am-perm ${addon.builtin ? '' : 'denied'}" title="${permLabel(p).replace(/"/g, '&quot;')}">${p}</span>`
+                `<span class="am-perm" title="${permLabel(p).replace(/"/g, '&quot;')}">${p}</span>`
               ).join('')}</div>`
             : '';
 
@@ -113,7 +110,6 @@
                 ${permsHtml}
                 <div class="am-actions">
                     ${addon.builtin ? '' : `
-                        <button class="am-btn ${trusted ? '' : 'danger'}" data-act="trust">${trusted ? 'Revoke trust' : 'Trust & enable'}</button>
                         <button class="am-btn danger" data-act="uninstall">Uninstall</button>
                     `}
                 </div>
@@ -126,35 +122,15 @@
         `;
 
         card.querySelector('[data-act="toggle"]').addEventListener('change', async (e) => {
-            await handleToggle(addon, e.target.checked, card);
-        });
-
-        const trustBtn = card.querySelector('[data-act="trust"]');
-        if (trustBtn) trustBtn.addEventListener('click', async () => {
-            if (ChatAddons.isTrusted(addon.id)) {
-                ChatAddons.setTrusted(addon.id, false);
-                if (ChatAddons.isEnabled(addon.id)) {
-                    await ChatAddons.disable(addon.id);
-                }
-                renderList();
-                return;
-            }
-            const ok = await confirmTrust(addon);
-            if (!ok) return;
-            ChatAddons.setTrusted(addon.id, true);
-            try {
-                await ChatAddons.enable(addon.id);
-            } catch (err) {
-                showCardError(card, err);
-            }
-            renderList();
+            console.log('[addons] toggle switch changed for', addon.id, e.target.checked);
+            ChatAddons.disable(addon.id).catch(() => {});
+            ChatAddons.enable(addon.id).catch(() => {});
         });
 
         const uninstallBtn = card.querySelector('[data-act="uninstall"]');
         if (uninstallBtn) uninstallBtn.addEventListener('click', async () => {
             if (!confirm(`Uninstall addon "${addon.name}"?\n(It will be removed from the manager; the .pa.js file stays in your workspace.)`)) return;
             await ChatAddons.disable(addon.id).catch(() => {});
-            ChatAddons.setTrusted(addon.id, false);
             removeWorkspaceRegistration(addon.id);
             renderList();
         });
@@ -167,12 +143,7 @@
         const errorEl = card.querySelector('.am-error');
         errorEl.style.display = 'none';
         try {
-            if (enabled) {
-                if (!addon.builtin && !ChatAddons.isTrusted(addon.id)) {
-                    const ok = await confirmTrust(addon);
-                    if (!ok) { renderList(); return; }
-                    ChatAddons.setTrusted(addon.id, true);
-                }
+            if (!enabled) {
                 await ChatAddons.enable(addon.id);
             } else {
                 await ChatAddons.disable(addon.id);
@@ -188,33 +159,6 @@
         if (!errorEl) return;
         errorEl.style.display = 'block';
         errorEl.textContent = err?.message || String(err);
-    }
-
-    function confirmTrust(addon) {
-        return new Promise((resolve) => {
-            const perms = (addon.permissions || []).map(permLabel).join('<br>• ') || 'No permissions requested';
-            const panel = document.createElement('div');
-            panel.className = 'am-trust-panel';
-            panel.innerHTML = `
-                <div><strong>Trust "${escapeHtml(addon.name)}"?</strong></div>
-                <div class="am-meta">${escapeHtml(addon.id)}</div>
-                <div class="am-perm-list" style="margin-top:8px"><div>This addon requests:</div>
-                    <span class="am-perm" style="display:block;margin-top:6px">• ${perms}</span>
-                </div>
-                <div class="am-actions">
-                    <button class="am-btn" data-act="trust-yes">Trust</button>
-                    <button class="am-btn danger" data-act="trust-no">Cancel</button>
-                </div>
-            `;
-            panel.querySelector('[data-act="trust-yes"]').addEventListener('click', () => {
-                panel.remove(); resolve(true);
-            });
-            panel.querySelector('[data-act="trust-no"]').addEventListener('click', () => {
-                panel.remove(); resolve(false);
-            });
-            const body = document.getElementById('chat-addon-manager-body');
-            body.prepend(panel);
-        });
     }
 
     function removeWorkspaceRegistration(id) {
@@ -289,7 +233,9 @@
                 refreshBtn.disabled = true;
                 refreshBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Scanning...';
                 await scanWorkspace();
-                renderList();
+                renderWorkspaceList(wsContainer);
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = '<i class="fa-solid fa-rotate" aria-hidden="true"></i> Rescan';
             });
         }
     }
@@ -300,20 +246,12 @@
         await ChatAddons.discoverWorkspaceAddons();
     }
 
-    async function renderWorkspaceList(container) {
+    function renderWorkspaceList(container) {
         const { ChatAddons } = global;
         const workspace = ChatAddons.list().filter(a => !a.builtin && !isRemoved(a.id));
+        container.innerHTML = '';
         if (workspace.length) {
             for (const a of workspace) container.appendChild(renderCard(a));
-            return;
-        }
-        // Not yet discovered — try scan.
-        container.innerHTML = '<div class="am-empty">Scanning workspace for .pa.js addons…</div>';
-        await scanWorkspace();
-        const again = ChatAddons.list().filter(a => !a.builtin && !isRemoved(a.id));
-        container.innerHTML = '';
-        if (again.length) {
-            for (const a of again) container.appendChild(renderCard(a));
         } else {
             container.innerHTML = '<div class="am-empty">No .pa.js addons found in the MCP workspace (pa-providers/).<br>Drop a file there and press Rescan.</div>';
         }
@@ -334,7 +272,7 @@
                     </div>
                     <div class="am-body" id="chat-addon-manager-body"></div>
                     <div class="am-foot">
-                        <span style="font-size:11px;opacity:.55;margin-right:auto">Addons run sandboxed. Workspace addons need your explicit trust before enabling.</span>
+                        <span style="font-size:11px;opacity:.55;margin-right:auto">Addons run sandboxed. Toggle the switch to enable/disable any addon.</span>
                         <button class="am-btn" id="am-close">Close</button>
                     </div>
                 </div>

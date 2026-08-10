@@ -634,7 +634,7 @@ body.liquid:not(.no-animations):not(.white) {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: none;
+    background: var(--colour-1);
     border: 1px solid var(--blur-border);
     border-radius: var(--border-radius-1);
     color: var(--colour-3);
@@ -642,6 +642,8 @@ body.liquid:not(.no-animations):not(.white) {
     font-size: 12px;
     cursor: pointer;
     transition: border-color var(--transition-speed), color var(--transition-speed);
+    margin-top: 8px;
+    margin-left: 2px;
 }
 
 .message .edit_button:hover {

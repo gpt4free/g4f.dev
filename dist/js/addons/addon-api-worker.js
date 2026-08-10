@@ -10,7 +10,7 @@
 // origin), fall back to regular fetch() on the main thread.
 const scriptUrl = document.currentScript?.src || location.href;
 const workerUrl = new URL('api-worker.js', scriptUrl);
-const apiWorker = new Worker(workerUrl);
+let apiWorker = new Worker(workerUrl);
 apiWorker.onerror = (event) => {
     console.warn('api-worker failed, falling back to main-thread fetch:', event.message || event, workerUrl.href);
     try { apiWorker.terminate(); } catch (e) {}

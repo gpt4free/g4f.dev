@@ -638,8 +638,12 @@ function get_message_id() {
 };
 
 domReady.then(async () => {
+    console.log("DOM ready, initializing sidebar buttons");
+    return;
+
     const sidebar_buttons = document.querySelectorAll(".mobile-sidebar-toggle");
-    sidebar_buttons.forEach((el) => el.addEventListener("click", async () => {
+    sidebar_buttons.forEach((el) => el.addEventListener("click", async (e) => {
+        e.preventDefault();
         // Animate sidebar buttons
         sidebar_buttons.forEach((el) => {
             el.classList.toggle("rotated");
@@ -1600,19 +1604,12 @@ function insertBackticksInTextarea(el) {
 // MCP (Model Context Protocol) Integration
 // ============================================================
 
-let mcpClient = null;
-
-// Initialize MCP client when page loads
-domReady.then(() => {
-    if (typeof MCPClient !== 'undefined') {
-        mcpClient = new MCPClient();
-        try {
-             initializeMCPUI();
-        } catch(e) {
-            add_error(e)
-        }
-    }
-});
+const mcpClient = new MCPClient();
+try {
+    initializeMCPUI();
+} catch(e) {
+    add_error(e)
+}
 
 function initializeMCPUI() {
     // Add default server if none exist
@@ -2331,5 +2328,7 @@ export default {
     new_conversation,
     domReady,
     appStorage,
-    load_conversations
+    load_conversations,
+    mcpClient,
+    getPaBaseUrl,
 }

@@ -3178,7 +3178,8 @@ async function hide_settings() {
     Array.from(provider_forms).forEach((form) => form.classList.add("hidden"));
 }
 
-sidebar_buttons.forEach((el) => el.addEventListener("click", async () => {
+sidebar_buttons.forEach((el) => el.addEventListener("click", async (e) => {
+    e.preventDefault();
     // Animate sidebar buttons
     sidebar_buttons.forEach((el) => {
         el.classList.toggle("rotated");
@@ -7299,7 +7300,6 @@ export default {
     windowsReservedRe,
     countFocus,
     refreshOnHidden,
-    mcpClient,
     CLOUD_SYNC_API,
     settingsSearch,
     conversationSearch,
@@ -7460,6 +7460,5 @@ export default {
     syncConversationsToCloud,
     syncConversationsFromCloud,
     cloudSyncLoginRedirect,
-    framework,
     add_error
 };

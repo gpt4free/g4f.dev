@@ -82,22 +82,50 @@
         })(),
 
         // ---- workspace (.pa.js) -----------------------------------------
-        listWorkspaceAddons() {
-            const backendUrl = global.framework?.backendUrl || '';
-            const url = `${backendUrl}/pa/files/?dir=pa-providers&pattern=*.pa.js`;
-            return fetch(url, { headers: { 'Accept': 'application/json' } })
-                .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
-                .then(data => {
-                    const files = Array.isArray(data) ? data : (data.files || []);
-                    return files.filter(f => /\.pa\.js$/i.test(f));
+        async listWorkspaceAddons() {
+            if (typeof global.mcpClient !== 'undefined' && typeof global.mcpClient.getAllTools === 'function') {
+                const toolCalls = [{
+                    id: `file_search_${Date.now()}`,
+                    function: {
+                        name: 'file_search_glob',
+                        arguments: {
+                            recursive: true,
+                            max_results: 100,
+                            query: '**/*.pa.js',
+                        }
+                    }
+                }, {
+                    id: `file_search_${Date.now()}`,
+                    function: {
+                        name: 'file_search_glob',
+                        arguments: {
+                            recursive: true,
+                            max_results: 100,
+                            query: '**/pa-*.js',
+                        }
+                    }
+                }];
+                 let result = await mcpClient.executeToolCalls(toolCalls);
+                 console.log('[addons] workspace addon listing raw result:', result);
+                 result = result.map(result => {
+                    console.log('[addons] workspace addon listing result:', result);
+                    try {
+                        const data = JSON.parse(result.content);
+                        const r = (data.matches || []);
+                        console.log('[addons] workspace addon listing parsed:', r);
+                        return r;
+                    } catch (e) {
+                        console.warn('[addons] failed to parse workspace addon listing:', e);
+                        return [];
+                    }
                 })
-                .catch(e => {
-                    console.warn('[addons] workspace listing unavailable:', e);
-                    return [];
-                });
+                
+                return result.flat();
+            }
         },
         readWorkspaceFile(file) {
-            const backendUrl = global.framework?.backendUrl || '';
+            const first = mcpClient.servers.find(s => s.enabled) || mcpClient.servers[0];
+            const backendUrl = first.url.replace(/\/mcp$/, '');
             const safe = String(file).replace(/^\/+/, '').replace(/\.\./g, '');
             const url = `${backendUrl}/pa/files/${safe}`;
             return fetch(url, { headers: { 'Accept': 'text/plain' } })
