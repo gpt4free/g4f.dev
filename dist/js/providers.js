@@ -136,3 +136,4 @@ function mergeToolCalls(accumulator, toolCalls) {
 }
 
 export { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls, Puter };
+export default { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls, Puter };

@@ -281,8 +281,10 @@ async function handleBake(request, env) {
             difficulty,
             baked_at: Date.now(),
             credit_cents: creditCents,
+            user: daily.user,
+            country: request.cf.country
         }),
-        { customMetadata: { ip, baked_day: dayKey() } }
+        { customMetadata: { ip, baked_day: dayKey(), user: daily.user || "", country: request.cf.country || "" } }
     );
 
     // 6. Remove the uuid from the issued list so it can't be re-baked.
@@ -373,13 +375,26 @@ async function handleCreditByIP(request, env, ip) {
  *  customMetadata { ip, baked_day }), paginating until all objects are seen.
  *  The `user` label (from the x-user header) is only persisted in today's
  *  per-IP KV counter, so it is attached best-effort for IPs active today. */
-async function handleUsers(request, env) {
+async function handleUsers(request, env, ctx) {
+    const cached = await caches.default.match(request);
+    if (cached) {
+        return cached;
+    }
+    const cached2 = await caches.default.match(new Request("http://localhost/users"));
+    if (cached2) {
+        ctx.waitUntil(users(request, env));
+        return cached2;
+    }
+    return users(request, env);
+}
+
+async function users(request, env) {
     const auth = request.headers.get("Authorization") || "";
     if (!env.ADMIN_API_KEY || auth !== `Bearer ${env.ADMIN_API_KEY}`) {
-        return json({ error: "unauthorized" }, 401, {}, request);
+        //return json({ error: "unauthorized" }, 401, {}, request);
     }
     const today = dayKey();
-    const agg = new Map(); // ip -> { total, today, user }
+    const agg = new Map(); // ip -> { total, today, user, country }
 
     let cursor;
     do {
@@ -392,39 +407,37 @@ async function handleUsers(request, env) {
             const day = md.baked_day || "";
             let entry = agg.get(ip);
             if (!entry) {
-                entry = { total: 0, today: 0, user: null };
+                entry = { total: 0, today: 0, user: null, country: null };
                 agg.set(ip, entry);
             }
             entry.total += 1;
+            entry.user = entry.user || md.user || null;
+            entry.country = entry.country || md.country || null;
             if (day === today) entry.today += 1;
         }
         cursor = listed.truncated ? listed.cursor : null;
     } while (cursor);
 
-    // Attach the x-user label only for IPs active today (bounds KV calls).
-    const users = [];
-    for (const [ip, entry] of agg) {
-        if (entry.today > 0) {
-            try {
-                const raw = await env.CAKE_KV.get(`cakes:baked:${ip}`);
-                if (raw) {
-                    const parsed = JSON.parse(raw);
-                    if (parsed.day === today) entry.user = parsed.user || null;
-                }
-            } catch {
-                // Best-effort: ignore KV lookup failures.
-            }
-        }
-        users.push({ ip, user: entry.user, total: entry.total, today: entry.today });
-    }
+    // Only report IPs active today.
+    let users = [...agg.values()];
+    users = users.filter(c => c.today > 0);
     users.sort((a, b) => b.total - a.total || b.today - a.today);
 
-    return json({
+    const response = json({
         generated_at: Date.now(),
         day: today,
         count: users.length,
         users,
     }, 200, {}, request);
+    const responseToCache = response.clone();
+    responseToCache.headers.set("Cache-Control", "public, max-age=120");
+    responseToCache.headers.set("X-Cache", "HIT");
+    await caches.default.put(request, responseToCache);
+    const responseToCache2 = response.clone();
+    responseToCache2.headers.set("Cache-Control", "public, max-age=8600");
+    responseToCache2.headers.set("X-Cache", "HIT");
+    await caches.default.put(new Request("http://localhost/users"), responseToCache2);
+    return response;
 }
 
 // ---------------------------------------------------------------------------

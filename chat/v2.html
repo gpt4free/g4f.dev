@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en" data-framework="javascript">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>G4F Chat - Conversational AI that Listens, Learns, and Challenges</title>
+
+    <!-- Improved meta description with relevant keywords -->
+    <meta name="description" content="G4F Chat is an advanced conversational AI platform designed to listen, learn, and challenge your ideas effectively. Experience AI-powered chat with private conversations, customizable settings, and multiple providers." />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:title" content="G4F Chat - Conversational AI that Listens, Learns, and Challenges" />
+    <meta property="og:description" content="Engage with G4F Chat's AI system for dynamic, private, and customizable conversations powered by cutting-edge technology." />
+    <meta property="og:image" content="/dist/img/g4f.svg" />
+    <meta property="og:url" content="https://g4f.dev" />
+    <meta property="og:type" content="website" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="G4F Chat - Conversational AI that Listens, Learns, and Challenges" />
+    <meta name="twitter:description" content="Use G4F Chat for private and customizable AI-driven chat experiences, supporting multiple AI providers and seamless communication." />
+    <meta name="twitter:image" content="/dist/img/g4f.svg" />
+
+    <!-- Canonical URL to avoid duplicate content issues -->
+    <link rel="canonical" href="https://g4f.dev/chat/" />
+
+    <link rel="stylesheet" href="/dist/css/style.css?v={{ v }}" />
+    <link rel="stylesheet" href="/dist/css/all.min.css" />
+    <link rel="stylesheet" href="/dist/css/dracula.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe/dist/photoswipe.css" />
+
+    <link rel="icon" href="/dist/img/g4f.svg" type="image/svg+xml">
+    <link rel="shortcut icon" href="/dist/img/g4f.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/dist/img/g4f.svg">
+    <link rel="manifest" href="/dist/img/site.webmanifest">
+
+    <script src="/dist/js/framework.js?v={{ v }}"></script>
+    <script src="/dist/js/mcp-client.js?v={{ v }}"></script>
+    <script src="/dist/js/chat.v2.js?v={{ v }}"></script>
+    <script>
+        const v = "{{ v }}";
+        const addons = ["core", "host", "manager", "load", "api-worker", "voice-preview", "baked-credits", "renderers", "mobile-experience", "worker", "ask", "messages", "ask-gpt", "conversations", "settings", "providers-ui", "providers-models", "mobile", "cloudsync"];
+        const c = 6;
+        const g = Math.floor(addons.length / c);
+        (async () => {
+            for (let i = 0; i < g; i++) {
+                const chunks = addons.slice(i * c, (i + 1) * c);
+                await new Promise((resolve) => {
+                    let loadedCount = 0;
+                    chunks.forEach((addon) => {
+                        const script = document.createElement("script");
+                        script.src = `/dist/js/addons/addon-${addon}.js?v=${v}`;
+                        script.onload = () => {
+                            loadedCount++;
+                            if (loadedCount === chunks.length) {
+                                resolve();
+                            }
+                        };
+                        document.head.appendChild(script);
+                    });
+                });
+            }
+        })();
+    </script>
+    
+    <script src="/dist/js/addons/addon-cloudsync.js?v={{ v }}"></script>
+    <script src="/dist/js/cake-baker.js?v={{ v }}"></script>
+    <script src="/dist/js/recorder.js" async></script>
+    <script src="/dist/js/highlight.min.js" async></script>
+    <script src="/dist/js/highlightjs-copy.min.js" async></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsencrypt/bin/jsencrypt.min.js" defer></script>
+    <script src="/dist/js/sanitize-html.js" async></script>
+    <script type="module">
+        import container from "/dist/js/providers.js";
+        window.loadProviders = container.loadProviders;
+        window.createClient = container.createClient;
+        window.providerLocalStorage = container.providerLocalStorage;
+        window.captureUserTierHeaders = container.captureUserTierHeaders;
+        window.mergeToolCalls = container.mergeToolCalls;
+        window.Puter = container.Puter;
+    </script>
+    <script type="module" async>
+        import { convertModel, getModelTags, isValidModel } from '/dist/js/model.js';
+        window.convertModel = convertModel;
+        window.getModelTags = getModelTags;
+        window.isValidModel = isValidModel;
+    </script>
+    <script>
+      window.MathJax = {
+        chtml: {
+          scale: 1,
+          displayAlign: 'left'
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          displayMath: [['$$', '$$'], ['\\[', '\\]']]
+        },
+      };
+    </script>
+    <script id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <script>
+      var tag = document.createElement('script');
+      tag.src = "https://www.youtube.com/iframe_api";
+      var firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    </script>
+
+    <template>
+      <script src="https://cdn.jsdelivr.net/npm/gpt-tokenizer/dist/o200k_base.js" async></script>
+    </template>
+    <script async>
+      if (localStorage.getItem("countTokens") !== "false") {
+        const template = document.head.querySelector('template');
+        if (template) {
+          document.head.appendChild(template.content);
+          template.remove();
+        }
+      }
+    </script>
+
+    <script type="module" src="/dist/js/photoswipe.js" async></script>
+
+    <script>
+      const user_image = '<img src="/dist/img/user_avatar.jpeg" alt="User avatar" />';
+      const gpt_image = '<img src="/dist/img/gpt_avatar.jpeg" alt="GPT avatar" />';
+      window.conversation_id = "";
+    </script>
+
+    <link rel="preload" href="/dist/css/style.css?v={{ v }}" as="style">
+    <link rel="preload" href="/dist/js/chat.v1.js?v={{ v }}" as="script">
+</head>
+<body>
+    <script async>
+      if (localStorage.getItem("liquid") !== "false") {
+        document.body.classList.add("liquid");
+      }
+      if (localStorage.getItem("darkMode") === "false") {
+        document.body.classList.add("white");
+      }
+      if (localStorage.getItem("disableAnimations") !== "false") {
+        document.body.classList.add("no-animations");
+      }
+    </script>
+
+    <div class="media-overlay" aria-hidden="true"></div>
+    <div class="gradient" aria-hidden="true"></div>
+
+    <div class="container">
+        <a href="sr.html" class="hidden">Open Screen Reader Optimized Version</a>
+        <aside class="sidebar" aria-label="Primary sidebar navigation">
+            <div class="sidebar-container">
+                <header class="sidebar-header">
+                    <h1 class="sidebar-logo" data-translate="true">G4F Chat</h1>
+                    <button class="mobile-sidebar-toggle" aria-label="Toggle sidebar menu">
+                        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+                    </button>
+                </header>
+                <div id="user-tier-info" class="user-tier-info" role="status" aria-label="User tier and usage info">
+                    <div class="tier-row">
+                        <div class="tier-badge">
+                            <i class="fa-solid fa-user" aria-hidden="true"></i>
+                            <span id="user-tier-text">Guest</span>
+                        </div>
+                        <a id="sidebar-login-btn" class="tier-auth-btn" href="#login" title="Login to Members Area">
+                            <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+                            <span>Login</span>
+                        </a>
+                        <button id="sidebar-logout-btn" class="tier-auth-btn hidden" onclick="cloudSyncLogout()" title="Logout">
+                            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                            <span>Logout</span>
+                        </button>
+                    </div>
+                    <div class="tier-limits hidden" id="tier-limits-row">
+                        <span id="max-tokens-text" title="Tokens remaining/limit"><i class="fa-solid fa-coins" aria-hidden="true"></i> -</span>
+                        <span id="max-requests-text" title="Requests remaining/limit"><i class="fa-solid fa-list" aria-hidden="true"></i> -</span>
+                        <span id="cake-credits-text" title="Credits earned by baking proof-of-work cakes"><i class="fa-solid fa-cake-candles" aria-hidden="true"></i> -</span>
+                    </div>
+                </div>
+                <nav class="top" aria-label="Conversation actions">
+                    <button class="new_convo" onclick="new_conversation()" aria-label="Start a new conversation">
+                        <i class="fa-regular fa-plus" aria-hidden="true"></i>
+                        <span>New Conversation</span>
+                    </button>
+                    <button class="new_convo" onclick="new_conversation(true)" aria-label="Start a private conversation">
+                        <i class="fa-solid fa-user-secret" aria-hidden="true"></i>
+                        <span>Private Conversation</span>
+                    </button>
+                    <div id="box_conversations" class="conversations" role="region" aria-live="polite" aria-label="List of conversations"></div>
+                </nav>
+                <section class="bottom_buttons" aria-label="Support and links">
+                    <button onclick="open_settings();" aria-label="Open settings">
+                        <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                        <span>Open Settings</span>
+                    </button>
+                    <div class="info" role="region" aria-label="Support Discord">
+                        <i class="fa fa-question-circle" aria-hidden="true"></i>
+                        <span class="convo-title">
+                            support ~ 
+                            <a href="https://discord.gg/qXA4Wf4Fsm" target="_blank" rel="noopener noreferrer">discord.gg/qXA4Wf4Fsm</a>
+                        </span>
+                    </div>
+                    <div class="info" role="region" aria-label="GitHub Repository">
+                        <i class="fa-brands fa-github" aria-hidden="true"></i>
+                        <span class="convo-title">
+                            github ~ 
+                            <a href="https://github.com/gpt4free/g4f.dev" target="_blank" rel="noopener noreferrer">@gpt4free/g4f.dev</a>
+                        </span>
+                    </div>
+                    <div class="info" role="region" aria-label="Version info">
+                        <i class="fa-solid fa-star" aria-hidden="true"></i>
+                        <span id="version_text" class="convo-title" aria-live="polite"></span>
+                    </div>
+                </section>
+            </div>
+        </aside>
+
+        <!-- Settings panel -->
+        <section class="settings hidden" aria-label="Application Settings" tabindex="-1">
+            <div class="paper">
+                <header class="settings-top-bar">
+                    <button class="settings-back-button" onclick="open_settings();" aria-label="Back to main interface">
+                        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                    </button>
+                     <h2>Settings</h2>
+                </header>
+                <nav class="settings-tabs" role="tablist" aria-label="Settings categories">
+                    <button class="settings-tab active" data-tab="general" role="tab" aria-selected="true" aria-controls="tab-general">
+                        <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                        <span>General</span>
+                    </button>
+                    <button class="settings-tab" data-tab="appearance" role="tab" aria-selected="false" aria-controls="tab-appearance">
+                        <i class="fa-solid fa-palette" aria-hidden="true"></i>
+                        <span>Appearance</span>
+                    </button>
+                    <button class="settings-tab" data-tab="prompts" role="tab" aria-selected="false" aria-controls="tab-prompts">
+                        <i class="fa-solid fa-comment" aria-hidden="true"></i>
+                        <span>Prompts</span>
+                    </button>
+                    <button class="settings-tab" data-tab="providers" role="tab" aria-selected="false" aria-controls="tab-providers">
+                        <i class="fa-solid fa-server" aria-hidden="true"></i>
+                        <span>Providers</span>
+                    </button>
+                    <button class="settings-tab" data-tab="api" role="tab" aria-selected="false" aria-controls="tab-api">
+                        <i class="fa-solid fa-key" aria-hidden="true"></i>
+                        <span>Custom Provider</span>
+                    </button>
+                    <button class="settings-tab" data-tab="advanced" role="tab" aria-selected="false" aria-controls="tab-advanced">
+                        <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                        <span>Advanced</span>
+                    </button>
+                    <button class="settings-tab" data-tab="cloudsync" role="tab" aria-selected="false" aria-controls="tab-cloudsync">
+                        <i class="fa-solid fa-cloud" aria-hidden="true"></i>
+                        <span>Cloud Sync</span>
+                    </button>
+                </nav>
+                <div class="settings-content">
+                <form>
+                  <!-- General Tab -->
+                  <div class="settings-tab-content active" id="tab-general" role="tabpanel" aria-labelledby="tab-general">
+                  <div class="field">
+                      <span class="label">Render Markdown</span>
+                      <input type="checkbox" id="renderMarkdown" checked />
+                      <label for="renderMarkdown" class="toogle" title="Enable rendering of Markdown content"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Simulate Typing</span>
+                      <input type="checkbox" id="simulateTyping" checked />
+                      <label for="simulateTyping" class="toogle" title="Enable simulated typing effect for responses"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">AI Features</span>
+                      <input type="checkbox" id="aiFeatures" />
+                      <label for="aiFeatures" class="toogle" title="Enable providing Follow Ups and Title Generation"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Disable Conversation History</span>
+                      <input type="checkbox" id="history" />
+                      <label for="history" class="toogle" title="Improve response time or fix large conversation issues"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Count Words and Tokens</span>
+                      <input type="checkbox" id="countTokens" checked />
+                      <label for="countTokens" class="toogle" title="Enable word and token counting"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Download Generated Media</span>
+                      <input type="checkbox" id="download_media" checked/>
+                      <label for="download_media" class="toogle" title="Download and save generated images, audios, and videos"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Hide Models with One Provider</span>
+                      <input type="checkbox" id="hideOneProviderModels" checked />
+                      <label for="hideOneProviderModels" class="toogle" title="Hide models that only have one provider (no backup)"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Automatic Orientation (16:9 or 9:16)</span>
+                      <input type="checkbox" id="automaticOrientation" checked />
+                      <label for="automaticOrientation" class="toogle" title="Auto-orient generated media"></label>
+                  </div>
+                  <div class="field box">
+                      <label for="userInput-height" class="label" title="Set maximum height of input box">Input Max Height (px)</label>
+                      <input type="number" id="userInput-height" value="180" min="100" max="500" />
+                  </div>
+                  <div class="field box">
+                      <label for="recognition-language" class="label" title="Set preferred language for speech recognition">Speech Recognition Language</label>
+                      <input type="text" id="recognition-language" value="" placeholder="Default: navigator.language" />
+                  </div>
+                  <div class="field row box">
+                      <label for="voice" class="label" title="Select voice for text-to-speech synthesis">Synthesize Voice</label>
+                      <select id="voice">
+                          <option value="">Loading voices...</option>
+                      </select>
+                  </div>
+                  <div class="bottom_buttons">
+                      <button type="button" onclick="delete_conversations()" aria-label="Clear all conversations">
+                          <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                          <span>Clear Conversations</span>
+                      </button>
+                      <button type="button" onclick="save_storage()" aria-label="Export conversations">
+                          <i class="fa-solid fa-download" aria-hidden="true"></i>
+                          <span>Export Conversations</span>
+                      </button>
+                      <button type="button" onclick="save_storage(true)" aria-label="Export settings">
+                          <i class="fa-solid fa-pencil" aria-hidden="true"></i>
+                          <span>Export Settings</span>
+                      </button>
+                      <button type="button" onclick="this.querySelector('.fa-spin').classList.remove('hidden'); framework.translateAll().then(() => {window.location.reload()}).catch(() => {this.querySelector('.fa-spin').classList.add('hidden')})" aria-label="Translate user interface">
+                          <i class="fa-solid fa-language" aria-hidden="true"></i>
+                          <span>Translate UI</span>
+                          <i class="fas fa-spinner fa-spin hidden" aria-hidden="true"></i>
+                      </button>
+                      <button type="button" onclick="deleteTranslations() && window.location.reload()" aria-label="Delete translations">
+                          <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                          <span>Delete Translations</span>
+                      </button>
+                      <button id="showLog" type="button" aria-label="Show log" onclick="window.showLog()">
+                          <i class="fa-solid fa-terminal" aria-hidden="true"></i>
+                          <span>Show log</span>
+                      </button>
+                  </div>
+                  </div>
+
+                  <!-- Appearance Tab -->
+                  <div class="settings-tab-content" id="tab-appearance" role="tabpanel" aria-labelledby="tab-appearance">
+                  <div class="field">
+                      <span class="label">Enable Dark Mode</span>
+                      <input type="checkbox" id="darkMode" checked />
+                      <label for="darkMode" class="toogle" title="Toggle Dark Mode"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Enable Model Search</span>
+                      <input type="checkbox" id="enableModelSearch" checked />
+                      <label for="enableModelSearch" class="toogle" title="Enable the model search overlay (pencil icon)"></label>
+                  </div>
+                  <div class="field" id="searchModelField" style="display: none; margin-left: 20px;">
+                      <span class="label">Search by Model</span>
+                      <input type="checkbox" id="searchByModel" checked />
+                      <label for="searchByModel" class="toogle" title="Enable searching for models by model name"></label>
+                  </div>
+                  <div class="field" id="searchProviderField" style="display: none; margin-left: 20px;">
+                      <span class="label">Search by Provider</span>
+                      <input type="checkbox" id="searchByProvider" />
+                      <label for="searchByProvider" class="toogle" title="Enable searching for models by provider name"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Enable Liquid Mode</span>
+                      <input type="checkbox" id="liquid" checked />
+                      <label for="liquid" class="toogle" title="Toggle Liquid Mode"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Disable Animations</span>
+                      <input type="checkbox" id="disableAnimations" checked />
+                      <label for="disableAnimations" class="toogle" title="Disable animations"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Hide System Prompt</span>
+                      <input type="checkbox" id="hide-systemPrompt" />
+                      <label for="hide-systemPrompt" class="toogle" title="Hide system prompt for more space on phones"></label>
+                  </div>
+                  </div>
+
+                  <!-- Prompts Tab -->
+                  <div class="settings-tab-content" id="tab-prompts" role="tabpanel" aria-labelledby="tab-prompts">
+                  <div class="field row box">
+                      <label for="globalPrompt" class="label">Global System Prompt</label>
+                      <textarea id="globalPrompt" value="Render image URLs in Markdown format: `![](http://example/image.jpg)`
+Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3&quot;&gt;&lt;/audio&gt;`" aria-describedby="globalPrompt-desc"></textarea>
+                      <small id="globalPrompt-desc" class="sr-only">Customize the AI's global prompt to personalize responses or enable features like image generation.</small>
+                  </div>
+                  <div class="field row box">
+                      <label for="systemPrompt" class="label">System Prompt Template</label>
+                      <textarea id="systemPrompt" placeholder="You are a helpful assistant." aria-describedby="systemPrompt-desc"></textarea>
+                      <small id="systemPrompt-desc" class="sr-only">Customize the AI's system prompt to personalize responses or enable features like image generation.</small>
+                  </div>
+                  </div>
+
+                  <!-- Providers Tab -->
+                  <div class="settings-tab-content" id="tab-providers" role="tabpanel" aria-labelledby="tab-providers">
+                  <!-- Provider API Keys section will be dynamically added here -->
+                  <div id="providers-api-keys-container"></div>
+                  <!-- Provider Enable/Disable section will be dynamically added here -->
+                  <div id="providers-toggle-container"></div>
+                  </div>
+
+                  <!-- API Keys Tab -->
+                  <div class="settings-tab-content" id="tab-api" role="tabpanel" aria-labelledby="tab-api">
+                  <div class="field box hidden row">
+                      <label for="Custom-api_base" class="label">Custom Provider Base URL</label>
+                      <input type="url" id="Custom-api_base" name="Custom[api_base]" placeholder="http://localhost:8080/v1" autocomplete="off" />
+                  </div>
+                  <div class="field box hidden row">
+                      <label for="Custom-api_key" class="label">Custom Provider API Key</label>
+                      <input type="text" id="Custom-api_key" name="Custom[api_key]" placeholder="API key" autocomplete="off" />
+                  </div>
+                  </div>
+
+                  <!-- Advanced Tab -->
+                  <div class="settings-tab-content" id="tab-advanced" role="tabpanel" aria-labelledby="tab-advanced">
+                  <div class="field">
+                      <span class="label">Log/Routing URL</span>
+                      <input type="checkbox" id="log_routing" />
+                      <label for="log_routing" class="toogle" title="Route all requests through local backend for logging"></label>
+                  </div>
+                  <div class="field hidden">
+                      <span class="label">Refine Files with spaCy</span>
+                      <input type="checkbox" id="refine" />
+                      <label for="refine" class="toogle" title="Enable file refinement with spaCy"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Report Errors</span>
+                      <input type="checkbox" id="reportError" checked />
+                      <label for="reportError" class="toogle" title="Send error reports"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Debug Mode</span>
+                      <input type="checkbox" id="debugMode" />
+                      <label for="debugMode" class="toogle" title="Enable debug mode"></label>
+                  </div>
+                  
+                  <!-- MCP Servers Section -->
+                  <div class="field mcp-section">
+                      <div class="mcp-header">
+                          <span class="label">MCP Servers</span>
+                          <button type="button" id="add-mcp-server-btn" aria-label="Add MCP Server" title="Add a new MCP server">
+                              <i class="fa-solid fa-plus"></i>
+                          </button>
+                      </div>
+                      <div id="mcp-servers-list" class="mcp-servers-list"></div>
+                  </div>
+
+                  <!-- MCP Tools Section -->
+                  <div class="field mcp-section">
+                      <div class="mcp-header">
+                          <span class="label">MCP Tools</span>
+                          <button type="button" id="refresh-mcp-tools-btn" aria-label="Refresh Tools" title="Refresh tools from MCP servers">
+                              <i class="fa-solid fa-sync"></i>
+                          </button>
+                      </div>
+                      <div id="mcp-tools-list" class="mcp-tools-list"></div>
+                  </div>
+
+                  <!-- PA Providers Section -->
+                  <div class="field mcp-section">
+                      <div class="mcp-header">
+                          <span class="label">PA Providers</span>
+                          <button type="button" id="refresh-pa-providers-btn" aria-label="Refresh PA Providers" title="Refresh PA providers from workspace">
+                              <i class="fa-solid fa-sync"></i>
+                          </button>
+                      </div>
+                      <div id="pa-providers-list" class="mcp-tools-list"></div>
+                  </div>
+                  </div>
+
+                  <!-- Cloud Sync Tab -->
+                  <div class="settings-tab-content" id="tab-cloudsync" role="tabpanel" aria-labelledby="tab-cloudsync">
+                      <div class="cloud-sync-login" id="cloudSyncLogin">
+                          <p style="margin-bottom: 1rem; color: var(--colour-3);">Login to sync your conversations across devices.</p>
+                          <button type="button" id="cloudSyncLoginBtn" class="cloud-sync-btn">
+                              <i class="fa-solid fa-right-to-bracket"></i>
+                              <span>Login to Members Area</span>
+                          </button>
+                      </div>
+                      <div class="cloud-sync-section" id="cloudSyncSection" style="display: none;">
+                          <div class="cloud-sync-user-info" style="margin-bottom: 1rem; padding: 0.75rem; background: var(--blur-bg); border-radius: 8px;">
+                              <i class="fa-solid fa-user"></i>
+                              <span>Logged in as: </span>
+                              <strong id="cloudSyncUser"></strong>
+                          </div>
+                          <div class="cloud-sync-actions" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                              <button type="button" id="cloudSyncUpload" class="cloud-sync-btn">
+                                  <i class="fa-solid fa-cloud-arrow-up"></i>
+                                  <span>Upload Conversations to Cloud</span>
+                              </button>
+                              <button type="button" id="cloudSyncDownload" class="cloud-sync-btn">
+                                  <i class="fa-solid fa-cloud-arrow-down"></i>
+                                  <span>Download Conversations from Cloud</span>
+                              </button>
+                              <button type="button" id="cloudSyncLogoutBtn" class="cloud-sync-btn logout">
+                                  <i class="fa-solid fa-right-from-bracket"></i>
+                                  <span>Logout</span>
+                              </button>
+                          </div>
+                      </div>
+                  </div>
+                </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- Provider forms container -->
+        <section class="provider_forms hidden" aria-label="Provider forms">
+            <div class="bottom_buttons">
+                <button id="close_provider_forms" type="button" aria-label="Close provider forms">
+                    <i class="fa-regular fa-circle-xmark" aria-hidden="true"></i>
+                    <span>Close</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Main chat container -->
+        <main class="chat-container" role="main" aria-label="Chat conversation">
+            <header class="chat-top-panel">
+                <button class="mobile-sidebar-toggle" aria-label="Toggle sidebar menu">
+                    <i class="fa-solid fa-bars" aria-hidden="true"></i>
+                </button>
+                <h2 class="convo-title" id="conversationTitle">New Conversation</h2>
+                <button class="new_convo_icon" onclick="new_conversation()" aria-label="Start new conversation">
+                    <i class="fa-regular fa-plus" aria-hidden="true"></i>
+                </button>
+                <button class="show_log hidden" onclick="showLog()" aria-label="Show log">
+                    <i class="fa-solid fa-terminal" aria-hidden="true"></i>
+                </button>
+                <script async>
+                if (localStorage.getItem("debugMode") === "true") {
+                    let button = document.querySelector('.chat-top-panel .show_log');
+                    if (button) {
+                        button.classList.remove('hidden');
+                    }
+                    button = document.querySelector('.chat-top-panel .new_convo_icon');
+                    if (button) {
+                        button.classList.add('hidden');
+                    }
+                }
+                </script>
+            </header>
+
+            <label for="chatPrompt" class="sr-only">System prompt textarea</label>
+            <textarea id="chatPrompt" class="box" placeholder="System prompt" aria-multiline="true" rows="3"></textarea>
+
+            <button class="slide-header" aria-label="Collapse chat header">
+                <i class="fa-solid fa-angles-up" aria-hidden="true"></i>
+            </button>
+
+            <section class="chat-body" id="chatBody" tabindex="0" aria-live="polite" aria-label="Conversation content"></section>
+
+            <footer class="chat-footer">
+                <div class="chat-toolbar" role="region" aria-label="Chat controls">
+                    <div id="input-count" class="">
+                        <button class="hide-input" aria-label="Hide input">
+                            <i class="fa-solid fa-angles-down" aria-hidden="true"></i>
+                        </button>
+                        <label for="agree" class="text" onclick="this.innerText='';"></label>
+                    </div>
+                    <div class="stop_generating stop_generating-hidden" role="region" aria-live="assertive">
+                        <button id="cancelButton" aria-label="Stop generating response">
+                            <span>Stop Generating</span>
+                            <i class="fa-solid fa-stop" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="regenerate" role="region" aria-live="polite">
+                        <button id="regenerateButton" aria-label="Regenerate last response">
+                            <span>Regenerate</span>
+                            <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="media-player" aria-hidden="true">
+                    <i class="fa-regular fa-x" aria-hidden="true"></i>
+                </div>
+
+                <div class="media-select hidden" aria-label="Media input options" role="group">
+                    <label class="image-select" for="image" title="Select image file">
+                        <input
+                          type="file"
+                          id="image"
+                          name="image"
+                          accept="image/*"
+                          required
+                          aria-label="Select an image file"
+                        />
+                        <i class="fa-regular fa-image" aria-hidden="true"></i>
+                    </label>
+                    <label class="capture-camera" for="camera" title="Capture photo using camera">
+                        <input
+                          type="file"
+                          id="camera"
+                          name="camera"
+                          accept="image/*"
+                          capture="camera"
+                          required
+                          aria-label="Capture a photo using camera"
+                        />
+                        <i class="fa-solid fa-camera" aria-hidden="true"></i>
+                    </label>
+                    <label class="capture-audio" for="audio" title="Record audio">
+                        <small class="sr-only">Record audio message</small>
+                        <i class="fa-solid fa-microphone" aria-hidden="true"></i>
+                    </label>
+                    <label class="add-link" for="link" title="Add link">
+                        <i class="fa-solid fa-link" aria-hidden="true"></i>
+                    </label>
+                    <button class="close" type="button" aria-label="Close media selector">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    </button>
+                </div>
+
+                <section class="user-input" role="region" aria-label="User input area">
+                    <div class="input-area">
+                        <a id="download" aria-hidden="true"></a><!-- Download Button -->
+
+                        <label for="userInput" class="sr-only">Type your message</label>
+                        <textarea
+                          id="userInput"
+                          class="box"
+                          placeholder="Type a message..."
+                          cols="30"
+                          rows="4"
+                          style="white-space: pre-wrap;resize: none;"
+                          autocomplete="off"
+                        ></textarea>
+
+                        <label class="file-label image-label" aria-label="USB device icon for uploads">
+                            <i class="fa-brands fa-usb" aria-hidden="true"></i>
+                        </label>
+
+                        <label class="file-label" for="file" aria-label="Attach one or multiple files">
+                            <input
+                              type="file"
+                              id="file"
+                              name="file"
+                              accept="*/*"
+                              multiple
+                              required
+                              aria-describedby="fileHelp"
+                            />
+                            <i class="fa-solid fa-paperclip" aria-hidden="true"></i>
+                        </label>
+                        <small id="fileHelp" class="sr-only">Upload files to send with your message.</small>
+
+                        <label class="micro-label" for="micro" aria-label="Microphone toggle">
+                            <small class="sr-only">Toggle microphone for audio input.</small>
+                            <i class="fa-solid fa-microphone-slash" aria-hidden="true"></i>
+                        </label>
+
+                        <button class="code" title="Insert code block" type="button" aria-label="Insert code block">
+                            <i class="fa-solid fa-code" aria-hidden="true"></i>
+                        </button>
+
+                        <div class="send-buttons" role="group" aria-label="Send message buttons">
+                            <button id="addButton" aria-label="Add message" type="button">
+                                <i class="fa-solid fa-square-plus" aria-hidden="true"></i>
+                                <span>Add</span>
+                            </button>
+
+                            <button id="sendButton" aria-label="Send message" type="submit">
+                                <i class="fa-regular fa-paper-plane" aria-hidden="true"></i>
+                                <span>Send</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <nav class="chat-buttons" role="navigation" aria-label="Chat options">
+                    <div class="field">
+                        <button id="search" aria-label="Enable web search">
+                            <small class="sr-only">Enable web search</small>
+                            <i class="fa-solid fa-search" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="field">
+                        <label for="model" class="sr-only">Select AI Model</label>
+                        <select name="model" id="model" aria-describedby="modelHelp">
+                            <option value="" selected>Model: Default</option>
+                        </select>
+                        <small id="modelHelp" class="sr-only">Select AI model to use for conversations.</small>
+
+                        <div class="model-selector hidden" role="region" aria-label="Model search and suggestions">
+                            <div id="model-suggestions" class="suggestions-dropdown" aria-live="polite"></div>
+                            <input
+                              type="text"
+                              id="model-search"
+                              placeholder="Search models (e.g. 'gpt-4', 'claude')..."
+                              autocomplete="off"
+                              autocapitalize="off"
+                              autocorrect="off"
+                              spellcheck="false"
+                              aria-label="Search models"
+                            />
+                        </div>
+                    </div>
+                    <div class="field">
+                        <button id="model_edit" type="button" aria-label="Edit model settings">
+                            <i class="fa-solid fa-edit" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="field">
+                        <label for="provider" class="sr-only">Select Provider</label>
+                        <select name="provider" id="provider" aria-describedby="providerHelp">
+                            <option value="AnyProvider">Provider: Auto</option>
+                        </select>
+                        <small id="providerHelp" class="sr-only">Select AI provider for conversations.</small>
+                    </div>
+                    <div class="field">
+                        <button id="pin" type="button" aria-label="Pin conversation">
+                            <i class="fa-solid fa-thumbtack" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div id="pin_container" class="field" aria-live="polite"></div>
+                </nav>
+            </footer>
+        </main>
+
+        <!-- Logs -->
+        <section class="log hidden" aria-label="Application logs" tabindex="-1">
+            <header class="log-top-bar">
+                <button class="log-back-button" onclick="window.hideLog();" aria-label="Back to settings">
+                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                </button>
+                <h2>Logs</h2>
+            </header>
+            <div class="log-content" role="region" aria-live="polite"></div>
+        </section>
+
+        <!-- Highlight.js iframe container-->
+        <div class="hljs-iframe-container hidden" aria-hidden="true">
+            <iframe class="hljs-iframe" title="Code syntax preview"></iframe>
+        </div>
+    </div>
+</body>
+</html>
