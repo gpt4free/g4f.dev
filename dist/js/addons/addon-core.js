@@ -433,3 +433,5 @@
         global.addEventListener('DOMContentLoaded', () => { boot(); }, { once: true });
     }
 })(window);
+
+export default { ChatAddons };

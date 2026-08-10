@@ -374,3 +374,5 @@
 
     global.ChatAddonManager = { open: openManager, close: closeManager, scan: scanWorkspace };
 })(window);
+
+export default window.ChatAddonManager;

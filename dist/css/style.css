@@ -629,6 +629,92 @@ body.liquid:not(.no-animations):not(.white) {
     padding: 0 4px;
 }
 
+/* Edit message button */
+.message .edit_button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: 1px solid var(--blur-border);
+    border-radius: var(--border-radius-1);
+    color: var(--colour-3);
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color var(--transition-speed), color var(--transition-speed);
+}
+
+.message .edit_button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.message .edit_button.clicked {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Edit mode UI */
+.message.editing .content_inner {
+    position: relative;
+}
+
+.message .edit_textarea {
+    width: 100%;
+    min-height: 80px;
+    background: var(--colour-5);
+    border: 1px solid var(--accent);
+    border-radius: var(--border-radius-1);
+    color: var(--text-color);
+    font-family: var(--font-1);
+    font-size: 15px;
+    line-height: 1.6;
+    padding: 10px 14px;
+    resize: vertical;
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.message .edit_buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.message .edit_save_button,
+.message .edit_cancel_button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--blur-border);
+    border-radius: var(--border-radius-1);
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color var(--transition-speed), background var(--transition-speed);
+}
+
+.message .edit_save_button {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
+.message .edit_save_button:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
+.message .edit_cancel_button {
+    background: none;
+    color: var(--colour-3);
+}
+
+.message .edit_cancel_button:hover {
+    border-color: var(--colour-3);
+    color: var(--text-color);
+}
+
 .message .content blockquote {
     padding: 8px 16px;
     margin-bottom: 16px;

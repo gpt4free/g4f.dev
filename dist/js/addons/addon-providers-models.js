@@ -547,51 +547,55 @@ async function loadProviderModels(provider=null) {
     console.log("Loading models for provider:", provider);
     await refreshModels(provider);
 };
-if (providerSelect) {
-    providerSelect.addEventListener("change", async () => {
-        await loadProviderModels()
-        const favorites = appStorage.getItem("favorite_providers") ? JSON.parse(appStorage.getItem("favorite_providers")) : {};
-        const selected = providerSelect.options[providerSelect.selectedIndex];
-        console.log("Selected provider:", providerSelect.value, selected);
-        if (!favorites[providerSelect.value]) {
-            const option = selected.cloneNode(true);
-            const optgroup = providerSelect.querySelector('optgroup:last-child');
+addonsLoaded.then(() => {
+    domReady.then(() => {
+    if (providerSelect) {
+        providerSelect.addEventListener("change", async () => {
+            await loadProviderModels()
+            const favorites = appStorage.getItem("favorite_providers") ? JSON.parse(appStorage.getItem("favorite_providers")) : {};
+            const selected = providerSelect.options[providerSelect.selectedIndex];
+            console.log("Selected provider:", providerSelect.value, selected);
+            if (!favorites[providerSelect.value]) {
+                const option = selected.cloneNode(true);
+                const optgroup = providerSelect.querySelector('optgroup:last-child');
+                if (optgroup) {
+                    optgroup.appendChild(option);
+                    if (optgroup.childElementCount > 5) {
+                        delete favorites[optgroup.firstChild.value];
+                        optgroup.removeChild(optgroup.firstChild);
+                    }
+                }
+            }
+            const selected_values = favorites[providerSelect.value] ? favorites[providerSelect.value] + 1 : 1;
+            delete favorites[providerSelect.value];
+            favorites[providerSelect.value] = selected_values;
+            appStorage.setItem("favorite_providers", JSON.stringify(favorites));
+        });
+    }
+    modelSelect.addEventListener("change", () => {
+        const favorites = appStorage.getItem("favorites") ? JSON.parse(appStorage.getItem("favorites")) : {};
+        const selected = favorites[providerSelect?.value] || {};
+        const selectedOption = modelSelect.options[modelSelect.selectedIndex];
+        console.log("Selected model:", modelSelect.value, selectedOption);
+        if (!selected[modelSelect.value]) {
+            const option = selectedOption.cloneNode(true);
+            const optgroup = modelSelect.querySelector('optgroup:last-child');
             if (optgroup) {
                 optgroup.appendChild(option);
                 if (optgroup.childElementCount > 5) {
-                    delete favorites[optgroup.firstChild.value];
+                    delete selected[optgroup.firstChild.value];
                     optgroup.removeChild(optgroup.firstChild);
                 }
             }
         }
-        const selected_values = favorites[providerSelect.value] ? favorites[providerSelect.value] + 1 : 1;
-        delete favorites[providerSelect.value];
-        favorites[providerSelect.value] = selected_values;
-        appStorage.setItem("favorite_providers", JSON.stringify(favorites));
+        const selected_values = selected[modelSelect.value] ? selected[modelSelect.value] + 1 : 1;
+        delete selected[modelSelect.value];
+        selected[modelSelect.value] = selected_values;
+        favorites[providerSelect?.value] = selected;
+        appStorage.setItem("favorites", JSON.stringify(favorites));
     });
-}
-modelSelect.addEventListener("change", () => {
-    const favorites = appStorage.getItem("favorites") ? JSON.parse(appStorage.getItem("favorites")) : {};
-    const selected = favorites[providerSelect?.value] || {};
-    const selectedOption = modelSelect.options[modelSelect.selectedIndex];
-    console.log("Selected model:", modelSelect.value, selectedOption);
-    if (!selected[modelSelect.value]) {
-        const option = selectedOption.cloneNode(true);
-        const optgroup = modelSelect.querySelector('optgroup:last-child');
-        if (optgroup) {
-            optgroup.appendChild(option);
-            if (optgroup.childElementCount > 5) {
-                delete selected[optgroup.firstChild.value];
-                optgroup.removeChild(optgroup.firstChild);
-            }
-        }
-    }
-    const selected_values = selected[modelSelect.value] ? selected[modelSelect.value] + 1 : 1;
-    delete selected[modelSelect.value];
-    selected[modelSelect.value] = selected_values;
-    favorites[providerSelect?.value] = selected;
-    appStorage.setItem("favorites", JSON.stringify(favorites));
-});
+
+    
 document.getElementById("model_edit")?.addEventListener("click", () => {
     if (!modelSelector.classList.contains("hidden")) {
         providerSelect.classList.remove("hidden");
@@ -620,86 +624,82 @@ modelSearch?.addEventListener('input', function() {
 
     // Search across all models
     for (const [provider, modelList] of Object.entries(searchModels)) {
-    if (filterByProvider && provider !== selectedProvider) continue;
-    if (!Array.isArray(modelList)) continue;
+        if (filterByProvider && provider !== selectedProvider) continue;
+        if (!Array.isArray(modelList)) continue;
 
-    const providerMatch = allowProviderMatch && provider.toLowerCase().includes(searchTerm);
+        const providerMatch = allowProviderMatch && provider.toLowerCase().includes(searchTerm);
 
-    modelList.forEach(model => {
-        if (model.models) {
-        model.models.forEach(subModel => {
-            const modelMatch = allowModelMatch && subModel.model.toLowerCase().includes(searchTerm);
+        modelList.forEach(model => {
+            if (model.models) {
+            model.models.forEach(subModel => {
+                const modelMatch = allowModelMatch && subModel.model.toLowerCase().includes(searchTerm);
+                if (modelMatch || providerMatch) {
+                matches.push({ provider, model: subModel });
+                }
+            });
+            } else {
+            const modelStr = model.id || model;
+            const modelMatch = allowModelMatch && modelStr.toLowerCase().includes(searchTerm);
             if (modelMatch || providerMatch) {
-            matches.push({ provider, model: subModel });
+                matches.push({ provider, model });
+            }
             }
         });
-        } else {
-        const modelStr = model.id || model;
-        const modelMatch = allowModelMatch && modelStr.toLowerCase().includes(searchTerm);
-        if (modelMatch || providerMatch) {
-            matches.push({ provider, model });
         }
-        }
-    });
-    }
 
-    // Sort matches so that the currently selected provider is at the top
-    if (selectedProvider && selectedProvider !== "AnyProvider") {
-        matches.sort((a, b) => {
-            if (a.provider === selectedProvider && b.provider !== selectedProvider) return -1;
-            if (a.provider !== selectedProvider && b.provider === selectedProvider) return 1;
-            return 0;
+        // Sort matches so that the currently selected provider is at the top
+        if (selectedProvider && selectedProvider !== "AnyProvider") {
+            matches.sort((a, b) => {
+                if (a.provider === selectedProvider && b.provider !== selectedProvider) return -1;
+                if (a.provider !== selectedProvider && b.provider === selectedProvider) return 1;
+                return 0;
+            });
+        }
+
+        // Limit matches to top 100 to prevent DOM rendering lag
+        const topMatches = matches.slice(0, 100);
+
+        // Display matches
+        topMatches.forEach(match => {
+        const div = document.createElement('div');
+        div.className = 'suggestion-item';
+        div.innerHTML = `
+            <strong>${match.model.id || match.model}</strong>
+            <span class="provider-tag">${match.provider}</span>
+        `;
+        div.addEventListener('click', async () => {
+            modelSearch.value = "";
+            providerSelect.value = match.provider;
+            await loadProviderModels();
+            modelSelect.value = match.model.id || match.model;
+            modelSelector.classList.add("hidden");
+            providerSelect.classList.remove("hidden");
+            modelSelect.classList.remove("hidden");
+            modelSuggestions.innerHTML = '';
+            console.log(`Selected model: ${match.model}`);
         });
+        modelSuggestions.appendChild(div);
+        });
+    });
+    async function loadModels(providers) {
+        searchModels = await api('models');
     }
 
-    // Limit matches to top 100 to prevent DOM rendering lag
-    const topMatches = matches.slice(0, 100);
-
-    // Display matches
-    topMatches.forEach(match => {
-    const div = document.createElement('div');
-    div.className = 'suggestion-item';
-    div.innerHTML = `
-        <strong>${match.model.id || match.model}</strong>
-        <span class="provider-tag">${match.provider}</span>
-    `;
-    div.addEventListener('click', async () => {
-        modelSearch.value = "";
-        providerSelect.value = match.provider;
-        await loadProviderModels();
-        modelSelect.value = match.model.id || match.model;
-        modelSelector.classList.add("hidden");
-        providerSelect.classList.remove("hidden");
-        modelSelect.classList.remove("hidden");
+    // Close dropdown when clicking outside
+    if (modelSuggestions)
+    document.addEventListener('click', (e) => {
+        if (e.target !== modelSearch) {
         modelSuggestions.innerHTML = '';
-        console.log(`Selected model: ${match.model}`);
+        }
     });
-    modelSuggestions.appendChild(div);
-    });
-});
-async function loadModels(providers) {
-    searchModels = await api('models');
-}
 
-// Close dropdown when clicking outside
-if (modelSuggestions)
-document.addEventListener('click', (e) => {
-    if (e.target !== modelSearch) {
-    modelSuggestions.innerHTML = '';
-    }
-});
-
-document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("pin").addEventListener("click", async () => {
         add_pinned(providerSelect?.value, get_selected_model());
     });
-});
-(async () => {
     JSON.parse(appStorage.getItem("pinned") || "[]").forEach((el) => {
         add_pinned(el.provider, el.model, false);
     });
-})();
-
+});
 function add_pinned(selected_provider, selected_model, save=true) {
     if (save) {
         const all_pinned_saved = JSON.parse(appStorage.getItem("pinned") || "[]");
@@ -734,14 +734,13 @@ function add_pinned(selected_provider, selected_model, save=true) {
     }
     pin_container.appendChild(pinned);
 }
-
-document.addEventListener("DOMContentLoaded", async () => {
     searchButton.addEventListener("click", async () => {
         setTimeout(() => userInput.focus(), 100);
         searchButton.classList.toggle("active");
         (searchButton.querySelector("*")).innerText = (searchButton.classList.contains("active") ? framework.translate("Search On") : framework.translate("Search Off"));
     });
 });
+
 async function save_storage(settings=false) {
     let filename = `${settings ? 'settings' : 'chat'} ${new Date().toLocaleString()}.json`.replaceAll(":", "-");
     let data = {"options": {"g4f": ""}};
@@ -805,77 +804,97 @@ async function get_recognition_language() {
 }
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let stopRecognition = () => {};
 if (SpeechRecognition) {
-    const mircoIcon = microLabel.querySelector("i");
-    mircoIcon.classList.add("fa-microphone");
-    mircoIcon.classList.remove("fa-microphone-slash");
+    domReady.then(() => {
+        const microLabel = document.querySelector(".micro-label");
+        const mircoIcon = microLabel.querySelector("i");
+        mircoIcon.classList.add("fa-microphone");
+        mircoIcon.classList.remove("fa-microphone-slash");
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
 
-    let startValue;
-    let buffer;
-    let lastDebounceTranscript;
-    recognition.onstart = function() {
-        startValue = userInput.value;
-        lastDebounceTranscript = "";
-        userInput.readOnly = true;
-        buffer = "";
-    };
-    recognition.onend = function() {
-        if (buffer) {
-            userInput.value += `${startValue ? startValue + "\n" : ""}${buffer}`;
+        let startValue;
+        let buffer;
+        let lastDebounceTranscript;
+        recognition.onstart = function() {
+            startValue = userInput.value;
+            lastDebounceTranscript = "";
+            userInput.readOnly = true;
             buffer = "";
-            count_input();
-        }
-        if (microLabel.classList.contains("recognition")) {
-            recognition.start();
-        } else {
-            userInput.readOnly = false;
-            userInput.focus();
-        }
-    };
-    recognition.onresult = function(event) {
-        if (!event.results) {
-            return;
-        }
-        let result = event.results[event.resultIndex];
-        let isFinal = result.isFinal && (result[0].confidence > 0);
-        let transcript = result[0].transcript;
-        if (isFinal) {
-            if(transcript == lastDebounceTranscript) {
+        };
+        recognition.onend = function() {
+            if (buffer) {
+                userInput.value += `${startValue ? startValue + "\n" : ""}${buffer}`;
+                buffer = "";
+                count_input();
+            }
+            if (microLabel.classList.contains("recognition")) {
+                recognition.start();
+            } else {
+                userInput.readOnly = false;
+                userInput.focus();
+            }
+        };
+        recognition.onresult = function(event) {
+            if (!event.results) {
                 return;
             }
-            lastDebounceTranscript = transcript;
-        }
-        if (transcript) {
-            inputCount.innerText = transcript;
+            let result = event.results[event.resultIndex];
+            let isFinal = result.isFinal && (result[0].confidence > 0);
+            let transcript = result[0].transcript;
             if (isFinal) {
-                buffer = `${buffer ? buffer + "\n" : ""}${transcript.trim()}`;
+                if(transcript == lastDebounceTranscript) {
+                    return;
+                }
+                lastDebounceTranscript = transcript;
             }
-        }
-    };
+            if (transcript) {
+                inputCount.innerText = transcript;
+                if (isFinal) {
+                    buffer = `${buffer ? buffer + "\n" : ""}${transcript.trim()}`;
+                }
+            }
+        };
 
-    stopRecognition = ()=>{
-        if (microLabel.classList.contains("recognition")) {
-            microLabel.classList.remove("recognition");
-            recognition.stop();
-            count_input();
-            return true;
+        stopRecognition = ()=>{
+            if (microLabel.classList.contains("recognition")) {
+                microLabel.classList.remove("recognition");
+                recognition.stop();
+                count_input();
+                return true;
+            }
+            return false;
         }
-        return false;
-    }
 
-    microLabel.addEventListener("click", async (e) => {
-        if (!stopRecognition()) {
-            microLabel.classList.add("recognition");
-            microLabel.querySelector("*").innerText = framework.translate("Recognition On");
-            recognition.lang = await get_recognition_language();
-            recognition.start();
-        } else {
-            microLabel.querySelector("*").innerText = framework.translate("Recognition Off");
-        }
+        microLabel.addEventListener("click", async (e) => {
+            if (!stopRecognition()) {
+                microLabel.classList.add("recognition");
+                microLabel.querySelector("*").innerText = framework.translate("Recognition On");
+                recognition.lang = await get_recognition_language();
+                recognition.start();
+            } else {
+                microLabel.querySelector("*").innerText = framework.translate("Recognition Off");
+            }
+        });
     });
 }
+
+export default {
+    api,
+    read_response,
+    get_api_key_by_provider,
+    setFavoriteModels,
+    set_favorite_providers,
+    setQuotaInfo,
+    setProviderModels,
+    get_quota,
+    refreshModels,
+    loadProviderModels,
+    save_storage,
+    get_recognition_language,
+    stopRecognition
+};

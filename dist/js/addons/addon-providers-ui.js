@@ -32,7 +32,6 @@ const load_provider_option = (input, provider_name) => {
             (el) => el.removeAttribute("disabled")
         );
         settings.querySelector(`.field.box:has(label[for="${provider_name}-api_key"])`)?.classList.remove("hidden");
-        console.log(`.field.box:has(label[for="${provider_name}-api_key"])`)
         settings.querySelector(`.field.box:has(label[for="${provider_name}-api_base"])`)?.classList.remove("hidden");
     } else {
         providerSelect.querySelectorAll(`option[value="${provider_name}"]:not([data-live="true"])`).forEach(
@@ -279,3 +278,9 @@ function load_provider_login_urls(providersListContainer, providers = []) {
         providersListContainer.querySelector(".collapsible-content").appendChild(providerBox);
     }
 }
+
+export default {
+    load_provider_option,
+    load_providers,
+    load_provider_login_urls,
+};

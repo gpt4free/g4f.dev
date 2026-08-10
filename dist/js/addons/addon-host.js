@@ -133,3 +133,5 @@
         global.ChatAddons.boot().then(() => global.ChatAddons.enableAll());
     }
 })(window);
+
+export default { ChatAddonHost };

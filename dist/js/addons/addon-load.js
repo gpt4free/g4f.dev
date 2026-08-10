@@ -1,7 +1,7 @@
 
 let startup_questions = [];
 
-window.generateUUID = () => {
+const generateUUID = () => {
     if (crypto.randomUUID) {
         return crypto.randomUUID();
     }
@@ -12,7 +12,6 @@ window.generateUUID = () => {
 };
 
 async function on_api() {
-    load_version();
     let prompt_lock = false;
     userInput.addEventListener("keydown", async (evt) => {
         if (prompt_lock) return;
@@ -273,86 +272,90 @@ async function on_api() {
     document.getElementById('recognition-language').placeholder = await get_recognition_language();
 }
 
-document.addEventListener('DOMContentLoaded', async function () {
-    await on_load();
-    await on_api();
+addonsLoaded.then(() => {
+    console.log("addonsLoaded, calling on_load and on_api");
+    domReady.then(async () => {
+        console.log("domReady, calling on_load and on_api");
+        await on_load();
+        await on_api();
 
-    if (window.conversation_id) {
-        let conversation = await get_conversation(window.conversation_id);
-        if (!conversation) {
-            // New conversation not yet in IndexedDB, nothing to load
-            return;
+        if (window.conversation_id) {
+            let conversation = await get_conversation(window.conversation_id);
+            if (!conversation) {
+                // New conversation not yet in IndexedDB, nothing to load
+                return;
+            }
+            if (!conversation.share) {
+                await load_conversation(conversation);
+                await play_last_message();
+                return;
+            }
+            const response = await fetch(`${framework.backendUrl}/backend-api/v2/chat/${window.conversation_id}`, {
+                headers: {'accept': 'application/json'},
+            });
+            if (!response.ok) {
+                return await load_conversation(conversation);
+            }
+            conversation = await response.json();
+            if (conversation.id == window.conversation_id) {
+                await save_conversation(conversation);
+                await load_conversations();
+            }
+            await load_conversation(window.conversation_id);
         }
-        if (!conversation.share) {
-            await load_conversation(conversation);
-            await play_last_message();
-            return;
+        
+        // Set default sidebar state based on screen size
+        if (window.innerWidth >= 640) { // 40em = 640px
+            sidebar.classList.add("shown");
+            sidebar.classList.remove("minimized");
+        } else {
+            sidebar.classList.remove("shown");
         }
-        const response = await fetch(`${framework.backendUrl}/backend-api/v2/chat/${window.conversation_id}`, {
-            headers: {'accept': 'application/json'},
-        });
-        if (!response.ok) {
-            return await load_conversation(conversation);
+        // Ensure sidebar is shown by default on desktop
+        if (window.innerWidth >= 640) { // 40em = 640px
+            sidebar.classList.add("shown");
+            sidebar.classList.remove("minimized");
         }
-        conversation = await response.json();
-        if (conversation.id == window.conversation_id) {
-            await save_conversation(conversation);
-            await load_conversations();
-        }
-        await load_conversation(window.conversation_id);
-    }
-    
-    // Set default sidebar state based on screen size
-    if (window.innerWidth >= 640) { // 40em = 640px
-        sidebar.classList.add("shown");
-        sidebar.classList.remove("minimized");
-    } else {
-        sidebar.classList.remove("shown");
-    }
-    // Ensure sidebar is shown by default on desktop
-    if (window.innerWidth >= 640) { // 40em = 640px
-        sidebar.classList.add("shown");
-        sidebar.classList.remove("minimized");
-    }
-    
+    });
 });
 
 let refreshOnHidden = true;
 document.addEventListener("visibilitychange", () => {
     refreshOnHidden = !document.hidden;
 });
-setInterval(async () => {
-    if (!refreshOnHidden || !window.conversation_id) {
-        return;
-    }
-    let conversation = await get_conversation(window.conversation_id);
-    if (!conversation || !conversation.share) {
-        return
-    }
-    refreshOnHidden = false;
-    const now = Math.floor(Date.now() / 1000);
-    const response = await fetch(`${framework.backendUrl}/backend-api/v2/chat/${conversation.id}?now=${now - now % 5}`, {
-        headers: {
-            'accept': 'application/json',
-            'if-none-match': conversation.updated,
-        },
-    });
-    refreshOnHidden = true;
-    if (response.status == 200) {
-        const new_conversation = await response.json();
-        if (conversation.id == window.conversation_id && new_conversation.updated != conversation.updated) {
-            conversation = new_conversation;
-            await save_conversation(conversation);
-        }
-    }
-    if (lastUpdated != conversation.updated) {
-        await load_conversations();
-        await load_conversation(conversation);
-    }
-}, 5000);
 
-window.addEventListener('pywebviewready', async function() {
-    await on_api();
+let lastUpdated = null;;
+addonsLoaded.then(() => {
+    setInterval(async () => {
+        if (!refreshOnHidden || !window.conversation_id) {
+            return;
+        }
+        let conversation = await get_conversation(window.conversation_id);
+        if (!conversation || !conversation.share) {
+            return
+        }
+        refreshOnHidden = false;
+        const now = Math.floor(Date.now() / 1000);
+        const response = await fetch(`${framework.backendUrl}/backend-api/v2/chat/${conversation.id}?now=${now - now % 5}`, {
+            headers: {
+                'accept': 'application/json',
+                'if-none-match': conversation.updated,
+            },
+        });
+        refreshOnHidden = true;
+        if (response.status == 200) {
+            const new_conversation = await response.json();
+            if (conversation.id == window.conversation_id && new_conversation.updated != conversation.updated) {
+                conversation = new_conversation;
+                await save_conversation(conversation);
+            }
+        }
+        if (lastUpdated != conversation.updated) {
+            lastUpdated = conversation.updated;
+            await load_conversations();
+            await load_conversation(conversation);
+        }
+    }, 5000);
 });
 
 window.addEventListener("load", (event) => {
@@ -361,10 +364,7 @@ window.addEventListener("load", (event) => {
     }
 });
 
-window.count_input = ()=>{}
-
 async function on_load() {
-    translationSnipptes.forEach((snippet)=>this.framework.translate(snippet));
     count_input();
     const locationHash = window.location.hash.substring(1);
     if (locationHash === "login") {
@@ -382,7 +382,9 @@ async function on_load() {
     } else {
         window.conversation_id = generateUUID();
     }
-    chatPrompt.value = document.getElementById("systemPrompt")?.value || "";
+    if (chatPrompt) {
+        chatPrompt.value = document.getElementById("systemPrompt")?.value || "";
+    }
     let chatParams = new URLSearchParams(window.location.search);
     if (chatParams.get("prompt")) {
         userInput.value = chatParams.get("prompt");
@@ -451,7 +453,6 @@ Example:
         add_error("Failed to parse startup questions:", e);
     }
 }
-load_startup_questions();
 async function load_follow_up_questions(messages, new_response) {
     if (appStorage.getItem("aiFeatures") !== "true") {
         return;
@@ -506,3 +507,36 @@ async function load_follow_up_questions(messages, new_response) {
         add_error("Failed to parse follow up questions:", e);
     }
 }
+
+async function hide_sidebar(remove_shown=false) {
+    if (remove_shown && window.innerWidth < 640) { // Only apply on mobile
+        sidebar.classList.remove("shown");
+    }
+    settings.classList.add("hidden");
+    chat.classList.remove("hidden");
+    logStorage?.classList.add("hidden");
+    await hide_settings();
+    if (window.location.hash.endsWith("#menu") || window.location.hash.endsWith("#settings")) {
+        history.back();
+    }
+}
+
+async function hide_settings() {
+    settings.classList.add("hidden");
+    let provider_forms = document.querySelectorAll(".provider_forms from");
+    Array.from(provider_forms).forEach((form) => form.classList.add("hidden"));
+}
+
+addonsLoaded.then(() => {
+    domReady.then(() => {
+        load_startup_questions();
+    });
+});
+export default {
+    load_startup_questions,
+    load_follow_up_questions,
+    render_startup_questions,
+    hide_sidebar,
+    hide_settings,
+    generateUUID,
+};

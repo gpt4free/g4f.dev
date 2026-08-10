@@ -381,8 +381,9 @@ function renderLargeMessage(container, content, chunkSize = 50) {
     setTimeout(renderNextChunk, 10);
 }
 
-window.count_input = async () => {
+const count_input = async () => {
     let countFocus = userInput;
+    const countTokensEnabled = appStorage.getItem("countTokens") != "false";
     if (countTokensEnabled && countFocus.value) {
         if (window.matchMedia("(pointer:coarse)")) {
             inputCount.innerText = `(${count_tokens(get_selected_model(), countFocus.value)} tokens)`;
@@ -393,40 +394,55 @@ window.count_input = async () => {
         inputCount.innerText = "";
     }
 };
-document.addEventListener("DOMContentLoaded", () => {
-        
-    userInput.addEventListener("keyup", count_input);
-    chatPrompt.addEventListener("keyup", count_input);
-    chatPrompt.addEventListener("focus", function() {
-        countFocus = chatPrompt;
-        count_input();
-    });
-    chatPrompt.addEventListener("input", function() {
-        countFocus = userInput;
-        count_input();
-    });
-    window.addEventListener("hashchange", async (event) => {
-        if (window.iframe_container) window.iframe_container.classList.add("hidden");
-        if (window.iframe) window.iframe.src = "";
-        const locationHash = window.location.hash.substring(1);
-        
-        if (locationHash == "login") {
-            window.location.href='https://g4f.dev/members?redirect='+encodeURIComponent(location.href.split('#')[0])+'&conversation='+encodeURIComponent(window.conversation_id);
-            return;
-        }
-        if (locationHash == "menu" || locationHash == "settings") {
-            if (locationHash == "settings") {
-                open_settings();
+addonsLoaded.then(() => {
+    domReady.then(() => {
+        userInput.addEventListener("keyup", count_input);
+        chatPrompt.addEventListener("keyup", count_input);
+        chatPrompt.addEventListener("focus", function() {
+            countFocus = chatPrompt;
+            count_input();
+        });
+        chatPrompt.addEventListener("input", function() {
+            countFocus = userInput;
+            count_input();
+        });
+        window.addEventListener("hashchange", async (event) => {
+            if (window.iframe_container) window.iframe_container.classList.add("hidden");
+            if (window.iframe) window.iframe.src = "";
+            const locationHash = window.location.hash.substring(1);
+            
+            if (locationHash == "login") {
+                window.location.href='https://g4f.dev/members?redirect='+encodeURIComponent(location.href.split('#')[0])+'&conversation='+encodeURIComponent(window.conversation_id);
+                return;
             }
-            return;
-        }
-        hide_sidebar(true);
-        if (locationHash && locationHash != "new") {
-            window.conversation_id = locationHash;
-            set_conversation(locationHash);
-        } else {
-            window.conversation_id = generateUUID();
-            new_conversation();
-        }
+            if (locationHash == "menu" || locationHash == "settings") {
+                if (locationHash == "settings") {
+                    open_settings();
+                }
+                return;
+            }
+            hide_sidebar(true);
+            if (locationHash && locationHash != "new") {
+                window.conversation_id = locationHash;
+                set_conversation(locationHash);
+            } else {
+                window.conversation_id = generateUUID();
+                new_conversation();
+            }
+        });
     });
 });
+
+export default {
+    register_settings_storage,
+    load_settings_storage,
+    loadCustomProvidersFromAPI,
+    updateCustomProviderOption,
+    say_hello,
+    count_tokens,
+    count_words,
+    count_chars,
+    count_words_and_tokens,
+    renderLargeMessage,
+    count_input,
+};

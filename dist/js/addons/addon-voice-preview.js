@@ -99,3 +99,8 @@ window.playVoicePreview = async function playVoicePreview(voice) {
         console.error('Error playing voice preview:', error);
     });
 };
+
+export default {
+    loadVoiceModels,
+    playVoicePreview,
+};

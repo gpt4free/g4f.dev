@@ -1,3 +1,28 @@
+const is_loaded = false;
+
+const domReady = new Promise((resolve) => {
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", resolve);
+    } else {
+        resolve();
+    }
+}).then(() => new Promise((resolve) => {    
+    ChatAddons.register({
+        id: 'builtin:legacy',
+        name: 'Legacy Package',
+        version: '1.0.0',
+        description: 'Provides legacy support for older features.',
+        author: 'g4f',
+        builtin: true,
+        permissions: ['net:fetch'],
+
+        load() {
+            resolve();
+        }
+    });
+}));
+
+
 const chatBody          = document.getElementById(`chatBody`);
 const userInput         = document.getElementById("userInput");
 const codeButton        = document.querySelector(".code");
@@ -67,7 +92,7 @@ const modelTags = {
     free: "🆓",
 }
 
-document.addEventListener("DOMContentLoaded", (event) => {
+domReady.then(() => {
     translationSnipptes.forEach((text) => framework.translate(text));
     
     // Shared DOM refs used by tier/cake UI below
@@ -805,6 +830,12 @@ function closeErrorPopup() {
     }
 }
 
+const register_message_buttons_all = async () => {
+    await register_message_buttons();
+    await register_message_buttons2();
+    await register_message_buttons3();
+}
+
 const register_message_buttons = async () => {
     chatBody.querySelectorAll(".message .content .provider").forEach(async (el) => {
         if (el.dataset.click) {
@@ -871,7 +902,7 @@ const register_message_buttons = async () => {
                 setTimeout(() => el.innerText = startText, 1000);
             }
         });
-    })
+    });
 
     chatBody.querySelectorAll(".message .fa-file-export").forEach(async (el) => {
         if (el.dataset.click) {
@@ -896,8 +927,9 @@ const register_message_buttons = async () => {
             el.classList.add("clicked");
             setTimeout(() => el.classList.remove("clicked"), 1000);
         });
-    })
-
+    });
+}
+const register_message_buttons2 = async () => {
     chatBody.querySelectorAll(".message .fa-volume-high, .message .volume-high").forEach(async (el) => {
         if (el.dataset.click) {
             return
@@ -1066,7 +1098,9 @@ const register_message_buttons = async () => {
             });
         });
     });
+}
 
+const register_message_buttons3 = async () => {
     chatBody.querySelectorAll(".message .fa-whatsapp").forEach(async (el) => {
         if (el.dataset.click) {
             return
@@ -1075,7 +1109,7 @@ const register_message_buttons = async () => {
         el.addEventListener("click", async () => {
             const text = get_message_el(el).innerText;
             window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-            });
+        });
     });
 
     chatBody.querySelectorAll(".message .fa-print").forEach(async (el) => {
@@ -1594,7 +1628,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         }
         let p = document.createElement("p");
         p.innerText = error_message;
-        logContent.appendChild(p);
+        logContent && logContent.appendChild(p);
         await api("log", {...message, provider: provider_storage[message_id]});
     } else if (message.type == "preview") {
         let img;
@@ -1630,7 +1664,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
     } else if (message.type == "log") {
         let p = document.createElement("p");
         p.innerText = message.log;
-        logContent.appendChild(p);
+        logContent && logContent.appendChild(p);
     } else if (message.type == "synthesize") {
         synthesize_storage[message_id] = message.synthesize;
     } else if (message.type == "title") {
@@ -2011,7 +2045,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         if (cursorDiv) cursorDiv.parentNode.removeChild(cursorDiv);
         await safe_remove_cancel_button();
         await register_message_images();
-        await register_message_buttons();
+        await register_message_buttons_all();
         await load_conversations();
         regenerate_button.classList.remove("regenerate-hidden");
     }
@@ -2872,7 +2906,7 @@ const load_conversation = async (conversation, append = false) => {
         }
     }
 
-    await register_message_buttons();
+    await register_message_buttons_all();
     highlight(chatBody);
     regenerate_button.classList.remove("regenerate-hidden");
     chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" });
@@ -3586,6 +3620,7 @@ chatPrompt.addEventListener("input", function() {
     countFocus = userInput;
     count_input();
 });
+domReady.then(() => {
 window.addEventListener("hashchange", async (event) => {
     iframe_container.classList.add("hidden");
     iframe.src = "";
@@ -3609,6 +3644,7 @@ window.addEventListener("hashchange", async (event) => {
         window.conversation_id = generateUUID();
         new_conversation();
     }
+});
 });
 function render_startup_questions() {
     if (!Array.isArray(startup_questions) || !startup_questions.length) {
@@ -3660,7 +3696,9 @@ Example:
         add_error("Failed to parse startup questions:", e);
     }
 }
+domReady.then(() => {
 load_startup_questions();
+});
 async function load_follow_up_questions(messages, new_response) {
     if (appStorage.getItem("aiFeatures") !== "true") {
         return;
@@ -3715,7 +3753,7 @@ async function load_follow_up_questions(messages, new_response) {
         add_error("Failed to parse follow up questions:", e);
     }
 }
-window.addEventListener('DOMContentLoaded', async function () {
+domReady.then(async () => {
     await on_load();
     await on_api();
 
@@ -3756,6 +3794,7 @@ window.addEventListener('DOMContentLoaded', async function () {
 });
 
 let refreshOnHidden = true;
+domReady.then(() => {
 document.addEventListener("visibilitychange", () => {
     refreshOnHidden = !document.hidden;
 });
@@ -3789,14 +3828,11 @@ setInterval(async () => {
     }
 }, 5000);
 
-window.addEventListener('pywebviewready', async function() {
-    await on_api();
-});
-
 window.addEventListener("load", (event) => {
     if (!window.location.hash.substring(1)) {
         render_startup_questions();
     }
+});
 });
 
 async function on_load() {
@@ -4461,7 +4497,7 @@ function renderMediaSelect() {
 }
 
 imageInput ? imageInput.onclick = () => mediaSelect.classList.toggle("hidden") : null;
-
+domReady.then(() => {
 mediaSelect.querySelector(".close").onclick = () => {
     if (Object.values(image_storage).length) {
         Object.entries(image_storage).forEach(async ([object_url, file]) => {
@@ -4489,7 +4525,7 @@ mediaSelect.querySelector(".close").onclick = () => {
         }
     });
 });
-
+});
 async function upload_audio(blob) {
     const loadingIndicator = document.createElement('div');
     loadingIndicator.className = 'file-upload-loading';
@@ -4591,7 +4627,7 @@ audioButton.addEventListener('click', async (event) => {
         mediaRecorder = null;
     }
 });
-
+domReady.then(() => {
 linkButton.addEventListener('click', async (event) => {
     const i = audioButton.querySelector("i");
     const link = prompt("Please enter a link");
@@ -4622,6 +4658,7 @@ imageSelect?.addEventListener("click", (e) => {
         e.preventDefault();
         pywebview.api.choose_image();
     }
+});
 });
 
 async function upload_cookies() {
@@ -4737,7 +4774,7 @@ async function upload_files(fileInput) {
         add_error(e, true);
     }
 }
-
+domReady.then(() => {
 fileInput.addEventListener('change', async (event) => {
     if (fileInput.files.length) {
         type = fileInput.files[0].name.split('.').pop()
@@ -4800,7 +4837,7 @@ if (!window.matchMedia("(pointer:coarse)").matches) {
 chatPrompt?.addEventListener("input", async () => {
     await save_system_message();
 });
-
+});
 function get_selected_model() {
     let model = null;
     if (modelSearch && modelSearch.value) {
@@ -5462,13 +5499,16 @@ async function loadModels(providers) {
 }
 
 // Close dropdown when clicking outside
+domReady.then(() => {
 if (modelSuggestions)
 document.addEventListener('click', (e) => {
   if (e.target !== modelSearch) {
     modelSuggestions.innerHTML = '';
   }
 });
+});
 
+domReady.then(() => {
 document.getElementById("pin").addEventListener("click", async () => {
     add_pinned(providerSelect?.value, get_selected_model());
 });
@@ -5478,6 +5518,7 @@ document.getElementById("pin").addEventListener("click", async () => {
         add_pinned(el.provider, el.model, false);
     });
 })();
+});
 
 function add_pinned(selected_provider, selected_model, save=true) {
     if (save) {
@@ -5746,7 +5787,7 @@ function initMobileEnhancements() {
   // Add swipe gesture support
   let touchStartX = 0;
   let touchEndX = 0;
-  
+  domReady.then(() => {
   document.addEventListener('touchstart', e => {
     touchStartX = e.changedTouches[0].screenX;
   }, { passive: true });
@@ -5755,6 +5796,7 @@ function initMobileEnhancements() {
     touchEndX = e.changedTouches[0].screenX;
     handleSwipeGesture();
   }, { passive: true });
+});
   
   function handleSwipeGesture() {
     const swipeThreshold = 100;
@@ -5979,6 +6021,7 @@ function applyMobileEnhancements() {
 }
 
 // Initialize mobile enhancements if on mobile device
+domReady.then(() => {
 document.addEventListener('DOMContentLoaded', () => {
   if (isMobileDevice()) {
     applyMobileEnhancements();
@@ -5999,6 +6042,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateOrientationClass();
   window.addEventListener('resize', updateOrientationClass);
   window.addEventListener('orientationchange', updateOrientationClass);
+    });
 });
 
 // Create drag-and-drop zones
@@ -6450,6 +6494,7 @@ function insertBackticksInTextarea(el) {
 let mcpClient = null;
 
 // Initialize MCP client when page loads
+domReady.then(() => {
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof MCPClient !== 'undefined') {
         mcpClient = new MCPClient();
@@ -6460,7 +6505,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
-
+});
 function initializeMCPUI() {
     // Add default server if none exist
     if (mcpClient.servers.length === 0) {
@@ -7166,64 +7211,255 @@ if (conversationSearch) {
         });
     });
 }
-
 export default {
-    insertBackticksInTextarea,
-    handleToolCalls,
-    toggleMCPServer,
-    removeMCPServer,
-    toggleMCPTool,
-    cloudSyncLoginRedirect,
-    syncConversationsToCloud,
-    syncConversationsFromCloud,
-    cloudSyncLogout,
-    showCloudSyncLogin,
-    showCloudSyncLoggedIn,
-    checkCloudSyncSession,
-    renderMCPServers,
-    renderMCPTools,
-    renderPaProviders,
-    loadPaProviders,
-    loadPaProviderSelect,
-    refreshMCPTools,
-    showAddServerDialog,
-    handleCloudSyncCallback,
-    insertBackticksInTextarea,
-    settingsSearch,
-    conversationSearch,
-    escapeHtml,
-    getPaBaseUrl,
-    isTokenExpired,
+    // Variables
     chatBody,
     userInput,
     codeButton,
+    box_conversations,
+    stop_generating,
+    regenerate_button,
+    sidebar,
+    sidebar_buttons,
+    sendButton,
+    addButton,
+    imageInput,
+    mediaSelect,
+    imageSelect,
+    cameraInput,
+    audioButton,
+    linkButton,
+    fileInput,
+    microLabel,
+    inputCount,
+    providerSelect,
+    modelSelect,
+    modelSearch,
+    modelSelector,
+    modelSuggestions,
+    chatPrompt,
     settings,
-    conversationSearch,
+    settingsContent,
+    chat,
+    album,
+    searchButton,
+    paperclip,
+    userInputHeight,
+    hide_systemPrompt,
+    slide_systemPrompt_icon,
+    optionElementsSelector,
+    translationSnipptes,
+    providers,
+    modelTags,
+    provider_storage,
+    message_storage,
+    content_alt_storage,
+    content_data_storage,
+    controller_storage,
+    content_storage,
+    error_storage,
+    synthesize_storage,
+    title_storage,
+    parameters_storage,
+    finish_storage,
+    usage_storage,
+    continue_storage,
+    reasoning_storage,
+    variant_storage,
+    debug_response_counter,
+    title_ids_storage,
+    image_storage,
+    headers_storage,
+    wakeLock,
+    countTokensEnabled,
+    suggestions,
+    tool_calls_storage,
+    startup_questions,
+    lastUpdated,
+    mediaRecorder,
+    stopRecognition,
+    providerModelSignal,
+    searchModels,
+    client,
+    voicePreviewAudio,
+    apiWorker,
+    apiWorkerCallbacks,
+    appStorage,
+    iframe_container,
+    iframe,
+    iframe_close,
+    HtmlRenderPlugin,
+    typesetPromise,
+    hljs_loaded,
+    highlight,
+    autoScrollEnabled,
+    illegalRe,
+    controlRe,
+    reservedRe,
+    windowsReservedRe,
+    countFocus,
+    refreshOnHidden,
+    mcpClient,
+    CLOUD_SYNC_API,
     settingsSearch,
+    conversationSearch,
     cloudSyncLoginBtn,
     cloudSyncUploadBtn,
     cloudSyncDownloadBtn,
     cloudSyncLogoutBtn,
-    mcpClient,
-    CLOUD_SYNC_API,
+
+    // Functions
+    workerFetch,
+    workerAbort,
+    loadVoiceModels,
+    playVoicePreview,
+    render_reasoning,
+    render_reasoning_text,
+    filter_message,
+    filter_message_content,
+    fallback_clipboard,
+    get_message_el,
+    generateUUID,
+    register_message_images,
+    showToast,
+    showOAuthCodePrompt,
+    showNotification,
+    showErrorPopup,
+    generateFallbackHints,
+    closeErrorPopup,
+    register_message_buttons_all,
+    new_conversation,
+    delete_conversations,
+    handle_ask,
+    safe_remove_cancel_button,
+    prepare_messages,
+    load_provider_parameters,
+    add_message_chunk,
+    add_sources,
+    renderer,
+    is_stopped,
+    requestWakeLock,
+    play_last_message,
+    toBase64,
+    toUrl,
+    getExtraBody,
+    ask_gpt,
+    scroll_to_bottom,
+    clear_conversations,
+    clear_conversation,
+    sanitize,
+    sanitizeSelector,
+    set_conversation_title,
+    show_option,
+    hide_option,
+    on_delete_conversation,
+    on_star_conversation,
+    on_preset_conversation,
+    set_conversation,
+    merge_messages,
+    load_conversation,
+    safe_load_conversation,
+    update_conversation,
+    get_messages,
+    add_conversation,
+    save_system_message,
+    remove_message,
+    get_message,
+    add_message,
+    toLocaleDateString,
+    load_conversations,
+    get_message_id,
+    hide_sidebar,
+    hide_settings,
+    add_url_to_history,
+    show_menu,
+    open_settings,
+    register_settings_storage,
+    updateCustomProviderOption,
+    loadCustomProvidersFromAPI,
+    load_settings,
+    load_settings_storage,
+    say_hello,
+    count_tokens,
+    count_words,
+    count_chars,
+    calculateBase64Size,
+    get_media_size,
+    count_words_and_tokens,
+    renderLargeMessage,
+    count_input,
+    render_startup_questions,
+    load_startup_questions,
+    load_follow_up_questions,
+    on_load,
+    load_provider_option,
+    load_providers,
+    load_provider_login_urls,
+    on_api,
+    load_version,
+    upload_image,
+    renderMediaSelect,
+    upload_audio,
+    upload_cookies,
+    formatFileSize,
+    connectToSSE,
+    upload_files,
+    get_selected_model,
+    api,
+    read_response,
+    get_api_key_by_provider,
+    setFavoriteModels,
+    set_favorite_providers,
+    setQuotaInfo,
+    filterModels,
+    setProviderModels,
+    get_quota,
+    refreshModels,
+    loadProviderModels,
+    loadModels,
+    add_pinned,
+    save_storage,
+    get_recognition_language,
+    showLog,
+    hideLog,
+    logRequestResponse,
+    createSidebarOverlay,
+    initMobileEnhancements,
+    isMobileDevice,
+    applyMobileEnhancements,
+    setupDragAndDrop,
+    enhanceFileUpload,
+    isLive,
+    initClient,
+    loadClientModels,
+    import_from_appStorage,
+    insertBackticksInTextarea,
+    initializeMCPUI,
+    renderMCPServers,
+    renderMCPTools,
+    showAddServerDialog,
+    removeMCPServer,
+    toggleMCPServer,
+    toggleMCPTool,
+    refreshMCPTools,
+    escapeHtml,
+    getPaBaseUrl,
+    fetchPaProviders,
+    loadPaProviderSelect,
+    loadPaProviders,
+    renderPaProviders,
+    handleToolCalls,
+    checkCloudSyncSession,
+    showCloudSyncLogin,
+    showCloudSyncLoggedIn,
+    isTokenExpired,
+    handleCloudSyncCallback,
+    cloudSyncLogout,
     showCloudSyncLoading,
     hideCloudSyncLoading,
-    initializeMCPUI,
-    get_api_key_by_provider,
-    add_error,
-    add_message_chunk,
-    list_conversations,
-    save_conversation,
-    load_conversations,
-    open_settings,
-    api,
-    client,
-    controller_storage,
+    syncConversationsToCloud,
+    syncConversationsFromCloud,
+    cloudSyncLoginRedirect,
     framework,
-    open_settings,
-    set_conversation,
-    regenerate_button,
-    appStorage,
-    stopRecognition,
-    highlight
+    add_error
 };

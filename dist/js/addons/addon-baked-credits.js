@@ -22,12 +22,6 @@
     });
 })();
 
-appStorage = window.localStorage || {
-    setItem: (key, value) => self[key] = value,
-    getItem: (key) => self[key],
-    removeItem: (key) => delete self[key],
-};
-
 // --- Baked credits (proof-of-work cakes) ---------------------------
 const cakeCreditsText = document.getElementById('cake-credits-text');
 
@@ -63,7 +57,7 @@ function formatNumber(num) {
     return (Math.round(num * 10) / 10).toString();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+domReady.then(() => {
     // Shared DOM refs used by tier/cake UI below
     const tierLimitsRow = document.getElementById('tier-limits-row');
 
@@ -142,3 +136,9 @@ if (savedTab) {
         tabButton.click();
     }
 }
+
+export default {
+    formatCakeCredits,
+    updateCakeCredits,
+    refreshCakeStatus,
+};

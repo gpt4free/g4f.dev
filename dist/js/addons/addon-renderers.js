@@ -76,7 +76,7 @@ function fallback_clipboard (text) {
     document.body.removeChild(textBox);
 }
 let iframe_container;
-document.addEventListener("DOMContentLoaded", () => {
+domReady.then(() => {
     iframe_container = document.querySelector(".hljs-iframe-container");
     const iframe = document.querySelector(".hljs-iframe");
     const iframe_close = Object.assign(document.createElement("button"), {
@@ -401,3 +401,17 @@ function closeErrorPopup() {
         setTimeout(() => popup.remove(), 300);
     }
 }
+
+export default {
+    render_reasoning,
+    render_reasoning_text,
+    filter_message,
+    filter_message_content,
+    fallback_clipboard,
+    register_message_images,
+    showToast,
+    showOAuthCodePrompt,
+    showNotification,
+    showErrorPopup,
+    closeErrorPopup,
+};

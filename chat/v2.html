@@ -38,34 +38,41 @@
 
     <script src="/dist/js/framework.js?v={{ v }}"></script>
     <script src="/dist/js/mcp-client.js?v={{ v }}"></script>
-    <script src="/dist/js/chat.v2.js?v={{ v }}"></script>
     <script>
         const v = "{{ v }}";
-        const addons = ["core", "host", "manager", "load", "api-worker", "voice-preview", "baked-credits", "renderers", "mobile-experience", "worker", "ask", "messages", "ask-gpt", "conversations", "settings", "providers-ui", "providers-models", "mobile", "cloudsync"];
-        const c = 6;
-        const g = Math.floor(addons.length / c);
-        (async () => {
-            for (let i = 0; i < g; i++) {
-                const chunks = addons.slice(i * c, (i + 1) * c);
-                await new Promise((resolve) => {
-                    let loadedCount = 0;
-                    chunks.forEach((addon) => {
+        const addons = [["core"], ["legacy", "init"], ["photoswipe", "host", "manager", "load"], ["api-worker", "voice-preview", "baked-credits", "highlight", "renderers", "mobile-experience", "worker", "ask", "messages", "ask-gpt", "conversations", "settings", "providers-ui", "providers-models", "mobile"]];
+        window.domReady = new Promise((resolve) => {
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", resolve);
+            } else {
+                resolve();
+            }
+        });
+        window.addonsLoaded = new Promise(async (resolve) => {
+            for (let i = 0; i < addons.length; i++) {
+                const chunks = addons[i];
+                const jobs = chunks.map((addon) => {
+                    return new Promise((resolve) => {
                         const script = document.createElement("script");
-                        script.src = `/dist/js/addons/addon-${addon}.js?v=${v}`;
-                        script.onload = () => {
-                            loadedCount++;
-                            if (loadedCount === chunks.length) {
-                                resolve();
-                            }
-                        };
+                        script.type = "module";
+                        //script.defer = true;
+                        window[`resolve_${addon.replaceAll("-", "_")}`] = resolve;
+                        script.textContent = `import container from "/dist/js/addons/addon-${addon}.js?v=${v}";
+                        window.addon_${addon.replaceAll("-", "_")} = container;
+                        for (const [key, value] of Object.entries(container)) {
+                            window[key] = value;
+                        }
+                        window.resolve_${addon.replaceAll("-", "_")}()
+                        `;
                         document.head.appendChild(script);
                     });
                 });
+                await Promise.all(jobs);
             }
-        })();
+            resolve();
+        });
     </script>
     
-    <script src="/dist/js/addons/addon-cloudsync.js?v={{ v }}"></script>
     <script src="/dist/js/cake-baker.js?v={{ v }}"></script>
     <script src="/dist/js/recorder.js" async></script>
     <script src="/dist/js/highlight.min.js" async></script>
@@ -121,8 +128,6 @@
       }
     </script>
 
-    <script type="module" src="/dist/js/photoswipe.js" async></script>
-
     <script>
       const user_image = '<img src="/dist/img/user_avatar.jpeg" alt="User avatar" />';
       const gpt_image = '<img src="/dist/img/gpt_avatar.jpeg" alt="GPT avatar" />';
@@ -130,7 +135,6 @@
     </script>
 
     <link rel="preload" href="/dist/css/style.css?v={{ v }}" as="style">
-    <link rel="preload" href="/dist/js/chat.v1.js?v={{ v }}" as="script">
 </head>
 <body>
     <script async>
@@ -180,11 +184,11 @@
                     </div>
                 </div>
                 <nav class="top" aria-label="Conversation actions">
-                    <button class="new_convo" onclick="new_conversation()" aria-label="Start a new conversation">
+                    <button class="new_convo" aria-label="Start a new conversation">
                         <i class="fa-regular fa-plus" aria-hidden="true"></i>
                         <span>New Conversation</span>
                     </button>
-                    <button class="new_convo" onclick="new_conversation(true)" aria-label="Start a private conversation">
+                    <button class="new_convo private_conversation" aria-label="Start a private conversation">
                         <i class="fa-solid fa-user-secret" aria-hidden="true"></i>
                         <span>Private Conversation</span>
                     </button>
@@ -527,7 +531,7 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                     <i class="fa-solid fa-bars" aria-hidden="true"></i>
                 </button>
                 <h2 class="convo-title" id="conversationTitle">New Conversation</h2>
-                <button class="new_convo_icon" onclick="new_conversation()" aria-label="Start new conversation">
+                <button class="new_convo_icon" aria-label="Start new conversation">
                     <i class="fa-regular fa-plus" aria-hidden="true"></i>
                 </button>
                 <button class="show_log hidden" onclick="showLog()" aria-label="Show log">

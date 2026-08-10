@@ -261,8 +261,15 @@ function applyMobileEnhancements() {
   // Add mobile class to body for CSS targeting
   document.body.classList.add('mobile-device');
 }
-document.addEventListener('DOMContentLoaded', () => {
-  if (isMobileDevice()) {
-    applyMobileEnhancements();
-  }
+addonsLoaded.then(() => {
+    domReady.then(() => {
+      if (isMobileDevice()) {
+        applyMobileEnhancements();
+      }
+    })
 });
+
+export default {
+    isMobileDevice,
+    applyMobileEnhancements,
+};

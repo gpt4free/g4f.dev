@@ -2718,7 +2718,7 @@ const load_conversation = async (conversation, append = false) => {
         }
     });
 
-    if (suggestions && suggestions.length > 0) {
+    if (window.suggestions && suggestions.length > 0) {
         try {
                 if (!Array.isArray(suggestions)) {
                 suggestions = [suggestions];
@@ -2934,7 +2934,7 @@ const add_message = async (
         });
         conversation.items = new_messages;
     }
-    data = update_conversation(conversation);
+    const data = update_conversation(conversation);
     await save_conversation(data);
     if (conversation.share) {
         const url = `${framework.backendUrl}/backend-api/v2/chat/${conversation.id}`;
@@ -3619,11 +3619,7 @@ window.addEventListener('DOMContentLoaded', async function () {
 
     if (window.conversation_id) {
         let conversation = await get_conversation(window.conversation_id);
-        if (!conversation) {
-            // New conversation not yet in IndexedDB, nothing to load
-            return;
-        }
-        if (!conversation.share) {
+        if (conversation && !conversation.share) {
             await load_conversation(conversation);
             await play_last_message();
             return;
@@ -3720,7 +3716,9 @@ async function on_load() {
     } else {
         window.conversation_id = generateUUID();
     }
-    chatPrompt.value = document.getElementById("systemPrompt")?.value || "";
+    if (chatPrompt) {
+        chatPrompt.value = document.getElementById("systemPrompt")?.value || "";
+    }
     let chatParams = new URLSearchParams(window.location.search);
     if (chatParams.get("prompt")) {
         userInput.value = chatParams.get("prompt");
@@ -3748,7 +3746,6 @@ const load_provider_option = (input, provider_name) => {
             (el) => el.removeAttribute("disabled")
         );
         settings.querySelector(`.field.box:has(label[for="${provider_name}-api_key"])`)?.classList.remove("hidden");
-        console.log(`.field.box:has(label[for="${provider_name}-api_key"])`)
         settings.querySelector(`.field.box:has(label[for="${provider_name}-api_base"])`)?.classList.remove("hidden");
     } else {
         providerSelect.querySelectorAll(`option[value="${provider_name}"]:not([data-live="true"])`).forEach(

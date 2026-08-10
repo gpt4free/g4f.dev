@@ -461,7 +461,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         if (cursorDiv) cursorDiv.parentNode.removeChild(cursorDiv);
         await safe_remove_cancel_button();
         await register_message_images();
-        await register_message_buttons();
+        await register_message_buttons_all();
         await load_conversations();
         regenerate_button.classList.remove("regenerate-hidden");
     }
@@ -825,4 +825,10 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
     } catch (e) {
         add_error(e, true);
     }
+};
+
+export default {
+    ask_gpt,
+    play_last_message,
+    requestWakeLock,
 };
