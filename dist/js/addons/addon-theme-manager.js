@@ -500,7 +500,7 @@
     // UI — Overlay
     // ------------------------------------------------------------------
     const OVERLAY_CSS = `
-#theme-manager-overlay { position: fixed; inset: 0; z-index: 10001; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.55); font-family: inherit; }
+#theme-manager-overlay { position: fixed; inset: 0; z-index: 10060; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.55); font-family: inherit; }
 #theme-manager-overlay.open { display: flex; }
 #theme-manager-overlay .tm-panel { width: min(820px, 94vw); max-height: 88vh; background: var(--colour-1, #1e1e2e); color: var(--colour-3, #e0e0e0); border: 1px solid var(--blur-border, #333); border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.5); display: flex; flex-direction: column; overflow: hidden; }
 #theme-manager-overlay .tm-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--blur-border, #333); }
@@ -542,7 +542,7 @@
 #theme-manager-overlay .tm-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--blur-border, #333); }
 #theme-manager-overlay .tm-preview-bar { display: flex; gap: 8px; align-items: center; padding: 8px 12px; background: rgba(255,255,255,.04); border-radius: 8px; margin-top: 10px; font-size: 12px; }
 #theme-manager-overlay .tm-preview-bar button { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--blur-border, #333); background: transparent; color: inherit; cursor: pointer; font-size: 11px; }
-#theme-manager-overlay .tm-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 8px 16px; background: var(--accent, #8b3dff); color: #fff; border-radius: 8px; font-size: 13px; z-index: 10002; opacity: 0; transition: opacity .2s; pointer-events: none; }
+#theme-manager-overlay .tm-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 8px 16px; background: var(--accent, #8b3dff); color: #fff; border-radius: 8px; font-size: 13px; z-index: 10070; opacity: 0; transition: opacity .2s; pointer-events: none; }
 #theme-manager-overlay .tm-toast.show { opacity: 1; }
 #theme-manager-overlay .tm-font-list { display: flex; flex-wrap: wrap; gap: 6px; }
 #theme-manager-overlay .tm-font-btn { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--blur-border, #333); background: transparent; color: inherit; cursor: pointer; font-size: 12px; }
@@ -579,7 +579,7 @@
         btn.setAttribute('aria-label', 'Open Theme Manager');
         btn.innerHTML = '<i class="fa-solid fa-palette" aria-hidden="true"></i>';
         btn.style.cssText = `
-            position: fixed; bottom: 132px; right: 18px; z-index: 9000;
+            position: fixed; bottom: 132px; right: 18px; z-index: 10050;
             width: 44px; height: 44px; border-radius: 50%;
             border: 1px solid var(--blur-border, #333); cursor: pointer;
             background: var(--colour-1, #1e1e2e); color: var(--colour-3, #e0e0e0);
@@ -1008,7 +1008,7 @@
         builtin: true,
         permissions: ['dom:read', 'dom:write', 'storage:local', 'ui:notify'],
 
-        load() {
+        load(opts = {}) {
             loadConfig();
             // If no theme selected, default to midnight-purple
             if (!currentTheme) currentTheme = 'midnight-purple';
@@ -1029,6 +1029,11 @@
                     openOverlay();
                 }
             });
+
+            // If enabled at runtime (e.g. via Addon Manager), show the UI right away
+            if (opts && opts.showOnLoad) {
+                setTimeout(() => openOverlay(), 250);
+            }
 
             console.info('[theme-manager] loaded');
         },

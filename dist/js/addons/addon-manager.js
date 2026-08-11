@@ -123,8 +123,19 @@
 
         card.querySelector('[data-act="toggle"]').addEventListener('change', async (e) => {
             console.log('[addons] toggle switch changed for', addon.id, e.target.checked);
-            ChatAddons.disable(addon.id).catch(() => {});
-            ChatAddons.enable(addon.id).catch(() => {});
+            const { ChatAddons } = global;
+            const errorEl = card.querySelector('.am-error');
+            errorEl.style.display = 'none';
+            try {
+                if (e.target.checked) {
+                    await ChatAddons.enable(addon.id, { showOnLoad: addon.id === 'builtin:theme-manager' });
+                } else {
+                    await ChatAddons.disable(addon.id);
+                }
+            } catch (err) {
+                showCardError(card, err);
+                renderList();
+            }
         });
 
         const uninstallBtn = card.querySelector('[data-act="uninstall"]');

@@ -638,11 +638,13 @@ function get_message_id() {
 };
 
 domReady.then(async () => {
-    console.log("DOM ready, initializing sidebar buttons");
-    return;
-
     const sidebar_buttons = document.querySelectorAll(".mobile-sidebar-toggle");
-    sidebar_buttons.forEach((el) => el.addEventListener("click", async (e) => {
+    sidebar_buttons.forEach((el) => {
+        if (el.dataset.click) {
+            return;
+        }
+        el.dataset.click = true;
+        el.addEventListener("click", async (e) => {
         e.preventDefault();
         // Animate sidebar buttons
         sidebar_buttons.forEach((el) => {
@@ -671,7 +673,8 @@ domReady.then(async () => {
                 sidebar.classList.add("shown");
             }
         }
-    }));
+        });
+    });
 });
 
 async function show_menu() {

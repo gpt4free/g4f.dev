@@ -239,7 +239,7 @@
     function get(id) { return registry.get(id); }
     function list() { return [...registry.values()]; }
 
-    async function loadOne(id) {
+    async function loadOne(id, opts = {}) {
         const addon = registry.get(id);
         if (!addon) throw new Error(`[addons] unknown addon "${id}"`);
         if (addon.source) {
@@ -248,7 +248,7 @@
             addon.api = api;
         }
         if (typeof addon.load === 'function') {
-            await addon.load(capsFor(addon));
+            await addon.load(capsFor(addon), opts);
         }
         addon._active = true;
         console.info(`[addons] enabled: ${id}`);
@@ -278,9 +278,9 @@
         }
     }
 
-    async function enable(id) {
+    async function enable(id, opts = {}) {
         console.log('[addons] enabling addon', id);
-        await loadOne(id);
+        await loadOne(id, opts);
         setEnabled(id, true);
     }
 
@@ -292,11 +292,23 @@
     async function enableAll() {
         // State is already loaded by boot(). Re-loading here would overwrite
         // any migration performed during workspace discovery.
+        // First run: auto-enable all built-in addons. Later runs keep
+        // the user's choices from localStorage, but newly added built-in
+        // addons are always merged in so they show up for existing users.
         if (state.enabled.size === 0) {
             for (const addon of registry.values()) {
                 if (addon.builtin) state.enabled.add(addon.id);
             }
             persistState();
+        } else {
+            let changed = false;
+            for (const addon of registry.values()) {
+                if (addon.builtin && !state.enabled.has(addon.id)) {
+                    state.enabled.add(addon.id);
+                    changed = true;
+                }
+            }
+            if (changed) persistState();
         }
         for (const addon of registry.values()) {
             if (isEnabled(addon.id)) {
@@ -368,12 +380,22 @@
         state.bootPromise = (async () => {
             loadState();
             // First run: auto-enable all built-in addons. Later runs keep
-            // the user's choices from localStorage.
+            // the user's choices from localStorage, but newly added built-in
+            // addons are always merged in so they show up for existing users.
             if (state.enabled.size === 0) {
                 for (const addon of registry.values()) {
                     if (addon.builtin) state.enabled.add(addon.id);
                 }
                 persistState();
+            } else {
+                let changed = false;
+                for (const addon of registry.values()) {
+                    if (addon.builtin && !state.enabled.has(addon.id)) {
+                        state.enabled.add(addon.id);
+                        changed = true;
+                    }
+                }
+                if (changed) persistState();
             }
             if (global.ChatAddonHost && typeof global.ChatAddonHost.onAddonRegistered === 'function') {
                 global.ChatAddonHost.onAddonRegistered((addon) => {

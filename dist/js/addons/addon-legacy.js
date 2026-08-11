@@ -3178,36 +3178,42 @@ async function hide_settings() {
     Array.from(provider_forms).forEach((form) => form.classList.add("hidden"));
 }
 
-sidebar_buttons.forEach((el) => el.addEventListener("click", async (e) => {
-    e.preventDefault();
-    // Animate sidebar buttons
-    sidebar_buttons.forEach((el) => {
-        el.classList.toggle("rotated");
-    });
-    // For desktop
-    if (window.innerWidth >= 640) {
-        // Toggle between shown and minimized only
-        if (sidebar.classList.contains("shown")) {
-            // Change from shown to minimized
-            sidebar.classList.remove("shown");
-            sidebar.classList.add("minimized");
-        } else {
-            // Change from minimized to shown
-            sidebar.classList.remove("minimized");
-            sidebar.classList.add("shown");
-        }
-    } 
-    // For mobile
-    else {
-        if (sidebar.classList.contains("shown")) {
-            // Hide sidebar on mobile
-            sidebar.classList.remove("shown");
-        } else {
-            // Show sidebar on mobile
-            sidebar.classList.add("shown");
-        }
+sidebar_buttons.forEach((el) => {
+    if (el.dataset.click) {
+        return;
     }
-}));
+    el.dataset.click = true;
+    el.addEventListener("click", async (e) => {
+        e.preventDefault();
+        // Animate sidebar buttons
+        sidebar_buttons.forEach((el) => {
+            el.classList.toggle("rotated");
+        });
+        // For desktop
+        if (window.innerWidth >= 640) {
+            // Toggle between shown and minimized only
+            if (sidebar.classList.contains("shown")) {
+                // Change from shown to minimized
+                sidebar.classList.remove("shown");
+                sidebar.classList.add("minimized");
+            } else {
+                // Change from minimized to shown
+                sidebar.classList.remove("minimized");
+                sidebar.classList.add("shown");
+            }
+        } 
+        // For mobile
+        else {
+            if (sidebar.classList.contains("shown")) {
+                // Hide sidebar on mobile
+                sidebar.classList.remove("shown");
+            } else {
+                // Show sidebar on mobile
+                sidebar.classList.add("shown");
+            }
+        }
+    });
+});
 
 function add_url_to_history(url) {
     if (!window?.pywebview) {

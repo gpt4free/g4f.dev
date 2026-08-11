@@ -4,8 +4,8 @@ import PhotoSwipeAutoHideUI from "https://cdn.jsdelivr.net/gh/arnowelzel/photosw
 import PhotoSwipeSlideshow from "https://cdn.jsdelivr.net/gh/dpet23/photoswipe-slideshow@v2.0.0/photoswipe-slideshow.esm.min.js";
 
 // ─── Demo-Screen HTML & CSS ────────────────────────────────────────────
-const DEMO_HTML = `
-<style>
+const DEMO_CSS = `
+
     .ps-demo-overlay {
         position: fixed;
         inset: 0;
@@ -138,7 +138,40 @@ const DEMO_HTML = `
     .ps-demo-btn-secondary:hover {
         background: rgba(255,255,255,0.2);
     }
-</style>
+`;
+const DEMO_IMAGES = `
+<a href="https://picsum.photos/id/1015/1200/800"
+    data-pswp-width="1200" data-pswp-height="800"
+    data-caption="Berglandschaft" alt="Berglandschaft">
+    <img src="https://picsum.photos/id/1015/300/300" alt="Berglandschaft" loading="lazy">
+</a>
+<a href="https://picsum.photos/id/1025/1200/800"
+    data-pswp-width="1200" data-pswp-height="800"
+    data-caption="Hund im Gras" alt="Hund im Gras">
+    <img src="https://picsum.photos/id/1025/300/300" alt="Hund im Gras" loading="lazy">
+</a>
+<a href="https://picsum.photos/id/1035/1200/800"
+    data-pswp-width="1200" data-pswp-height="800"
+    data-caption="Wasserfall" alt="Wasserfall">
+    <img src="https://picsum.photos/id/1035/300/300" alt="Wasserfall" loading="lazy">
+</a>
+<a href="https://picsum.photos/id/1040/1200/800"
+    data-pswp-width="1200" data-pswp-height="800"
+    data-caption="Herbstwald" alt="Herbstwald">
+    <img src="https://picsum.photos/id/1040/300/300" alt="Herbstwald" loading="lazy">
+</a>
+<a href="https://picsum.photos/id/1050/1200/800"
+    data-pswp-width="1200" data-pswp-height="800"
+    data-caption="Sonnenuntergang" alt="Sonnenuntergang">
+    <img src="https://picsum.photos/id/1050/300/300" alt="Sonnenuntergang" loading="lazy">
+</a>
+<a href="https://picsum.photos/id/1060/1200/800"
+    data-pswp-width="1200" data-pswp-height="800"
+    data-caption="Blumenwiese" alt="Blumenwiese">
+    <img src="https://picsum.photos/id/1060/300/300" alt="Blumenwiese" loading="lazy">
+</a>
+`
+const DEMO_HTML = `
 <div class="ps-demo-overlay" id="psDemoOverlay">
     <div class="ps-demo-card">
         <div class="ps-demo-header">
@@ -146,36 +179,7 @@ const DEMO_HTML = `
             <p>Addon erfolgreich installiert! Hier eine Demo:</p>
         </div>
         <div class="ps-demo-gallery" id="psDemoGallery">
-            <a href="https://picsum.photos/id/1015/1200/800"
-               data-pswp-width="1200" data-pswp-height="800"
-               data-caption="Berglandschaft" alt="Berglandschaft">
-                <img src="https://picsum.photos/id/1015/300/300" alt="Berglandschaft" loading="lazy">
-            </a>
-            <a href="https://picsum.photos/id/1025/1200/800"
-               data-pswp-width="1200" data-pswp-height="800"
-               data-caption="Hund im Gras" alt="Hund im Gras">
-                <img src="https://picsum.photos/id/1025/300/300" alt="Hund im Gras" loading="lazy">
-            </a>
-            <a href="https://picsum.photos/id/1035/1200/800"
-               data-pswp-width="1200" data-pswp-height="800"
-               data-caption="Wasserfall" alt="Wasserfall">
-                <img src="https://picsum.photos/id/1035/300/300" alt="Wasserfall" loading="lazy">
-            </a>
-            <a href="https://picsum.photos/id/1040/1200/800"
-               data-pswp-width="1200" data-pswp-height="800"
-               data-caption="Herbstwald" alt="Herbstwald">
-                <img src="https://picsum.photos/id/1040/300/300" alt="Herbstwald" loading="lazy">
-            </a>
-            <a href="https://picsum.photos/id/1050/1200/800"
-               data-pswp-width="1200" data-pswp-height="800"
-               data-caption="Sonnenuntergang" alt="Sonnenuntergang">
-                <img src="https://picsum.photos/id/1050/300/300" alt="Sonnenuntergang" loading="lazy">
-            </a>
-            <a href="https://picsum.photos/id/1060/1200/800"
-               data-pswp-width="1200" data-pswp-height="800"
-               data-caption="Blumenwiese" alt="Blumenwiese">
-                <img src="https://picsum.photos/id/1060/300/300" alt="Blumenwiese" loading="lazy">
-            </a>
+            <!-- Sample images for demo -->
         </div>
         <div class="ps-demo-features">
             <div class="ps-demo-feature">
@@ -221,9 +225,14 @@ function showDemoScreen() {
     const existing = document.getElementById('psDemoOverlay');
     if (existing) existing.remove();
 
+    const style = document.createElement('style');
+    style.textContent = DEMO_CSS;
+    document.head.appendChild(style);
+    
     // Inject demo HTML
     const container = document.createElement('div');
     container.innerHTML = DEMO_HTML;
+    container.querySelector('#psDemoGallery').innerHTML = DEMO_IMAGES;
     document.body.appendChild(container.firstElementChild);
 
     const overlay = document.getElementById('psDemoOverlay');
@@ -238,10 +247,12 @@ function showDemoScreen() {
         setTimeout(() => overlay.remove(), 300);
     };
 
-    closeBtn.addEventListener('click', closeOverlay);
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) closeOverlay();
-    });
+    if (closeBtn) closeBtn.addEventListener('click', closeOverlay);
+    if (overlay) {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeOverlay();
+        });
+    }
 
     // "Demo starten" → open the demo gallery with PhotoSwipe
     tryBtn.addEventListener('click', () => {
