@@ -628,10 +628,10 @@ domReady.then(async () => {
     });
 });
 function get_message_id() {
-    random_bytes = (Math.floor(Math.random() * 1338377565) + 2956589730).toString(
+    const random_bytes = (Math.floor(Math.random() * 1338377565) + 2956589730).toString(
         2
     );
-    unix = Math.floor(Date.now() / 1000).toString(2);
+    const unix = Math.floor(Date.now() / 1000).toString(2);
 
     return BigInt(`0b${unix}${random_bytes}`).toString();
 };

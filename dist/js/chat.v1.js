@@ -3015,10 +3015,10 @@ hide_input.addEventListener("click", async (e) => {
 });
 
 function get_message_id() {
-    random_bytes = (Math.floor(Math.random() * 1338377565) + 2956589730).toString(
+    const random_bytes = (Math.floor(Math.random() * 1338377565) + 2956589730).toString(
         2
     );
-    unix = Math.floor(Date.now() / 1000).toString(2);
+    const unix = Math.floor(Date.now() / 1000).toString(2);
 
     return BigInt(`0b${unix}${random_bytes}`).toString();
 };
@@ -4798,6 +4798,13 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
                     delete continue_storage[message_id];
                     await api("conversation", args, files, message_id, finish_message)
                 }
+            }
+            if (response.status != 200) {
+                const message = `Èrror: ${response.status} ${response.statusText}`;
+                try {
+                    message = message + "\n" + ((await response.json())?.error?.message || "");
+                } catch (e) {}
+                error_storage[message_id] = message;
             }
             await finish_message();
             return;
