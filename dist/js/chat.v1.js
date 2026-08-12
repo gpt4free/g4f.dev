@@ -5559,7 +5559,7 @@ if (SpeechRecognition) {
 function showLog() {
     logStorage.classList.remove("hidden");
     settings.classList.add("hidden");
-    logContent?.scrollTop = logContent?.scrollHeight;
+    logContent?.scrollTop = logContent.scrollHeight;
     chat.classList.add("hidden");
 }
 
