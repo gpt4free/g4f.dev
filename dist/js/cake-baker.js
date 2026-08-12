@@ -1100,8 +1100,7 @@
     const isLocalDev = host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0";
     const pathMatch =
         path === "/chat" ||
-        path === "/chat/" ||
-        path === "/chat/index.html" ||
+        path.startsWith("/chat/") ||
         path === "/members" ||
         path === "/members.html" ||
         path === "/members/";
