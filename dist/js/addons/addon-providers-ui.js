@@ -22,6 +22,9 @@
     })
 })();
 
+async function loadModels(providers) {
+    searchModels = await api('models');
+}
 
 const load_provider_option = (input, provider_name) => {
     if (input.checked) {

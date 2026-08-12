@@ -572,6 +572,21 @@
     }
 
     function ensureFloatingButton() {
+        // Prefer the sidebar addon panel when the host bridge provides it.
+        const host = window.ChatAddonHost;
+        if (host && host.sidebar && document.getElementById('addon-panel')) {
+            host.sidebar.register({
+                id: FLOATING_BTN_ID,
+                title: 'Theme Manager',
+                label: 'Theme Manager',
+                ariaLabel: 'Open Theme Manager',
+                icon: 'fa-solid fa-palette',
+                order: 10,
+                onClick: () => openOverlay(),
+            });
+            return;
+        }
+        // Fallback: floating action button (panel unavailable).
         if (document.getElementById(FLOATING_BTN_ID)) return;
         const btn = document.createElement('button');
         btn.id = FLOATING_BTN_ID;
@@ -1015,11 +1030,22 @@
             applyTheme();
             if (autoDayNight) startAutoDayNight();
 
-            // Add floating button when DOM is ready
+            // Add the theme manager entry when DOM is ready. If the host
+            // sidebar panel isn't mounted yet, retry until it is (addons
+            // boot before chat.v1.js finishes initialising the page).
+            const mount = () => {
+                const host = window.ChatAddonHost;
+                if (!host || !host.sidebar) { ensureFloatingButton(); return; }
+                if (document.getElementById('addon-panel')) {
+                    ensureFloatingButton();
+                } else {
+                    setTimeout(mount, 100);
+                }
+            };
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => ensureFloatingButton());
+                document.addEventListener('DOMContentLoaded', mount);
             } else {
-                ensureFloatingButton();
+                mount();
             }
 
             // Keyboard shortcut: Ctrl+Shift+T
@@ -1040,6 +1066,10 @@
 
         unload() {
             stopAutoDayNight();
+            const host = window.ChatAddonHost;
+            if (host && host.sidebar) {
+                host.sidebar.unregister(FLOATING_BTN_ID);
+            }
             const fab = document.getElementById(FLOATING_BTN_ID);
             if (fab) fab.remove();
             const ov = document.getElementById(OVERLAY_ID);

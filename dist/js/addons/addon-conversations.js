@@ -525,7 +525,7 @@ const load_conversation = async (conversation, append = false) => {
         }
     }
 
-    await register_message_buttons_all();
+    await register_message_buttons();
     highlight(chatBody);
     regenerate_button.classList.remove("regenerate-hidden");
     chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" });

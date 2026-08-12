@@ -642,7 +642,7 @@ body.liquid:not(.no-animations):not(.white) {
     font-size: 12px;
     cursor: pointer;
     transition: border-color var(--transition-speed), color var(--transition-speed);
-    margin-top: 8px;
+    margin-top: -8px;
     margin-left: 2px;
 }
 
@@ -1490,6 +1490,84 @@ select:hover,
     overflow: auto;
     flex-grow: 1;
     padding-bottom: var(--inner-gap);
+}
+
+/* ---- Addon sidebar panel ----------------------------------------- */
+.addon-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--inner-gap);
+    padding: 8px 0;
+    border-top: 1px solid var(--blur-border);
+    margin-top: 8px;
+    max-height: 35%;
+    overflow: auto;
+    flex-shrink: 0;
+}
+
+.addon-panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--colour-4, #888);
+    margin: 0;
+    padding: 0 4px;
+    user-select: none;
+}
+
+.addon-panel-items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.addon-panel-items:empty {
+    display: none;
+}
+
+.addon-panel-item {
+    padding: 8px 12px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    background: transparent;
+    border: 1px solid var(--blur-border);
+    border-radius: var(--border-radius-1);
+    width: 100%;
+    color: var(--colour-3);
+    font-weight: 500;
+    text-align: left;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
+}
+
+.addon-panel-item:hover {
+    background-color: var(--conversations-hover);
+    border-color: var(--conversations);
+}
+
+.addon-panel-item i {
+    width: 16px;
+    text-align: center;
+    font-size: 1em;
+}
+
+.addon-panel-item span {
+    color: var(--colour-3);
+    font-weight: 500;
+}
+
+.addon-panel-badge {
+    margin-left: auto;
+    font-size: 10px;
+    line-height: 1;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: var(--accent, #7c6cf0);
+    color: #fff;
+    flex-shrink: 0;
 }
 
 .cursor {
@@ -2420,7 +2498,9 @@ form textarea {
 .sidebar.minimized .bottom_buttons span,
 .sidebar.minimized .info span,
 .sidebar.minimized .datetime,
-.sidebar.minimized .user-tier-info {
+.sidebar.minimized .user-tier-info,
+.sidebar.minimized .addon-panel-title,
+.sidebar.minimized .addon-panel-item span {
     display: none;
 }
 
@@ -2436,7 +2516,8 @@ form textarea {
 
 .sidebar.minimized .new_convo,
 .sidebar.minimized .bottom_buttons button,
-.sidebar.minimized .info {
+.sidebar.minimized .info,
+.sidebar.minimized .addon-panel-item {
     justify-content: center;
     gap: 0;
     width: 40px;

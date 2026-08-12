@@ -830,350 +830,6 @@ function closeErrorPopup() {
     }
 }
 
-const register_message_buttons_all = async () => {
-    await register_message_buttons();
-    await register_message_buttons2();
-    await register_message_buttons3();
-}
-
-const register_message_buttons = async () => {
-    chatBody.querySelectorAll(".message .content .provider").forEach(async (el) => {
-        if (el.dataset.click) {
-            return
-        }
-        el.dataset.click = true;
-        const provider_link = el.querySelector("a");
-        provider_link?.addEventListener("click", async (event) => {
-            event.preventDefault();
-            await load_provider_parameters(el.dataset.provider);
-            const provider_forms_container = document.querySelector(".provider_forms");
-            provider_forms_container.querySelectorAll("form").forEach(form => form.classList.add("hidden"));
-            const provider_form = provider_forms_container.querySelector(`#${sanitizeSelector(el.dataset.provider)}-form`);
-            if (provider_form) {
-                provider_form.classList.remove("hidden");
-                provider_forms_container.classList.remove("hidden");
-                chat.classList.add("hidden");
-            }
-            return false;
-        });
-    });
-
-    chatBody.querySelectorAll(".message .fa-xmark, .message .delete-message").forEach(async (el) => {
-        if (el.dataset.click) {
-            return
-        }
-        el.dataset.click = true;
-        el.addEventListener("click", async () => {
-            const message_el = get_message_el(el);
-            if (message_el) {
-                if ("index" in message_el.dataset) {
-                    await remove_message(window.conversation_id, message_el.dataset.index);
-                    chatBody.removeChild(message_el);
-                }
-            }
-            await safe_load_conversation(window.conversation_id);
-        });
-    });
-
-    chatBody.querySelectorAll(".message .fa-clipboard, .message .copy-to-clipboard").forEach(async (el) => {
-        if (el.dataset.click) {
-            return
-        }
-        el.dataset.click = true;
-        el.addEventListener("click", async () => {
-            let message_el = get_message_el(el);
-            let response = await fetch(message_el.dataset.object_url);
-            let copyText = await response.text();
-            try {        
-                if (!navigator.clipboard) {
-                    throw new Error("navigator.clipboard: Clipboard API unavailable.");
-                }
-                await navigator.clipboard.writeText(copyText);
-            } catch (e) {
-                console.error(e);
-                console.error("Clipboard API writeText() failed! Fallback to document.exec(\"copy\")...");
-                fallback_clipboard(copyText);
-            }
-            el.classList.add("clicked");
-            setTimeout(() => el.classList.remove("clicked"), 1000);
-            const startText = el.innerText;
-            if (startText) {
-                el.innerText = framework.translate("Copied")
-                setTimeout(() => el.innerText = startText, 1000);
-            }
-        });
-    });
-
-    chatBody.querySelectorAll(".message .fa-file-export").forEach(async (el) => {
-        if (el.dataset.click) {
-            return
-        }
-        el.dataset.click = true;
-        el.addEventListener("click", async () => {
-            const elem = window.document.createElement('a');
-            let filename = `chat ${new Date().toLocaleString()}.txt`.replaceAll(":", "-");
-            const conversation = await get_conversation(window.conversation_id);
-            let buffer = "";
-            conversation.items.forEach(message => {
-                if (message.reasoning) {
-                    buffer += render_reasoning_text(message.reasoning);
-                }
-                buffer += `${message.role == 'user' ? 'User' : 'Assistant'}: ${message.content.trim()}\n\n`;
-            });
-            var download = document.getElementById("download");
-            download.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(buffer.trim()));
-            download.setAttribute("download", filename);
-            download.click();
-            el.classList.add("clicked");
-            setTimeout(() => el.classList.remove("clicked"), 1000);
-        });
-    });
-}
-const register_message_buttons2 = async () => {
-    chatBody.querySelectorAll(".message .fa-volume-high, .message .volume-high").forEach(async (el) => {
-        if (el.dataset.click) {
-            return
-        }
-        el.dataset.click = true;
-        el.addEventListener("click", async () => {
-            const message_el = get_message_el(el);
-            let audio;
-            if (message_el.dataset.synthesize_url) {
-                el.classList.add("active");
-                if (message_el.dataset.synthesize_url.startsWith("https://g4f.space/ai/audio/")) {
-                    const response = await fetch(message_el.dataset.synthesize_url, {
-                        headers: appStorage.getItem("g4f_session") ? {
-                            'Authorization': `Bearer ${appStorage.getItem("g4f_session")}`
-                        } : {}
-                    });
-                    window.captureUserTierHeaders?.(response.headers);
-                    const object = await response.blob();
-                    message_el.dataset.synthesize_url = URL.createObjectURL(object);
-                }
-                setTimeout(()=>el.classList.remove("active"), 2000);
-                const media_player = document.querySelector(".media-player");
-                if (!media_player.classList.contains("show")) {
-                    media_player.classList.add("show");
-                    audio = new Audio(message_el.dataset.synthesize_url);
-                    audio.controls = true;   
-                    media_player.appendChild(audio);
-                } else {
-                    audio = media_player.querySelector("audio");
-                    audio.src = message_el.dataset.synthesize_url;
-                }
-                audio.play();
-                return;
-            }
-        });
-    });
-
-    chatBody.querySelectorAll(".message .regenerate_button").forEach(async (el) => {
-        if (el.dataset.click) {
-            return
-        }
-        el.dataset.click = true;
-        el.addEventListener("click", async () => {
-            const message_el = get_message_el(el);
-            el.classList.add("clicked");
-            setTimeout(() => el.classList.remove("clicked"), 1000);
-            await ask_gpt(get_message_id(), message_el.dataset.index);
-        });
-    });
-
-    chatBody.querySelectorAll(".message .continue_button").forEach(async (el) => {
-        if (el.dataset.click) {
-            return
-        }
-        el.dataset.click = true;
-        el.addEventListener("click", async () => {
-            if (!el.disabled) {
-                el.disabled = true;
-                const message_el = get_message_el(el);
-                el.classList.add("clicked");
-                setTimeout(() => {el.classList.remove("clicked"); el.disabled = false}, 1000);
-                await ask_gpt(get_message_id(), message_el.dataset.index, false, null, null, "continue");
-            }
-        });
-    });
-
-    chatBody.querySelectorAll(".message .edit_button").forEach(async (el) => {
-        if (el.dataset.click) {
-            return
-        }
-        el.dataset.click = true;
-        el.addEventListener("click", async () => {
-            const message_el = get_message_el(el);
-            if (!message_el || message_el.classList.contains("editing")) {
-                return;
-            }
-            const content_inner = message_el.querySelector(".content_inner");
-            if (!content_inner) {
-                return;
-            }
-            const index = parseInt(message_el.dataset.index);
-            const conversation = await get_conversation(window.conversation_id);
-            if (!conversation || !conversation.items[index]) {
-                return;
-            }
-            const item = conversation.items[index];
-            if (Array.isArray(item.content)) {
-                return;
-            }
-
-            // Enter edit mode
-            message_el.classList.add("editing");
-            const original_html = content_inner.innerHTML;
-            const original_text = item.content;
-
-            // Create edit UI
-            content_inner.innerHTML = "";
-            const textarea = document.createElement("textarea");
-            textarea.className = "edit_textarea";
-            textarea.value = original_text;
-            textarea.rows = Math.max(3, Math.min(15, original_text.split("\n").length + 1));
-            content_inner.appendChild(textarea);
-
-            const button_container = document.createElement("div");
-            button_container.className = "edit_buttons";
-            const save_btn = document.createElement("button");
-            save_btn.className = "edit_save_button";
-            save_btn.innerHTML = `<i class="fa-solid fa-check"></i> ${framework.translate('Save')}`;
-            const cancel_btn = document.createElement("button");
-            cancel_btn.className = "edit_cancel_button";
-            cancel_btn.innerHTML = `<i class="fa-solid fa-xmark"></i> ${framework.translate('Cancel')}`;
-            button_container.appendChild(save_btn);
-            button_container.appendChild(cancel_btn);
-            content_inner.appendChild(button_container);
-
-            textarea.focus();
-            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-
-            // Cancel handler
-            cancel_btn.addEventListener("click", () => {
-                message_el.classList.remove("editing");
-                content_inner.innerHTML = original_html;
-            });
-
-            // Save handler
-            save_btn.addEventListener("click", async () => {
-                const new_text = textarea.value.trim();
-                if (!new_text || new_text === original_text) {
-                    message_el.classList.remove("editing");
-                    content_inner.innerHTML = original_html;
-                    return;
-                }
-
-                // Update the message in conversation
-                conversation.items[index].content = new_text;
-                const data = update_conversation(conversation);
-                await save_conversation(data);
-                if (conversation.share) {
-                    const url = `${framework.backendUrl}/backend-api/v2/chat/${conversation.id}`;
-                    await fetch(url, {
-                        method: 'POST',
-                        headers: {'content-type': 'application/json'},
-                        body: JSON.stringify(data),
-                    });
-                }
-
-                // Remove all messages after the edited one
-                const new_items = conversation.items.slice(0, index + 1);
-                conversation.items = new_items;
-                await save_conversation(update_conversation(conversation));
-
-                // Reload conversation and re-ask
-                await load_conversation(conversation);
-                await ask_gpt(get_message_id(), index);
-            });
-
-            // Ctrl+Enter to save, Escape to cancel
-            textarea.addEventListener("keydown", (e) => {
-                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                    e.preventDefault();
-                    save_btn.click();
-                } else if (e.key === "Escape") {
-                    e.preventDefault();
-                    cancel_btn.click();
-                }
-            });
-        });
-    });
-}
-
-const register_message_buttons3 = async () => {
-    chatBody.querySelectorAll(".message .fa-whatsapp").forEach(async (el) => {
-        if (el.dataset.click) {
-            return
-        }
-        el.dataset.click = true;
-        el.addEventListener("click", async () => {
-            const text = get_message_el(el).innerText;
-            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-        });
-    });
-
-    chatBody.querySelectorAll(".message .fa-print").forEach(async (el) => {
-        if (el.dataset.click) {
-            return
-        }
-        el.dataset.click = true;
-        el.addEventListener("click", async () => {
-            const message_el = get_message_el(el);
-            el.classList.add("clicked");
-            chatBody.scrollTop = 0;
-            message_el.classList.add("print");
-            setTimeout(() => {
-                el.classList.remove("clicked");
-                message_el.classList.remove("print");
-            }, 1000);
-            window.print()
-        });
-    });
-
-    chatBody.querySelectorAll(".message .fa-qrcode").forEach(async (el) => {
-        if (el.dataset.click) {
-            return
-        }
-        el.dataset.click = true;
-        el.addEventListener("click", async () => {
-            iframe.src = 'qrcode.html' + (window.conversation_id ? `#${window.conversation_id}` : '');
-            iframe_container.classList.remove("hidden");
-        });
-    });
-
-    chatBody.querySelectorAll(".message .reasoning_title").forEach(async (el) => {
-        if (el.dataset.click) {
-            return
-        }
-        el.dataset.click = true;
-        el.addEventListener("click", async () => {
-            let text_el = el.parentElement.querySelector(".reasoning_text");
-            if (text_el) {
-                text_el.classList.toggle("hidden");
-            }
-        });
-    });
-}
-
-const new_conversation = async (is_private = false) => {
-    if (window.location.hash) {
-        await clear_conversation();
-        add_url_to_history(is_private ? "#private" : window.location.pathname);
-    }
-    window.conversation_id = is_private ? null : generateUUID();
-    document.title = window.title || document.title;
-    document.querySelector(".chat-top-panel .convo-title").innerText = is_private ? framework.translate("Private Conversation") : framework.translate("New Conversation");
-    
-    suggestions = null;
-    if (chatPrompt) {
-        chatPrompt.value = document.getElementById("systemPrompt")?.value;
-    }
-    load_conversations();
-    hide_sidebar(true);
-    say_hello();
-    render_startup_questions();
-};
-
 const delete_conversations = async () => {
     if (!confirm(framework.translate("Delete all conversations?"))) {
         return;
@@ -1628,7 +1284,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         }
         let p = document.createElement("p");
         p.innerText = error_message;
-        logContent && logContent.appendChild(p);
+        logContent && logContent?.appendChild(p);
         await api("log", {...message, provider: provider_storage[message_id]});
     } else if (message.type == "preview") {
         let img;
@@ -1664,7 +1320,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
     } else if (message.type == "log") {
         let p = document.createElement("p");
         p.innerText = message.log;
-        logContent && logContent.appendChild(p);
+        logContent && logContent?.appendChild(p);
     } else if (message.type == "synthesize") {
         synthesize_storage[message_id] = message.synthesize;
     } else if (message.type == "title") {
@@ -2045,7 +1701,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         if (cursorDiv) cursorDiv.parentNode.removeChild(cursorDiv);
         await safe_remove_cancel_button();
         await register_message_images();
-        await register_message_buttons_all();
+        await register_message_buttons();
         await load_conversations();
         regenerate_button.classList.remove("regenerate-hidden");
     }
@@ -2652,7 +2308,7 @@ const load_conversation = async (conversation, append = false) => {
     console.debug("Conversation:", conversation.id)
 
     let conversation_title = conversation.new_title || conversation.title;
-    title = conversation_title ? `${conversation_title} - G4F` : window.title;
+    const title = conversation_title ? `${conversation_title} - G4F` : window.title;
     if (title) {
         document.title = title;
     }
@@ -2784,6 +2440,12 @@ const load_conversation = async (conversation, append = false) => {
                 </button>`);
             }
         }
+        if (!Array.isArray(item.content)) {
+            add_buttons.push(`<button class="edit_button" title="${framework.translate('Edit message')}">
+                <span>${framework.translate('Edit')}</span>
+                <i class="fa-solid fa-pen-to-square"></i>
+            </button>`);
+        }
 
         countTokensEnabled = appStorage.getItem("countTokens") != "false";
         let next_usage;
@@ -2906,7 +2568,7 @@ const load_conversation = async (conversation, append = false) => {
         }
     }
 
-    await register_message_buttons_all();
+    await register_message_buttons();
     highlight(chatBody);
     regenerate_button.classList.remove("regenerate-hidden");
     chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" });
@@ -3138,17 +2800,6 @@ const load_conversations = async () => {
         box_conversations.appendChild(convo);
     });
 };
-
-const hide_input = document.querySelector(".chat-toolbar .hide-input");
-hide_input.addEventListener("click", async (e) => {
-    const icon = hide_input.querySelector("i");
-    const func = icon.classList.contains("fa-angles-down") ? "add" : "remove";
-    const remv = icon.classList.contains("fa-angles-down") ? "remove" : "add";
-    icon.classList[func]("fa-angles-up");
-    icon.classList[remv]("fa-angles-down");
-    document.querySelector(".chat-footer .user-input").classList[func]("hidden");
-    document.querySelector(".chat-footer .buttons").classList[func]("hidden");
-});
 
 function get_message_id() {
     const random_bytes = (Math.floor(Math.random() * 1338377565) + 2956589730).toString(
@@ -3760,45 +3411,6 @@ async function load_follow_up_questions(messages, new_response) {
         add_error("Failed to parse follow up questions:", e);
     }
 }
-domReady.then(async () => {
-    await on_load();
-    await on_api();
-
-    if (window.conversation_id) {
-        let conversation = await get_conversation(window.conversation_id);
-        if (conversation && !conversation.share) {
-            await load_conversation(conversation);
-            await play_last_message();
-            return;
-        }
-        const response = await fetch(`${framework.backendUrl}/backend-api/v2/chat/${window.conversation_id}`, {
-            headers: {'accept': 'application/json'},
-        });
-        if (!response.ok) {
-            return await load_conversation(conversation);
-        }
-        conversation = await response.json();
-        if (conversation.id == window.conversation_id) {
-            await save_conversation(conversation);
-            await load_conversations();
-        }
-        await load_conversation(window.conversation_id);
-    }
-    
-    // Set default sidebar state based on screen size
-    if (window.innerWidth >= 640) { // 40em = 640px
-        sidebar.classList.add("shown");
-        sidebar.classList.remove("minimized");
-    } else {
-        sidebar.classList.remove("shown");
-    }
-    // Ensure sidebar is shown by default on desktop
-    if (window.innerWidth >= 640) { // 40em = 640px
-        sidebar.classList.add("shown");
-        sidebar.classList.remove("minimized");
-    }
-    
-});
 
 let refreshOnHidden = true;
 domReady.then(() => {
@@ -3902,104 +3514,6 @@ const load_provider_option = (input, provider_name) => {
     }
 };
 
-async function load_providers(providers, provider_options, providersListContainer, providersToggleContainer) {
-    providersToggleContainer = providersToggleContainer || settingsContent;
-    providers.sort((a, b) => a.label.localeCompare(b.label));
-    const optGroupCore = document.createElement("optgroup");
-    optGroupCore.label = "Core Providers";
-    providers.forEach((provider) => {
-        if (provider.hf_space) {
-            return;
-        }
-        let option = document.createElement("option");
-        option.value = provider.name;
-        option.dataset.label = provider.label;
-        option.text = provider.label
-            + (window.getModelTags ? getModelTags(provider) : "")
-            + (provider.hf_space ? " 🤗" : "")
-            + (provider.nodriver ? " 🌐" : "")
-            + (!provider.nodriver && provider.auth ? " 🔑" : "")
-            + (provider.live > 0 ? " 🟢" : "")
-        if (provider.parent)
-            option.dataset.parent = provider.parent;
-        optGroupCore.appendChild(option);
-    });
-    providerSelect.appendChild(optGroupCore);
-    providerSelect.selectedIndex = 0;
-    if (!document.body.classList.contains("screen-reader")) {
-        let providersContainer = document.createElement("div");
-        providersContainer.classList.add("field", "collapsible");
-        providersContainer.innerHTML = `
-            <div class="collapsible-header">
-                <span class="label">${framework.translate('Providers (Enable/Disable)')}</span>
-                <i class="fa-solid fa-chevron-down"></i>
-            </div>
-            <div class="collapsible-content hidden"></div>
-        `;
-        providersToggleContainer.appendChild(providersContainer);
-
-        providers.forEach((provider) => {
-            if (!provider.parent || provider.name == "PuterJS") {
-                const name = provider.parent || provider.name;
-                let option = document.createElement("div");
-                option.classList.add("provider-item");
-                let api_key = appStorage.getItem(`${name}-api_key`);
-                option.innerHTML = `
-                    <span class="label">${framework.translate("Enable")} ${provider.label}</span>
-                    <input id="Provider${name}" type="checkbox" name="Provider${name}" value="${name}" class="provider" ${(provider.active_by_default || api_key) ? 'checked="checked"' : ''}/>
-                    <label for="Provider${name}" class="toogle" title="Remove provider from dropdown"></label>
-                `;
-                option.querySelector("input").addEventListener("change", (event) => load_provider_option(event.target, name));
-                providersContainer.querySelector(".collapsible-content").appendChild(option);
-                provider_options[name] = option;
-            }
-        });
-
-        providersContainer.querySelector(".collapsible-header").addEventListener('click', (e) => {
-            providersContainer.querySelector(".collapsible-content").classList.toggle('hidden');
-            providersContainer.querySelector(".collapsible-header").classList.toggle('active');
-        });
-
-        // Add Live Providers toggle
-        let liveProvidersToggle = document.createElement("div");
-        liveProvidersToggle.classList.add("provider-item");
-        const liveEnabled = appStorage.getItem("enableLiveProviders") !== "false";
-        liveProvidersToggle.innerHTML = `
-            <span class="label">Enable Live Providers</span>
-            <input id="enableLiveProviders" type="checkbox" name="enableLiveProviders" value="live" class="provider-toggle" ${liveEnabled ? 'checked="checked"' : ''}/>
-            <label for="enableLiveProviders" class="toogle" title="Enable or disable all live providers in dropdown"></label>
-        `;
-        liveProvidersToggle.querySelector("input").addEventListener("change", (event) => {
-            appStorage.setItem("enableLiveProviders", event.target.checked ? "true" : "false");
-            const optgroup = document.getElementById("live-providers-optgroup");
-            if (optgroup) {
-                optgroup.disabled = !event.target.checked;
-            }
-        });
-        providersContainer.querySelector(".collapsible-content").insertBefore(liveProvidersToggle, providersContainer.querySelector(".collapsible-content").firstChild);
-
-        // Add Custom Providers toggle
-        let customProvidersToggle = document.createElement("div");
-        customProvidersToggle.classList.add("provider-item");
-        const customEnabled = appStorage.getItem("enableCustomProviders") !== "false";
-        customProvidersToggle.innerHTML = `
-            <span class="label">Enable Custom Providers</span>
-            <input id="enableCustomProviders" type="checkbox" name="enableCustomProviders" value="custom" class="provider-toggle" ${customEnabled ? 'checked="checked"' : ''}/>
-            <label for="enableCustomProviders" class="toogle" title="Enable or disable custom providers in dropdown"></label>
-        `;
-        customProvidersToggle.querySelector("input").addEventListener("change", (event) => {
-            appStorage.setItem("enableCustomProviders", event.target.checked ? "true" : "false");
-            const optgroup = document.getElementById("custom-providers-optgroup");
-            if (optgroup) {
-                optgroup.disabled = !event.target.checked;
-            }
-        });
-        providersContainer.querySelector(".collapsible-content").insertBefore(customProvidersToggle, providersContainer.querySelector(".collapsible-content").firstChild.nextSibling);
-    }
-    load_provider_login_urls(providersListContainer, providers);
-    await load_settings(provider_options);
-    loadModels(providers);
-}
 function load_provider_login_urls(providersListContainer, providers = []) {
     for (const provider of providers) {
         if (provider.parent || provider.name == "AnyProvider") {
@@ -4136,299 +3650,6 @@ function load_provider_login_urls(providersListContainer, providers = []) {
         }
         providersListContainer.querySelector(".collapsible-content").appendChild(providerBox);
     }
-}
-async function on_api() {
-    load_version();
-    let prompt_lock = false;
-    userInput.addEventListener("keydown", async (evt) => {
-        if (prompt_lock) return;
-        // If not mobile and not shift enter
-        let do_enter = userInput.value.endsWith("\n\n\n\n");
-        if (do_enter || !window.matchMedia("(pointer:coarse)").matches && evt.keyCode === 13 && !evt.shiftKey) {
-            evt.preventDefault();
-            console.log("pressed enter");
-            prompt_lock = true;
-            setTimeout(()=>prompt_lock=false, 3000);
-            await handle_ask(!do_enter);
-        }
-    });
-    let timeoutBlur = null;
-    userInput.addEventListener("focus", async (evt) => {
-        userInput.style.height = userInputHeight?.value + "px";
-    });
-    userInput.addEventListener("blur", async (evt) => {
-        timeoutBlur = setTimeout(() => userInput.style.height = "", 200);
-    });
-    codeButton?.addEventListener("click", async () => {
-        clearTimeout(timeoutBlur);
-        insertBackticksInTextarea(userInput);
-    });
-    sendButton.addEventListener(`click`, async () => {
-        console.log("clicked send");
-        if (prompt_lock) return;
-        prompt_lock = true;
-        setTimeout(()=>prompt_lock=false, 3000);
-        stopRecognition();
-        await handle_ask();
-    });
-    addButton.addEventListener(`click`, async () => {
-        stopRecognition();
-        await handle_ask(false);
-    });
-    userInput.addEventListener(`click`, async () => {
-        stopRecognition();
-    });
-
-    // Get the Providers tab containers (or fall back to settingsContent for backward compatibility)
-    const providersApiKeysContainer = document.getElementById("providers-api-keys-container") || settingsContent;
-    const providersToggleContainer = document.getElementById("providers-toggle-container") || settingsContent;
-
-    let providersListContainer = document.createElement("div");
-    providersListContainer.classList.add("field", "collapsible");
-    providersListContainer.innerHTML = `
-        <div class="collapsible-header">
-            <span class="label">${framework.translate('Providers API key')}</span>
-            <i class="fa-solid fa-chevron-down"></i>
-        </div>
-        <div class="collapsible-content api-key hidden"></div>
-    `;
-    providersApiKeysContainer.appendChild(providersListContainer);
-
-    providersListContainer.querySelector(".collapsible-header").addEventListener('click', (e) => {
-        providersListContainer.querySelector(".collapsible-content").classList.toggle('hidden');
-        providersListContainer.querySelector(".collapsible-header").classList.toggle('active');
-    });
-    if (providerSelect) {
-        // Add Live Providers optgroup
-        const optgroup = document.createElement("optgroup");
-        optgroup.id = "live-providers-optgroup";
-        optgroup.label = framework.translate('Live Providers');
-        const liveProvidersEnabled = appStorage.getItem("enableLiveProviders") !== "false";
-        if (!liveProvidersEnabled) {
-            optgroup.disabled = true;
-        }
-        providerSelect.appendChild(optgroup);
-        async function updateLiveProviderOptions() {
-            try {
-                Object.entries(await window.loadProviders()).forEach(([name, config]) => {
-                    if (name === "custom") {
-                        return; // Skip custom here, will be added separately
-                    }
-                    if (["together", "huggingface", "typegpt"].includes(name) && !appStorage.getItem(window.providerLocalStorage[name])) {
-                        return;
-                    }
-                    let option = document.createElement("option");
-                    if (name === config.defaultModel) {
-                        option.selected = true;
-                    }
-                    option.value = name;
-                    option.dataset.live = "true";
-                    option.text = (config.label || name) + (config.tags ? ` ${config.tags} 🟢` : " 🟢");
-                    if (config.id) {
-                        option.dataset.serverId = config.id;
-                    }
-                    optgroup.appendChild(option);
-                });
-                providerSelect.value = "default";
-            } catch(e) {
-                add_error(e, true);
-            }
-        }
-
-        // Add Custom Providers optgroup
-        const customOptgroup = document.createElement("optgroup");
-        customOptgroup.id = "custom-providers-optgroup";
-        customOptgroup.label = framework.translate('Custom Providers');
-        const customProvidersEnabled = appStorage.getItem("enableCustomProviders") !== "false";
-        if (!customProvidersEnabled) {
-            customOptgroup.disabled = true;
-        }
-        providerSelect.appendChild(customOptgroup);
-        async function loadCustomProvidersSelect() {
-            try {
-                // Add Custom provider if configured (local custom provider)
-                if (appStorage.getItem("Custom-api_base")) {
-                    const customOption = document.createElement("option");
-                    customOption.value = "custom";
-                    customOption.dataset.live = "true";
-                    customOption.dataset.custom = "true";
-                    customOption.text = "Custom Provider 🔧";
-                    customOptgroup.appendChild(customOption);
-                } 
-                // Load custom providers from API and add to toggle list
-                await loadCustomProvidersFromAPI(document.getElementById("custom-providers-optgroup"));
-            } catch(e) {
-                add_error(e, true);
-            }
-        }
-
-        // Add PA Providers optgroup
-        const paOptgroup = document.createElement("optgroup");
-        paOptgroup.id = "pa-providers-optgroup";
-        paOptgroup.label = framework.translate('PA Providers');
-        providerSelect.appendChild(paOptgroup);
-
-        async function loadCoreProvidersSelect() {
-            let provider_options = [];
-            await api("providers").then(async (providers) => {
-                await load_providers(providers, provider_options, providersListContainer, providersToggleContainer);
-            }).catch(async (e)=>{
-                add_error(e, true);
-                providerSelect.querySelectorAll("option:not([data-live])").forEach((el)=>el.remove());
-                await load_provider_login_urls(providersListContainer, providers);
-                await load_settings(provider_options);
-            });
-        }
-
-        await Promise.all([
-            updateLiveProviderOptions(),
-            loadCustomProvidersSelect(),
-            loadPaProviderSelect(paOptgroup),
-            loadCoreProvidersSelect()
-        ]).then(() => {
-            loadProviderModels(appStorage.getItem("provider"));
-        });
-
-        set_favorite_providers();
-    } else {
-        await load_provider_login_urls(providersListContainer, providers);
-        await load_settings({});
-        await initClient();
-    }
-
-    const update_systemPrompt_icon = (checked) => {
-        slide_systemPrompt_icon.classList[checked ? "remove": "add"]("fa-angles-up");
-        slide_systemPrompt_icon.classList[checked ? "add": "remove"]("fa-angles-down");
-        chatPrompt.classList[checked ? "add": "remove"]("hidden");
-    };
-    if (appStorage.getItem("hide-systemPrompt") == "true") {
-        update_systemPrompt_icon(true);
-    }
-    slide_systemPrompt_icon.addEventListener("click", ()=>{
-        update_systemPrompt_icon(slide_systemPrompt_icon.classList.contains("fa-angles-up"));
-    });
-    hide_systemPrompt ? hide_systemPrompt.addEventListener('change', async (event) => {
-        update_systemPrompt_icon(event.target.checked);
-    }) : null;
-    const darkMode = document.getElementById("darkMode");
-    if (darkMode) {
-        darkMode.addEventListener('change', async (event) => {
-            if (event.target.checked) {
-                document.body.classList.remove("white");
-            } else {
-                document.body.classList.add("white");
-            }
-        });
-    }
-    const enableModelSearch = document.getElementById("enableModelSearch");
-    const searchProviderField = document.getElementById("searchProviderField");
-    const searchModelField = document.getElementById("searchModelField");
-    if (enableModelSearch) {
-        enableModelSearch.addEventListener('change', async (event) => {
-            appStorage.setItem("enableModelSearch", event.target.checked ? "true" : "false");
-            if (event.target.checked) {
-                document.getElementById("model_edit")?.parentElement.classList.remove("hidden");
-                if (searchProviderField) searchProviderField.style.display = "flex";
-                if (searchModelField) searchModelField.style.display = "flex";
-            } else {
-                document.getElementById("model_edit")?.parentElement.classList.add("hidden");
-                if (searchProviderField) searchProviderField.style.display = "none";
-                if (searchModelField) searchModelField.style.display = "none";
-                // Reset search UI if it was open
-                if (modelSelector && !modelSelector.classList.contains("hidden")) {
-                    providerSelect?.classList.remove("hidden");
-                    modelSelect?.classList.remove("hidden");
-                    modelSelector.classList.add("hidden");
-                }
-            }
-        });
-        if (appStorage.getItem("enableModelSearch") === "false") {
-            enableModelSearch.checked = false;
-            document.getElementById("model_edit")?.parentElement.classList.add("hidden");
-            if (searchProviderField) searchProviderField.style.display = "none";
-            if (searchModelField) searchModelField.style.display = "none";
-        } else {
-            enableModelSearch.checked = true;
-            if (searchProviderField) searchProviderField.style.display = "flex";
-            if (searchModelField) searchModelField.style.display = "flex";
-        }
-    }
-    const searchByProvider = document.getElementById("searchByProvider");
-    if (searchByProvider) {
-        searchByProvider.addEventListener('change', async (event) => {
-            appStorage.setItem("searchByProvider", event.target.checked ? "true" : "false");
-        });
-        if (appStorage.getItem("searchByProvider") !== "true") {
-            searchByProvider.checked = false;
-        } else {
-            searchByProvider.checked = true;
-        }
-    }
-    const searchByModel = document.getElementById("searchByModel");
-    if (searchByModel) {
-        searchByModel.addEventListener('change', async (event) => {
-            appStorage.setItem("searchByModel", event.target.checked ? "true" : "false");
-        });
-        if (appStorage.getItem("searchByModel") === "false") {
-            searchByModel.checked = false;
-        } else {
-            searchByModel.checked = true;
-        }
-    }
-    const liquid = document.getElementById("liquid");
-    if (liquid) {
-        liquid.addEventListener('change', async (event) => {
-            if (event.target.checked) {
-                document.body.classList.add("liquid");
-            } else {
-                document.body.classList.remove("liquid");
-            }
-        });
-    }
-    const disableAnimations = document.getElementById("disableAnimations");
-    if (disableAnimations) {
-        disableAnimations.addEventListener('change', async (event) => {
-            if (event.target.checked) {
-                document.body.classList.add("no-animations");
-            } else {
-                document.body.classList.remove("no-animations");
-            }
-        });
-    }
-
-    document.getElementById('recognition-language').placeholder = await get_recognition_language();
-}
-
-async function load_version() {
-    let new_version = document.querySelector(".new_version");
-    if (new_version) return;
-    let text = "version ~ "
-    api("version").then((versions)=>{
-        window.title = 'G4F - ' + versions["version"];
-        if (document.title == "G4F Chat") {
-            document.title = window.title;
-        }
-        if (versions["latest_version"] && versions["version"] != versions["latest_version"]) {
-            let release_url = 'https://github.com/xtekky/gpt4free/releases/latest';
-            let title = `${framework.translate('New version:')} ${versions["latest_version"]}`;
-            text += `<a href="${release_url}" target="_blank" title="${title}">${versions["version"]}</a> 🆕`;
-            new_version = document.createElement("div");
-            new_version.classList.add("new_version");
-            const link = `<a href="${release_url}" target="_blank" title="${title}">v${versions["latest_version"]}</a>`;
-            new_version.innerHTML = `G4F ${link}&nbsp;&nbsp;🆕`;
-            new_version.addEventListener("click", ()=>new_version.parentElement.removeChild(new_version));
-            document.body.appendChild(new_version);
-        } else {
-            text += versions["version"];
-        }
-        document.getElementById("version_text").innerHTML = text
-    }).catch((e)=>{
-        console.error("Error loading version:", e);
-        fetch("https://api.github.com/repos/xtekky/gpt4free/releases/latest").then((response)=>response.json()).then((data)=>{
-            document.getElementById("version_text").innerText = text + data.tag_name;
-        });
-    });
-    setTimeout(load_version, 1000 * 60 * 60); // 1 hour
 }
 
 async function upload_image(file) {
@@ -5318,256 +4539,6 @@ async function get_quota(provider) {
     }
     return response.ok ? data : undefined;
 }
-async function refreshModels(provider) {
-    // PA providers expose models via the pa providers list, not the models API
-    if (provider && String(provider).startsWith("pa:")) {
-        const paId = provider.slice(3);
-        const paEntry = window._paProviders && window._paProviders.find(p => p.id === paId);
-        console.log("PA provider entry for provider:", provider, paEntry);
-        if (paEntry && Array.isArray(paEntry.models) && paEntry.models.length > 0) {
-            console.log("Setting PA provider models for provider:", provider, paEntry.models);
-            setProviderModels(paEntry.models, provider);
-        }
-        return;
-    }
-    let models = appStorage.getItem(`${provider}:models`);
-    if (models) {
-        models = JSON.parse(models);
-        setProviderModels(models, provider);
-    }
-    const [new_models, quota] = await Promise.all([api('models', provider), get_quota(provider)]);
-    if (new_models) {
-        setProviderModels(new_models, provider, quota);
-        appStorage.setItem(`${provider}:models`, JSON.stringify(new_models));
-    }
-}
-async function loadProviderModels(provider=null) {
-    const isLoading = !!provider;
-    if (!provider) {
-        provider = providerSelect?.value;
-    }
-    if (!provider) {
-        modelSelect.classList.add("hidden");
-        return;
-    }
-    if (isLoading && providerSelect) {
-        providerSelect.value = provider;
-    }
-    modelSelect.innerHTML = '';
-    modelSelect.name = `model[${provider}]`;
-    modelSelect.classList.remove("hidden");
-    if (!isLoading && ["PuterJS"].includes(provider) && !appStorage.getItem("puter.auth.token") && window.Puter) {
-        try {
-            await (new window.Puter()).signIn().then((res) => {
-                console.log('PuterJS signed in:', res);
-            });
-        } catch (error) {
-            add_error(error, true);
-        }
-    }
-    if (await initClient()) {
-        return;
-    }
-    console.log("Loading models for provider:", provider);
-    await refreshModels(provider);
-};
-if (providerSelect) {
-    providerSelect.addEventListener("change", async () => {
-        await loadProviderModels()
-        const favorites = appStorage.getItem("favorite_providers") ? JSON.parse(appStorage.getItem("favorite_providers")) : {};
-        const selected = providerSelect.options[providerSelect.selectedIndex];
-        console.log("Selected provider:", providerSelect.value, selected);
-        if (!favorites[providerSelect.value]) {
-            const option = selected.cloneNode(true);
-            const optgroup = providerSelect.querySelector('optgroup:last-child');
-            if (optgroup) {
-                optgroup.appendChild(option);
-                if (optgroup.childElementCount > 5) {
-                    delete favorites[optgroup.firstChild.value];
-                    optgroup.removeChild(optgroup.firstChild);
-                }
-            }
-        }
-        const selected_values = favorites[providerSelect.value] ? favorites[providerSelect.value] + 1 : 1;
-        delete favorites[providerSelect.value];
-        favorites[providerSelect.value] = selected_values;
-        appStorage.setItem("favorite_providers", JSON.stringify(favorites));
-    });
-}
-modelSelect.addEventListener("change", () => {
-    const favorites = appStorage.getItem("favorites") ? JSON.parse(appStorage.getItem("favorites")) : {};
-    const selected = favorites[providerSelect?.value] || {};
-    const selectedOption = modelSelect.options[modelSelect.selectedIndex];
-    console.log("Selected model:", modelSelect.value, selectedOption);
-    if (!selected[modelSelect.value]) {
-        const option = selectedOption.cloneNode(true);
-        const optgroup = modelSelect.querySelector('optgroup:last-child');
-        if (optgroup) {
-            optgroup.appendChild(option);
-            if (optgroup.childElementCount > 5) {
-                delete selected[optgroup.firstChild.value];
-                optgroup.removeChild(optgroup.firstChild);
-            }
-        }
-    }
-    const selected_values = selected[modelSelect.value] ? selected[modelSelect.value] + 1 : 1;
-    delete selected[modelSelect.value];
-    selected[modelSelect.value] = selected_values;
-    favorites[providerSelect?.value] = selected;
-    appStorage.setItem("favorites", JSON.stringify(favorites));
-});
-document.getElementById("model_edit")?.addEventListener("click", () => {
-    if (!modelSelector.classList.contains("hidden")) {
-        providerSelect.classList.remove("hidden");
-        modelSelect.classList.remove("hidden");
-        modelSelector.classList.add("hidden");
-        modelSearch.value = "";
-        return;
-    }
-    providerSelect.classList.add("hidden");
-    modelSelect.classList.add("hidden");
-    modelSelector.classList.remove("hidden");
-    modelSearch.focus()
-});
-modelSearch?.addEventListener('input', function() {
-  const searchTerm = this.value.toLowerCase();
-  modelSuggestions.innerHTML = '';
-
-  if (!searchTerm) return;
-
-  let matches = [];
-  
-  const selectedProvider = providerSelect.value;
-  const filterByProvider = selectedProvider && selectedProvider !== "AnyProvider";
-  const allowProviderMatch = appStorage.getItem("searchByProvider") === "true";
-  const allowModelMatch = appStorage.getItem("searchByModel") !== "false";
-
-  // Search across all models
-  for (const [provider, modelList] of Object.entries(searchModels)) {
-    if (filterByProvider && provider !== selectedProvider) continue;
-    if (!Array.isArray(modelList)) continue;
-    
-    const providerMatch = allowProviderMatch && provider.toLowerCase().includes(searchTerm);
-    
-    modelList.forEach(model => {
-      if (model.models) {
-        model.models.forEach(subModel => {
-          const modelMatch = allowModelMatch && subModel.model.toLowerCase().includes(searchTerm);
-          if (modelMatch || providerMatch) {
-            matches.push({ provider, model: subModel });
-          }
-        });
-      } else {
-        const modelStr = model.id || model;
-        const modelMatch = allowModelMatch && modelStr.toLowerCase().includes(searchTerm);
-        if (modelMatch || providerMatch) {
-          matches.push({ provider, model });
-        }
-      }
-    });
-  }
-
-  // Sort matches so that the currently selected provider is at the top
-  if (selectedProvider && selectedProvider !== "AnyProvider") {
-      matches.sort((a, b) => {
-          if (a.provider === selectedProvider && b.provider !== selectedProvider) return -1;
-          if (a.provider !== selectedProvider && b.provider === selectedProvider) return 1;
-          return 0;
-      });
-  }
-
-  // Limit matches to top 100 to prevent DOM rendering lag
-  const topMatches = matches.slice(0, 100);
-
-  // Display matches
-  topMatches.forEach(match => {
-    const div = document.createElement('div');
-    div.className = 'suggestion-item';
-    div.innerHTML = `
-      <strong>${match.model.id || match.model}</strong>
-      <span class="provider-tag">${match.provider}</span>
-    `;
-    div.addEventListener('click', async () => {
-      modelSearch.value = "";
-      providerSelect.value = match.provider;
-      await loadProviderModels();
-      modelSelect.value = match.model.id || match.model;
-      modelSelector.classList.add("hidden");
-      providerSelect.classList.remove("hidden");
-      modelSelect.classList.remove("hidden");
-      modelSuggestions.innerHTML = '';
-      console.log(`Selected model: ${match.model}`);
-    });
-    modelSuggestions.appendChild(div);
-  });
-});
-async function loadModels(providers) {
-    searchModels = await api('models');
-}
-
-// Close dropdown when clicking outside
-domReady.then(() => {
-if (modelSuggestions)
-document.addEventListener('click', (e) => {
-  if (e.target !== modelSearch) {
-    modelSuggestions.innerHTML = '';
-  }
-});
-});
-
-domReady.then(() => {
-document.getElementById("pin").addEventListener("click", async () => {
-    add_pinned(providerSelect?.value, get_selected_model());
-});
-
-(async () => {
-    JSON.parse(appStorage.getItem("pinned") || "[]").forEach((el) => {
-        add_pinned(el.provider, el.model, false);
-    });
-})();
-});
-
-function add_pinned(selected_provider, selected_model, save=true) {
-    if (save) {
-        const all_pinned_saved = JSON.parse(appStorage.getItem("pinned") || "[]");
-        appStorage.setItem("pinned", JSON.stringify([{
-            provider: selected_provider?.value || selected_provider,
-            model: selected_model?.value || selected_model,
-        }, ...all_pinned_saved]));
-    }
-    const pinned = document.createElement("button");
-    pinned.classList.add("pinned");
-    if (selected_provider) pinned.dataset.provider = selected_provider.value || selected_provider;
-    if (selected_model) pinned.dataset.model = selected_model.value || selected_model;
-    pinned.innerHTML = `
-        <span>
-        ${selected_provider && selected_provider.dataset ? selected_provider.dataset.label || selected_provider.text : selected_provider}
-        ${selected_provider && selected_model ? "/" : ""}
-        ${selected_model && selected_model.dataset ? selected_model.dataset.label || selected_model.text : selected_model}
-        </span>
-        <i class="fa-regular fa-circle-xmark"></i>`;
-    pinned.addEventListener("click", () => {
-        pin_container.removeChild(pinned);
-        let all_pinned = JSON.parse(appStorage.getItem("pinned") || "[]");
-        all_pinned = all_pinned.filter((el) => {
-            return el.provider != pinned.dataset.provider || el.model != pinned.dataset.model;
-        });
-        appStorage.setItem("pinned", JSON.stringify(all_pinned));
-    });
-    all_pinned = pin_container.querySelectorAll(".pinned");
-    while (all_pinned.length > 4) {
-        pin_container.removeChild(all_pinned[0])
-        all_pinned = pin_container.querySelectorAll(".pinned");
-    }
-    pin_container.appendChild(pinned);
-}
-
-searchButton.addEventListener("click", async () => {
-    setTimeout(() => userInput.focus(), 100);
-    searchButton.classList.toggle("active");
-    (searchButton.querySelector("*")).innerText = (searchButton.classList.contains("active") ? framework.translate("Search On") : framework.translate("Search Off"));
-});
-
 async function save_storage(settings=false) {
     let filename = `${settings ? 'settings' : 'chat'} ${new Date().toLocaleString()}.json`.replaceAll(":", "-");
     let data = {"options": {"g4f": ""}};
@@ -5706,13 +4677,6 @@ if (SpeechRecognition) {
     });
 }
 
-function showLog() {
-    logStorage?.classList.remove("hidden");
-    settings.classList.add("hidden");
-    logContent.scrollTop = logContent.scrollHeight;
-    chat.classList.add("hidden");
-}
-
 function hideLog() {
     logStorage?.classList.add("hidden");
     chat.classList.remove("hidden");
@@ -5735,13 +4699,13 @@ function logRequestResponse(event, messageId, count=0) {
     }
     pre.appendChild(code)
     details.appendChild(pre);
-    const detailsList = logContent ? logContent.getElementsByTagName('details') : [];
+    const detailsList = logContent ? logContent?.getElementsByTagName('details') : [];
     if (detailsList.length >= 100) {
-         logContent.removeChild(detailsList[0]);
+         logContent?.removeChild(detailsList[0]);
     }
 
     if (logContent) {
-        logContent.appendChild(details);
+        logContent?.appendChild(details);
     }
     if (window.hljs) {
         hljs.highlightElement(code);
@@ -6497,78 +5461,6 @@ function insertBackticksInTextarea(el) {
 // ============================================================
 // MCP (Model Context Protocol) Integration
 // ============================================================
-
-let mcpClient = null;
-
-// Initialize MCP client when page loads
-domReady.then(() => {
-document.addEventListener('DOMContentLoaded', () => {
-    if (typeof MCPClient !== 'undefined') {
-        mcpClient = new MCPClient();
-        try {
-             initializeMCPUI();
-        } catch(e) {
-            add_error(e)
-        }
-    }
-});
-});
-function initializeMCPUI() {
-    // Add default server if none exist
-    if (mcpClient.servers.length === 0) {
-        mcpClient.addServer({ name: 'Default', url: 'https://mcp.g4f.space' });
-    }
-
-    // Render servers list
-    renderMCPServers();
-    
-    // Render tools list
-    renderMCPTools();
-
-    // Initial refresh of tools
-    refreshMCPTools();
-    
-    // Add server button
-    document.getElementById('add-mcp-server-btn')?.addEventListener('click', showAddServerDialog);
-    
-    // Refresh tools button
-    document.getElementById('refresh-mcp-tools-btn')?.addEventListener('click', refreshMCPTools);
-
-    // PA providers
-    document.getElementById('refresh-pa-providers-btn')?.addEventListener('click', loadPaProviders);
-    loadPaProviders();
-}
-
-function renderMCPServers() {
-    const container = document.getElementById('mcp-servers-list');
-    if (!container || !mcpClient) return;
-    
-    const servers = mcpClient.servers;
-    
-    if (servers.length === 0) {
-        container.innerHTML = '<div class="mcp-empty">No MCP servers configured. Click + to add one.</div>';
-        return;
-    }
-    
-    container.innerHTML = servers.map(server => `
-        <div class="mcp-server-item" data-server-id="${server.id}">
-            <div class="mcp-server-info">
-                <input type="checkbox" 
-                       id="mcp-server-${server.id}" 
-                       ${server.enabled ? 'checked' : ''}
-                       onchange="toggleMCPServer('${server.id}')">
-                <label for="mcp-server-${server.id}" class="mcp-server-name">${escapeHtml(server.name)}</label>
-                <span class="mcp-server-url">${escapeHtml(server.url)}</span>
-            </div>
-            <button type="button" 
-                    class="mcp-remove-btn" 
-                    onclick="removeMCPServer('${server.id}')"
-                    aria-label="Remove server">
-                <i class="fa-solid fa-trash"></i>
-            </button>
-        </div>
-    `).join('');
-}
 
 function renderMCPTools() {
     const container = document.getElementById('mcp-tools-list');
@@ -7333,8 +6225,7 @@ export default {
     showErrorPopup,
     generateFallbackHints,
     closeErrorPopup,
-    register_message_buttons_all,
-    new_conversation,
+    register_message_buttons,
     delete_conversations,
     handle_ask,
     safe_remove_cancel_button,
@@ -7399,10 +6290,7 @@ export default {
     load_follow_up_questions,
     on_load,
     load_provider_option,
-    load_providers,
     load_provider_login_urls,
-    on_api,
-    load_version,
     upload_image,
     renderMediaSelect,
     upload_audio,
@@ -7420,13 +6308,8 @@ export default {
     filterModels,
     setProviderModels,
     get_quota,
-    refreshModels,
-    loadProviderModels,
-    loadModels,
-    add_pinned,
     save_storage,
     get_recognition_language,
-    showLog,
     hideLog,
     logRequestResponse,
     createSidebarOverlay,
@@ -7440,8 +6323,6 @@ export default {
     loadClientModels,
     import_from_appStorage,
     insertBackticksInTextarea,
-    initializeMCPUI,
-    renderMCPServers,
     renderMCPTools,
     showAddServerDialog,
     removeMCPServer,

@@ -461,7 +461,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         if (cursorDiv) cursorDiv.parentNode.removeChild(cursorDiv);
         await safe_remove_cancel_button();
         await register_message_images();
-        await register_message_buttons_all();
+        await register_message_buttons();
         await load_conversations();
         regenerate_button.classList.remove("regenerate-hidden");
     }

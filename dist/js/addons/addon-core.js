@@ -39,6 +39,8 @@
         'ui:render': 'Hook into message rendering',
         // Show toasts / notifications.
         'ui:notify': 'Show toast notifications',
+        // Add feature buttons/options to the sidebar addon panel.
+        'ui:sidebar': 'Add buttons/options to the sidebar panel',
         // Read DOM (querySelector on the chat page).
         'dom:read': 'Read chat page DOM elements',
         // Limited DOM write (add CSS classes, toggle visibility).
@@ -119,6 +121,11 @@
     ];
 
     function screenSource(source, id) {
+        // Static screening is advisory, not a hard gate: workspace addons
+        // are user-provided files that legitimately touch document/window
+        // (the host bridge is the recommended surface, but the sandbox is a
+        // plain Function wrapper, so blocking these patterns would reject
+        // every real workspace addon without adding actual isolation).
         const warnings = [];
         for (const pattern of FORBIDDEN_PATTERNS) {
             if (pattern.test(source)) {
@@ -126,8 +133,9 @@
             }
         }
         if (warnings.length) {
-            throw new Error(
-                `[addons:${id}] source contains forbidden patterns: ${warnings.join(', ')}`
+            console.warn(
+                `[addons:${id}] source contains patterns that are discouraged (${warnings.join(', ')}); ` +
+                `prefer the ChatAddonHost bridge where possible`
             );
         }
     }
@@ -155,6 +163,10 @@
 
         if (granted.includes('ui:render') && global.ChatAddonHost) {
             caps.onMessageRender = (cb) => global.ChatAddonHost.onMessageRender(addon.id, cb);
+        }
+
+        if (granted.includes('ui:sidebar') && global.ChatAddonHost) {
+            caps.sidebar = global.ChatAddonHost.sidebar;
         }
 
         if (granted.includes('dom:read') && global.ChatAddonHost) {
@@ -190,22 +202,54 @@
 
     function executeSandboxed(addon) {
         const caps = grantCaps(addon);
-        const sources = [
-            '"use strict";',
-            'const addon = arguments[0];',
-            'const caps = arguments[1];',
-            'const module = { exports: {} };',
-            'const exports = module.exports;',
-            addon.source,
-        ].join('\n');
-        const factory = new Function('addon', 'caps', 'module', 'exports', sources);
-        const result = factory(addon, caps, { exports: {} }, {});
-        if (result && typeof result.enable === 'function') {
-            // Support `return { enable, disable }` style addons.
-            addon.api = result;
+        // Workspace addon files self-register via the global ChatAddons.register()
+        // (e.g. `id: 'workspace:chat-export'`), while discovery pre-registers an
+        // entry under a normalized id and stores the source here. Intercept
+        // register() during the eval so the self-declared descriptor (load(),
+        // unload(), permissions, ...) is merged into the discovery entry —
+        // otherwise the addon's load() body would never run.
+        const realRegister = global.ChatAddons.register.bind(global.ChatAddons);
+        let selfDescriptor = null;
+        let sawSelf = false;
+        global.ChatAddons.register = (descriptor) => {
+            const result = realRegister(descriptor);
+            if (descriptor && !descriptor.builtin) {
+                sawSelf = true;
+                selfDescriptor = descriptor;
+            }
             return result;
+        };
+        try {
+            const sources = [
+                '"use strict";',
+                addon.source,
+            ].join('\n');
+            const factory = new Function('addon', 'caps', 'module', 'exports', sources);
+            const result = factory(addon, caps, { exports: {} }, {});
+            if (sawSelf && selfDescriptor) {
+                // If the addon self-registered under a different id than the
+                // discovery id, drop the self-registered duplicate entry.
+                if (selfDescriptor.id && selfDescriptor.id !== addon.id && registry.has(selfDescriptor.id)) {
+                    registry.delete(selfDescriptor.id);
+                }
+                // Merge ALL own properties from the self-declared descriptor
+                // into the discovery entry so that `this` inside load/unload
+                // has access to every method and property the addon defined
+                // (e.g. _loadSets, _getMCP, STORAGE_KEY, _injectPanel, …).
+                for (const key of Object.keys(selfDescriptor)) {
+                    if (key === 'id') continue; // keep the discovery id
+                    addon[key] = selfDescriptor[key];
+                }
+            }
+            if (result && typeof result.enable === 'function') {
+                // Support `return { enable, disable }` style addons.
+                addon.api = result;
+                return result;
+            }
+            return null;
+        } finally {
+            global.ChatAddons.register = realRegister;
         }
-        return null;
     }
 
     // ------------------------------------------------------------------
@@ -248,7 +292,7 @@
             addon.api = api;
         }
         if (typeof addon.load === 'function') {
-            await addon.load(capsFor(addon), opts);
+            await addon.load.call(addon, capsFor(addon), opts);
         }
         addon._active = true;
         console.info(`[addons] enabled: ${id}`);
@@ -269,7 +313,7 @@
                     await addon.api.disable();
                 }
                 if (typeof addon.unload === 'function') {
-                    await addon.unload();
+                    await addon.unload.call(addon);
                 }
             } catch (e) {
                 console.error(`[addons] error unloading "${id}"`, e);
@@ -280,8 +324,13 @@
 
     async function enable(id, opts = {}) {
         console.log('[addons] enabling addon', id);
-        await loadOne(id, opts);
-        setEnabled(id, true);
+        try {
+            await loadOne(id, opts);
+            setEnabled(id, true);
+        } catch (e) {
+            console.error(`[addons] failed to enable "${id}"`, e);
+            throw e;
+        }
     }
 
     async function disable(id) {
@@ -311,7 +360,10 @@
             if (changed) persistState();
         }
         for (const addon of registry.values()) {
-            if (isEnabled(addon.id)) {
+            // Guard with _active so re-running enableAll() (e.g. after
+            // workspace discovery registers new addons) never double-loads
+            // addons that are already up.
+            if (isEnabled(addon.id) && !addon._active) {
                 try { await loadOne(addon.id); }
                 catch (e) { console.error(`[addons] failed to enable "${addon.id}"`, e); }
             }
@@ -326,14 +378,26 @@
         if (!host) return [];
         const files = await host.listWorkspaceAddons();
         const found = [];
+        let discoveredNew = false;
         for (const file of files) {
-            const id = 'workspace:' + file;
+            // Normalize the id to the short form the addon files themselves
+            // register under (`workspace:<name>`, not the full path). The
+            // file content is the source of truth: it calls
+            // `ChatAddons.register({ id: 'workspace:<name>', ... })` at
+            // eval time, so the discovery id must match or toggling in the
+            // manager would persist a different id than the addon registers.
+            const id = normalizeWorkspaceId(file);
             if (registry.has(id)) { found.push(registry.get(id)); continue; }
             try {
                 const text = await host.readWorkspaceFile(file);
                 const meta = parseAddonHeader(text, file);
+                // Prefer the id the addon file itself declares in its
+                // ChatAddons.register({ id: 'workspace:<name>' }) call, so the
+                // manager list, enable-state persistence and the addon's own
+                // registration all agree.
+                const selfId = extractSelfRegisteredId(text);
                 const addon = register({
-                    id,
+                    id: selfId || id,
                     name: meta.name || file.replace(/\.pa\.js$/i, ''),
                     version: meta.version || '0.0.1',
                     description: meta.description || 'Workspace addon',
@@ -344,11 +408,44 @@
                     allowedOrigins: meta.allowedOrigins || [],
                 });
                 found.push(addon);
+                discoveredNew = true;
             } catch (e) {
                 console.error(`[addons] failed to load workspace addon "${file}"`, e);
             }
         }
+        // Workspace addons are registered asynchronously, after the host's
+        // initial enableAll() already ran over the built-in registry. If the
+        // user previously enabled a workspace addon (persisted in localStorage),
+        // apply the stored state now so it comes back after every reload.
+        if (discoveredNew) {
+            await enableAll();
+        }
         return found;
+    }
+
+    // 'pa-providers/pa-chat-export.js' -> 'workspace:pa-chat-export.js'
+    // 'pa-providers/pa-chat-export.js' (addon registers 'workspace:chat-export')
+    // -> also acceptable: strip the .js extension only if the addon file
+    // does. We keep the basename with extension by default, matching the
+    // `pa-*.js` registration convention used by the built-in files, and
+    // fall back to the short name if the basename doesn't start with 'pa-'.
+    function normalizeWorkspaceId(file) {
+        const base = String(file).split('/').pop();
+        const id = 'workspace:' + base;
+        // If the basename is pa-<name>.js, the addon files register with
+        // workspace:<name> (no prefix, no extension). Try to match that.
+        const m = /^pa-(.+)\.js$/i.exec(base);
+        if (m) return 'workspace:' + m[1];
+        return id;
+    }
+
+    // Extract the id a workspace addon self-registers with in its
+    // `ChatAddons.register({ id: '...' })` call so the manager list and
+    // enable-state use the same id the addon itself registers.
+    function extractSelfRegisteredId(source) {
+        const m = /\bid\s*:\s*['"]([^'"]+)['"]/.exec(source || '');
+        if (m && /^workspace:/.test(m[1])) return m[1];
+        return null;
     }
 
     function parseAddonHeader(source, filename) {

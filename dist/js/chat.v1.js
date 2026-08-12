@@ -1491,7 +1491,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         }
         let p = document.createElement("p");
         p.innerText = error_message;
-        logContent.appendChild(p);
+        logContent?.appendChild(p);
         await api("log", {...message, provider: provider_storage[message_id]});
     } else if (message.type == "preview") {
         let img;
@@ -1527,7 +1527,7 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
     } else if (message.type == "log") {
         let p = document.createElement("p");
         p.innerText = message.log;
-        logContent.appendChild(p);
+        logContent?.appendChild(p);
     } else if (message.type == "synthesize") {
         synthesize_storage[message_id] = message.synthesize;
     } else if (message.type == "title") {
@@ -4735,11 +4735,11 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
         }
         providerModelSignal = new AbortController();
         
-        api_key = get_api_key_by_provider(args);
+        const api_key = get_api_key_by_provider(args);
         if (api_key) {
             headers['x-api-key'] = api_key;
         }
-        api_base = args == "Custom" ? document.getElementById(`${args}-api_base`).value : null;
+        const api_base = args == "Custom" ? document.getElementById(`${args}-api_base`).value : null;
         if (api_base) {
             headers['x-api-base'] = api_base;
         }
@@ -5559,7 +5559,7 @@ if (SpeechRecognition) {
 function showLog() {
     logStorage.classList.remove("hidden");
     settings.classList.add("hidden");
-    logContent.scrollTop = logContent.scrollHeight;
+    logContent?.scrollTop = logContent?.scrollHeight;
     chat.classList.add("hidden");
 }
 
@@ -5585,12 +5585,12 @@ function logRequestResponse(event, messageId, count=0) {
     }
     pre.appendChild(code)
     details.appendChild(pre);
-    const detailsList = logContent.getElementsByTagName('details');
+    const detailsList = logContent?.getElementsByTagName('details');
     if (detailsList.length >= 100) {
-         logContent.removeChild(detailsList[0]);
+         logContent?.removeChild(detailsList[0]);
     }
 
-    logContent.appendChild(details);
+    logContent?.appendChild(details);
     if (window.hljs) {
         hljs.highlightElement(code);
     }

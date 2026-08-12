@@ -5,9 +5,8 @@ const appStorage = window.localStorage || {
     length: 0,
 };
 const domReady = new Promise((resolve) => {
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", resolve);
-    } else {
+    document.addEventListener("DOMContentLoaded", resolve);
+    if (document.readyState !== "loading" ) {
         resolve();
     }
 });
@@ -625,7 +624,7 @@ domReady.then(async () => {
         icon.classList[func]("fa-angles-up");
         icon.classList[remv]("fa-angles-down");
         document.querySelector(".chat-footer .user-input").classList[func]("hidden");
-        document.querySelector(".chat-footer .buttons").classList[func]("hidden");
+        document.querySelector(".chat-footer .chat-buttons").classList[func]("hidden");
     });
 });
 function get_message_id() {
@@ -965,16 +964,16 @@ function load_provider_login_urls(providersListContainer, providers = []) {
 async function load_version() {
     let new_version = document.querySelector(".new_version");
     if (new_version) return;
-    let text = "version ~ "
-    fetch(`${framework.backendUrl}/backend-api/v2/version`).then((response) => response.json()).then((versions)=>{
+    api("version").then((versions)=>{
         window.title = 'G4F - ' + versions["version"];
         if (document.title == "G4F Chat") {
             document.title = window.title;
         }
+        let text = ""
         if (versions["latest_version"] && versions["version"] != versions["latest_version"]) {
             let release_url = 'https://github.com/xtekky/gpt4free/releases/latest';
             let title = `${framework.translate('New version:')} ${versions["latest_version"]}`;
-            text += `<a href="${release_url}" target="_blank" title="${title}">${versions["version"]}</a> 🆕`;
+            text = `<a href="${release_url}" target="_blank" title="${title}">${versions["version"]}</a> 🆕`;
             new_version = document.createElement("div");
             new_version.classList.add("new_version");
             const link = `<a href="${release_url}" target="_blank" title="${title}">v${versions["latest_version"]}</a>`;
@@ -982,20 +981,20 @@ async function load_version() {
             new_version.addEventListener("click", ()=>new_version.parentElement.removeChild(new_version));
             document.body.appendChild(new_version);
         } else {
-            text += versions["version"];
+            text = versions["version"];
         }
-        document.getElementById("version_text").innerHTML = text
+        document.getElementById("version_text").innerHTML = text;
     }).catch((e)=>{
         console.error("Error loading version:", e);
         fetch("https://api.github.com/repos/xtekky/gpt4free/releases/latest").then((response)=>response.json()).then((data)=>{
-            document.getElementById("version_text").innerText = text + data.tag_name;
+            document.getElementById("version_text").innerText = data.tag_name;
         });
     });
     setTimeout(load_version, 1000 * 60 * 60); // 1 hour
 }
 
-domReady.then(async () => {
-    await load_version();
+addonsLoaded.then(() => {
+    load_version();
 });
 
 async function upload_image(file) {
@@ -2334,4 +2333,5 @@ export default {
     load_conversations,
     mcpClient,
     getPaBaseUrl,
+    load_version,
 }

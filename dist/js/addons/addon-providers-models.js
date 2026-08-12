@@ -57,11 +57,11 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
         }
         providerModelSignal = new AbortController();
 
-        api_key = get_api_key_by_provider(args);
+        const api_key = get_api_key_by_provider(args);
         if (api_key) {
             headers['x-api-key'] = api_key;
         }
-        api_base = args == "Custom" ? document.getElementById(`${args}-api_base`).value : null;
+        const api_base = args == "Custom" ? document.getElementById(`${args}-api_base`).value : null;
         if (api_base) {
             headers['x-api-base'] = api_base;
         }
@@ -681,9 +681,6 @@ modelSearch?.addEventListener('input', function() {
         modelSuggestions.appendChild(div);
         });
     });
-    async function loadModels(providers) {
-        searchModels = await api('models');
-    }
 
     // Close dropdown when clicking outside
     if (modelSuggestions)
@@ -727,7 +724,7 @@ function add_pinned(selected_provider, selected_model, save=true) {
         });
         appStorage.setItem("pinned", JSON.stringify(all_pinned));
     });
-    all_pinned = pin_container.querySelectorAll(".pinned");
+    let all_pinned = pin_container.querySelectorAll(".pinned");
     while (all_pinned.length > 4) {
         pin_container.removeChild(all_pinned[0])
         all_pinned = pin_container.querySelectorAll(".pinned");

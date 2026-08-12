@@ -146,6 +146,82 @@
                 try { h.cb(ctx); } catch (e) { console.error(`[addons] render hook "${h.addonId}" failed`, e); }
             }
         },
+
+        // ---- sidebar panel (addon features & options) --------------------
+        // Addons register buttons/options into the sidebar "addon panel"
+        // (`#addon-panel` in v2.html). Each entry is a plain button; the
+        // addon supplies a label, an optional FontAwesome icon and a click
+        // handler. Entries are sorted by `order` (default 100).
+        sidebar: (() => {
+            const items = new Map();
+            let panelEl = null;
+
+            function getPanel() {
+                if (panelEl && panelEl.isConnected) return panelEl;
+                panelEl = document.getElementById('addon-panel');
+                return panelEl;
+            }
+
+            function render() {
+                const panel = getPanel();
+                if (!panel) return;
+                const sorted = [...items.values()].sort((a, b) =>
+                    (a.order ?? 100) - (b.order ?? 100));
+                panel.textContent = '';
+                for (const item of sorted) {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.id = item.id;
+                    btn.title = item.title || item.label || item.id;
+                    btn.className = 'addon-panel-item';
+                    if (item.ariaLabel) btn.setAttribute('aria-label', item.ariaLabel);
+                    if (item.icon) {
+                        const i = document.createElement('i');
+                        i.className = item.icon;
+                        i.setAttribute('aria-hidden', 'true');
+                        btn.appendChild(i);
+                    }
+                    const span = document.createElement('span');
+                    span.textContent = item.label || item.title || item.id;
+                    btn.appendChild(span);
+                    if (item.badge != null) {
+                        const badge = document.createElement('span');
+                        badge.className = 'addon-panel-badge';
+                        badge.textContent = item.badge;
+                        btn.appendChild(badge);
+                    }
+                    if (typeof item.onClick === 'function') {
+                        btn.addEventListener('click', () => {
+                            try { item.onClick(); } catch (e) {
+                                console.error(`[addons] sidebar item "${item.id}" failed`, e);
+                            }
+                        });
+                    }
+                    panel.appendChild(btn);
+                }
+            }
+
+            return {
+                register(item) {
+                    if (!item || !item.id) return false;
+                    items.set(item.id, item);
+                    render();
+                    return true;
+                },
+                unregister(id) {
+                    if (!items.delete(id)) return false;
+                    render();
+                    return true;
+                },
+                has(id) { return items.has(id); },
+                list() { return [...items.keys()]; },
+                clear() { items.clear(); render(); },
+                // Force a re-render (e.g. after the panel element appears).
+                refresh: render,
+                // Convenience accessor for the panel element itself.
+                getPanel,
+            };
+        })(),
     };
 
     global.ChatAddonHost = host;

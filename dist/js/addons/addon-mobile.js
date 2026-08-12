@@ -22,13 +22,20 @@
     });
 })();
 
-
-function showLog() {
+function showLogPanel() {
     logStorage?.classList.remove("hidden");
     settings?.classList.add("hidden");
     logContent.scrollTop = logContent.scrollHeight;
     chat.classList.add("hidden");
 }
+
+domReady.then(() => {
+  const showLogButton = document.querySelectorAll("#showLog, .show_log");
+  showLogButton.forEach(button => {
+      button.addEventListener("click", showLogPanel);
+  });
+});
+
 
 function hideLog() {
     logStorage?.classList.add("hidden");
@@ -52,12 +59,12 @@ function logRequestResponse(event, messageId, count=0) {
     }
     pre.appendChild(code)
     details.appendChild(pre);
-    const detailsList = logContent.getElementsByTagName('details');
+    const detailsList = logContent?.getElementsByTagName('details');
     if (detailsList.length >= 100) {
-          logContent.removeChild(detailsList[0]);
+          logContent?.removeChild(detailsList[0]);
     }
 
-    logContent.appendChild(details);
+    logContent?.appendChild(details);
     if (window.hljs) {
         hljs.highlightElement(code);
     }
@@ -272,4 +279,5 @@ addonsLoaded.then(() => {
 export default {
     isMobileDevice,
     applyMobileEnhancements,
+    showLogPanel,
 };
