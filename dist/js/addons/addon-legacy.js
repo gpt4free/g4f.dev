@@ -2601,13 +2601,6 @@ async function get_messages(conversation_id) {
 
 async function add_conversation(conversation_id) {
     if (!conversation_id) {
-        privateConversation = {
-            id: conversation_id,
-            title: "",
-            added: Date.now(),
-            system: chatPrompt?.value,
-            items: [],
-        }
         return;
     }
     if (!await get_conversation(conversation_id)) {

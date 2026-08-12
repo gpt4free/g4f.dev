@@ -1,5 +1,3 @@
-let privateConversation = null;
-
 const appStorage = window.localStorage || {
     setItem: (key, value) => window[key] = value,
     getItem: (key) => window[key],
@@ -417,13 +415,6 @@ async function get_messages(conversation_id) {
 
 async function add_conversation(conversation_id) {
     if (!conversation_id) {
-        privateConversation = {
-            id: conversation_id,
-            title: "",
-            added: Date.now(),
-            system: chatPrompt?.value,
-            items: [],
-        }
         return;
     }
     if (!await get_conversation(conversation_id)) {
@@ -1617,9 +1608,18 @@ try {
 }
 
 function initializeMCPUI() {
-    // Add default server if none exist
+    // Default to the local MCP server (full file access incl. list_dir).
+    // If the user only has the old remote default saved, replace it.
     if (mcpClient.servers.length === 0) {
-        mcpClient.addServer({ name: 'Default', url: 'https://mcp.g4f.space' });
+        mcpClient.addServer({ name: 'Local', url: 'http://localhost:8765/mcp' });
+    } else {
+        const hasLocal = mcpClient.servers.some(s =>
+            s.url && (s.url.includes('localhost:8765') || s.url.includes('127.0.0.1:8765')));
+        const onlyRemote = mcpClient.servers.every(s =>
+            s.url && s.url.includes('mcp.g4f.space'));
+        if (onlyRemote && !hasLocal) {
+            mcpClient.addServer({ name: 'Local', url: 'http://localhost:8765/mcp' });
+        }
     }
 
     // Render servers list
