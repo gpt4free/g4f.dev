@@ -76,7 +76,11 @@ async function createClient(provider, options = {}) {
     }
 
     if (!providers[provider]) {
-        options.baseUrl = options.baseUrl || `https://g4f.space/api/${provider}`;
+        if (provider.startsWith("https://") || provider.startsWith("http://")) {
+            options.baseUrl = provider;
+        } else {
+            options.baseUrl = options.baseUrl || `https://g4f.space/api/${provider}`;
+        }
         options.apiKey = options.apiKey || (typeof window !== "undefined" ? window?.localStorage.getItem("g4f_session") : undefined);
         options.sleep = options.sleep || 10000; // 10 seconds delay to avoid rate limiting
         return new Client(options);
