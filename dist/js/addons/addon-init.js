@@ -1,9 +1,12 @@
+let privateConversation = null;
+
 const appStorage = window.localStorage || {
     setItem: (key, value) => window[key] = value,
     getItem: (key) => window[key],
     removeItem: (key) => delete window[key],
     length: 0,
 };
+
 const domReady = new Promise((resolve) => {
     document.addEventListener("DOMContentLoaded", resolve);
     if (document.readyState !== "loading" ) {
@@ -2267,6 +2270,10 @@ if (cloudSyncLogoutBtn) cloudSyncLogoutBtn.addEventListener("click", cloudSyncLo
 window.toggleMCPServer = toggleMCPServer;
 window.removeMCPServer = removeMCPServer;
 window.toggleMCPTool = toggleMCPTool;
+window.renderMCPServers = renderMCPServers;
+window.renderMCPTools = renderMCPTools;
+window.refreshMCPTools = refreshMCPTools;
+window.showAddServerDialog = showAddServerDialog;
 window.cloudSyncLoginRedirect = cloudSyncLoginRedirect;
 window.syncConversationsToCloud = syncConversationsToCloud;
 window.syncConversationsFromCloud = syncConversationsFromCloud;
@@ -2334,4 +2341,9 @@ export default {
     mcpClient,
     getPaBaseUrl,
     load_version,
+    renderMCPServers,
+    renderMCPTools,
+    loadPaProviders,
+    loadPaProviderSelect,
+    renderPaProviders
 }

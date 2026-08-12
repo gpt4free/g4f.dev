@@ -24,7 +24,7 @@
 
 async function add_message_chunk(message, message_id, provider, finish_message=null) {
     console.debug("Message chunk received:", message);
-    content_map = content_storage[message_id];
+    const content_map = content_storage[message_id];
     if (message.type == "conversation") {
         const conversation = await get_conversation(window.conversation_id);
         if (!conversation.data) {
@@ -327,7 +327,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
     }
 
     let content_el = message_el.querySelector('.content');
-    let content_map = content_storage[message_id] = {
+    const content_map = content_storage[message_id] = {
         container: message_el,
         content: content_el,
         inner: content_el.querySelector('.content_inner'),

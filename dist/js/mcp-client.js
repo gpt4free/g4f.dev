@@ -306,9 +306,18 @@ class MCPClient {
         const args = typeof toolCall.function.arguments === 'string' ? JSON.parse(toolCall.function.arguments) : toolCall.function.arguments;
         
         // Find which server has this tool
-        const allTools = this.getAllTools();
-        const tool = allTools.find(t => t.name === toolName);
-        
+        let allTools = this.getAllTools();
+        let tool = allTools.find(t => t.name === toolName);
+
+        // Tools may not have been fetched yet (e.g. the workspace addon scan
+        // runs before refreshMCPTools() finishes). Refresh the tool list once
+        // before giving up on the "not found" error.
+        if (!tool && typeof this.fetchAllTools === 'function') {
+            await this.fetchAllTools();
+            allTools = this.getAllTools();
+            tool = allTools.find(t => t.name === toolName);
+        }
+
         if (!tool) {
             throw new Error(`Tool ${toolName} not found`);
         }

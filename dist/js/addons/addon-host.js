@@ -84,47 +84,65 @@
         // ---- workspace (.pa.js) -----------------------------------------
         async listWorkspaceAddons() {
             if (typeof global.mcpClient !== 'undefined' && typeof global.mcpClient.getAllTools === 'function') {
-                const toolCalls = [{
-                    id: `file_search_${Date.now()}`,
-                    function: {
-                        name: 'file_search_glob',
-                        arguments: {
-                            recursive: true,
-                            max_results: 100,
-                            query: '**/*.pa.js',
-                        }
+                try {
+                    // Ensure the MCP tool list is loaded before executing tool
+                    // calls. fetchAllTools() populates mcpClient.tools; without
+                    // it executeToolCall throws "Tool file_search_glob not found"
+                    // and the workspace (.pa.js) addon scan silently dies.
+                    if (typeof global.mcpClient.fetchAllTools === 'function') {
+                        await global.mcpClient.fetchAllTools();
                     }
-                }, {
-                    id: `file_search_${Date.now()}`,
-                    function: {
-                        name: 'file_search_glob',
-                        arguments: {
-                            recursive: true,
-                            max_results: 100,
-                            query: '**/pa-*.js',
-                        }
-                    }
-                }];
-                 let result = await mcpClient.executeToolCalls(toolCalls);
-                 console.log('[addons] workspace addon listing raw result:', result);
-                 result = result.map(result => {
-                    console.log('[addons] workspace addon listing result:', result);
-                    try {
-                        const data = JSON.parse(result.content);
-                        const r = (data.matches || []);
-                        console.log('[addons] workspace addon listing parsed:', r);
-                        return r;
-                    } catch (e) {
-                        console.warn('[addons] failed to parse workspace addon listing:', e);
+                    const allTools = global.mcpClient.getAllTools();
+                    if (!allTools.some(t => t.name === 'file_search_glob')) {
+                        console.warn('[addons] file_search_glob tool not available on any MCP server; skipping workspace addon scan');
                         return [];
                     }
-                })
-                
-                return result.flat();
+                    const toolCalls = [{
+                        id: `file_search_${Date.now()}`,
+                        function: {
+                            name: 'file_search_glob',
+                            arguments: {
+                                recursive: true,
+                                max_results: 100,
+                                query: '**/*.pa.js',
+                            }
+                        }
+                    }, {
+                        id: `file_search_${Date.now()}`,
+                        function: {
+                            name: 'file_search_glob',
+                            arguments: {
+                                recursive: true,
+                                max_results: 100,
+                                query: '**/pa-*.js',
+                            }
+                        }
+                    }];
+                    let result = await global.mcpClient.executeToolCalls(toolCalls);
+                    result = result.map(result => {
+                        try {
+                            const data = JSON.parse(result.content);
+                            return (data.matches || []);
+                        } catch (e) {
+                            console.warn('[addons] failed to parse workspace addon listing:', e);
+                            return [];
+                        }
+                    });
+
+                    return result.flat();
+                } catch (e) {
+                    console.warn('[addons] workspace addon scan failed:', e);
+                    return [];
+                }
             }
+            return [];
         },
         readWorkspaceFile(file) {
-            const first = mcpClient.servers.find(s => s.enabled) || mcpClient.servers[0];
+            const client = global.mcpClient;
+            if (!client || !Array.isArray(client.servers) || !client.servers.length) {
+                return Promise.reject(new Error('No MCP server configured'));
+            }
+            const first = client.servers.find(s => s.enabled) || client.servers[0];
             const backendUrl = first.url.replace(/\/mcp$/, '');
             const safe = String(file).replace(/^\/+/, '').replace(/\.\./g, '');
             const url = `${backendUrl}/pa/files/${safe}`;

@@ -1021,7 +1021,7 @@
         description: 'Preset themes, custom CSS variable editor, live preview, import/export, auto day/night switching.',
         author: 'g4f',
         builtin: true,
-        permissions: ['dom:read', 'dom:write', 'storage:local', 'ui:notify'],
+        permissions: ['dom:read', 'dom:write', 'storage:local', 'ui:notify', 'ui:sidebar'],
 
         load(opts = {}) {
             loadConfig();
@@ -1031,15 +1031,19 @@
             if (autoDayNight) startAutoDayNight();
 
             // Add the theme manager entry when DOM is ready. If the host
-            // sidebar panel isn't mounted yet, retry until it is (addons
+            // sidebar panel isn't mounted yet, retry a few times (addons
             // boot before chat.v1.js finishes initialising the page).
+            let mountAttempts = 0;
             const mount = () => {
                 const host = window.ChatAddonHost;
                 if (!host || !host.sidebar) { ensureFloatingButton(); return; }
                 if (document.getElementById('addon-panel')) {
                     ensureFloatingButton();
-                } else {
+                } else if (++mountAttempts < 20) {
                     setTimeout(mount, 100);
+                } else {
+                    // Panel never appeared — fall back to the FAB.
+                    ensureFloatingButton();
                 }
             };
             if (document.readyState === 'loading') {

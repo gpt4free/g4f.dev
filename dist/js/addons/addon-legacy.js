@@ -1566,8 +1566,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         parent_message.after(message_el);
     }
 
-    let content_el = message_el.querySelector('.content');
-    let content_map = content_storage[message_id] = {
+    const content_el = message_el.querySelector('.content');
+    const content_map = content_storage[message_id] = {
         container: message_el,
         content: content_el,
         inner: content_el.querySelector('.content_inner'),
@@ -2800,7 +2800,6 @@ const load_conversations = async () => {
         box_conversations.appendChild(convo);
     });
 };
-
 function get_message_id() {
     const random_bytes = (Math.floor(Math.random() * 1338377565) + 2956589730).toString(
         2
