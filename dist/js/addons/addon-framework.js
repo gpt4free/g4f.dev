@@ -648,14 +648,21 @@ const renderMarkdown = (content) => {
         add_error(`markdownit init failed: ${e}`, e);
         return escapeHtml(content);
     }
-    let rendered;
+    let rendered = content;
     try {
-        rendered = markdown.render(
-            content.replaceAll('<think>', `<details><summary>${framework.translate('Reasoning')}</summary>`)
-            .replaceAll('</think>', '\n</details>\n')
-            .replaceAll('<thought>', `<details><summary>${framework.translate('Reasoning')}</summary>`)
-            .replaceAll('</thought>', '\n</details>\n')
-        )
+        if (rendered.includes('</think>')) {
+            rendered = markdown.render(
+                rendered.replaceAll('<think>', `<details><summary>${framework.translate('Reasoning')}</summary>`)
+                .replaceAll('</think>', '\n</details>\n')
+            )
+        }
+        if (rendered.includes('</thought>')) {
+            rendered = markdown.render(
+                rendered.replaceAll('<thought>', `<details><summary>${framework.translate('Reasoning')}</summary>`)
+                .replaceAll('</thought>', '\n</details>\n')
+            )
+        }
+        rendered = markdown.render(rendered)
         .replaceAll("<a href=", '<a target="_blank" href=')
         .replaceAll('<code>', '<code class="language-plaintext">')
         .replaceAll('<iframe src="', '<iframe frameborder="0" height="224" width="400" src="')
@@ -663,7 +670,7 @@ const renderMarkdown = (content) => {
         .replaceAll('"></iframe>', `?enablejsapi=1"></iframe>`)
         .replaceAll('src="/media/', `src="${framework.backendUrl}/media/`)
         .replaceAll('src="/thumbnail/', `src="${framework.backendUrl}/thumbnail/`)
-        .replaceAll('href="/media/', `src="${framework.backendUrl}/media/`)
+        .replaceAll('href="/media/', `href="${framework.backendUrl}/media/`)
     } catch (e) {
         add_error(`Markdown render failed: ${e}`, e);
         return escapeHtml(content);
