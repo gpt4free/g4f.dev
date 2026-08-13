@@ -906,16 +906,16 @@ async function safe_remove_cancel_button() {
     }
 }
 
-regenerate_button.addEventListener("click", async () => {
-    regenerate_button.classList.add("regenerate-hidden");
-    setTimeout(()=>regenerate_button.classList.remove("regenerate-hidden"), 3000);
-    const all_pinned = document.querySelectorAll("#pin_container button.pinned")
-    if (all_pinned.length > 0) {
-        all_pinned.forEach((el) => ask_gpt(get_message_id(), -1, true, el.dataset.provider, el.dataset.model, "variant"));
-    } else {
-        await ask_gpt(get_message_id(), -1, true, null, null, "variant");
-    }
-});
+// regenerate_button.addEventListener("click", async () => {
+//     regenerate_button.classList.add("regenerate-hidden");
+//     setTimeout(()=>regenerate_button.classList.remove("regenerate-hidden"), 3000);
+//     const all_pinned = document.querySelectorAll("#pin_container button.pinned")
+//     if (all_pinned.length > 0) {
+//         all_pinned.forEach((el) => ask_gpt(get_message_id(), -1, true, el.dataset.provider, el.dataset.model, "variant"));
+//     } else {
+//         await ask_gpt(get_message_id(), -1, true, null, null, "variant");
+//     }
+// });
 
 stop_generating.addEventListener("click", async () => {
     regenerate_button.classList.remove("regenerate-hidden");
