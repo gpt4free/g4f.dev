@@ -1610,16 +1610,19 @@ try {
 function initializeMCPUI() {
     // Default to the local MCP server (full file access incl. list_dir).
     // If the user only has the old remote default saved, replace it.
+    // if (mcpClient.servers.length === 0) {
+    //     mcpClient.addServer({ name: 'Local', url: 'http://localhost:8765/mcp' });
+    // } else {
+    //     const hasLocal = mcpClient.servers.some(s =>
+    //         s.url && (s.url.includes('localhost:8765') || s.url.includes('127.0.0.1:8765')));
+    //     const onlyRemote = mcpClient.servers.every(s =>
+    //         s.url && s.url.includes('mcp.g4f.space'));
+    //     if (onlyRemote && !hasLocal) {
+    //         mcpClient.addServer({ name: 'Local', url: 'http://localhost:8765/mcp' });
+    //     }
+    // }
     if (mcpClient.servers.length === 0) {
-        mcpClient.addServer({ name: 'Local', url: 'http://localhost:8765/mcp' });
-    } else {
-        const hasLocal = mcpClient.servers.some(s =>
-            s.url && (s.url.includes('localhost:8765') || s.url.includes('127.0.0.1:8765')));
-        const onlyRemote = mcpClient.servers.every(s =>
-            s.url && s.url.includes('mcp.g4f.space'));
-        if (onlyRemote && !hasLocal) {
-            mcpClient.addServer({ name: 'Local', url: 'http://localhost:8765/mcp' });
-        }
+         mcpClient.addServer({ name: 'Demo', url: 'https://mcp.g4f.space/mcp' });
     }
 
     // Render servers list
