@@ -4141,11 +4141,28 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
             body: body,
         });
         // On Ratelimit
-        if (response.status == 429) {
-            const body = await response.text();
-            const title = body.match(/<title>([^<]+?)<\/title>/)[1];
-            const message = body.match(/<p>([^<]+?)<\/p>/)[1];
-            error_storage[message_id] = `**${title}**\n${message}`;
+        if (response.status != 200) {
+            let message = null;
+            try {
+                const json = await response.json();
+                if (json.error) {
+                    message = json.error.message || message;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+            if (!message) {
+                const body = await response.text();
+                const title = body.match(/<title>([^<]+?)<\/title>/)[1];
+                message = body.match(/<p>([^<]+?)<\/p>/)[1];
+                if (message) {
+                    message = `**${title}**\n${message}`
+                }
+            }
+            if (!message) {
+                message = `**Error ${response.status}:** ${response.statusText}`;
+            }
+            error_storage[message_id] = message;
             await finish_message();
             return;
         } else {
