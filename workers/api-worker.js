@@ -98,6 +98,27 @@ var EXTRA_HEADERS = {
 var ACCESS_CONTROL_ALLOW_ORIGIN = {
   "Access-Control-Allow-Origin": "*"
 };
+// Concurrency queue for pass.g4f.space requests.
+// Limits simultaneous in-flight requests to PASS_MAX_CONCURRENT,
+// queuing the rest until a slot frees up.
+const PASS_MAX_CONCURRENT = 1;
+let passActiveCount = 0;
+const passQueue = [];
+function acquirePassSlot() {
+  if (passActiveCount < PASS_MAX_CONCURRENT) {
+    passActiveCount++;
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => passQueue.push(resolve));
+}
+function releasePassSlot() {
+  if (passQueue.length > 0) {
+    const next = passQueue.shift();
+    next();
+  } else {
+    passActiveCount--;
+  }
+}
 var AUTO_PROVIDERS = []
 var DEFAULT_MODELS = {};
 var SERVER_MAP = {}
@@ -354,6 +375,33 @@ var custom_worker_default = {
             updateResponsefromRateCheck(newResponse, rateCheck);
           }
           return newResponse;
+        }
+      }
+      // POST /v1/chat/completions and /chat/completions: cache non-streaming
+      // responses by body hash so repeated test prompts (ping, hello, test)
+      // return the same cached result without hitting the upstream server.
+      if (!(request.headers.get("cache-control") || "").includes("no-cache")
+          && !userProvidedKey && request.method === "POST"
+          && (pathname === "/v1/chat/completions" || pathname === "/chat/completions"
+              || pathname.match(/\/chat\/completions$/))) {
+        const bodyHash = await generatePostBodyHash(request);
+        if (bodyHash) {
+          const postCacheKey = `POST:${pathname}:body:${bodyHash}`;
+          const cachedResponse = await getCachedResponse(request, postCacheKey);
+          if (cachedResponse) {
+            const newResponse = new Response(cachedResponse.body, cachedResponse);
+            newResponse.headers.set("X-Cache", "HIT");
+            if (user) {
+              newResponse.headers.set("X-User-Id", user.id);
+              newResponse.headers.set("X-User-Tier", user.tier);
+            }
+            if (rateCheck) {
+              updateResponsefromRateCheck(newResponse, rateCheck);
+            }
+            return newResponse;
+          }
+          // Stash the body hash so handleProxyToServer can cache the response
+          request._postBodyHash = bodyHash;
         }
       }
       if (user) {
@@ -1578,6 +1626,18 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   if (targetUrl in URL_MAP) {
     targetUrl = URL_MAP[targetUrl];
   }
+  // Fallback: when URL is not in URL_MAP and ends with /quota,
+  // do a real /chat/completions request with the default model instead
+  if (!(targetUrl in URL_MAP) && targetUrl.endsWith("/quota")) {
+    subPath = "/chat/completions";
+    if (server.base_url.includes("/chat/completions")) {
+      targetUrl = server.base_url;
+    } else if (server.base_url.includes("/v1/chat/completions")) {
+      targetUrl = server.base_url.split("/v1/")[0] + subPath;
+    } else {
+      targetUrl = `${server.base_url}${subPath}`;
+    }
+  }
   if (targetUrl.startsWith("https://pass.g4f.space/")) {
     proxyHeaders["g4f-api-key"] = env.PASS_API_KEY;
   }
@@ -1589,12 +1649,29 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     };
     if (chatUrls.includes(subPath)) {
       fetchOptions.method = "POST";
-      fetchOptions.body = JSON.stringify({"messages": [{ "role": "user", "content": "say only okay" }], ...requestBody});
+      const defaultModel = DEFAULT_MODELS[server.id]
+        || (server.allowed_models && server.allowed_models[0])
+        || null;
+      const testBody = {
+        "messages": [{ "role": "user", "content": "say only okay" }],
+        ...requestBody
+      };
+      if (defaultModel) {
+        testBody.model = defaultModel;
+      }
+      fetchOptions.body = JSON.stringify(testBody);
     } else if (request.method === "POST") {
       fetchOptions.body = requestBody ? JSON.stringify(requestBody) : await request.text();
     }
     const firstMessage = requestBody ? requestBody.prompt || getFirstMessage(requestBody.messages) : null;
-    const response = await fetch(targetUrl, fetchOptions);
+    const isPassG4f = targetUrl.startsWith("https://pass.g4f.space/");
+    if (isPassG4f) await acquirePassSlot();
+    let response;
+    try {
+      response = await fetch(targetUrl, fetchOptions);
+    } finally {
+      if (isPassG4f) releasePassSlot();
+    }
     const contentType = (response.headers.get("content-type") || "").split(";")[0];
     if (!contentType || !["text/event-stream", "application/json", "text/plain", "application/problem+json", "audio/vnd.wav", "audio/mpeg"].includes(contentType)) {
       return Response.json(
@@ -1705,6 +1782,16 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     }
     if (request.method === "GET" && !userProvidedKey) {
       ctx.waitUntil(setCachedResponse(request, newResponse.clone(), subPath.endsWith("/quota") ? CACHE_HEADERS.SHORT : CACHE_HEADERS.MEDIUM, cacheKey, ctx));
+    }
+    // Cache non-streaming POST chat/completions by body hash so repeated
+    // test prompts (ping, hello, test) return cached results instantly.
+    if (request.method === "POST" && !userProvidedKey && !requestBody?.stream
+        && subPath.endsWith("/chat/completions") && newResponse.ok) {
+      const bodyHash = request._postBodyHash || await generatePostBodyHash(request);
+      if (bodyHash) {
+        const postCacheKey = `POST:${pathname}:body:${bodyHash}`;
+        ctx.waitUntil(setCachedResponse(request, newResponse.clone(), CACHE_HEADERS.SHORT, postCacheKey, ctx));
+      }
     }
     if (user) {
       newResponse.headers.set("X-User-Id", user.id);
@@ -2331,11 +2418,18 @@ ${prompt}
     queryBody.stream = true;
   }
   try {
-    const response = await fetch(queryUrl, {
-      method: "POST",
-      body: JSON.stringify(queryBody),
-      headers: proxyHeaders
-    });
+    const isPassG4f = queryUrl.startsWith("https://pass.g4f.space/");
+    if (isPassG4f) await acquirePassSlot();
+    let response;
+    try {
+      response = await fetch(queryUrl, {
+        method: "POST",
+        body: JSON.stringify(queryBody),
+        headers: proxyHeaders
+      });
+    } finally {
+      if (isPassG4f) releasePassSlot();
+    }
     if (!response.ok || queryBody.stream) {
       const contentType = (response.headers.get("content-type") || "").split(";")[0];
       if (queryBody.stream || contentType.includes("text/event-stream")) {
@@ -3064,6 +3158,36 @@ function generateCacheKey(request, extra = "") {
   const method = request.method;
   return `${method}:${pathname}${searchParams ? "?" + searchParams : ""}${extra ? ":" + extra : ""}`;
 }
+// Hash the POST request body for chat/completions caching.
+// Uses model + stream flag + last message content so that repeated
+// test prompts like "ping", "hello", "test" share the same cache key.
+async function generatePostBodyHash(request) {
+  try {
+    const body = await request.clone().json();
+    const messages = body.messages || [];
+    const lastMsg = messages[messages.length - 1];
+    const lastContent = lastMsg
+      ? (typeof lastMsg.content === 'string' ? lastMsg.content : '')
+      : '';
+    if (["test", "ping", "hello"].includes(lastContent.toLowerCase())) {
+      const model = body.model || '';
+      const stream = body.stream ? '1' : '0';
+      return await hashString(`${model}:${stream}:${lastContent}`);
+    }
+    for (const msg of messages) {
+      if (msg && msg.content && typeof msg.content === 'string') {
+        continue;
+      }
+      return null;
+    }
+    if (body.stream) {
+      return null;
+    }
+    return await hashString(`${body.model || ''}:${JSON.stringify(messages)}`);
+  } catch (e) {
+    return null;
+  }
+}
 async function getCachedResponse(request, cacheKey = null) {
   try {
     const key = cacheKey || generateCacheKey(request);
@@ -3127,7 +3251,13 @@ async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ct
   if (request.method !== "GET" && request.method !== "HEAD") {
     fetchOptions.body = request.clone().body;
   }
-  const response = await fetch(targetUrl, fetchOptions);
+  await acquirePassSlot();
+  let response;
+  try {
+    response = await fetch(targetUrl, fetchOptions);
+  } finally {
+    releasePassSlot();
+  }
   const newResponse = new Response(response.body, response);
   newResponse.headers.set("Access-Control-Allow-Origin", "*");
   if (request.method === "GET" && (!headers.get("g4f-api-key") && !request.headers.get("x-api-key") && !request.headers.get("x-ignored")) || ["/pa/providers"].includes(pathname)) {

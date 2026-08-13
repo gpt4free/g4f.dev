@@ -468,7 +468,7 @@ export default {
                 return handleCreditByIP(request, env, ip);
             }
             if (pathname === "/cake/users" && request.method === "GET") {
-                return handleUsers(request, env);
+                return handleUsers(request, env, ctx);
             }
             if (pathname === "/cake/health") {
                 return json({ ok: true, service: "cake-worker" }, 200, {}, request);

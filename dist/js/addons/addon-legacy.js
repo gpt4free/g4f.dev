@@ -3446,45 +3446,45 @@ window.addEventListener("load", (event) => {
 });
 });
 
-async function on_load() {
-    translationSnipptes.forEach((snippet)=>framework.translate(snippet));
-    count_input();
-    const locationHash = window.location.hash.substring(1);
-    if (locationHash === "login") {
-        window.location.href='https://g4f.dev/members?redirect='+encodeURIComponent(location.href.split('#')[0])+'&conversation='+encodeURIComponent(window.conversation_id);
-        return;
-    }
-    if (locationHash === "settings") {
-        open_settings();
-        await load_conversations();
-        return;
-    }
-    let isNewConversation = locationHash === "" || ["new", "private"].includes(locationHash);
-    if (!isNewConversation && !locationHash.startsWith("session=") && locationHash !== "menu") {
-        window.conversation_id = locationHash;
-    } else {
-        window.conversation_id = generateUUID();
-    }
-    if (chatPrompt) {
-        chatPrompt.value = document.getElementById("systemPrompt")?.value || "";
-    }
-    let chatParams = new URLSearchParams(window.location.search);
-    if (chatParams.get("prompt")) {
-        userInput.value = chatParams.get("prompt");
-        userInput.focus();
-        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
-    }
-    if (isNewConversation) {
-        await new_conversation(locationHash === "private");
-    } else {
-        await load_conversations();
-    }
-    // Ensure sidebar is shown by default on desktop
-    if (window.innerWidth >= 640) {
-        sidebar.classList.add("shown");
-        sidebar.classList.remove("minimized");
-    }
-}
+// async function on_load() {
+//     translationSnipptes.forEach((snippet)=>framework.translate(snippet));
+//     count_input();
+//     const locationHash = window.location.hash.substring(1);
+//     if (locationHash === "login") {
+//         window.location.href='https://g4f.dev/members?redirect='+encodeURIComponent(location.href.split('#')[0])+'&conversation='+encodeURIComponent(window.conversation_id);
+//         return;
+//     }
+//     if (locationHash === "settings") {
+//         open_settings();
+//         await load_conversations();
+//         return;
+//     }
+//     let isNewConversation = locationHash === "" || ["new", "private"].includes(locationHash);
+//     if (!isNewConversation && !locationHash.startsWith("session=") && locationHash !== "menu") {
+//         window.conversation_id = locationHash;
+//     } else {
+//         window.conversation_id = generateUUID();
+//     }
+//     if (chatPrompt) {
+//         chatPrompt.value = document.getElementById("systemPrompt")?.value || "";
+//     }
+//     let chatParams = new URLSearchParams(window.location.search);
+//     if (chatParams.get("prompt")) {
+//         userInput.value = chatParams.get("prompt");
+//         userInput.focus();
+//         window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+//     }
+//     if (isNewConversation) {
+//         await new_conversation(locationHash === "private");
+//     } else {
+//         await load_conversations();
+//     }
+//     // Ensure sidebar is shown by default on desktop
+//     if (window.innerWidth >= 640) {
+//         sidebar.classList.add("shown");
+//         sidebar.classList.remove("minimized");
+//     }
+// }
 
 const load_provider_option = (input, provider_name) => {
     if (input.checked) {
@@ -6280,7 +6280,6 @@ export default {
     render_startup_questions,
     load_startup_questions,
     load_follow_up_questions,
-    on_load,
     load_provider_option,
     load_provider_login_urls,
     upload_image,

@@ -277,6 +277,7 @@ async function play_last_message(response = null) {
 }
 
 const ask_gpt = async (message_id, message_index = -1, regenerate = false, provider = null, model = null, action = null, message = null) => {
+    console.debug("ask_gpt called with message_id:", message_id, "message_index:", message_index, "regenerate:", regenerate, "provider:", provider, "model:", model, "action:", action, "message:", message);
     if (!model && !provider) {
         model = get_selected_model();
         provider = providerSelect?.value;
@@ -781,6 +782,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         }
         return;
     }
+    console.debug("Sending request to backend API for provider:", provider, "model:", model, "message_id:", message_id);
     try {
         const apiKey = get_api_key_by_provider(provider);
         const downloadMedia = document.getElementById("download_media")?.checked;
@@ -803,6 +805,10 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         const mcpTools = mcpClient && mcpClient.selectedTools.length > 0 
             ? mcpClient.getSelectedToolsForAPI() 
             : undefined;
+        console.debug("Request body for API call:", {
+            id: message_id,
+            conversation_id: window.conversation_id,
+        });
         await api("conversation", {
             id: message_id,
             conversation_id: window.conversation_id,
@@ -828,7 +834,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
 };
 
 export default {
-    ask_gpt,
-    play_last_message,
-    requestWakeLock,
+    //ask_gpt,
+    //play_last_message,
+    //requestWakeLock,
 };

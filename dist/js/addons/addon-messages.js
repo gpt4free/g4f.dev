@@ -273,7 +273,7 @@ async function load_provider_parameters(provider) {
 
 async function add_message_chunk(message, message_id, provider, finish_message=null) {
     console.debug("Message chunk received:", message);
-    content_map = content_storage[message_id];
+    const content_map = content_storage[message_id];
     if (message.type == "conversation") {
         const conversation = await get_conversation(window.conversation_id);
         if (!conversation.data) {
@@ -558,7 +558,7 @@ function getExtraBody(provider) {
 export default {
     prepare_messages,
     load_provider_parameters,
-    add_message_chunk,
+    //add_message_chunk,
     add_sources,
     renderer,
     is_stopped,
