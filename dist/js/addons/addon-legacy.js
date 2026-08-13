@@ -133,35 +133,6 @@ domReady.then(() => {
             }
         }
     });
-
-    // --- Baked credits (proof-of-work cakes) ---------------------------
-    const cakeCreditsText = document.getElementById('cake-credits-text');
-
-    function formatCakeCredits(cents, bakedToday) {
-        const dollars = (cents / 100).toFixed(2);
-        return `<i class="fa-solid fa-cake-candles" aria-hidden="true"></i> $${dollars}`;
-    }
-
-    function updateCakeCredits(cents, bakedToday) {
-        if (!cakeCreditsText) return;
-        cakeCreditsText.innerHTML = formatCakeCredits(cents || 0, bakedToday);
-        cakeCreditsText.title = `Baked credits: $${((cents || 0) / 100).toFixed(2)}${bakedToday != null ? ` · ${bakedToday} baked today` : ''}`;
-        if (tierLimitsRow) tierLimitsRow.classList.remove('hidden');
-    }
-
-    // Poll the cake worker /status endpoint for baked credits
-    async function refreshCakeStatus() {
-        try {
-            const res = await fetch('https://g4f.space/cake/status', { credentials: 'include' });
-            if (res.ok) {
-                const data = await res.json();
-                updateCakeCredits(data.credit_cents, data.baked_today);
-            }
-        } catch (e) { /* network blocked — ignore */ }
-    }
-
-    refreshCakeStatus();
-    setInterval(refreshCakeStatus, 30000);
     
     function formatNumber(num) {
         if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -5594,72 +5565,72 @@ async function fetchPaProviders() {
     return await res.json();
 }
 
-async function loadPaProviderSelect(optgroup) {
-    optgroup = optgroup || document.getElementById('pa-providers-optgroup');
-    if (!optgroup) return;
-    try {
-        window._paProviders = window._paProviders || await fetchPaProviders();
-        // Remove stale options
-        optgroup.innerHTML = '';
-        window._paProviders.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = `pa:${p.id}`;
-            opt.dataset.pa = 'true';
-            opt.dataset.paId = p.id;
-            opt.dataset.label = p.label || p.id;
-            const modelHint = Array.isArray(p.models) && p.models.length > 0 ? ` (${p.models.length} model${p.models.length > 1 ? 's' : ''})` : '';
-            opt.text = `${p.label || p.id}${modelHint} 🔌`;
-            optgroup.appendChild(opt);
-        });
-    } catch (e) {
-        console.debug('Failed to load PA providers into select:', e);
-    }
-}
+// async function loadPaProviderSelect(optgroup) {
+//     optgroup = optgroup || document.getElementById('pa-providers-optgroup');
+//     if (!optgroup) return;
+//     try {
+//         window._paProviders = window._paProviders || await fetchPaProviders();
+//         // Remove stale options
+//         optgroup.innerHTML = '';
+//         window._paProviders.forEach(p => {
+//             const opt = document.createElement('option');
+//             opt.value = `pa:${p.id}`;
+//             opt.dataset.pa = 'true';
+//             opt.dataset.paId = p.id;
+//             opt.dataset.label = p.label || p.id;
+//             const modelHint = Array.isArray(p.models) && p.models.length > 0 ? ` (${p.models.length} model${p.models.length > 1 ? 's' : ''})` : '';
+//             opt.text = `${p.label || p.id}${modelHint} 🔌`;
+//             optgroup.appendChild(opt);
+//         });
+//     } catch (e) {
+//         console.debug('Failed to load PA providers into select:', e);
+//     }
+// }
 
-async function loadPaProviders() {
-    const btn = document.getElementById('refresh-pa-providers-btn');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-sync fa-spin"></i>';
-    }
-    try {
-        const providers = await fetchPaProviders();
-        window._paProviders = providers;
-        renderPaProviders(providers);
-        // Also refresh the select dropdown
-        await loadPaProviderSelect();
-    } catch (err) {
-        const container = document.getElementById('pa-providers-list');
-        if (container) container.innerHTML = `<div class="mcp-empty">Failed to load PA providers: ${escapeHtml(String(err))}</div>`;
-    } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-sync"></i>';
-        }
-    }
-}
+// async function loadPaProviders() {
+//     const btn = document.getElementById('refresh-pa-providers-btn');
+//     if (btn) {
+//         btn.disabled = true;
+//         btn.innerHTML = '<i class="fa-solid fa-sync fa-spin"></i>';
+//     }
+//     try {
+//         const providers = await fetchPaProviders();
+//         window._paProviders = providers;
+//         renderPaProviders(providers);
+//         // Also refresh the select dropdown
+//         await loadPaProviderSelect();
+//     } catch (err) {
+//         const container = document.getElementById('pa-providers-list');
+//         if (container) container.innerHTML = `<div class="mcp-empty">Failed to load PA providers: ${escapeHtml(String(err))}</div>`;
+//     } finally {
+//         if (btn) {
+//             btn.disabled = false;
+//             btn.innerHTML = '<i class="fa-solid fa-sync"></i>';
+//         }
+//     }
+// }
 
-function renderPaProviders(providers) {
-    const container = document.getElementById('pa-providers-list');
-    if (!container) return;
-    if (!providers || providers.length === 0) {
-        container.innerHTML = '<div class="mcp-empty">No PA providers found. Add <code>.pa.py</code> files to <code>~/.g4f/workspace</code> and refresh.</div>';
-        return;
-    }
-    container.innerHTML = providers.map(p => {
-        const models = Array.isArray(p.models) ? p.models.join(', ') : '';
-        const url = p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="mcp-server-url">${escapeHtml(p.url)}</a>` : '';
-        return `<div class="mcp-tool-item">
-            <div>
-                <span class="mcp-tool-name">${escapeHtml(p.label || p.id)}</span>
-                ${url}
-                ${models ? `<span class="mcp-tool-desc">${escapeHtml(models)}</span>` : ''}
-            </div>
-        </div>`;
-    }).join('');
-}
+// function renderPaProviders(providers) {
+//     const container = document.getElementById('pa-providers-list');
+//     if (!container) return;
+//     if (!providers || providers.length === 0) {
+//         container.innerHTML = '<div class="mcp-empty">No PA providers found. Add <code>.pa.py</code> files to <code>~/.g4f/workspace</code> and refresh.</div>';
+//         return;
+//     }
+//     container.innerHTML = providers.map(p => {
+//         const models = Array.isArray(p.models) ? p.models.join(', ') : '';
+//         const url = p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="mcp-server-url">${escapeHtml(p.url)}</a>` : '';
+//         return `<div class="mcp-tool-item">
+//             <div>
+//                 <span class="mcp-tool-name">${escapeHtml(p.label || p.id)}</span>
+//                 ${url}
+//                 ${models ? `<span class="mcp-tool-desc">${escapeHtml(models)}</span>` : ''}
+//             </div>
+//         </div>`;
+//     }).join('');
+// }
 
-document.getElementById('refresh-pa-providers-btn')?.addEventListener('click', loadPaProviders);
+// document.getElementById('refresh-pa-providers-btn')?.addEventListener('click', loadPaProviders);
 
 /**
  * Handle tool calls from assistant
@@ -6340,8 +6311,6 @@ export default {
     escapeHtml,
     getPaBaseUrl,
     fetchPaProviders,
-    loadPaProviderSelect,
-    loadPaProviders,
     renderPaProviders,
     handleToolCalls,
     checkCloudSyncSession,

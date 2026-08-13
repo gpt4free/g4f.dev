@@ -224,7 +224,7 @@ function get_api_key_by_provider(provider, single=false) {
                 "Groq": get_api_key_by_provider("Groq"),
                 "DeepInfra": get_api_key_by_provider("DeepInfra"),
                 "Replicate": get_api_key_by_provider("Replicate"),
-                "PuterJS": get_api_key_by_provider("PuterJS"),
+                "Puter": get_api_key_by_provider("Puter"),
                 "Nvidia": get_api_key_by_provider("Nvidia"),
                 "Ollama": get_api_key_by_provider("Ollama"),
                 "Airforce": get_api_key_by_provider("Airforce"),
@@ -532,10 +532,10 @@ async function loadProviderModels(provider=null) {
     modelSelect.innerHTML = '';
     modelSelect.name = `model[${provider}]`;
     modelSelect.classList.remove("hidden");
-    if (!isLoading && ["PuterJS"].includes(provider) && !appStorage.getItem("puter.auth.token") && window.Puter) {
+    if (!isLoading && ["Puter"].includes(provider) && !appStorage.getItem("puter.auth.token") && window.Puter) {
         try {
             await (new window.Puter()).signIn().then((res) => {
-                console.log('PuterJS signed in:', res);
+                console.log('Puter signed in:', res);
             });
         } catch (error) {
             add_error(error, true);

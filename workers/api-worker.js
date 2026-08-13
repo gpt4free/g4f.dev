@@ -255,8 +255,8 @@ var BLOCKED_USERS = [
   "luciazamora99", "valrab_",
 ];
 var GPT_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "marin", "cedar", "amuch", "dan", "elan", "breeze", "cove", "ember", "fathom", "glimmer", "harp", "juniper", "maple", "orbit", "vale"];
-var custom_worker_default = {
-  async fetch(request, env, ctx) {
+
+async function save(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = url.pathname;
     // Set the module-level request context so jsonResponse can persist any
@@ -589,6 +589,28 @@ var custom_worker_default = {
       currentRequestContext.skipErrorLog = true;
       return jsonResponse({ error: "Custom worker error: " + error.message || "Internal server error" }, 500);
     }
+  }
+var custom_worker_default = {
+  async fetch(request, env, ctx) {
+    try {
+      const response = await safe(request, env, ctx);
+      return new Response(response.body, {
+        ...response,
+        headers: {
+          ...response.headers,
+          ...ACCESS_CONTROL_ALLOW_ORIGIN,
+        }
+      });
+    } catch (error) {
+      console.error("Fetch error:", error);
+      return new Response(JSON.stringify({ error: "Internal server error: " + (error.message) }), {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          ...ACCESS_CONTROL_ALLOW_ORIGIN,
+        }
+      });
+    }
   },
   async scheduled(event, env, ctx) {
     // Delete usage logs older than 14 days
@@ -616,7 +638,7 @@ var custom_worker_default = {
       }
     }
   }
-};
+
 async function authenticateRequest(request, env) {
   let sessionToken = request.headers.get("Authorization")?.replace("Bearer ", "");
   if (!sessionToken) {
@@ -1952,7 +1974,7 @@ async function handleApiErrors(request, env, user) {
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
   try {
     const result = await env.ERRORS_DB.prepare(
-      `SELECT id, timestamp, source, status, message, pathname, method, ip, user_id, user_tier, request_id, context
+      `SELECT id, timestamp, source, status, message, pathname, method, user_id, user_tier, request_id, context
        FROM error_logs ${whereSql}
        ORDER BY timestamp DESC
        LIMIT ?`
