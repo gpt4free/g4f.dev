@@ -55,7 +55,7 @@
         "srv_mlj8gd8y789d112ec50d": "zai-glm-4.7"
     },
     "providerLocalStorage": {
-        "airforce": "ApiAirforce-api_key",
+        "airforce": "Airforce-api_key",
         "deepinfra": "DeepInfra-api_key",
         "huggingface": "HuggingFace-api_key",
         "gemini": "GeminiPro-api_key",
@@ -88,6 +88,6 @@
         "srv_mq7ktfibad45c29f3839": ".ollama.swarm",
         "srv_monk1pkz433a519ff2be": "openrouter",
         "srv_mkoloq41e34074b6133e": ".pollinations",
-        "srv_mrdypihj16e8b1776409": "community"
+        "srv_mrdypihj16e8b1776409": ".community"
     }
 }
