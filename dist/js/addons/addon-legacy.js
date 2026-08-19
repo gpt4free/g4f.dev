@@ -79,7 +79,7 @@ let providers = [
     {"name": "HuggingFace", "login_url": "https://huggingface.co/settings/tokens", "active_by_default": true},
     {"name": "HuggingFaceMedia", "parent": "HuggingFace", "active_by_default": true},
     {"name": "Pollinations", "label": "Pollinations AI", "login_url": "https://enter.pollinations.ai", "active_by_default": true},
-    {"name": "PuterJS", "label": "Puter.js", "login_url": "https://discord.gg/qXA4Wf4Fsm", "active_by_default": true},
+    {"name": "Puter", "label": "Puter.js", "login_url": "https://discord.gg/qXA4Wf4Fsm", "active_by_default": true},
 ];
 
 const modelTags = {
@@ -3522,20 +3522,20 @@ function load_provider_login_urls(providersListContainer, providers = []) {
             ? `<a href="https://g4f.dev/members?provider=${login_provider}&redirect=${encodeURIComponent(window.location.href.split("#")[0])}" title="${framework.translate("Login to")} ${framework.escape(label)}">${framework.translate('Login')}</a>`
             : (provider.login_url ? `<a href="${framework.escape(provider.login_url)}" target="_blank" title="${framework.translate("Login to")} ${framework.escape(label)}">${framework.translate('Get API key')}</a>` : "");
         const inputId = `${provider.name}-api_key`;
-        const storageKey = provider.name == "PuterJS" ? "puter.auth.token" : inputId;
+        const storageKey = provider.name == "Puter" ? "puter.auth.token" : inputId;
         providerBox.innerHTML = `
             <label for="${inputId}" class="label" title="">${framework.escape(label)}:</label>
         ` + (oauthButton || (apiKeyLink ? `
             <input type="text" id="${inputId}" name="${provider.name}[api_key]" class="${childs}" placeholder="api_key" autocomplete="off" data-storage-key="${storageKey}"/>
         ` + apiKeyLink : ""));
 
-        if (provider.name == "PuterJS") {
+        if (provider.name == "Puter") {
             const link = providerBox.querySelector("a");
             link.textContent = framework.translate("Login");
             link.addEventListener("click", async (event) => {
                 event.preventDefault();
                 await (new window.Puter()).signIn().then((res) => {
-                    console.log('PuterJS signed in:', res);
+                    console.log('Puter signed in:', res);
                     providerBox.querySelector("input").value = res.token;
                     appStorage.setItem(storageKey, res.token);
                 });
@@ -3619,10 +3619,12 @@ async function upload_image(file) {
     if (file instanceof File) {
         try {
             const url = "https://media.pollinations.ai/upload";
+            const formData = new FormData();
+            formData.append('file', file);
             const response = await fetch(url, {
                 method: 'POST',
-                body: file,
-                headers: {"Authorization": "Bearer pk_qYqyuR9tJOcWaKNQ"}
+                body: formData,
+                headers: {"Authorization": "Bearer pk_7X0QLj0xijSd0xj7"}
             });
             if (!response.ok) {
                 throw new Error(`Error uploading image: ${await response.text()}`);
@@ -4249,7 +4251,7 @@ function get_api_key_by_provider(provider, single=false) {
                 "Groq": get_api_key_by_provider("Groq"),
                 "DeepInfra": get_api_key_by_provider("DeepInfra"),
                 "Replicate": get_api_key_by_provider("Replicate"),
-                "PuterJS": get_api_key_by_provider("PuterJS"),
+                "Puter": get_api_key_by_provider("Puter"),
                 "Nvidia": get_api_key_by_provider("Nvidia"),
                 "Ollama": get_api_key_by_provider("Ollama"),
                 "Airforce": get_api_key_by_provider("Airforce"),

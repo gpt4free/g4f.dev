@@ -807,7 +807,7 @@ class Puter extends Client {
     async signIn(options = {attempt_temp_user_creation: true}) {
         this.puter = this.puter || await this._injectPuter();
         return this.puter.auth.signIn(options).then((res) => {
-            console.log('PuterJS signed in:', res);
+            console.log('Puter signed in:', res);
             return res;
         });
     }

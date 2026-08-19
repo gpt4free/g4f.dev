@@ -28,10 +28,10 @@ Use `client.models.get_all()` to list available models.
 
 ```python
 from g4f.client import Client
-from g4f.Provider import PuterJS
+from g4f.Provider import Puter
 
 # API key is required
-client = Client(provider=PuterJS, api_key="YOUR_PUTER_API_KEY")
+client = Client(provider=Puter, api_key="YOUR_PUTER_API_KEY")
 
 # List available models
 models = client.models.get_all()

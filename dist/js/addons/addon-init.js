@@ -995,10 +995,12 @@ async function upload_image(file) {
     if (file instanceof File) {
         try {
             const url = "https://media.pollinations.ai/upload";
+            const formData = new FormData();
+            formData.append('file', file);
             const response = await fetch(url, {
                 method: 'POST',
-                body: file,
-                headers: {"Authorization": "Bearer pk_qYqyuR9tJOcWaKNQ"}
+                body: formData,
+                headers: {"Authorization": "Bearer pk_7X0QLj0xijSd0xj7"}
             });
             if (!response.ok) {
                 throw new Error(`Error uploading image: ${await response.text()}`);

@@ -2610,12 +2610,12 @@
                 addPuterServerBtn.addEventListener('click', async () => {
                     try {
                         await (await _injectPuter()).auth.signIn({attempt_temp_user_creation: true}).then((res) => {
-                            console.log('PuterJS signed in:', res);
+                            console.log('Puter signed in:', res);
                             createOrUpdatePuterServer(res.token);
                         });
                     } catch (error) {
-                        console.error('Failed to sign in with PuterJS:', error);
-                        showToastFormat('Failed to sign in with PuterJS: {0}', 'error', error.message);
+                        console.error('Failed to sign in with Puter:', error);
+                        showToastFormat('Failed to sign in with Puter: {0}', 'error', error.message);
                     }
                 });
             }

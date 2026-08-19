@@ -8,7 +8,7 @@
 const PUTER_API_ENDPOINT = "https://api.puter.com/drivers/call";
 const PUTER_USAGE_ENDPOINT = "https://api.puter.com/metering/usage";
 
-// Model aliases mapping (same as PuterJS.py)
+// Model aliases mapping (same as Puter.py)
 const MODEL_ALIASES = {
 };
 
