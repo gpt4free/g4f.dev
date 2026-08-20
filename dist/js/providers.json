@@ -51,7 +51,7 @@
         "srv_mrgy0nmbc8a86c407f17": "models/gemini-flash-latest",
         "srv_mkoloq41e34074b6133e": "openai-fast",
         "srv_mkomfko63371049b6da6": "deepseek-v3.2:free",
-        "srv_mrdypihj16e8b1776409": "zai-org/GLM-5.2",
+        "srv_mrdypihj16e8b1776409": "openai",
         "srv_mlj8gd8y789d112ec50d": "zai-glm-4.7"
     },
     "providerLocalStorage": {
