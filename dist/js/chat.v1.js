@@ -242,7 +242,7 @@ try {
     // Resolve relative to the script's own URL so it works regardless of
     // which HTML page loads this file (e.g. /chat/index.html uses ../dist/js/).
     const scriptUrl = document.currentScript?.src || location.href;
-    const workerUrl = new URL("api-worker.js", scriptUrl);
+    const workerUrl = new URL("/dist/js/api-worker.js", scriptUrl);
     apiWorker = new Worker(workerUrl);
     // If the worker errors out (load failure, syntax error, etc.), disable it
     // so subsequent requests fall back to main-thread fetch.

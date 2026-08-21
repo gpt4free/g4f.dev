@@ -42,7 +42,7 @@
     },
     "serverDefaultModels": {
         "srv_mkom688d57c76d8a3542": "moonshotai/kimi-k2-instruct-0905",
-        "srv_mkombumpae45db46dcb8": "nvidia/nemotron-3-nano-30b-a3b",
+        "srv_mkombumpae45db46dcb8": "nvidia/nemotron-3.5-lightning-30b-a3b",
         "srv_mrgykg8eea645e7bb006": "nemotron-3-nano:30b",
         "srv_mq7ktfibad45c29f3839": "deepseek-v4-pro:cloud",
         "srv_mm0u9cua212491d78695": "openrouter/free",
