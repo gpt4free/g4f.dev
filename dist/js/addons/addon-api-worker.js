@@ -9,7 +9,7 @@
 // Try to load the worker; if it fails (file missing, CSP, file://
 // origin), fall back to regular fetch() on the main thread.
 const scriptUrl = document.currentScript?.src || location.href;
-const workerUrl = new URL('api-worker.js', scriptUrl);
+const workerUrl = new URL("/dist/js/api-worker.js", scriptUrl);
 let apiWorker = new Worker(workerUrl);
 apiWorker.onerror = (event) => {
     console.warn('api-worker failed, falling back to main-thread fetch:', event.message || event, workerUrl.href);
