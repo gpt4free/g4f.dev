@@ -3240,12 +3240,6 @@ setInterval(async () => {
         await load_conversation(conversation);
     }
 }, 5000);
-
-window.addEventListener("load", (event) => {
-    if (!window.location.hash.substring(1)) {
-        render_startup_questions();
-    }
-});
 });
 
 // async function on_load() {
@@ -6098,7 +6092,6 @@ export default {
     count_words_and_tokens,
     renderLargeMessage,
     count_input,
-    render_startup_questions,
     load_startup_questions,
     load_follow_up_questions,
     load_provider_option,
