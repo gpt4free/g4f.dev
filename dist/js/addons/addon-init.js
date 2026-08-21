@@ -70,7 +70,7 @@ const new_conversation = async (is_private = false) => {
     load_conversations();
     hide_sidebar(true);
     // say_hello();
-    render_startup_questions();
+    render_startup_questions?.();
 };
 
 domReady.then((event) => {
