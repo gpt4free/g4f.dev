@@ -88,7 +88,7 @@ var CORS_HEADERS = {
   "Access-Control-Allow-Credentials": "true",
   "Access-Control-Allow-Methods": "GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key, x-user, x-ignored, x-secret, x-recognition-language, if-none-match",
-  "Access-Control-Expose-Headers": "Content-Type, X-User-Id, X-User-Tier, X-Provider, X-Model, X-Server, X-Url, X-Usage-Total-Tokens, X-Stream, X-Ratelimit-Model-Factor, X-Ratelimit-Remaining-Requests, X-Ratelimit-Remaining-Tokens, X-Ratelimit-Limit-Requests, X-Ratelimit-Limit-Tokens, X-Prompt-Tokens"
+  "Access-Control-Expose-Headers": "Content-Type, X-User-Id, X-User-Tier, X-Provider, X-Model, X-Server, X-Url, X-Usage-Total-Tokens, X-Stream, X-Ratelimit-Model-Factor, X-Ratelimit-Remaining-Requests, X-Ratelimit-Remaining-Tokens, X-Ratelimit-Limit-Requests, X-Ratelimit-Limit-Tokens, X-Usage-Prompt-Tokens"
 };
 var EXTRA_HEADERS = {
   "HTTP-Referer": "https://g4f.dev",
@@ -124,7 +124,9 @@ var DEFAULT_MODELS = {};
 var SERVER_MAP = {}
 var URL_MAP = {
   "https://gen.pollinations.ai/quota": "https://gen.pollinations.ai/account/balance",
-  "https://api.featherless.ai/v1/models": null
+  "https://pollinations.g4f-dev.workers.dev/quota": "https://gen.pollinations.ai/account/balance",
+  "https://pollinations.g4f-dev.workers.dev/free/quota": "https://gen.pollinations.ai/account/balance",
+  //"https://api.featherless.ai/v1/models": null
 }
 let providers = {};
 let waitForProviders = ()=>fetch("https://github.com/gpt4free/g4f.dev/raw/refs/heads/main/dist/js/providers.json")
@@ -256,7 +258,7 @@ var BLOCKED_USERS = [
 ];
 var GPT_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "marin", "cedar", "amuch", "dan", "elan", "breeze", "cove", "ember", "fathom", "glimmer", "harp", "juniper", "maple", "orbit", "vale"];
 
-async function save(request, env, ctx) {
+async function safe(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = url.pathname;
     // Set the module-level request context so jsonResponse can persist any
@@ -594,22 +596,14 @@ var custom_worker_default = {
   async fetch(request, env, ctx) {
     try {
       const response = await safe(request, env, ctx);
-      return new Response(response.body, {
-        ...response,
-        headers: {
-          ...response.headers,
-          ...ACCESS_CONTROL_ALLOW_ORIGIN,
-        }
-      });
+      const newResponse = new Response(response.body, response);
+      for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
+        newResponse.headers.set(key, value);
+      }
+      return newResponse;
     } catch (error) {
       console.error("Fetch error:", error);
-      return new Response(JSON.stringify({ error: "Internal server error: " + (error.message) }), {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          ...ACCESS_CONTROL_ALLOW_ORIGIN,
-        }
-      });
+      return jsonResponse({ error: {message: "Internal server error: " + (error.message) }}, 500);
     }
   },
   async scheduled(event, env, ctx) {
@@ -638,6 +632,7 @@ var custom_worker_default = {
       }
     }
   }
+};
 
 async function authenticateRequest(request, env) {
   let sessionToken = request.headers.get("Authorization")?.replace("Bearer ", "");
@@ -770,6 +765,7 @@ async function handleCreateServer(request, env) {
       details: validationResult.details
     }, 400);
   }
+  body.base_url = validationResult.base_url || body.base_url;
 
   const maxServers = USER_TIER_LIMITS[user.tier].maxServers || 3;
   if ((user.custom_servers || []).length >= maxServers) {
@@ -857,6 +853,9 @@ async function handleUpdateServer(request, env) {
       const refreshResult = await validateServer(server.base_url, server.api_keys);
       if (refreshResult.valid && refreshResult.models && refreshResult.models.length > 0) {
         server.allowed_models = refreshResult.models;
+      }
+      if (refreshResult.base_url) {
+        server.base_url = refreshResult.base_url;
       }
     } catch (e) {
       console.error("Failed to refresh models on update:", e);
@@ -980,8 +979,9 @@ async function handleListPublicServers(request, env, user) {
   for (const s of publicServers) {
     const updated_at = new Date(s.updated_at);
     updated_at.setHours(updated_at.getHours() + 1)
-    if (new Date() > updated_at || !("is_online" in s)) {
+    if (new Date() > updated_at || !("test" in s) || !s.test) {
       s.updated_at = new Date().toISOString();
+      s.test = true
       try {
         const fullServer = await getServerById(env, s.id, user);
         const validationResult = await validateServer(fullServer.base_url, fullServer.api_keys);
@@ -991,7 +991,12 @@ async function handleListPublicServers(request, env, user) {
           if (fullServer.auto_update_models !== false && validationResult.models && validationResult.models.length > 0) {
             s.allowed_models = validationResult.models;
           }
+          if (validationResult.base_url) {
+            s.base_url = validationResult.base_url;
+          }
+          s.test_url = validationResult.test_url;
         } else {
+          s.test_url = false;
           s.is_online = false;
         }
       } catch(e) {console.error(e)}
@@ -1010,7 +1015,7 @@ async function handleListPublicServers(request, env, user) {
   const safeServers = publicServers.map((s) => ({
     id: s.id,
     label: s.label,
-    base_url: (s.is_ollama || (user && user.tier == "admin")) ? s.base_url : "",
+    base_url: s.base_url, // (s.is_ollama || (user && user.tier == "admin")) ? s.base_url : "",
     allowed_models: s.allowed_models,
     auto_update_models: s.auto_update_models,
     owner_id: s.owner_id,
@@ -1020,6 +1025,8 @@ async function handleListPublicServers(request, env, user) {
     is_hidden: HIDDEN_SERVERS.includes(s.id),
     updated_at: s.updated_at,
     usage: s.usage || { requests: 0, tokens: 0 },
+    test_url: s.test_url,
+    test: s.test
   }));
   return jsonResponse({
     servers: safeServers
@@ -1079,13 +1086,13 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey,
     headers["Authorization"] = `Bearer ${apiKey}`;
   }
   try {
-    let targetUrl = server.base_url.includes("/chat/completions") ? server.base_url.replace("/chat/completions", "/models") : `${server.base_url}/models`;
+    let targetUrl = `${server.base_url}/models`;
     if (targetUrl in URL_MAP) {
       targetUrl = URL_MAP[targetUrl];
     }
     let response;
     let data = {data: []};
-    if (targetUrl) {
+    if (targetUrl && !targetUrl.includes("/chat/completions")) {
       response = await fetch(targetUrl, {
         method: request.method,
         headers
@@ -1114,7 +1121,7 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey,
     }
     newResponse.headers.set("X-Server", serverId);
     newResponse.headers.set("X-Provider", server.label);
-    newResponse.headers.set("X-Url", (new URL(targetUrl).pathname));
+    newResponse.headers.set("X-Url", targetUrl);
     ctx.waitUntil(setCachedResponse(request, newResponse, CACHE_HEADERS.MEDIUM, cacheKey, ctx));
     return newResponse;
   } catch (e) {
@@ -1152,16 +1159,6 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
         if (message && typeof message.content === "string") {
           if (message.content === "Server?") {
             return jsonResponse({ "choices": [{ "message": { "content": `${server.label} - Server ID: ${server.id}` } }] });
-          }
-          if (message.content.startsWith("Hello, are you working?") || message.content.startsWith("Are you working?")) {
-            return jsonResponse({ "choices": [{ "message": { "content": "Yes" } }] });
-          }
-          const m = message.content.match(/^(what is |)(\d+)([\+*])(\d+)(\?|$)/);
-          if (m) {
-            const a = Number(m[2]);
-            const b = Number(m[4]);
-            const r = String(m[3] === "+" ? a + b : a * b);
-            return jsonResponse({ "choices": [{ "message": { "content": r } }] });
           }
         }
         const searchVSC = /Follow the user's requirements carefully & to the letter.\nFollow Microsoft content policies.\n[\s\S]*? simple code examples or demonstrations; debugging <\/description>/gi;
@@ -1678,7 +1675,14 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
         "messages": [{ "role": "user", "content": "say only okay" }],
         ...requestBody
       };
-      if (defaultModel) {
+      if (!testBody.stream) {
+          const url = new URL(request.url);
+          const streamParam = url.searchParams.get("stream");
+          if (streamParam === "true") {
+            testBody.stream = true;
+          }
+      }
+      if (defaultModel && !testBody.model) {
         testBody.model = defaultModel;
       }
       fetchOptions.body = JSON.stringify(testBody);
@@ -1699,7 +1703,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       return Response.json(
         { error: { message: `Shield: Status: ${response.status}, Content-Type: '${contentType}'` } },
         { status: 500, headers: {
-          "X-Url": (new URL(targetUrl).pathname),
+          "X-Url": user && user.tier == "admin" ? targetUrl : (new URL(targetUrl).pathname),
           "X-Server": server.id,
           "X-Provider": server.label,
           "X-User-Id": user && user.id,
@@ -1726,14 +1730,15 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
           pathname,
           userProvidedKey,
           geoLocation,
-          userAgent
+          userAgent,
+          rateCheck
         ));
         const newResponse2 = new Response(response.body, response);
         for (const [key, value] of Object.entries(CORS_HEADERS)) {
           newResponse2.headers.set(key, value);
         }
         newResponse2.headers.delete("set-cookie");
-        newResponse2.headers.set("X-Url", (new URL(targetUrl).pathname));
+        newResponse2.headers.set("X-Url", user && user.tier == "admin" ? targetUrl : (new URL(targetUrl).pathname));
         newResponse2.headers.set("X-Server", server.id);
         newResponse2.headers.set("X-Provider", server.label);
         if (savedBytes) {
@@ -1769,7 +1774,8 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
         }
       }
     }
-    const totalTokens = parseInt(response.headers.get("X-Usage-Total-Tokens") || "0") || usage.total_tokens || (usage.prompt_tokens + usage.completion_tokens) || 0;
+    const pollenCost = parseFloat(response.headers.get("x-pollen-cost") || "0");
+    const totalTokens = pollenCost ? (pollenCost * 5e7) : (parseInt(response.headers.get("X-Usage-Total-Tokens") || "0") || usage.total_tokens || (usage.prompt_tokens + usage.completion_tokens) || 0);
     if (totalTokens > 0 || (response.ok && requestModel)) {
       const geoLocation = request.cf?.asOrganization || request.cf?.country || null;
       const userAgent = request.headers.get("user-agent") || null;
@@ -1782,7 +1788,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       }
       const isCached = (response.headers.get("X-Cache") || usage.cache || "MISS") === "HIT";
       if (!userProvidedKey && !isCached && !server.api_key) {
-        const modelTotalTokens = getModelTokens(requestModel, totalTokens);
+        const modelTotalTokens = pollenCost > 0 ? totalTokens : getModelTokens(requestModel, totalTokens);
         if (user) {
           ctx.waitUntil(updateUserTokenUsage(env, user.id, modelTotalTokens, ctx));
         }
@@ -1793,7 +1799,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       newResponse.headers.set(key, value);
     }
     newResponse.headers.delete("set-cookie");
-    newResponse.headers.set("X-Url", (new URL(targetUrl).pathname));
+    newResponse.headers.set("X-Url", user && user.tier == "admin" ? targetUrl : (new URL(targetUrl).pathname));
     newResponse.headers.set("X-Server", server.id);
     newResponse.headers.set("X-Provider", server.label);
     if (requestModel) {
@@ -1801,6 +1807,13 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     }
     if (totalTokens) {
       newResponse.headers.set("X-Usage-Total-Tokens", String(totalTokens));
+    }
+    if (pollenCost > 0 && rateCheck.centsToCharge > 0 && !user) {
+      const pollenDiff = ((pollenCost * 10) - (rateCheck.centsToCharge / 100)) * 100;
+      if (pollenDiff > 0) {
+        ctx.waitUntil(chargeCakeCreditCents(env, clientIP, pollenDiff));
+      }
+      newResponse.headers.set("x-pollen-diff", String(pollenDiff));
     }
     if (request.method === "GET" && !userProvidedKey) {
       ctx.waitUntil(setCachedResponse(request, newResponse.clone(), subPath.endsWith("/quota") ? CACHE_HEADERS.SHORT : CACHE_HEADERS.MEDIUM, cacheKey, ctx));
@@ -1832,7 +1845,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     }, 502);
   }
 }
-async function createUsageTrackingStream(response, env, ctx, server, serverId, clientIP, requestModel, firstMessage, user, pathname, userProvidedKey, geoLocation, userAgent) {
+async function createUsageTrackingStream(response, env, ctx, server, serverId, clientIP, requestModel, firstMessage, user, pathname, userProvidedKey, geoLocation, userAgent, rateCheck=null) {
   const reader = response.clone().body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -1864,7 +1877,15 @@ async function createUsageTrackingStream(response, env, ctx, server, serverId, c
       break;
     }
   }
-  const totalUsage = usage.total_tokens || (usage.prompt_tokens + usage.completion_tokens) || 0;
+  const pollenCost = parseFloat(usage.pollen_cost);
+  if (pollenCost > 0 && rateCheck.centsToCharge && !user) {
+    const pollenDiff = ((pollenCost * 10) - (rateCheck.centsToCharge / 100)) * 100;
+    if (pollenDiff > 0) {
+      ctx.waitUntil(chargeCakeCreditCents(env, clientIP, pollenDiff));
+    }
+  }
+  parseInt(response.headers.get("x-pollen-cost") || "0") * 5e7;
+  const totalUsage = pollenCost > 0 ? (pollenCost * 5e7) : (usage.total_tokens || (usage.prompt_tokens + usage.completion_tokens) || 0);
   ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${serverId}`, requestModel, totalUsage, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent, userProvidedKey));
   ctx.waitUntil(updateServerUsage(env, server, totalUsage, requestModel));
   if (user) {
@@ -1872,7 +1893,7 @@ async function createUsageTrackingStream(response, env, ctx, server, serverId, c
   }
   const isCached = (response.headers.get("X-Cache") || usage.cache || "MISS") === "HIT";
   if (!userProvidedKey && !isCached && !server.api_key) {
-    const totalTokens = getModelTokens(requestModel, totalUsage);
+    const totalTokens = pollenCost > 0 ? totalUsage : getModelTokens(requestModel, totalUsage);
     if (user) {
       ctx.waitUntil(updateUserTokenUsage(env, user.id, totalTokens, ctx));
     }
@@ -2204,18 +2225,20 @@ async function validateServer(baseUrl, apiKeysStr) {
   if (apiKey) {
     headers["Authorization"] = `Bearer ${apiKey}`;
   }
-  const modelsEndpoints = [
-    "/models",
-    ""
-  ];
-  if (baseUrl.includes("/chat/completions")) {
+  let testUrl = baseUrl.includes("/chat/completions") ? baseUrl : null
+  if (URL_MAP[`${baseUrl}/quota`]) {
+    testUrl = URL_MAP[`${baseUrl}/quota`];
+  }
+  if (testUrl) {
     try {
-      const url = baseUrl;
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 1e4);
-      const response = await fetch(url, {
+      const extra = testUrl.includes("/chat/completions") ? {
         method: "POST",
         body: JSON.stringify({ "messages": [{ "role": "user", "content": "Hello" }] }),
+      } : {};
+      const response = await fetch(testUrl, {
+        ...extra,
         headers,
         signal: controller.signal
       });
@@ -2226,8 +2249,8 @@ async function validateServer(baseUrl, apiKeysStr) {
           return {
             valid: true,
             models: [],
-            endpoint: "",
-            note: "No models discovered"
+            base_url: baseUrl,
+            test_url: testUrl,
           };
         }
       } else if (response.status === 401 || response.status === 403) {
@@ -2247,13 +2270,18 @@ async function validateServer(baseUrl, apiKeysStr) {
       }
     }
   }
+  const modelsEndpoints = [
+    baseUrl + "/models", baseUrl + "/v1/models"
+  ];
+  if (baseUrl.startsWith("http:")) {
+    modelsEndpoints.push((baseUrl + "/models").replace("http:", "https:"))
+  }
+  if (!baseUrl.includes("/chat/completions"))
   for (const endpoint of modelsEndpoints) {
     try {
-      baseUrl = baseUrl.includes("/chat/completions") ? baseUrl.replace("/chat/completions", "/models") : baseUrl
-      const url = baseUrl + endpoint;
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 1e4);
-      const response = await fetch(url, {
+      const response = await fetch(endpoint, {
         headers,
         signal: controller.signal
       });
@@ -2274,15 +2302,16 @@ async function validateServer(baseUrl, apiKeysStr) {
             return {
               valid: true,
               models,
-              //.slice(0, 100), // Limit to 100 models
-              endpoint: endpoint || "/"
+              base_url: response.url.replace("/models", ""),
+              test_url: endpoint
             };
           }
           return {
             valid: true,
             models: [],
-            endpoint: endpoint || "/",
-            note: "No models discovered"
+            note: "No models discovered",
+            base_url: response.url.replace("/models", ""),
+            test_url: endpoint
           };
         }
       } else if (response.status === 401 || response.status === 403) {
@@ -2307,11 +2336,13 @@ async function validateServer(baseUrl, apiKeysStr) {
       method: "HEAD",
       headers
     });
-    if (response.ok || response.status < 500) {
+    if (response.ok) {
       return {
         valid: true,
         models: [],
-        note: "Server reachable but no models endpoint found"
+        note: "Server reachable but no models endpoint found",
+        base_url: response.url,
+        test_url: baseUrl
       };
     }
   } catch (e) {
@@ -2319,7 +2350,7 @@ async function validateServer(baseUrl, apiKeysStr) {
   return {
     valid: false,
     error: "Cannot connect to server - check URL and network accessibility",
-    details: { baseUrl }
+    details: { baseUrl },
   };
 }
 async function hashString(str) {
@@ -2651,7 +2682,9 @@ function updateResponsefromRateCheck(newResponse, rateCheck) {
   if (!rateCheck) {
     return;
   }
-  newResponse.headers.set("X-Prompt-Tokens", rateCheck.promptTokens)
+  if (rateCheck.promptTokens) {
+    newResponse.headers.set("X-Usage-Prompt-Tokens", rateCheck.promptTokens);
+  }
   newResponse.headers.set("X-Ratelimit-Remaining-Requests", String(rateCheck.maxRequests));
   newResponse.headers.set("X-Ratelimit-Remaining-Tokens", String(rateCheck.maxTokens));
   newResponse.headers.set("X-Ratelimit-Limit-Requests", String(rateCheck.limitRequests));
@@ -2875,6 +2908,7 @@ async function applyAnonymousCreditGate(env, ctx, request, user, requestBody, ra
   rateCheck.tokenBudget = tokenBudget;
   rateCheck.limitTokens = tokenBudget;
   rateCheck.maxTokens = remainingTokens;
+  rateCheck.centsToCharge = centsToCharge;
   rateCheck.limitRequests = Math.max(1, Math.floor(tokenBudget / avgRequestTokens));
   rateCheck.maxRequests = Math.floor(remainingTokens / avgRequestTokens);
   return rateCheck;
@@ -3249,8 +3283,8 @@ async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ct
   // block anonymous requests originating from certain cloud providers
   // (Cloudflare sets `request.cf.asOrganization` for the source ASN/org).
   const org = request.cf?.asOrganization || request.cf?.country || null;
-  if ( request.headers.get("host") != "api.gpt4free.workers.dev")
-  if (!user && org && BLOCKED_ORGS.includes(org) && !pathname.endsWith("/public")) {
+  // if ( request.headers.get("host") != "api.gpt4free.workers.dev")
+  if (!user && org && BLOCKED_ORGS.includes(org)) {
     return jsonResponse({
       error: {
         message: `Access from "${org}" blocked. Sign up at g4f.dev/members.html for access from cloud.`,
@@ -3282,7 +3316,7 @@ async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ct
   }
   const newResponse = new Response(response.body, response);
   newResponse.headers.set("Access-Control-Allow-Origin", "*");
-  if (request.method === "GET" && (!headers.get("g4f-api-key") && !request.headers.get("x-api-key") && !request.headers.get("x-ignored")) || ["/pa/providers"].includes(pathname)) {
+  if (request.method === "GET") {
     ctx.waitUntil(setCachedResponse(request, newResponse.clone(), CACHE_HEADERS.SHORT, cacheKey, ctx));
   }
   return newResponse;

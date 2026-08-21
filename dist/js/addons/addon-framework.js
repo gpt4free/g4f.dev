@@ -508,7 +508,7 @@ async function query(prompt, options = { json: false, cache: true }) {
         }
         const firstPartyUrl = `https://g4f.space/ai/auto/${encodeURIComponent(prompt)}?${encodedParams}`;
         try {
-            response = await fetch(firstPartyUrl, { headers: { "Authorization": `Bearer ${["sk", "_fPLVqg5vAQRCZWzPoYUG6dzSu5czowKf"].join("")}` } });
+            response = await fetch(firstPartyUrl);
         } catch (e) {
             add_error(`Error fetching fallback URL: \`${firstPartyUrl}\``, e);
             return new Response('{"error": "All endpoints failed"}', { status: 503, headers: { 'Content-Type': 'application/json' } });

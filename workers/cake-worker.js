@@ -14,17 +14,17 @@
  *   GET  /cake/credit/:ip           — total credit earned by an IP (admin only)
  *   GET  /cake/users                — all users with total + today's cakes (admin only)
  *
- * Storage (R2: CAKE_BUCKET, KV: CAKE_KV):
+ * Storage (KV: CAKE_KV):
  *   cakes:issued:<ip>               — KV list of issued UUIDs + timestamps (TTL = issue TTL)
  *   cakes:baked:<ip>                — KV counter of cakes baked today
  *   cakes:credit:<ip>               — KV accumulated credit (in cents) for the IP
  *   cakes:consumed:<ip>             — KV list of consumed cake-ids (for spend tracking)
  *   cakes:user:<user>               — KV mapping of user label to IP
  *   cakes:user_index:<ip>           — KV aggregated per-IP user stats for /cake/users
- *   cake:<uuid>                     — R2 object storing { ip, baked_at, hash, salt } (TTL via lifecycle)
+ *   cakes:today_ips                  — KV list of IPs that baked today (TTL = 1 day, resets daily)
+ *   cake:<uuid>                     — KV object storing { ip, baked_at, hash, salt } (TTL = 365 days)
  *
  * Environment variables:
- *   CAKE_BUCKET          — R2 bucket binding
  *   CAKE_KV              — KV namespace binding
  *   CAKE_DIFFICULTY      — number of leading zero bits required (default: 16)
  *   CAKE_PER_IP_PER_DAY / CAKES_PER_IP_PER_DAY  — max cakes an IP may bake per day (default: 100)
@@ -189,6 +189,28 @@ async function addCredit(env, ip, cents, user, country) {
     entry.user = normalizeUser(entry.user) || normalized || null;
     entry.country = entry.country || country || null;
     await env.CAKE_KV.put(userIndexKey, JSON.stringify(entry), { expirationTtl: 86400 * 365 });
+
+    // Track today's active IPs so /cake/users can skip the full-list scan.
+    const todayIpsKey = "cakes:today_ips";
+    const rawToday = await env.CAKE_KV.get(todayIpsKey);
+    let todayIps;
+    if (rawToday) {
+        try {
+            todayIps = JSON.parse(rawToday);
+        } catch {
+            todayIps = { day: today, ips: [] };
+        }
+    } else {
+        todayIps = { day: today, ips: [] };
+    }
+    if (todayIps.day !== today) {
+        todayIps = { day: today, ips: [] };
+    }
+    if (!todayIps.ips.includes(ip)) {
+        todayIps.ips.push(ip);
+        await env.CAKE_KV.put(todayIpsKey, JSON.stringify(todayIps), { expirationTtl: 86400 });
+    }
+
     return current + cents;
 }
 
@@ -294,13 +316,13 @@ async function handleBake(request, env) {
         return json({ error: "daily_limit_reached", limit: perDay }, 429, { "Retry-After": "3600" }, request);
     }
 
-    // 5. Persist the baked cake in R2 (dedup by uuid).
+    // 5. Persist the baked cake in KV (dedup by uuid).
     const cakeKey = `cake:${uuid}`;
-    const existing = await env.CAKE_BUCKET.get(cakeKey);
+    const existing = await env.CAKE_KV.get(cakeKey);
     if (existing) {
         return json({ error: "cake_already_baked", uuid }, 409, {}, request);
     }
-    await env.CAKE_BUCKET.put(
+    await env.CAKE_KV.put(
         cakeKey,
         JSON.stringify({
             uuid,
@@ -314,7 +336,7 @@ async function handleBake(request, env) {
             user: daily.user || null,
             country: request.cf?.country || null
         }),
-        { customMetadata: { ip, baked_day: dayKey(), user: daily.user || "", country: request.cf?.country || "" } }
+        { expirationTtl: 86400 * 365 }
     );
 
     // 6. Remove the uuid from the issued list so it can't be re-baked.
@@ -402,27 +424,52 @@ async function handleCreditByIP(request, env, ip) {
 
 /** Admin-only: list every baker with total cakes and cakes baked today.
  *  Uses a lightweight KV user index updated on every bake, so this no
- *  longer scans the entire R2 bucket. */
+ *  longer scans the entire KV namespace.  Results are cached via the
+ *  Cache API for 60 seconds to avoid repeated full-list scans. */
 async function handleUsers(request, env) {
     const auth = request.headers.get("Authorization") || "";
     if (!env.ADMIN_API_KEY || auth !== `Bearer ${env.ADMIN_API_KEY}`) {
         // return json({ error: "unauthorized" }, 401, {}, request);
     }
     const today = dayKey();
+
+    // Check Cloudflare edge cache first.
+    const cacheUrl = new URL(request.url);
+    cacheUrl.pathname = "/cake/users";
+    const cache = caches.default;
+    const cachedResponse = await cache.match(cacheUrl);
+    if (cachedResponse) {
+        return cachedResponse;
+    }
+
     const users = [];
-    let cursor;
-    do {
-        const listArgs = { prefix: "cakes:user_index:" };
-        if (cursor) listArgs.cursor = cursor;
-        const listed = await env.CAKE_KV.list(listArgs);
-        for (const key of listed.keys) {
-            const raw = await env.CAKE_KV.get(key.name);
+    // Use the today-IPs index instead of listing all user_index keys.
+    const todayIpsRaw = await env.CAKE_KV.get("cakes:today_ips");
+    let todayIps = [];
+    if (todayIpsRaw) {
+        try {
+            const parsed = JSON.parse(todayIpsRaw);
+            if (parsed.day === today && Array.isArray(parsed.ips)) {
+                todayIps = parsed.ips;
+            }
+        } catch {
+            // fall through to empty list
+        }
+    }
+
+    if (todayIps.length > 0) {
+        // Fetch all user_index entries in parallel.
+        const entries = await Promise.all(
+            todayIps.map((ip) =>
+                env.CAKE_KV.get(`cakes:user_index:${ip}`).then((raw) => ({ raw, ip }))
+            )
+        );
+        for (const { raw } of entries) {
             if (!raw) continue;
             try {
                 const entry = JSON.parse(raw);
                 if (entry.day === today && entry.today > 0) {
                     users.push({
-                        //ip: key.name.slice("cakes:user_index:".length),
                         total: entry.total || 0,
                         today: entry.today || 0,
                         user: normalizeUser(entry.user),
@@ -433,17 +480,48 @@ async function handleUsers(request, env) {
                 // ignore malformed entries
             }
         }
-        cursor = listed.list_complete ? null : listed.cursor;
-    } while (cursor);
+    } else {
+        // Fallback: full list scan if today-IPs index is missing.
+        let cursor;
+        do {
+            const listArgs = { prefix: "cakes:user_index:" };
+            if (cursor) listArgs.cursor = cursor;
+            const listed = await env.CAKE_KV.list(listArgs);
+            const pageEntries = await Promise.all(
+                listed.keys.map((key) => env.CAKE_KV.get(key.name).then((raw) => ({ raw })))
+            );
+            for (const { raw } of pageEntries) {
+                if (!raw) continue;
+                try {
+                    const entry = JSON.parse(raw);
+                    if (entry.day === today && entry.today > 0) {
+                        users.push({
+                            total: entry.total || 0,
+                            today: entry.today || 0,
+                            user: normalizeUser(entry.user),
+                            country: entry.country || null,
+                        });
+                    }
+                } catch {
+                    // ignore malformed entries
+                }
+            }
+            cursor = listed.list_complete ? null : listed.cursor;
+        } while (cursor);
+    }
 
     users.sort((a, b) => b.total - a.total || b.today - a.today);
 
-    return json({
+    const payload = {
         generated_at: Date.now(),
         day: today,
         count: users.length,
         users,
-    }, 200, {}, request);
+    };
+    const response = json(payload, 200, { "Cache-Control": "public, max-age=60" }, request);
+    // Store in edge cache for subsequent requests.
+    await cache.put(cacheUrl, response.clone());
+    return response;
 }
 
 // ---------------------------------------------------------------------------

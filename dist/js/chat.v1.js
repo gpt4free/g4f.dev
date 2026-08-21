@@ -124,19 +124,33 @@ document.addEventListener("DOMContentLoaded", (event) => {
         if (tierLimitsRow) tierLimitsRow.classList.remove('hidden');
     }
 
+    let lastCakeCredits = null;
+    let repetitionCount = 0;
+    let cakeStatusInterval = null;
+
     // Poll the cake worker /status endpoint for baked credits
     async function refreshCakeStatus() {
         try {
             const res = await fetch('https://g4f.space/cake/status', { credentials: 'include' });
             if (res.ok) {
                 const data = await res.json();
+                if (data.credit_cents === lastCakeCredits) {
+                    repetitionCount++;
+                    clearInterval(cakeStatusInterval);
+                    const nextInterval = Math.min(30000, 5000 + repetitionCount * 5000);
+                    cakeStatusInterval = setInterval(refreshCakeStatus, nextInterval);
+                } else {
+                    repetitionCount = 0;
+                    lastCakeCredits = data.credit_cents;
+                }
                 updateCakeCredits(data.credit_cents, data.baked_today);
             }
         } catch (e) { /* network blocked — ignore */ }
     }
 
     refreshCakeStatus();
-    setInterval(refreshCakeStatus, 30000);
+    cakeStatusInterval = setInterval(refreshCakeStatus, 30000);
+
     
     function formatNumber(num) {
         if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -3548,7 +3562,7 @@ Example:
         prompt += `\nRespond in ${navigator.language}.`;
     }
     try {
-        const response = await framework.query(prompt, {json: true, seed: Math.floor(Date.now() / 1000 / 3600 / 24)});
+        const response = await framework.query(prompt, {json: true, seed: Math.floor(Date.now() / 1000 / 3600 / 24 / 3)});
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${await response.text()}`);
         }

@@ -233,7 +233,7 @@ async function query(prompt, options = { json: false, cache: true }) {
             add_error(`Error ${response.status} with URL: \`${secondPartyUrl}\`\n ${await response.clone().text()}`, true);
         }
         const firstPartyUrl = `https://g4f.space/ai/auto/${encodeURIComponent(prompt)}?${encodedParams}`;
-        response = await fetch(firstPartyUrl, { headers: { "Authorization": `Bearer ${["sk", "_fPLVqg5vAQRCZWzPoYUG6dzSu5czowKf"].join("")}` } });
+        response = await fetch(firstPartyUrl);
         if (!response.ok) {
             add_error(`Error ${response.status} with URL: \`${firstPartyUrl}\`\n ${await response.clone().text()}`, true);
             return response;

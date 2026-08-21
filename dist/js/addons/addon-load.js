@@ -443,7 +443,7 @@ Example:
         prompt += `\nRespond in ${navigator.language}.`;
     }
     try {
-        const response = await framework.query(prompt, {json: true, seed: Math.floor(Date.now() / 1000 / 3600 / 24)});
+        const response = await framework.query(prompt, {json: true, seed: Math.floor(Date.now() / 1000 / 3600 / 24 / 3)});
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${await response.text()}`);
         }
