@@ -6,42 +6,60 @@
  * worker cannot load.                                                *
  * ================================================================== */
 
-// Try to load the worker; if it fails (file missing, CSP, file://
-// origin), fall back to regular fetch() on the main thread.
-const scriptUrl = document.currentScript?.src || location.href;
-const workerUrl = new URL("/dist/js/api-worker.js", scriptUrl);
+
+// --- Web Worker for AI API requests (keeps streaming when tab is backgrounded) ---
+// Try to load the worker; if it fails (e.g. file missing, CSP, file:// origin),
+// fall back to regular fetch() on the main thread.
 let apiWorker = null;
+try {
+    // The worker lives next to this script (dist/js/api-worker.js).
+    // Resolve relative to the script's own URL so it works regardless of
+    // which HTML page loads this file (e.g. /chat/index.html uses ../dist/js/).
+    const scriptUrl = document.currentScript?.src || location.href;
+    const workerUrl = new URL("/dist/js/api-worker.js", scriptUrl);
+    apiWorker = new Worker(workerUrl);
+    // If the worker errors out (load failure, syntax error, etc.), disable it
+    // so subsequent requests fall back to main-thread fetch.
+    apiWorker.onerror = (event) => {
+        console.warn("api-worker failed, falling back to main-thread fetch:", event.message || event, workerUrl.href);
+        try { apiWorker.terminate(); } catch (e) {}
+        apiWorker = null;
+    };
+} catch (e) {
+    console.warn("Failed to create api-worker, using main-thread fetch:", e);
+    apiWorker = null;
+}
+const apiWorkerCallbacks = new Map(); // workerId -> { onOpen, onChunk, onDone, onError, onRatelimit }
 
-(function () {
-    'use strict';
+if (apiWorker) {
+    apiWorker.onmessage = (event) => {
+        const data = event.data;
+        const cb = apiWorkerCallbacks.get(data.id);
+        if (!cb) return;
+        if (data.type === "open") {
+            cb.onOpen?.(data.status, data.headers);
+        } else if (data.type === "chunk") {
+            cb.onChunk?.(data.value);
+        } else if (data.type === "done") {
+            cb.onDone?.();
+            apiWorkerCallbacks.delete(data.id);
+        } else if (data.type === "error") {
+            cb.onError?.(data.message, data.aborted);
+            apiWorkerCallbacks.delete(data.id);
+        } else if (data.type === "ratelimit") {
+            cb.onRatelimit?.(data.status, data.body);
+            apiWorkerCallbacks.delete(data.id);
+        }
+    };
+}
 
-    ChatAddons.register({
-        id: 'builtin:api-worker',
-        name: 'API Web Worker',
-        version: '1.0.0',
-        description: 'Keeps AI streaming alive in background tabs by running API requests in a Web Worker.',
-        author: 'g4f',
-        builtin: true,
-        permissions: ['net:fetch'],
-
-        load() {
-            apiWorker = new Worker(workerUrl);
-            apiWorker.onerror = (event) => {
-                console.warn('api-worker failed, falling back to main-thread fetch:', event.message || event, workerUrl.href);
-                try { apiWorker.terminate(); } catch (e) {}
-            };
-        },
-
-        unload() {
-            if (apiWorker) {
-                try { apiWorker.terminate(); } catch (e) {}
-                apiWorker = null;
-            }
-        },
-    });
-})();
-
-function workerFetch(message_id, url, options) {
+/**
+ * Runs a fetch() inside the web worker so the request keeps streaming
+ * even when the tab is backgrounded / the user switches to another app.
+ * Falls back to regular fetch() on the main thread if the worker is unavailable.
+ * Returns a Response-like object with a .body ReadableStream.
+ */
+function workerFetch(workerId, url, options) {
     // Fallback: worker not loaded — use main-thread fetch.
     if (!apiWorker) {
         return fetch(url, options);
@@ -49,44 +67,62 @@ function workerFetch(message_id, url, options) {
     return new Promise((resolve, reject) => {
         let streamController;
         const stream = new ReadableStream({
-            start(controller) {
-                streamController = controller;
+            start(controller) { streamController = controller; }
+        });
+        let resolved = false;
+
+        apiWorkerCallbacks.set(workerId, {
+            onOpen: (status, headers) => {
+                // Build a Response-like object the existing code can consume.
+                const headersObj = new Headers();
+                for (const [k, v] of Object.entries(headers || {})) {
+                    headersObj.set(k, v);
+                }
+                const response = new Response(stream, {
+                    status,
+                    headers: headersObj,
+                });
+                resolved = true;
+                resolve(response);
+            },
+            onChunk: (value) => {
+                streamController?.enqueue(new Uint8Array(value));
+            },
+            onDone: () => {
+                try { streamController?.close(); } catch (e) {}
+            },
+            onError: (message, aborted) => {
+                try { streamController?.error(new Error(message)); } catch (e) {}
+                if (!resolved) {
+                    if (aborted) {
+                        reject(new DOMException("The user aborted a request.", "AbortError"));
+                    } else {
+                        reject(new Error(message));
+                    }
+                }
+            },
+            onRatelimit: (status, body) => {
+                // Resolve with a synthetic 429 response carrying the body text.
+                const response = new Response(body, {
+                    status,
+                    headers: { "Content-Type": "text/html" },
+                });
+                resolved = true;
+                resolve(response);
             },
         });
-        const reader = stream.getReader();
-        const state = { done: false };
 
-        const onMessage = (event) => {
-            if (event.data?.type === 'response') {
-                const { headers, status } = event.data;
-                const response = new Response(reader, {
-                    headers,
-                    status,
-                });
-                apiWorker.removeEventListener('message', onMessage);
-                resolve(response);
-            } else if (event.data?.type === 'error') {
-                apiWorker.removeEventListener('message', onMessage);
-                reject(new Error(event.data.message || 'Worker fetch failed'));
-            } else if (event.data?.type === 'stream') {
-                if (event.data.data) {
-                    streamController.enqueue(new Uint8Array(event.data.data));
-                }
-                if (event.data.done) {
-                    state.done = true;
-                    streamController.close();
-                }
-            }
-        };
-        apiWorker.addEventListener('message', onMessage);
-        apiWorker.postMessage({ type: 'fetch', id: message_id, url, options });
+        // Strip any signal — the worker manages its own AbortController.
+        const { signal, ...safeOptions } = options || {};
+        apiWorker.postMessage({ type: "fetch", id: workerId, url, options: safeOptions });
     });
-};
+}
 
-function workerAbort(message_id) {
+function workerAbort(workerId) {
     if (!apiWorker) return;
-    apiWorker.postMessage({ type: 'abort', id: message_id });
-};
+    apiWorker.postMessage({ type: "abort", id: workerId });
+}
+
 
 function fetchFn(url, fetchOptions) {
     if (!apiWorker) {
@@ -107,8 +143,29 @@ function fetchFn(url, fetchOptions) {
     return workerFetch(workerId, url, fetchOptions);
 };
 
+(function () {
+    'use strict';
+
+    ChatAddons.register({
+        id: 'builtin:api-worker',
+        name: 'API Web Worker',
+        version: '1.0.0',
+        description: 'Keeps AI streaming alive in background tabs by running API requests in a Web Worker.',
+        author: 'g4f',
+        builtin: true,
+        permissions: ['net:fetch'],
+
+        load() {
+            window.fetchFn = fetchFn;
+        },
+
+        unload() {
+            window.fetchFn = null;
+        },
+    });
+})();
+
 export default {
-    workerFetch,
-    workerAbort,
-    fetchFn
+    apiWorker,
+    fetchFn: fetch
 };

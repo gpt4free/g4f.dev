@@ -1460,24 +1460,7 @@ async function initClient() {
     // Route client fetch() calls through the Web Worker so streaming
     // continues even when the tab is backgrounded / the user switches apps.
     // Falls back to regular fetch() if the worker is unavailable.
-    options.fetchFn = (url, fetchOptions) => {
-        if (!apiWorker) {
-            return fetch(url, fetchOptions);
-        }
-        const workerId = `client-${generateUUID()}`;
-        // Forward aborts from the provided signal to the worker.
-        const signal = fetchOptions?.signal;
-        if (signal) {
-            if (signal.aborted) {
-                apiWorker.postMessage({ type: "abort", id: workerId });
-            } else {
-                signal.addEventListener("abort", () => {
-                    apiWorker.postMessage({ type: "abort", id: workerId });
-                });
-            }
-        }
-        return workerFetch(workerId, url, fetchOptions);
-    };
+    options.fetchFn = window.fetchFn;
     try {
         // Handle custom providers with custom:server_id format
         client = await window.createClient(provider, options);

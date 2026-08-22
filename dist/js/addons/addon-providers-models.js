@@ -98,7 +98,7 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
         }
         // Run the fetch in a Web Worker so it keeps streaming
         // even when the tab is backgrounded / the user switches apps.
-        response = await workerFetch(message_id, url, {
+        response = await fetchFn(message_id, url, {
             method: 'POST',
             headers: headers,
             body: body,
