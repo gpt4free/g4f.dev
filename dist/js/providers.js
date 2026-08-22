@@ -8,6 +8,7 @@ if (typeof window === "undefined") {
 let providers = {};
 let defaultModels = {};
 let providerLocalStorage = {};
+let serverDefaultModels = {};
 let providerClassMap = {
     "default": Client,
     "pollinations": Pollinations,
@@ -34,6 +35,7 @@ async function loadProviders() {
             .then(json => {
                 providers = json.providers || {};
                 defaultModels = json.defaultModels || {};
+                serverDefaultModels = json.serverDefaultModels || {};
                 window.providerLocalStorage = providerLocalStorage = json.providerLocalStorage || {};
                 return providers;
             });
@@ -42,6 +44,7 @@ async function loadProviders() {
         data = JSON.parse(fs.readFileSync("./providers.json", "utf-8"));
         providers = data.providers || {};
         defaultModels = data.defaultModels || {};
+        serverDefaultModels = data.serverDefaultModels || {};
         providerLocalStorage = data.providerLocalStorage || {};
     }
     return providers;
@@ -49,16 +52,6 @@ async function loadProviders() {
 
 async function createClient(provider, options = {}) {
     options.id = provider;
-    if (provider.startsWith("custom:")) {
-        const serverId = provider.substring(7);
-        options.baseUrl = `https://g4f.space/custom/${serverId}`;
-        options.apiKey = options.apiKey || (typeof window !== "undefined" ? window?.localStorage.getItem("g4f_session") : undefined);
-        provider = "custom";
-    }
-    
-    if (!providers) {
-        providers = await loadProviders();
-    }
 
     if (provider === "custom") {
         if (!options.baseUrl) {
@@ -75,6 +68,24 @@ async function createClient(provider, options = {}) {
         return new Client(options);
     }
 
+    if (!providers) {
+        providers = await loadProviders();
+    }
+
+    let serverId = null;
+    if (provider.startsWith("custom:")) {
+        serverId = provider.substring(7);
+        options.baseUrl = `https://g4f.space/custom/${serverId}`;
+        options.apiKey = options.apiKey || (typeof window !== "undefined" ? window?.localStorage.getItem("g4f_session") : undefined);
+        provider = "custom";
+    } else if (providers[provider]) {
+        serverId = providers[provider].id;
+    }
+
+    if (serverId && serverDefaultModels[serverId] && !options.defaultModel) {
+        options.defaultModel = serverDefaultModels[serverId];
+    }
+
     if (!providers[provider]) {
         if (provider.startsWith("https://") || provider.startsWith("http://")) {
             options.baseUrl = provider;
@@ -87,7 +98,7 @@ async function createClient(provider, options = {}) {
     }
     const { class: ClientClass = (providerClassMap[provider] || Client), backupUrl, localStorageApiKey, tags, ...config } = providers[provider];
 
-    if (typeof localStorage !== "undefined" && providerLocalStorage[provider] && localStorage.getItem(providerLocalStorage[provider])) {
+    if (typeof localStorage !== "undefined" && providerLocalStorage[provider] && !options.apiKey) {
         options.apiKey = localStorage.getItem(providerLocalStorage[provider]);
     }
     
@@ -99,8 +110,8 @@ async function createClient(provider, options = {}) {
         options.baseUrl = backupUrl;
     }
 
-    if (defaultModels[provider]) {
-        options.defaultModel = options.defaultModel || defaultModels[provider];
+    if (defaultModels[provider] && !options.defaultModel) {
+        options.defaultModel = defaultModels[provider];
     }
     
     // Instantiate the client

@@ -234,6 +234,7 @@ async function query(prompt, options = { json: false, cache: true }) {
         }
         const firstPartyUrl = `https://g4f.space/ai/auto/${encodeURIComponent(prompt)}?${encodedParams}`;
         response = await fetch(firstPartyUrl);
+        window.captureUserTierHeaders?.(response.headers);
         if (!response.ok) {
             add_error(`Error ${response.status} with URL: \`${firstPartyUrl}\`\n ${await response.clone().text()}`, true);
             return response;

@@ -18,41 +18,34 @@
         "qwen": {"id": "srv_mrgymq8534d9ea96920d", "backupUrl": "https://g4f.space/api/qwen", "tags": "💡", "provider": "Qwen"},
         "crowllm": {"id": "srv_mrgynwuz08a167112109", "backupUrl": "https://g4f.space/custom/srv_mrgynwuz08a167112109", "tags": "🐦‍⬛"},
         "eaon": {"id": "srv_mrtd0gge48cb809ab7eb", "backupUrl": "https://g4f.space/custom/srv_mrtd0gge48cb809ab7eb", "tags": "⚡"},
-        "opencode": {"id": "srv_mrgy4bjz6a85b485d663", "backupUrl": "https://g4f.space/custom/srv_mrgy4bjz6a85b485d663", "tags": "🦄"}
+        "opencode": {"id": "srv_mrgy4bjz6a85b485d663", "backupUrl": "https://g4f.space/custom/srv_mrgy4bjz6a85b485d663", "tags": "🦄"},
+        "orcarouter": {"id": "srv_msoxsh206cb0d89eca32", "baseUrl": "https://api.orcarouter.ai/v1", "backupUrl": "https://g4f.space/api/orcarouter", "tags": "🐳"}
     },
     "defaultModels": {
         "default": "auto",
-        "pollinations": "openai-fast",
-        "airforce": "gpt-4o-mini",
-        "master": "gpt-4o-mini",
-        "gemini": "models/gemini-3-flash-preview",
-        "openrouter": "nvidia/nemotron-3.5-lightning:free",
-        "nvidia": "nvidia/nemotron-3.5-lightning-30b-a3b",
-        "ollama": "nemotron-3-nano:30b",
-        "ollama.pro": "glm-5.2",
-        "ollama.swarm": "deepseek-v4-pro:cloud",
-        "groq": "openai/gpt-oss-120b",
-        "puter": "anthropic:anthropic/claude-opus-4-7",
-        "perplexity": "turbo",
-        "deepinfra": "zai-org/GLM-5.2",
-        "qwen": "qwen3.6-plus",
-        "crowllm": "glm-5.2",
-        "eaon": "auto",
-        "opencode": "glm-5.2"
+        "puter": "anthropic:anthropic/claude-opus-4-7"
     },
     "serverDefaultModels": {
-        "srv_mkom688d57c76d8a3542": "moonshotai/kimi-k2-instruct-0905",
+        "srv_mp5miql908c8738d71be": "openai-fast",
+        "srv_mp3lmkuad07322459f47": "unmoderated-gpt",
+        "srv_mkom688d57c76d8a3542": "openai/gpt-oss-120b",
         "srv_mkombumpae45db46dcb8": "nvidia/nemotron-3.5-lightning-30b-a3b",
         "srv_mrgykg8eea645e7bb006": "nemotron-3-nano:30b",
         "srv_mq7ktfibad45c29f3839": "deepseek-v4-pro:cloud",
         "srv_mm0u9cua212491d78695": "openrouter/free",
-        "srv_monk1pkz433a519ff2be": "nvidia/nemotron-3-super-120b-a12b:free",
+        "srv_monk1pkz433a519ff2be": "nvidia/nemotron-3.5-lightning:free",
         "srv_mjlq1ncq8a3f7fe0aea0": "turbo",
         "srv_mrgy0nmbc8a86c407f17": "models/gemini-flash-latest",
         "srv_mkoloq41e34074b6133e": "openai-fast",
         "srv_mkomfko63371049b6da6": "deepseek-v3.2:free",
         "srv_mrdypihj16e8b1776409": "openai",
-        "srv_mlj8gd8y789d112ec50d": "zai-glm-4.7"
+        "srv_mlj8gd8y789d112ec50d": "zai-glm-4.7",
+        "srv_msoxsh206cb0d89eca32": "orcarouter/free",
+        "srv_mrgy4bjz6a85b485d663": "glm-5.2",
+        "srv_mrtd0gge48cb809ab7eb": "auto",
+        "srv_mrgynwuz08a167112109": "glm-5.2",
+        "srv_mp2huzrg06e426ad12f3": "zai-org/GLM-5.2",
+        "srv_mrgymq8534d9ea96920d": "qwen3.7-plus"
     },
     "providerLocalStorage": {
         "airforce": "Airforce-api_key",
@@ -85,9 +78,16 @@
         "srv_mkombumpae45db46dcb8": "nvidia",
         "srv_mrgykg8eea645e7bb006": "ollama",
         "srv_mrgy0nmbc8a86c407f17": "gemini",
-        "srv_mq7ktfibad45c29f3839": ".ollama.swarm",
         "srv_monk1pkz433a519ff2be": "openrouter",
-        "srv_mkoloq41e34074b6133e": ".pollinations",
-        "srv_mrdypihj16e8b1776409": ".community"
-    }
+        "srv_msoxsh206cb0d89eca32": "orcarouter"
+    },
+    "hiddenServers": [
+        "srv_mkoloq41e34074b6133e",
+        "srv_mp7i458w1b1b1f3920b3",
+        "srv_msgba2af3938f6f6b015",
+        "srv_mksdsdwy7c6526ebabc3",
+        "srv_mrgy4bjz6a85b485d663",
+        "srv_mkopv2kp2e0038cdf550",
+        "srv_mrgymq8534d9ea96920d"
+    ]
 }
