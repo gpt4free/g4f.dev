@@ -215,7 +215,6 @@ class MCPClient {
             .map(server => 
                 this.fetchTools(server.url)
                     .catch(err => {
-                        console.error(`Failed to fetch tools from ${server.name}:`, err);
                         return [];
                     })
             );

@@ -811,8 +811,6 @@ stop_generating.addEventListener("click", async () => {
             try {
                 controller_storage[key].abort();
             } finally {
-                // Also abort the worker-side fetch if applicable
-                workerAbort(key);
                 let message = message_storage[key];
                 if (message) {
                     content_storage[key].inner.innerHTML += " [aborted]";
@@ -3146,7 +3144,6 @@ window.addEventListener("hashchange", async (event) => {
         window.conversation_id = locationHash;
         set_conversation(locationHash);
     } else {
-        window.conversation_id = generateUUID();
         new_conversation();
     }
 });
@@ -5127,24 +5124,7 @@ async function initClient() {
     // Route client fetch() calls through the Web Worker so streaming
     // continues even when the tab is backgrounded / the user switches apps.
     // Falls back to regular fetch() if the worker is unavailable.
-    options.fetchFn = (url, fetchOptions) => {
-        if (!apiWorker) {
-            return fetch(url, fetchOptions);
-        }
-        const workerId = `client-${generateUUID()}`;
-        // Forward aborts from the provided signal to the worker.
-        const signal = fetchOptions?.signal;
-        if (signal) {
-            if (signal.aborted) {
-                apiWorker.postMessage({ type: "abort", id: workerId });
-            } else {
-                signal.addEventListener("abort", () => {
-                    apiWorker.postMessage({ type: "abort", id: workerId });
-                });
-            }
-        }
-        return workerFetch(workerId, url, fetchOptions);
-    };
+    options.fetchFn = window.fetchFn;
     try {
         // Handle custom providers with custom:server_id format
         client = await window.createClient(provider, options);
@@ -5988,8 +5968,6 @@ export default {
     searchModels,
     client,
     voicePreviewAudio,
-    apiWorker,
-    apiWorkerCallbacks,
     appStorage,
     iframe_container,
     iframe,
@@ -6014,8 +5992,6 @@ export default {
     cloudSyncLogoutBtn,
 
     // Functions
-    workerFetch,
-    workerAbort,
     loadVoiceModels,
     playVoicePreview,
     render_reasoning,
@@ -6092,7 +6068,6 @@ export default {
     count_words_and_tokens,
     renderLargeMessage,
     count_input,
-    load_startup_questions,
     load_follow_up_questions,
     load_provider_option,
     load_provider_login_urls,
