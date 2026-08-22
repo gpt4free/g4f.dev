@@ -612,9 +612,7 @@ class Pollinations extends Client {
             this._models = [
                 ...textModels.map(model => {
                     model.id = model.name;
-                    model.label = model.name;
                     if (model.aliases && model.aliases.length > 0) {
-                        model.label += ` (${model.aliases[0]})`;
                         for (const alias of model.aliases) {
                             this.modelAliases[alias] = model.id;
                         }

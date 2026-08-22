@@ -10,8 +10,10 @@ const modelTags = {
 };
 
 function getModelLabel(model) {
-    const value = model.label || `${model.id || ""}`.replace("models/", "");
-    return value;
+    if (model.title) {
+        return `${model.title} (${model.id})`;
+    }
+    return model.label || `${model.id || ""}`.replace("models/", "");;
 }
 
 function getModelTags(model, addVision = true) {
@@ -104,6 +106,9 @@ function convertModel(inputModel, options = {}) {
     }
     if (model.multiplier === 1) {
         model.free = true;
+    }
+    if (model.pricing) {
+        model.free = !("completionTextTokens" in model.pricing || "completionImageTokens" in model.pricing || "completionVideoSeconds" in model.pricing);
     }
     model.tags = getModelTags(model);
     const count = model.count || model.requests || 0;
