@@ -302,6 +302,8 @@ addonsLoaded.then(() => {
                 await load_conversations();
             }
             await load_conversation(window.conversation_id);
+        } else {
+            window.conversation_id = generateUUID();
         }
         
         // Set default sidebar state based on screen size
@@ -379,8 +381,6 @@ async function on_load() {
     let isNewConversation = locationHash === "" || ["new", "private"].includes(locationHash);
     if (!isNewConversation && !locationHash.startsWith("session=") && locationHash !== "menu") {
         window.conversation_id = locationHash;
-    } else {
-        window.conversation_id = generateUUID();
     }
     if (chatPrompt) {
         chatPrompt.value = document.getElementById("systemPrompt")?.value || "";

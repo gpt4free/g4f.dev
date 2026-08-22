@@ -344,43 +344,6 @@ function count_words_and_tokens(text, model, completion_tokens, prompt_tokens) {
     text = filter_message(text);
     return `(${count_words(text)} ${framework.translate('words')}, ${count_chars(text)} ${framework.translate('chars')}, ${completion_tokens ? completion_tokens : count_tokens(model, text, prompt_tokens)} ${framework.translate('tokens')})`;
 }
-function renderLargeMessage(container, content, chunkSize = 50) {
-    if (content.length <= chunkSize * 100) {
-        container.innerHTML = content;
-        return;
-    }
-
-    // Split content into chunks
-    const lines = content.split("\n");
-    const chunks = [];
-    const buffer = [];
-    for (let i = 0; i < lines.length; i += 1) {
-        buffer.push(lines[i]);
-        if (buffer.length >= chunkSize || i === lines.length - 1) {
-            chunks.push(buffer.join("\n"));
-            buffer.length = 0; // Clear the buffer
-        }
-    }
-
-    // Render chunks progressively
-    let index = 0;
-    container.innerHTML = chunks[0];
-
-    const renderNextChunk = () => {
-        index++;
-        if (index < chunks.length) {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = chunks[index];
-            while (tempDiv.firstChild) {
-                container.appendChild(tempDiv.firstChild);
-            }
-            setTimeout(renderNextChunk, 10);
-        }
-    };
-
-    setTimeout(renderNextChunk, 10);
-}
-
 const count_input = async () => {
     let countFocus = userInput;
     const countTokensEnabled = appStorage.getItem("countTokens") != "false";
@@ -443,6 +406,5 @@ export default {
     count_words,
     count_chars,
     count_words_and_tokens,
-    renderLargeMessage,
     count_input,
 };
