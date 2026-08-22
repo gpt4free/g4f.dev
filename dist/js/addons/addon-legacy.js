@@ -2452,22 +2452,6 @@ async function get_messages(conversation_id) {
     return conversation?.items || [];
 }
 
-async function add_conversation(conversation_id) {
-    if (!conversation_id) {
-        return;
-    }
-    if (!await get_conversation(conversation_id)) {
-        await save_conversation(update_conversation({
-            id: conversation_id,
-            title: "",
-            added: Date.now(),
-            system: chatPrompt?.value,
-            items: [],
-        }));
-    }
-    add_url_to_history(`#${conversation_id}`);
-}
-
 async function save_system_message() {
     if (!window.conversation_id) {
         return;
@@ -3579,69 +3563,6 @@ async function upload_audio(blob) {
     }
 }
 
-audioButton.addEventListener('click', async (event) => {
-    const i = audioButton.querySelector("i");
-    const t = audioButton.querySelector("*");
-    if (mediaRecorder) {
-        i.classList.remove("fa-stop");
-        i.classList.add("fa-microphone");
-        mediaRecorder.stop();
-        t.innerText = framework.translate("Upload Audio");
-        if(mediaRecorder.stream) {
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
-        }
-        if (mediaRecorder.wavBlob) {
-            if (modelSelect.selectedIndex >= 0 && modelSelect.options[modelSelect.selectedIndex].dataset.audio) {
-                await add_conversation(window.conversation_id);
-                await ask_gpt(get_message_id(), -1, false, providerSelect.value, get_selected_model(), "next");
-            } else {
-                await upload_audio(mediaRecorder.wavBlob);
-            }
-            t.innerText = framework.translate("Record Audio");
-        }
-        mediaRecorder = null;
-        return;
-    }
-
-    i.classList.remove("fa-microphone");
-    i.classList.add("fa-stop");
-    t.innerText = framework.translate("Stop Recording");
-
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({
-            audio: true
-        });
-
-        //if (modelSelect.selectedIndex && modelSelect.options[modelSelect.selectedIndex].dataset.audio) {
-            mediaRecorder = new Recorder(stream);
-            mediaRecorder.start();
-            return;
-        //}
-
-        if (!MediaRecorder.isTypeSupported('audio/webm')) {
-            console.warn('audio/webm is not supported');
-        }
-        mediaRecorder = new MediaRecorder(stream, {
-            mimeType: 'audio/webm',
-        });
-        
-        mediaRecorder.addEventListener('dataavailable', async event => {
-            await upload_audio(event.data);
-            t.innerText = framework.translate("Record Audio");
-        });
-
-        mediaRecorder.start()
-    } catch (err) {
-        console.error('Error accessing microphone:', err);
-        i.classList.remove("fa-stop");
-        i.classList.add("fa-microphone");
-        t.innerText = framework.translate("Record Audio");
-        if(mediaRecorder?.stream) {
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
-        }
-        mediaRecorder = null;
-    }
-});
 domReady.then(() => {
 linkButton.addEventListener('click', async (event) => {
     const i = audioButton.querySelector("i");
@@ -5348,97 +5269,6 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// ============================================================
-// PA Providers listing
-// ============================================================
-
-/**
- * Derive the base URL for PA endpoints.
- * Uses the first enabled MCP server URL (strips /mcp suffix) or falls back
- * to window.location.origin.
- */
-function getPaBaseUrl() {
-    if (typeof mcpClient !== 'undefined' && mcpClient.servers.length > 0) {
-        const first = mcpClient.servers.find(s => s.enabled) || mcpClient.servers[0];
-        // MCP server URLs end with /mcp — strip that to get the base
-        return first.url.replace(/\/mcp$/, '');
-    }
-    return window.location.origin;
-}
-
-async function fetchPaProviders() {
-    const res = await fetch(`${framework.backendUrl}/pa/providers`, { headers: { 'Accept': 'application/json' } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-}
-
-// async function loadPaProviderSelect(optgroup) {
-//     optgroup = optgroup || document.getElementById('pa-providers-optgroup');
-//     if (!optgroup) return;
-//     try {
-//         window._paProviders = window._paProviders || await fetchPaProviders();
-//         // Remove stale options
-//         optgroup.innerHTML = '';
-//         window._paProviders.forEach(p => {
-//             const opt = document.createElement('option');
-//             opt.value = `pa:${p.id}`;
-//             opt.dataset.pa = 'true';
-//             opt.dataset.paId = p.id;
-//             opt.dataset.label = p.label || p.id;
-//             const modelHint = Array.isArray(p.models) && p.models.length > 0 ? ` (${p.models.length} model${p.models.length > 1 ? 's' : ''})` : '';
-//             opt.text = `${p.label || p.id}${modelHint} 🔌`;
-//             optgroup.appendChild(opt);
-//         });
-//     } catch (e) {
-//         console.debug('Failed to load PA providers into select:', e);
-//     }
-// }
-
-// async function loadPaProviders() {
-//     const btn = document.getElementById('refresh-pa-providers-btn');
-//     if (btn) {
-//         btn.disabled = true;
-//         btn.innerHTML = '<i class="fa-solid fa-sync fa-spin"></i>';
-//     }
-//     try {
-//         const providers = await fetchPaProviders();
-//         window._paProviders = providers;
-//         renderPaProviders(providers);
-//         // Also refresh the select dropdown
-//         await loadPaProviderSelect();
-//     } catch (err) {
-//         const container = document.getElementById('pa-providers-list');
-//         if (container) container.innerHTML = `<div class="mcp-empty">Failed to load PA providers: ${escapeHtml(String(err))}</div>`;
-//     } finally {
-//         if (btn) {
-//             btn.disabled = false;
-//             btn.innerHTML = '<i class="fa-solid fa-sync"></i>';
-//         }
-//     }
-// }
-
-// function renderPaProviders(providers) {
-//     const container = document.getElementById('pa-providers-list');
-//     if (!container) return;
-//     if (!providers || providers.length === 0) {
-//         container.innerHTML = '<div class="mcp-empty">No PA providers found. Add <code>.pa.py</code> files to <code>~/.g4f/workspace</code> and refresh.</div>';
-//         return;
-//     }
-//     container.innerHTML = providers.map(p => {
-//         const models = Array.isArray(p.models) ? p.models.join(', ') : '';
-//         const url = p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer" class="mcp-server-url">${escapeHtml(p.url)}</a>` : '';
-//         return `<div class="mcp-tool-item">
-//             <div>
-//                 <span class="mcp-tool-name">${escapeHtml(p.label || p.id)}</span>
-//                 ${url}
-//                 ${models ? `<span class="mcp-tool-desc">${escapeHtml(models)}</span>` : ''}
-//             </div>
-//         </div>`;
-//     }).join('');
-// }
-
-// document.getElementById('refresh-pa-providers-btn')?.addEventListener('click', loadPaProviders);
-
 /**
  * Handle tool calls from assistant
  */
@@ -6041,7 +5871,6 @@ export default {
     safe_load_conversation,
     update_conversation,
     get_messages,
-    add_conversation,
     save_system_message,
     remove_message,
     get_message,
@@ -6110,9 +5939,6 @@ export default {
     toggleMCPTool,
     refreshMCPTools,
     escapeHtml,
-    getPaBaseUrl,
-    fetchPaProviders,
-    renderPaProviders,
     handleToolCalls,
     checkCloudSyncSession,
     showCloudSyncLogin,

@@ -10,10 +10,17 @@ const modelTags = {
 };
 
 function getModelLabel(model) {
+    let label = model.label;
     if (model.title) {
-        return `${model.title} (${model.id})`;
+        label = `${model.title} (${model.id})`;
+    } else if (!label) {
+        label = `${model.id || ""}`.replace("models/", "");
     }
-    return model.label || `${model.id || ""}`.replace("models/", "");;
+    if (model.costs > 0) {
+        label += ` (${model.costs.toFixed(3).replace(/0$/, '')}$)`;
+        label = label.replace(/\(\.0\$\)/, '(<0.001$)');
+    }
+    return label;
 }
 
 function getModelTags(model, addVision = true) {

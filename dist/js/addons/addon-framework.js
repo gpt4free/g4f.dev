@@ -844,7 +844,7 @@ function withStore(mode) {
 // Get one conversation by id
 async function get_conversation(id) {
     if (!id) {
-        return privateConversation;
+        return window.privateConversation;
     }
     try {
         const { store } = await withStore('readonly');
@@ -865,7 +865,7 @@ async function get_conversation(id) {
 // Save conversation (insert or update)
 async function save_conversation(conv) {
     if (!conv.id) {
-        privateConversation = conv;
+        window.privateConversation = conv;
         return true;
     }
     try {

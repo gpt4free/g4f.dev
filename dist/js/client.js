@@ -522,119 +522,13 @@ class Pollinations extends Client {
     constructor(options = {}) {
         super({
             ...options,
-            apiKey: options.apiKey || "p" + "k_i0NJnRMi1nHDjerf",
-            baseUrl: options.baseUrl || 'https://gen.pollinations.ai/v1',
-            imageEndpoint: options.imageEndpoint || 'https://gen.pollinations.ai/image/{prompt}',
-            modelsEndpoint: options.modelsEndpoint || 'https://gen.pollinations.ai/text/models',
-            quotaEndpoint: options.quotaEndpoint || 'https://g4f.space/api/pollinations/quota',
-            imageModelsEndpoint: options.imageModelsEndpoint || 'https://gen.pollinations.ai/image/models',
-            defaultModel: options.defaultModel || 'openai',
-            extraBody: options.extraBody,
+            baseUrl: options.baseUrl || 'https://g4f.space/api/pollinations',
             modelAliases: {
-                "sdxl-turbo": "turbo",
                 "gpt-image": "gptimage",
                 "flux-kontext": "kontext",
                 ...(options.modelAliases || {})
             }
         });
-        this.balance = this.checkBalance();
-    }
-
-    async getQuota() {
-        if (this.balance !== undefined) {
-            return await this.balance;
-        }
-    }
-
-    async checkBalance() {
-        return fetch(this.quotaEndpoint).then(r=>r.json()).then(d=>{
-            console.log(`Pollinations balance: ${d.balance}`);
-            if (d.balance > 0) {
-                this.baseUrl = 'https://g4f.space/api/pollinations';
-                this.apiEndpoint = `${this.baseUrl}/chat/completions`;
-                const userInfo = {
-                    tier: 'free',
-                    remainingRequests: 10,
-                    remainingTokens: d.balance,
-                    limitRequests: 10,
-                    limitTokens: 1
-                };
-                if (typeof window !== "undefined") {
-                    // window.dispatchEvent(new CustomEvent('userTierUpdate', { detail: userInfo }));
-                }
-            }
-            return d;
-        })
-    }
-
-    get models() {
-      return {
-        list: async () => {
-          if (this._models.length > 0) return this._models;
-          try {
-            let textModelsResponse;
-            let imageModelsResponse;
-            try {
-                await this._sleep();
-                textModelsResponse = await fetch(this._route(this.modelsEndpoint));
-                if (!textModelsResponse.ok) {
-                    throw new Error(`Status ${textModelsResponse.status}: ${await textModelsResponse.text()}`);
-                }
-            } catch (e) {
-                console.error("Failed to fetch pollinations.ai models from g4f.dev:", e);
-                textModelsResponse = await this._fetchWithProxyRotation('https://text.pollinations.ai/models').catch(e => {
-                    console.error("Failed to fetch text models from all proxies:", e); return { data: [] };
-                });
-            }
-            try {
-                const imageModelsUrl = 'https://gen.pollinations.ai/image/models';
-                imageModelsResponse = await fetch(this._route(imageModelsUrl));
-                if (!imageModelsResponse.ok) {
-                    const delay = parseInt(response.headers.get('Retry-After'), 10);
-                    if (delay > 0) {
-                        console.log(`Retrying after ${delay} seconds...`);
-                        await new Promise(resolve => setTimeout(resolve, delay * 1000));
-                        imageModelsResponse = await fetch(this._route(imageModelsUrl));
-                    }
-                    if (!imageModelsResponse.ok) {
-                       throw new Error(`Status ${imageModelsResponse.status}: ${await imageModelsResponse.text()}`);
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to fetch pollinations.ai image models from g4f.dev:", e);
-                imageModelsResponse = await this._fetchWithProxyRotation('https://image.pollinations.ai/models').catch(e => {
-                    console.error("Failed to fetch image models from all proxies:", e); return { data: [] };
-                });
-            }
-            textModelsResponse = await textModelsResponse.json();
-            imageModelsResponse = await imageModelsResponse.json();
-            const textModels = (textModelsResponse.data || textModelsResponse || []);
-            this._models = [
-                ...textModels.map(model => {
-                    model.id = model.name;
-                    if (model.aliases && model.aliases.length > 0) {
-                        for (const alias of model.aliases) {
-                            this.modelAliases[alias] = model.id;
-                        }
-                    }
-                    return convertModel(model);
-                }),
-                ...imageModelsResponse.map(model => {
-                    const isVideo = model.output_modalities && model.output_modalities.includes('video');
-                    return convertModel({ ...model, type: isVideo ? 'video' : 'image', seed: true });
-                })
-            ];
-            return this._models;
-          } catch (err) {
-              console.error("Final fallback for Pollinations models:", err);
-              return [
-                  { id: "openai", type: "chat" },
-                  { id: "deepseek", type: "chat" },
-                  { id: "flux", type: "image" },
-              ];
-          }
-        }
-      };
     }
 }
 

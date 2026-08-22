@@ -101,7 +101,7 @@ var ACCESS_CONTROL_ALLOW_ORIGIN = {
 // Concurrency queue for pass.g4f.space requests.
 // Limits simultaneous in-flight requests to PASS_MAX_CONCURRENT,
 // queuing the rest until a slot frees up.
-const PASS_MAX_CONCURRENT = 1;
+const PASS_MAX_CONCURRENT = 4;
 let passActiveCount = 0;
 const passQueue = [];
 function acquirePassSlot() {
@@ -123,28 +123,21 @@ var AUTO_PROVIDERS = []
 var DEFAULT_MODELS = {};
 var SERVER_MAP = {}
 var URL_MAP = {
-  "https://gen.pollinations.ai/quota": "https://gen.pollinations.ai/account/balance",
+  "https://gen.pollinations.ai/v1/quota": "https://gen.pollinations.ai/account/balance",
   "https://pollinations.g4f-dev.workers.dev/quota": "https://gen.pollinations.ai/account/balance",
   "https://pollinations.g4f-dev.workers.dev/free/quota": "https://gen.pollinations.ai/account/balance",
-  //"https://api.featherless.ai/v1/models": null
+  "https://puter.g4f-dev.workers.dev/quota": "https://api.puter.com/metering/usage",
+  "https://router.huggingface.co/v1/quota": "https://huggingface.co/api/whoami-v2"
 }
 let providers = {};
-let waitForProviders = ()=>fetch("https://github.com/gpt4free/g4f.dev/raw/refs/heads/main/dist/js/providers.json")
+let waitForProviders = ()=>fetch("https://g4f.dev/dist/js/providers.json")
   .then(r=>r.json()).then(p=>{
-    providers = p.providers;
-    DEFAULT_MODELS = p.serverDefaultModels || DEFAULT_MODELS;
-    const autoProvidersList = Object.fromEntries(
-      Object.entries(p.autoProviders||{}).filter(
-        ([key, provider]) => !provider.startsWith(".")
-      )
-    );
-    AUTO_PROVIDERS = Object.keys(autoProvidersList);
-    for (const [key, provider] of Object.entries(providers)) {
+    DEFAULT_MODELS = p.serverDefaultModels || {};
+    HIDDEN_SERVERS = p.hiddenServers || {};
+    AUTO_PROVIDERS = Object.keys(p.autoProviders||{});
+    for (const [key, provider] of Object.entries(p.providers)) {
       if (provider.id) {
         SERVER_MAP[key] = provider.id;
-      }
-      if (p.defaultModels[key] && provider.id) {
-        DEFAULT_MODELS[provider.id] = p.defaultModels[key];
       }
     }
     if (p.checkUrls) {
@@ -154,7 +147,8 @@ let waitForProviders = ()=>fetch("https://github.com/gpt4free/g4f.dev/raw/refs/h
         }
       }
     }
-  });
+    return true;
+  }).catch(console.error);
 var SERVER_TO_PROVIDER = {
   "srv_mkoloq41e34074b6133e": "pollinations",
   "srv_mp5miql908c8738d71be": "pollinations",
@@ -162,12 +156,7 @@ var SERVER_TO_PROVIDER = {
   "srv_mp3lmkuad07322459f47": "airforce"
 }
 var BLOCKED_SERVERS = [];
-var HIDDEN_SERVERS = [
-  "srv_mkoloq41e34074b6133e",
-  "srv_mp7i458w1b1b1f3920b3",
-  "srv_msgba2af3938f6f6b015",
-  "srv_mksdsdwy7c6526ebabc3"
-];
+var HIDDEN_SERVERS = [];
 // organizations (from Cloudflare `asOrganization`) that should be blocked
 // when the request is anonymous (no user/session or API key provided).
 var BLOCKED_ORGS = [
@@ -257,10 +246,12 @@ var BLOCKED_USERS = [
   "luciazamora99", "valrab_",
 ];
 var GPT_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "marin", "cedar", "amuch", "dan", "elan", "breeze", "cove", "ember", "fathom", "glimmer", "harp", "juniper", "maple", "orbit", "vale"];
-
+function getDefaultModel(s) {
+  return DEFAULT_MODELS[s.id] || s.allowed_models.find(m=>["auto", "openai", "FreeModel"].includes(m) || m.endsWith("/free")) || s.allowed_models[0] || null
+}
 async function safe(request, env, ctx) {
     const url = new URL(request.url);
-    const pathname = url.pathname;
+    let pathname = url.pathname;
     // Set the module-level request context so jsonResponse can persist any
     // error response (status >= 400) to ERRORS_DB. Reset on every fetch.
     currentRequestContext = { request, env, ctx, pathname, skipErrorLog: false };
@@ -270,13 +261,15 @@ async function safe(request, env, ctx) {
     if (["/", "/chat", "/chat/", "/playground", "/playground/", "/docs"].includes(pathname) && request.method != "POST") {
       return Response.redirect(`https://g4f.dev${pathname}`, 302);
     }
-    if (pathname == "/api/pollinations/quota") {
-      return Response.json({ balance: 0 }, { headers: ACCESS_CONTROL_ALLOW_ORIGIN });
-    }
     if (pathname == "/api/audio/models") {
       return Response.json({ data: [{ id: "gpt-audio", audio: true }, ...GPT_AUDIO_VOICES.map((voice) => {
         return { id: voice, audio: true };
       })] }, { headers: ACCESS_CONTROL_ALLOW_ORIGIN });
+    }
+    if (pathname === "/public") {
+      pathname = "/custom/api/servers/public";
+    } else if (pathname === "/usage") {
+      pathname = "/custom/api/servers/usage";
     }
     let user = null;
     if (pathname === "/api/errors" && request.method === "GET") {
@@ -296,7 +289,7 @@ async function safe(request, env, ctx) {
       const authHeader = request.headers.get("authorization");
       if (authHeader && authHeader.startsWith("Bearer ")) {
         const tokens = authHeader.substring(7).split(/\s+/);
-        userProvidedKey = tokens.find((t) => t && !t.startsWith("g4f_") && !t.startsWith("gfs_") && t != "screct");
+        userProvidedKey = tokens.find((t) => t && !t.startsWith("g4f_") && !t.startsWith("gfs_") && t.length > 7);
       }
     } catch (error) {
         console.error("User error:", error);
@@ -364,7 +357,7 @@ async function safe(request, env, ctx) {
         return jsonResponse({ error: "Rate check error: " + error.message || "Internal server error" }, 500);
       }
       const cacheKey = generateCacheKey(request)
-      if (request.headers.get("cache-control") !== "no-cache")
+      //if (request.headers.get("cache-control") !== "no-cache")
       if ((!userProvidedKey || pathname.endsWith("/models")) && request.method === "GET") {
         const cachedResponse = await getCachedResponse(request, cacheKey);
         if (cachedResponse) {
@@ -409,8 +402,7 @@ async function safe(request, env, ctx) {
       if (user) {
         ctx.waitUntil(updateUserRateLimit(env, user.id, ctx));
       }
-      await waitForProviders();
-      waitForProviders = ()=>{};
+      await waitForProviders() ? waitForProviders = async ()=>{} : {};
       const serverLabel = url.hostname.split(".")[0];
       try {
         if (serverLabel in SERVER_MAP) {
@@ -469,11 +461,11 @@ async function safe(request, env, ctx) {
       if (pathname === "/custom/api/servers/delete") {
         return handleDeleteServer(request, env);
       }
-      if (pathname === "/custom/api/servers/usage" || pathname === "/usage") {
+      if (pathname === "/custom/api/servers/usage") {
         return handleGetServerUsage(request, env);
       }
-      if (pathname === "/custom/api/servers/public" || pathname === "/public") {
-        return handleListPublicServers(request, env, user);
+      if (pathname === "/custom/api/servers/public") {
+        return handleListPublicServers(request, env, user, ctx, cacheKey);
       }
       if (pathname.match(/^\/custom\/api\/servers\/[^/]+\/models$/)) {
         const serverId = pathname.split("/")[4];
@@ -503,19 +495,26 @@ async function safe(request, env, ctx) {
         }
         return handleModels(request, env, ctx, server.id, user, server, cacheKey);
       }
+      if (false)
       if (!user || user.tier != "admin") {
         const { success } = await env.RATE_LIMIT.limit({ key: user ? user.id : pathname }) // key can be any string of your choosing
         if (!success) {
-          const newResponse = Response.json({
+          return jsonResponse({
             error: {
               message: "Rate limit 10s exceeded",
               type: "rate_limit_exceeded",
               retry_after: "10",
             }
-          }, { status: 429, headers: { "Retry-After": "10", ...CORS_HEADERS } });
-          updateResponsefromRateCheck(newResponse, rateCheck);
-          return newResponse;
+          }, 420, {"Retry-After": "10"});
         }
+      }
+      if (userProvidedKey && (pathname.startsWith("/v1") || ["/", "/chat/completions", "/models"].includes(pathname))) {
+        return jsonResponse({
+          error: {
+            message: "User-provided API keys are not supported for v1 endpoints. Please authenticate with a g4f.dev session or API key (g4f_*) to use v1 endpoints, or use the /api/{provider}/chat/completions endpoint with your own key.",
+            type: "authentication_error"
+          }
+        }, 403);
       }
       if (!userProvidedKey && ["/", "/v1", "/v1/chat/completions", "/chat/completions"].includes(pathname)) {
         return handleV1ChatCompletions(request, env, ctx, pathname, user, cacheKey, rateCheck);
@@ -603,7 +602,13 @@ var custom_worker_default = {
       return newResponse;
     } catch (error) {
       console.error("Fetch error:", error);
-      return jsonResponse({ error: {message: "Internal server error: " + (error.message) }}, 500);
+      return new Response(JSON.stringify({ error: {message: "Internal server error: " + (error.message) }}), {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          ...ACCESS_CONTROL_ALLOW_ORIGIN
+        }
+      });
     }
   },
   async scheduled(event, env, ctx) {
@@ -973,15 +978,30 @@ async function getPublicServers(env, blocklist = true) {
   });
   return publicServers;
 }
-async function handleListPublicServers(request, env, user) {
+async function handleListPublicServers(request, env, user, ctx, cacheKey) {
+  const cachedResponse = await getCachedResponse(request, "public");
+  if (cachedResponse) {
+    if (parseInt(cachedResponse.headers.get("age")) > 600) {
+      ctx.waitUntil(handleUpdatePublicServers(request, env, user, ctx, "public"));
+    }
+    return cachedResponse;
+  }
+  return handleUpdatePublicServers(request, env, user, ctx, "public");
+}
+async function handleUpdatePublicServers(request, env, user, ctx, cacheKey) {
   const publicServers = await getPublicServers(env);
   let ct = 0;
+  publicServers.sort((a, b) => {
+    const aCreated = new Date(a.updated_at || 0).getTime();
+    const bCreated = new Date(b.updated_at || 0).getTime();
+    return aCreated - bCreated;
+  });
   for (const s of publicServers) {
     const updated_at = new Date(s.updated_at);
     updated_at.setHours(updated_at.getHours() + 1)
     if (new Date() > updated_at || !("test" in s) || !s.test) {
       s.updated_at = new Date().toISOString();
-      s.test = true
+      s.test = true;
       try {
         const fullServer = await getServerById(env, s.id, user);
         const validationResult = await validateServer(fullServer.base_url, fullServer.api_keys);
@@ -996,7 +1016,7 @@ async function handleListPublicServers(request, env, user) {
           }
           s.test_url = validationResult.test_url;
         } else {
-          s.test_url = false;
+          s.test_url = validationResult.test_url;
           s.is_online = false;
         }
       } catch(e) {console.error(e)}
@@ -1009,6 +1029,11 @@ async function handleListPublicServers(request, env, user) {
       break;
     }
   }
+  publicServers.sort((a, b) => {
+    const aCreated = new Date(a.created_at || a.updated_at || 0).getTime();
+    const bCreated = new Date(b.created_at || b.updated_at || 0).getTime();
+    return aCreated - bCreated;
+  });
   if (ct > 0) {
     await env.MEMBERS_KV.put("public_servers_index", JSON.stringify(publicServers));
   }
@@ -1017,6 +1042,7 @@ async function handleListPublicServers(request, env, user) {
     label: s.label,
     base_url: s.base_url, // (s.is_ollama || (user && user.tier == "admin")) ? s.base_url : "",
     allowed_models: s.allowed_models,
+    default_model: getDefaultModel(s),
     auto_update_models: s.auto_update_models,
     owner_id: s.owner_id,
     is_ollama: s.is_ollama,
@@ -1026,11 +1052,14 @@ async function handleListPublicServers(request, env, user) {
     updated_at: s.updated_at,
     usage: s.usage || { requests: 0, tokens: 0 },
     test_url: s.test_url,
-    test: s.test
   }));
-  return jsonResponse({
+  const response = jsonResponse({
     servers: safeServers
   });
+  if (ct <= 0) {
+    ctx.waitUntil(setCachedResponse(request, response, CACHE_HEADERS.LONG, cacheKey, ctx));
+  }
+  return response;
 }
 async function handleGetServerModels(request, env, serverId, user) {
   const server = await getServerById(env, serverId, user);
@@ -1540,16 +1569,12 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   if (chatUrls.includes(subPath)) {
     try {
       if (!requestModel || requestModel === "auto") {
-        if (DEFAULT_MODELS[server.id]) {
-          requestModel = DEFAULT_MODELS[server.id];
-        } else if (server.allowed_models && server.allowed_models.length > 0) {
-          requestModel = server.allowed_models[0];
-        }
+        requestModel = getDefaultModel(server);
       }
       if (requestModel) {
           requestBody.model = requestModel;
       }
-      if (!server.auto_update_models && server.allowed_models && server.allowed_models.length > 0) {
+      if (server.allowed_models && server.allowed_models.length > 0) {
         if (!server.allowed_models.includes(requestModel)) {
           return jsonResponse({
             error: {
@@ -1668,9 +1693,6 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     };
     if (chatUrls.includes(subPath)) {
       fetchOptions.method = "POST";
-      const defaultModel = DEFAULT_MODELS[server.id]
-        || (server.allowed_models && server.allowed_models[0])
-        || null;
       const testBody = {
         "messages": [{ "role": "user", "content": "say only okay" }],
         ...requestBody
@@ -1682,8 +1704,9 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
             testBody.stream = true;
           }
       }
+      const defaultModel = getDefaultModel(server);
       if (defaultModel && !testBody.model) {
-        testBody.model = defaultModel;
+        testBody.model = requestModel = defaultModel;
       }
       fetchOptions.body = JSON.stringify(testBody);
     } else if (request.method === "POST") {
@@ -1745,7 +1768,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
           newResponse2.headers.set("X-Saved", String(Math.round(savedBytes/4)));
         }
         for (const [k, v] of Object.entries(logs)) {
-          newResponse2.headers.set(`X-Removed-${k}`, v);
+          // newResponse2.headers.set(`X-Removed-${k}`, v);
         }
         if (requestModel) {
           newResponse2.headers.set("X-Model", requestModel);
@@ -2226,6 +2249,7 @@ async function validateServer(baseUrl, apiKeysStr) {
     headers["Authorization"] = `Bearer ${apiKey}`;
   }
   let testUrl = baseUrl.includes("/chat/completions") ? baseUrl : null
+  baseUrl = baseUrl.replace("/chat/completions", "")
   if (URL_MAP[`${baseUrl}/quota`]) {
     testUrl = URL_MAP[`${baseUrl}/quota`];
   }
@@ -2245,10 +2269,9 @@ async function validateServer(baseUrl, apiKeysStr) {
       clearTimeout(timeout);
       if (response.ok) {
         const contentType = response.headers.get("content-type") || "";
-        if (contentType.includes("application/json")) {
+        if (!contentType.includes("application/json")) {
           return {
-            valid: true,
-            models: [],
+            valid: false,
             base_url: baseUrl,
             test_url: testUrl,
           };
@@ -2257,7 +2280,16 @@ async function validateServer(baseUrl, apiKeysStr) {
         return {
           valid: false,
           error: "Authentication failed - check your API keys",
-          details: { status: response.status, endpoint: "" }
+          details: { status: response.status, endpoint: "" },
+          base_url: baseUrl,
+          test_url: testUrl,
+        };
+      } else if (!testUrl.includes("/chat/completions")) {
+        return {
+          valid: false,
+          models: [],
+          base_url: baseUrl,
+          test_url: testUrl,
         };
       }
     } catch (e) {
@@ -2265,18 +2297,22 @@ async function validateServer(baseUrl, apiKeysStr) {
         return {
           valid: false,
           error: "Server timeout - server did not respond within 10 seconds",
-          details: { timeout: true }
+          details: { timeout: true },
+          base_url: baseUrl,
+          test_url: testUrl,
         };
       }
     }
   }
   const modelsEndpoints = [
-    baseUrl + "/models", baseUrl + "/v1/models"
+    baseUrl + "/models"
   ];
+  if (!baseUrl.endsWith("/v1")) {
+    modelsEndpoints.push(baseUrl + "/v1/models")
+  }
   if (baseUrl.startsWith("http:")) {
     modelsEndpoints.push((baseUrl + "/models").replace("http:", "https:"))
   }
-  if (!baseUrl.includes("/chat/completions"))
   for (const endpoint of modelsEndpoints) {
     try {
       const controller = new AbortController();
@@ -2303,22 +2339,23 @@ async function validateServer(baseUrl, apiKeysStr) {
               valid: true,
               models,
               base_url: response.url.replace("/models", ""),
-              test_url: endpoint
+              test_url: testUrl || endpoint
             };
           }
           return {
             valid: true,
-            models: [],
             note: "No models discovered",
             base_url: response.url.replace("/models", ""),
-            test_url: endpoint
+            test_url: testUrl || endpoint
           };
         }
       } else if (response.status === 401 || response.status === 403) {
         return {
           valid: false,
           error: "Authentication failed - check your API keys",
-          details: { status: response.status, endpoint }
+          details: { status: response.status, endpoint },
+          base_url: baseUrl,
+          test_url: testUrl || endpoint
         };
       }
     } catch (e) {
@@ -2326,31 +2363,18 @@ async function validateServer(baseUrl, apiKeysStr) {
         return {
           valid: false,
           error: "Server timeout - server did not respond within 10 seconds",
-          details: { timeout: true }
+          details: { timeout: true },
+          base_url: baseUrl,
+          test_url: testUrl || endpoint
         };
       }
     }
   }
-  try {
-    const response = await fetch(baseUrl, {
-      method: "HEAD",
-      headers
-    });
-    if (response.ok) {
-      return {
-        valid: true,
-        models: [],
-        note: "Server reachable but no models endpoint found",
-        base_url: response.url,
-        test_url: baseUrl
-      };
-    }
-  } catch (e) {
-  }
   return {
     valid: false,
     error: "Cannot connect to server - check URL and network accessibility",
-    details: { baseUrl },
+    base_url: baseUrl,
+    test_url: testUrl,
   };
 }
 async function hashString(str) {
@@ -2433,7 +2457,7 @@ ${prompt}
       }
     }
   }
-  queryBody.model = queryBody.model || url.searchParams.get("model") || DEFAULT_MODELS[server.id] || server.allowed_models && server.allowed_models[0];
+  queryBody.model = queryBody.model || url.searchParams.get("model") || getDefaultModel(server)
   if (url.searchParams.get("json") === "true") {
     queryBody.response_format = { "type": "json_object" };
   }
@@ -2447,7 +2471,7 @@ ${prompt}
     }
   }
   if (server.allowed_models && server.allowed_models.length > 0 && queryBody.model && serverLabel != "audio") {
-    if (!server.auto_update_models && !server.allowed_models.includes(queryBody.model) && queryBody.model != DEFAULT_MODELS[server.id]) {
+    if (!server.allowed_models.includes(queryBody.model) && queryBody.model != DEFAULT_MODELS[server.id]) {
       return jsonResponse({
         error: `Model '${queryBody.model}' not allowed. Available models: ${server.allowed_models.join(", ")}`
       }, 400);
@@ -2685,10 +2709,12 @@ function updateResponsefromRateCheck(newResponse, rateCheck) {
   if (rateCheck.promptTokens) {
     newResponse.headers.set("X-Usage-Prompt-Tokens", rateCheck.promptTokens);
   }
-  newResponse.headers.set("X-Ratelimit-Remaining-Requests", String(rateCheck.maxRequests));
-  newResponse.headers.set("X-Ratelimit-Remaining-Tokens", String(rateCheck.maxTokens));
-  newResponse.headers.set("X-Ratelimit-Limit-Requests", String(rateCheck.limitRequests));
-  newResponse.headers.set("X-Ratelimit-Limit-Tokens", String(rateCheck.limitTokens));
+  if (rateCheck.maxRequests) {
+    newResponse.headers.set("X-Ratelimit-Remaining-Requests", String(rateCheck.maxRequests));
+    newResponse.headers.set("X-Ratelimit-Remaining-Tokens", String(rateCheck.maxTokens));
+    newResponse.headers.set("X-Ratelimit-Limit-Requests", String(rateCheck.limitRequests));
+    newResponse.headers.set("X-Ratelimit-Limit-Tokens", String(rateCheck.limitTokens));
+  }
 }
 async function checkUserRateLimits(env, user, request) {
   const tier = user.tier || "new";
@@ -3179,7 +3205,7 @@ async function handleV1Models(request, env, user) {
 // catch blocks that already call persistErrorToDb set `skipErrorLog` to avoid
 // double-logging the same event.
 var currentRequestContext = null;
-function jsonResponse(data, status = 200) {
+function jsonResponse(data, status = 200, headers = {}) {
   if (status >= 400 && status != 402 && currentRequestContext && !currentRequestContext.skipErrorLog) {
     const ctx = currentRequestContext.ctx;
     const env = currentRequestContext.env;
@@ -3203,7 +3229,8 @@ function jsonResponse(data, status = 200) {
     status,
     headers: {
       "Content-Type": "application/json",
-      ...ACCESS_CONTROL_ALLOW_ORIGIN
+      ...ACCESS_CONTROL_ALLOW_ORIGIN,
+      ...headers
     }
   });
 }
@@ -3223,12 +3250,25 @@ async function generatePostBodyHash(request) {
     const messages = body.messages || [];
     const lastMsg = messages[messages.length - 1];
     const lastContent = lastMsg
-      ? (typeof lastMsg.content === 'string' ? lastMsg.content : '')
+      ? (typeof lastMsg.content === 'string' ? lastMsg.content.toLowerCase() : '')
       : '';
-    if (["test", "ping", "hello"].includes(lastContent.toLowerCase())) {
+    if ([
+      "hi", "test", "ping", "hello",
+      "hola", "gola", "Чао",
+      "say only okay",
+      'say "ok" exactly. no other text.',
+      "1+1=? one word",
+      "who are you, and what can you do?",
+      "111",
+      "what's 1 + 1?"
+    ].includes(lastContent)
+    || lastContent.endsWith("reply with the result only")
+    || lastContent.startsWith("reply with just:")
+    || lastContent.startsWith("reply with exactly:")
+    || lastContent.startsWith("say ok")) {
       const model = body.model || '';
       const stream = body.stream ? '1' : '0';
-      return await hashString(`${model}:${stream}:${lastContent}`);
+      return await hashString(`${model}:${stream}:test`);
     }
     for (const msg of messages) {
       if (msg && msg.content && typeof msg.content === 'string') {

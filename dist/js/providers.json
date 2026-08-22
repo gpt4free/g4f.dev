@@ -33,7 +33,7 @@
         "srv_mrgykg8eea645e7bb006": "nemotron-3-nano:30b",
         "srv_mq7ktfibad45c29f3839": "deepseek-v4-pro:cloud",
         "srv_mm0u9cua212491d78695": "openrouter/free",
-        "srv_monk1pkz433a519ff2be": "nvidia/nemotron-3.5-lightning:free",
+        "srv_monk1pkz433a519ff2be": "openrouter/free",
         "srv_mjlq1ncq8a3f7fe0aea0": "turbo",
         "srv_mrgy0nmbc8a86c407f17": "models/gemini-flash-latest",
         "srv_mkoloq41e34074b6133e": "openai-fast",

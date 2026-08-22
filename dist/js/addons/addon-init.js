@@ -413,22 +413,6 @@ async function get_messages(conversation_id) {
     return conversation?.items || [];
 }
 
-async function add_conversation(conversation_id) {
-    if (!conversation_id) {
-        return;
-    }
-    if (!await get_conversation(conversation_id)) {
-        await save_conversation(update_conversation({
-            id: conversation_id,
-            title: "",
-            added: Date.now(),
-            system: chatPrompt?.value,
-            items: [],
-        }));
-    }
-    add_url_to_history(`#${conversation_id}`);
-}
-
 async function save_system_message() {
     if (!window.conversation_id) {
         return;
@@ -1140,106 +1124,104 @@ async function upload_audio(blob) {
     }
 }
 
-domReady.then(() => {
-    const audioButton = document.querySelector(".capture-audio");
-    audioButton.addEventListener('click', async (event) => {
-        const i = audioButton.querySelector("i");
-        const t = audioButton.querySelector("*");
-        if (mediaRecorder) {
-            i.classList.remove("fa-stop");
-            i.classList.add("fa-microphone");
-            mediaRecorder.stop();
-            t.innerText = framework.translate("Upload Audio");
-            if(mediaRecorder.stream) {
-                mediaRecorder.stream.getTracks().forEach(track => track.stop());
-            }
-            if (mediaRecorder.wavBlob) {
-                if (modelSelect.selectedIndex >= 0 && modelSelect.options[modelSelect.selectedIndex].dataset.audio) {
-                    await add_conversation(window.conversation_id);
-                    await ask_gpt(get_message_id(), -1, false, providerSelect.value, get_selected_model(), "next");
-                } else {
-                    await upload_audio(mediaRecorder.wavBlob);
-                }
-                t.innerText = framework.translate("Record Audio");
-            }
-            mediaRecorder = null;
-            return;
+const audioButton = document.querySelector(".capture-audio");
+audioButton.addEventListener('click', async (event) => {
+    const i = audioButton.querySelector("i");
+    const t = audioButton.querySelector("*");
+    if (mediaRecorder) {
+        i.classList.remove("fa-stop");
+        i.classList.add("fa-microphone");
+        mediaRecorder.stop();
+        t.innerText = framework.translate("Upload Audio");
+        if(mediaRecorder.stream) {
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
         }
-
-        i.classList.remove("fa-microphone");
-        i.classList.add("fa-stop");
-        t.innerText = framework.translate("Stop Recording");
-
-        try {
-            stream = await navigator.mediaDevices.getUserMedia({
-                audio: true
-            });
-
-            //if (modelSelect.selectedIndex && modelSelect.options[modelSelect.selectedIndex].dataset.audio) {
-                mediaRecorder = new Recorder(stream);
-                mediaRecorder.start();
-                return;
-            //}
-
-            if (!MediaRecorder.isTypeSupported('audio/webm')) {
-                console.warn('audio/webm is not supported');
+        if (mediaRecorder.wavBlob) {
+            if (modelSelect.selectedIndex >= 0 && modelSelect.options[modelSelect.selectedIndex].dataset.audio) {
+                await add_conversation(window.conversation_id);
+                await ask_gpt(get_message_id(), -1, false, providerSelect.value, get_selected_model(), "next");
+            } else {
+                await upload_audio(mediaRecorder.wavBlob);
             }
-            mediaRecorder = new MediaRecorder(stream, {
-                mimeType: 'audio/webm',
-            });
-            
-            mediaRecorder.addEventListener('dataavailable', async event => {
-                await upload_audio(event.data);
-                t.innerText = framework.translate("Record Audio");
-            });
-
-            mediaRecorder.start()
-        } catch (err) {
-            console.error('Error accessing microphone:', err);
-            i.classList.remove("fa-stop");
-            i.classList.add("fa-microphone");
             t.innerText = framework.translate("Record Audio");
-            if(mediaRecorder?.stream) {
-                mediaRecorder.stream.getTracks().forEach(track => track.stop());
-            }
-            mediaRecorder = null;
         }
-    });
+        mediaRecorder = null;
+        return;
+    }
 
-    const linkButton = document.querySelector(".add-link");
-    linkButton.addEventListener('click', async (event) => {
-        const i = audioButton.querySelector("i");
-        const link = prompt("Please enter a link");
-        if (!link) {
+    i.classList.remove("fa-microphone");
+    i.classList.add("fa-stop");
+    t.innerText = framework.translate("Stop Recording");
+
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({
+            audio: true
+        });
+
+        //if (modelSelect.selectedIndex && modelSelect.options[modelSelect.selectedIndex].dataset.audio) {
+            mediaRecorder = new Recorder(stream);
+            mediaRecorder.start();
             return;
-        }
-        if (link.startsWith("http") === false) {
-            inputCount.innerText = framework.translate("Invalid link");
-            return;
-        }
-        image_storage[link] = link;
-        renderMediaSelect();
-    });
+        //}
 
-    const fileInput = document.getElementById("file");
-    fileInput.addEventListener('click', async (event) => {
-        fileInput.value = '';
-    });
+        if (!MediaRecorder.isTypeSupported('audio/webm')) {
+            console.warn('audio/webm is not supported');
+        }
+        mediaRecorder = new MediaRecorder(stream, {
+            mimeType: 'audio/webm',
+        });
+        
+        mediaRecorder.addEventListener('dataavailable', async event => {
+            await upload_audio(event.data);
+            t.innerText = framework.translate("Record Audio");
+        });
 
-    const cameraInput = document.getElementById("camera");
-    cameraInput.addEventListener("click", (e) => {
-        if (window?.pywebview) {
-            e.preventDefault();
-            pywebview.api.take_picture();
+        mediaRecorder.start()
+    } catch (err) {
+        console.error('Error accessing microphone:', err);
+        i.classList.remove("fa-stop");
+        i.classList.add("fa-microphone");
+        t.innerText = framework.translate("Record Audio");
+        if(mediaRecorder?.stream) {
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
         }
-    });
-    const imageSelect = document.getElementById("image");
-    imageSelect.addEventListener("click", (e) => {
-        if (window?.pywebview) {
-            e.preventDefault();
-            pywebview.api.choose_image();
-        }
-    });
+        mediaRecorder = null;
+    }
+});
+
+const linkButton = document.querySelector(".add-link");
+linkButton.addEventListener('click', async (event) => {
+    const i = audioButton.querySelector("i");
+    const link = prompt("Please enter a link");
+    if (!link) {
+        return;
+    }
+    if (link.startsWith("http") === false) {
+        inputCount.innerText = framework.translate("Invalid link");
+        return;
+    }
+    image_storage[link] = link;
+    renderMediaSelect();
+});
+
+const fileInput = document.getElementById("file");
+fileInput.addEventListener('click', async (event) => {
+    fileInput.value = '';
+});
+
+const cameraInput = document.getElementById("camera");
+cameraInput.addEventListener("click", (e) => {
+    if (window?.pywebview) {
+        e.preventDefault();
+        pywebview.api.take_picture();
+    }
+});
+const imageSelect = document.getElementById("image");
+imageSelect.addEventListener("click", (e) => {
+    if (window?.pywebview) {
+        e.preventDefault();
+        pywebview.api.choose_image();
+    }
 });
 
 async function upload_cookies() {
@@ -2323,7 +2305,6 @@ export default {
     syncConversationsFromCloud,
     cloudSyncLogout,
     new_conversation,
-    domReady,
     appStorage,
     load_conversations,
     mcpClient,
