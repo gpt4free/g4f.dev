@@ -39,13 +39,13 @@
         "srv_mkoloq41e34074b6133e": "openai-fast",
         "srv_mkomfko63371049b6da6": "deepseek-v3.2:free",
         "srv_mrdypihj16e8b1776409": "openai",
-        "srv_mlj8gd8y789d112ec50d": "zai-glm-4.7",
         "srv_msoxsh206cb0d89eca32": "orcarouter/free",
         "srv_mrgy4bjz6a85b485d663": "glm-5.2",
         "srv_mrtd0gge48cb809ab7eb": "auto",
         "srv_mrgynwuz08a167112109": "glm-5.2",
         "srv_mp2huzrg06e426ad12f3": "zai-org/GLM-5.2",
-        "srv_mrgymq8534d9ea96920d": "qwen3.7-plus"
+        "srv_mrgymq8534d9ea96920d": "qwen3.8-max",
+        "srv_mrgypezt91a1a4a8ea7f": "glm-5.2-venice"
     },
     "providerLocalStorage": {
         "airforce": "Airforce-api_key",
