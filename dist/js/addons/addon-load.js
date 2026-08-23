@@ -94,6 +94,9 @@ async function on_api() {
                     if (name === config.defaultModel) {
                         option.selected = true;
                     }
+                    if (config.is_hidden) {
+                        option.disabled = true;
+                    }
                     option.value = name;
                     option.dataset.live = "true";
                     option.text = (config.label || name) + (config.tags ? ` ${config.tags} 🟢` : " 🟢");

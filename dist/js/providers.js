@@ -9,6 +9,7 @@ let providers = {};
 let defaultModels = {};
 let providerLocalStorage = {};
 let serverDefaultModels = {};
+let hiddenServers = [];
 let providerClassMap = {
     "default": Client,
     "pollinations": Pollinations,
@@ -36,7 +37,8 @@ async function loadProviders() {
                 providers = json.providers || {};
                 defaultModels = json.defaultModels || {};
                 serverDefaultModels = json.serverDefaultModels || {};
-                window.providerLocalStorage = providerLocalStorage = json.providerLocalStorage || {};
+                providerLocalStorage = json.providerLocalStorage || {};
+                hiddenServers = json.hiddenServers || [];
                 return providers;
             });
     } else {
@@ -46,6 +48,15 @@ async function loadProviders() {
         defaultModels = data.defaultModels || {};
         serverDefaultModels = data.serverDefaultModels || {};
         providerLocalStorage = data.providerLocalStorage || {};
+        hiddenServers = data.hiddenServers || [];
+    }
+    for (const provider of Object.values(providers)) {
+        if (provider.id && hiddenServers.includes(provider.id)) {
+            provider.is_hidden = true;
+        }
+        if (provider.id && serverDefaultModels[provider.id]) {
+            provider.defaultModel = serverDefaultModels[provider.id];
+        }
     }
     return providers;
 }

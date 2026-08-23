@@ -759,8 +759,9 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
                     } else {
                         isEnabled = isEnabled === "true";
                     }
+                    const statusIcon = server.is_hidden ? "⚫" : server.is_offline ? "🔴" : server.is_ollama ? "🦙" : "🌐";
                     providerItem.innerHTML = `
-                        <span class="label">${framework.translate("Enable")} ${server.label || server.id} 🌐</span>
+                        <span class="label">${framework.translate("Enable")} ${server.label || server.id} ${statusIcon}</span>
                         <input id="ProviderCustom${server.id}" type="checkbox" name="ProviderCustom${server.id}" value="custom:${server.id}" class="provider custom-server" data-server-id="${server.id}" ${isEnabled ? 'checked="checked"' : ''}/>
                         <label for="ProviderCustom${server.id}" class="toogle" title="Enable or disable this custom server"></label>
                     `;
