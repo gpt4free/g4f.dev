@@ -447,7 +447,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                         }
                     }
                     delete content_data_storage[message_id];
-                    if (client) {
+                    if (window.client) {
                         loadClientModels();
                     } else {
                         refreshModels(providerSelect?.value);
@@ -477,7 +477,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             }
         });
     }
-    if (client && modelType === "chat") {
+    if (window.client && modelType === "chat") {
         for (const file of Object.values(image_storage)) {
             media.push({
                 "type": "image_url",
@@ -573,9 +573,9 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         }
         requestAnimationFrame(update);
     });
-    if (client) {
+    if (window.client) {
         const providerSelectOption = providerSelect.options[providerSelect.selectedIndex];
-        const selectedModel = get_selected_model() || client.defaultModel;
+        const selectedModel = get_selected_model() || window.client.defaultModel;
         const modelSeed = selectedOption?.dataset.seed;
         let providerLabel = providerSelectOption?.dataset.label || provider;
         const isAudio = selectedOption?.dataset.audio == "true";
@@ -588,7 +588,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 const isAutomaticOrientation = appStorage.getItem("automaticOrientation") != "false";
                 const imageHeight = isAutomaticOrientation ? (window.innerHeight > window.innerWidth ? 832 : 480) : undefined;
                 const imageWidth = isAutomaticOrientation ? (window.innerHeight > window.innerWidth ? 480 : 832) : undefined;
-                const response = await client.images[method]({
+                const response = await window.client.images[method]({
                     model: selectedModel,
                     prompt: message,
                     ...(modelSeed && regenerate ? { seed: Math.floor(Date.now() / 1000) } : {}),
@@ -613,7 +613,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 });
             } else if (isAudio) {
                 // Handle audio generation
-                const response = await client.chat.completions.create({
+                const response = await window.client.chat.completions.create({
                     model: selectedModel,
                     messages,
                 });
@@ -661,7 +661,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     ...(conversation.data ? { conversation: conversation.data[provider] } : {}),
                     ...getExtraBody(provider)
                 };
-                const response = await client.chat.completions.create(body);
+                const response = await window.client.chat.completions.create(body);
 
                 add_message_chunk({type: "provider", provider: {name: provider, model: selectedModel, label: providerLabel}}, message_id);
 
@@ -671,8 +671,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     }
                     if (response.model) {
                         let provider;
-                        if (client.id) {
-                            provider = client.id;
+                        if (window.client.id) {
+                            provider = window.client.id;
                         } else if (response.server && response.provider) {
                             provider = `custom:${response.server}`;
                         } else if (response.provider) {
@@ -714,8 +714,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     }
                     if (chunk.model && !hasModel) {
                         hasModel = true;
-                        if (client.id) {
-                            provider = client.id;
+                        if (window.client.id) {
+                            provider = window.client.id;
                         }
                         if (chunk.server && chunk.provider) {
                             provider = `custom:${chunk.server}`;

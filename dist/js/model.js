@@ -16,6 +16,9 @@ function getModelLabel(model) {
     } else if (!label) {
         label = `${model.id || ""}`.replace("models/", "");
     }
+    if (model.default) {
+        label += ` (${framework.translate("default")})`;
+    }
     if (model.costs > 0) {
         label += ` (${model.costs.toFixed(3).replace(/0$/, '')}$)`;
         label = label.replace(/\(\.0\$\)/, '(<0.001$)');
@@ -41,6 +44,9 @@ function convertModel(inputModel, options = {}) {
     const useModelName = !!options.useModelName;
     if (!model.id || useModelName) {
         model.id = model.name || model.model_name;
+    }
+    if (options.defaultModel && model.id === options.defaultModel) {
+        model.default = true;
     }
     model.label = getModelLabel(model);
     if (!model.type) {

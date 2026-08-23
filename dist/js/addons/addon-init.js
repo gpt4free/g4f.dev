@@ -34,6 +34,8 @@ window.providers = [
     {"name": "Puter", "label": "Puter.js", "login_url": "https://discord.gg/qXA4Wf4Fsm", "active_by_default": true},
 ];
 
+window.client = null;
+
 domReady.then((event) => {
     // Addon bootstrap (no-op if addon-host.js already booted us)
     if (window.ChatAddons && typeof window.ChatAddons.boot === 'function') {
@@ -1429,7 +1431,7 @@ function isLive() {
 
 async function initClient() {
     if (!isLive()) {
-        client = null;
+        window.client = null;
         return;
     }
     const serverId = providerSelect.options[providerSelect.selectedIndex]?.dataset?.serverId;
@@ -1460,7 +1462,7 @@ async function initClient() {
     options.fetchFn = window.fetchFn;
     try {
         // Handle custom providers with custom:server_id format
-        client = await window.createClient(provider, options);
+        window.client = await window.createClient(provider, options);
     } catch (error) {
         console.error('Failed to create client:', error);
         return;
@@ -1472,7 +1474,7 @@ async function initClient() {
 async function loadClientModels() {
     modelSelect.innerHTML = `<option value="" disabled selected>${framework.translate("Loading...")}</option>`;
     try {
-        const [models, quota] = await Promise.all([client.models.list(), client.getQuota().catch(() => undefined)]);
+        const [models, quota] = await Promise.all([window.client.models.list(), window.client.getQuota().catch(() => undefined)]);
         setQuotaInfo(models, quota);
         modelSelect.innerHTML = '';
         models.forEach(model => {
@@ -1500,36 +1502,13 @@ async function loadClientModels() {
             modelSelect.appendChild(opt);
         });
         if (models.length > 2) {
-            setFavoriteModels(providerSelect?.value, client.defaultModel || models[0].id);
+            setFavoriteModels(providerSelect?.value, window.client.defaultModel || models[0].id);
         }
     } catch (err) {
         console.error('Model load failed:', err);
         modelSelect.innerHTML = "";
     }
 }
-
-// Import old conversations from appStorage into IndexedDB
-async function import_from_appStorage() {
-  const prefix = 'conversation:';
-  const keys = Object.keys(appStorage).filter(k => k.startsWith(prefix));
-
-  for (const key of keys) {
-    try {
-      const json = appStorage.getItem(key);
-      if (!json) continue;
-      const conv = JSON.parse(json);
-      // Use the id from conversation, if missing fallback to key after prefix
-      conv.id = conv.id || key.substring(prefix.length);
-      conv.updated = conv.updated || Date.now();
-      await save_conversation(conv);
-      appStorage.removeItem(key); // Optionally clear old storage
-    } catch (e) {
-      console.warn(`Skipping appStorage item ${key} due to error`, e);
-    }
-  }
-}
-
-import_from_appStorage();
 
 /**
  * Insert or wrap text with Markdown triple back‑ticks (```).
@@ -1889,8 +1868,8 @@ async function handleToolCalls(toolCalls, messages, model, provider, message_id,
         
         // Make another API call with tool results
         controller_storage[message_id] = new AbortController();
-        if (client) {
-            const stream = await client.chat.completions.create({
+        if (window.client) {
+            const stream = await window.client.chat.completions.create({
                 model: model,
                 messages: updatedMessages,
                 stream: true,
@@ -2330,5 +2309,7 @@ export default {
     loadPaProviders,
     loadPaProviderSelect,
     renderPaProviders,
-    loadCustomProvidersFromAPI
+    loadCustomProvidersFromAPI,
+    loadClientModels,
+    initClient
 }

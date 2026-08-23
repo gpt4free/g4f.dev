@@ -1539,7 +1539,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                         }
                     }
                     delete content_data_storage[message_id];
-                    if (client) {
+                    if (window.client) {
                         loadClientModels();
                     } else {
                         refreshModels(providerSelect?.value);
@@ -1569,7 +1569,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             }
         });
     }
-    if (client && modelType === "chat") {
+    if (window.client && modelType === "chat") {
         for (const file of Object.values(image_storage)) {
             media.push({
                 "type": "image_url",
@@ -1665,7 +1665,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         }
         requestAnimationFrame(update);
     });
-    if (client) {
+    if (window.client) {
         const providerSelectOption = providerSelect.options[providerSelect.selectedIndex];
         const selectedModel = get_selected_model() || client.defaultModel;
         const modelSeed = selectedOption?.dataset.seed;
@@ -1753,7 +1753,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     ...(conversation.data ? { conversation: conversation.data[provider] } : {}),
                     ...getExtraBody(provider)
                 };
-                const response = await client.chat.completions.create(body);
+                const response = await window.client.chat.completions.create(body);
 
                 add_message_chunk({type: "provider", provider: {name: provider, model: selectedModel, label: providerLabel}}, message_id);
 
@@ -1763,8 +1763,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     }
                     if (response.model) {
                         let provider;
-                        if (client.id) {
-                            provider = client.id;
+                        if (window.client.id) {
+                            provider = window.client.id;
                         } else if (response.server && response.provider) {
                             provider = `custom:${response.server}`;
                         } else if (response.provider) {
@@ -1806,8 +1806,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     }
                     if (chunk.model && !hasModel) {
                         hasModel = true;
-                        if (client.id) {
-                            provider = client.id;
+                        if (window.client.id) {
+                            provider = window.client.id;
                         }
                         if (chunk.server && chunk.provider) {
                             provider = `custom:${chunk.server}`;
@@ -4094,93 +4094,6 @@ function filterModels(models, shouldFilter) {
     
     return filterArray(models);
 }
-
-function setProviderModels(models, provider, quota=null) {
-    const hideOneProvider = appStorage.getItem("hideOneProviderModels") === "true";
-    
-    // Filter models if the setting is enabled
-    if (hideOneProvider && models) {
-        models = filterModels(models, true);
-    }
-    
-    modelSelect.innerHTML = '';
-    const option = providerSelect.options[providerSelect.selectedIndex];
-    if (option) option.text = option.text.replaceAll(" 🟢", "") + (quota ? " 🟢" : "");
-    function addOptions(group, models, search) {
-        if (quota) {
-            setQuotaInfo(models, quota);
-        }
-        models.forEach((model, i) => {
-            if (!model.models) {
-                let option = document.createElement('option');
-                option.dataset.label = model.label || model.id || model;
-                if (window.convertModel && model.id) convertModel(model);
-                option.value = model.id || model;
-                option.text = model.label || model.id || model;
-                if (model.type) {
-                    option.dataset.type = model.type;
-                }
-                if (model.audio) {
-                    option.dataset.audio = "true";
-                }
-                if (model.remaining_percent !== undefined) {
-                    option.dataset.remaining = model.remaining_percent;
-                }
-                group.appendChild(option);
-                if (model.default) {
-                    option.selected = true;
-                }
-                if (model.disabled) {
-                    option.disabled = true;
-                }
-            } else {
-                let optgroup = document.createElement('optgroup');
-                optgroup.label = model.group;
-                addOptions(optgroup, model.models, search);
-                if (optgroup.childElementCount == 0) {
-                    return;
-                }
-                modelSelect.appendChild(optgroup);
-            }
-        });
-    }
-    if (Array.isArray(models)) {
-        addOptions(modelSelect, models, search);
-        if (models.length > 2) {
-            const defaultModel = models.map(m => m.models?.find(m => m.default) || m).find(m => m.default)?.id;
-            setFavoriteModels(provider, defaultModel);
-        }
-    }
-}
-async function get_quota(provider) {
-    if (!provider || provider == "AnyProvider" || provider.startsWith("custom:") || provider.startsWith("pa:")) {
-        return;
-    }
-    const url = `${framework.backendUrl}/backend-api/v2/quota/${provider}`;
-    const api_key = get_api_key_by_provider(provider, true);
-    const response = await fetch(url, { method: 'GET', headers: api_key ? {"x-api-key": api_key} : {} });
-    let data;
-    try {
-        data = await response.json();
-    } catch (e) {
-        add_error(e, true);
-        return;
-    }
-    if (response.status == 401 || (data && data.error && data.error.code == 401)) {
-        let input = document.querySelector(`.${provider}-api_key`);
-        if (!input) {
-            input = document.getElementById(`${provider}-api_key`);
-        }
-        console.warn("Unauthorized access for provider:", provider);
-        if (input) {
-            input.value = "";
-            input.dataset.value = "";
-            appStorage.removeItem(input.id);
-            input.placeholder = framework.translate("Invalid API key");
-        }
-    }
-    return response.ok ? data : undefined;
-}
 async function save_storage(settings=false) {
     let filename = `${settings ? 'settings' : 'chat'} ${new Date().toLocaleString()}.json`.replaceAll(":", "-");
     let data = {"options": {"g4f": ""}};
@@ -4932,110 +4845,6 @@ function isLive() {
     return providerSelect.options[providerSelect.selectedIndex]?.dataset?.live;
 }
 
-async function initClient() {
-    if (!isLive()) {
-        client = null;
-        return;
-    }
-    const serverId = providerSelect.options[providerSelect.selectedIndex]?.dataset?.serverId;
-    let messageId = null;
-    let count = 0;
-    function logCallback(event) {
-        if (event.request) {
-            messageId = generateUUID();
-            count = 0;
-        }
-        if (event.response || event.request) {
-            logRequestResponse(event, messageId, count);
-            count += 1;
-        }
-    }
-    const provider = providerSelect?.value;
-    const apiKey = get_api_key_by_provider(provider);
-    const options = apiKey ? { apiKey } : {};
-    if (serverId && options.backupUrl) {
-        options.backupUrl = `https://g4f.space/custom/${serverId}`;
-    }
-    if (appStorage.getItem("debugMode") == "true") {
-        options.logCallback = logCallback;
-    }
-    // Route client fetch() calls through the Web Worker so streaming
-    // continues even when the tab is backgrounded / the user switches apps.
-    // Falls back to regular fetch() if the worker is unavailable.
-    options.fetchFn = window.fetchFn;
-    try {
-        // Handle custom providers with custom:server_id format
-        client = await window.createClient(provider, options);
-    } catch (error) {
-        console.error('Failed to create client:', error);
-        return;
-    }
-    await loadClientModels();
-    return true;
-}
-
-async function loadClientModels() {
-    modelSelect.innerHTML = `<option value="" disabled selected>${framework.translate("Loading...")}</option>`;
-    try {
-        const [models, quota] = await Promise.all([client.models.list(), client.getQuota().catch(() => undefined)]);
-        setQuotaInfo(models, quota);
-        modelSelect.innerHTML = '';
-        models.forEach(model => {
-            if (window.isValidModel && !isValidModel(model)) {
-                return;
-            }
-            const opt = document.createElement('option');
-            opt.value = model.id;
-            opt.text = model.label;
-            if (model.type) {
-                opt.dataset.type = model.type;
-            }
-            if (model.audio) {
-                opt.dataset.audio = model.audio;
-            }
-            if (model.remaining_percent !== undefined) {
-                opt.dataset.remaining = model.remaining_percent;
-            }
-            if (model.default) {
-                opt.selected = true;
-            }
-            if (model.disabled) {
-                opt.disabled = true;
-            }
-            modelSelect.appendChild(opt);
-        });
-        if (models.length > 2) {
-            setFavoriteModels(providerSelect?.value, client.defaultModel || models[0].id);
-        }
-    } catch (err) {
-        console.error('Model load failed:', err);
-        modelSelect.innerHTML = "";
-    }
-}
-
-// Import old conversations from appStorage into IndexedDB
-async function import_from_appStorage() {
-  const prefix = 'conversation:';
-  const keys = Object.keys(appStorage).filter(k => k.startsWith(prefix));
-
-  for (const key of keys) {
-    try {
-      const json = appStorage.getItem(key);
-      if (!json) continue;
-      const conv = JSON.parse(json);
-      // Use the id from conversation, if missing fallback to key after prefix
-      conv.id = conv.id || key.substring(prefix.length);
-      conv.updated = conv.updated || Date.now();
-      await save_conversation(conv);
-      appStorage.removeItem(key); // Optionally clear old storage
-    } catch (e) {
-      console.warn(`Skipping appStorage item ${key} due to error`, e);
-    }
-  }
-}
-
-import_from_appStorage();
-
 /**
  * Insert or wrap text with Markdown triple back‑ticks (```).
  *
@@ -5227,7 +5036,7 @@ async function handleToolCalls(toolCalls, messages, model, provider, message_id,
         
         // Make another API call with tool results
         controller_storage[message_id] = new AbortController();
-        if (client) {
+        if (window.client) {
             const stream = await client.chat.completions.create({
                 model: model,
                 messages: updatedMessages,
@@ -5831,8 +5640,6 @@ export default {
     set_favorite_providers,
     setQuotaInfo,
     filterModels,
-    setProviderModels,
-    get_quota,
     save_storage,
     get_recognition_language,
     hideLog,
@@ -5844,9 +5651,6 @@ export default {
     setupDragAndDrop,
     enhanceFileUpload,
     isLive,
-    initClient,
-    loadClientModels,
-    import_from_appStorage,
     insertBackticksInTextarea,
     renderMCPTools,
     showAddServerDialog,

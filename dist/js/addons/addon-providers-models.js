@@ -321,59 +321,58 @@ function set_favorite_providers() {
 }
 
 function setQuotaInfo(models, quota) {
-    if (!quota) {
-        return;
-    }
     let defaultModel = null;
-    models.forEach((model) => {
-        let percent;
-        if (quota.buckets) {
-            if (!["gemini-3-pro-preview"].includes(defaultModel)) {
-                defaultModel = null; // Use last model with enough quota as default instead of the first one
-            }
-            percent = (quota.buckets.filter((bucket) => bucket.modelId == model.id).pop()?.remainingFraction || 0) * 100;
-            model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
-        } else if (quota.models) {
-            percent = (quota.models[model.id]?.quotaInfo?.remainingFraction || 0) * 100;
-            model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
-        } else if (quota.quota_snapshots) {
-            function isPremium(model) {
-                return model.includes("claude") || model.includes("gemini") || (model != "gpt-5-mini" && model.includes("gpt-5")) || model.includes("grok");
-            }
-            if (isPremium(model.id)) {
-                percent = Math.max(0, quota.quota_snapshots?.premium_interactions?.percent_remaining || 0);
+    if (quota) {
+        models.forEach((model) => {
+            let percent;
+            if (quota.buckets) {
+                if (!["gemini-3-pro-preview"].includes(defaultModel)) {
+                    defaultModel = null; // Use last model with enough quota as default instead of the first one
+                }
+                percent = (quota.buckets.filter((bucket) => bucket.modelId == model.id).pop()?.remainingFraction || 0) * 100;
                 model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
+            } else if (quota.models) {
+                percent = (quota.models[model.id]?.quotaInfo?.remainingFraction || 0) * 100;
+                model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
+            } else if (quota.quota_snapshots) {
+                function isPremium(model) {
+                    return model.includes("claude") || model.includes("gemini") || (model != "gpt-5-mini" && model.includes("gpt-5")) || model.includes("grok");
+                }
+                if (isPremium(model.id)) {
+                    percent = Math.max(0, quota.quota_snapshots?.premium_interactions?.percent_remaining || 0);
+                    model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
+                } else {
+                    percent = Math.max(0, quota.quota_snapshots?.chat?.percent_remaining || 0);
+                    model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
+                }
             } else {
-                percent = Math.max(0, quota.quota_snapshots?.chat?.percent_remaining || 0);
-                model.label = `${model.label} (${framework.translate("Remaining:")} ${percent}%)`;
+                return;
             }
-        } else {
-            return;
-        }
-        if (percent !== undefined && percent < 10) {
-            model.label += ` ⚠️`;
-        } else {
-            model.label += ` ✅`;
-        }
-        model.remaining_percent = percent;
-        if (!defaultModel && percent >= 10) {
-            defaultModel = model.id;
-            models.forEach((model) => delete model.default);
-            model.default = true;
-        }
-    });
-    if (quota && quota.hasOwnProperty("balance")) {            
-        let creditsInfo = `${framework.translate("Balance:")} ${quota.balance.toFixed(2).replace(".00", "")} Pollen`;
-        if (quota.balance > 0) {
-            creditsInfo += " ✅";
-        } else {
-            creditsInfo += " ⚠️";
-        }
-        if (models.length > 10) {
-            models.unshift({id: "credits_info", label: creditsInfo, disabled: true});
+            if (percent !== undefined && percent < 10) {
+                model.label += ` ⚠️`;
+            } else {
+                model.label += ` ✅`;
+            }
+            model.remaining_percent = percent;
+            if (!defaultModel && percent >= 10) {
+                defaultModel = model.id;
+                models.forEach((model) => delete model.default);
+                model.default = true;
+            }
+        });
+        if (quota && quota.hasOwnProperty("balance")) {            
+            let creditsInfo = `${framework.translate("Balance:")} ${quota.balance.toFixed(2).replace(".00", "")} Pollen`;
+            if (quota.balance > 0) {
+                creditsInfo += " ✅";
+            } else {
+                creditsInfo += " ⚠️";
+            }
+            if (models.length > 10) {
+                models.unshift({id: "credits_info", label: creditsInfo, disabled: true});
+            }
         }
     }
-    if (quota.credits) {
+    if (quota?.credits) {
         const percent = (quota.credits.remaining / quota.credits.total) * 100;
         let creditsInfo = `${framework.translate("Credits:")} ${quota.credits.remaining}, ${framework.translate("Remaining:")} ${percent.toFixed(2)}%`;
         if (percent >= 10) {
@@ -386,31 +385,21 @@ function setQuotaInfo(models, quota) {
             models.push({id: "credits_info", label: creditsInfo, disabled: true});
         }
     }
-    if (quota.session_usage) {
+    if (quota?.session_usage) {
         models.push({id: "session_usage", label: `${framework.translate("Session usage:")} ${quota.session_usage.used_percent}%` + (quota.session_usage.used_percent > 90 ? " ⚠️" : " ✅"), disabled: true});
     }
-    if (quota.weekly_usage) {
+    if (quota?.weekly_usage) {
         models.push({id: "weekly_usage", label: `${framework.translate("Weekly usage:")} ${quota.weekly_usage.used_percent}%` + (quota.weekly_usage.used_percent > 90 ? " ⚠️" : " ✅"), disabled: true});
     }
-    if (quota.allowanceInfo?.remaining) {
+    if (quota?.allowanceInfo?.remaining) {
         const percent = (quota.allowanceInfo.remaining / quota.allowanceInfo.monthUsageAllowance) * 100;
         const total = (quota?.allowanceInfo?.remaining || 0) / 1e8;
         const creditsInfo = `${framework.translate("Credits:")} ${total.toFixed(2)}$, ${framework.translate("Remaining:")} ${percent.toFixed(2)}%` + (percent > 10 ? " ✅" : " ⚠️");
         models.unshift({id: "credits_info", label: creditsInfo, disabled: true});
     }
-    if (quota.total) {
+    if (quota?.total) {
         const providerInfo = quota.total > quota.offset ? `${quota.offset}/${quota.total} ${framework.translate("servers loaded ⚠️")}` : `${quota.total} ${framework.translate("servers loaded ✅")}`;
         models.unshift({id: "provider_info", label: providerInfo, disabled: true});
-    }
-    if (!defaultModel && client && client.defaultModel) {
-        defaultModel = client.defaultModel;
-        models.forEach((model) => {
-            if ((model.model || model.id) == defaultModel) {
-                model.default = true;
-            } else {
-                delete model.default;
-            }
-        });
     }
 }
 
@@ -437,9 +426,7 @@ function setProviderModels(models, provider, quota=null) {
     const option = providerSelect.options[providerSelect.selectedIndex];
     if (option) option.text = option.text.replaceAll(" 🟢", "") + (quota ? " 🟢" : "");
     function addOptions(group, models, search) {
-        if (quota) {
-            setQuotaInfo(models, quota);
-        }
+        setQuotaInfo(models, quota);
         models.forEach((model, i) => {
             if (!model.models) {
                 let option = document.createElement('option');
@@ -518,7 +505,6 @@ async function refreshModels(provider) {
         const paEntry = window._paProviders && window._paProviders.find(p => p.id === paId);
         console.log("PA provider entry for provider:", provider, paEntry);
         if (paEntry && Array.isArray(paEntry.models) && paEntry.models.length > 0) {
-            console.log("Setting PA provider models for provider:", provider, paEntry.models);
             setProviderModels(paEntry.models, provider);
         }
         return;
@@ -561,7 +547,6 @@ async function loadProviderModels(provider=null) {
     if (await initClient()) {
         return;
     }
-    console.log("Loading models for provider:", provider);
     await refreshModels(provider);
 };
 addonsLoaded.then(() => {

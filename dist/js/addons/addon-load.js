@@ -91,9 +91,6 @@ async function on_api() {
                         return;
                     }
                     let option = document.createElement("option");
-                    if (name === config.defaultModel) {
-                        option.selected = true;
-                    }
                     if (config.is_hidden) {
                         option.disabled = true;
                     }

@@ -262,7 +262,7 @@ class Client {
 
           let data = await response.json();
           data = data.data || data.result || data.models || data;
-          data = data.map((model) => convertModel(model, { useModelName: this.useModelName }));
+          data = data.map((model) => convertModel(model, { defaultModel: this.defaultModel, useModelName: this.useModelName }));
           const uniqueModels = {};
           data.forEach(model => {
             if (!uniqueModels[model.id]) {
