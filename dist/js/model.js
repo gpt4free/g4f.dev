@@ -47,7 +47,6 @@ function convertModel(inputModel, options = {}) {
     if (options.defaultModel && model.id === options.defaultModel) {
         model.default = true;
     }
-    model.label = getModelLabel(model);
     if (!model.type) {
         if (model.task?.name === "Text Generation") {
             model.type = "chat";
@@ -142,6 +141,7 @@ function convertModel(inputModel, options = {}) {
             }
         }
     }
+    model.label = getModelLabel(model);
     model.tags = getModelTags(model);
     const count = model.count || model.requests || 0;
     model.label = model.label + (count > 1 ? ` (${count}+)` : "") + (model.tags ? ` ${model.tags}` : "");
