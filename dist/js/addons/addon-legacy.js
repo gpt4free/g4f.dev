@@ -2817,89 +2817,6 @@ function updateCustomProviderOption(apiBaseValue) {
     }
 }
 
-async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = null) {
-    if (!customOptgroup) {
-        customOptgroup = document.getElementById("custom-providers-optgroup");
-    }
-    if (!customOptgroup) return;
-    
-    try {
-        let privateData;
-        if (appStorage.getItem("g4f_session")) {
-            const url = "https://g4f.space/custom/api/servers";
-            const resp = await fetch(url, {
-                headers: {'Authorization': `Bearer ${appStorage.getItem("g4f_session") || ""}`}
-            });
-            if (resp.status === 401) {
-                appStorage.removeItem("g4f_session");
-            }
-            privateData = await resp.json();
-        }
-        const publicUrl = "https://g4f.space/custom/api/servers/public";
-        const publicResp = await fetch(publicUrl);
-        let data = await publicResp.json();
-        data = data.servers;
-        if (privateData) {
-            if (privateData.servers) {
-                data = data.concat(privateData.servers.filter(server=>!server.is_public));
-            }
-        }
-        // Store servers globally for client creation
-        window.customServers = data;
-        
-        data.forEach(server => {
-            if (server.is_public && (!server.is_online || server.is_ollama || server.is_hidden)) {
-                return;
-            }
-            // Check if this server already exists in dropdown
-            const existingOption = providerSelect.querySelector(`option[data-server-id="${server.id}"]`);
-            if (!existingOption) {
-                const option = document.createElement("option");
-                option.value = `custom:${server.id}`;
-                option.dataset.live = "true";
-                option.dataset.custom = "true";
-                option.dataset.serverId = server.id;
-                option.dataset.baseUrl = server.base_url;
-                option.dataset.label = server.label;
-                
-                // Build label with model count if available
-                let label = server.label || server.id;
-                if (server.allowed_models && server.allowed_models.length > 0) {
-                    label += ` (${server.allowed_models.length} models)`;
-                }
-                option.text = `${label} 🌐`;
-                
-                customOptgroup.appendChild(option);
-            }
-            
-            // Add to providers toggle list if container provided
-            if (providersContainer) {
-                const toggleContent = providersContainer.querySelector(".collapsible-content");
-                if (toggleContent && !toggleContent.querySelector(`#ProviderCustom${server.id}`)) {
-                    const providerItem = document.createElement("div");
-                    providerItem.classList.add("provider-item", "custom-server-item");
-                    const isEnabled = appStorage.getItem(`enableCustomServer_${server.id}`) !== "false";
-                    providerItem.innerHTML = `
-                        <span class="label">${server.label || server.id} 🌐</span>
-                        <input id="ProviderCustom${server.id}" type="checkbox" name="ProviderCustom${server.id}" value="custom:${server.id}" class="provider custom-server" data-server-id="${server.id}" ${isEnabled ? 'checked="checked"' : ''}/>
-                        <label for="ProviderCustom${server.id}" class="toogle" title="Enable or disable this custom server"></label>
-                    `;
-                    providerItem.querySelector("input").addEventListener("change", (event) => {
-                        appStorage.setItem(`enableCustomServer_${server.id}`, event.target.checked ? "true" : "false");
-                        const option = customOptgroup.querySelector(`option[data-server-id="${server.id}"]`);
-                        if (option) {
-                            option.disabled = !event.target.checked;
-                        }
-                    });
-                    toggleContent.appendChild(providerItem);
-                }
-            }
-        });
-    } catch (e) {
-        console.debug("Failed to load custom providers from API:", e);
-    }
-}
-
 async function load_settings(provider_options) {
     await register_settings_storage();
     await load_settings_storage();
@@ -5885,7 +5802,6 @@ export default {
     open_settings,
     register_settings_storage,
     updateCustomProviderOption,
-    loadCustomProvidersFromAPI,
     load_settings,
     load_settings_storage,
     say_hello,

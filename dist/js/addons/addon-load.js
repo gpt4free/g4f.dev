@@ -129,7 +129,7 @@ async function on_api() {
                     customOptgroup.appendChild(customOption);
                 } 
                 // Load custom providers from API and add to toggle list
-                await loadCustomProvidersFromAPI(document.getElementById("custom-providers-optgroup"));
+                await loadCustomProvidersFromAPI(document.getElementById("custom-providers-optgroup"), providersToggleContainer);
             } catch(e) {
                 add_error(e, true);
             }

@@ -706,16 +706,25 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
         let data = await publicResp.json();
         data = data.servers;
         if (privateData) {
+            const publicServerIds = new Set(data.map(server => server.id));
             if (privateData.servers) {
-                data = data.concat(privateData.servers.filter(server=>!server.is_public));
+                data = data.concat(privateData.servers.filter(server => !publicServerIds.has(server.id)));
             }
         }
+
+        // Filter out servers that are already live in the dropdown
+        const liveServerIds = Object.values(await window.loadProviders()).map(p => p.id);
+        data = data.filter(server => !liveServerIds.includes(server.id));
+
         // Store servers globally for client creation
         window.customServers = data;
         
         data.forEach(server => {
-            if (server.is_public && (!server.is_online || server.is_ollama || server.is_hidden)) {
-                return;
+            let isEnabled = appStorage.getItem(`enableCustomServer_${server.id}`);
+            if (isEnabled === null) {
+                isEnabled = !server.is_hidden && !server.is_ollama && !server.is_offline;
+            } else {
+                isEnabled = isEnabled === "true";
             }
             // Check if this server already exists in dropdown
             const existingOption = providerSelect.querySelector(`option[data-server-id="${server.id}"]`);
@@ -734,19 +743,24 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
                     label += ` (${server.allowed_models.length} models)`;
                 }
                 option.text = `${label} 🌐`;
-                
+                option.disabled = !isEnabled;
+
                 customOptgroup.appendChild(option);
             }
-            
             // Add to providers toggle list if container provided
             if (providersContainer) {
                 const toggleContent = providersContainer.querySelector(".collapsible-content");
                 if (toggleContent && !toggleContent.querySelector(`#ProviderCustom${server.id}`)) {
                     const providerItem = document.createElement("div");
                     providerItem.classList.add("provider-item", "custom-server-item");
-                    const isEnabled = appStorage.getItem(`enableCustomServer_${server.id}`) !== "false";
+                    let isEnabled = appStorage.getItem(`enableCustomServer_${server.id}`);
+                    if (isEnabled === null) {
+                        isEnabled = !server.is_hidden && !server.is_ollama && !server.is_offline;
+                    } else {
+                        isEnabled = isEnabled === "true";
+                    }
                     providerItem.innerHTML = `
-                        <span class="label">${server.label || server.id} 🌐</span>
+                        <span class="label">${framework.translate("Enable")} ${server.label || server.id} 🌐</span>
                         <input id="ProviderCustom${server.id}" type="checkbox" name="ProviderCustom${server.id}" value="custom:${server.id}" class="provider custom-server" data-server-id="${server.id}" ${isEnabled ? 'checked="checked"' : ''}/>
                         <label for="ProviderCustom${server.id}" class="toogle" title="Enable or disable this custom server"></label>
                     `;
@@ -2314,5 +2328,6 @@ export default {
     renderMCPTools,
     loadPaProviders,
     loadPaProviderSelect,
-    renderPaProviders
+    renderPaProviders,
+    loadCustomProvidersFromAPI
 }
