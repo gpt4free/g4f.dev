@@ -45,7 +45,9 @@
         "srv_mrgynwuz08a167112109": "glm-5.2",
         "srv_mp2huzrg06e426ad12f3": "zai-org/GLM-5.2",
         "srv_mrgymq8534d9ea96920d": "qwen3.8-max",
-        "srv_mrgypezt91a1a4a8ea7f": "glm-5.2-venice"
+        "srv_mrgypezt91a1a4a8ea7f": "glm-5.2-venice",
+        "srv_mt4quyfw26b0a700926a": "nemotron-3.5-lightning-30b",
+        "srv_mt1wbaxgf9c946af0c58": "glm-5-2"
     },
     "providerLocalStorage": {
         "airforce": "Airforce-api_key",
