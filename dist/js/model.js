@@ -121,7 +121,7 @@ function convertModel(inputModel, options = {}) {
         model.free = true;
     }
     if (model.pricing) {
-        model.free = !("completionTextTokens" in model.pricing || "completionImageTokens" in model.pricing || "completionVideoSeconds" in model.pricing);
+        model.free = !("completionTextTokens" in model.pricing || "completionImageTokens" in model.pricing || "completionVideoSeconds" in model.pricing || "completion" in model.pricing);
     }
     model.tags = getModelTags(model);
     const count = model.count || model.requests || 0;
