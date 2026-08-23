@@ -600,6 +600,9 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 if (!response.data) {
                     throw new Error(framework.translate("No image URL returned from the API."));
                 }
+                if (response.usage) {
+                    add_message_chunk({type: "usage", usage: response.usage}, message_id);
+                }
                 response.data.forEach(img => {
                     if (img.b64_json) {
                         const mimeType = modelType === 'video' ? 'video/mp4' : 'image/png';

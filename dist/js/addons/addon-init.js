@@ -803,22 +803,6 @@ function get_media_size(text) {
     return null;
 }
 
-function count_words_and_tokens(text, model, completion_tokens, prompt_tokens) {
-    if (Array.isArray(text) || !text) {
-        return "";
-    }
-    
-    // Check if the message contains media (image/video)
-    const mediaSize = get_media_size(text);
-    if (mediaSize !== null) {
-        // Show size instead of word/token count for media responses
-        return `(${formatFileSize(mediaSize)})`;
-    }
-    
-    text = filter_message(text);
-    return `(${count_words(text)} ${framework.translate('words')}, ${count_chars(text)} ${framework.translate('chars')}, ${completion_tokens ? completion_tokens : count_tokens(model, text, prompt_tokens)} ${framework.translate('tokens')})`;
-}
-
 function load_provider_login_urls(providersListContainer, providers = []) {
     for (const provider of providers) {
         if (provider.parent || provider.name == "AnyProvider") {

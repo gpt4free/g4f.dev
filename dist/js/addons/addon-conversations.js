@@ -435,7 +435,8 @@ const load_conversation = async (conversation, append = false) => {
                     <div class="count">
                         ${countTokensEnabled ? count_words_and_tokens(
                             item.reasoning ? item.reasoning.text + text : text,
-                            next_provider?.model, completion_tokens, prompt_tokens
+                            next_provider?.model, completion_tokens, prompt_tokens,
+                            item.usage?.pollen_cost
                         ) : ""}
                         ${add_buttons.join("")}
                     </div>

@@ -85,7 +85,7 @@ function captureUserTierHeaders(headers, usage) {
     const userTier = headers.get('x-user-tier');
     const modelFactor = parseFloat(headers.get('x-ratelimit-model-factor') || '1');
     const remainingRequests = parseInt(headers.get('x-ratelimit-remaining-requests') || '1') - (usage ? 1 : 0);
-    let totalTokens = usage?.total_tokens || parseInt(headers.get('x-usage-total-tokens') || '0');
+    let totalTokens = usage?.pollen_cost ? (usage?.pollen_cost * 1e7) : usage?.total_tokens || parseInt(headers.get('x-usage-total-tokens') || '0');
     let remainingTokens = parseInt(headers.get('x-ratelimit-remaining-tokens') || '0');
     if (!isCached && totalTokens > 0) {
         remainingTokens -= totalTokens * modelFactor;
@@ -505,6 +505,10 @@ class Client {
         }
         if (response.headers.get('Content-Type').startsWith('application/json')) {
             const data = await response.json();
+            if (response.headers.get('x-pollen-cost')) {
+                data.usage = data.usage || {};
+                data.usage.pollen_cost = parseFloat(response.headers.get('x-pollen-cost'));
+            }
             this.logCallback && this.logCallback({response: data, type: 'image'});
             if (data?.error?.message) {
                 throw new Error(`Image generation failed: ${data.error.message}`);

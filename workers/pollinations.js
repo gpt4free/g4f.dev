@@ -12,9 +12,10 @@ const POLLINATIONS_TEXT_API = "https://text.pollinations.ai/openai";
 const POLLINATIONS_IMAGE_API = "https://image.pollinations.ai/prompt/{prompt}";
 const POLLINATIONS_MODELS_API = "https://gen.pollinations.ai/text/models";
 const POLLINATIONS_IMAGE_MODELS_API = "https://gen.pollinations.ai/image/models";
+const POLLINATIONS_FREE_MODELS_API = "https://image.pollinations.ai/models";
+const POLLINATIONS_ACCOUNT_BALANCE = "https://gen.pollinations.ai/account/balance"
 
 const POLLINATIONS_GEN_TEXT_API = "https://gen.pollinations.ai/v1/chat/completions";
-const POLLINATIONS_GEN_IMAGE_API = "https://gen.pollinations.ai/image/{prompt}";
 const POLLINATIONS_GEN_API = "https://gen.pollinations.ai";
 
 const MODEL_ALIASES = {
@@ -43,9 +44,15 @@ function resolveModel(model) {
 // the registry for 5 minutes because it is stable but does change occasionally.
 
 const PRICING_CACHE_TTL_MS = 5 * 60 * 1000;
+// `free` gets its own slot because the free-models endpoint returns an
+// array of plain strings (model names), not pricing objects. Sharing the
+// `text` slot would poison the text pricing cache for the TTL window and
+// make every subsequent chat completion report `pollen_pricing_available:
+// false` even for models that are listed in the text registry.
 const pricingCache = {
   text: { fetchedAt: 0, data: [] },
   image: { fetchedAt: 0, data: [] },
+  free: { fetchedAt: 0, data: [] },
 };
 
 async function fetchPricingRegistry(url) {
@@ -57,13 +64,13 @@ async function fetchPricingRegistry(url) {
 }
 
 async function getPricingRegistry(kind) {
-  const slot = kind === "image" ? pricingCache.image : pricingCache.text;
+  const slot = pricingCache[kind] || pricingCache.text;
   const now = Date.now();
   if (now - slot.fetchedAt < PRICING_CACHE_TTL_MS && slot.data.length) {
     return slot.data;
   }
   const url =
-    kind === "image" ? POLLINATIONS_IMAGE_MODELS_API : POLLINATIONS_MODELS_API;
+    kind === "image" ? POLLINATIONS_IMAGE_MODELS_API : kind === "free" ? POLLINATIONS_FREE_MODELS_API : POLLINATIONS_MODELS_API;
   try {
     const data = await fetchPricingRegistry(url);
     slot.data = Array.isArray(data) ? data : data.data || [];
@@ -271,129 +278,6 @@ function mergeUsage(a, b) {
     }
   }
   return merged;
-}
-
-/**
- * Extract usage data from any Response (streaming or not). For non-streaming
- * responses we just read the `x-usage-*` headers. For SSE streams without
- * those headers we buffer the body, scan each `data: {...}` line for a
- * `usage` field, and return a fresh Response whose body can still be
- * forwarded to the client. Returns `{ response, usage }`; the resolved
- * `response.body` is safe to forward.
- *
- * NOTE: streaming responses buffer the full body before returning. This
- * sacrifices per-chunk delivery but is unavoidable because cost headers must
- * be attached *before* the body starts. If the upstream already provides
- * `x-usage-*` headers, those are returned synchronously without buffering –
- * callers should forward the header-only response untouched.
- */
-async function extractUsageFromResponse(response) {
-  if (!response) return { response, usage: {} };
-
-  // Fast path: header usage is sufficient for non-streaming responses and for
-  // SSE responses that include `x-usage-*` trailers before the body.
-  const headerUsage = extractUsageFromHeaders(response.headers);
-  const contentType = response.headers.get("content-type") || "";
-  const isSSE = contentType.includes("text/event-stream");
-
-  if (!response.body || !isSSE) {
-    return { response, usage: headerUsage };
-  }
-
-  if (Object.keys(headerUsage).length) {
-    // Upstream already provided the canonical usage via headers – skip the
-    // body scan entirely so the SSE stream is forwarded unmodified.
-    return { response, usage: headerUsage };
-  }
-
-  // Streaming path: buffer the body, parse SSE lines as we go, capture the
-  // most recent `usage` object, and reconstruct a fresh Response whose body
-  // still contains the original SSE payload.
-  const chunks = [];
-  let textBuffer = "";
-  let capturedUsage = {};
-  let capturedModel = null;
-  let readFailed = false;
-
-  try {
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-
-    const consumeLine = (rawLine) => {
-      const line = rawLine.replace(/\r$/, "");
-      if (!line.startsWith("data:")) return;
-      const payload = line.slice(5).trim();
-      if (!payload || payload === "[DONE]") return;
-      let parsed;
-      try {
-        parsed = JSON.parse(payload);
-      } catch {
-        return;
-      }
-      if (!parsed || typeof parsed !== "object") return;
-      if (!capturedModel && typeof parsed.model === "string") {
-        capturedModel = parsed.model;
-      }
-      if (parsed.usage) {
-        capturedUsage = mergeUsage(
-          capturedUsage,
-          convertOpenAIUsageToHeadersShape(parsed.usage),
-        );
-      }
-    };
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      textBuffer += decoder.decode(value, { stream: true });
-
-      let newlineIndex;
-      while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-        const line = textBuffer.slice(0, newlineIndex);
-        textBuffer = textBuffer.slice(newlineIndex + 1);
-        consumeLine(line);
-      }
-    }
-
-    // Flush the decoder and parse any final partial line.
-    textBuffer += decoder.decode();
-    if (textBuffer.length) consumeLine(textBuffer);
-  } catch (err) {
-    // If body read fails (network drop, decoder error, etc.) we still want
-    // to forward whatever bytes we captured and surface no usage rather than
-    // blowing up the whole request.
-    readFailed = true;
-    console.log("extractUsageFromResponse: body read failed:", err.message);
-  }
-
-  // If we never managed to read a single chunk, fall back to the original
-  // response untouched so the client still gets the live stream.
-  if (readFailed && chunks.length === 0) {
-    return { response, usage: headerUsage };
-  }
-
-  const newHeaders = new Headers(response.headers);
-  if (capturedModel) newHeaders.set("x-model-used", capturedModel);
-
-  const bufferedResponse = new Response(
-    new ReadableStream({
-      start(controller) {
-        for (const chunk of chunks) controller.enqueue(chunk);
-        controller.close();
-      },
-    }),
-    {
-      status: response.status,
-      statusText: response.statusText,
-      headers: newHeaders,
-    },
-  );
-
-  return {
-    response: bufferedResponse,
-    usage: mergeUsage(headerUsage, capturedUsage),
-  };
 }
 
 /**
@@ -873,14 +757,27 @@ function wrapStreamResponse(originalResponse, body, costFields, resolvedModel, p
 /**
  * Handle GET /v1/models - List available models
  */
-async function handleListModels(request, env, free) {
+async function handleListModels(request, env, mode) {
   const models = [];
 
+  
   // Extract API key if provided
   const authHeader = request.headers.get("Authorization");
-  let apiKey = env.POLLINATIONS_API_KEY;
+  let providerKey;
   if (authHeader && authHeader.startsWith('Bearer ')) {
-    apiKey = authHeader.substring(7).split(/\s+/);
+    const tokens = authHeader.substring(7).split(/\s+/);
+    providerKey = tokens.find(t => t && !t.startsWith('g4f_'));
+  }
+
+  if (providerKey && ["free", "community"].includes(mode)) {
+    const balance = await fetch(POLLINATIONS_ACCOUNT_BALANCE, {
+      headers: {"Authorization": `Bearer ${providerKey}`}
+    }).then(r=>r.json()).then(r=>r.balance).catch(e=>0);
+    if (balance <= 1) {
+      mode = "free";
+    } else if (mode == "free") {
+      mode = null;
+    }
   }
 
   try {
@@ -890,11 +787,14 @@ async function handleListModels(request, env, free) {
       const textData = await textResponse.json();
       const textModels = textData.data || textData || [];
       for (const model of textModels) {
-        const costs = (model.pricing.promptTextTokens || 0) * 1e5
-        if (costs > 0.25) {
+        if (["free", "community"].includes(mode) && model.paid_only) {
           continue;
         }
-        if (free && model.paid_only) {
+        const costs = (model.pricing.promptTextTokens || 0) * 1e5;
+        if (mode == "free" && costs > 0) {
+          continue;
+        }
+        if (mode == "community" && costs > 0.25) {
           continue;
         }
         models.push({
@@ -908,16 +808,44 @@ async function handleListModels(request, env, free) {
       }
     }
 
+    // Fetch free models
+    const freeResponse = await getPricingRegistry("free");
+    if (freeResponse.length > 0) {
+      for (const model of freeResponse) {
+        models.push({
+          id: model,
+          object: "model",
+          created: 0,
+          owned_by: "pollinations",
+          free: true,
+          image: true,
+          title: model.toUpperCase()
+        });
+      }
+    }
+
     // Fetch image models
     const imageResponse = await fetch(POLLINATIONS_IMAGE_MODELS_API);
     if (imageResponse.ok) {
       const imageData = await imageResponse.json();
       for (const model of imageData) {
-        const costs = model.pricing.completionImageTokens * 5;
-        if (costs > 0.25) {
+        if (["free", "community"].includes(mode) && model.paid_only) {
           continue;
         }
-        if (free && model.paid_only) {
+        let costs = 0;
+        for (const [key, value] of Object.entries(model.pricing)) {
+          if (key == "currency") continue;
+          costs += parseFloat(value);
+        }
+        if (model.id.startsWith("gpt-image") || model.id.startsWith("gptimage")) {
+          costs = costs * 2000;
+        } else {
+          costs = costs * 10;
+        }
+        if (mode == "free" && costs > 0) {
+          continue;
+        }
+        if (mode == "community" && costs > 0.25) {
           continue;
         }
         const isVideo = model.output_modalities && model.output_modalities.includes('video');
@@ -938,55 +866,6 @@ async function handleListModels(request, env, free) {
   }
 
   //models.sort((a, b) => b.added_date - a.added_date);
-
-  return new Response(JSON.stringify({
-    object: "list",
-    data: models
-  }), {
-    headers: { "Content-Type": "application/json" }
-  });
-}
-
-/**
- * Handle GET /image/models - List available image models
- */
-async function handleListImageModels(request, env) {
-  const models = [];
-
-  // Extract API key if provided
-  const authHeader = request.headers.get("Authorization");
-  let apiKey = env.POLLINATIONS_API_KEY;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const tokens = authHeader.substring(7).split(/\s+/);
-    const providerKey = tokens.find(t => t && !t.startsWith('g4f_'));
-    if (providerKey) {
-      apiKey = providerKey;
-    }
-  }
-
-  const useGen = !!apiKey;
-  try {
-    // Fetch image models
-    const imageModelsUrl = useGen ? POLLINATIONS_GEN_IMAGE_MODELS_API : POLLINATIONS_IMAGE_MODELS_API;
-    const imageResponse = await fetch(imageModelsUrl);
-    if (imageResponse.ok) {
-      const imageData = await imageResponse.json();
-      for (const model of imageData) {
-        const modelName = model.name || model;
-        const isVideo = model.output_modalities && model.output_modalities.includes('video');
-        models.push({
-          id: modelName,
-          object: "model",
-          created: Math.floor(Date.now() / 1000),
-          owned_by: "pollinations",
-          image: !isVideo,
-          video: isVideo
-        });
-      }
-    }
-  } catch (e) {
-    console.log("Pollinations image models fetch failed:", e.message);
-  }
 
   return new Response(JSON.stringify({
     object: "list",
@@ -1094,9 +973,6 @@ async function handleChatCompletion(request, env, ctx) {
 
 /**
  * Handle POST /v1/images/generations - Image generation
- */
-/**
- * Handle POST /v1/images/generations - Image generation
  *
  * Uses the OpenAI-compatible `/v1/images/generations` endpoint on
  * gen.pollinations.ai when an API key is present (returns b64_json / url),
@@ -1136,8 +1012,10 @@ async function handleImageGeneration(request, env, ctx) {
     });
   }
 
+  const freeResponse = await getPricingRegistry("free");
+
   // Authenticated path: use the OpenAI-compatible endpoint on gen.pollinations.ai
-  if (apiKey) {
+  if (apiKey && body.model && !freeResponse.includes(body.model)) {
     const requestBody = {
       ...body,
       prompt: prompt,
@@ -1289,7 +1167,7 @@ export default {
       } else if (path.startsWith("/account/") && request.method === "GET") {
         response = await handlePath("account", path.substring("/account/".length), request, env);
       } else if (path.endsWith("/models") && request.method === "GET") {
-        response = await handleListModels(request, env, path.startsWith("/free/"));
+        response = await handleListModels(request, env, path.substring(1).split("/")[0]);
       } else if (path.endsWith("/quota") && request.method === "GET") {
         response = await handlePath("account", "balance", request, env);
       } else if (path.endsWith("/chat/completions") && request.method === "POST") {

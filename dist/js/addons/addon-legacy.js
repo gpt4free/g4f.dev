@@ -1680,7 +1680,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 const isAutomaticOrientation = appStorage.getItem("automaticOrientation") != "false";
                 const imageHeight = isAutomaticOrientation ? (window.innerHeight > window.innerWidth ? 832 : 480) : undefined;
                 const imageWidth = isAutomaticOrientation ? (window.innerHeight > window.innerWidth ? 480 : 832) : undefined;
-                const response = await client.images[method]({
+                const response = await window.client.images[method]({
                     model: selectedModel,
                     prompt: message,
                     ...(modelSeed && regenerate ? { seed: Math.floor(Date.now() / 1000) } : {}),
@@ -1691,6 +1691,9 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 });
                 if (!response.data) {
                     throw new Error(framework.translate("No image URL returned from the API."));
+                }
+                if (response.usage) {
+                    add_message_chunk({type: "usage", usage: response.usage}, message_id);
                 }
                 response.data.forEach(img => {
                     if (img.b64_json) {
@@ -1705,7 +1708,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 });
             } else if (isAudio) {
                 // Handle audio generation
-                const response = await client.chat.completions.create({
+                const response = await window.client.chat.completions.create({
                     model: selectedModel,
                     messages,
                 });
@@ -2331,7 +2334,8 @@ const load_conversation = async (conversation, append = false) => {
                     <div class="count">
                         ${countTokensEnabled ? count_words_and_tokens(
                             item.reasoning ? item.reasoning.text + text : text,
-                            next_provider?.model, completion_tokens, prompt_tokens
+                            next_provider?.model, completion_tokens, prompt_tokens,
+                            item.usage?.pollen_cost
                         ) : ""}
                         ${add_buttons.join("")}
                     </div>
@@ -2950,21 +2954,6 @@ function get_media_size(text) {
     return null;
 }
 
-function count_words_and_tokens(text, model, completion_tokens, prompt_tokens) {
-    if (Array.isArray(text) || !text) {
-        return "";
-    }
-    
-    // Check if the message contains media (image/video)
-    const mediaSize = get_media_size(text);
-    if (mediaSize !== null) {
-        // Show size instead of word/token count for media responses
-        return `(${formatFileSize(mediaSize)})`;
-    }
-    
-    text = filter_message(text);
-    return `(${count_words(text)} ${framework.translate('words')}, ${count_chars(text)} ${framework.translate('chars')}, ${completion_tokens ? completion_tokens : count_tokens(model, text, prompt_tokens)} ${framework.translate('tokens')})`;
-}
 function renderLargeMessage(container, content, chunkSize = 50) {
     if (content.length <= chunkSize * 100) {
         container.innerHTML = content;
@@ -5037,7 +5026,7 @@ async function handleToolCalls(toolCalls, messages, model, provider, message_id,
         // Make another API call with tool results
         controller_storage[message_id] = new AbortController();
         if (window.client) {
-            const stream = await client.chat.completions.create({
+            const stream = await window.client.chat.completions.create({
                 model: model,
                 messages: updatedMessages,
                 stream: true,
@@ -5619,7 +5608,6 @@ export default {
     count_chars,
     calculateBase64Size,
     get_media_size,
-    count_words_and_tokens,
     renderLargeMessage,
     count_input,
     load_follow_up_questions,
