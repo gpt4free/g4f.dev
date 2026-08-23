@@ -81,32 +81,6 @@ async function on_api() {
             optgroup.disabled = true;
         }
         providerSelect.appendChild(optgroup);
-        async function updateLiveProviderOptions() {
-            try {
-                Object.entries(await window.loadProviders()).forEach(([name, config]) => {
-                    if (name === "custom") {
-                        return; // Skip custom here, will be added separately
-                    }
-                    if (["together", "huggingface", "typegpt"].includes(name) && !appStorage.getItem(window.providerLocalStorage[name])) {
-                        return;
-                    }
-                    let option = document.createElement("option");
-                    if (config.is_hidden) {
-                        option.disabled = true;
-                    }
-                    option.value = name;
-                    option.dataset.live = "true";
-                    option.text = (config.label || name) + (config.tags ? ` ${config.tags} 🟢` : " 🟢");
-                    if (config.id) {
-                        option.dataset.serverId = config.id;
-                    }
-                    optgroup.appendChild(option);
-                });
-                providerSelect.value = "default";
-            } catch(e) {
-                add_error(e, true);
-            }
-        }
 
         // Add Custom Providers optgroup
         const customOptgroup = document.createElement("optgroup");
@@ -154,7 +128,7 @@ async function on_api() {
         }
 
         await Promise.all([
-            updateLiveProviderOptions(),
+            updateLiveProviderOptions(optgroup),
             loadCustomProvidersSelect(),
             loadPaProviderSelect(paOptgroup),
             loadCoreProvidersSelect()

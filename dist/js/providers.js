@@ -21,6 +21,18 @@ let providerClassMap = {
     "worker": Worker,
 };
 
+function mapProviderDefaults(providers) {
+    for (const provider of Object.values(providers)) {
+        if (provider.id && hiddenServers.includes(provider.id)) {
+            provider.is_hidden = true;
+        }
+        if (provider.id && serverDefaultModels[provider.id]) {
+            provider.defaultModel = serverDefaultModels[provider.id];
+        }
+    }
+    return providers;
+}
+
 async function loadProviders() {
     let data;
     if (typeof window !== "undefined" && window.fetch) {
@@ -39,7 +51,7 @@ async function loadProviders() {
                 serverDefaultModels = json.serverDefaultModels || {};
                 providerLocalStorage = json.providerLocalStorage || {};
                 hiddenServers = json.hiddenServers || [];
-                return providers;
+                return mapProviderDefaults(providers);
             });
     } else {
         // Node: read providers.json
@@ -49,16 +61,8 @@ async function loadProviders() {
         serverDefaultModels = data.serverDefaultModels || {};
         providerLocalStorage = data.providerLocalStorage || {};
         hiddenServers = data.hiddenServers || [];
+        return mapProviderDefaults(providers);
     }
-    for (const provider of Object.values(providers)) {
-        if (provider.id && hiddenServers.includes(provider.id)) {
-            provider.is_hidden = true;
-        }
-        if (provider.id && serverDefaultModels[provider.id]) {
-            provider.defaultModel = serverDefaultModels[provider.id];
-        }
-    }
-    return providers;
 }
 
 async function createClient(provider, options = {}) {

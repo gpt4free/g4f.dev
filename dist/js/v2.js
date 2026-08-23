@@ -1,5 +1,5 @@
 const v = "{{ v }}";
-const addons = [["framework", "core", "worker"], ["legacy", "init"], ["photoswipe", "host", "manager", "load"], ["api-worker", "voice-preview", "baked-credits", "highlight", "renderers", "mobile-experience", "ask", "messages", "ask-gpt", "conversations", "settings", "providers-ui", "providers-models", "mobile", "theme-manager"]];
+const addons = [["framework", "core", "worker"], ["legacy", "init"], ["photoswipe", "host", "manager", "load"], ["api-worker", "voice-preview", "baked-credits", "highlight", "renderers", "mobile-experience", "ask", "messages", "ask-gpt", "conversations", "settings", "providers-ui", "providers-models", "mobile", "theme-manager", "picker"]];
 
 window.domReady = new Promise((resolve) => {
     if (document.readyState === "loading") {

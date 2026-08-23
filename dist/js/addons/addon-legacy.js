@@ -769,6 +769,8 @@ const handle_ask = async (do_ask_gpt = true, message = null) => {
                 el.dataset.model
             ));
         } else {
+            // Reset the auto-fallback chain for each new user message
+            if (typeof window.resetFallback === 'function') window.resetFallback();
             await ask_gpt(message_id, -1, false, null, null, "next", message);
         }
     } else {
@@ -1127,6 +1129,11 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         const error_message = message.message || message.error;
         error_storage[message_id] = error_message;
         console.error(error_message);
+        // Auto-fallback to next provider/model if available
+        if (typeof window.tryNextProvider === 'function') {
+            const retried = await window.tryNextProvider(message_id, null, null, null);
+            if (retried) return;
+        }
         content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${error_message}`);
         
         // Show error popup with partner hints
@@ -1667,7 +1674,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
     });
     if (window.client) {
         const providerSelectOption = providerSelect.options[providerSelect.selectedIndex];
-        const selectedModel = get_selected_model() || client.defaultModel;
+        const selectedModel = get_selected_model() || window.client.defaultModel;
         const modelSeed = selectedOption?.dataset.seed;
         let providerLabel = providerSelectOption?.dataset.label || provider;
         const isAudio = selectedOption?.dataset.audio == "true";
@@ -1871,6 +1878,14 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             add_error(err, true);
             safe_remove_cancel_button();
             error_storage[message_id] = `${err.message || err}`;
+            // Auto-fallback to next provider/model if available.
+            // The fallback chain continues until no candidates remain;
+            // fallback.tried prevents retrying the same pair.
+            if (typeof window.tryNextProvider === 'function'
+                && action !== "continue") {
+                const retried = await window.tryNextProvider(message_id, messages, action, message);
+                if (retried) return;
+            }
             content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${error_storage[message_id]}`);
         } finally {
             await finish_message();
@@ -1920,6 +1935,11 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         }, Object.values(image_storage), message_id, finish_message);
     } catch (e) {
         add_error(e, true);
+        // Auto-fallback to next provider/model if available
+        if (typeof window.tryNextProvider === 'function'
+            && action !== "continue") {
+            await window.tryNextProvider(message_id, messages, action, message);
+        }
     }
 };
 
@@ -4061,8 +4081,8 @@ function setQuotaInfo(models, quota) {
         const providerInfo = quota.total > quota.offset ? `${quota.offset}/${quota.total} ${framework.translate("servers loaded ⚠️")}` : `${quota.total} ${framework.translate("servers loaded ✅")}`;
         models.unshift({id: "provider_info", label: providerInfo, disabled: true});
     }
-    if (!defaultModel && client && client.defaultModel) {
-        defaultModel = client.defaultModel;
+    if (!defaultModel && window.client && window.client.defaultModel) {
+        defaultModel = window.client.defaultModel;
         models.forEach((model) => {
             if ((model.model || model.id) == defaultModel) {
                 model.default = true;

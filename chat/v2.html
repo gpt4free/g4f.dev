@@ -678,6 +678,11 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                         </button>
                     </div>
                     <div class="field">
+                        <button id="open_picker" type="button" aria-label="Open provider and model picker" title="Browse all providers & models">
+                            <i class="fa-solid fa-table-list" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="field">
                         <label for="provider" class="sr-only">Select Provider</label>
                         <select name="provider" id="provider" aria-describedby="providerHelp">
                             <option value="AnyProvider">Provider: Auto</option>
@@ -709,6 +714,66 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
         <div class="hljs-iframe-container hidden" aria-hidden="true">
             <iframe class="hljs-iframe" title="Code syntax preview"></iframe>
         </div>
+
+        <!-- Provider & Model Picker Panel (mounted by addon-picker.js) -->
+        <div id="picker-overlay" class="picker-overlay hidden" aria-hidden="true"></div>
+        <aside id="picker-panel" class="picker-panel hidden" role="dialog" aria-modal="true" aria-labelledby="picker-title">
+            <header class="picker-header">
+                <h2 id="picker-title"><i class="fa-solid fa-table-list" aria-hidden="true"></i> Providers &amp; Models</h2>
+                <div class="picker-header-actions">
+                    <button id="picker_show_hidden" type="button" class="picker-show-hidden" aria-label="Show hidden and disabled providers" aria-pressed="false" title="Show hidden &amp; disabled providers">
+                        <i class="fa-solid fa-eye" aria-hidden="true"></i> Show hidden
+                    </button>
+                    <button id="picker_refresh" type="button" class="picker-icon-btn" aria-label="Refresh models" title="Refresh models">
+                        <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+                    </button>
+                    <button id="picker_close" type="button" class="picker-icon-btn" aria-label="Close panel" title="Close">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div class="picker-search-row">
+                <div class="picker-search-box">
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                    <input
+                      type="text"
+                      id="picker_search"
+                      placeholder="Search by model name (e.g. gpt-4, claude, gemini)..."
+                      autocomplete="off"
+                      autocapitalize="off"
+                      autocorrect="off"
+                      spellcheck="false"
+                      aria-label="Search models"
+                    />
+                    <button id="picker_clear" type="button" class="picker-clear-btn hidden" aria-label="Clear search">
+                        <i class="fa-solid fa-circle-xmark" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="picker-tags-row" id="picker_tags" role="group" aria-label="Filter by tags"></div>
+
+            <div class="picker-body">
+                <section class="picker-providers" aria-label="Providers">
+                    <h3 class="picker-section-title"><i class="fa-solid fa-server" aria-hidden="true"></i> Providers</h3>
+                    <div id="picker_providers" class="picker-providers-list"></div>
+                </section>
+                <section class="picker-models" aria-label="Models">
+                    <h3 class="picker-section-title">
+                        <i class="fa-solid fa-cubes" aria-hidden="true"></i> Models
+                        <span id="picker_count" class="picker-count">0</span>
+                    </h3>
+                    <div id="picker_models" class="picker-models-list"></div>
+                </section>
+            </div>
+
+            <footer class="picker-footer">
+                <div class="picker-detail" id="picker_detail">
+                    <span class="picker-detail-empty">Select a model to see base URL &amp; quick actions</span>
+                </div>
+            </footer>
+        </aside>
     </div>
 </body>
 </html>
