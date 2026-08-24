@@ -17,7 +17,7 @@
         permissions: ['net:fetch', 'storage:local', 'dom:write', 'dom:query'],
 
         load() {
-            return (async () => {})
+            return (async () => {})();
         }
     })
 })();
@@ -423,7 +423,7 @@ function setProviderModels(models, provider, quota=null) {
     modelSelect.innerHTML = '';
     const option = providerSelect.options[providerSelect.selectedIndex];
     if (option) option.text = option.text.replaceAll(" 🟢", "") + (quota ? " 🟢" : "");
-    function addOptions(group, models, search) {
+    function addOptions(group, models) {
         setQuotaInfo(models, quota);
         models.forEach((model, i) => {
             if (!model.models) {
@@ -451,7 +451,7 @@ function setProviderModels(models, provider, quota=null) {
             } else {
                 let optgroup = document.createElement('optgroup');
                 optgroup.label = model.group;
-                addOptions(optgroup, model.models, search);
+                addOptions(optgroup, model.models);
                 if (optgroup.childElementCount == 0) {
                     return;
                 }
@@ -460,7 +460,7 @@ function setProviderModels(models, provider, quota=null) {
         });
     }
     if (Array.isArray(models)) {
-        addOptions(modelSelect, models, search);
+        addOptions(modelSelect, models);
         if (models.length > 2) {
             const defaultModel = models.map(m => m.models?.find(m => m.default) || m).find(m => m.default)?.id;
             setFavoriteModels(provider, defaultModel);
@@ -594,6 +594,7 @@ addonsLoaded.then(() => {
         favorites[providerSelect?.value] = selected;
         appStorage.setItem("favorites", JSON.stringify(favorites));
     });
+    });
 });
 
 async function save_storage(settings=false) {
@@ -646,7 +647,7 @@ async function get_recognition_language() {
         }
         try {
             const prompt = 'Response the full locale in JSON. Example: {"locale": "en-US"} Language: ' + navigator.language
-            response = await framework.query(prompt, true);
+            const response = await framework.query(prompt, true);
             locale = (await response.json()).locale || navigator.language;
             if (locale.includes("-")) {
                 appStorage.setItem(navigator.language, locale);
@@ -752,4 +753,4 @@ export default {
     save_storage,
     get_recognition_language,
     stopRecognition
-};
+}

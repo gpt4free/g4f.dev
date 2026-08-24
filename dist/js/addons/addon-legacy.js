@@ -1084,7 +1084,6 @@ async function load_provider_parameters(provider) {
 }
 
 async function add_message_chunk(message, message_id, provider, finish_message=null) {
-    console.debug("Message chunk received:", message);
     const content_map = content_storage[message_id];
     if (message.type == "conversation") {
         const conversation = await get_conversation(window.conversation_id);
