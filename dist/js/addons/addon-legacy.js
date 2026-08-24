@@ -44,9 +44,6 @@ const microLabel        = document.querySelector(".micro-label");
 const inputCount        = document.getElementById("input-count").querySelector(".text");
 const providerSelect    = document.getElementById("provider");
 const modelSelect       = document.getElementById("model");
-const modelSearch       = document.getElementById("model-search");
-const modelSelector     = document.querySelector(".model-selector");
-const modelSuggestions  = document.getElementById('model-suggestions');
 const chatPrompt        = document.getElementById("chatPrompt");
 const settings          = document.querySelector(".settings");
 const settingsContent   = settings.querySelector(".settings-content") || settings.querySelector(".paper");
@@ -211,7 +208,6 @@ let lastUpdated = null;
 let mediaRecorder = null;
 let stopRecognition = ()=>{};
 let providerModelSignal = null;
-let searchModels = {};
 let client = null;
 let voicePreviewAudio = null;
 
@@ -1129,23 +1125,26 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
         const error_message = message.message || message.error;
         error_storage[message_id] = error_message;
         console.error(error_message);
+        content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${error_message}`);
+
+        if (finish_message) {
+            await finish_message();
+        }
+
+        let p = document.createElement("p");
+        p.innerText = error_message;
+        logContent && logContent?.appendChild(p);
+
+        await api("log", {...message, provider: provider_storage[message_id]});
+
         // Auto-fallback to next provider/model if available
         if (typeof window.tryNextProvider === 'function') {
             const retried = await window.tryNextProvider(message_id, null, null, null);
             if (retried) return;
         }
-        content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${error_message}`);
         
         // Show error popup with partner hints
         await showErrorPopup(error_message);
-        
-        if (finish_message) {
-            await finish_message();
-        }
-        let p = document.createElement("p");
-        p.innerText = error_message;
-        logContent && logContent?.appendChild(p);
-        await api("log", {...message, provider: provider_storage[message_id]});
     } else if (message.type == "preview") {
         let img;
         if (img = content_map.inner.querySelector("img")) {
@@ -1878,6 +1877,8 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             add_error(err, true);
             safe_remove_cancel_button();
             error_storage[message_id] = `${err.message || err}`;
+            content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${error_storage[message_id]}`);
+            await finish_message();
             // Auto-fallback to next provider/model if available.
             // The fallback chain continues until no candidates remain;
             // fallback.tried prevents retrying the same pair.
@@ -1886,10 +1887,9 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 const retried = await window.tryNextProvider(message_id, messages, action, message);
                 if (retried) return;
             }
-            content_map.inner.innerHTML += framework.markdown(`${framework.translate('**An error occurred:**')} ${error_storage[message_id]}`);
-        } finally {
-            await finish_message();
+            return;
         }
+        await finish_message();
         return;
     }
     try {
@@ -3702,9 +3702,7 @@ chatPrompt?.addEventListener("input", async () => {
 });
 function get_selected_model() {
     let model = null;
-    if (modelSearch && modelSearch.value) {
-        return modelSearch.value;
-    } else if (modelSelect.selectedIndex >= 0) {
+    if (modelSelect.selectedIndex >= 0) {
         model = modelSelect.options[modelSelect.selectedIndex];
     }
     return model?.value ? model.value : null;
@@ -5485,9 +5483,6 @@ export default {
     inputCount,
     providerSelect,
     modelSelect,
-    modelSearch,
-    modelSelector,
-    modelSuggestions,
     chatPrompt,
     settings,
     settingsContent,
@@ -5530,7 +5525,6 @@ export default {
     mediaRecorder,
     stopRecognition,
     providerModelSignal,
-    searchModels,
     client,
     voicePreviewAudio,
     appStorage,

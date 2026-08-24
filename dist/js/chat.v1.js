@@ -19,9 +19,7 @@ const microLabel        = document.querySelector(".micro-label");
 const inputCount        = document.getElementById("input-count").querySelector(".text");
 const providerSelect    = document.getElementById("provider");
 const modelSelect       = document.getElementById("model");
-const modelSearch       = document.getElementById("model-search");
-const modelSelector     = document.querySelector(".model-selector");
-const modelSuggestions  = document.getElementById('model-suggestions');
+// Old model search overlay removed — replaced by the picker addon
 const chatPrompt        = document.getElementById("chatPrompt");
 const settings          = document.querySelector(".settings");
 const settingsContent   = settings.querySelector(".settings-content") || settings.querySelector(".paper");
@@ -229,7 +227,6 @@ let lastUpdated = null;
 let mediaRecorder = null;
 let stopRecognition = ()=>{};
 let providerModelSignal = null;
-let searchModels = {};
 let client = null;
 let voicePreviewAudio = null;
 
@@ -3867,7 +3864,6 @@ async function load_providers(providers, provider_options, providersListContaine
     }
     load_provider_login_urls(providersListContainer, providers);
     await load_settings(provider_options);
-    loadModels(providers);
 }
 function load_provider_login_urls(providersListContainer, providers = []) {
     for (const provider of providers) {
@@ -4188,61 +4184,6 @@ async function on_api() {
                 document.body.classList.add("white");
             }
         });
-    }
-    const enableModelSearch = document.getElementById("enableModelSearch");
-    const searchProviderField = document.getElementById("searchProviderField");
-    const searchModelField = document.getElementById("searchModelField");
-    if (enableModelSearch) {
-        enableModelSearch.addEventListener('change', async (event) => {
-            appStorage.setItem("enableModelSearch", event.target.checked ? "true" : "false");
-            if (event.target.checked) {
-                document.getElementById("model_edit")?.parentElement.classList.remove("hidden");
-                if (searchProviderField) searchProviderField.style.display = "flex";
-                if (searchModelField) searchModelField.style.display = "flex";
-            } else {
-                document.getElementById("model_edit")?.parentElement.classList.add("hidden");
-                if (searchProviderField) searchProviderField.style.display = "none";
-                if (searchModelField) searchModelField.style.display = "none";
-                // Reset search UI if it was open
-                if (modelSelector && !modelSelector.classList.contains("hidden")) {
-                    providerSelect?.classList.remove("hidden");
-                    modelSelect?.classList.remove("hidden");
-                    modelSelector.classList.add("hidden");
-                }
-            }
-        });
-        if (appStorage.getItem("enableModelSearch") === "false") {
-            enableModelSearch.checked = false;
-            document.getElementById("model_edit")?.parentElement.classList.add("hidden");
-            if (searchProviderField) searchProviderField.style.display = "none";
-            if (searchModelField) searchModelField.style.display = "none";
-        } else {
-            enableModelSearch.checked = true;
-            if (searchProviderField) searchProviderField.style.display = "flex";
-            if (searchModelField) searchModelField.style.display = "flex";
-        }
-    }
-    const searchByProvider = document.getElementById("searchByProvider");
-    if (searchByProvider) {
-        searchByProvider.addEventListener('change', async (event) => {
-            appStorage.setItem("searchByProvider", event.target.checked ? "true" : "false");
-        });
-        if (appStorage.getItem("searchByProvider") !== "true") {
-            searchByProvider.checked = false;
-        } else {
-            searchByProvider.checked = true;
-        }
-    }
-    const searchByModel = document.getElementById("searchByModel");
-    if (searchByModel) {
-        searchByModel.addEventListener('change', async (event) => {
-            appStorage.setItem("searchByModel", event.target.checked ? "true" : "false");
-        });
-        if (appStorage.getItem("searchByModel") === "false") {
-            searchByModel.checked = false;
-        } else {
-            searchByModel.checked = true;
-        }
     }
     const liquid = document.getElementById("liquid");
     if (liquid) {
@@ -4717,9 +4658,7 @@ chatPrompt?.addEventListener("input", async () => {
 
 function get_selected_model() {
     let model = null;
-    if (modelSearch && modelSearch.value) {
-        return modelSearch.value;
-    } else if (modelSelect.selectedIndex >= 0) {
+    if (modelSelect.selectedIndex >= 0) {
         model = modelSelect.options[modelSelect.selectedIndex];
     }
     return model?.value ? model.value : null;
@@ -5310,103 +5249,6 @@ modelSelect.addEventListener("change", () => {
     favorites[providerSelect?.value] = selected;
     appStorage.setItem("favorites", JSON.stringify(favorites));
 });
-document.getElementById("model_edit")?.addEventListener("click", () => {
-    if (!modelSelector.classList.contains("hidden")) {
-        providerSelect.classList.remove("hidden");
-        modelSelect.classList.remove("hidden");
-        modelSelector.classList.add("hidden");
-        modelSearch.value = "";
-        return;
-    }
-    providerSelect.classList.add("hidden");
-    modelSelect.classList.add("hidden");
-    modelSelector.classList.remove("hidden");
-    modelSearch.focus()
-});
-modelSearch?.addEventListener('input', function() {
-  const searchTerm = this.value.toLowerCase();
-  modelSuggestions.innerHTML = '';
-
-  if (!searchTerm) return;
-
-  let matches = [];
-  
-  const selectedProvider = providerSelect.value;
-  const filterByProvider = selectedProvider && selectedProvider !== "AnyProvider";
-  const allowProviderMatch = appStorage.getItem("searchByProvider") === "true";
-  const allowModelMatch = appStorage.getItem("searchByModel") !== "false";
-
-  // Search across all models
-  for (const [provider, modelList] of Object.entries(searchModels)) {
-    if (filterByProvider && provider !== selectedProvider) continue;
-    if (!Array.isArray(modelList)) continue;
-    
-    const providerMatch = allowProviderMatch && provider.toLowerCase().includes(searchTerm);
-    
-    modelList.forEach(model => {
-      if (model.models) {
-        model.models.forEach(subModel => {
-          const modelMatch = allowModelMatch && subModel.model.toLowerCase().includes(searchTerm);
-          if (modelMatch || providerMatch) {
-            matches.push({ provider, model: subModel });
-          }
-        });
-      } else {
-        const modelStr = model.id || model;
-        const modelMatch = allowModelMatch && modelStr.toLowerCase().includes(searchTerm);
-        if (modelMatch || providerMatch) {
-          matches.push({ provider, model });
-        }
-      }
-    });
-  }
-
-  // Sort matches so that the currently selected provider is at the top
-  if (selectedProvider && selectedProvider !== "AnyProvider") {
-      matches.sort((a, b) => {
-          if (a.provider === selectedProvider && b.provider !== selectedProvider) return -1;
-          if (a.provider !== selectedProvider && b.provider === selectedProvider) return 1;
-          return 0;
-      });
-  }
-
-  // Limit matches to top 100 to prevent DOM rendering lag
-  const topMatches = matches.slice(0, 100);
-
-  // Display matches
-  topMatches.forEach(match => {
-    const div = document.createElement('div');
-    div.className = 'suggestion-item';
-    div.innerHTML = `
-      <strong>${match.model.id || match.model}</strong>
-      <span class="provider-tag">${match.provider}</span>
-    `;
-    div.addEventListener('click', async () => {
-      modelSearch.value = "";
-      providerSelect.value = match.provider;
-      await loadProviderModels();
-      modelSelect.value = match.model.id || match.model;
-      modelSelector.classList.add("hidden");
-      providerSelect.classList.remove("hidden");
-      modelSelect.classList.remove("hidden");
-      modelSuggestions.innerHTML = '';
-      console.log(`Selected model: ${match.model}`);
-    });
-    modelSuggestions.appendChild(div);
-  });
-});
-async function loadModels(providers) {
-    searchModels = await api('models');
-}
-
-// Close dropdown when clicking outside
-if (modelSuggestions)
-document.addEventListener('click', (e) => {
-  if (e.target !== modelSearch) {
-    modelSuggestions.innerHTML = '';
-  }
-});
-
 document.getElementById("pin").addEventListener("click", async () => {
     add_pinned(providerSelect?.value, get_selected_model());
 });

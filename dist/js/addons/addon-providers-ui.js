@@ -22,9 +22,6 @@
     })
 })();
 
-async function loadModels(providers) {
-    searchModels = await api('models');
-}
 
 const load_provider_option = (input, provider_name) => {
     if (input.checked) {
@@ -142,7 +139,6 @@ async function load_providers(providers, provider_options, providersListContaine
     }
     load_provider_login_urls(providersListContainer, providers);
     await load_settings(provider_options);
-    loadModels(providers);
 }
 function load_provider_login_urls(providersListContainer, providers = []) {
     for (const provider of providers) {

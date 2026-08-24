@@ -23,9 +23,7 @@
 })();
 function get_selected_model() {
     let model = null;
-    if (modelSearch && modelSearch.value) {
-        return modelSearch.value;
-    } else if (modelSelect.selectedIndex >= 0) {
+    if (modelSelect.selectedIndex >= 0) {
         model = modelSelect.options[modelSelect.selectedIndex];
     }
     return model?.value ? model.value : null;

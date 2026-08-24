@@ -324,21 +324,6 @@
                       <label for="darkMode" class="toogle" title="Toggle Dark Mode"></label>
                   </div>
                   <div class="field">
-                      <span class="label">Enable Model Search</span>
-                      <input type="checkbox" id="enableModelSearch" checked />
-                      <label for="enableModelSearch" class="toogle" title="Enable the model search overlay (pencil icon)"></label>
-                  </div>
-                  <div class="field" id="searchModelField" style="display: none; margin-left: 20px;">
-                      <span class="label">Search by Model</span>
-                      <input type="checkbox" id="searchByModel" checked />
-                      <label for="searchByModel" class="toogle" title="Enable searching for models by model name"></label>
-                  </div>
-                  <div class="field" id="searchProviderField" style="display: none; margin-left: 20px;">
-                      <span class="label">Search by Provider</span>
-                      <input type="checkbox" id="searchByProvider" />
-                      <label for="searchByProvider" class="toogle" title="Enable searching for models by provider name"></label>
-                  </div>
-                  <div class="field">
                       <span class="label">Enable Liquid Mode</span>
                       <input type="checkbox" id="liquid" checked />
                       <label for="liquid" class="toogle" title="Toggle Liquid Mode"></label>
@@ -660,25 +645,6 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                             <option value="" selected>Model: Default</option>
                         </select>
                         <small id="modelHelp" class="sr-only">Select AI model to use for conversations.</small>
-
-                        <div class="model-selector hidden" role="region" aria-label="Model search and suggestions">
-                            <div id="model-suggestions" class="suggestions-dropdown" aria-live="polite"></div>
-                            <input
-                              type="text"
-                              id="model-search"
-                              placeholder="Search models (e.g. 'gpt-4', 'claude')..."
-                              autocomplete="off"
-                              autocapitalize="off"
-                              autocorrect="off"
-                              spellcheck="false"
-                              aria-label="Search models"
-                            />
-                        </div>
-                    </div>
-                    <div class="field">
-                        <button id="model_edit" type="button" aria-label="Edit model settings">
-                            <i class="fa-solid fa-edit" aria-hidden="true"></i>
-                        </button>
                     </div>
                     <div class="field">
                         <label for="provider" class="sr-only">Select Provider</label>

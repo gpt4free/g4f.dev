@@ -695,39 +695,111 @@ const apiExport = {};
     const FETCH_TIMEOUT = 8000;   // 8s per attempt
     const FETCH_RETRIES = 0;      // 2 retries = 3 total attempts
 
-    // In-memory model cache keyed by request URL.
-    // Survives across loadAll() calls within the TTL so re-opening the
-    // picker is instant. Cleared by refresh() and on unload.
-    // Also persisted to sessionStorage so a page reload doesn't trigger
-    // a full re-fetch of every provider's model list.
-    const MODEL_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-    const SESSION_CACHE_KEY = 'picker_model_cache';
-    const modelCache = new Map(); // url -> { data, expires }
+    // ------------------------------------------------------------------
+    // IndexedDB-backed persistent cache.
+    // Replaces sessionStorage/localStorage (which have ~5MB quotas and
+    // throw QuotaExceededError on the full provider+model list).
+    // IndexedDB has much larger limits (50MB–unlimited).
+    // ------------------------------------------------------------------
+    const IDB_NAME = 'g4f_picker_cache';
+    const IDB_VERSION = 1;
+    const IDB_STORE = 'cache'; // single object store, keyed by name
+    const MODEL_CACHE_TTL = 60 * 60 * 1000;       // 1 hour
+    const PROVIDER_CACHE_TTL = 60 * 60 * 1000;    // 1 hour
 
-    // Restore persisted cache from sessionStorage on init
-    try {
-        const saved = sessionStorage.getItem(SESSION_CACHE_KEY);
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            if (parsed && typeof parsed === 'object') {
+    let idbReady = null; // Promise<IDDatabase | null>
+
+    function openIDB() {
+        if (idbReady) return idbReady;
+        idbReady = new Promise((resolve) => {
+            if (typeof indexedDB === 'undefined') { resolve(null); return; }
+            try {
+                const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+                req.onupgradeneeded = () => {
+                    const db = req.result;
+                    if (!db.objectStoreNames.contains(IDB_STORE)) {
+                        db.createObjectStore(IDB_STORE);
+                    }
+                };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => resolve(null);
+            } catch (e) { resolve(null); }
+        });
+        return idbReady;
+    }
+
+    function idbGet(key) {
+        return openIDB().then(db => {
+            if (!db) return null;
+            return new Promise((resolve) => {
+                try {
+                    const tx = db.transaction(IDB_STORE, 'readonly');
+                    const req = tx.objectStore(IDB_STORE).get(key);
+                    req.onsuccess = () => resolve(req.result || null);
+                    req.onerror = () => resolve(null);
+                } catch (e) { resolve(null); }
+            });
+        });
+    }
+
+    function idbSet(key, value) {
+        return openIDB().then(db => {
+            if (!db) return false;
+            return new Promise((resolve) => {
+                try {
+                    const tx = db.transaction(IDB_STORE, 'readwrite');
+                    tx.objectStore(IDB_STORE).put(value, key);
+                    tx.oncomplete = () => resolve(true);
+                    tx.onerror = () => resolve(false);
+                } catch (e) { resolve(false); }
+            });
+        });
+    }
+
+    function idbClear() {
+        return openIDB().then(db => {
+            if (!db) return false;
+            return new Promise((resolve) => {
+                try {
+                    const tx = db.transaction(IDB_STORE, 'readwrite');
+                    tx.objectStore(IDB_STORE).clear();
+                    tx.oncomplete = () => resolve(true);
+                    tx.onerror = () => resolve(false);
+                } catch (e) { resolve(false); }
+            });
+        });
+    }
+
+    // In-memory model cache (hot path, synchronous reads).
+    // Hydrated from IndexedDB on init; writes go to both.
+    const modelCache = new Map(); // url -> { data, expires }
+    const MODEL_CACHE_KEY = 'models';
+    let modelCacheHydrated = false;
+
+    // Restore persisted model cache from IndexedDB into memory (async, fire-and-forget)
+    (async () => {
+        try {
+            const saved = await idbGet(MODEL_CACHE_KEY);
+            if (saved && typeof saved === 'object') {
                 const now = Date.now();
-                for (const [url, entry] of Object.entries(parsed)) {
+                for (const [url, entry] of Object.entries(saved)) {
                     if (entry && entry.expires > now) {
                         modelCache.set(url, entry);
                     }
                 }
             }
-        }
-    } catch (e) { /* corrupt or unavailable — start fresh */ }
+        } catch (e) { /* corrupt — start fresh */ }
+        modelCacheHydrated = true;
+    })();
 
-    function persistCache() {
+    async function persistModelCache() {
         try {
             const obj = {};
             for (const [url, entry] of modelCache.entries()) {
                 obj[url] = entry;
             }
-            sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(obj));
-        } catch (e) { /* quota exceeded — keep in-memory only */ }
+            await idbSet(MODEL_CACHE_KEY, obj);
+        } catch (e) { /* keep in-memory only */ }
     }
 
     function getCachedModels(url) {
@@ -741,12 +813,40 @@ const apiExport = {};
 
     function setCachedModels(url, data) {
         modelCache.set(url, { data, expires: Date.now() + MODEL_CACHE_TTL });
-        persistCache();
+        persistModelCache(); // fire-and-forget
     }
 
-    function clearModelCache() {
+    async function clearModelCache() {
         modelCache.clear();
-        try { sessionStorage.removeItem(SESSION_CACHE_KEY); } catch (e) {}
+        await idbClear();
+    }
+
+    // Providers cache (full state.providers array) — read/written via IndexedDB.
+    const PROVIDER_CACHE_KEY = 'providers';
+
+    async function getCachedProviders() {
+        try {
+            const entry = await idbGet(PROVIDER_CACHE_KEY);
+            if (entry && entry.expires > Date.now() && Array.isArray(entry.data)) {
+                return entry.data;
+            }
+        } catch (e) {}
+        return null;
+    }
+
+    // One-time migration: remove legacy localStorage/sessionStorage keys
+    // that caused QuotaExceededError. Fire-and-forget.
+    (async () => {
+        try {
+            localStorage.removeItem('picker_providers');
+            sessionStorage.removeItem('picker_model_cache');
+        } catch (e) {}
+    })();
+
+    async function setCachedProviders(providers) {
+        try {
+            await idbSet(PROVIDER_CACHE_KEY, { data: providers, expires: Date.now() + PROVIDER_CACHE_TTL });
+        } catch (e) {}
     }
 
     async function fetchWithRetry(url, headers, label) {
@@ -825,12 +925,25 @@ const apiExport = {};
         return '⭐';
     }
 
+    async function loadProvidersState(allEntry) {
+        state.providers.unshift(allEntry);
+        state.loaded = true;
+        state.activeProvider = '__all__';
+        renderProviders();
+        renderTags();
+        renderModels();
+    }
+
     async function loadAll() {
         const r = refs();
         if (!r.refreshBtn) return;
         r.refreshBtn.classList.add('spinning');
         try {
             state.providers = [];
+            const cachedProviders = await getCachedProviders();
+            if (Array.isArray(cachedProviders) && cachedProviders.length > 0) {
+                await loadProvidersState(cachedProviders);
+            }
             const seen = new Set();
 
             // "All Providers" pseudo-entry — collects models from all visible providers
@@ -901,9 +1014,6 @@ const apiExport = {};
             } catch (e) {
                 console.warn('Picker: failed to load models index', e);
             }
-            if (Object.keys(allModels).length === 0 && window.searchModels) {
-                allModels = window.searchModels;
-            }
 
             for (const [name, config] of Object.entries(providerConfigs || {})) {
                 if (seen.has(name)) continue;
@@ -915,6 +1025,7 @@ const apiExport = {};
                 }
                 seen.add(name);
                 const isHidden = !!config.is_hidden;
+                if (isHidden && !state.showHidden) continue;
                 const isDisabled = isProviderDisabled(name);
                 // Live providers fetch models on-demand via api('models', providerName)
                 let models = await fetchLiveProviderModels(config.backupUrl || config.baseUrl || name);
@@ -1003,7 +1114,8 @@ const apiExport = {};
                 }
             }
             for (const server of customServers) {
-                if (server.is_offline || server.is_ollama) continue; // skip offline or hidden servers
+                if (server.is_offline || server.is_ollama) continue;
+                if (server.is_hidden && !state.showHidden) continue;
                 const srvName = `custom:${server.id}`;
                 if (seen.has(srvName)) continue;
                 seen.add(srvName);
@@ -1018,6 +1130,7 @@ const apiExport = {};
                 const isDisabled = !isEnabled;
                 let models = await fetchLiveProviderModels(srvName);
                 models = normalizeModels(models, srvName);
+                if (models.length === 0) continue;
                 const label = server.label || server.id;
                 state.providers.push({
                     name: srvName,
@@ -1062,6 +1175,7 @@ const apiExport = {};
                     const isDisabled = isProviderDisabled(paName);
                     // PA models come from p.models directly (not the models API)
                     const models = normalizeModels(p.models || [], paName);
+                    if (models.length === 0) continue;
                     state.providers.push({
                         name: paName,
                         label: p.label || p.id,
@@ -1078,36 +1192,10 @@ const apiExport = {};
                 }
             }
 
-            // ----------------------------------------------------------
-            // 4. Providers present in the bulk model index but not yet added
-            //    (e.g. legacy / non-live providers returned by api('models'))
-            // ----------------------------------------------------------
-            // for (const [name, modelList] of Object.entries(allModels || {})) {
-            //     if (name === 'default' || seen.has(name)) continue;
-            //     seen.add(name);
-            //     const isDisabled = isProviderDisabled(name);
-            //     const models = normalizeModels(modelList, name);
-            //     state.providers.push({
-            //         name,
-            //         label: name,
-            //         tags: '',
-            //         baseUrl: '',
-            //         backupUrl: '',
-            //         models,
-            //         type: 'index',
-            //         isHidden: false,
-            //         isDisabled,
-            //         marker: '',
-            //     });
-            //     if (!isDisabled) allEntry.models = allEntry.models.concat(models);
-            // }
-
-            state.providers.unshift(allEntry);
-            state.loaded = true;
-            state.activeProvider = '__all__';
-            renderProviders();
-            renderTags();
-            renderModels();
+            await setCachedProviders(allEntry);
+            if (!Array.isArray(cachedProviders) || cachedProviders.length <= 0) {
+                await loadProvidersState(allEntry);
+            }
         } catch (e) {
             console.error('Picker: failed to load', e);
             notify('Picker: failed to load providers', 'error');
@@ -1320,7 +1408,7 @@ const apiExport = {};
         const metaParts = [];
         if (m.provider) metaParts.push(m.provider);
         if (m.type && m.type !== 'chat') metaParts.push(m.type);
-        if (m.total_cost) metaParts.push(`${m.total_cost.toFixed(3).replace(/0$/, '')}$`);
+        if (m.cost_label) metaParts.push(m.cost_label);
         row.innerHTML = `
             <div class="picker-model-main">
                 <div class="picker-model-name">${escapeHtml(m.label || m.id)}</div>
@@ -1423,16 +1511,8 @@ const apiExport = {};
                         notify(`Selected ${modelId} on ${providerName}`, 'success');
                         close(); // close the picker panel after successful selection
                     } else {
-                        // Model not in the provider's list — fall back to model search
-                        const modelSearch = document.getElementById('modelSearch');
-                        if (modelSearch) {
-                            modelSearch.value = modelId;
-                            modelSearch.dispatchEvent(new Event('input'));
-                            notify(`Provider set to ${providerName}; using model search for ${modelId}`, 'info');
-                            close();
-                        } else {
-                            notify(`Provider set to ${providerName}; model ${modelId} not in list`, 'info');
-                        }
+                        // Model not in the provider's list — notify the user
+                        notify(`Provider set to ${providerName}; model ${modelId} not in list`, 'info');
                     }
                 } else {
                     notify(`Provider ${providerName} not available in dropdown`, 'info');
@@ -1478,48 +1558,29 @@ const apiExport = {};
     // Build an ordered list of candidate {provider, model} pairs from the
     // picker's loaded providers. Excludes disabled/hidden providers and
     // already-tried pairs. Returns [] if the picker hasn't loaded.
-    function buildFallbackCandidates() {
+    function buildFallbackCandidates(failedProvider, failedModel) {
         if (!state.loaded || !state.providers.length) return [];
+        const normalizedFailedModel = normalizeModelId(failedModel);
         const candidates = [];
         for (const prov of state.providers) {
             if (prov.name === '__all__') continue;
             if (prov.isDisabled || prov.isHidden) continue;
             if (!prov.models || !prov.models.length) continue;
             for (const m of prov.models) {
-                const key = `${prov.name}/${m.id || m.label}`;
-                if (fallback.tried.has(key)) continue;
-                candidates.push({ provider: prov.name, model: m.id || m.label, key });
+                const normalizedModelId = normalizeModelId(m.id);
+                if (normalizedModelId.includes(normalizedFailedModel)) {
+                    const key = `${prov.name}/${m.id || m.label}`;
+                    if (fallback.tried.has(key)) continue;
+                    candidates.push({ provider: prov.name, model: m.id, key });
+                }
             }
         }
         return candidates;
     }
 
-    // Find the next candidate AFTER the just-failed provider/model in the
-    // picker's ordered list. This walks forward through the list instead of
-    // always jumping back to the first model (which is often the "default").
-    // Falls back to the first untried candidate if the failed pair isn't
-    // found in the list (e.g. it came from a provider not in the picker).
-    function buildFallbackCandidatesAfter(failedProvider, failedModel) {
-        if (!state.loaded || !state.providers.length) return [];
-        const all = [];
-        for (const prov of state.providers) {
-            if (prov.name === '__all__') continue;
-            if (prov.isDisabled || prov.isHidden) continue;
-            if (!prov.models || !prov.models.length) continue;
-            for (const m of prov.models) {
-                const key = `${prov.name}/${m.id || m.label}`;
-                all.push({ provider: prov.name, model: m.id || m.label, key });
-            }
-        }
-        // Find the position of the failed pair
-        const failedKey = `${failedProvider}/${failedModel}`;
-        const failedIdx = all.findIndex(c => c.key === failedKey);
-        if (failedIdx >= 0 && failedIdx + 1 < all.length) {
-            // Return everything after the failed pair, filtered by tried-set
-            return all.slice(failedIdx + 1).filter(c => !fallback.tried.has(c.key));
-        }
-        // Failed pair not in list (or it was last) — return all untried
-        return all.filter(c => !fallback.tried.has(c.key));
+    function normalizeModelId(modelId) {
+        if (!modelId) return '';
+        return String(modelId).split("/").pop().replaceAll(".", "-").trim().toLowerCase();
     }
 
     // Record that a provider/model pair was attempted (so we don't retry it).
@@ -1552,6 +1613,8 @@ const apiExport = {};
             fallback.active = false;
             return false;
         }
+        // Reload the conversation to flush any partial responses from the failed provider/model
+        await load_conversation(window.conversation_id);
         // Mark the just-failed provider/model as tried
         const providerSelect = document.getElementById('provider');
         const modelSelect = document.getElementById('model');
@@ -1563,7 +1626,7 @@ const apiExport = {};
         // Build candidates starting AFTER the just-failed pair, so we
         // advance through the picker's list instead of jumping back to
         // the first (default) model.
-        const candidates = buildFallbackCandidatesAfter(failedProvider, failedModel);
+        const candidates = buildFallbackCandidates(failedProvider, failedModel);
         if (!candidates.length) {
             fallback.active = false;
             return false;

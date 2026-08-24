@@ -167,61 +167,6 @@ async function on_api() {
             }
         });
     }
-    const enableModelSearch = document.getElementById("enableModelSearch");
-    const searchProviderField = document.getElementById("searchProviderField");
-    const searchModelField = document.getElementById("searchModelField");
-    if (enableModelSearch) {
-        enableModelSearch.addEventListener('change', async (event) => {
-            appStorage.setItem("enableModelSearch", event.target.checked ? "true" : "false");
-            if (event.target.checked) {
-                document.getElementById("model_edit")?.parentElement.classList.remove("hidden");
-                if (searchProviderField) searchProviderField.style.display = "flex";
-                if (searchModelField) searchModelField.style.display = "flex";
-            } else {
-                document.getElementById("model_edit")?.parentElement.classList.add("hidden");
-                if (searchProviderField) searchProviderField.style.display = "none";
-                if (searchModelField) searchModelField.style.display = "none";
-                // Reset search UI if it was open
-                if (modelSelector && !modelSelector.classList.contains("hidden")) {
-                    providerSelect?.classList.remove("hidden");
-                    modelSelect?.classList.remove("hidden");
-                    modelSelector.classList.add("hidden");
-                }
-            }
-        });
-        if (appStorage.getItem("enableModelSearch") === "false") {
-            enableModelSearch.checked = false;
-            document.getElementById("model_edit")?.parentElement.classList.add("hidden");
-            if (searchProviderField) searchProviderField.style.display = "none";
-            if (searchModelField) searchModelField.style.display = "none";
-        } else {
-            enableModelSearch.checked = true;
-            if (searchProviderField) searchProviderField.style.display = "flex";
-            if (searchModelField) searchModelField.style.display = "flex";
-        }
-    }
-    const searchByProvider = document.getElementById("searchByProvider");
-    if (searchByProvider) {
-        searchByProvider.addEventListener('change', async (event) => {
-            appStorage.setItem("searchByProvider", event.target.checked ? "true" : "false");
-        });
-        if (appStorage.getItem("searchByProvider") !== "true") {
-            searchByProvider.checked = false;
-        } else {
-            searchByProvider.checked = true;
-        }
-    }
-    const searchByModel = document.getElementById("searchByModel");
-    if (searchByModel) {
-        searchByModel.addEventListener('change', async (event) => {
-            appStorage.setItem("searchByModel", event.target.checked ? "true" : "false");
-        });
-        if (appStorage.getItem("searchByModel") === "false") {
-            searchByModel.checked = false;
-        } else {
-            searchByModel.checked = true;
-        }
-    }
     const liquid = document.getElementById("liquid");
     if (liquid) {
         liquid.addEventListener('change', async (event) => {
