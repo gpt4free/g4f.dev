@@ -88,7 +88,7 @@ var CORS_HEADERS = {
   "Access-Control-Allow-Credentials": "true",
   "Access-Control-Allow-Methods": "GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key, x-user, x-ignored, x-secret, x-recognition-language, if-none-match",
-  "Access-Control-Expose-Headers": "Content-Type, X-User-Id, X-User-Tier, X-Provider, X-Model, X-Server, X-Url, X-Usage-Total-Tokens, X-Stream, X-Ratelimit-Model-Factor, X-Ratelimit-Remaining-Requests, X-Ratelimit-Remaining-Tokens, X-Ratelimit-Limit-Requests, X-Ratelimit-Limit-Tokens, X-Usage-Prompt-Tokens"
+  "Access-Control-Expose-Headers": "Content-Type, X-User-Id, X-User-Tier, X-Provider, X-Model, X-Server, X-Url, X-Usage-Total-Tokens, X-Stream, X-Ratelimit-Model-Factor, X-Ratelimit-Remaining-Requests, X-Ratelimit-Remaining-Tokens, X-Ratelimit-Limit-Requests, X-Ratelimit-Limit-Tokens, X-Usage-Prompt-Tokens, X-Pollen-Cost"
 };
 var EXTRA_HEADERS = {
   "HTTP-Referer": "https://g4f.dev",
@@ -126,6 +126,7 @@ var URL_MAP = {
   "https://gen.pollinations.ai/v1/quota": "https://gen.pollinations.ai/account/balance",
   "https://pollinations.g4f-dev.workers.dev/quota": "https://gen.pollinations.ai/account/balance",
   "https://pollinations.g4f-dev.workers.dev/free/quota": "https://gen.pollinations.ai/account/balance",
+  "https://pollinations.g4f-dev.workers.dev/community/quota": "https://gen.pollinations.ai/account/balance",
   "https://puter.g4f-dev.workers.dev/quota": "https://api.puter.com/metering/usage",
   "https://router.huggingface.co/v1/quota": "https://huggingface.co/api/whoami-v2"
 }
@@ -247,7 +248,37 @@ var BLOCKED_USERS = [
 ];
 var GPT_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "marin", "cedar", "amuch", "dan", "elan", "breeze", "cove", "ember", "fathom", "glimmer", "harp", "juniper", "maple", "orbit", "vale"];
 function getDefaultModel(s) {
-  return DEFAULT_MODELS[s.id] || s.allowed_models.find(m=>["auto", "openai", "FreeModel"].includes(m) || m.endsWith("/free")) || s.allowed_models[0] || null
+  let defaultModel = DEFAULT_MODELS[s.id];
+  if (s.allowed_models.includes(defaultModel)) {
+    return defaultModel;
+  }
+  defaultModel = s.allowed_models.find(m=>["auto", "openai-fast", "FreeModel", "big-pickle"].includes(m) || m.endsWith("/free"));
+  if (defaultModel) {
+    return defaultModel;
+  }
+  defaultModel = s.allowed_models.find(m=>m.toLowerCase().replaceAll(".", "-").endsWith("glm-5-2"));
+  if (defaultModel) {
+    return defaultModel;
+  }
+  return s.allowed_models.length > 0 ? s.allowed_models[0] : null;
+}
+async function getCachedBodyRequest(request, pathname, bodyHash, rateCheck, user) {
+    const postCacheKey = `POST:${pathname.replace("/quota", "/chat/completions")}:body:${bodyHash}`;
+    const cachedResponse = await getCachedResponse(request, postCacheKey);
+    if (cachedResponse) {
+      const newResponse = new Response(cachedResponse.body, cachedResponse);
+      newResponse.headers.set("X-Cache", "HIT");
+      if (user) {
+        newResponse.headers.set("X-User-Id", user.id);
+        newResponse.headers.set("X-User-Tier", user.tier);
+      }
+      if (rateCheck) {
+        updateResponsefromRateCheck(newResponse, rateCheck);
+      }
+      return newResponse;
+    }
+    // Stash the body hash so handleProxyToServer can cache the response
+    request._postBodyHash = bodyHash;
 }
 async function safe(request, env, ctx) {
     const url = new URL(request.url);
@@ -258,7 +289,7 @@ async function safe(request, env, ctx) {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS });
     }
-    if (["/", "/chat", "/chat/", "/playground", "/playground/", "/docs"].includes(pathname) && request.method != "POST") {
+    if (["/", "/chat", "/chat/", "/playground", "/playground/"].includes(pathname) && request.method != "POST") {
       return Response.redirect(`https://g4f.dev${pathname}`, 302);
     }
     if (pathname == "/api/audio/models") {
@@ -304,6 +335,12 @@ async function safe(request, env, ctx) {
         }));
         currentRequestContext.skipErrorLog = true;
         return jsonResponse({ error: "User error: " + error.message || "Internal server error" }, 500);
+    }
+    if ((userProvidedKey || (user && user.pollinations?.api_key)) && pathname == "/api/pollinations/models") {
+      return fetch("https://pollinations.g4f-dev.workers.dev/models", {headers: {"Authorization": `Bearer ${userProvidedKey || user.pollinations?.api_key}`}});
+    }
+    if ((userProvidedKey || (user && user.pollinations?.api_key)) && pathname == "/api/pollinations/quota") {
+      return fetch("https://gen.pollinations.ai/account/balance", {headers: {"Authorization": `Bearer ${userProvidedKey || user.pollinations?.api_key}`}});
     }
     try {
     let rateCheck;
@@ -375,28 +412,17 @@ async function safe(request, env, ctx) {
       // POST /v1/chat/completions and /chat/completions: cache non-streaming
       // responses by body hash so repeated test prompts (ping, hello, test)
       // return the same cached result without hitting the upstream server.
-      if (!(request.headers.get("cache-control") || "").includes("no-cache")
-          && !userProvidedKey && request.method === "POST"
+      if ( // !(request.headers.get("cache-control") || "").includes("no-cache") &&
+        !userProvidedKey && request.method === "POST"
           && (pathname === "/v1/chat/completions" || pathname === "/chat/completions"
               || pathname.match(/\/chat\/completions$/))) {
-        const bodyHash = await generatePostBodyHash(request);
+        const body = await request.clone().json();
+        const bodyHash = await generatePostBodyHash(body);
         if (bodyHash) {
-          const postCacheKey = `POST:${pathname}:body:${bodyHash}`;
-          const cachedResponse = await getCachedResponse(request, postCacheKey);
+          const cachedResponse = await getCachedBodyRequest(request, pathname, bodyHash, rateCheck, user);
           if (cachedResponse) {
-            const newResponse = new Response(cachedResponse.body, cachedResponse);
-            newResponse.headers.set("X-Cache", "HIT");
-            if (user) {
-              newResponse.headers.set("X-User-Id", user.id);
-              newResponse.headers.set("X-User-Tier", user.tier);
-            }
-            if (rateCheck) {
-              updateResponsefromRateCheck(newResponse, rateCheck);
-            }
-            return newResponse;
+            return cachedResponse
           }
-          // Stash the body hash so handleProxyToServer can cache the response
-          request._postBodyHash = bodyHash;
         }
       }
       if (user) {
@@ -516,7 +542,7 @@ async function safe(request, env, ctx) {
           }
         }, 403);
       }
-      if (!userProvidedKey && ["/", "/v1", "/v1/chat/completions", "/chat/completions"].includes(pathname)) {
+      if (!userProvidedKey && ["/v1/chat/completions", "/chat/completions"].includes(pathname) || (["/", "/v1"].includes(pathname) && request.method == "POST")) {
         return handleV1ChatCompletions(request, env, ctx, pathname, user, cacheKey, rateCheck);
       }
       if (pathname === "/backend-api/v2/conversation") {
@@ -554,6 +580,18 @@ async function safe(request, env, ctx) {
           }
         }
         return handleProxyToServer(request, env, ctx, server, "/chat/completions", cacheKey, user, target, userProvidedKey, rateCheck, null, serverLabel == "log");
+      }
+      if (pathname.match(/^\/custom\/[^/]+\/validate$/)) {
+        const serverId = pathname.split("/")[2];
+        let server = await getServerById(env, serverId, user);
+        if (!server) {
+          return jsonResponse({ error: "Server not found" }, 404);
+        }
+        const result = await validateServer(server.base_url, server.api_keys);
+        server.allowed_models = result.models || server.allowed_models;
+        result.default_model = getDefaultModel(server);
+        result.test_result = await isOnline(result.base_url, server.api_keys, result.default_model)
+        return jsonResponse(result);
       }
       if (pathname.startsWith("/custom/") && pathname.split("/").length >= 3) {
         const parts = pathname.split("/");
@@ -723,7 +761,10 @@ async function handleListServers(request, env, user) {
     servers = user.custom_servers || [];
   }
   if (user && user.tier == "admin") {
-    servers.forEach(s=>{s.api_key_count=(s.api_keys || "").split("\n").filter((k) => k.trim()).length});
+    servers.forEach(s=>{
+      s.api_key_count=(s.api_keys || "").split("\n").filter((k) => k.trim()).length;
+      s.is_hidden = HIDDEN_SERVERS.includes(s.id);
+    });
     return jsonResponse({ servers: servers });
   }
   const safeServers = servers.map((s) => ({
@@ -731,6 +772,7 @@ async function handleListServers(request, env, user) {
     label: s.label,
     base_url: s.base_url,
     is_public: s.is_public,
+    is_hidden: HIDDEN_SERVERS.includes(s.id),
     allowed_models: s.allowed_models,
     api_key_count: (s.api_keys || "").split("\n").filter((k) => k.trim()).length,
     created_at: s.created_at,
@@ -999,14 +1041,16 @@ async function handleUpdatePublicServers(request, env, user, ctx, cacheKey) {
   for (const s of publicServers) {
     const updated_at = new Date(s.updated_at);
     updated_at.setHours(updated_at.getHours() + 1)
-    if (new Date() > updated_at || !("test" in s) || !s.test) {
+    if (new Date() > updated_at || !("test" in s)) {
       s.updated_at = new Date().toISOString();
-      s.test = true;
+      s.is_hidden = HIDDEN_SERVERS.includes(s.id);
+      try {
+        s.is_ollama = await isOllama(s.base_url);
+      } catch(e) {console.error(e)}
       try {
         const fullServer = await getServerById(env, s.id, user);
-        const validationResult = await validateServer(fullServer.base_url, fullServer.api_keys);
+        const validationResult = await validateServer(fullServer.base_url, fullServer.api_keys, getDefaultModel(fullServer));
         if (validationResult.valid) {
-          s.is_online = true;
           s.auto_update_models = fullServer.auto_update_models;
           if (fullServer.auto_update_models !== false && validationResult.models && validationResult.models.length > 0) {
             s.allowed_models = validationResult.models;
@@ -1015,14 +1059,20 @@ async function handleUpdatePublicServers(request, env, user, ctx, cacheKey) {
             s.base_url = validationResult.base_url;
           }
           s.test_url = validationResult.test_url;
+          s.default_model = getDefaultModel(s);
+          if (!s.is_ollama && !s.test_url && !s.is_hidden && s.default_model) {
+            s.test_result = await isOnline(s.base_url, s.api_keys, s.default_model);
+            s.is_online = s.test_result && !s.test_result.error;
+          } else {
+            s.is_online = true;
+          }
         } else {
           s.test_url = validationResult.test_url;
           s.is_online = false;
         }
-      } catch(e) {console.error(e)}
-      try {
-        s.is_ollama = await isOllama(s.base_url);
-      } catch(e) {console.error(e)}
+      } catch(e) {
+        s.test_result = {error: e.message};
+      }
       ct++;
     }
     if (ct > 10) {
@@ -1046,12 +1096,14 @@ async function handleUpdatePublicServers(request, env, user, ctx, cacheKey) {
     auto_update_models: s.auto_update_models,
     owner_id: s.owner_id,
     is_ollama: s.is_ollama,
-    is_online: "is_online" in s ? s.is_online : true,
+    is_online: s.is_online,
+    is_offline: !s.is_online,
     is_public: true,
-    is_hidden: HIDDEN_SERVERS.includes(s.id),
+    is_hidden: s.is_hidden,
     updated_at: s.updated_at,
     usage: s.usage || { requests: 0, tokens: 0 },
     test_url: s.test_url,
+    test_result: s.test_result
   }));
   const response = jsonResponse({
     servers: safeServers
@@ -1581,7 +1633,13 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
               message: `Model '${requestModel}' is not allowed on this server. Allowed: ${server.allowed_models.join(", ")}`,
               type: "model_not_allowed"
             }
-          }, 400);
+          }, 400, {
+            "X-Url": server.base_url + subPath,
+            "X-Server": server.id,
+            "X-Provider": server.label,
+            "X-User-Id": user && user.id,
+            ...CORS_HEADERS
+          });
         }
       }
       if (requestBody.stream) {
@@ -1694,7 +1752,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     if (chatUrls.includes(subPath)) {
       fetchOptions.method = "POST";
       const testBody = {
-        "messages": [{ "role": "user", "content": "say only okay" }],
+        "messages": [{ "role": "user", "content": "hi" }],
         ...requestBody
       };
       if (!testBody.stream) {
@@ -1712,6 +1770,17 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     } else if (request.method === "POST") {
       fetchOptions.body = requestBody ? JSON.stringify(requestBody) : await request.text();
     }
+    if (// !(request.headers.get("cache-control") || "").includes("no-cache") &&
+          !userProvidedKey
+          && subPath === "/chat/completions") {
+        const bodyHash = request._postBodyHash || await generatePostBodyHash(JSON.parse(fetchOptions.body));
+        if (bodyHash) {
+          const cachedResponse = await getCachedBodyRequest(request, pathname, bodyHash, rateCheck, user);
+          if (cachedResponse) {
+            return cachedResponse
+          }
+        }
+      }
     const firstMessage = requestBody ? requestBody.prompt || getFirstMessage(requestBody.messages) : null;
     const isPassG4f = targetUrl.startsWith("https://pass.g4f.space/");
     if (isPassG4f) await acquirePassSlot();
@@ -1798,7 +1867,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       }
     }
     const pollenCost = parseFloat(response.headers.get("x-pollen-cost") || "0");
-    const totalTokens = pollenCost ? (pollenCost * 5e7) : (parseInt(response.headers.get("X-Usage-Total-Tokens") || "0") || usage.total_tokens || (usage.prompt_tokens + usage.completion_tokens) || 0);
+    const totalTokens = pollenCost ? (pollenCost * 1e7) : (parseInt(response.headers.get("X-Usage-Total-Tokens") || "0") || usage.total_tokens || (usage.prompt_tokens + usage.completion_tokens) || 0);
     if (totalTokens > 0 || (response.ok && requestModel)) {
       const geoLocation = request.cf?.asOrganization || request.cf?.country || null;
       const userAgent = request.headers.get("user-agent") || null;
@@ -1843,11 +1912,12 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     }
     // Cache non-streaming POST chat/completions by body hash so repeated
     // test prompts (ping, hello, test) return cached results instantly.
-    if (request.method === "POST" && !userProvidedKey && !requestBody?.stream
+    if (!userProvidedKey && !requestBody?.stream
         && subPath.endsWith("/chat/completions") && newResponse.ok) {
       const bodyHash = request._postBodyHash || await generatePostBodyHash(request);
+      const postCacheKey = `POST:${pathname.replace("/quota", "/chat/completions")}:body:${bodyHash}`;
+      newResponse.headers.set("X-Post-Cache-Key", postCacheKey);
       if (bodyHash) {
-        const postCacheKey = `POST:${pathname}:body:${bodyHash}`;
         ctx.waitUntil(setCachedResponse(request, newResponse.clone(), CACHE_HEADERS.SHORT, postCacheKey, ctx));
       }
     }
@@ -1908,7 +1978,7 @@ async function createUsageTrackingStream(response, env, ctx, server, serverId, c
     }
   }
   parseInt(response.headers.get("x-pollen-cost") || "0") * 5e7;
-  const totalUsage = pollenCost > 0 ? (pollenCost * 5e7) : (usage.total_tokens || (usage.prompt_tokens + usage.completion_tokens) || 0);
+  const totalUsage = pollenCost > 0 ? (pollenCost * 1e7) : (usage.total_tokens || (usage.prompt_tokens + usage.completion_tokens) || 0);
   ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${serverId}`, requestModel, totalUsage, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent, userProvidedKey));
   ctx.waitUntil(updateServerUsage(env, server, totalUsage, requestModel));
   if (user) {
@@ -2239,7 +2309,45 @@ async function isOllama(url) {
   clearTimeout(timeout);
   return response.ok && (await response.text()).startsWith("Ollama");
 }
-async function validateServer(baseUrl, apiKeysStr) {
+async function isOnline(baseUrl, apiKeysStr, model) {
+  let data = {};
+  for (let i = 0; i <= 3; i++) {
+    const apiKey = getRandomApiKey(apiKeysStr);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      signal: controller.signal,
+      body: JSON.stringify({
+        model,
+        messages: [{"role": "user", "content": "hi"}]
+      }),
+      headers: apiKey ? {"Authorization": `Bearer ${apiKey}`} : {}
+    });
+    clearTimeout(timeout);
+    try {
+      data = await response.json();
+    } catch (e) {
+      if (!response.ok) {
+        data = {error: `Status ${response.status}: ${response.statusText}`};
+        continue;
+      }
+      data = {error: e.message};
+      continue;
+    }
+    if (!response.ok) {
+      data = {error: `Status ${response.status}: ${response.statusText}`, ...data};
+      continue;
+    }
+    if(data.choices && data.choices[0].message?.content) {
+      return data.choices[0].message.content;
+    }
+    data = {error: "No content", ...data};
+    continue;
+  }
+  return data;
+}
+async function validateServer(baseUrl, apiKeysStr, defaultModel=null) {
   const apiKey = getRandomApiKey(apiKeysStr);
   const headers = {
     "Content-Type": "application/json",
@@ -2248,7 +2356,7 @@ async function validateServer(baseUrl, apiKeysStr) {
   if (apiKey) {
     headers["Authorization"] = `Bearer ${apiKey}`;
   }
-  let testUrl = baseUrl.includes("/chat/completions") ? baseUrl : null
+  let testUrl = defaultModel ? baseUrl : null
   baseUrl = baseUrl.replace("/chat/completions", "")
   if (URL_MAP[`${baseUrl}/quota`]) {
     testUrl = URL_MAP[`${baseUrl}/quota`];
@@ -2259,7 +2367,7 @@ async function validateServer(baseUrl, apiKeysStr) {
       const timeout = setTimeout(() => controller.abort(), 1e4);
       const extra = testUrl.includes("/chat/completions") ? {
         method: "POST",
-        body: JSON.stringify({ "messages": [{ "role": "user", "content": "Hello" }] }),
+        body: JSON.stringify({ "model": defaultModel, "messages": [{ "role": "user", "content": "Hello" }] }),
       } : {};
       const response = await fetch(testUrl, {
         ...extra,
@@ -2280,14 +2388,15 @@ async function validateServer(baseUrl, apiKeysStr) {
         return {
           valid: false,
           error: "Authentication failed - check your API keys",
-          details: { status: response.status, endpoint: "" },
+          details: { status: response.status },
           base_url: baseUrl,
           test_url: testUrl,
         };
-      } else if (!testUrl.includes("/chat/completions")) {
+      } else if (!testUrl.includes("/chat/completions") || response.status == 404) {
         return {
           valid: false,
-          models: [],
+          error: `Error ${response.status}: ${response.statusText}`,
+          details: { status: response.status },
           base_url: baseUrl,
           test_url: testUrl,
         };
@@ -2339,14 +2448,14 @@ async function validateServer(baseUrl, apiKeysStr) {
               valid: true,
               models,
               base_url: response.url.replace("/models", ""),
-              test_url: testUrl || endpoint
+              test_url: testUrl
             };
           }
           return {
-            valid: true,
+            valid: false,
             note: "No models discovered",
             base_url: response.url.replace("/models", ""),
-            test_url: testUrl || endpoint
+            test_url: testUrl
           };
         }
       } else if (response.status === 401 || response.status === 403) {
@@ -2355,7 +2464,7 @@ async function validateServer(baseUrl, apiKeysStr) {
           error: "Authentication failed - check your API keys",
           details: { status: response.status, endpoint },
           base_url: baseUrl,
-          test_url: testUrl || endpoint
+          test_url: testUrl
         };
       }
     } catch (e) {
@@ -2365,7 +2474,7 @@ async function validateServer(baseUrl, apiKeysStr) {
           error: "Server timeout - server did not respond within 10 seconds",
           details: { timeout: true },
           base_url: baseUrl,
-          test_url: testUrl || endpoint
+          test_url: testUrl
         };
       }
     }
@@ -3244,9 +3353,8 @@ function generateCacheKey(request, extra = "") {
 // Hash the POST request body for chat/completions caching.
 // Uses model + stream flag + last message content so that repeated
 // test prompts like "ping", "hello", "test" share the same cache key.
-async function generatePostBodyHash(request) {
+async function generatePostBodyHash(body) {
   try {
-    const body = await request.clone().json();
     const messages = body.messages || [];
     const lastMsg = messages[messages.length - 1];
     const lastContent = lastMsg
@@ -3268,7 +3376,7 @@ async function generatePostBodyHash(request) {
     || lastContent.startsWith("say ok")) {
       const model = body.model || '';
       const stream = body.stream ? '1' : '0';
-      return await hashString(`${model}:${stream}:test`);
+      return `${model}:${stream}:test`;
     }
     for (const msg of messages) {
       if (msg && msg.content && typeof msg.content === 'string') {
@@ -3298,8 +3406,8 @@ async function getCachedResponse(request, cacheKey = null) {
 }
 async function setCachedResponse(request, response, cacheControl, cacheKey = null, ctx = null) {
   if (!response.ok) return;
-  if ((response.headers.get("Cache-Control") || "").includes("no-cache")) {
-    return;
+  if (!cacheKey.startsWith("POST:") && (response.headers.get("Cache-Control") || "").includes("no-cache")) {
+    //return;
   }
   try {
     const key = cacheKey || generateCacheKey(request);

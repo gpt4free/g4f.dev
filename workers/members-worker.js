@@ -586,6 +586,13 @@ var USER_TIER_LIMITS = {
                 return handleValidateApiKey(request, env);
             }
   
+            // Public recent-users feed (used by the Discord live feed bot).
+            // Returns the most recently created users (no auth required,
+            // only public fields: username, provider, tier, created_at, avatar).
+            if (pathname === "/members/api/recent-users") {
+                return handleGetRecentUsers(request, env);
+            }
+  
             // Usage statistics endpoints
             if (pathname === "/members/api/usage") {
                 return handleGetUsage(request, env);
@@ -596,15 +603,6 @@ var USER_TIER_LIMITS = {
             // if (pathname === "/members/api/usage/track") {
             //     return handleTrackUsage(request, env, ctx);
             // }
-
-            // Cake baking — apply credit for a baked cake (called by cake-worker)
-            if (pathname === "/members/api/cake/credit" && request.method === "POST") {
-                return handleApplyCakeCredit(request, env);
-            }
-            // Cake baking — get the user's current cake credit balance
-            if (pathname === "/members/api/cake/balance") {
-                return handleGetCakeBalance(request, env);
-            }
   
             // Extended rate limiting endpoints
             if (pathname === "/members/api/rate-limit") {
@@ -2163,7 +2161,70 @@ ${buttonsHtml}
     // Update cache
     await env.MEMBERS_KV.put(`user:${user.id}`, JSON.stringify(user), { expirationTtl: 3600 });
   }
-  
+
+  // Public recent-users feed — returns the most recently created users.
+  // No authentication required. Only public fields are exposed:
+  //   username, provider, tier, created_at, avatar
+  // Used by the g4f Discord bot's live feed to announce new members.
+  async function handleGetRecentUsers(request, env) {
+    const url = new URL(request.url);
+    const limit = Math.min(parseInt(url.searchParams.get("limit") || "20", 10) || 20, 100);
+
+    if (!env.MEMBERS_BUCKET) {
+      return jsonResponse({ users: [] });
+    }
+
+    // Iterate through all user objects in R2, collecting created_at timestamps.
+    // R2 list() returns objects sorted by key, not by mtime, so we must
+    // fetch each object's JSON to read created_at. To keep this cheap we
+    // cap the scan at a reasonable number of recent objects.
+    const users = [];
+    let listResult = await env.MEMBERS_BUCKET.list({ prefix: "users/", limit: 200 });
+    while (listResult && Array.isArray(listResult.objects) && users.length < limit * 4) {
+      // Process newest keys first (R2 lists in lexicographic order; user ids
+      // are random so order is arbitrary — we sort by created_at below).
+      for (const object of listResult.objects) {
+        if (!object.key.endsWith('.json')) continue;
+        try {
+          const userObject = await env.MEMBERS_BUCKET.get(object.key);
+          if (!userObject) continue;
+          const user = await userObject.json();
+          users.push({
+            id: user.id,
+            username: user.username,
+            provider: user.provider,
+            tier: user.tier,
+            created_at: user.created_at,
+            avatar: user.avatar || null
+          });
+        } catch (e) {
+          // skip malformed entries
+        }
+        if (users.length >= limit * 4) break;
+      }
+      if (listResult.truncated && users.length < limit * 4) {
+        listResult = await env.MEMBERS_BUCKET.list({
+          prefix: "users/",
+          limit: 200,
+          cursor: listResult.cursor
+        });
+      } else {
+        break;
+      }
+    }
+
+    // Sort by created_at descending and return the top *limit*.
+    users.sort((a, b) => {
+      const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return tb - ta;
+    });
+
+    return jsonResponse({
+      users: users.slice(0, limit)
+    }, 200, { "Cache-Control": "public, max-age=60" });
+  }
+
   async function handleGetUser(request, env) {
     const user = await authenticateRequest(request, env);
     if (!user) {
@@ -2726,67 +2787,9 @@ ${buttonsHtml}
   }
   
   // ============================================
-  // Cake Baking Credits (Proof-of-Work)
-  // ============================================
-
-  // Internal endpoint called by the cake-worker to apply baked-cake credits
-  // to a user account. Secured by a shared secret (CAKE_WORKER_SECRET env var).
-  async function handleApplyCakeCredit(request, env) {
-    // Verify the shared secret sent by the cake-worker
-    const expectedSecret = env.CAKE_WORKER_SECRET;
-    if (!expectedSecret) {
-        return jsonResponse({ error: "Cake credit system not configured" }, 503);
-    }
-    const providedSecret = request.headers.get("X-Cake-Secret");
-    if (providedSecret !== expectedSecret) {
-        return jsonResponse({ error: "Forbidden" }, 403);
-    }
-
-    let body;
-    try {
-        body = await request.json();
-    } catch {
-        return jsonResponse({ error: "Invalid JSON" }, 400);
-    }
-    const { user_id, cake_id, ip, credit_cents = 5 } = body;
-    if (!user_id || !cake_id || !ip) {
-        return jsonResponse({ error: "Missing user_id, cake_id, or ip" }, 400);
-    }
-
-    const user = await getUser(env, user_id);
-    if (!user) {
-        return jsonResponse({ error: "User not found" }, 404);
-    }
-
-    // Idempotency: track which cake_ids have already been credited
-    user.cake_credits = user.cake_credits || { total_cents: 0, baked_today: 0, last_bake_date: "", credited_cake_ids: [] };
-    if (user.cake_credits.credited_cake_ids.includes(cake_id)) {
-        return jsonResponse({ ok: true, already_credited: true, total_cents: user.cake_credits.total_cents });
-    }
-
-    const today = new Date().toISOString().slice(0, 10);
-    if (user.cake_credits.last_bake_date !== today) {
-        user.cake_credits.baked_today = 0;
-        user.cake_credits.last_bake_date = today;
-    }
-
-    user.cake_credits.total_cents = (user.cake_credits.total_cents || 0) + credit_cents;
-    user.cake_credits.baked_today = (user.cake_credits.baked_today || 0) + 1;
-    // Keep the credited_cake_ids list bounded (last 1000)
-    user.cake_credits.credited_cake_ids.push(cake_id);
-    if (user.cake_credits.credited_cake_ids.length > 1000) {
-        user.cake_credits.credited_cake_ids = user.cake_credits.credited_cake_ids.slice(-1000);
-    }
-    user.updated_at = new Date().toISOString();
-
-    await saveUser(env, user);
-    return jsonResponse({ ok: true, total_cents: user.cake_credits.total_cents, baked_today: user.cake_credits.baked_today });
-  }
-
-  // ============================================
   // Usage Tracking
   // ============================================
-
+  
   async function handleGetUsage(request, env) {
     const user = await authenticateRequest(request, env);
     if (!user) {
@@ -2823,17 +2826,13 @@ ${buttonsHtml}
     }
   
     const tierLimits = USER_TIERS[user.tier] || USER_TIERS.new;
-
-    const cakeCredits = user.cake_credits || { total_cents: 0, baked_today: 0 };
-
+  
     return jsonResponse({
         usage: {
             requests_today: requestsToday,
             tokens_today: tokensToday,
             total_requests: user.usage.total_requests || 0,
-            total_tokens: user.usage.total_tokens || 0,
-            cake_credits_cents: cakeCredits.total_cents || 0,
-            cakes_baked: cakeCredits.baked_today || 0
+            total_tokens: user.usage.total_tokens || 0
         },
         limits: {
             requests_per_day: tierLimits.requests_per_day,
