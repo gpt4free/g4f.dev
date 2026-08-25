@@ -1563,7 +1563,7 @@ const apiExport = {};
         const normalizedFailedModel = normalizeModelId(failedModel);
         const candidates = [];
         for (const prov of state.providers) {
-            if (prov.name === '__all__') continue;
+            if (prov.name === '__all__' || prov.name === 'AnyProvider') continue;
             if (prov.isDisabled || prov.isHidden) continue;
             if (!prov.models || !prov.models.length) continue;
             for (const m of prov.models) {
