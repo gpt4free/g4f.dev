@@ -169,10 +169,16 @@ function estimateModelCost(pricing, type, options = {}) {
         if (inUsd > 0 || outUsd > 0) return _chatResult(inUsd, outUsd);
     }
 
+    if ("input" in p) {
+        const inUsd = _num(p.input) / 1e6;
+        const outUsd = _num(p.output) / 1e6;
+        if (inUsd > 0 || outUsd > 0) return _chatResult(inUsd, outUsd);
+    }
+
     // OpenRouter: prompt + completion (USD per token)
     {
         const inUsd = _num(p.prompt);
-        const outUsd = _num(p.completion) > 0 ? _num(p.completion) : _num(p.output);
+        const outUsd = _num(p.completion);
         if (inUsd > 0 || outUsd > 0) return _chatResult(inUsd, outUsd);
     }
 
