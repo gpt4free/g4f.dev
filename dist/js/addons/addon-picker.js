@@ -1563,12 +1563,12 @@ const apiExport = {};
         const normalizedFailedModel = normalizeModelId(failedModel);
         const candidates = [];
         for (const prov of state.providers) {
-            if (prov.name === '__all__' || prov.name === 'AnyProvider') continue;
+            if (prov.name === '__all__' || prov.name === 'AnyProvider' || prov.name === 'default') continue;
             if (prov.isDisabled || prov.isHidden) continue;
             if (!prov.models || !prov.models.length) continue;
             for (const m of prov.models) {
                 const normalizedModelId = normalizeModelId(m.id);
-                if (normalizedModelId.includes(normalizedFailedModel)) {
+                if (normalizedModelId.startsWith(normalizedFailedModel)) {
                     const key = `${prov.name}/${m.id || m.label}`;
                     if (fallback.tried.has(key)) continue;
                     candidates.push({ provider: prov.name, model: m.id, key });
