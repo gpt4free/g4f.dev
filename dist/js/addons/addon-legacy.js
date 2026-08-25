@@ -802,6 +802,11 @@ async function safe_remove_cancel_button() {
 stop_generating.addEventListener("click", async () => {
     regenerate_button.classList.remove("regenerate-hidden");
     stop_generating.classList.add("stop_generating-hidden");
+    // Stop the picker's auto-fallback retry chain so it doesn't
+    // re-invoke ask_gpt with another provider after we abort.
+    if (typeof window.resetFallback === "function") {
+        window.resetFallback();
+    }
     let key;
     for (key in controller_storage) {
         if (!controller_storage[key].signal.aborted) {
