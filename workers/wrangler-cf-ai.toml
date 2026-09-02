@@ -1,0 +1,15 @@
+name = "cf-ai"
+main = "cf-ai-worker.js"
+compatibility_date = "2024-01-01"
+
+# Cloudflare Workers AI binding
+# Docs: https://developers.cloudflare.com/workers/runtime-apis/bindings/ai/
+[ai]
+binding = "AI"
+
+[vars]
+# Optional: set these via `wrangler secret put CLOUDFLARE_ACCOUNT_ID` and
+# `wrangler secret put CLOUDFLARE_API_TOKEN` to source available models from
+# the Cloudflare REST API:
+#   https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/models
+# When unset, the worker falls back to `env.AI.models()`.

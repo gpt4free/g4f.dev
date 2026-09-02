@@ -769,6 +769,9 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
                 option.dataset.custom = "true";
                 option.dataset.serverId = server.id;
                 option.dataset.baseUrl = server.base_url;
+                if (server.default_model) {
+                    option.dataset.defaultModel = server.default_model;
+                }
                 option.dataset.label = server.label;
                 
                 // Build label with model count if available
@@ -1450,7 +1453,9 @@ async function initClient() {
         window.client = null;
         return;
     }
-    const serverId = providerSelect.options[providerSelect.selectedIndex]?.dataset?.serverId;
+    const selectedProviderOption = providerSelect.options[providerSelect.selectedIndex];
+    const serverId = selectedProviderOption?.dataset?.serverId;
+    const defaultModel = selectedProviderOption?.dataset?.defaultModel;
     let messageId = null;
     let count = 0;
     function logCallback(event) {
@@ -1468,6 +1473,9 @@ async function initClient() {
     const options = apiKey ? { apiKey } : {};
     if (serverId && options.backupUrl) {
         options.backupUrl = `https://g4f.space/custom/${serverId}`;
+    }
+    if (defaultModel) {
+        options.defaultModel = defaultModel;
     }
     if (appStorage.getItem("debugMode") == "true") {
         options.logCallback = logCallback;

@@ -135,7 +135,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
                 if (data.credit_cents === lastCakeCredits) {
                     repetitionCount++;
                     clearInterval(cakeStatusInterval);
-                    const nextInterval = Math.min(30000, 5000 + repetitionCount * 5000);
+                    const nextInterval = Math.max(30000, 5000 + repetitionCount * 5000);
                     cakeStatusInterval = setInterval(refreshCakeStatus, nextInterval);
                 } else {
                     repetitionCount = 0;

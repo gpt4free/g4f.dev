@@ -790,11 +790,11 @@ async function handleListModels(request, env, mode) {
         if (["free", "community"].includes(mode) && model.paid_only) {
           continue;
         }
-        const costs = (model.pricing.promptTextTokens || 0) * 1e5;
-        if (mode == "free" && costs > 0) {
+        const pollen_cost = (model.pricing.promptTextTokens || model.pricing.completionTextTokens || 0) * 1e6;
+        if (mode == "free" && pollen_cost > 0) {
           continue;
         }
-        if (mode == "community" && costs > 0.25) {
+        if (mode == "community" && pollen_cost >= 0.25) {
           continue;
         }
         models.push({
@@ -802,7 +802,7 @@ async function handleListModels(request, env, mode) {
           object: "model",
           created: 0,
           owned_by: "pollinations",
-          costs: costs,
+          pollen_cost: pollen_cost,
           ...model
         });
       }
@@ -832,20 +832,16 @@ async function handleListModels(request, env, mode) {
         if (["free", "community"].includes(mode) && model.paid_only) {
           continue;
         }
-        let costs = 0;
-        for (const [key, value] of Object.entries(model.pricing)) {
-          if (key == "currency") continue;
-          costs += parseFloat(value);
-        }
-        if (model.id.startsWith("gpt-image") || model.id.startsWith("gptimage")) {
-          costs = costs * 2000;
+        let pollen_cost = model.pricing?.completionImageTokens;
+        if ("promptTextTokens" in model.pricing) {
+          pollen_cost = pollen_cost * 1000;
         } else {
-          costs = costs * 10;
+          pollen_cost = pollen_cost;
         }
-        if (mode == "free" && costs > 0) {
+        if (mode == "free" && pollen_cost > 0) {
           continue;
         }
-        if (mode == "community" && costs > 0.25) {
+        if (mode == "community" && pollen_cost > 0.02) {
           continue;
         }
         const isVideo = model.output_modalities && model.output_modalities.includes('video');
@@ -854,7 +850,7 @@ async function handleListModels(request, env, mode) {
           object: "model",
           created: 0,
           owned_by: "pollinations",
-          costs: costs,
+          pollen_cost: pollen_cost,
           image: !isVideo,
           video: isVideo,
           ...model
