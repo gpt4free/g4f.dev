@@ -1944,6 +1944,46 @@
             return num.toString();
         }
 
+        // --- Live cake credits via cross-tab status sync -----------------
+        // The cake-baker tab (lock holder) fetches /cake/status and
+        // broadcasts snapshots; update the members stats card from them so
+        // credits stay current without this page polling the endpoint.
+        function updateCakeCreditsLive(cents, bakedToday) {
+            const creditsEl = document.getElementById('statCredits');
+            if (!creditsEl || typeof cents !== 'number') return;
+            creditsEl.textContent = '$' + (cents / 100).toFixed(2);
+            creditsEl.title = (bakedToday != null ? bakedToday + ' cakes baked' : 'Baked credits');
+        }
+
+        window.addEventListener('g4f:cake:accepted', (event) => {
+            const detail = event.detail || {};
+            if (typeof detail.total === 'number') {
+                updateCakeCreditsLive(detail.total, detail.baked_today);
+            }
+        });
+
+        (function listenForCakeStatus() {
+            const apply = (msg) => {
+                if (msg && typeof msg === 'object' && msg.type === 'g4f-cake-status') {
+                    updateCakeCreditsLive(msg.credits, msg.dailyBaked);
+                }
+            };
+            if (typeof BroadcastChannel === 'function') {
+                try {
+                    const channel = new BroadcastChannel('g4f_cake_baker');
+                    channel.onmessage = (event) => apply(event.data);
+                    channel.postMessage({ type: 'g4f-cake-status-request' });
+                } catch (e) { /* ignore */ }
+            } else {
+                try {
+                    const saved = JSON.parse(localStorage.getItem('g4f_cake_status') || 'null');
+                    if (saved && Date.now() - (saved.ts || 0) < 45000) {
+                        updateCakeCreditsLive(saved.credits, saved.dailyBaked);
+                    }
+                } catch (e) { /* no snapshot yet */ }
+            }
+        })();
+
         // GitHub OAuth - redirect to worker
         loginGithub.addEventListener('click', () => {
             window.location.href = `${API_BASE}/members/auth/github`;
