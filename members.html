@@ -1141,6 +1141,7 @@
     <link rel="stylesheet" href="dist/css/all.min.css">
     <script src="dist/js/framework.js" defer></script>
     <script src="dist/js/cake-baker.js?v={{ v }}" defer></script>
+    <script src="dist/js/oauth-client.js?v={{ v }}" defer></script>
     <script type="importmap">
         {
             "imports": {
@@ -1200,10 +1201,11 @@
                     🌸
                     Sign in with Pollinations
                 </button>
-            </div>
-            
-            <p style="margin-top: 1.5rem;">
-                <a href="/members.html" style="color: rgba(255,255,255,0.6);">Cancel and go to Members Area</a>
+
+                <button class="oauth-btn g4f" id="redirectLoginG4f" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
+                    🔮
+                    Sign in with G4F Account
+                </button>
             </p>
         </section>
 
@@ -1240,6 +1242,11 @@
                 <button class="oauth-btn pollinations" id="loginPollinations">
                     🌸
                     Sign in with Pollinations
+                </button>
+
+                <button class="oauth-btn g4f" id="loginG4f" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
+                    🔮
+                    Sign in with G4F Account
                 </button>
             </div>
             
@@ -1605,6 +1612,8 @@
         const loginHuggingface = document.getElementById('loginHuggingface');
         const loginAirforce = document.getElementById('loginAirforce');
         const loginPollinations = document.getElementById('loginPollinations');
+        const loginG4f = document.getElementById('loginG4f');
+        const redirectLoginG4f = document.getElementById('redirectLoginG4f');
         const redirectLoginGithub = document.getElementById('redirectLoginGithub');
         const redirectLoginDiscord = document.getElementById('redirectLoginDiscord');
         const redirectLoginHuggingface = document.getElementById('redirectLoginHuggingface');
@@ -2014,6 +2023,24 @@
             window.location.href = `https://enter.pollinations.ai/authorize?${params}`;
         });
 
+        // Central G4F OAuth (self-hosted OAuth server, PKCE)
+        const G4F_OAUTH_REDIRECT = window.location.origin + '/members.html';
+        function startG4fOAuth(stateData) {
+            if (window.G4FOAuth) {
+                window.G4FOAuth.authorize(G4F_OAUTH_REDIRECT, stateData);
+            } else {
+                showToast('OAuth client not loaded', 'error');
+            }
+        }
+        loginG4f.addEventListener('click', () => startG4fOAuth(null));
+        redirectLoginG4f.addEventListener('click', () => {
+            // Round-trip the external redirect through the OAuth flow
+            startG4fOAuth({
+                redirect: externalRedirect,
+                conversation: externalConversation
+            });
+        });
+
         // Redirect login buttons (include redirect parameter for temp API key)
         redirectLoginGithub.addEventListener('click', () => {
             window.location.href = `${API_BASE}/members/auth/github?${externalQuery}`;
@@ -2091,6 +2118,44 @@
             const code = urlParams.get('code');
             const state = urlParams.get('state');
             const error = urlParams.get('error');
+
+            // Handle central G4F OAuth code (self-hosted OAuth server)
+            if ((code && state) || (error && window.G4FOAuth)) {
+                try {
+                    const result = await window.G4FOAuth.handleCallback(G4F_OAUTH_REDIRECT);
+                    if (result) {
+                        sessionToken = result.token;
+                        localStorage.setItem('g4f_session', result.token);
+                        if (result.user) {
+                            localStorage.setItem('g4f_user', JSON.stringify(result.user));
+                            localStorage.setItem('user', result.user.name || result.user.username);
+                        }
+                        if (result.expires) {
+                            localStorage.setItem('g4f_expires', String(result.expires));
+                        }
+                        showToast('Successfully signed in with G4F!');
+                        // Complete a pending external redirect (chat v2 login)
+                        const stateData = result.stateData || {};
+                        if (stateData.redirect && isValidRedirectUrl(stateData.redirect)) {
+                            const hashQuery = new URLSearchParams({
+                                session: result.token,
+                                user: JSON.stringify(result.user || {}),
+                                expires: String(result.expires || '')
+                            });
+                            if (stateData.conversation) {
+                                hashQuery.set('conversation', stateData.conversation);
+                            }
+                            window.location.href = `${stateData.redirect}#${hashQuery.toString()}`;
+                            return;
+                        }
+                        showDashboard(result.user || JSON.parse(localStorage.getItem('g4f_user') || '{}'));
+                        return;
+                    }
+                } catch (e) {
+                    showToastFormat('Authentication failed: {0}', 'error', e.message);
+                    return;
+                }
+            }
 
             if (error) {
                 showToastFormat('Authentication failed: {0}', 'error', error);

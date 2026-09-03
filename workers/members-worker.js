@@ -763,8 +763,7 @@ var USER_TIER_LIMITS = {
   async function handleGitHubAuth(request, env, url) {
     const state = generateState();
     const scope = "user:email read:user";
-    // Support both "redirect" and "redirect_chat" parameters
-    const redirect = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect") || null;
+    const redirect = url.searchParams.get("redirect") || null;
     const conversation = url.searchParams.get("conversation") || null;
 
     const authUrl = new URL("https://github.com/login/oauth/authorize");
@@ -855,28 +854,26 @@ var USER_TIER_LIMITS = {
     // Generate session token
     const { sessionToken, expires } = await createSession(env, user.id);
   
-    // If external redirect is requested, redirect with session token for cloud sync
+    // Only the central OAuth authorize/callback hop may receive the session
+    // via redirect; everything else falls back to the native members login.
     if (externalRedirect) {
-        // Check if redirect is for chat/cloud sync (same origin)
         try {
             const redirectUrl = new URL(externalRedirect);
-            if (isValidRedirect(redirectUrl)) {
+            if (isValidRedirect(redirectUrl) && redirectUrl.pathname === "/members/oauth/authorize/callback") {
                 return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation, expires);
             }
         } catch (e) {
             console.error("Invalid redirect URL:", e);
         }
-        return redirectWithTempApiKey(env, user, externalRedirect, stateData.conversation);
     }
-  
+
     return redirectWithSession(sessionToken, user, expires);
   }
-  
+
   async function handleDiscordAuth(request, env, url) {
     const state = generateState();
     const scope = "identify email";
-    // Support both "redirect" and "redirect_chat" parameters
-    const redirect = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect") || null;
+    const redirect = url.searchParams.get("redirect") || null;
     const conversation = url.searchParams.get("conversation") || null;
 
     const authUrl = new URL("https://discord.com/api/oauth2/authorize");
@@ -954,29 +951,27 @@ var USER_TIER_LIMITS = {
   
     const { sessionToken, expires } = await createSession(env, user.id);
   
-    // If external redirect is requested, redirect with session token for cloud sync
+    // Only the central OAuth authorize/callback hop may receive the session
+    // via redirect; everything else falls back to the native members login.
     if (externalRedirect) {
-        // Check if redirect is for chat/cloud sync (same origin)
         try {
             const redirectUrl = new URL(externalRedirect);
-            if (isValidRedirect(redirectUrl)) {
+            if (isValidRedirect(redirectUrl) && redirectUrl.pathname === "/members/oauth/authorize/callback") {
                 return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation, expires);
             }
         } catch (e) {
             console.error("Invalid redirect URL:", e);
         }
-        return redirectWithTempApiKey(env, user, externalRedirect, stateData.conversation);
     }
-  
+
     return redirectWithSession(sessionToken, user, expires);
   }
-  
+
   async function handleHuggingFaceAuth(request, env, url) {
     const user = await authenticateRequest(request, env);
     const state = generateState();
     const scope = "inference-api";
-    // Support both "redirect" and "redirect_chat" parameters
-    const redirect = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect") || null;
+    const redirect = url.searchParams.get("redirect") || null;
     const conversation = url.searchParams.get("conversation") || null;
 
     const authUrl = new URL("https://huggingface.co/oauth/authorize");
@@ -1056,20 +1051,19 @@ var USER_TIER_LIMITS = {
   
     const { sessionToken, expires } = await createSession(env, user.id);
   
-    // If external redirect is requested, redirect with session token for cloud sync
+    // Only the central OAuth authorize/callback hop may receive the session
+    // via redirect; everything else falls back to the native members login.
     if (externalRedirect) {
-        // Check if redirect is for chat/cloud sync (same origin)
         try {
             const redirectUrl = new URL(externalRedirect);
-            if (isValidRedirect(redirectUrl)) {
+            if (isValidRedirect(redirectUrl) && redirectUrl.pathname === "/members/oauth/authorize/callback") {
                 return redirectWithSessionToExternal(sessionToken, user, externalRedirect, tokenData.conversation, expires);
             }
         } catch (e) {
             console.error("Invalid redirect URL:", e);
         }
-        return redirectWithTempApiKey(env, user, externalRedirect, tokenData.conversation);
     }
-  
+
     return redirectWithSession(sessionToken, user, expires);
   }
 
@@ -1077,7 +1071,7 @@ var USER_TIER_LIMITS = {
     const user = await authenticateRequest(request, env);
     const state = generateState();
     const scope = "profile chat images";
-    const redirect = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect") || null;
+    const redirect = url.searchParams.get("redirect") || null;
     const conversation = url.searchParams.get("conversation") || null;
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = await generateCodeChallenge(codeVerifier);
@@ -1188,21 +1182,22 @@ var USER_TIER_LIMITS = {
 
     const { sessionToken, expires } = await createSession(env, user.id);
 
+    // Only the central OAuth authorize/callback hop may receive the session
+    // via redirect; everything else falls back to the native members login.
     if (externalRedirect) {
         try {
             const redirectUrl = new URL(externalRedirect);
-            if (isValidRedirect(redirectUrl)) {
+            if (isValidRedirect(redirectUrl) && redirectUrl.pathname === "/members/oauth/authorize/callback") {
                 return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation, expires);
             }
         } catch (e) {
             console.error("Invalid redirect URL:", e);
         }
-        return redirectWithTempApiKey(env, user, externalRedirect, stateData.conversation);
     }
 
     return redirectWithSession(sessionToken, user, expires);
   }
-  
+
   /**
    * Fetch user profile from Pollinations API.
    * @param {string} apiKey - Pollinations API key
@@ -1310,8 +1305,7 @@ var USER_TIER_LIMITS = {
    * using the authorization-code flow with PKCE (S256).
    *
    * Requires the POLLINATIONS_CLIENT_ID env var (a pk_... publishable key).
-   * Supports the same "redirect" / "redirect_chat" and "conversation" params
-   * as the other providers.
+   * Supports the same "redirect" and "conversation" params as the other providers.
    */
   async function handlePollinationsOAuthAuth(request, env, url) {
       if (!env.POLLINATIONS_CLIENT_ID) {
@@ -1320,7 +1314,7 @@ var USER_TIER_LIMITS = {
 
       const state = generateState();
       const scope = "profile usage";
-      const redirect = url.searchParams.get("redirect_chat") || url.searchParams.get("redirect") || null;
+      const redirect = url.searchParams.get("redirect") || null;
       const conversation = url.searchParams.get("conversation") || null;
       const codeVerifier = generateCodeVerifier();
       const codeChallenge = await generateCodeChallenge(codeVerifier);
@@ -1428,16 +1422,17 @@ var USER_TIER_LIMITS = {
 
       const { sessionToken, expires } = await createSession(env, user.id);
 
+// Only the central OAuth authorize/callback hop may receive the session
+      // via redirect; everything else falls back to the native members login.
       if (externalRedirect) {
           try {
               const redirectUrl = new URL(externalRedirect);
-              if (isValidRedirect(redirectUrl)) {
+              if (isValidRedirect(redirectUrl) && redirectUrl.pathname === "/members/oauth/authorize/callback") {
                   return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation, expires);
               }
           } catch (e) {
               console.error("Invalid redirect URL:", e);
           }
-          return redirectWithTempApiKey(env, user, externalRedirect, stateData.conversation);
       }
 
       return redirectWithSession(sessionToken, user, expires);
@@ -1934,8 +1929,34 @@ ${buttonsHtml}
    *   }
    * }
    */
+  /**
+   * Built-in first-party OAuth clients. These are always available, even
+   * when SELF_OAUTH_CLIENTS is not configured. The secret is public by
+   * design - browser clients cannot hold secrets; PKCE protects the code.
+   */
+  const BUILTIN_OAUTH_CLIENTS = {
+      "g4f-web": {
+          secret: "5594a516-0da6-4167-bcaa-132e715c54a3",
+          redirect_uris: [
+              "https://g4f.dev/members.html",
+              "https://g4f.dev/members",
+              "https://g4f.dev/chat/",
+              "https://g4f.dev/chat/v2.html",
+              "http://localhost:8080/members.html",
+              "http://localhost:8080/chat/",
+              "http://localhost:8080/chat/v2.html",
+              "http://localhost:1337/members.html",
+              "http://localhost:1337/chat/",
+              "http://localhost:1337/chat/v2.html",
+              "https://gpt4free.github.io/members.html"
+          ],
+          name: "G4F Web"
+      }
+  };
+
   async function getSelfOAuthClient(env, clientId) {
       try {
+          if (BUILTIN_OAUTH_CLIENTS[clientId]) return BUILTIN_OAUTH_CLIENTS[clientId];
           if (!env.SELF_OAUTH_CLIENTS) return null;
           const clients = JSON.parse(env.SELF_OAUTH_CLIENTS);
           return clients[clientId] || null;
@@ -3253,66 +3274,6 @@ ${buttonsHtml}
               "Set-Cookie": cookie
           }
       });
-  }
-  
-  /**
-   * Generate a temporary API key and redirect to external URL
-   * Used for login redirects from external sites
-   */
-  async function redirectWithTempApiKey(env, user, externalRedirectUrl, conversation = null) {
-    try {
-        // Generate a temporary API key for the user
-        const apiKey = await generateApiKey(env, user.id);
-        const keyHash = await hashApiKey(apiKey);
-        const keyPrefix = apiKey.substring(0, 8);
-        const expires = Date.now() + 24 * 60 * 60 * 1000;
-  
-        const keyData = {
-            id: generateKeyId(),
-            name: "Temporary Login Key",
-            key_hash: keyHash,
-            prefix: keyPrefix,
-            user_id: user.id,
-            created_at: new Date().toISOString(),
-            last_used: null,
-            is_temporary: true,
-            expires_at: new Date(expires).toISOString(), // 24 hour expiry
-            usage: {
-                requests: 0,
-                tokens: 0
-            }
-        };
-  
-        // Store API key mapping in KV for fast lookup (with 24 hour TTL)
-        await env.MEMBERS_KV.put(`api_key:${keyHash}`, JSON.stringify({
-            user_id: user.id,
-            key_id: keyData.id,
-            tier: user.tier,
-            is_temporary: true,
-            expires_at: keyData.expires_at,
-            expires: Math.floor(expires / 1000)
-        }), { expirationTtl: 86400 }); // 24 hours
-  
-        // Add to user's API keys
-        user.api_keys = user.api_keys || [];
-        user.api_keys.push(keyData);
-        user.updated_at = new Date().toISOString();
-        await saveUser(env, user);
-        
-        const redirectUrl = new URL(externalRedirectUrl);
-        const hashParams = new URLSearchParams();
-        hashParams.set("session", apiKey);
-        if (conversation) {
-            hashParams.set("conversation", conversation);
-        }
-        hashParams.set("expires", String(Math.floor(expires / 1000)));
-        redirectUrl.hash = hashParams.toString();
-        return Response.redirect(redirectUrl.toString(), 302);
-    } catch (error) {
-        console.error("Failed to generate temp API key:", error);
-        // Fallback to redirect without API key
-        return Response.redirect(externalRedirectUrl, 302);
-    }
   }
   
   // ============================================
