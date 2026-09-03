@@ -182,7 +182,7 @@ function load_provider_login_urls(providersListContainer, providers = []) {
         }
 
         const apiKeyLink = ["Pollinations", "HuggingFace", "Airforce"].includes(provider.name)
-            ? `<a href="https://g4f.dev/members?provider=${login_provider}&redirect=${encodeURIComponent(window.location.href.split("#")[0])}" title="${framework.translate("Login to")} ${framework.escape(label)}">${framework.translate('Login')}</a>`
+            ? `<a href="/members.html?provider=${login_provider}&redirect=${encodeURIComponent(window.location.href.split("#")[0])}" title="${framework.translate("Login to")} ${framework.escape(label)}">${framework.translate('Login')}</a>`
             : (provider.login_url ? `<a href="${framework.escape(provider.login_url)}" target="_blank" title="${framework.translate("Login to")} ${framework.escape(label)}">${framework.translate('Get API key')}</a>` : "");
         const inputId = `${provider.name}-api_key`;
         const storageKey = provider.name == "Puter" ? "puter.auth.token" : inputId;

@@ -423,7 +423,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     label: message_provider?.label,
                     ...usage
                 };
-                const user = appStorage.getItem("user");
+                const user = JSON.parse(appStorage.getItem("g4f_user") || "{}").username;
                 if (user) {
                     usage = {user: user, ...usage};
                 }

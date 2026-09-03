@@ -289,7 +289,13 @@ async function on_load() {
     count_input();
     const locationHash = window.location.hash.substring(1);
     if (locationHash === "login") {
-        window.location.href='https://g4f.dev/members?redirect='+encodeURIComponent(location.href.split('#')[0])+'&conversation='+encodeURIComponent(window.conversation_id);
+        if (window.G4FOAuth) {
+            window.G4FOAuth.authorize(window.location.origin + window.location.pathname, {
+                conversation: window.conversation_id || null,
+            });
+        } else {
+            window.location.href='/members.html?redirect='+encodeURIComponent(location.href.split('#')[0])+'&conversation='+encodeURIComponent(window.conversation_id);
+        }
         return;
     }
     if (locationHash === "settings") {

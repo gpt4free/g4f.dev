@@ -198,8 +198,8 @@
             // Login button - redirect to members with return URL
             loginBtn.addEventListener("click", (e) => {
                 e.preventDefault();
-                const returnUrl = encodeURIComponent(location.origin + '/chat/');
-                window.location.href = `https://g4f.dev/members?redirect=${returnUrl}`;
+                const returnUrl = encodeURIComponent(location.origin + '/chat/v2');
+                window.location.href = `/members.html?redirect=${returnUrl}`;
             });
 
             // Logout button

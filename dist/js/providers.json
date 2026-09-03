@@ -29,7 +29,7 @@
         "srv_mp5miql908c8738d71be": "openai-fast",
         "srv_mp3lmkuad07322459f47": "unmoderated-gpt",
         "srv_mkom688d57c76d8a3542": "openai/gpt-oss-120b",
-        "srv_mkombumpae45db46dcb8": "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "srv_mkombumpae45db46dcb8": "nvidia/nemotron-3-super-120b-a12b",
         "srv_mrgykg8eea645e7bb006": "nemotron-3-nano:30b",
         "srv_mq7ktfibad45c29f3839": "deepseek-v4-pro:cloud",
         "srv_mm0u9cua212491d78695": "openrouter/free",
