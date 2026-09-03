@@ -79,16 +79,6 @@ let providers = [
     {"name": "Puter", "label": "Puter.js", "login_url": "https://discord.gg/qXA4Wf4Fsm", "active_by_default": true},
 ];
 
-const modelTags = {
-    image: "🎨",
-    "image-edit": "🎨",
-    vision: "👓",
-    audio: "🎧",
-    video: "🎥",
-    paid_only: "💰",
-    free: "🆓",
-}
-
 domReady.then(() => {
     translationSnipptes.forEach((text) => framework.translate(text));
     
@@ -5500,7 +5490,6 @@ export default {
     optionElementsSelector,
     translationSnipptes,
     providers,
-    modelTags,
     provider_storage,
     message_storage,
     content_alt_storage,

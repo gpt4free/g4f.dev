@@ -55,16 +55,6 @@ let providers = [
     {"name": "Puter", "label": "Puter.js", "login_url": "https://discord.gg/qXA4Wf4Fsm", "active_by_default": true},
 ];
 
-const modelTags = {
-    image: "🎨",
-    "image-edit": "🎨",
-    vision: "👓",
-    audio: "🎧",
-    video: "🎥",
-    paid_only: "💰",
-    free: "🆓",
-}
-
 document.addEventListener("DOMContentLoaded", (event) => {
     translationSnipptes.forEach((text) => framework.translate(text));
     

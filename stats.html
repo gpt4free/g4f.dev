@@ -601,7 +601,7 @@
                     stats.providers[provider].prompt += prompt;
                     stats.providers[provider].completion += completion;
                     stats.providers[provider].cached += cached;
-                    if (r.label) {
+                    if (r.label && r.label != "AnyProvider") {
                         stats.providers[provider].label = r.label;
                     }
 

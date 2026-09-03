@@ -6,7 +6,8 @@ const modelTags = {
     video: "🎥",
     paid_only: "💰",
     free: "🆓",
-    tools: "🧰"
+    tools: "🧰",
+    reasoning: "🧠",
 };
 
 function getModelLabel(model) {
@@ -215,7 +216,7 @@ function convertModel(inputModel, options = {}) {
     const model = inputModel;
     const useModelName = !!options.useModelName;
     if (!model.id || useModelName) {
-        model.id = model.name || model.model_name;
+        model.id = model.name || model.model_name || model.model;
     }
     if (options.defaultModel && model.id === options.defaultModel) {
         model.default = true;
@@ -273,6 +274,13 @@ function convertModel(inputModel, options = {}) {
         model.tools = model.providers[0].supports_tools;
     } else if (model.tags && model.tags.includes("tools")) {
         model.tools = true;
+    } else if (model.properties?.function_calling) {
+        model.tools = true;
+    }
+    if (model.tags && model.tags.includes("reasoning")) {
+        model.reasoning = true;
+    } else if (model.properties?.reasoning) {
+        model.reasoning = true;
     }
     if (model.id) {
         if (model.id.endsWith("/free") || model.id.endsWith(":free")) {

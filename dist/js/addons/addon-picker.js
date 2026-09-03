@@ -895,7 +895,10 @@ const apiExport = {};
         } else {
             url = `https://g4f.space/api/${providerName}/models`;
         }
-        const result = await fetchWithRetry(url, { 'Accept': 'application/json' }, `models for ${providerName}`);
+        const result = await fetchWithRetry(url, {
+            'Accept': 'application/json',
+            ...typeof appStorage !== 'undefined' && appStorage.getItem('g4f_session') ? {'Authorization': `Bearer ${appStorage.getItem('g4f_session') || ''}`} : {},
+        }, `models for ${providerName}`);
         return result.ok ? (result.data || []) : [];
     }
 
@@ -977,6 +980,7 @@ const apiExport = {};
                         if (!name || name === 'default' || seen.has(name)) continue;
                         seen.add(name);
                         const isDisabled = isProviderDisabled(name);
+                        if (isDisabled && !state.showHidden) continue;
                         // Build prefix emoji from provider attributes
                         const marker = coreProviderMarker(provider);
                         let models = await fetchCoreProviderModels(name);
@@ -1025,8 +1029,8 @@ const apiExport = {};
                 }
                 seen.add(name);
                 const isHidden = !!config.is_hidden;
-                if (isHidden && !state.showHidden) continue;
                 const isDisabled = isProviderDisabled(name);
+                if (isDisabled) continue;
                 // Live providers fetch models on-demand via api('models', providerName)
                 let models = await fetchLiveProviderModels(config.backupUrl || config.baseUrl || name);
                 models = normalizeModels(models, name);
@@ -1128,6 +1132,7 @@ const apiExport = {};
                 }
                 const isHidden = !!server.is_hidden;
                 const isDisabled = !isEnabled;
+                if (isDisabled && !state.showHidden) continue;
                 let models = await fetchLiveProviderModels(srvName);
                 models = normalizeModels(models, srvName);
                 if (models.length === 0) continue;
@@ -1389,14 +1394,6 @@ const apiExport = {};
         }
     }
 
-    function modelTagsString(m) {
-        const parts = [];
-        for (const k of TAG_KEYS) {
-            if (m[k] && PICKER_TAG_META[k]) parts.push(PICKER_TAG_META[k].icon);
-        }
-        return parts.join(' ');
-    }
-
     function buildModelRow(m) {
         const row = document.createElement('div');
         row.className = 'picker-model';
@@ -1404,7 +1401,7 @@ const apiExport = {};
             && state.selectedModel.model.id === m.id
             && state.selectedModel.provider === m.provider;
         if (isSelected) row.classList.add('selected');
-        const tagsHtml = modelTagsString(m);
+        const tagsHtml = window.getModelTags ? getModelTags(m) : "";
         const metaParts = [];
         if (m.provider) metaParts.push(m.provider);
         if (m.type && m.type !== 'chat') metaParts.push(m.type);
