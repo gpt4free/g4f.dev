@@ -186,7 +186,7 @@
         let share_id = localStorage.getItem(`backup`);
         let backup = null;
         if (share_id || conversation_id) {
-            const url = `${framework.backendUrl}/backend-api/v2/chat/${encodeURIComponent(share_id || conversation_id)}`;
+            const url = `${framework.backendUrl}/backend-api/v2/chat${encodeURIComponent(share_id || conversation_id)}`;
             const response = await fetch(url, {
                 method: 'GET'
             });
@@ -201,7 +201,7 @@
             }
         }
         if (share_id) {
-            const share = `${window.location.origin}/chat/#${encodeURIComponent(share_id)}`;
+            const share = `${window.location.origin}/chat/v2#${encodeURIComponent(share_id)}`;
             qrcodeStatus.innerText = share;
             qrcodeStatus.href = share;
             document.getElementById("qrcode").style.display = 'inline-block';
@@ -278,7 +278,7 @@
                 qrcodeStatus.innerText = 'Error generating QR code: ' + response.statusText;
                 return;
             }
-            const share = `${window.location.origin}/chat/#${encodeURIComponent(conversation.id)}`;
+            const share = `${window.location.origin}/chat/v2#${encodeURIComponent(conversation.id)}`;
             qrcodeStatus.innerText = share;
             qrcodeStatus.href = share;
             document.getElementById("qrcode").innerHTML = '';

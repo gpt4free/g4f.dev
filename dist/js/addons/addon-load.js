@@ -294,7 +294,7 @@ async function on_load() {
                 conversation: window.conversation_id || null,
             });
         } else {
-            window.location.href='https://g4f.dev/members?redirect='+encodeURIComponent(location.href.split('#')[0])+'&conversation='+encodeURIComponent(window.conversation_id);
+            window.location.href='/members.html?redirect='+encodeURIComponent(location.href.split('#')[0])+'&conversation='+encodeURIComponent(window.conversation_id);
         }
         return;
     }

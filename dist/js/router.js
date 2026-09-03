@@ -140,7 +140,7 @@ const MembersAuth = (() => {
         redirect: getCurrentUrl(),
         provider: 'pollinations'
       });
-      window.location.href = `https://g4f.dev/members?${params.toString()}`;
+      window.location.href = `/members.html?${params.toString()}`;
       return;
     }
     window.location.href = `${AUTH_BASE}/members/auth/${provider}?redirect=${encodeURIComponent(getCurrentUrl())}`;

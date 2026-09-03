@@ -1516,7 +1516,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     label: message_provider?.label,
                     ...usage
                 };
-                const user = appStorage.getItem("user");
+                const user = JSON.parse(appStorage.getItem("g4f_user") || "{}").username;
                 if (user) {
                     usage = {user: user, ...usage};
                 }
@@ -3039,7 +3039,7 @@ window.addEventListener("hashchange", async (event) => {
                 conversation: window.conversation_id || null,
             });
         } else {
-            window.location.href='https://g4f.dev/members?redirect='+encodeURIComponent(location.href.split('#')[0])+'&conversation='+encodeURIComponent(window.conversation_id);
+            window.location.href='/members.html?redirect='+encodeURIComponent(location.href.split('#')[0])+'&conversation='+encodeURIComponent(window.conversation_id);
         }
         return;
     }
@@ -3251,7 +3251,7 @@ function load_provider_login_urls(providersListContainer, providers = []) {
         }
 
         const apiKeyLink = ["Pollinations", "HuggingFace", "Airforce"].includes(provider.name)
-            ? `<a href="https://g4f.dev/members?provider=${login_provider}&redirect=${encodeURIComponent(window.location.href.split("#")[0])}" title="${framework.translate("Login to")} ${framework.escape(label)}">${framework.translate('Login')}</a>`
+            ? `<a href="/members.html?provider=${login_provider}&redirect=${encodeURIComponent(window.location.href.split("#")[0])}" title="${framework.translate("Login to")} ${framework.escape(label)}">${framework.translate('Login')}</a>`
             : (provider.login_url ? `<a href="${framework.escape(provider.login_url)}" target="_blank" title="${framework.translate("Login to")} ${framework.escape(label)}">${framework.translate('Get API key')}</a>` : "");
         const inputId = `${provider.name}-api_key`;
         const storageKey = provider.name == "Puter" ? "puter.auth.token" : inputId;
@@ -3722,7 +3722,7 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
         return pywebview.api[`get_${ressource}`]();
     }
     let headers = {};
-    let user = appStorage.getItem("user");
+    let user = JSON.parse(appStorage.getItem("g4f_user") || "{}").username;
     if (user) {
         headers['x-user'] = user;
     }
@@ -5110,6 +5110,7 @@ async function checkCloudSyncSession() {
     try {
         const url = token.startsWith("g4f_") ? `${CLOUD_SYNC_API}/keys/validate` : `${CLOUD_SYNC_API}/session`;
         const response = await fetch(url, {
+            credentials: "include",
             headers: { "Authorization": `Bearer ${token}` }
         });
         if (response.ok) {
@@ -5289,6 +5290,7 @@ async function cloudSyncLogout() {
         try {
             await fetch(`${CLOUD_SYNC_API}/logout`, {
                 method: "POST",
+                credentials: "include",
                 headers: { "Authorization": `Bearer ${token}` }
             });
         } catch (e) {
@@ -5340,6 +5342,7 @@ async function syncConversationsToCloud() {
         }
         const response = await fetch(`${CLOUD_SYNC_API}/conversations/sync`, {
             method: "POST",
+            credentials: "include",
             headers: {
                 "Authorization": `Bearer ${token}`,
                 "Content-Type": "application/json"
@@ -5371,6 +5374,7 @@ async function syncConversationsFromCloud() {
     showCloudSyncLoading("Downloading conversations...");
     try {
         const response = await fetch(`${CLOUD_SYNC_API}/conversations`, {
+            credentials: "include",
             headers: { "Authorization": `Bearer ${token}` }
         });
         if (response.ok) {
@@ -5421,7 +5425,7 @@ function cloudSyncLoginRedirect(provider = null) {
     const returnUrl = encodeURIComponent(window.location.href.split("#")[0]);
     const conversation = window.conversation_id ? `&conversation=${encodeURIComponent(window.conversation_id)}` : "";
     const providerParam = provider ? `&provider=${encodeURIComponent(provider)}` : "";
-    window.location.href = `https://g4f.dev/members.html?redirect=${returnUrl}${conversation}${providerParam}`;
+    window.location.href = `/members.html?redirect=${returnUrl}${conversation}${providerParam}`;
 }
 
 // Cloud Sync button event listeners

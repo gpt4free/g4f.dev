@@ -234,6 +234,16 @@ function REVOKE_BY_KEY_RESULT_HTML(status, message) {
 </html>`;
 }
 
+function getCorsHeaders(request) {
+    if (!isValidRedirect(request.headers.get("Origin"))) {
+        return CORS_HEADERS;
+    }
+    return {
+        ...CORS_HEADERS,
+        "Access-Control-Allow-Origin": request.headers.get("Origin")
+    }
+}
+
 function isValidRedirect(url) {
     try {
         const parsed = new URL(url);
@@ -491,7 +501,7 @@ var USER_TIER_LIMITS = {
   
         // Handle CORS preflight
         if (request.method === "OPTIONS") {
-            return new Response(null, { headers: CORS_HEADERS });
+            return new Response(null, { headers: getCorsHeaders(request) });
         }
   
         try {
@@ -647,10 +657,10 @@ var USER_TIER_LIMITS = {
                 return handleJwtRequest(request, env);
             }
   
-            return jsonResponse({ error: "Not found" }, 404);
+            return jsonResponse({ error: "Not found" }, 404, getCorsHeaders(request));
         } catch (error) {
             console.error("Worker error:", error);
-            return jsonResponse({ error: "Worker error: " + error.message || "Internal server error" }, 500);
+            return jsonResponse({ error: "Worker error: " + error.message || "Internal server error" }, 500, getCorsHeaders(request));
         }
     },
 
@@ -860,14 +870,14 @@ var USER_TIER_LIMITS = {
         try {
             const redirectUrl = new URL(externalRedirect);
             if (isValidRedirect(redirectUrl) && redirectUrl.pathname === "/members/oauth/authorize/callback") {
-                return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation, expires);
+                return redirectWithSessionToExternal(request, sessionToken, user, externalRedirect, stateData.conversation, expires);
             }
         } catch (e) {
             console.error("Invalid redirect URL:", e);
         }
     }
 
-    return redirectWithSession(sessionToken, user, expires);
+    return redirectWithSession(request, sessionToken, user, expires);
   }
 
   async function handleDiscordAuth(request, env, url) {
@@ -957,14 +967,14 @@ var USER_TIER_LIMITS = {
         try {
             const redirectUrl = new URL(externalRedirect);
             if (isValidRedirect(redirectUrl) && redirectUrl.pathname === "/members/oauth/authorize/callback") {
-                return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation, expires);
+                return redirectWithSessionToExternal(request, sessionToken, user, externalRedirect, stateData.conversation, expires);
             }
         } catch (e) {
             console.error("Invalid redirect URL:", e);
         }
     }
 
-    return redirectWithSession(sessionToken, user, expires);
+    return redirectWithSession(request, sessionToken, user, expires);
   }
 
   async function handleHuggingFaceAuth(request, env, url) {
@@ -1057,14 +1067,14 @@ var USER_TIER_LIMITS = {
         try {
             const redirectUrl = new URL(externalRedirect);
             if (isValidRedirect(redirectUrl) && redirectUrl.pathname === "/members/oauth/authorize/callback") {
-                return redirectWithSessionToExternal(sessionToken, user, externalRedirect, tokenData.conversation, expires);
+                return redirectWithSessionToExternal(request, sessionToken, user, externalRedirect, tokenData.conversation, expires);
             }
         } catch (e) {
             console.error("Invalid redirect URL:", e);
         }
     }
 
-    return redirectWithSession(sessionToken, user, expires);
+    return redirectWithSession(request, sessionToken, user, expires);
   }
 
   async function handleAirforceAuth(request, env, url) {
@@ -1188,14 +1198,14 @@ var USER_TIER_LIMITS = {
         try {
             const redirectUrl = new URL(externalRedirect);
             if (isValidRedirect(redirectUrl) && redirectUrl.pathname === "/members/oauth/authorize/callback") {
-                return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation, expires);
+                return redirectWithSessionToExternal(request, sessionToken, user, externalRedirect, stateData.conversation, expires);
             }
         } catch (e) {
             console.error("Invalid redirect URL:", e);
         }
     }
 
-    return redirectWithSession(sessionToken, user, expires);
+    return redirectWithSession(request, sessionToken, user, expires);
   }
 
   /**
@@ -1241,7 +1251,7 @@ var USER_TIER_LIMITS = {
    */
   async function handlePollinationsAuth(request, env, url) {
       if (request.method !== "POST") {
-          return jsonResponse({ error: "Method not allowed" }, 405);
+          return jsonResponse({ error: "Method not allowed" }, 405, getCorsHeaders(request));
       }
   
       // Accept key from body or Authorization header
@@ -1256,19 +1266,19 @@ var USER_TIER_LIMITS = {
           pollinationsKey = request.headers.get("Authorization")?.replace("Bearer ", "");
       }
       if (!pollinationsKey) {
-          return jsonResponse({ error: "api_key is required" }, 400);
+          return jsonResponse({ error: "api_key is required" }, 400, getCorsHeaders(request));
       }
   
       // Validate key by fetching the Pollinations profile
       const profile = await fetchPollinationsProfile(pollinationsKey);
       if (!profile) {
-          return jsonResponse({ error: "Invalid Pollinations API key" }, 401);
+          return jsonResponse({ error: "Invalid Pollinations API key" }, 401, getCorsHeaders(request));
       }
   
       // Pollinations profile includes GitHub identity fields
       const githubUsername = profile.githubUsername;
       if (!githubUsername) {
-          return jsonResponse({ error: "Pollinations profile missing GitHub identity", profile}, 502);
+          return jsonResponse({ error: "Pollinations profile missing GitHub identity", profile}, 502, getCorsHeaders(request));
       }
   
       // Create or update the user, linked to the GitHub identity
@@ -1287,14 +1297,14 @@ var USER_TIER_LIMITS = {
       const safeUser = getSafeUser(user);
   
       const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
-      const cookie = `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=Lax; Secure`;
+    const cookie = `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=None; Secure`;
   
       return new Response(JSON.stringify({ session: sessionToken, user: safeUser }), {
           status: 200,
           headers: {
               "Content-Type": "application/json",
               "Set-Cookie": cookie,
-              ...CORS_HEADERS
+              ...getCorsHeaders(request)
           }
       });
   }
@@ -1428,14 +1438,14 @@ var USER_TIER_LIMITS = {
           try {
               const redirectUrl = new URL(externalRedirect);
               if (isValidRedirect(redirectUrl) && redirectUrl.pathname === "/members/oauth/authorize/callback") {
-                  return redirectWithSessionToExternal(sessionToken, user, externalRedirect, stateData.conversation, expires);
+                  return redirectWithSessionToExternal(request, sessionToken, user, externalRedirect, stateData.conversation, expires);
               }
           } catch (e) {
               console.error("Invalid redirect URL:", e);
           }
       }
 
-      return redirectWithSession(sessionToken, user, expires);
+      return redirectWithSession(request, sessionToken, user, expires);
   }
   
   // ============================================
@@ -1476,24 +1486,24 @@ var USER_TIER_LIMITS = {
 
       // Validate required parameters
       if (responseType !== "code") {
-          return jsonResponse({ error: "unsupported_response_type" }, 400);
+          return jsonResponse({ error: "unsupported_response_type" }, 400, getCorsHeaders(request));
       }
       if (!clientId) {
-          return jsonResponse({ error: "invalid_request", error_description: "client_id is required" }, 400);
+          return jsonResponse({ error: "invalid_request", error_description: "client_id is required" }, 400, getCorsHeaders(request));
       }
       if (!redirectUri) {
-          return jsonResponse({ error: "invalid_request", error_description: "redirect_uri is required" }, 400);
+          return jsonResponse({ error: "invalid_request", error_description: "redirect_uri is required" }, 400, getCorsHeaders(request));
       }
 
       // Look up registered client
       const client = await getSelfOAuthClient(env, clientId);
       if (!client) {
-          return jsonResponse({ error: "invalid_client", error_description: "Unknown client_id" }, 401);
+          return jsonResponse({ error: "invalid_client", error_description: "Unknown client_id" }, 401, getCorsHeaders(request));
       }
 
       // Validate redirect_uri
-      if (!client.redirect_uris.includes(redirectUri)) {
-          return jsonResponse({ error: "invalid_request", error_description: "redirect_uri mismatch" }, 400);
+      if (!client.redirect_uris.includes(redirectUri) && !isValidRedirect(redirectUri)) {
+          return jsonResponse({ error: "invalid_request", error_description: "redirect_uri mismatch" }, 400, getCorsHeaders(request));
       }
 
       // Pending authorization context stored in KV
@@ -1507,7 +1517,7 @@ var USER_TIER_LIMITS = {
 
       // If the user already has a session, skip the login page
       const user = await authenticateRequest(request, env);
-      if (user) {
+      if (user && !state.provider) {
           return issueSelfOAuthCode(env, authRequestId, authRequest, user);
       }
 
@@ -1556,11 +1566,12 @@ var USER_TIER_LIMITS = {
       // client.provider can be a string (single provider) or an array.
       // When omitted, all providers are shown.
       let providersToShow = Object.keys(PROVIDER_BUTTONS);
-      if (client.provider) {
-          const requested = Array.isArray(client.provider) ? client.provider : [client.provider];
+      const requestProvider = client.provider || state.provider;
+      if (requestProvider) {
+          const requested = Array.isArray(requestProvider) ? requestProvider : [requestProvider];
           providersToShow = requested.filter(p => PROVIDER_BUTTONS[p]);
           if (providersToShow.length === 0) {
-              return jsonResponse({ error: "invalid_client", error_description: "Client configured with no valid providers" }, 500);
+              return jsonResponse({ error: "invalid_client", error_description: "Client configured with no valid providers" }, 500, getCorsHeaders(request));
           }
       }
 
@@ -1632,7 +1643,7 @@ ${buttonsHtml}
 
       return new Response(html, {
           status: 200,
-          headers: { "Content-Type": "text/html; charset=utf-8", ...CORS_HEADERS }
+          headers: { "Content-Type": "text/html; charset=utf-8", ...getCorsHeaders(request) }
       });
   }
 
@@ -1646,12 +1657,12 @@ ${buttonsHtml}
   async function handleSelfOAuthAuthorizeCallback(request, env, url) {
       const authRequestId = url.searchParams.get("self_oauth_req");
       if (!authRequestId) {
-          return jsonResponse({ error: "invalid_request", error_description: "Missing self_oauth_req" }, 400);
+          return jsonResponse({ error: "invalid_request", error_description: "Missing self_oauth_req" }, 400, getCorsHeaders(request));
       }
 
       const authRequestRaw = await env.MEMBERS_KV.get(`self_oauth_req:${authRequestId}`);
       if (!authRequestRaw) {
-          return jsonResponse({ error: "invalid_request", error_description: "Authorization request expired or not found" }, 400);
+          return jsonResponse({ error: "invalid_request", error_description: "Authorization request expired or not found" }, 400, getCorsHeaders(request));
       }
 
       const authRequest = JSON.parse(authRequestRaw);
@@ -1721,7 +1732,7 @@ ${buttonsHtml}
    */
   async function handleSelfOAuthToken(request, env, url) {
       if (request.method !== "POST") {
-          return jsonResponse({ error: "method_not_allowed" }, 405);
+          return jsonResponse({ error: "method_not_allowed" }, 405, getCorsHeaders(request));
       }
 
       // Parse body — accept both application/json and application/x-www-form-urlencoded
@@ -1735,7 +1746,7 @@ ${buttonsHtml}
               for (const [k, v] of form.entries()) params[k] = v;
           }
       } catch {
-          return jsonResponse({ error: "invalid_request", error_description: "Could not parse request body" }, 400);
+          return jsonResponse({ error: "invalid_request", error_description: "Could not parse request body" }, 400, getCorsHeaders(request));
       }
 
       const grantType = params.grant_type;
@@ -1743,12 +1754,12 @@ ${buttonsHtml}
       const clientSecret = params.client_secret;
 
       if (!clientId || !clientSecret) {
-          return jsonResponse({ error: "invalid_client", error_description: "client_id and client_secret are required" }, 401);
+          return jsonResponse({ error: "invalid_client", error_description: "client_id and client_secret are required" }, 401, getCorsHeaders(request));
       }
 
       const client = await getSelfOAuthClient(env, clientId);
       if (!client || client.secret !== clientSecret) {
-          return jsonResponse({ error: "invalid_client", error_description: "Invalid client credentials" }, 401);
+          return jsonResponse({ error: "invalid_client", error_description: "Invalid client credentials" }, 401, getCorsHeaders(request));
       }
 
       // ── authorization_code grant ───────────────────────────────────────────
@@ -1758,32 +1769,32 @@ ${buttonsHtml}
           const codeVerifier = params.code_verifier || null;
 
           if (!code || !redirectUri) {
-              return jsonResponse({ error: "invalid_request", error_description: "code and redirect_uri are required" }, 400);
+              return jsonResponse({ error: "invalid_request", error_description: "code and redirect_uri are required" }, 400, getCorsHeaders(request));
           }
 
           const codeDataRaw = await env.MEMBERS_KV.get(`self_oauth_code:${code}`);
           if (!codeDataRaw) {
-              return jsonResponse({ error: "invalid_grant", error_description: "Authorization code expired or not found" }, 400);
+              return jsonResponse({ error: "invalid_grant", error_description: "Authorization code expired or not found" }, 400, getCorsHeaders(request));
           }
 
           const codeData = JSON.parse(codeDataRaw);
 
           // Verify binding claims
           if (codeData.clientId !== clientId) {
-              return jsonResponse({ error: "invalid_grant", error_description: "code was issued to a different client" }, 400);
+              return jsonResponse({ error: "invalid_grant", error_description: "code was issued to a different client" }, 400, getCorsHeaders(request));
           }
           if (codeData.redirectUri !== redirectUri) {
-              return jsonResponse({ error: "invalid_grant", error_description: "redirect_uri mismatch" }, 400);
+              return jsonResponse({ error: "invalid_grant", error_description: "redirect_uri mismatch" }, 400, getCorsHeaders(request));
           }
 
           // PKCE verification
           if (codeData.codeChallenge) {
               if (!codeVerifier) {
-                  return jsonResponse({ error: "invalid_grant", error_description: "code_verifier required" }, 400);
+                  return jsonResponse({ error: "invalid_grant", error_description: "code_verifier required" }, 400, getCorsHeaders(request));
               }
               const expectedChallenge = await generateCodeChallenge(codeVerifier);
               if (expectedChallenge !== codeData.codeChallenge) {
-                  return jsonResponse({ error: "invalid_grant", error_description: "code_verifier mismatch" }, 400);
+                  return jsonResponse({ error: "invalid_grant", error_description: "code_verifier mismatch" }, 400, getCorsHeaders(request));
               }
           }
 
@@ -1792,30 +1803,44 @@ ${buttonsHtml}
 
           const user = await getUser(env, codeData.userId);
           if (!user) {
-              return jsonResponse({ error: "invalid_grant", error_description: "User not found" }, 400);
+              return jsonResponse({ error: "invalid_grant", error_description: "User not found" }, 400, getCorsHeaders(request));
           }
 
           const { apiKey, expires } = await createTempLoginKey(env, user);
+          const { sessionToken, _ } = await createSession(env, user.id);
 
+          // Set refreshed session cookie
+          const cookieExpiry = new Date(expires*1000).toUTCString();
+          const cookieHeader = sessionToken 
+                ? `g4f_session=${sessionToken}; Path=/; Expires=${cookieExpiry}; SameSite=None; Secure; HttpOnly`
+                : null;
+
+          const headers = {
+             "Content-Type": "application/json",
+             ...getCorsHeaders(request)
+          };
+          if (cookieHeader) {
+             headers["Set-Cookie"] = cookieHeader;
+          }
           return jsonResponse({
               access_token: apiKey,
               token_type: "bearer",
               expires_in: expires - Math.floor(Date.now() / 1000),
               scope: "profile",
               user: getSafeUser(user)
-          });
+          }, 200, headers);
       }
 
       // ── client_credentials grant ───────────────────────────────────────────
       if (grantType === "client_credentials") {
           // Issue a temp key for the g4f user linked to this client, if configured
           if (!client.user_id) {
-              return jsonResponse({ error: "unauthorized_client", error_description: "No user linked to this client" }, 400);
+              return jsonResponse({ error: "unauthorized_client", error_description: "No user linked to this client" }, 400, getCorsHeaders(request));
           }
 
           const user = await getUser(env, client.user_id);
           if (!user) {
-              return jsonResponse({ error: "invalid_client", error_description: "Linked user not found" }, 400);
+              return jsonResponse({ error: "invalid_client", error_description: "Linked user not found" }, 400, getCorsHeaders(request));
           }
 
           const { apiKey, expires } = await createTempLoginKey(env, user);
@@ -1825,10 +1850,10 @@ ${buttonsHtml}
               token_type: "bearer",
               expires_in: expires - Math.floor(Date.now() / 1000),
               scope: "profile"
-          });
+          }, 200, getCorsHeaders(request));
       }
 
-      return jsonResponse({ error: "unsupported_grant_type" }, 400);
+      return jsonResponse({ error: "unsupported_grant_type" }, 400, getCorsHeaders(request));
   }
 
   /**
@@ -1937,20 +1962,26 @@ ${buttonsHtml}
   const BUILTIN_OAUTH_CLIENTS = {
       "g4f-web": {
           secret: "5594a516-0da6-4167-bcaa-132e715c54a3",
-          redirect_uris: [
-              "https://g4f.dev/members.html",
-              "https://g4f.dev/members",
-              "https://g4f.dev/chat/",
-              "https://g4f.dev/chat/v2.html",
-              "http://localhost:8080/members.html",
-              "http://localhost:8080/chat/",
-              "http://localhost:8080/chat/v2.html",
-              "http://localhost:1337/members.html",
-              "http://localhost:1337/chat/",
-              "http://localhost:1337/chat/v2.html",
-              "https://gpt4free.github.io/members.html"
-          ],
+          redirect_uris: [],
           name: "G4F Web"
+      },
+      "g4f-web-pollinations": {
+          secret: "5594a516-0da6-4167-bcaa-132e715c54a3",
+          redirect_uris: [],
+          name: "G4F Web",
+          provider: "pollinations"
+      },
+      "g4f-web-airforce": {
+          secret: "5594a516-0da6-4167-bcaa-132e715c54a3",
+          redirect_uris: [],
+          name: "G4F Web",
+          provider: "airforce"
+      },
+      "g4f-web-huggingface": {
+          secret: "5594a516-0da6-4167-bcaa-132e715c54a3",
+          redirect_uris: [],
+          name: "G4F Web",
+          provider: "huggingface"
       }
   };
 
@@ -1980,7 +2011,7 @@ ${buttonsHtml}
    */
   async function handleSelfOAuthRevoke(request, env) {
       if (request.method !== "POST") {
-          return jsonResponse({ error: "method_not_allowed" }, 405);
+          return jsonResponse({ error: "method_not_allowed" }, 405, getCorsHeaders(request));
       }
 
       let params = {};
@@ -1993,19 +2024,19 @@ ${buttonsHtml}
               for (const [k, v] of form.entries()) params[k] = v;
           }
       } catch {
-          return jsonResponse({ error: "invalid_request", error_description: "Could not parse request body" }, 400);
+          return jsonResponse({ error: "invalid_request", error_description: "Could not parse request body" }, 400, getCorsHeaders(request));
       }
 
       const clientId = params.client_id;
       const clientSecret = params.client_secret;
 
       if (!clientId || !clientSecret) {
-          return jsonResponse({ error: "invalid_client", error_description: "client_id and client_secret are required" }, 401);
+          return jsonResponse({ error: "invalid_client", error_description: "client_id and client_secret are required" }, 401, getCorsHeaders(request));
       }
 
       const client = await getSelfOAuthClient(env, clientId);
       if (!client || client.secret !== clientSecret) {
-          return jsonResponse({ error: "invalid_client", error_description: "Invalid client credentials" }, 401);
+          return jsonResponse({ error: "invalid_client", error_description: "Invalid client credentials" }, 401, getCorsHeaders(request));
       }
 
       const token = params.token;
@@ -2025,7 +2056,7 @@ ${buttonsHtml}
           }
       }
 
-      return new Response(null, { status: 200, headers: CORS_HEADERS });
+      return new Response(null, { status: 200, headers: getCorsHeaders(request) });
   }
 
   /**
@@ -2059,13 +2090,13 @@ ${buttonsHtml}
       }
 
       if (!token) {
-          return jsonResponse({ error: "invalid_token", error_description: "Missing access token" }, 401);
+          return jsonResponse({ error: "invalid_token", error_description: "Missing access token" }, 401, getCorsHeaders(request));
       }
 
       // Validate as a temporary login key (issued by the OAuth token endpoint)
       const resolved = await resolveTempLoginKey(env, token);
       if (!resolved) {
-          return jsonResponse({ error: "invalid_token", error_description: "Token not found, expired, or not a valid OAuth token" }, 401);
+          return jsonResponse({ error: "invalid_token", error_description: "Token not found, expired, or not a valid OAuth token" }, 401, getCorsHeaders(request));
       }
 
       const user = resolved.user;
@@ -2079,7 +2110,7 @@ ${buttonsHtml}
           profile: `https://g4f.dev/members.html`,
           provider: user.provider,
           tier: user.tier
-      });
+      }, 200, getCorsHeaders(request));
   }
 
   /** Escape HTML special chars for safe insertion into templates */
@@ -2192,7 +2223,7 @@ ${buttonsHtml}
     const limit = Math.min(parseInt(url.searchParams.get("limit") || "20", 10) || 20, 100);
 
     if (!env.MEMBERS_BUCKET) {
-      return jsonResponse({ users: [] });
+      return jsonResponse({ users: [] }, 200, getCorsHeaders(request));
     }
 
     // Iterate through all user objects in R2, collecting created_at timestamps.
@@ -2243,29 +2274,29 @@ ${buttonsHtml}
 
     return jsonResponse({
       users: users.slice(0, limit)
-    }, 200, { "Cache-Control": "public, max-age=60" });
+    }, 200, { "Cache-Control": "public, max-age=60", ...getCorsHeaders(request) });
   }
 
   async function handleGetUser(request, env) {
     const user = await authenticateRequest(request, env);
     if (!user) {
-        return jsonResponse({ error: "Unauthorized" }, 401);
+        return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
     }
   
     // Remove sensitive data before returning
     const safeUser = getSafeUser(user);
   
-    return jsonResponse({ user: safeUser });
+    return jsonResponse({ user: safeUser }, 200, getCorsHeaders(request));
   }
   
   async function handleUpdateUser(request, env) {
     const user = await authenticateRequest(request, env);
     if (!user) {
-        return jsonResponse({ error: "Unauthorized" }, 401);
+        return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
     }
   
     if (request.method !== "POST") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
+        return jsonResponse({ error: "Method not allowed" }, 405, getCorsHeaders(request));
     }
   
     const body = await request.json();
@@ -2282,17 +2313,17 @@ ${buttonsHtml}
   
     const safeUser = getSafeUser(user);
   
-    return jsonResponse({ user: safeUser, message: "User updated successfully" });
+    return jsonResponse({ user: safeUser, message: "User updated successfully" }, 200, getCorsHeaders(request));
   }
   
   async function handleDeleteUser(request, env) {
     const user = await authenticateRequest(request, env);
     if (!user) {
-        return jsonResponse({ error: "Unauthorized" }, 401);
+        return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
     }
   
     if (request.method !== "POST" && request.method !== "DELETE") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
+        return jsonResponse({ error: "Method not allowed" }, 405, getCorsHeaders(request));
     }
   
     // Parse body to check for immediate flag (admin override) or confirm flag
@@ -2314,7 +2345,7 @@ ${buttonsHtml}
         message: "Account deletion scheduled. You have 24 hours to cancel.",
         scheduled_deletion: user.scheduled_deletion,
         can_cancel_until: user.scheduled_deletion
-    });
+    }, 200, getCorsHeaders(request));
   }
   
   /**
@@ -2324,22 +2355,22 @@ ${buttonsHtml}
   async function handleCancelDeleteUser(request, env) {
     const user = await authenticateRequest(request, env);
     if (!user) {
-        return jsonResponse({ error: "Unauthorized" }, 401);
+        return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
     }
   
     if (request.method !== "POST") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
+        return jsonResponse({ error: "Method not allowed" }, 405, getCorsHeaders(request));
     }
   
     if (!user.scheduled_deletion) {
-        return jsonResponse({ error: "No scheduled deletion to cancel" }, 400);
+        return jsonResponse({ error: "No scheduled deletion to cancel" }, 400, getCorsHeaders(request));
     }
   
     delete user.scheduled_deletion;
     user.updated_at = new Date().toISOString();
     await saveUser(env, user);
   
-    return jsonResponse({ message: "Account deletion cancelled" });
+    return jsonResponse({ message: "Account deletion cancelled" }, 200, getCorsHeaders(request));
   }
   
   /**
@@ -2386,32 +2417,32 @@ ${buttonsHtml}
   async function handleUnlinkProvider(request, env) {
     const user = await authenticateRequest(request, env);
     if (!user) {
-        return jsonResponse({ error: "Unauthorized" }, 401);
+        return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
     }
   
     if (request.method !== "POST") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
+        return jsonResponse({ error: "Method not allowed" }, 405, getCorsHeaders(request));
     }
   
     let body;
     try {
         body = await request.json();
     } catch {
-        return jsonResponse({ error: "Invalid JSON body" }, 400);
+        return jsonResponse({ error: "Invalid JSON body" }, 400, getCorsHeaders(request));
     }
   
     const provider = body.provider;
     if (!provider) {
-        return jsonResponse({ error: "Missing required field: provider" }, 400);
+        return jsonResponse({ error: "Missing required field: provider" }, 400, getCorsHeaders(request));
     }
   
     // The main provider cannot be unlinked
     if (provider === user.provider) {
-        return jsonResponse({ error: "Cannot unlink the main provider. Set a different main provider first." }, 400);
+        return jsonResponse({ error: "Cannot unlink the main provider. Set a different main provider first." }, 400, getCorsHeaders(request));
     }
   
     if (!user[provider]) {
-        return jsonResponse({ error: `Provider ${provider} is not linked to your account` }, 400);
+        return jsonResponse({ error: `Provider ${provider} is not linked to your account` }, 400, getCorsHeaders(request));
     }
   
     // Remove the provider link and its lookup index
@@ -2424,7 +2455,7 @@ ${buttonsHtml}
     await saveUser(env, user);
   
     const safeUser = getSafeUser(user);
-    return jsonResponse({ user: safeUser, message: `Provider ${provider} unlinked successfully` });
+    return jsonResponse({ user: safeUser, message: `Provider ${provider} unlinked successfully` }, 200, getCorsHeaders(request));
   }
 
   /**
@@ -2440,7 +2471,7 @@ ${buttonsHtml}
         try {
             body = await request.json();
         } catch (e) {
-            return jsonResponse({ error: "Invalid JSON body" }, 400);
+            return jsonResponse({ error: "Invalid JSON body" }, 400, getCorsHeaders(request));
         }
         
         hashValue = body.hash;
@@ -2451,7 +2482,7 @@ ${buttonsHtml}
         }
         
         if (!hashValue) {
-            return jsonResponse({ error: "Missing required field: username or hash" }, 400);
+            return jsonResponse({ error: "Missing required field: username or hash" }, 400, getCorsHeaders(request));
         }
     } else {
         username = pathname.split("/").pop();
@@ -2467,7 +2498,7 @@ ${buttonsHtml}
         limits: tierLimits,
     };
     
-    return jsonResponse(tierInfo);
+    return jsonResponse(tierInfo, 200, getCorsHeaders(request));
   }
   
   // ============================================
@@ -2477,7 +2508,7 @@ ${buttonsHtml}
   async function handleListApiKeys(request, env) {
     const user = await authenticateRequest(request, env);
     if (!user) {
-        return jsonResponse({ error: "Unauthorized" }, 401);
+        return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
     }
   
     // Return API keys without the actual key values (only metadata)
@@ -2491,17 +2522,17 @@ ${buttonsHtml}
         usage: k.usage
     }));
   
-    return jsonResponse({ api_keys: keys });
+    return jsonResponse({ api_keys: keys }, 200, getCorsHeaders(request));
   }
   
   async function handleGenerateApiKey(request, env, ctx) {
     const user = await authenticateRequest(request, env);
     if (!user) {
-        return jsonResponse({ error: "Unauthorized" }, 401);
+        return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
     }
   
     if (request.method !== "POST") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
+        return jsonResponse({ error: "Method not allowed" }, 405, getCorsHeaders(request));
     }
   
     const tierLimits = USER_TIERS[user.tier] || USER_TIERS.new;
@@ -2619,29 +2650,29 @@ ${buttonsHtml}
         response.message = "API key generated successfully. Old key was automatically revoked.";
     }
   
-    return jsonResponse(response);
+    return jsonResponse(response, 200, getCorsHeaders(request));
   }
   
   async function handleRevokeApiKey(request, env) {
     const user = await authenticateRequest(request, env);
     if (!user) {
-        return jsonResponse({ error: "Unauthorized" }, 401);
+        return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
     }
   
     if (request.method !== "POST" && request.method !== "DELETE") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
+        return jsonResponse({ error: "Method not allowed" }, 405, getCorsHeaders(request));
     }
   
     const body = await request.json();
     const keyId = body.key_id;
   
     if (!keyId) {
-        return jsonResponse({ error: "key_id is required" }, 400);
+        return jsonResponse({ error: "key_id is required" }, 400, getCorsHeaders(request));
     }
   
     const keyIndex = (user.api_keys || []).findIndex(k => k.id === keyId);
     if (keyIndex === -1) {
-        return jsonResponse({ error: "API key not found" }, 404);
+        return jsonResponse({ error: "API key not found" }, 404, getCorsHeaders(request));
     }
   
     const keyData = user.api_keys[keyIndex];
@@ -2664,7 +2695,7 @@ ${buttonsHtml}
       { httpMetadata: { contentType: "application/json" } }
     );
   
-    return jsonResponse({ message: "API key revoked successfully" });
+    return jsonResponse({ message: "API key revoked successfully" }, 200, getCorsHeaders(request));
   }
 
   /**
@@ -2678,13 +2709,13 @@ ${buttonsHtml}
         status: 200,
         headers: {
           "Content-Type": "text/html; charset=utf-8",
-          ...CORS_HEADERS
+          ...getCorsHeaders(request)
         }
       });
     }
 
     if (request.method !== "POST") {
-      return jsonResponse({ error: "Method not allowed" }, 405);
+      return jsonResponse({ error: "Method not allowed" }, 405, getCorsHeaders(request));
     }
 
     let apiKey;
@@ -2702,7 +2733,7 @@ ${buttonsHtml}
     if (!apiKey || typeof apiKey !== "string" || !apiKey.trim()) {
       return new Response(REVOKE_BY_KEY_RESULT_HTML("error", "No API key provided"), {
         status: 400,
-        headers: { "Content-Type": "text/html; charset=utf-8", ...CORS_HEADERS }
+        headers: { "Content-Type": "text/html; charset=utf-8", ...getCorsHeaders(request) }
       });
     }
 
@@ -2713,7 +2744,7 @@ ${buttonsHtml}
     if (!keyDataStr) {
       return new Response(REVOKE_BY_KEY_RESULT_HTML("error", "Invalid API key — not found in system"), {
         status: 404,
-        headers: { "Content-Type": "text/html; charset=utf-8", ...CORS_HEADERS }
+        headers: { "Content-Type": "text/html; charset=utf-8", ...getCorsHeaders(request) }
       });
     }
 
@@ -2723,7 +2754,7 @@ ${buttonsHtml}
     if (!user) {
       return new Response(REVOKE_BY_KEY_RESULT_HTML("error", "User associated with this key no longer exists"), {
         status: 404,
-        headers: { "Content-Type": "text/html; charset=utf-8", ...CORS_HEADERS }
+        headers: { "Content-Type": "text/html; charset=utf-8", ...getCorsHeaders(request) }
       });
     }
 
@@ -2734,7 +2765,7 @@ ${buttonsHtml}
       await env.MEMBERS_KV.delete(`api_key:${keyHash}`);
       return new Response(REVOKE_BY_KEY_RESULT_HTML("error", "API key mapping was orphaned — cleaned up"), {
         status: 404,
-        headers: { "Content-Type": "text/html; charset=utf-8", ...CORS_HEADERS }
+        headers: { "Content-Type": "text/html; charset=utf-8", ...getCorsHeaders(request) }
       });
     }
 
@@ -2763,7 +2794,7 @@ ${buttonsHtml}
       REVOKE_BY_KEY_RESULT_HTML("success", `API key "${keyData.name}" (prefix: ${keyData.prefix}…) revoked successfully for user ${user.username}`),
       {
         status: 200,
-        headers: { "Content-Type": "text/html; charset=utf-8", ...CORS_HEADERS }
+        headers: { "Content-Type": "text/html; charset=utf-8", ...getCorsHeaders(request) }
       }
     );
   }
@@ -2773,21 +2804,21 @@ ${buttonsHtml}
                    request.headers.get("Authorization")?.replace("Bearer ", "");
   
     if (!apiKey) {
-        return jsonResponse({ valid: false, error: "No API key provided" }, 401);
+        return jsonResponse({ valid: false, error: "No API key provided" }, 401, getCorsHeaders(request));
     }
   
     const keyHash = await hashApiKey(apiKey);
     const keyData = await env.MEMBERS_KV.get(`api_key:${keyHash}`);
   
     if (!keyData) {
-        return jsonResponse({ valid: false, error: "Invalid API key" }, 401);
+        return jsonResponse({ valid: false, error: "Invalid API key" }, 401, getCorsHeaders(request));
     }
   
     const { user_id, key_id, expires } = JSON.parse(keyData);
     const user = await getUser(env, user_id);
   
     if (!user) {
-        return jsonResponse({ valid: false, error: "User not found" }, 401);
+        return jsonResponse({ valid: false, error: "User not found" }, 401, getCorsHeaders(request));
     }
   
     // Update last_used timestamp
@@ -2804,7 +2835,7 @@ ${buttonsHtml}
         username: user.username,
         limits: USER_TIERS[user.tier] || USER_TIERS.new,
         expires
-    });
+    }, 200, getCorsHeaders(request));
   }
   
   // ============================================
@@ -2814,7 +2845,7 @@ ${buttonsHtml}
   async function handleGetUsage(request, env) {
     const user = await authenticateRequest(request, env);
     if (!user) {
-        return jsonResponse({ error: "Unauthorized" }, 401);
+        return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
     }
   
     // Initialize usage if not present
@@ -2863,13 +2894,13 @@ ${buttonsHtml}
             requests: Math.max(0, tierLimits.requests_per_day - requestsToday),
             tokens: Math.max(0, tierLimits.tokens_per_day - tokensToday)
         }
-    });
+    }, 200, getCorsHeaders(request));
   }
   
   async function handleGetUsageHistory(request, env) {
     const user = await authenticateRequest(request, env);
     if (!user) {
-        return jsonResponse({ error: "Unauthorized" }, 401);
+        return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
     }
   
     const url = new URL(request.url);
@@ -2896,33 +2927,33 @@ ${buttonsHtml}
         }
     }
   
-    return jsonResponse({ history });
+    return jsonResponse({ history }, 200, getCorsHeaders(request));
   }
   
   async function handleTrackUsage(request, env, ctx) {
     if (request.method !== "POST") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
+        return jsonResponse({ error: "Method not allowed" }, 405, getCorsHeaders(request));
     }
   
     const apiKey = request.headers.get("X-API-Key") ||
                    request.headers.get("Authorization")?.replace("Bearer ", "");
   
     if (!apiKey) {
-        return jsonResponse({ error: "No API key provided" }, 401);
+        return jsonResponse({ error: "No API key provided" }, 401, getCorsHeaders(request));
     }
   
     const keyHash = await hashApiKey(apiKey);
     const keyDataStr = await env.MEMBERS_KV.get(`api_key:${keyHash}`);
   
     if (!keyDataStr) {
-        return jsonResponse({ error: "Invalid API key" }, 401);
+        return jsonResponse({ error: "Invalid API key" }, 401, getCorsHeaders(request));
     }
   
     const { user_id, key_id } = JSON.parse(keyDataStr);
     const user = await getUser(env, user_id);
   
     if (!user) {
-        return jsonResponse({ error: "User not found" }, 404);
+        return jsonResponse({ error: "User not found" }, 404, getCorsHeaders(request));
     }
   
     const body = await request.json();
@@ -2948,7 +2979,7 @@ ${buttonsHtml}
     const dateKey = new Date().toISOString().split("T")[0];
     ctx.waitUntil(updateDailyUsage(env, user.id, dateKey, requests, tokens, provider, model));
   
-    return jsonResponse({ success: true });
+    return jsonResponse({ success: true }, 200, getCorsHeaders(request));
   }
   
   async function updateDailyUsage(env, userId, dateKey, requests, tokens, provider, model) {
@@ -3077,14 +3108,14 @@ ${buttonsHtml}
     }
   
     // Clear the session cookie
-    const clearCookie = "g4f_session=; domain=g4f.space; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure";
+    const clearCookie = "g4f_session=; domain=g4f.space; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=None; Secure";
   
     return new Response(JSON.stringify({ message: "Logged out successfully" }), {
         status: 200,
         headers: {
             "Content-Type": "application/json",
             "Set-Cookie": clearCookie,
-            ...CORS_HEADERS
+            ...getCorsHeaders(request)
         }
     });
   }
@@ -3093,7 +3124,7 @@ ${buttonsHtml}
     const user = await authenticateRequest(request, env, true); // Refresh session on check
     
     if (!user) {
-        return jsonResponse({ authenticated: false }, 401);
+        return jsonResponse({ authenticated: false }, 401, getCorsHeaders(request));
     }
   
     const safeUser = getSafeUser(user);
@@ -3112,12 +3143,12 @@ ${buttonsHtml}
     const expires = Date.now() + 7 * 24 * 60 * 60 * 1000;
     const cookieExpiry = new Date(expires).toUTCString();
     const cookieHeader = sessionToken 
-        ? `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=Lax; Secure`
+        ? `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=None; Secure`
         : null;
   
     const headers = {
         "Content-Type": "application/json",
-        ...CORS_HEADERS
+        ...getCorsHeaders(request)
     };
     if (cookieHeader) {
         headers["Set-Cookie"] = cookieHeader;
@@ -3216,7 +3247,6 @@ ${buttonsHtml}
         status,
         headers: {
             "Content-Type": "application/json",
-            ...CORS_HEADERS,
             ...extraHeaders
         }
     });
@@ -3228,20 +3258,21 @@ ${buttonsHtml}
     return Response.redirect(redirectUrl.toString(), 302);
   }
   
-  function redirectWithSession(sessionToken, user, expires) {
+  function redirectWithSession(request, sessionToken, user, expires) {
     const redirectUrl = new URL(OAUTH_REDIRECT_URI);
     redirectUrl.searchParams.set("session", sessionToken);
     redirectUrl.searchParams.set("user", encodeURIComponent(JSON.stringify(getSafeUser(user))));
     redirectUrl.searchParams.set("expires", String(expires));
     // Set session cookie with 7 day expiry
     const cookieExpiry = new Date(expires * 1000).toUTCString();
-    const cookie = `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=Lax; Secure`;
+    const cookie = `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=None; Secure`;
     
     return new Response(null, {
         status: 302,
         headers: {
             "Location": redirectUrl.toString(),
-            "Set-Cookie": cookie
+            "Set-Cookie": cookie,
+            ...getCorsHeaders(request)
         }
     });
   }
@@ -3250,7 +3281,7 @@ ${buttonsHtml}
    * Redirect to external URL with session token for cloud sync
    * Used for login redirects from chat interface
    */
-  function redirectWithSessionToExternal(sessionToken, user, externalRedirectUrl, conversation = null, expires = null) {
+  function redirectWithSessionToExternal(request, sessionToken, user, externalRedirectUrl, conversation = null, expires = null) {
       const redirectUrl = new URL(externalRedirectUrl);
       const hashParams = new URLSearchParams();
       hashParams.set("session", sessionToken);
@@ -3265,13 +3296,14 @@ ${buttonsHtml}
       
       // Set session cookie with 7 day expiry
       const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
-      const cookie = `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=Lax; Secure`;
+    const cookie = `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=None; Secure`;
       
       return new Response(null, {
           status: 302,
           headers: {
               "Location": redirectUrl.toString(),
-              "Set-Cookie": cookie
+              "Set-Cookie": cookie,
+              ...getCorsHeaders(request)
           }
       });
   }
@@ -3391,53 +3423,12 @@ ${buttonsHtml}
   }
   
   /**
-   * Update rate limit usage for an authenticated user across all windows
-   */
-  async function updateUserRateLimitUsage(env, userId, tokensUsed, ctx) {
-      if (!env.MEMBERS_KV || tokensUsed <= 0) return;
-  
-      const now = Date.now();
-      const windows = ['minute', 'hour', 'day'];
-  
-      for (const window of windows) {
-          const key = `user_rate:${userId}:${window}`;
-          const windowMs = RATE_LIMITS.windows[window];
-  
-          // Get current data
-          const data = await env.MEMBERS_KV.get(key, { type: 'json' });
-  
-          let newData;
-          if (!data || (now - data.timestamp > windowMs)) {
-              // Start new window
-              newData = {
-                  tokens: tokensUsed,
-                  requests: 1,
-                  timestamp: now
-              };
-          } else {
-              // Accumulate in existing window
-              newData = {
-                  tokens: data.tokens + tokensUsed,
-                  requests: data.requests + 1,
-                  timestamp: data.timestamp
-              };
-          }
-  
-          // Calculate TTL based on remaining window time plus buffer
-          const elapsed = now - newData.timestamp;
-          const remaining = Math.max(60, Math.ceil((windowMs - elapsed) / 1000) + 60);
-  
-          ctx.waitUntil(env.MEMBERS_KV.put(key, JSON.stringify(newData), { expirationTtl: remaining }));
-      }
-  }
-  
-  /**
    * Handle GET /members/api/rate-limit - Get current rate limit status
    */
   async function handleGetRateLimit(request, env) {
       const user = await authenticateRequest(request, env);
       if (!user) {
-          return jsonResponse({ error: "Unauthorized" }, 401);
+          return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
       }
   
       const tier = user.tier || 'new';
@@ -3479,7 +3470,7 @@ ${buttonsHtml}
           }
       };
   
-      return jsonResponse(response);
+      return jsonResponse(response, 200, getCorsHeaders(request));
   }
   
   /**
@@ -3514,7 +3505,7 @@ ${buttonsHtml}
       }
   
       if (!userId) {
-          return jsonResponse({ error: "Unauthorized" }, 401);
+          return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
       }
   
       const rateCheck = await checkUserRateLimits(env, userId, tier);
@@ -3536,130 +3527,20 @@ ${buttonsHtml}
                   used: rateCheck.used,
                   retry_after: rateCheck.retryAfter
               }
-          }, 429, { "Retry-After": rateCheck.retryAfter.toString(), "X-User-Tier": tier });
+          }, 429, {
+            "Retry-After": rateCheck.retryAfter.toString(),
+            "X-User-Tier": tier,
+            ...getCorsHeaders(request)
+        });
       }
   
       return jsonResponse({
           allowed: true,
           tier,
           usage: rateCheck.usage
-      });
+      }, 200, getCorsHeaders(request));
   }
-  
-  /**
-   * Handle POST /members/api/rate-limit/update - Update rate limit usage (internal)
-   */
-  async function handleUpdateRateLimit(request, env, ctx) {
-      if (request.method !== "POST") {
-          return jsonResponse({ error: "Method not allowed" }, 405);
-      }
-  
-      // This endpoint is for internal use by the main worker
-      // Validate using API key or internal secret
-      const apiKey = request.headers.get("X-API-Key") ||
-                     request.headers.get("Authorization")?.replace("Bearer ", "");
-  
-      let userId, tier;
-  
-      if (apiKey && apiKey.startsWith('g4f_')) {
-          const keyHash = await hashApiKey(apiKey);
-          const keyDataStr = await env.MEMBERS_KV.get(`api_key:${keyHash}`);
-          
-          if (keyDataStr) {
-              const keyData = JSON.parse(keyDataStr);
-              userId = keyData.user_id;
-              tier = keyData.tier || 'new';
-          }
-      }
-  
-      if (!userId) {
-          const user = await authenticateRequest(request, env);
-          if (user) {
-              userId = user.id;
-              tier = user.tier || 'new';
-          }
-      }
-  
-      if (!userId) {
-          return jsonResponse({ error: "Unauthorized" }, 401);
-      }
-  
-      const body = await request.json();
-      const { tokens = 0, requests = 1, provider = null, model = null } = body;
-  
-      if (tokens > 0 || requests > 0) {
-          // Update rate limit counters
-          await updateUserRateLimitUsage(env, userId, tokens, ctx);
-  
-          // Also update user's total usage stats
-          const user = await getUser(env, userId);
-          if (user) {
-              const now = new Date();
-              const lastReset = new Date(user.usage?.last_reset || 0);
-  
-              // Reset daily counters if new day
-              if (now.getUTCDate() !== lastReset.getUTCDate() ||
-                  now.getUTCMonth() !== lastReset.getUTCMonth() ||
-                  now.getUTCFullYear() !== lastReset.getUTCFullYear()) {
-                  user.usage = {
-                      ...user.usage,
-                      requests_today: 0,
-                      tokens_today: 0,
-                      last_reset: now.toISOString()
-                  };
-              }
-  
-              // Update usage counters
-              user.usage = user.usage || { requests_today: 0, tokens_today: 0, total_requests: 0, total_tokens: 0 };
-              user.usage.requests_today = (user.usage.requests_today || 0) + requests;
-              user.usage.tokens_today = (user.usage.tokens_today || 0) + tokens;
-              user.usage.total_requests = (user.usage.total_requests || 0) + requests;
-              user.usage.total_tokens = (user.usage.total_tokens || 0) + tokens;
-  
-              await saveUser(env, user);
-  
-              // Store daily usage log
-              const dateKey = now.toISOString().split("T")[0];
-              ctx.waitUntil(updateDailyUsage(env, userId, dateKey, requests, tokens, provider, model));
-          }
-      }
-  
-      return jsonResponse({ success: true, tokens_added: tokens, requests_added: requests });
-  }
-  
-  /**
-   * Validate API key and return user info with rate limit status
-   * Used by the main worker for authentication
-   */
-  async function validateApiKeyWithRateLimits(env, apiKey) {
-      if (!apiKey || !apiKey.startsWith('g4f_')) {
-          return null;
-      }
-  
-      const keyHash = await hashApiKey(apiKey);
-      const keyDataStr = await env.MEMBERS_KV.get(`api_key:${keyHash}`);
-  
-      if (!keyDataStr) {
-          return null;
-      }
-  
-      try {
-          const keyData = JSON.parse(keyDataStr);
-          const tier = keyData.tier || 'new';
-          const rateCheck = await checkUserRateLimits(env, keyData.user_id, tier);
-  
-          return {
-              user_id: keyData.user_id,
-              key_id: keyData.key_id,
-              tier,
-              api_key_hash: keyHash,
-              rate_limit: rateCheck
-          };
-      } catch (e) {
-          console.error('Failed to validate API key:', e);
-          return null;
-      }
-  }
+
   
   // ============================================
   // Conversation Cloud Sync
@@ -3671,7 +3552,7 @@ ${buttonsHtml}
   async function handleListConversations(request, env) {
       const user = await authenticateRequest(request, env);
       if (!user) {
-          return jsonResponse({ error: "Unauthorized" }, 401);
+          return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
       }
   
       try {
@@ -3699,10 +3580,10 @@ ${buttonsHtml}
           return jsonResponse({ 
               conversations,
               count: conversations.length
-          });
+          }, 200, getCorsHeaders(request));
       } catch (error) {
           console.error("Failed to list conversations:", error);
-          return jsonResponse({ error: "Failed to list conversations" }, 500);
+          return jsonResponse({ error: "Failed to list conversations" }, 500, getCorsHeaders(request));
       }
   }
   
@@ -3712,11 +3593,11 @@ ${buttonsHtml}
   async function handleSyncConversations(request, env) {
       const user = await authenticateRequest(request, env);
       if (!user) {
-          return jsonResponse({ error: "Unauthorized" }, 401);
+          return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
       }
   
       if (request.method !== "POST") {
-          return jsonResponse({ error: "Method not allowed" }, 405);
+          return jsonResponse({ error: "Method not allowed" }, 405, getCorsHeaders(request));
       }
   
       try {
@@ -3724,7 +3605,7 @@ ${buttonsHtml}
           const { conversations } = body;
   
           if (!Array.isArray(conversations)) {
-              return jsonResponse({ error: "conversations must be an array" }, 400);
+              return jsonResponse({ error: "conversations must be an array" }, 400, getCorsHeaders(request));
           }
   
           // Limit number of conversations to sync (prevent abuse)
@@ -3732,7 +3613,7 @@ ${buttonsHtml}
           if (conversations.length > MAX_CONVERSATIONS) {
               return jsonResponse({ 
                   error: `Maximum ${MAX_CONVERSATIONS} conversations allowed` 
-              }, 400);
+              }, 400, getCorsHeaders(request));
           }
   
           const results = [];
@@ -3771,10 +3652,10 @@ ${buttonsHtml}
           return jsonResponse({
               message: `Synced ${successCount} of ${conversations.length} conversations`,
               results
-          });
+          }, 200, getCorsHeaders(request));
       } catch (error) {
           console.error("Failed to sync conversations:", error);
-          return jsonResponse({ error: "Failed to sync conversations" }, 500);
+          return jsonResponse({ error: "Failed to sync conversations" }, 500, getCorsHeaders(request));
       }
   }
   
@@ -3784,7 +3665,7 @@ ${buttonsHtml}
   async function handleGetConversation(request, env, conversationId) {
       const user = await authenticateRequest(request, env);
       if (!user) {
-          return jsonResponse({ error: "Unauthorized" }, 401);
+          return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
       }
   
       try {
@@ -3792,14 +3673,14 @@ ${buttonsHtml}
           const object = await env.MEMBERS_BUCKET.get(key);
   
           if (!object) {
-              return jsonResponse({ error: "Conversation not found" }, 404);
+              return jsonResponse({ error: "Conversation not found" }, 404, getCorsHeaders(request));
           }
   
           const conversation = await object.json();
-          return jsonResponse({ conversation });
+          return jsonResponse({ conversation }, 200, getCorsHeaders(request));
       } catch (error) {
           console.error("Failed to get conversation:", error);
-          return jsonResponse({ error: "Failed to get conversation" }, 500);
+          return jsonResponse({ error: "Failed to get conversation" }, 500, getCorsHeaders(request));
       }
   }
   
@@ -3809,17 +3690,17 @@ ${buttonsHtml}
   async function handleDeleteConversation(request, env, conversationId) {
       const user = await authenticateRequest(request, env);
       if (!user) {
-          return jsonResponse({ error: "Unauthorized" }, 401);
+          return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
       }
   
       try {
           const key = `conversations/${user.id}/${conversationId}.json`;
           await env.MEMBERS_BUCKET.delete(key);
   
-          return jsonResponse({ message: "Conversation deleted successfully" });
+          return jsonResponse({ message: "Conversation deleted successfully" }, 200, getCorsHeaders(request));
       } catch (error) {
           console.error("Failed to delete conversation:", error);
-          return jsonResponse({ error: "Failed to delete conversation" }, 500);
+          return jsonResponse({ error: "Failed to delete conversation" }, 500, getCorsHeaders(request));
       }
   }
 
@@ -3832,11 +3713,11 @@ ${buttonsHtml}
   async function handleJwtRequest(request, env) {
     const user = await authenticateRequest(request, env);
     if (!user) {
-        return jsonResponse({ error: "Unauthorized" }, 401);
+        return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
     }
 
     if (request.method !== "GET") {
-        return jsonResponse({ error: "Method not allowed" }, 405);
+        return jsonResponse({ error: "Method not allowed" }, 405, getCorsHeaders(request));
     }
 
     // JWT Expiry: 24 hours
@@ -3883,5 +3764,5 @@ ${buttonsHtml}
     return jsonResponse({
         token,
         expires
-    });
+    }, 200, getCorsHeaders(request));
   }

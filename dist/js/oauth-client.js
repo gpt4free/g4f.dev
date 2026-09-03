@@ -46,7 +46,7 @@
     // in sessionStorage, then navigate to the central authorize endpoint.
     // stateData is round-tripped via sessionStorage and returned by
     // handleCallback() after the redirect back.
-    async function authorize(redirectUri, stateData) {
+    async function authorize(redirectUri, stateData, provider=null) {
         const verifier = randomString(64);
         const challenge = await generateCodeChallenge(verifier);
         const state = randomString(32);
@@ -55,10 +55,11 @@
             state: state,
             redirectUri: redirectUri,
             data: stateData || null,
+            provider: provider || null
         }));
         const params = new URLSearchParams({
             response_type: "code",
-            client_id: CLIENT_ID,
+            client_id: provider ? `g4f-web-${provider}` : CLIENT_ID,
             redirect_uri: redirectUri,
             state: state,
             code_challenge: challenge,
@@ -67,10 +68,10 @@
         window.location.href = `${OAUTH_BASE}/members/oauth/authorize?${params.toString()}`;
     }
 
-    async function exchangeCode(code, redirectUri) {
+    async function exchangeCode(code, redirectUri, provider=null) {
         const body = new URLSearchParams({
             grant_type: "authorization_code",
-            client_id: CLIENT_ID,
+            client_id: provider ? `g4f-web-${provider}` : CLIENT_ID,
             client_secret: CLIENT_SECRET,
             code: code,
             redirect_uri: redirectUri,
@@ -79,6 +80,7 @@
         const res = await fetch(`${OAUTH_BASE}/members/oauth/token`, {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            credentials: "include",
             body: body.toString(),
         });
         const data = await res.json().catch(() => ({}));
@@ -101,11 +103,16 @@
             saved = JSON.parse(sessionStorage.getItem(STATE_KEY) || "null");
         } catch (e) { saved = null; }
         sessionStorage.removeItem(STATE_KEY);
-        sessionStorage.removeItem(VERIFIER_KEY);
         if (!saved || saved.state !== state) {
+            sessionStorage.removeItem(VERIFIER_KEY);
             throw new Error("OAuth state mismatch - please retry signing in");
         }
-        const data = await exchangeCode(code, saved.redirectUri || redirectUri);
+        let data;
+        try {
+            data = await exchangeCode(code, saved.redirectUri || redirectUri, saved.provider || null);
+        } finally {
+            sessionStorage.removeItem(VERIFIER_KEY);
+        }
         // clean the URL (drop code/state)
         url.searchParams.delete("code");
         url.searchParams.delete("state");

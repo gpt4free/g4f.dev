@@ -43,7 +43,7 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
         return pywebview.api[`get_${ressource}`]();
     }
     let headers = {};
-    let user = appStorage.getItem("user");
+    let user = JSON.parse(appStorage.getItem("g4f_user") || "{}").username;
     if (user) {
         headers['x-user'] = user;
     }
