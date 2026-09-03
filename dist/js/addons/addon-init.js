@@ -177,7 +177,7 @@ const toUrl = async (file)=>{
 
 function getExtraBody(provider) {
     const extraBody = {};
-    for (el of document.getElementById(`${sanitizeSelector(provider)}-form`)?.querySelectorAll(".saved input, .saved textarea") || []) {
+    for (const el of document.getElementById(`${sanitizeSelector(provider)}-form`)?.querySelectorAll(".saved input, .saved textarea") || []) {
         let value;
         if (el.type == "checkbox") {
             value = el.checked;
@@ -1915,6 +1915,9 @@ async function handleToolCalls(toolCalls, messages, model, provider, message_id,
                         if (delta) {
                             await add_message_chunk({type: "content", content: delta}, message_id);
                         }
+                    }
+                    if (choice?.finish_reason) {
+                        finish_storage[message_id] = choice.finish_reason;
                     }
                 }
             }

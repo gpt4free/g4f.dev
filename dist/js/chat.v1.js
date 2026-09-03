@@ -1417,8 +1417,8 @@ async function load_provider_parameters(provider) {
                 }
                 field_el.innerHTML = `<label for="${el_id}" title="">${key}:</label>`;
                 if (Number.isInteger(value)) {
-                    max =  key === "n" ? 10 : value == 42 || value >= 4096 ? 8192 : value >= 100 ? 4096 : value > 1 ? 100 : value === 0 ? 600 : 2;
-                    step = value >= 1024 ? 8 : value > 1 ? 1 : value > 0 ? 0.1 : 1;
+                    const max =  key === "n" ? 10 : value == 42 || value >= 4096 ? 16384 : value >= 100 ? 4096 : value > 1 ? 100 : value === 0 ? 600 : 2;
+                    const step = value >= 1024 ? 8 : value > 1 ? 1 : value > 0 ? 0.1 : 1;
                     field_el.innerHTML += `<input type="range" id="${el_id}" name="${key}" value="${framework.escape(value)}" class="slider" min="0" max="${max}" step="${step}"/><output>${framework.escape(value)}</output>`;
                     field_el.innerHTML += `<i class="fa-solid fa-xmark"></i>`;
                 } else if (typeof value == "number") {
@@ -1844,7 +1844,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 if (spinner) spinner.remove();
             }
         }
-        if (message_storage[message_id] || reasoning_storage[message_id]?.status || reasoning_storage[message_id]?.text) {
+        if (finish_storage[message_id] || message_storage[message_id] || reasoning_storage[message_id]?.status || reasoning_storage[message_id]?.text) {
             const message_provider = message_id in provider_storage ? provider_storage[message_id] : null;
             let usage = {};
             if (usage_storage[message_id]) {

@@ -347,7 +347,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                 if (spinner) spinner.remove();
             }
         }
-        if (message_storage[message_id] || reasoning_storage[message_id]?.status || reasoning_storage[message_id]?.text) {
+        if (finish_storage[message_id] || message_storage[message_id] || reasoning_storage[message_id]?.status || reasoning_storage[message_id]?.text) {
             const message_provider = message_id in provider_storage ? provider_storage[message_id] : null;
             let usage = {};
             if (usage_storage[message_id]) {
@@ -702,6 +702,9 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                         if (choice.content) {
                             await add_message_chunk({type: "content", content: choice.content}, message_id);
                         }
+                        if (choice.finish_reason) {
+                            finish_storage[message_id] = choice.finish_reason;
+                        }
                     }
                     await finish_message();
                     return;
@@ -754,6 +757,9 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                         if (choice?.delta?.content) {
                             const delta = choice?.delta?.content || '';
                             await add_message_chunk({type: "content", content: delta}, message_id);
+                        }
+                        if (choice?.finish_reason) {
+                            finish_storage[message_id] = choice.finish_reason;
                         }
                     }
                     if (chunk.citations) {

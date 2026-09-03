@@ -391,12 +391,12 @@ const load_conversation = async (conversation, append = false) => {
             </button>`);
         }
         if (actions.includes("continue")) {
-            if (messages.length >= i - 1) {
+            //if (messages.length >= i - 1) {
                 add_buttons.push(`<button class="continue_button">
                     <span>${framework.translate('Continue')}</span>
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
                 </button>`);
-            }
+            //}
         }
         if (!Array.isArray(item.content)) {
             add_buttons.push(`<button class="edit_button" title="${framework.translate('Edit message')}">
