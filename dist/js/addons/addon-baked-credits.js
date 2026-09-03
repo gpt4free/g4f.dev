@@ -24,6 +24,7 @@
 
 // --- Baked credits (proof-of-work cakes) ---------------------------
 const cakeCreditsText = document.getElementById('cake-credits-text');
+const tierLimitsRow = document.getElementById('tier-limits-row');
 
 function formatCakeCredits(cents, bakedToday) {
     const dollars = (cents / 100).toFixed(2);
@@ -40,9 +41,62 @@ function updateCakeCredits(cents, bakedToday) {
 let lastCakeCredits = null;
 let repetitionCount = 0;
 let cakeStatusInterval = null;
+// Cross-tab sync: the cake-baker tab (lock holder) fetches /cake/status and
+// broadcasts snapshots; this tab consumes them instead of polling itself.
+const CAKE_STATUS_CHANNEL = 'g4f_cake_baker';
+const CAKE_STATUS_MSG = 'g4f-cake-status';
+const CAKE_STATUS_REQ = 'g4f-cake-status-request';
+const CAKE_STATUS_KEY = 'g4f_cake_status';
+// Freshness window: while snapshots arrive, polling is paused entirely.
+const CAKE_SNAPSHOT_TTL = 45000;
+let lastSnapshotTs = 0;
 
-// Poll the cake worker /status endpoint for baked credits
+function applyCakeSnapshot(credits, bakedToday) {
+    if (typeof credits !== 'number') return;
+    lastCakeCredits = credits;
+    repetitionCount = 0;
+    updateCakeCredits(credits, bakedToday);
+}
+
+function onCakeStatusMessage(msg) {
+    if (!msg || typeof msg !== 'object' || msg.type !== CAKE_STATUS_MSG) return;
+    lastSnapshotTs = msg.ts || Date.now();
+    applyCakeSnapshot(msg.credits, msg.dailyBaked);
+}
+
+function listenForCakeStatus() {
+    if (typeof BroadcastChannel === 'function') {
+        try {
+            const channel = new BroadcastChannel(CAKE_STATUS_CHANNEL);
+            channel.onmessage = (event) => onCakeStatusMessage(event.data);
+            // Ask the baking tab for its latest snapshot right away.
+            channel.postMessage({ type: CAKE_STATUS_REQ });
+            return;
+        } catch (e) { /* fall through to storage fallback */ }
+    }
+    // Fallback: read the last persisted snapshot from localStorage.
+    try {
+        const saved = JSON.parse(localStorage.getItem(CAKE_STATUS_KEY) || 'null');
+        if (saved && Date.now() - (saved.ts || 0) < CAKE_SNAPSHOT_TTL) {
+            applyCakeSnapshot(saved.credits, saved.dailyBaked);
+        }
+    } catch (e) { /* no snapshot yet */ }
+}
+
+// Immediate UI update when a bake is accepted in any tab (cake-baker.js
+// dispatches this in the baking tab; other tabs get it via the snapshot).
+window.addEventListener('g4f:cake:accepted', (event) => {
+    const detail = event.detail || {};
+    if (typeof detail.total === 'number') {
+        applyCakeSnapshot(detail.total, detail.baked_today);
+    }
+});
+
+// Poll the cake worker /status endpoint for baked credits.
+// Skipped while fresh cross-tab snapshots are arriving — only the
+// lock-holding baking tab fetches /cake/status; everyone else listens.
 async function refreshCakeStatus() {
+    if (Date.now() - lastSnapshotTs < CAKE_SNAPSHOT_TTL) return;
     try {
         const res = await fetch('https://g4f.space/cake/status', { credentials: 'include' });
         if (res.ok) {
@@ -61,6 +115,7 @@ async function refreshCakeStatus() {
     } catch (e) { /* network blocked — ignore */ }
 }
 
+listenForCakeStatus();
 refreshCakeStatus();
 cakeStatusInterval = setInterval(refreshCakeStatus, 30000);
 
@@ -71,8 +126,8 @@ function formatNumber(num) {
 }
 
 domReady.then(() => {
-    // Shared DOM refs used by tier/cake UI below
-    const tierLimitsRow = document.getElementById('tier-limits-row');
+    // Shared DOM refs used by tier/cake UI below (tierLimitsRow is declared
+    // at module scope above so updateCakeCredits can unhide it)
 
     // Listen for user tier updates from API responses
     window.addEventListener('userTierUpdate', (event) => {

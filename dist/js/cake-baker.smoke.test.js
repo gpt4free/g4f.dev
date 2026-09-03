@@ -50,6 +50,8 @@ const fakeDoc = {
     head: makeEl("head"),
     readyState: "complete",
     getElementById(id) { return null; },
+    querySelector() { return null; },
+    querySelectorAll() { return []; },
     createElement(tag) { return makeEl(tag); },
     addEventListener() {},
     dispatchEvent() { return true; },

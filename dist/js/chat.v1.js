@@ -125,9 +125,57 @@ document.addEventListener("DOMContentLoaded", (event) => {
     let lastCakeCredits = null;
     let repetitionCount = 0;
     let cakeStatusInterval = null;
+    // Cross-tab sync: the cake-baker tab (lock holder) fetches /cake/status
+    // and broadcasts snapshots; this tab consumes them instead of polling.
+    const CAKE_STATUS_CHANNEL = 'g4f_cake_baker';
+    const CAKE_STATUS_MSG = 'g4f-cake-status';
+    const CAKE_STATUS_REQ = 'g4f-cake-status-request';
+    const CAKE_STATUS_KEY = 'g4f_cake_status';
+    const CAKE_SNAPSHOT_TTL = 45000;
+    let lastSnapshotTs = 0;
 
-    // Poll the cake worker /status endpoint for baked credits
+    function applyCakeSnapshot(credits, bakedToday) {
+        if (typeof credits !== 'number') return;
+        lastCakeCredits = credits;
+        repetitionCount = 0;
+        updateCakeCredits(credits, bakedToday);
+    }
+
+    function onCakeStatusMessage(msg) {
+        if (!msg || typeof msg !== 'object' || msg.type !== CAKE_STATUS_MSG) return;
+        lastSnapshotTs = msg.ts || Date.now();
+        applyCakeSnapshot(msg.credits, msg.dailyBaked);
+    }
+
+    function listenForCakeStatus() {
+        if (typeof BroadcastChannel === 'function') {
+            try {
+                const channel = new BroadcastChannel(CAKE_STATUS_CHANNEL);
+                channel.onmessage = (event) => onCakeStatusMessage(event.data);
+                channel.postMessage({ type: CAKE_STATUS_REQ });
+                return;
+            } catch (e) { /* fall through to storage fallback */ }
+        }
+        try {
+            const saved = JSON.parse(localStorage.getItem(CAKE_STATUS_KEY) || 'null');
+            if (saved && Date.now() - (saved.ts || 0) < CAKE_SNAPSHOT_TTL) {
+                applyCakeSnapshot(saved.credits, saved.dailyBaked);
+            }
+        } catch (e) { /* no snapshot yet */ }
+    }
+
+    // Immediate UI update when a bake is accepted in this tab.
+    window.addEventListener('g4f:cake:accepted', (event) => {
+        const detail = event.detail || {};
+        if (typeof detail.total === 'number') {
+            applyCakeSnapshot(detail.total, detail.baked_today);
+        }
+    });
+
+    // Poll the cake worker /status endpoint for baked credits.
+    // Skipped while fresh cross-tab snapshots are arriving.
     async function refreshCakeStatus() {
+        if (Date.now() - lastSnapshotTs < CAKE_SNAPSHOT_TTL) return;
         try {
             const res = await fetch('https://g4f.space/cake/status', { credentials: 'include' });
             if (res.ok) {
@@ -146,6 +194,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
         } catch (e) { /* network blocked — ignore */ }
     }
 
+    listenForCakeStatus();
     refreshCakeStatus();
     cakeStatusInterval = setInterval(refreshCakeStatus, 30000);
 

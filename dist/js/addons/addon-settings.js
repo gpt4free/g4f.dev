@@ -246,25 +246,25 @@ function get_media_size(text) {
     return null;
 }
 
-function count_words_and_tokens(text, model, completion_tokens, prompt_tokens, pollen_cost=null) {
+function count_words_and_tokens(text, model, completion_tokens, prompt_tokens, estimated_cost=null) {
     if (Array.isArray(text) || !text) {
         return "";
     }
 
-    let addPollenCost = "";
-    if (pollen_cost !== null) {
-        addPollenCost = `, ${(pollen_cost*10).toFixed(3).replace(/0+$/, "")}$`;
+    let addEstimatedCost = "";
+    if (estimated_cost !== null) {
+        addEstimatedCost = `, ${(estimated_cost).toFixed(3).replace(/0+$/, "")}$`;
     }
     
     // Check if the message contains media (image/video)
     const mediaSize = get_media_size(text);
     if (mediaSize !== null) {
         // Show size instead of word/token count for media responses
-        return `(${formatFileSize(mediaSize)}${addPollenCost})`;
+        return `(${formatFileSize(mediaSize)}${addEstimatedCost})`;
     }
     
     text = filter_message(text);
-    return `(${count_words(text)} ${framework.translate('words')}, ${count_chars(text)} ${framework.translate('chars')}, ${completion_tokens ? completion_tokens : count_tokens(model, text, prompt_tokens)} ${framework.translate('tokens')}${addPollenCost})`;
+    return `(${count_words(text)} ${framework.translate('words')}, ${count_chars(text)} ${framework.translate('chars')}, ${completion_tokens ? completion_tokens : count_tokens(model, text, prompt_tokens)} ${framework.translate('tokens')}${addEstimatedCost})`;
 }
 
 const count_input = async () => {
