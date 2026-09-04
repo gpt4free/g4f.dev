@@ -568,6 +568,8 @@ function chunkArray(array, chunkSize) {
 
 if (window.location.origin === G4F_HOST || window.location.origin.endsWith(G4F_WILDCARD)) {
     if (window.self === window.top) {
-        includeAdsense().catch(add_error);
+        if (!["/members", "/members.html"].includes(location.pathname)) {
+    includeAdsense().catch(add_error);
+        }
     }
 }
