@@ -1082,7 +1082,7 @@ let runExtraArgs = localStorage.getItem("mcp_editor_run_args") || "";
 
 document.getElementById("run-config-cancel").addEventListener("click", () => runConfigDialog.close());
 document.getElementById("run-config-save").addEventListener("click", () => {
-  runToolName = runToolInput.value.trim() || "code_run";
+  runToolName = runToolInput.value.trim() || "python_execute";
   localStorage.setItem("mcp_editor_run_tool", runToolName);
   runExtraArgs = runArgsInput.value.trim();
   localStorage.setItem("mcp_editor_run_args", runExtraArgs);
