@@ -3275,7 +3275,7 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
         window.customServers = data;
         
         data.forEach(server => {
-            if (server.is_public && (!server.is_online || server.is_ollama || server.is_hidden)) {
+            if (server.is_public && (server.is_offline || server.is_ollama || server.is_hidden || !server.is_valid)) {
                 return;
             }
             // Check if this server already exists in dropdown

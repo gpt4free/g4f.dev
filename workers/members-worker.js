@@ -870,6 +870,16 @@ var USER_TIER_LIMITS = {
         try {
             const redirectUrl = new URL(externalRedirect);
             if (isValidRedirect(redirectUrl) && redirectUrl.pathname === "/members/oauth/authorize/callback") {
+                const authReqId = redirectUrl.searchParams.get("self_oauth_req");
+                if (authReqId) {
+                    const authReqRaw = await env.MEMBERS_KV.get(`self_oauth_req:${authReqId}`);
+                    if (authReqRaw) {
+                        const authReq = JSON.parse(authReqRaw);
+                        authReq.userId = user.id;
+                        authReq.sessionToken = sessionToken;
+                        await env.MEMBERS_KV.put(`self_oauth_req:${authReqId}`, JSON.stringify(authReq), { expirationTtl: 600 });
+                    }
+                }
                 return redirectWithSessionToExternal(request, sessionToken, user, externalRedirect, stateData.conversation, expires);
             }
         } catch (e) {
@@ -967,6 +977,16 @@ var USER_TIER_LIMITS = {
         try {
             const redirectUrl = new URL(externalRedirect);
             if (isValidRedirect(redirectUrl) && redirectUrl.pathname === "/members/oauth/authorize/callback") {
+                const authReqId = redirectUrl.searchParams.get("self_oauth_req");
+                if (authReqId) {
+                    const authReqRaw = await env.MEMBERS_KV.get(`self_oauth_req:${authReqId}`);
+                    if (authReqRaw) {
+                        const authReq = JSON.parse(authReqRaw);
+                        authReq.userId = user.id;
+                        authReq.sessionToken = sessionToken;
+                        await env.MEMBERS_KV.put(`self_oauth_req:${authReqId}`, JSON.stringify(authReq), { expirationTtl: 600 });
+                    }
+                }
                 return redirectWithSessionToExternal(request, sessionToken, user, externalRedirect, stateData.conversation, expires);
             }
         } catch (e) {
@@ -1067,6 +1087,16 @@ var USER_TIER_LIMITS = {
         try {
             const redirectUrl = new URL(externalRedirect);
             if (isValidRedirect(redirectUrl) && redirectUrl.pathname === "/members/oauth/authorize/callback") {
+                const authReqId = redirectUrl.searchParams.get("self_oauth_req");
+                if (authReqId) {
+                    const authReqRaw = await env.MEMBERS_KV.get(`self_oauth_req:${authReqId}`);
+                    if (authReqRaw) {
+                        const authReq = JSON.parse(authReqRaw);
+                        authReq.userId = user.id;
+                        authReq.sessionToken = sessionToken;
+                        await env.MEMBERS_KV.put(`self_oauth_req:${authReqId}`, JSON.stringify(authReq), { expirationTtl: 600 });
+                    }
+                }
                 return redirectWithSessionToExternal(request, sessionToken, user, externalRedirect, tokenData.conversation, expires);
             }
         } catch (e) {
@@ -1198,6 +1228,16 @@ var USER_TIER_LIMITS = {
         try {
             const redirectUrl = new URL(externalRedirect);
             if (isValidRedirect(redirectUrl) && redirectUrl.pathname === "/members/oauth/authorize/callback") {
+                const authReqId = redirectUrl.searchParams.get("self_oauth_req");
+                if (authReqId) {
+                    const authReqRaw = await env.MEMBERS_KV.get(`self_oauth_req:${authReqId}`);
+                    if (authReqRaw) {
+                        const authReq = JSON.parse(authReqRaw);
+                        authReq.userId = user.id;
+                        authReq.sessionToken = sessionToken;
+                        await env.MEMBERS_KV.put(`self_oauth_req:${authReqId}`, JSON.stringify(authReq), { expirationTtl: 600 });
+                    }
+                }
                 return redirectWithSessionToExternal(request, sessionToken, user, externalRedirect, stateData.conversation, expires);
             }
         } catch (e) {
@@ -1432,12 +1472,22 @@ var USER_TIER_LIMITS = {
 
       const { sessionToken, expires } = await createSession(env, user.id);
 
-// Only the central OAuth authorize/callback hop may receive the session
+      // Only the central OAuth authorize/callback hop may receive the session
       // via redirect; everything else falls back to the native members login.
       if (externalRedirect) {
           try {
               const redirectUrl = new URL(externalRedirect);
               if (isValidRedirect(redirectUrl) && redirectUrl.pathname === "/members/oauth/authorize/callback") {
+                  const authReqId = redirectUrl.searchParams.get("self_oauth_req");
+                  if (authReqId) {
+                      const authReqRaw = await env.MEMBERS_KV.get(`self_oauth_req:${authReqId}`);
+                      if (authReqRaw) {
+                          const authReq = JSON.parse(authReqRaw);
+                          authReq.userId = user.id;
+                          authReq.sessionToken = sessionToken;
+                          await env.MEMBERS_KV.put(`self_oauth_req:${authReqId}`, JSON.stringify(authReq), { expirationTtl: 600 });
+                      }
+                  }
                   return redirectWithSessionToExternal(request, sessionToken, user, externalRedirect, stateData.conversation, expires);
               }
           } catch (e) {
@@ -1517,7 +1567,7 @@ var USER_TIER_LIMITS = {
 
       // If the user already has a session, skip the login page
       const user = await authenticateRequest(request, env);
-      if (user && !state.provider) {
+      if (user) {
           return issueSelfOAuthCode(env, authRequestId, authRequest, user);
       }
 
@@ -1566,9 +1616,8 @@ var USER_TIER_LIMITS = {
       // client.provider can be a string (single provider) or an array.
       // When omitted, all providers are shown.
       let providersToShow = Object.keys(PROVIDER_BUTTONS);
-      const requestProvider = client.provider || state.provider;
-      if (requestProvider) {
-          const requested = Array.isArray(requestProvider) ? requestProvider : [requestProvider];
+      if (client.provider) {
+          const requested = Array.isArray(client.provider) ? client.provider : [client.provider];
           providersToShow = requested.filter(p => PROVIDER_BUTTONS[p]);
           if (providersToShow.length === 0) {
               return jsonResponse({ error: "invalid_client", error_description: "Client configured with no valid providers" }, 500, getCorsHeaders(request));
@@ -1667,7 +1716,23 @@ ${buttonsHtml}
 
       const authRequest = JSON.parse(authRequestRaw);
 
-      const user = await authenticateRequest(request, env);
+      let user = await authenticateRequest(request, env);
+      const sessionToken = url.searchParams.get("session") || authRequest.sessionToken;
+
+      if (!user && sessionToken) {
+          const sessionData = await env.MEMBERS_KV.get(`session:${sessionToken}`);
+          if (sessionData) {
+              const session = JSON.parse(sessionData);
+              if (new Date(session.expires_at) > new Date()) {
+                  user = await getUser(env, session.user_id);
+              }
+          }
+      }
+
+      if (!user && authRequest.userId) {
+          user = await getUser(env, authRequest.userId);
+      }
+
       if (!user) {
           // Not yet authenticated — redirect back to the authorize page
           const authorizeUrl = new URL(`${url.origin}/members/oauth/authorize`);
@@ -1682,13 +1747,13 @@ ${buttonsHtml}
           return Response.redirect(authorizeUrl.toString(), 302);
       }
 
-      return issueSelfOAuthCode(env, authRequestId, authRequest, user);
+      return issueSelfOAuthCode(env, authRequestId, authRequest, user, sessionToken);
   }
 
   /**
    * Issue an authorization code and redirect back to the client's redirect_uri.
    */
-  async function issueSelfOAuthCode(env, authRequestId, authRequest, user) {
+  async function issueSelfOAuthCode(env, authRequestId, authRequest, user, sessionToken = null) {
       const code = generateState(); // cryptographically random 64-char hex string
       const codeData = {
           userId: user.id,
@@ -1712,7 +1777,18 @@ ${buttonsHtml}
       redirect.searchParams.set("code", code);
       if (authRequest.state) redirect.searchParams.set("state", authRequest.state);
 
-      return Response.redirect(redirect.toString(), 302);
+      const headers = {
+          "Location": redirect.toString()
+      };
+      if (sessionToken) {
+          const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
+          headers["Set-Cookie"] = `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=None; Secure`;
+      }
+
+      return new Response(null, {
+          status: 302,
+          headers
+      });
   }
 
   /**
@@ -3283,20 +3359,24 @@ ${buttonsHtml}
    */
   function redirectWithSessionToExternal(request, sessionToken, user, externalRedirectUrl, conversation = null, expires = null) {
       const redirectUrl = new URL(externalRedirectUrl);
-      const hashParams = new URLSearchParams();
-      hashParams.set("session", sessionToken);
-      hashParams.set("user", encodeURIComponent(JSON.stringify(getSafeUser(user))));
-      if (conversation) {
-        hashParams.set("conversation", conversation);
+      if (redirectUrl.pathname === "/members/oauth/authorize/callback") {
+          redirectUrl.searchParams.set("session", sessionToken);
+      } else {
+          const hashParams = new URLSearchParams();
+          hashParams.set("session", sessionToken);
+          hashParams.set("user", encodeURIComponent(JSON.stringify(getSafeUser(user))));
+          if (conversation) {
+            hashParams.set("conversation", conversation);
+          }
+          if (expires) {
+            hashParams.set("expires", expires);
+          }
+          redirectUrl.hash = hashParams.toString();
       }
-      if (expires) {
-        hashParams.set("expires", expires);
-      }
-      redirectUrl.hash = hashParams.toString();
       
       // Set session cookie with 7 day expiry
       const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
-    const cookie = `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=None; Secure`;
+      const cookie = `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=None; Secure`;
       
       return new Response(null, {
           status: 302,

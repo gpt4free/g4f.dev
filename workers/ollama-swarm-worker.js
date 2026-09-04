@@ -100,7 +100,7 @@ async function probeBatched(candidates, step = 0) {
 let cachedAlive = {}; // In-memory cache for the duration of the worker instance
 let cachedStep = 0;
 let workingModels = null;
-let publicServers = null;
+let publicServers = [];
 let cachedSeedServers = null;
 function shuffleObject(obj) {
     const entries = Object.entries(obj);
@@ -124,7 +124,7 @@ function shuffleArray(array) {
 async function getSeedServers() {
   if (cachedSeedServers) return cachedSeedServers;
   try {
-    const resp = await fetch(SEED_SERVERS_URL, { signal: AbortSignal.timeout(10_000) });
+    const resp = await fetch(SEED_URL, { signal: AbortSignal.timeout(10_000) });
     if (resp.ok) {
       const data = await resp.json();
       const servers = Array.isArray(data) ? data : data.servers;
@@ -141,7 +141,7 @@ async function getSeedServers() {
 }
 
 async function discoverServers(env) {
-  const cacheRequest = new Request(`https://cache.example/servers`, {
+  const cacheRequest = new Request(`https://localhost:8080/servers`, {
     method: "GET"
   });
   if (!cachedStep) {
@@ -166,12 +166,12 @@ async function discoverServers(env) {
   responseToCache.headers.set("Cache-Control", "public, max-age=86400");
   await caches.default.put(cacheRequest, responseToCache);
 
-  if (!publicServers) {
+  if (!publicServers.length) {
     try {
       const url = "https://g4f.space/custom/api/servers/public";
       const response = await fetch(url);
       const publicList = await response.json();
-      publicServers = publicList.servers.filter(s=>s.is_ollama&&s.is_online);
+      publicServers = publicList.servers.filter(s=>s.is_ollama);
     } catch(e) {
       console.error(e);
     }
