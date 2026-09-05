@@ -899,7 +899,7 @@ document.getElementById("new-file-create").addEventListener("click", async () =>
   if (!path) return;
   const filePath = openDir ? `${openDir}/${path}` : path;
   try {
-    await mcpCall("create_file", { filePath, content: "" });
+    mcpCall("create_file", { filePath, content: "" }).catch(e=>console.error("Failed to create file:", e));
     newFileDialog.close();
     await refreshTree();
     openFile(filePath);
