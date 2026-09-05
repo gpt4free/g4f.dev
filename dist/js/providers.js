@@ -91,7 +91,6 @@ async function createClient(provider, options = {}) {
     if (provider.startsWith("custom:")) {
         serverId = provider.substring(7);
         options.baseUrl = `https://g4f.space/custom/${serverId}`;
-        options.apiKey = options.apiKey || (typeof window !== "undefined" ? window?.localStorage.getItem("g4f_session") : undefined);
         provider = "custom";
     } else if (providers[provider]) {
         serverId = providers[provider].id;
@@ -113,16 +112,18 @@ async function createClient(provider, options = {}) {
     }
     const { class: ClientClass = (providerClassMap[provider] || Client), backupUrl, localStorageApiKey, tags, ...config } = providers[provider];
 
-    if (typeof localStorage !== "undefined" && providerLocalStorage[provider] && !options.apiKey) {
-        options.apiKey = localStorage.getItem(providerLocalStorage[provider]);
+    if (typeof localStorage !== "undefined") {
+        if (providerLocalStorage[provider] && !options.apiKey) {
+            options.apiKey = localStorage.getItem(providerLocalStorage[provider]);
+        }
+        if (!options.apiKey && backupUrl) {
+            options.apiKey = localStorage.getItem("g4f_session");
+        }
     }
     
-    if (backupUrl && !options.apiKey && !options.baseUrl) {
+    if (backupUrl && !options.baseUrl) {
         options.baseUrl = backupUrl;
-        options.apiKey = (typeof window !== "undefined" ? window?.localStorage.getItem("g4f_session") : undefined);
         options.sleep = 10000; // 10 seconds delay to avoid rate limiting
-    } else if (!options.baseUrl) {
-        options.baseUrl = backupUrl;
     }
 
     if (defaultModels[provider] && !options.defaultModel) {

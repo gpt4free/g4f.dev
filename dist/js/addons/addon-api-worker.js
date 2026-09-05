@@ -11,6 +11,27 @@
 // Try to load the worker; if it fails (e.g. file missing, CSP, file:// origin),
 // fall back to regular fetch() on the main thread.
 let apiWorker = null;
+let isEnabled = false;
+const apiWorkerCallbacks = new Map(); // workerId -> { onOpen, onChunk, onDone, onError, onRatelimit }
+
+ChatAddons.register({
+    id: 'builtin:api-worker',
+    name: 'API Web Worker',
+    version: '1.0.0',
+    description: 'Keeps AI streaming alive in background tabs by running API requests in a Web Worker.',
+    author: 'g4f',
+    builtin: true,
+    permissions: ['net:fetch'],
+
+    load() {
+        isEnabled = true;
+    },
+
+    unload() {
+        isEnabled = false;
+    },
+});
+
 try {
     // The worker lives next to this script (dist/js/api-worker.js).
     // Resolve relative to the script's own URL so it works regardless of
@@ -29,7 +50,6 @@ try {
     console.warn("Failed to create api-worker, using main-thread fetch:", e);
     apiWorker = null;
 }
-const apiWorkerCallbacks = new Map(); // workerId -> { onOpen, onChunk, onDone, onError, onRatelimit }
 
 if (apiWorker) {
     apiWorker.onmessage = (event) => {
@@ -61,7 +81,7 @@ if (apiWorker) {
  */
 function workerFetch(workerId, url, options) {
     // Fallback: worker not loaded — use main-thread fetch.
-    if (!apiWorker) {
+    if (!apiWorker || !isEnabled) {
         return fetch(url, options);
     }
     return new Promise((resolve, reject) => {
@@ -118,14 +138,8 @@ function workerFetch(workerId, url, options) {
     });
 }
 
-function workerAbort(workerId) {
-    if (!apiWorker) return;
-    apiWorker.postMessage({ type: "abort", id: workerId });
-}
-
-
 function fetchFn(url, fetchOptions) {
-    if (!apiWorker) {
+    if (!apiWorker || !isEnabled) {
         return fetch(url, fetchOptions);
     }
     const workerId = `client-${generateUUID()}`;
@@ -143,29 +157,7 @@ function fetchFn(url, fetchOptions) {
     return workerFetch(workerId, url, fetchOptions);
 };
 
-(function () {
-    'use strict';
-
-    ChatAddons.register({
-        id: 'builtin:api-worker',
-        name: 'API Web Worker',
-        version: '1.0.0',
-        description: 'Keeps AI streaming alive in background tabs by running API requests in a Web Worker.',
-        author: 'g4f',
-        builtin: true,
-        permissions: ['net:fetch'],
-
-        load() {
-            window.fetchFn = fetchFn;
-        },
-
-        unload() {
-            window.fetchFn = null;
-        },
-    });
-})();
-
 export default {
     apiWorker,
-    fetchFn: fetch
+    fetchFn
 };

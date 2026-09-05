@@ -1454,7 +1454,6 @@ async function initClient() {
         return;
     }
     const selectedProviderOption = providerSelect.options[providerSelect.selectedIndex];
-    const serverId = selectedProviderOption?.dataset?.serverId;
     const defaultModel = selectedProviderOption?.dataset?.defaultModel;
     let messageId = null;
     let count = 0;
@@ -1471,9 +1470,6 @@ async function initClient() {
     const provider = providerSelect?.value;
     const apiKey = get_api_key_by_provider(provider);
     const options = apiKey ? { apiKey } : {};
-    if (serverId && options.backupUrl) {
-        options.backupUrl = `https://g4f.space/custom/${serverId}`;
-    }
     if (defaultModel) {
         options.defaultModel = defaultModel;
     }
@@ -2327,5 +2323,6 @@ export default {
     renderPaProviders,
     loadCustomProvidersFromAPI,
     initClient,
-    updateLiveProviderOptions
+    updateLiveProviderOptions,
+    mcpClient,
 }
