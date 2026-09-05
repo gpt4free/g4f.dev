@@ -256,6 +256,7 @@ class Client {
             headers: this.extraHeaders,
             signal: this.modelsSignal?.signal
           });
+          delete this.modelsSignal;
           
           if (!response.ok) {
             throw new Error(`Failed to fetch models: ${response.status}`);
