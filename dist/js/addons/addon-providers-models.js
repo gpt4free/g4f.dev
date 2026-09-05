@@ -21,13 +21,8 @@
         }
     })
 })();
-function get_selected_model() {
-    let model = null;
-    if (modelSelect.selectedIndex >= 0) {
-        model = modelSelect.options[modelSelect.selectedIndex];
-    }
-    return model?.value ? model.value : null;
-}
+
+let providerModelSignal = null;
 
 async function api(ressource, args=null, files=null, message_id=null, finish_message=null) {
     if (window?.pywebview) {
@@ -106,7 +101,7 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
         if (response.status != 200) {
             let message = null;
             try {
-                const json = await response.json();
+                const json = await response.clone().json();
                 if (json.error) {
                     message = json.error.message || message;
                 }
@@ -155,9 +150,6 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
     }
     if (!response) {
         response = await fetch(url, {headers: headers});
-    }
-    if (response.status != 200) {
-        console.error(response);
     }
     return await response.json();
 }
@@ -519,6 +511,50 @@ async function refreshModels(provider) {
         appStorage.setItem(`${provider}:models`, JSON.stringify(new_models));
     }
 }
+async function loadClientModels() {
+    modelSelect.innerHTML = `<option value="" disabled selected>${framework.translate("Loading...")}</option>`;
+    try {
+
+        if (providerModelSignal) {
+            providerModelSignal.abort();
+        }
+        providerModelSignal = new AbortController();
+        window.client.modelsSignal = providerModelSignal;
+        const [models, quota] = await Promise.all([window.client.models.list(), window.client.getQuota().catch(() => undefined)]);
+        setQuotaInfo(models, quota);
+        modelSelect.innerHTML = '';
+        models.forEach(model => {
+            if (window.isValidModel && !isValidModel(model)) {
+                return;
+            }
+            const opt = document.createElement('option');
+            opt.value = model.id;
+            opt.text = model.label;
+            if (model.type) {
+                opt.dataset.type = model.type;
+            }
+            if (model.audio) {
+                opt.dataset.audio = model.audio;
+            }
+            if (model.remaining_percent !== undefined) {
+                opt.dataset.remaining = model.remaining_percent;
+            }
+            if (model.default) {
+                opt.selected = true;
+            }
+            if (model.disabled) {
+                opt.disabled = true;
+            }
+            modelSelect.appendChild(opt);
+        });
+        if (models.length > 2) {
+            setFavoriteModels(providerSelect?.value, window.client.defaultModel || models[0].id);
+        }
+    } catch (err) {
+        console.error('Model load failed:', err);
+        modelSelect.innerHTML = "";
+    }
+}
 async function loadProviderModels(provider=null) {
     const isLoading = !!provider;
     if (!provider) {
@@ -750,6 +786,7 @@ export default {
     setProviderModels,
     get_quota,
     refreshModels,
+    loadClientModels,
     loadProviderModels,
     save_storage,
     get_recognition_language,

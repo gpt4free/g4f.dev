@@ -3714,139 +3714,6 @@ function get_selected_model() {
     return model?.value ? model.value : null;
 }
 
-async function api(ressource, args=null, files=null, message_id=null, finish_message=null) {
-    if (window?.pywebview) {
-        if (args !== null) {
-            if (ressource == "conversation") {
-                return pywebview.api[`get_${ressource}`](args, message_id);
-            }
-            if (ressource == "models") {
-                ressource = "provider_models";
-            }
-            return pywebview.api[`get_${ressource}`](args);
-        }
-        return pywebview.api[`get_${ressource}`]();
-    }
-    let headers = {};
-    let user = JSON.parse(appStorage.getItem("g4f_user") || "{}").username;
-    if (user) {
-        headers['x-user'] = user;
-    }
-    let url = `${framework.backendUrl}/backend-api/v2/${ressource}`;
-    let response;
-    if (ressource == "models" && args) {
-        if (providerModelSignal) {
-            providerModelSignal.abort();
-        }
-        providerModelSignal = new AbortController();
-        
-        const api_key = get_api_key_by_provider(args);
-        if (api_key) {
-            headers['x-api-key'] = api_key;
-        }
-        const api_base = args == "Custom" ? document.getElementById(`${args}-api_base`).value : null;
-        if (api_base) {
-            headers['x-api-base'] = api_base;
-        }
-        const ignored = Array.from(settings.querySelectorAll("input.provider:not(:checked)")).map((el)=>el.value);
-        if (ignored.length > 0 && args == "AnyProvider") {
-            args += '?ignored=' + encodeURIComponent(ignored.join(" "));
-        }
-        url = `${framework.backendUrl}/backend-api/v2/${ressource}/${args}`;
-        headers['content-type'] = 'application/json';
-        response = await fetch(url, {
-            method: 'GET',
-            headers: headers,
-            signal: providerModelSignal.signal,
-        });
-    } else if (ressource == "conversation") {
-        let body = JSON.stringify(args);
-        headers = {
-            accept: 'text/event-stream',
-            ...await framework.getHeaders(),
-            ...headers
-        };
-        if (files.length > 0) {
-            const formData = new FormData();
-            for (const file of files) {
-                if (file instanceof File) {
-                    formData.append('files', file)
-                } else {
-                    formData.append('media_url', file.url ? file.url : file)
-                }
-            }
-            formData.append('json', body);
-            body = formData;
-        } else {
-            headers['content-type'] = 'application/json';
-        }
-        // Run the fetch in a Web Worker so it keeps streaming
-        // even when the tab is backgrounded / the user switches apps.
-        response = await fetchFn(url, {
-            method: 'POST',
-            headers: headers,
-            body: body,
-        });
-        // On Ratelimit
-        if (response.status != 200) {
-            let message = null;
-            try {
-                const json = await response.json();
-                if (json.error) {
-                    message = json.error.message || message;
-                }
-            } catch (e) {
-                console.error(e);
-            }
-            if (!message) {
-                const body = await response.text();
-                const title = body.match(/<title>([^<]+?)<\/title>/)[1];
-                message = body.match(/<p>([^<]+?)<\/p>/)[1];
-                if (message) {
-                    message = `**${title}**\n${message}`
-                }
-            }
-            if (!message) {
-                message = `**Error ${response.status}:** ${response.statusText}`;
-            }
-            error_storage[message_id] = message;
-            await finish_message();
-            return;
-        } else {
-            try {
-                await read_response(response, message_id, args.provider || null, finish_message);
-            } catch (e) {
-                console.error(e);
-                if (continue_storage[message_id]) {
-                    delete continue_storage[message_id];
-                    await api("conversation", args, files, message_id, finish_message)
-                }
-            }
-            await finish_message();
-            return;
-        }
-    } else if (args) {
-        if (ressource == "log" ||  ressource == "usage") {
-            if (ressource == "log" && !document.getElementById("reportError").checked) {
-                return;
-            }
-        }
-        headers['content-type'] = 'application/json';
-        response = await fetch(url, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(args),
-        });
-    }
-    if (!response) {
-        response = await fetch(url, {headers: headers});
-    }
-    if (response.status != 200) {
-        console.error(response);
-    }
-    return await response.json();
-}
-
 async function read_response(response, message_id, provider, finish_message) {
     const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
     let buffer = "";
@@ -5678,7 +5545,6 @@ export default {
     connectToSSE,
     upload_files,
     get_selected_model,
-    api,
     read_response,
     get_api_key_by_provider,
     setFavoriteModels,
@@ -5716,5 +5582,4 @@ export default {
     syncConversationsToCloud,
     syncConversationsFromCloud,
     cloudSyncLoginRedirect,
-    add_error
 };

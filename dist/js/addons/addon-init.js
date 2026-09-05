@@ -1495,45 +1495,6 @@ async function initClient() {
     return true;
 }
 
-async function loadClientModels() {
-    modelSelect.innerHTML = `<option value="" disabled selected>${framework.translate("Loading...")}</option>`;
-    try {
-        const [models, quota] = await Promise.all([window.client.models.list(), window.client.getQuota().catch(() => undefined)]);
-        setQuotaInfo(models, quota);
-        modelSelect.innerHTML = '';
-        models.forEach(model => {
-            if (window.isValidModel && !isValidModel(model)) {
-                return;
-            }
-            const opt = document.createElement('option');
-            opt.value = model.id;
-            opt.text = model.label;
-            if (model.type) {
-                opt.dataset.type = model.type;
-            }
-            if (model.audio) {
-                opt.dataset.audio = model.audio;
-            }
-            if (model.remaining_percent !== undefined) {
-                opt.dataset.remaining = model.remaining_percent;
-            }
-            if (model.default) {
-                opt.selected = true;
-            }
-            if (model.disabled) {
-                opt.disabled = true;
-            }
-            modelSelect.appendChild(opt);
-        });
-        if (models.length > 2) {
-            setFavoriteModels(providerSelect?.value, window.client.defaultModel || models[0].id);
-        }
-    } catch (err) {
-        console.error('Model load failed:', err);
-        modelSelect.innerHTML = "";
-    }
-}
-
 /**
  * Insert or wrap text with Markdown triple back‑ticks (```).
  *
@@ -2356,9 +2317,7 @@ export default {
     syncConversationsFromCloud,
     cloudSyncLogout,
     new_conversation,
-    appStorage,
     load_conversations,
-    mcpClient,
     getPaBaseUrl,
     load_version,
     renderMCPServers,
@@ -2367,7 +2326,6 @@ export default {
     loadPaProviderSelect,
     renderPaProviders,
     loadCustomProvidersFromAPI,
-    loadClientModels,
     initClient,
     updateLiveProviderOptions
 }

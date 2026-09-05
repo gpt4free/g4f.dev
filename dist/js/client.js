@@ -253,7 +253,8 @@ class Client {
         list: async () => {
           const response = await fetch(this._route(this.modelsEndpoint.replace('{model}', 'auto')), {
             method: 'GET',
-            headers: this.extraHeaders
+            headers: this.extraHeaders,
+            signal: this.modelsSignal?.signal
           });
           
           if (!response.ok) {
@@ -690,7 +691,9 @@ class Puter extends Client {
     get models() {
       return {
         list: async () => {
-            const response = await fetch("https://api.puter.com/puterai/chat/models/");
+            const response = await fetch("https://api.puter.com/puterai/chat/models/", {
+                signal: this.modelsSignal?.signal
+            });
             let data = await response.json();
             data.models = data.models.filter(model => !model.includes("claude-3-5") && !model.includes("claude-3-7"));
             return data.models.map(model => {
