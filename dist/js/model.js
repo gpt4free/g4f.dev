@@ -305,7 +305,7 @@ function convertModel(inputModel, options = {}) {
             model.total_cost = cost.per_million;
             model.cost_label = cost.label;
             model.free = false;
-            console.log(`Model ${model.id} estimated cost: ${cost.label}`);
+            console.info(`Model ${model.id} estimated cost: ${cost.label}`);
         } else {
             model.free = true;
         }
