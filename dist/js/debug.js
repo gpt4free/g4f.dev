@@ -126,4 +126,7 @@
         logEl.innerHTML = '';
     }
   }
+  document.onclick = function(evt) {
+    logEl.innerHTML = '';
+  }
 })();
