@@ -6984,10 +6984,12 @@ async function ensureWorkspaceSecret() {
  * Creates a pending request on the server, then polls until the
  * online device confirms (or timeout).
  */
+const SECRET_API = "https://auth.g4f.space";
+
 async function requestSecretFromOnlineDevice(timeoutMs = 120000) {
     const userId = getSecretUserId();
     if (!userId) return null;
-    const baseUrl = framework.backendUrl || window.location.origin;
+    const baseUrl = SECRET_API;
     const deviceName = navigator.userAgent.includes("Mobile") ? "Mobile" : "Desktop";
     try {
         // Create the request
@@ -7036,7 +7038,7 @@ async function checkAndConfirmSecretRequests() {
     if (!userId) return;
     const existingSecret = appStorage.getItem("g4f_workspace_secret");
     if (!existingSecret) return; // This device doesn't have the secret yet
-    const baseUrl = framework.backendUrl || window.location.origin;
+    const baseUrl = SECRET_API;
     try {
         const resp = await fetch(`${baseUrl}/v1/secret/requests`, {
             headers: { "x-user-id": userId },

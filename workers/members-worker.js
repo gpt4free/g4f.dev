@@ -656,7 +656,27 @@ var USER_TIER_LIMITS = {
             if (pathname === "/members/api/jwt") {
                 return handleJwtRequest(request, env);
             }
-  
+
+            // Secret request endpoints (cross-device workspace secret sharing)
+            // Mirrors the Python API paths at /v1/secret/request*
+            if (pathname === "/v1/secret/request" && request.method === "POST") {
+                return handleCreateSecretRequest(request, env);
+            }
+            if (pathname === "/v1/secret/requests" && request.method === "GET") {
+                return handleListSecretRequests(request, env);
+            }
+            if (pathname === "/v1/secret/request/confirm" && request.method === "POST") {
+                return handleConfirmSecretRequest(request, env);
+            }
+            if (pathname.startsWith("/v1/secret/request/") && pathname !== "/v1/secret/request/confirm") {
+                const requestId = pathname.replace("/v1/secret/request/", "");
+                if (request.method === "GET") {
+                    return handlePollSecretRequest(request, env, requestId);
+                } else if (request.method === "DELETE") {
+                    return handleDeleteSecretRequest(request, env, requestId);
+                }
+            }
+
             return jsonResponse({ error: "Not found" }, 404, getCorsHeaders(request));
         } catch (error) {
             console.error("Worker error:", error);
@@ -1886,7 +1906,7 @@ ${buttonsHtml}
           const { sessionToken, _ } = await createSession(env, user.id);
 
           // Set refreshed session cookie
-          const cookieExpiry = new Date(expires*1000).toUTCString();
+          const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
           const cookieHeader = sessionToken 
                 ? `g4f_session=${sessionToken}; Path=/; Expires=${cookieExpiry}; SameSite=None; Secure; HttpOnly`
                 : null;
@@ -2217,10 +2237,6 @@ ${buttonsHtml}
             user = { ...user, ...userData }
             user.updated_at = now;
             user.last_login = now;
-            // Ensure persistent secret exists for cross-device workspace sync
-            if (!user.secret) {
-                user.secret = generateUserSecret();
-            }
             // Tier is updated by scheduled handler, not on login
         }
     }
@@ -2232,7 +2248,6 @@ ${buttonsHtml}
             id: userId,
             ...userData,
             tier: "new",  // Tier is updated by scheduled handler
-            secret: generateUserSecret(),  // Persistent secret for cross-device workspace sync
             api_keys: [],
             created_at: now,
             updated_at: now,
@@ -3282,12 +3297,6 @@ ${buttonsHtml}
     const randomStr = Array.from(randomPart, byte => byte.toString(16).padStart(2, "0")).join("");
     return `u_${timestamp}${randomStr}`;
   }
-
-  function generateUserSecret() {
-    const array = new Uint8Array(32);
-    crypto.getRandomValues(array);
-    return Array.from(array, byte => byte.toString(16).padStart(2, "0")).join("");
-  }
   
   function generateKeyId() {
     const array = new Uint8Array(8);
@@ -3351,7 +3360,7 @@ ${buttonsHtml}
     redirectUrl.searchParams.set("user", encodeURIComponent(JSON.stringify(getSafeUser(user))));
     redirectUrl.searchParams.set("expires", String(expires));
     // Set session cookie with 7 day expiry
-    const cookieExpiry = new Date(expires * 1000).toUTCString();
+    const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
     const cookie = `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=None; Secure`;
     
     return new Response(null, {
@@ -3856,4 +3865,274 @@ ${buttonsHtml}
         token,
         expires
     }, 200, getCorsHeaders(request));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Secret request endpoints — cross-device workspace secret sharing
+  //
+  // Storage layout in R2:
+  //   secret/<user_id>/secret_requests/<request_id>.json
+  //
+  // Lifecycle:
+  //   pending  →  confirmed  →  completed (polled & cleaned up)
+  //
+  // Mirrors the Python API endpoints at /v1/secret/request*.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Authenticate via x-user-id header (used by secret request endpoints).
+   * Returns the user object or null.
+   */
+  async function authenticateByUserId(request, env) {
+    const userId = request.headers.get("x-user-id");
+    if (!userId) return null;
+    const user = await getUser(env, userId);
+    return user || null;
+  }
+
+  /**
+   * Generate a 12-char hex request ID (matches Python uuid.uuid4().hex[:12]).
+   */
+  function generateSecretRequestId() {
+    const array = new Uint8Array(6);
+    crypto.getRandomValues(array);
+    return Array.from(array, byte => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  /**
+   * List all secret request files for a user, cleaning up expired ones.
+   */
+  async function listSecretRequestObjects(env, userId) {
+    const prefix = `secret/${userId}/secret_requests/`;
+    const listed = await env.MEMBERS_BUCKET.list({ prefix });
+    return listed;
+  }
+
+  /**
+   * Handle POST /members/api/secret/request
+   * Create a pending secret-sharing request from a new device.
+   */
+  async function handleCreateSecretRequest(request, env) {
+    const user = await authenticateByUserId(request, env);
+    if (!user) {
+      return jsonResponse({ error: "User ID is required (provide x-user-id header)" }, 401, getCorsHeaders(request));
+    }
+
+    let deviceName = "unknown";
+    try {
+      const body = await request.json();
+      if (body && body.device_name) deviceName = body.device_name;
+    } catch (e) {
+      // body is optional
+    }
+
+    const requestId = generateSecretRequestId();
+    const now = Date.now() / 1000;
+    const requestData = {
+      id: requestId,
+      user_id: user.id,
+      device_name: deviceName,
+      status: "pending",
+      created: now,
+      expires: now + 300, // 5-minute expiry
+      secret: null
+    };
+
+    const key = `secret/${user.id}/secret_requests/${requestId}.json`;
+    await env.MEMBERS_BUCKET.put(
+      key,
+      JSON.stringify(requestData),
+      { httpMetadata: { contentType: "application/json" } }
+    );
+
+    return jsonResponse({ request_id: requestId, status: "pending" }, 200, getCorsHeaders(request));
+  }
+
+  /**
+   * Handle GET /members/api/secret/requests
+   * List all pending secret-sharing requests for the online device.
+   * Expired requests are automatically removed.
+   */
+  async function handleListSecretRequests(request, env) {
+    const user = await authenticateByUserId(request, env);
+    if (!user) {
+      return jsonResponse({ error: "User ID is required (provide x-user-id header)" }, 401, getCorsHeaders(request));
+    }
+
+    try {
+      const listed = await listSecretRequestObjects(env, user.id);
+      const now = Date.now() / 1000;
+      const requests = [];
+
+      for (const object of listed.objects) {
+        try {
+          const obj = await env.MEMBERS_BUCKET.get(object.key);
+          if (!obj) continue;
+          const data = await obj.json();
+
+          // Clean up expired non-completed requests
+          if (data.expires < now && data.status !== "completed") {
+            await env.MEMBERS_BUCKET.delete(object.key);
+            continue;
+          }
+
+          // Don't expose the secret in the list
+          const safe = { ...data };
+          delete safe.secret;
+          requests.push(safe);
+        } catch (e) {
+          console.error("Failed to load secret request:", object.key, e);
+        }
+      }
+
+      // Sort by created time, newest first
+      requests.sort((a, b) => (b.created || 0) - (a.created || 0));
+
+      return jsonResponse({ requests }, 200, getCorsHeaders(request));
+    } catch (error) {
+      console.error("Failed to list secret requests:", error);
+      return jsonResponse({ error: "Failed to list secret requests" }, 500, getCorsHeaders(request));
+    }
+  }
+
+  /**
+   * Handle POST /members/api/secret/request/confirm
+   * Confirm a pending secret request by providing the workspace secret.
+   * Called by the online device that already has the secret.
+   */
+  async function handleConfirmSecretRequest(request, env) {
+    const user = await authenticateByUserId(request, env);
+    if (!user) {
+      return jsonResponse({ error: "User ID is required (provide x-user-id header)" }, 401, getCorsHeaders(request));
+    }
+
+    let body;
+    try {
+      body = await request.json();
+    } catch (e) {
+      return jsonResponse({ error: "Invalid JSON body" }, 400, getCorsHeaders(request));
+    }
+
+    const requestId = body.request_id;
+    const workspaceSecret = body.workspace_secret;
+    if (!requestId || !workspaceSecret) {
+      return jsonResponse({ error: "request_id and workspace_secret are required" }, 400, getCorsHeaders(request));
+    }
+
+    // Sanitize request ID to prevent path traversal
+    const safeId = requestId.replace(/[^a-f0-9]/gi, "");
+    if (!safeId) {
+      return jsonResponse({ error: "Invalid request_id" }, 400, getCorsHeaders(request));
+    }
+
+    const key = `secret/${user.id}/secret_requests/${safeId}.json`;
+    const object = await env.MEMBERS_BUCKET.get(key);
+
+    if (!object) {
+      return jsonResponse({ error: "Request not found" }, 404, getCorsHeaders(request));
+    }
+
+    let data;
+    try {
+      data = await object.json();
+    } catch (e) {
+      return jsonResponse({ error: "Invalid request file" }, 500, getCorsHeaders(request));
+    }
+
+    if (data.status !== "pending") {
+      return jsonResponse({ error: `Request is not pending (status=${data.status})` }, 400, getCorsHeaders(request));
+    }
+
+    data.status = "confirmed";
+    data.secret = workspaceSecret;
+    data.confirmed_at = Date.now() / 1000;
+
+    await env.MEMBERS_BUCKET.put(
+      key,
+      JSON.stringify(data),
+      { httpMetadata: { contentType: "application/json" } }
+    );
+
+    return jsonResponse({ confirmed: true, request_id: safeId }, 200, getCorsHeaders(request));
+  }
+
+  /**
+   * Handle GET /members/api/secret/request/:id
+   * Poll a secret request to check if it has been confirmed.
+   * Returns the request data including the secret if confirmed.
+   * If the secret has been retrieved, the request is cleaned up.
+   */
+  async function handlePollSecretRequest(request, env, requestId) {
+    const user = await authenticateByUserId(request, env);
+    if (!user) {
+      return jsonResponse({ error: "User ID is required (provide x-user-id header)" }, 401, getCorsHeaders(request));
+    }
+
+    const safeId = requestId.replace(/[^a-f0-9]/gi, "");
+    if (!safeId) {
+      return jsonResponse({ status: "not_found" }, 404, getCorsHeaders(request));
+    }
+
+    const key = `secret/${user.id}/secret_requests/${safeId}.json`;
+    const object = await env.MEMBERS_BUCKET.get(key);
+
+    if (!object) {
+      return jsonResponse({ status: "not_found" }, 200, getCorsHeaders(request));
+    }
+
+    let data;
+    try {
+      data = await object.json();
+    } catch (e) {
+      return jsonResponse({ status: "error", error: "Invalid request file" }, 500, getCorsHeaders(request));
+    }
+
+    const now = Date.now() / 1000;
+
+    // Clean up expired non-completed requests
+    if (data.expires < now && data.status !== "completed") {
+      await env.MEMBERS_BUCKET.delete(key);
+      return jsonResponse({ status: "expired" }, 200, getCorsHeaders(request));
+    }
+
+    if (data.status === "confirmed") {
+      // Mark as completed and clean up
+      await env.MEMBERS_BUCKET.delete(key);
+      return jsonResponse({
+        status: "confirmed",
+        secret: data.secret,
+        request_id: safeId
+      }, 200, getCorsHeaders(request));
+    }
+
+    return jsonResponse({
+      status: data.status || "pending",
+      request_id: safeId
+    }, 200, getCorsHeaders(request));
+  }
+
+  /**
+   * Handle DELETE /members/api/secret/request/:id
+   * Cancel / delete a secret-sharing request.
+   */
+  async function handleDeleteSecretRequest(request, env, requestId) {
+    const user = await authenticateByUserId(request, env);
+    if (!user) {
+      return jsonResponse({ error: "User ID is required (provide x-user-id header)" }, 401, getCorsHeaders(request));
+    }
+
+    const safeId = requestId.replace(/[^a-f0-9]/gi, "");
+    if (!safeId) {
+      return jsonResponse({ error: "Request not found" }, 404, getCorsHeaders(request));
+    }
+
+    const key = `secret/${user.id}/secret_requests/${safeId}.json`;
+    const object = await env.MEMBERS_BUCKET.get(key);
+
+    if (!object) {
+      return jsonResponse({ error: "Request not found" }, 404, getCorsHeaders(request));
+    }
+
+    await env.MEMBERS_BUCKET.delete(key);
+    return jsonResponse({ deleted: true, request_id: safeId }, 200, getCorsHeaders(request));
   }

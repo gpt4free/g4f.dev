@@ -131,8 +131,8 @@ var URL_MAP = {
   "https://router.huggingface.co/v1/quota": "https://huggingface.co/api/whoami-v2"
 }
 let providers = {};
-let waitForProviders = ()=>fetch("https://g4f.dev/dist/js/providers.json")
-  .then(r=>r.json()).then(p=>{
+let waitForProviders = (env)=>fetch("https://g4f.dev/dist/js/providers.json")
+  .then(r=>r.json()).then(async (p)=>{
     DEFAULT_MODELS = p.serverDefaultModels || {};
     HIDDEN_SERVERS = p.hiddenServers || {};
     AUTO_PROVIDERS = Object.keys(p.autoProviders||{});
@@ -148,6 +148,12 @@ let waitForProviders = ()=>fetch("https://g4f.dev/dist/js/providers.json")
         }
       }
     }
+    const publicServers = await getPublicServers(env);
+    for (const s of publicServers) {
+      if (s.default_model && !s.is_ollama && s.is_valid) {
+        DEFAULT_MODELS[s.id] = s.default_model;
+      }
+     }
     return true;
   }).catch(console.error);
 var SERVER_TO_PROVIDER = {
@@ -176,7 +182,7 @@ var BLOCKED_ORGS = [
   "DigitalOcean, LLC",
   "SEO Hosting LTD",
   "Cloudflare London, LLC",
-  "Cloudflare, Inc.",
+  //"Cloudflare, Inc.",
   "Contabo GmbH",
   "Amazon Data Services Brazil",
   "Private Customer",
@@ -240,19 +246,23 @@ var BLOCKED_ORGS = [
   "Amazon Data Services Singapore",
   "500 Oracle Parkway"
 ];
-var BLOCKED_USERS = [
+const BLOCKED_USERS = [
   "mamakumko", "mamkokumko", "MahmutHizal", "LucaBasri",
   "SteamPunk001", "steampunk001", "steeampunk002-cmyk", "steeampunk004-cmyk",
   "denmos221-cpu", "vlintz",
   "luciazamora99", "valrab_",
 ];
-var GPT_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "marin", "cedar", "amuch", "dan", "elan", "breeze", "cove", "ember", "fathom", "glimmer", "harp", "juniper", "maple", "orbit", "vale"];
+const GPT_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "marin", "cedar", "amuch", "dan", "elan", "breeze", "cove", "ember", "fathom", "glimmer", "harp", "juniper", "maple", "orbit", "vale"];
+const LLMPLAYGROUND = {};
 function getDefaultModel(s) {
+  if (s.default_model) {
+    return s.default_model;
+  }
   let defaultModel = DEFAULT_MODELS[s.id];
   if (s.allowed_models.includes(defaultModel)) {
     return defaultModel;
   }
-  defaultModel = s.allowed_models.find(m=>["auto", "openai-fast", "FreeModel", "big-pickle"].includes(m) || m.endsWith("/free"));
+  defaultModel = s.allowed_models.find(m=>["auto", "big-pickle"].includes(m) || m.endsWith("/free") || m.endsWith("/auto"));
   if (defaultModel) {
     return defaultModel;
   }
@@ -263,7 +273,8 @@ function getDefaultModel(s) {
   return s.allowed_models.length > 0 ? s.allowed_models[0] : null;
 }
 async function getCachedBodyRequest(request, pathname, bodyHash, rateCheck, user) {
-    const postCacheKey = `POST:${pathname.replace("/quota", "/chat/completions")}:body:${bodyHash}`;
+    let postCacheKey = generateCacheKey(request);
+    if (bodyHash) postCacheKey = `POST:${postCacheKey}:body:${bodyHash}`;
     const cachedResponse = await getCachedResponse(request, postCacheKey);
     if (cachedResponse) {
       const newResponse = new Response(cachedResponse.body, cachedResponse);
@@ -289,8 +300,10 @@ async function safe(request, env, ctx) {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS });
     }
-    if (["/", "/chat", "/chat/", "/playground", "/playground/"].includes(pathname) && request.method != "POST") {
-      return Response.redirect(`https://g4f.dev${pathname}`, 302);
+    if (["/", "/chat", "/chat/", "/chat/v2", "/playground", "/playground/"].includes(pathname) && request.method != "POST") {
+      const newUrl = new URL(request.url);
+      newUrl.hostname = "g4f.dev";
+      return Response.redirect(newUrl.toString(), 302);
     }
     if (pathname == "/api/audio/models") {
       return Response.json({ data: [{ id: "gpt-audio", audio: true }, ...GPT_AUDIO_VOICES.map((voice) => {
@@ -301,6 +314,8 @@ async function safe(request, env, ctx) {
       pathname = "/custom/api/servers/public";
     } else if (pathname === "/usage") {
       pathname = "/custom/api/servers/usage";
+    } else if (pathname.startsWith("/srv_")) {
+      pathname = "/custom" + pathname;
     }
     let user = null;
     if (pathname === "/api/errors" && request.method === "GET") {
@@ -418,17 +433,15 @@ async function safe(request, env, ctx) {
               || pathname.match(/\/chat\/completions$/))) {
         const body = await request.clone().json();
         const bodyHash = await generatePostBodyHash(body);
-        if (bodyHash) {
-          const cachedResponse = await getCachedBodyRequest(request, pathname, bodyHash, rateCheck, user);
-          if (cachedResponse) {
-            return cachedResponse
-          }
+        const cachedResponse = await getCachedBodyRequest(request, pathname, bodyHash, rateCheck, user);
+        if (cachedResponse) {
+          return cachedResponse
         }
       }
       if (user) {
         ctx.waitUntil(updateUserRateLimit(env, user.id, ctx));
       }
-      await waitForProviders() ? waitForProviders = async ()=>{} : {};
+      if (waitForProviders && await waitForProviders(env)) waitForProviders = null;
       const serverLabel = url.hostname.split(".")[0];
       try {
         if (serverLabel in SERVER_MAP) {
@@ -463,7 +476,7 @@ async function safe(request, env, ctx) {
         ctx.waitUntil(persistErrorToDb(env, error, {
           source: "server_map",
           status: 500,
-          pathname,
+          pathname, 
           method: request.method,
           ip: getClientIP(request),
           userAgent: request.headers.get("user-agent"),
@@ -474,6 +487,18 @@ async function safe(request, env, ctx) {
       }
       if (pathname.startsWith("/ai/")) {
         return handleCustomAiRoute(request, pathname, cacheKey, rateCheck, env, ctx);
+      }
+      if (pathname.startsWith("/screenshot/")) {
+        const storeResponse = await fetch(`https://pass.g4f.space${pathname}`, {headers: {"g4f-api-key": env.PASS_API_KEY}});
+        const subPath = pathname.substring("/screenshot/".length);
+        const previewUrl = subPath == "providers" ? "https://g4f.space/" + subPath : subPath;
+        let response = storeResponse;
+        if (!response.ok)
+            response = await fetch("https://pass.g4f.space/screenshot?url=" + encodeURIComponent(previewUrl), {headers: {"g4f-api-key": env.PASS_API_KEY}});
+        const newResponse = new Response(response.body, response);
+        newResponse.headers.set("cache-control", CACHE_HEADERS.LONG);
+        ctx.waitUntil(setCachedResponse(request, response, CACHE_HEADERS.LONG, cacheKey, ctx));
+        return response;
       }
       if (pathname === "/custom/api/servers") {
         return handleListServers(request, env, user);
@@ -505,7 +530,7 @@ async function safe(request, env, ctx) {
         const server = await getServerById(env, serverId, user);
         return handleModels(request, env, ctx, serverId, user, server, cacheKey);
       }
-      if (pathname.match(/^\/api\/[^/]+\/models$/)) {
+      if (pathname.match(/^\/api\/(?!https?:\/\/).+\/models$/) && pathname != "/api/groq/v1/models") {
         const label = pathname.split("/")[2];
         let server;
         // support serverId:model prefix to directly specify by ID
@@ -557,7 +582,7 @@ async function safe(request, env, ctx) {
         }
         return handleProxyToServer(request, env, ctx, server, "/chat/completions", cacheKey, user, pathname, userProvidedKey, rateCheck, null, serverLabel == "log");
       }
-      if (pathname.match(/^\/api\/.+\/chat\/completions$/)) {
+      if (pathname.match(/^\/api\/(?!https?:\/\/).+\/chat\/completions$/)) {
         const label = pathname.split("/")[2];
         let server;
         let target = pathname;
@@ -581,17 +606,38 @@ async function safe(request, env, ctx) {
         }
         return handleProxyToServer(request, env, ctx, server, "/chat/completions", cacheKey, user, target, userProvidedKey, rateCheck, null, serverLabel == "log");
       }
-      if (pathname.match(/^\/custom\/[^/]+\/validate$/)) {
-        const serverId = pathname.split("/")[2];
+      if (pathname.match(/^\/custom\/[^/]+\/(validate|status)$/)) {
+        let serverId = pathname.split("/")[2];
+        if (serverId in SERVER_MAP) {
+          serverId = SERVER_MAP[serverId];
+        }
         let server = await getServerById(env, serverId, user);
         if (!server) {
           return jsonResponse({ error: "Server not found" }, 404);
         }
-        const result = await validateServer(server.base_url, server.api_keys);
-        server.allowed_models = result.models || server.allowed_models;
-        result.default_model = getDefaultModel(server);
-        result.test_result = await isOnline(result.base_url, server.api_keys, result.default_model)
-        return jsonResponse(result);
+        const publicServers = await getPublicServers(env);
+        const entry = publicServers.find(s=>s.id==server.id);
+        if (!entry) {
+            return jsonResponse({ error: "Server not found" }, 404);
+        }
+        if (pathname.endsWith("/status")) {
+            delete entry.api_keys;
+            return jsonResponse(entry);
+        }
+        const fullServer = await getServerById(env, server.id, user);
+        entry.default_model = url.searchParams.get("model") || entry.default_model || getDefaultModel(entry);
+        const result = await validateServer(env, server.base_url, fullServer.api_keys, entry.default_model);
+        entry.base_url = result.base_url || server.base_url;
+        if (!result.is_loading) entry.allowed_models = result.models || entry.allowed_models;
+        entry.test_result = await isOnline(env, result.base_url, server.api_keys, entry.default_model);
+        entry.is_offline = !!(entry.test_result && entry.test_result.error);
+        entry.is_online = !entry.is_offline;
+        entry.is_hidden = HIDDEN_SERVERS.includes(entry.id);
+        delete entry.api_keys;
+        delete entry.is_loading;
+        if (result.is_loading) entry.is_loading = true;
+        await env.MEMBERS_KV.put("public_servers_index", JSON.stringify(publicServers));
+        return jsonResponse(entry);
       }
       if (pathname.startsWith("/custom/") && pathname.split("/").length >= 3) {
         const parts = pathname.split("/");
@@ -763,7 +809,6 @@ async function handleListServers(request, env, user) {
   if (user && user.tier == "admin") {
     servers.forEach(s=>{
       s.api_key_count=(s.api_keys || "").split("\n").filter((k) => k.trim()).length;
-      s.is_hidden = HIDDEN_SERVERS.includes(s.id);
     });
     return jsonResponse({ servers: servers });
   }
@@ -772,7 +817,6 @@ async function handleListServers(request, env, user) {
     label: s.label,
     base_url: s.base_url,
     is_public: s.is_public,
-    is_hidden: HIDDEN_SERVERS.includes(s.id),
     allowed_models: s.allowed_models,
     api_key_count: (s.api_keys || "").split("\n").filter((k) => k.trim()).length,
     created_at: s.created_at,
@@ -804,8 +848,8 @@ async function handleCreateServer(request, env) {
   if(ipv4.test(baseUrl.hostname)) {
     baseUrl.hostname = `${baseUrl.hostname}.nip.io`;
   }
-  body.base_url = body.base_url.replace(/\/$/, "");
-  const validationResult = await validateServer(body.base_url, body.api_keys);
+  body.base_url = baseUrl.toString().replace(/\/$/, "");
+  const validationResult = await validateServer(env, body.base_url, body.api_keys);
   if (!validationResult.valid) {
     return jsonResponse({
       error: `Server validation failed: ${validationResult.error}`,
@@ -877,7 +921,6 @@ async function handleUpdateServer(request, env) {
     return jsonResponse({ error: "Server not found" }, 404);
   }
   const server = user.custom_servers[serverIndex];
-  const wasPublic = server.is_public;
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const allowedFields = ["label", "base_url", "api_keys", "allowed_models", "auto_update_models", "is_public", "expires"];
   for (const field of allowedFields) {
@@ -897,7 +940,7 @@ async function handleUpdateServer(request, env) {
   // When auto_update_models is enabled, refresh the allowed_models from the upstream server
   if (server.auto_update_models !== false) {
     try {
-      const refreshResult = await validateServer(server.base_url, server.api_keys);
+      const refreshResult = await validateServer(env, server.base_url, server.api_keys);
       if (refreshResult.valid && refreshResult.models && refreshResult.models.length > 0) {
         server.allowed_models = refreshResult.models;
       }
@@ -912,10 +955,8 @@ async function handleUpdateServer(request, env) {
   server.updated_at = now;
   user.updated_at = now;
   await saveUser(env, user);
-  if (wasPublic && !server.is_public) {
+  if (!server.is_public) {
     await updatePublicServerIndex(env, server, user.id, "remove");
-  } else if (!wasPublic && server.is_public) {
-    await updatePublicServerIndex(env, server, user.id, "add");
   } else if (server.is_public) {
     await updatePublicServerIndex(env, server, user.id, "update");
   }
@@ -1021,14 +1062,14 @@ async function getPublicServers(env, blocklist = true) {
   return publicServers;
 }
 async function handleListPublicServers(request, env, user, ctx, cacheKey) {
-  const cachedResponse = await getCachedResponse(request, "public");
+  const cachedResponse = await getCachedResponse(request, cacheKey);
   if (cachedResponse) {
-    if (parseInt(cachedResponse.headers.get("age")) > 600) {
-      ctx.waitUntil(handleUpdatePublicServers(request, env, user, ctx, "public"));
+    if (parseInt(cachedResponse.headers.get("age")) > 300) {
+      ctx.waitUntil(handleUpdatePublicServers(request, env, user, ctx, cacheKey));
     }
     return cachedResponse;
   }
-  return handleUpdatePublicServers(request, env, user, ctx, "public");
+  return handleUpdatePublicServers(request, env, user, ctx, cacheKey);
 }
 async function handleUpdatePublicServers(request, env, user, ctx, cacheKey) {
   const publicServers = await getPublicServers(env);
@@ -1041,15 +1082,22 @@ async function handleUpdatePublicServers(request, env, user, ctx, cacheKey) {
   for (const s of publicServers) {
     const updated_at = new Date(s.updated_at);
     updated_at.setHours(updated_at.getHours() + 1)
-    if (new Date() > updated_at || !("test" in s)) {
+    if (new Date() > updated_at) {
       s.updated_at = new Date().toISOString();
-      s.is_hidden = HIDDEN_SERVERS.includes(s.id);
       try {
-        s.is_ollama = await isOllama(s.base_url);
+        if (!("is_ollama" in s)) {
+          s.is_ollama = await isOllama(s.base_url);
+        }
       } catch(e) {console.error(e)}
+      if (s.is_hidden || s.is_ollama) continue;
       try {
         const fullServer = await getServerById(env, s.id, user);
-        const validationResult = await validateServer(fullServer.base_url, fullServer.api_keys, getDefaultModel(fullServer));
+        s.is_hidden = HIDDEN_SERVERS.includes(s.id);
+        const validationResult = await validateServer(env, fullServer.base_url, fullServer.api_keys);
+        if (validationResult.error) {
+          s.test_result = {error: validationResult.error, details: validationResult.details};
+        }
+        s.test_url = validationResult.test_url;
         if (validationResult.valid) {
           s.auto_update_models = fullServer.auto_update_models;
           if (fullServer.auto_update_models !== false && validationResult.models && validationResult.models.length > 0) {
@@ -1058,17 +1106,9 @@ async function handleUpdatePublicServers(request, env, user, ctx, cacheKey) {
           if (validationResult.base_url) {
             s.base_url = validationResult.base_url;
           }
-          s.test_url = validationResult.test_url;
-          s.default_model = getDefaultModel(s);
-          if (!s.is_ollama && !s.test_url && !s.is_hidden && s.default_model) {
-            s.test_result = await isOnline(s.base_url, s.api_keys, s.default_model);
-            s.is_online = s.test_result && !s.test_result.error;
-          } else {
-            s.is_online = true;
-          }
+          s.is_valid = true;
         } else {
-          s.test_url = validationResult.test_url;
-          s.is_online = false;
+          s.is_valid = false;
         }
       } catch(e) {
         s.test_result = {error: e.message};
@@ -1087,24 +1127,10 @@ async function handleUpdatePublicServers(request, env, user, ctx, cacheKey) {
   if (ct > 0) {
     await env.MEMBERS_KV.put("public_servers_index", JSON.stringify(publicServers));
   }
-  const safeServers = publicServers.map((s) => ({
-    id: s.id,
-    label: s.label,
-    base_url: s.base_url, // (s.is_ollama || (user && user.tier == "admin")) ? s.base_url : "",
-    allowed_models: s.allowed_models,
-    default_model: getDefaultModel(s),
-    auto_update_models: s.auto_update_models,
-    owner_id: s.owner_id,
-    is_ollama: s.is_ollama,
-    is_online: s.is_online,
-    is_offline: !s.is_online,
+  const safeServers = publicServers.map((s) => { delete s.api_keys; return {
+    ...s,
     is_public: true,
-    is_hidden: s.is_hidden,
-    updated_at: s.updated_at,
-    usage: s.usage || { requests: 0, tokens: 0 },
-    test_url: s.test_url,
-    test_result: s.test_result
-  }));
+  }});
   const response = jsonResponse({
     servers: safeServers
   });
@@ -1165,6 +1191,9 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey,
   const headers = { "Content-Type": "application/json" };
   if (apiKey) {
     headers["Authorization"] = `Bearer ${apiKey}`;
+  }
+  if (server.base_url.startsWith("https://pass.g4f.space/")) {
+    headers["g4f-api-key"] = env.PASS_API_KEY;
   }
   try {
     let targetUrl = `${server.base_url}/models`;
@@ -1245,7 +1274,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
         const searchVSC = /Follow the user's requirements carefully & to the letter.\nFollow Microsoft content policies.\n[\s\S]*? simple code examples or demonstrations; debugging <\/description>/gi;
         const replaceVSC = "### Core Rules\n- Follow user requirements strictly and to the letter.\n- Keep answers short and impersonal.\n\n### Role & Context\nYou are an expert automated coding agent. \n- **Gather context first:** Don\'t make assumptions. Use tools to read files and understand the workspace before acting. Don\'t give up if a task seems hard; explore creatively to find a solution.\n- **Be efficient:** Read large file chunks to minimize tool calls. Use provided context/attachments if relevant. Don\'t re-read files already in context.\n- **Infer project type:** Use languages, frameworks, and libraries inferred from the context to guide your changes.\n\n### Tool Usage\n- **Direct answers:** Answer direct code sample requests without using tools.\n- **Schema & permissions:** Follow JSON schemas strictly. Include ALL required properties. No need to ask permission before using a tool.\n- **Parallelization:** Call independent tools in parallel. Run terminal commands sequentially (never in parallel).\n- **Transparency:** Never mention tool names to the user (e.g., say \"I\'ll run the command\" not \"I\'ll use run_in_terminal\").\n- **Best practices:** Use absolute paths/URIs. Use `grep_search` for file overviews. Use browser tools for front-end UI validation. Only use currently available tools.\n- **Continuity:** Don\'t repeat yourself after a tool call; pick up where you left off.\n\n### Editing & Execution\n- **No codeblocks:** NEVER print codeblocks for file changes or terminal commands. Use the respective tools directly.\n- **Read before edit:** Ensure a file is in context before editing. Use `replace_string_in_file` (preferred) or `insert_edit_into_file`. Group changes by file. Never pass omitted line markers (e.g., `/* Lines 123-456 omitted */`) to edit tools.\n- **Insert edits:** For `insert_edit_into_file`, use `// ...existing code...` comments to omit unchanged code. Be as concise as possible.\n- **No terminal edits:** Never edit files via terminal commands unless explicitly asked.\n- **Dependencies & UI:** Use popular external libraries when appropriate (install via `npm install`, etc.). Build modern, beautiful UIs from scratch.\n- **Error fixing:** Fix new errors resulting from your edits. Max 3 attempts per file; if the third fails, stop and ask the user.\n\n### Notebooks\n- Use `edit_notebook_file` and `run_notebook_cell` for notebooks. NEVER use terminal commands or `insert_edit_into_file` for notebooks.\n- Use `copilot_getNotebookSummary` for overviews. Refer to cells by number, not ID. Markdown cells cannot be executed.\n\n### Output Formatting\n- Use Markdown. Wrap filenames/symbols in backticks (e.g., `src/models/person.ts`).\n- Use `$` for inline math and `$$` for block math (KaTeX).\n- Use ```mermaid fenced code blocks for Mermaid diagrams.\n\n### Memory\nConsult memory files for past insights. Keep entries concise and update existing files over creating new ones.\n- **User (`/memories/`):** Persistent, auto-loaded. Store preferences and general insights.\n- **Session (`/memories/session/`):** Current conversation only. Store task-specific state.\n- **Repository (`/memories/repo/`):** Local workspace facts, conventions, and build commands.\n\n### Workspace & Skills\n- This is a multi-root workspace. Apply folder-specific instructions to their respective folders.\n- **Skills:** Use `read_file` to load detailed skill instructions when a task matches a skill\'s domain (e.g., use `project-setup-info-local` for scaffolding new projects from scratch, not for adding individual files).";
         const firstMessage = messages[0];
-        if (firstMessage && firstMessage.content && firstMessage.role == "system") {
+        if (firstMessage && firstMessage.content && typeof firstMessage.content === 'string' && firstMessage.role == "system") {
           const startLen = firstMessage.content.length;
           firstMessage.content = firstMessage.content.replace(searchVSC, replaceVSC);
           savedBytes += startLen - firstMessage.content.length
@@ -1620,12 +1649,13 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   const chatUrls = ["/chat/completions", "/backend-api/v2/conversation", "/images/generate"];
   if (chatUrls.includes(subPath)) {
     try {
-      if (!requestModel || requestModel === "auto") {
+      if (!requestModel || requestModel === "auto" || requestModel === "default") {
         requestModel = getDefaultModel(server);
       }
       if (requestModel) {
           requestBody.model = requestModel;
       }
+      if (!userProvidedKey && !server.api_key)
       if (server.allowed_models && server.allowed_models.length > 0) {
         if (!server.allowed_models.includes(requestModel)) {
           return jsonResponse({
@@ -1651,71 +1681,21 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   }
 
   const apiKey = userProvidedKey || server.api_key || getRandomApiKey(server.api_keys);
+  const ip = request.headers.get('cf-connecting-ip') || '';
+  const country = request.headers.get('cf-ipcountry') || 'XX';
+  const ipSnippet = ip.substring(0, 4).replace(/[.:]/g, '');
+  const xUser = `${country}:${(user?.username || user?.id) ||ipSnippet}`;
   const proxyHeaders = {
     "accept": request.headers.get("accept"),
     "user-agent": request.headers.get("user-agent"),
     "content-type": request.headers.get("content-type") || "application/json",
     "x-secret": request.headers.get("x-secret"),
-    "x-user": (user && (user.username || user.id)) || request.headers.get("x-user"),
+    "x-user": xUser,
     "x-user-tier": user && user.tier,
     ...EXTRA_HEADERS
   };
   if (apiKey) {
     proxyHeaders["Authorization"] = `Bearer ${apiKey}`;
-  }
-  if (request.method == "POST" && server.base_url == "https://llmplayground.net/api") {
-    if (!requestBody.conversation?.cookie) {
-      const conversation = {};
-      let username = null;
-      let password = null;
-      let lastValue = null;
-      let isUsername = false;
-      let isPassword = false;
-      for (const m of requestBody.messages) {
-        if (m.role == "user") {
-          if (isUsername) {
-            username = m.content;
-            isUsername = false;
-          } else if (isPassword) {
-            password = m.content;
-            username = username || lastValue;
-            break;
-          }
-          lastValue = m.content;
-        } else {
-          if (m.content == "Password:") {
-            isPassword = true;
-          } else if (m.content.startsWith("Username:")) {
-            isUsername = true;
-          }
-        }
-      }
-      if (!username) {
-        return jsonResponse({ "choices": [{ "message": { "content": "Username:" } }] });
-      }
-      if (!password) {
-        return jsonResponse({ "choices": [{ "message": { "content": "Password:" } }] });
-      }
-      const url = "https://llmplayground.net/api/auth/login";
-      const response = await fetch(url, { method: "POST", body: JSON.stringify({ username, password }), headers: proxyHeaders });
-      const data = await response.json();
-      if (data.authenticated) {
-        conversation.csrf_token = data.csrf_token
-        conversation.cookie = (response.headers.get("set-cookie") || "").split(";")[0];
-        return jsonResponse({ "choices": [{ "message": { "content": "Success: Delete login messages now!" } }], conversation });
-      } else {
-        return jsonResponse(data, response.status);
-      }
-    } else {
-      proxyHeaders["cookie"] = requestBody.conversation.cookie;
-      proxyHeaders["x-csrf-token"] = requestBody.conversation.csrf_token;
-      const passwordIndex = requestBody.messages.findIndex(m=>m.content=="Password:");
-      if (passwordIndex) {
-        requestBody.messages = requestBody.messages.slice(passwordIndex+1)
-      }
-      requestBody.connection_id = "c013963a-29d8-4ffd-88d6-05b5f3048ae0";
-      delete requestBody.conversation;
-    }
   }
   let targetUrl;
   if (server.base_url.includes(subPath)) {
@@ -1728,8 +1708,57 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   if (targetUrl in URL_MAP) {
     targetUrl = URL_MAP[targetUrl];
   }
+  if (server.base_url === "https://api.you.com/v1") {
+    if (!["/chat/completions", "/answer"].includes(subPath) || request.method != "POST") {
+        return jsonResponse({
+          error: {
+            message: "Not Found"
+          }
+        }, 400, {
+          "X-Url": server.base_url + subPath,
+          "X-Server": server.id,
+          "X-Provider": server.label,
+          "X-User-Id": user && user.id,
+          ...CORS_HEADERS
+        });
+    }
+    targetUrl = `${server.base_url}/answer`;
+    const data = {query: (requestBody.query || requestBody.prompt || requestBody.messages)};
+    if (Array.isArray(data.query)) {
+      data.query = data.query.pop();
+      if (data.query && data.query.content) {
+        data.query = data.query.content;
+      }
+    }
+    const url = 'https://api.you.com/v1/answer';
+    const options = {
+      method: 'POST',
+      headers: {'X-API-Key': env.YDC_API_KEY, 'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
+    };
+
+    const response = await fetch(url, options);
+    const body = await response.json();
+    if (requestBody.stream) {
+      body.choices = [{"delta":{"content":body.answer,"role":"assistant"},"index":0}];
+      body.model = "answer";
+      const newResponse =  new Response(`data: ${JSON.stringify(body)}\n\ndata: [DONE]\n\n`, response);
+      newResponse.headers.set("Content-Type", "text/event-stream");
+      for (const [key, value] of Object.entries(CORS_HEADERS)) {
+        newResponse.headers.set(key, value);
+      }
+      return newResponse;
+    }
+    body.choices = [{"message":{"content":body.answer,"role":"assistant"},"index":0}];
+    const newResponse = new Response(JSON.stringify(body), response);
+    for (const [key, value] of Object.entries(CORS_HEADERS)) {
+      newResponse.headers.set(key, value);
+    }
+    return newResponse;
+  }
   // Fallback: when URL is not in URL_MAP and ends with /quota,
   // do a real /chat/completions request with the default model instead
+  
   if (!(targetUrl in URL_MAP) && targetUrl.endsWith("/quota")) {
     subPath = "/chat/completions";
     if (server.base_url.includes("/chat/completions")) {
@@ -1740,7 +1769,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       targetUrl = `${server.base_url}${subPath}`;
     }
   }
-  if (targetUrl.startsWith("https://pass.g4f.space/")) {
+  if (targetUrl.startsWith("https://pass.g4f.space/") && !targetUrl.includes("/logs")) {
     proxyHeaders["g4f-api-key"] = env.PASS_API_KEY;
   }
   const clientIP = getClientIP(request);
@@ -1751,10 +1780,12 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     };
     if (chatUrls.includes(subPath)) {
       fetchOptions.method = "POST";
-      const testBody = {
-        "messages": [{ "role": "user", "content": "hi" }],
-        ...requestBody
-      };
+      const testBody = {...requestBody};
+      if (!testBody.messages) {
+        testBody.messages = [{ "role": "user", "content": "Hi" }];
+        testBody.max_tokens = 1;
+        testBody.reasoning_effort = "low";
+      }
       if (!testBody.stream) {
           const url = new URL(request.url);
           const streamParam = url.searchParams.get("stream");
@@ -1780,7 +1811,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
             return cachedResponse
           }
         }
-      }
+    }
     const firstMessage = requestBody ? requestBody.prompt || getFirstMessage(requestBody.messages) : null;
     const isPassG4f = targetUrl.startsWith("https://pass.g4f.space/");
     if (isPassG4f) await acquirePassSlot();
@@ -2191,6 +2222,8 @@ function isTokenExpired(expires) {
     return Date.now() > expiresMs;
 }
 async function getServerById(env, serverId, user = null) {
+  let publicServers = await getPublicServers(env);
+  const server = publicServers.find((s) => s.id === serverId);
   const provider = SERVER_TO_PROVIDER[serverId];
   let api_key;
   if (user && provider && user[provider] && !isTokenExpired(user[provider].expires)) {
@@ -2199,18 +2232,16 @@ async function getServerById(env, serverId, user = null) {
   if (user && user.custom_servers) {
     const ownedServer = user.custom_servers.find((s) => s.id === serverId);
     if (ownedServer) {
-      return { ...ownedServer, owner_id: user.id, api_key };
+      return { ...ownedServer, owner_id: user.id, api_key, default_model: server?.default_model };
     }
   }
   if (env.MEMBERS_KV) {
     const cached = await env.MEMBERS_KV.get(`server:${serverId}`);
     if (cached) {
-      return { ...JSON.parse(cached), api_key };
+      return { ...JSON.parse(cached), api_key, default_model: server?.default_model };
     }
   }
-  let publicServers = await getPublicServers(env);
   if (publicServers) {
-    const server = publicServers.find((s) => s.id === serverId);
     if (server) {
       const owner = await getUser(env, server.owner_id);
       if (owner) {
@@ -2234,14 +2265,20 @@ async function getServerByLabel(env, label, user = null) {
   if (!label) {
     return null;
   }
+  if (label === "huggingface") {
+    return { id: "huggingface", base_url: `https://router.huggingface.co/v1`, allowed_models: []};
+  }
+  if (label === "puter") {
+    return { id: "puter", base_url: `https://puter.g4f-dev.workers.dev`, allowed_models: []};
+  }
   if (label.startsWith("pa:")) {
-    return { id: "core", base_url: `https://pass.g4f.space/api/${label}`};
+    return { id: "core", base_url: `https://pass.g4f.space/api/${label}`, allowed_models: []};
   }
   if (label.endsWith("/v1")) {
     label = label.substring(0, label.length-3);
   }
   if (["core", "pa", "backend"].includes(label)) {
-      return { id: "core", base_url: `https://pass.g4f.space`};
+      return { id: "core", base_url: `https://pass.g4f.space`, allowed_models: []};
   }
   if (user && user.custom_servers) {
     const ownedServer = user.custom_servers.find((s) => s.label.toLowerCase().includes(label.toLowerCase()));
@@ -2258,7 +2295,7 @@ async function getServerByLabel(env, label, user = null) {
     if (serverIndex) {
       return await getServerById(env, serverIndex.id, user);
     } else {
-      return { id: "core", base_url: `https://pass.g4f.space/api/${label}`};
+      return { id: "core", base_url: `https://pass.g4f.space/api/${label}`, allowed_models: []};
     }
   }
   return null;
@@ -2271,16 +2308,7 @@ async function updatePublicServerIndex(env, server, ownerId, action) {
   } else {
     servers = servers.filter((s) => s.id !== server.id);
     if (action === "add" || action === "update") {
-      servers.push({
-        id: server.id,
-        label: server.label,
-        base_url: server.base_url,
-        allowed_models: server.allowed_models,
-        owner_id: ownerId,
-        usage: server.usage,
-        created_at: server.created_at || server.updated_at,
-        updated_at: server.updated_at
-      });
+      servers.push(server);
     }
   }
   await env.MEMBERS_KV.put("public_servers_index", JSON.stringify(servers));
@@ -2309,22 +2337,38 @@ async function isOllama(url) {
   clearTimeout(timeout);
   return response.ok && (await response.text()).startsWith("Ollama");
 }
-async function isOnline(baseUrl, apiKeysStr, model) {
+async function isOnline(env, baseUrl, apiKeysStr, model) {
+  if (baseUrl == "https://llmplayground.net/api") {
+    return true;
+  }
   let data = {};
-  for (let i = 0; i <= 3; i++) {
-    const apiKey = getRandomApiKey(apiKeysStr);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      signal: controller.signal,
-      body: JSON.stringify({
-        model,
-        messages: [{"role": "user", "content": "hi"}]
-      }),
-      headers: apiKey ? {"Authorization": `Bearer ${apiKey}`} : {}
-    });
-    clearTimeout(timeout);
+  for (let i = 0; i <= 1; i++) {
+    let response;
+    try {
+      const apiKey = getRandomApiKey(apiKeysStr);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      response = await fetch(`${baseUrl}/chat/completions`, {
+        method: "POST",
+        signal: controller.signal,
+        body: JSON.stringify({
+          model,
+          messages: [{"role": "user", "content": "hi"}],
+          stream: false
+        }),
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          ...apiKey ? {"Authorization": `Bearer ${apiKey}`} : {},
+          ...(baseUrl.startsWith("https://pass.g4f.space/") && !baseUrl.includes("/logs")) ? {"g4f-api-key": env.PASS_API_KEY} : {}
+        }
+      });
+      clearTimeout(timeout);
+    } catch (e) {
+      data = {error: e.message};
+      continue;
+    }
+    
     try {
       data = await response.json();
     } catch (e) {
@@ -2342,12 +2386,21 @@ async function isOnline(baseUrl, apiKeysStr, model) {
     if(data.choices && data.choices[0].message?.content) {
       return data.choices[0].message.content;
     }
+    if(data.choices && data.choices[0].message?.reasoning) {
+      return data.choices[0].message.reasoning;
+    }
     data = {error: "No content", ...data};
     continue;
   }
   return data;
 }
-async function validateServer(baseUrl, apiKeysStr, defaultModel=null) {
+async function validateServer(env, baseUrl, apiKeysStr, defaultModel=null) {
+  if (baseUrl == "https://api.you.com/v1") {
+    return {
+      valid: true,
+      models: ["answer"]
+    }
+  }
   const apiKey = getRandomApiKey(apiKeysStr);
   const headers = {
     "Content-Type": "application/json",
@@ -2355,6 +2408,9 @@ async function validateServer(baseUrl, apiKeysStr, defaultModel=null) {
   };
   if (apiKey) {
     headers["Authorization"] = `Bearer ${apiKey}`;
+  }
+  if (baseUrl.startsWith("https://pass.g4f.space/")) {
+    headers["g4f-api-key"] = env.PASS_API_KEY;
   }
   let testUrl = defaultModel ? baseUrl : null
   baseUrl = baseUrl.replace("/chat/completions", "")
@@ -2364,7 +2420,7 @@ async function validateServer(baseUrl, apiKeysStr, defaultModel=null) {
   if (testUrl) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 1e4);
+      const timeout = setTimeout(() => controller.abort(), 30000);
       const extra = testUrl.includes("/chat/completions") ? {
         method: "POST",
         body: JSON.stringify({ "model": defaultModel, "messages": [{ "role": "user", "content": "Hello" }] }),
@@ -2446,7 +2502,8 @@ async function validateServer(baseUrl, apiKeysStr, defaultModel=null) {
           if (models.length > 0) {
             return {
               valid: true,
-              models,
+              is_loading: response.headers.get("Cache-Control") == "no-cache",
+              models: models,
               base_url: response.url.replace("/models", ""),
               test_url: testUrl
             };
@@ -2595,7 +2652,7 @@ ${prompt}
   } else if (apiKey) {
     proxyHeaders["Authorization"] = apiKey.includes("Bearer") ? apiKey : `Bearer ${apiKey}`;
   }
-  if (server.base_url.startsWith("https://pass.g4f.space/")) {
+  if (server.base_url.startsWith("https://pass.g4f.space/") && !server.base_url.includes("/logs")) {
     proxyHeaders["g4f-api-key"] = env.PASS_API_KEY;
   }
   // Enable streaming by default for text responses (not audio)
@@ -3143,11 +3200,26 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, user, cacheK
   let selectedServer = null;
   let model = requestBody.model;
 
-  if (model === "auto" || !model) {
-    try {
-      selectedServer = await getRandomPublicServer(env);
-    } catch(e) {
-      return jsonResponse({ error: e.message }, 500);
+  if (model.startsWith("AnyProvider:")) {
+    model = model.substring("AnyProvider:".length);
+  } else if (model.startsWith("community:")) {
+    model = model.substring("community:".length);
+  }
+  requestBody.model = model;
+  function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+      }
+  }
+  if (!model || ["auto", "default"].includes(model)) {
+    shuffleArray(AUTO_PROVIDERS);
+    for (const serverId of AUTO_PROVIDERS) {
+      const randomServer = await getServerById(env, serverId, user);
+      requestBody.model = DEFAULT_MODELS[serverId];
+      const response = await handleProxyToServer(request, env, ctx, randomServer, "/chat/completions", cacheKey, user, pathname, null, rateCheck, requestBody);
+      if (response.status == 429 || response.status == 503) continue;
+      return response;
     }
   }
   if (!selectedServer)
@@ -3195,23 +3267,51 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, user, cacheK
       }
     }
   }
+  let foundServers = null;
   if (!selectedServer) {
     const publicServersIndex = await getPublicServers(env);
+    const checkModel = model.split("/").pop().toLowerCase().replace(/[:.]+/, '-').trim();
     for (const serverIndex of publicServersIndex) {
+      if (serverIndex.is_hidden || serverIndex.is_offline) continue;
+      let foundModel = null;
+      if (serverIndex.allowed_models) {
+        for (const m in serverIndex.allowed_models) {
+          if (m.split("/").pop().toLowerCase().replace(/[:.]+/, '-').trim().startsWith(checkModel)) {
+            foundModel = m;
+            break;
+          }
+        }
+      }
+      if (!foundModel) continue;
       const owner = await getUser(env, serverIndex.owner_id);
       if (!owner) continue;
       const fullServer = (owner.custom_servers || []).find((s) => s.id === serverIndex.id);
       if (!fullServer || !fullServer.is_public) continue;
-      if (fullServer.allowed_models && fullServer.allowed_models.length > 0) {
-        if (fullServer.allowed_models.includes(model)) {
-          selectedServer = fullServer;
-          break;
-        }
-      }
+      foundServers = foundServers || {};
+      foundServers[serverIndex.id] = [serverIndex.owner_id, foundModel];
     }
   }
-  if (!selectedServer) {
+  if (!selectedServer && !foundServers) {
     return jsonResponse({ error: `No server found that supports model '${model}'` }, 404);
+  }
+
+  if (foundServers) {
+    let lastError = new Error(`All servers failed with model '${model}' / '${JSON.stringify(foundServers)}'`);
+    for (const [serverId, [ownerId, modelName]] of Object.entries(foundServers)) {
+      const owner = await getUser(env, ownerId);
+      if (!owner) continue;
+      const fullServer = (owner.custom_servers || []).find((s) => s.id === serverId);
+      requestBody.model = modelName;
+      try {
+        const response = await handleProxyToServer(request, env, ctx, fullServer, "/chat/completions", cacheKey, user, pathname, null, rateCheck, requestBody);
+        if (response.status == 429 || response.status == 503) continue;
+        return response;
+      } catch(e) {
+        console.error(e);
+        lastError = e;
+      }
+    }
+    throw lastError;
   }
 
   return handleProxyToServer(request, env, ctx, selectedServer, "/chat/completions", cacheKey, user, pathname, null, rateCheck, requestBody);
@@ -3319,7 +3419,7 @@ function jsonResponse(data, status = 200, headers = {}) {
     const ctx = currentRequestContext.ctx;
     const env = currentRequestContext.env;
     const request = currentRequestContext.request;
-    if (ctx && env) {
+    if (ctx && env && data?.error?.type !== "authentication_required") {
       const message = typeof data?.error === "string"
         ? data.error
         : (data?.error?.message || JSON.stringify(data?.error || data));
@@ -3343,12 +3443,20 @@ function jsonResponse(data, status = 200, headers = {}) {
     }
   });
 }
-function generateCacheKey(request, extra = "") {
+function generateCacheKey(request, extra = null) {
   const url = new URL(request.url);
-  const pathname = url.pathname;
-  const searchParams = url.searchParams.toString();
-  const method = request.method;
-  return `${method}:${pathname}${searchParams ? "?" + searchParams : ""}${extra ? ":" + extra : ""}`;
+  url.pathname = url.pathname.replace("/quota", "/chat/completions");
+  for (const key of Object.keys(url.searchParams)) {
+    if (key === "seed" || key === "url" || key === "model") {
+      continue;
+    }
+    url.searchParams.delete(key);
+  }
+  url.searchParams.set("_method", request.method);
+  if (extra) {
+      url.searchParams.set("_extra", request.method);
+  }
+  return url.toString();
 }
 // Hash the POST request body for chat/completions caching.
 // Uses model + stream flag + last message content so that repeated
@@ -3375,8 +3483,7 @@ async function generatePostBodyHash(body) {
     || lastContent.startsWith("reply with exactly:")
     || lastContent.startsWith("say ok")) {
       const model = body.model || '';
-      const stream = body.stream ? '1' : '0';
-      return `${model}:${stream}:test`;
+      return (model || body.stream) ? `${model}:${body.stream}:test` : null;
     }
     for (const msg of messages) {
       if (msg && msg.content && typeof msg.content === 'string') {
@@ -3394,6 +3501,9 @@ async function generatePostBodyHash(body) {
 }
 async function getCachedResponse(request, cacheKey = null) {
   try {
+    const url = new URL(request.url);
+    if (url.searchParams.get("nocache")) return null;
+    if (url.pathname.includes("/public-key")) return null;
     const key = cacheKey || generateCacheKey(request);
     const cacheRequest = new Request(`https://cache.example/${key}`, {
       method: "GET"
@@ -3415,8 +3525,10 @@ async function setCachedResponse(request, response, cacheControl, cacheKey = nul
       method: "GET"
     });
     const responseToCache = response.clone();
+    if (!responseToCache.headers.has("Cache-Control"))
     responseToCache.headers.set("Cache-Control", cacheControl);
     responseToCache.headers.set("X-Cache", "HIT");
+    if (responseToCache.headers.set("Cache-Control").includes("no-cache")) return;
     const cacheOperation = caches.default.put(cacheRequest, responseToCache);
     if (ctx) {
       ctx.waitUntil(cacheOperation);
@@ -3441,12 +3553,19 @@ async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ct
     }, 403);
   }
   const headers = new Headers(request.headers);
+
+  const ip = request.headers.get('cf-connecting-ip') || '';
+  const country = request.headers.get('cf-ipcountry') || 'XX';
+  const ipSnippet = ip.substring(0, 4).replace(/[.:]/g, '');
+  const xUser = `${country}:${(user?.username || user?.id) ||ipSnippet}`;
+  headers.set("x-user", xUser);
   if (user) {
-    headers.set("x-user", user.username || user.id);
     headers.set("x-user-provider", user.provider);
     headers.set("x-user-tier", user.tier);
   }
-  headers.set("g4f-api-key", env.PASS_API_KEY);
+  if (!pathname.includes("/logs")) {
+    headers.set("g4f-api-key", env.PASS_API_KEY);
+  }
   const targetUrl = `https://pass.g4f.space${pathname}${search || ""}`;
   const fetchOptions = {
     method: request.method,
