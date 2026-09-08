@@ -32,7 +32,7 @@
   const addLog = (msg, type = 'log') => {
     const line = document.createElement('div');
     line.textContent = msg;
-    line.className = type;
+    line.className = `g4f-debug-${type}`;
     logEl.appendChild(line);
     logEl.scrollTop = logEl.scrollHeight;
   };
