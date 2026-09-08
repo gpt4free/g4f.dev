@@ -295,6 +295,16 @@ const ErrorTracker = (() => {
 ErrorTracker.install();
 window.ErrorTracker = ErrorTracker;
 
+if (localStorage.getItem("debugMode") === "true") {
+    if (!document.querySelector('script[src="https://g4f.dev/dist/js/debug.js"]')) {
+        if (window.location === window.parent.location) {
+            const debugEl = document.createElement('script');
+            debugEl.src = 'https://g4f.dev/dist/js/debug.js';
+            document.head.appendChild(debugEl);
+        }
+    }
+}
+
 /* ================================================================== *
  * Legacy add_error — now delegates to ErrorTracker
  * ================================================================== */

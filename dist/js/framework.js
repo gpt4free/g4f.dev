@@ -17,30 +17,10 @@ function add_error(event, log=false) {
     }
     if (log) {
         console.error(event);
-    }
-    if (!logContent) {
-        return;
-    }
-    let p = document.createElement("p");
-    if (typeof(event) === 'object' && event.srcElement && event.target) {
-        if(event.srcElement == '[object HTMLScriptElement]' && event.target == '[object HTMLScriptElement]'){
-            event.message = 'Error loading script';
-        } else {
-            event.message = 'Event Error - target:' + event.target + ' srcElement:' + event.srcElement;
-        }
-    }
-    if (event.target && (event.target.src || event.target.href)) {
-        p.innerText = `Resource failed to load: ${event.target.src || event.target.href}`;
-    } else if (event.message) {
-        p.innerText = event.type ? `${event.type}: ${event.message}` + (event.filename ? `\n${event.filename}:${event.lineno}:${event.colno}` : "") : event.message;
     } else {
-        p.innerText = typeof event === 'string' ? event : JSON.stringify(event);
+        console.info(event);
     }
-    p.innerHTML = p.innerHTML.replaceAll("\n", "<br>");
-    logContent.appendChild(p);
 }
-
-window.addEventListener('error', add_error, true);
 
 if (window.location.origin === G4F_HOST || window.location.origin.endsWith(G4F_WILDCARD)) {
     window.oauthConfig = {
@@ -575,6 +555,15 @@ if (window.location.origin === G4F_HOST || window.location.origin.endsWith(G4F_W
     if (window.self === window.top) {
         if (!["/members", "/members.html"].includes(location.pathname)) {
     includeAdsense().catch(add_error);
+        }
+    }
+}
+if (localStorage.getItem("debugMode") === "true") {
+    if (!document.querySelector('script[src="https://g4f.dev/dist/js/debug.js"]')) {
+        if (window.location !== window.parent.location) {
+            const debugEl = document.createElement('script');
+            debugEl.src = 'https://g4f.dev/dist/js/debug.js';
+            document.head.appendChild(debugEl);
         }
     }
 }

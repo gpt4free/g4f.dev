@@ -3,6 +3,9 @@
 // and JavaScript errors using Chrome DevTools Protocol (CDP).
 
 (() => {
+  if (window.g4fDebug) {
+    return; // already initialized
+  }
   // Create panel element
   const panel = document.createElement('div');
   panel.id = 'g4f-debug-panel';
@@ -10,7 +13,7 @@
     position: fixed;
     top: 0;
     right: 0;
-    width: 300px;
+    width: 400px;
     max-height: 90vh;
     overflow: auto;
     background: rgba(0,0,0,0.85);
@@ -29,7 +32,7 @@
   const addLog = (msg, type = 'log') => {
     const line = document.createElement('div');
     line.textContent = msg;
-    line.style[`${type}`] = 'true';
+    line.className = type;
     logEl.appendChild(line);
     logEl.scrollTop = logEl.scrollHeight;
   };
@@ -97,7 +100,7 @@
     originalConsole[method] = (...args) => {
         const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
         logged.push(msg);
-        addLog(`[CONSOLE ${method.toUpperCase()}] ${msg}`, method);
+        addLog(`[${method.toUpperCase()}] ${msg}`, method);
         if (orig) orig.apply(originalConsole, args);
       };
   });
@@ -110,4 +113,17 @@
     },
     getLogs: () => logged.slice(),
   };
+
+  document.onkeydown = function(evt) {
+    evt = evt || window.event;
+    var isEscape = false;
+    if ("key" in evt) {
+        isEscape = (evt.key === "Escape" || evt.key === "Esc");
+    } else {
+        isEscape = (evt.keyCode === 27);
+    }
+    if (isEscape) {
+        logEl.innerHTML = '';
+    }
+  }
 })();

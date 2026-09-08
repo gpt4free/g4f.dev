@@ -2496,8 +2496,14 @@ async function syncConversationsFromSecret() {
  * Auto-sync the current conversation to secret storage if the toggle is enabled.
  * Called after each conversation update.
  */
+let refreshOnHidden = true;
+document.addEventListener("visibilitychange", () => {
+    refreshOnHidden = !document.hidden;
+});
 async function autoSyncCurrentConversation() {
+    if (!refreshOnHidden) return;
     if (appStorage.getItem("secretConversationSync") !== "true") return;
+
     const userId = getSecretUserId();
     if (!userId) return;
     try {
