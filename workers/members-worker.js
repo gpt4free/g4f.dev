@@ -2248,6 +2248,7 @@ ${buttonsHtml}
             id: userId,
             ...userData,
             tier: "new",  // Tier is updated by scheduled handler
+            secret: generateUserSecret(),  // Per-user secret for cross-device workspace sharing
             api_keys: [],
             created_at: now,
             updated_at: now,
@@ -2260,6 +2261,12 @@ ${buttonsHtml}
                 last_reset: now
             }
         };
+    } else if (!user.secret) {
+        // Backfill secret for existing users who don't have one yet
+        user.secret = generateUserSecret();
+        user.updated_at = now;
+        await saveUser(env, user);
+        await env.MEMBERS_KV.put(`user:${user.id}`, JSON.stringify(user), { expirationTtl: 3600 });
     }
   
     // Store lookup index for this user
@@ -3308,6 +3315,12 @@ ${buttonsHtml}
     const array = new Uint8Array(32);
     crypto.getRandomValues(array);
     return "gfs_" + Array.from(array, byte => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  function generateUserSecret() {
+    const array = new Uint8Array(32);
+    crypto.getRandomValues(array);
+    return Array.from(array, byte => byte.toString(16).padStart(2, "0")).join("");
   }
   
   async function generateApiKey(env, userId) {
