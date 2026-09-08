@@ -1602,6 +1602,9 @@
             const headers = {
                 'Content-Type': 'application/json',
                 ...(sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {}),
+                ...options.headers
+            };
+
             const response = await fetch(`${MEMBERS_API}${endpoint}`, {
                 ...options,
                 headers,
@@ -1654,9 +1657,9 @@
                             showDashboard(result.user || userData);
                             return;
                         } else {
-                            console.log('Session invalid, showing login');
-                            localStorage.removeItem("g4f_session");
-                            localStorage.removeItem('g4f_user');
+                            console.log('Session invalid, keeping cached data for re-login');
+                            // Don't wipe localStorage on failed session check.
+                            // The token may still be valid — only clear on explicit logout.
                         }
                     } catch (e) {
                         console.log('Session verification failed, using cached data');
