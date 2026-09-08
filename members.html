@@ -1491,6 +1491,20 @@
                     </div>
                 </div>
 
+                <!-- Cross-Device Secret Sync Card -->
+                <div class="card" style="grid-column: 1 / -1;">
+                    <h2><span class="icon">🔐</span> Cross-Device Secret Sync</h2>
+                    <p style="color: rgba(255,255,255,0.6); margin-bottom: 1rem; font-size: 0.9rem;">
+                        Your workspace secret enables encrypted conversation sync across devices. This device automatically confirms requests from your other logged-in devices.
+                    </p>
+                    <div id="secretSyncStatus" style="padding: 0.75rem 1rem; border-radius: 8px; background: rgba(255,255,255,0.05); margin-bottom: 1rem; font-size: 0.9rem;">
+                        <span class="loading"></span> Checking workspace secret...
+                    </div>
+                    <button class="btn btn-secondary" id="secretRequestBtn" style="display: none;">
+                        <i class="fa-solid fa-satellite-dish"></i> Request Secret from Online Device
+                    </button>
+                </div>
+
                 <!-- Danger Zone Card -->
                 <div class="card" style="grid-column: 1 / -1;">
                     <h2><span class="icon">⚠️</span> Danger Zone</h2>
@@ -1532,6 +1546,7 @@
         const API_BASE = 'https://auth.g4f.space';
         const API_URL = 'https://g4f.space';
         const MEMBERS_API = `${API_BASE}/members/api`;
+        const SECRET_API = 'https://auth.g4f.space';
 
         // DOM Elements
         const loginSection = document.getElementById('loginSection');
@@ -1586,9 +1601,7 @@
         async function apiRequest(endpoint, options = {}) {
             const headers = {
                 'Content-Type': 'application/json',
-                ...options.headers
-            };
-            
+                ...(sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {}),
             const response = await fetch(`${MEMBERS_API}${endpoint}`, {
                 ...options,
                 headers,
@@ -1763,6 +1776,144 @@
 
             // Load API keys
             await loadApiKeys();
+
+            // Derive and store workspace secret for cross-device sync
+            ensureWorkspaceSecret().then((secret) => {
+                updateSecretSyncUI(secret);
+                if (secret) startSecretRequestPolling();
+            });
+        }
+
+        // ============================================
+        // Cross-Device Workspace Secret Sharing
+        // ============================================
+
+        function getSecretUserId() {
+            const raw = localStorage.getItem('g4f_user');
+            if (!raw) return null;
+            try {
+                const user = JSON.parse(raw);
+                return user && user.id ? user.id : null;
+            } catch (e) { return null; }
+        }
+
+        async function deriveWorkspaceSecret() {
+            const raw = localStorage.getItem('g4f_user');
+            if (!raw) return null;
+            try {
+                const user = JSON.parse(raw);
+                if (!user || !user.id) return null;
+                if (user.secret) {
+                    const input = `${user.id}:${user.secret}`;
+                    const data = new TextEncoder().encode(input);
+                    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+                    const hashArray = Array.from(new Uint8Array(hashBuffer));
+                    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                }
+                return null;
+            } catch (e) {
+                console.error('Failed to derive workspace secret:', e);
+                return null;
+            }
+        }
+
+        async function ensureWorkspaceSecret() {
+            const existing = localStorage.getItem('g4f_workspace_secret');
+            if (existing) return existing;
+            const secret = await deriveWorkspaceSecret();
+            if (secret) {
+                localStorage.setItem('g4f_workspace_secret', secret);
+                return secret;
+            }
+            const shared = await requestSecretFromOnlineDevice();
+            if (shared) {
+                localStorage.setItem('g4f_workspace_secret', shared);
+                return shared;
+            }
+            return null;
+        }
+
+        async function requestSecretFromOnlineDevice(timeoutMs = 120000) {
+            const userId = getSecretUserId();
+            if (!userId) return null;
+            const deviceName = navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop';
+            try {
+                const resp = await fetch(`${SECRET_API}/v1/secret/request`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+                    body: JSON.stringify({ device_name: deviceName }),
+                });
+                if (!resp.ok) return null;
+                const data = await resp.json();
+                const requestId = data.request_id;
+                if (!requestId) return null;
+                console.log(`Secret request created: ${requestId}. Waiting for online device...`);
+                const deadline = Date.now() + timeoutMs;
+                while (Date.now() < deadline) {
+                    await new Promise(r => setTimeout(r, 3000));
+                    const pollResp = await fetch(`${SECRET_API}/v1/secret/request/${encodeURIComponent(requestId)}`, {
+                        headers: { 'x-user-id': userId },
+                    });
+                    if (!pollResp.ok) continue;
+                    const pollData = await pollResp.json();
+                    if (pollData.status === 'confirmed' && pollData.secret) return pollData.secret;
+                    if (pollData.status === 'expired' || pollData.status === 'not_found') return null;
+                }
+                return null;
+            } catch (e) {
+                console.error('requestSecretFromOnlineDevice failed:', e);
+                return null;
+            }
+        }
+
+        async function checkAndConfirmSecretRequests() {
+            const userId = getSecretUserId();
+            if (!userId) return;
+            const existingSecret = localStorage.getItem('g4f_workspace_secret');
+            if (!existingSecret) return;
+            try {
+                const resp = await fetch(`${SECRET_API}/v1/secret/requests`, {
+                    headers: { 'x-user-id': userId },
+                });
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const requests = data.requests || [];
+                for (const req of requests) {
+                    if (req.status === 'pending') {
+                        console.log(`Confirming secret request from: ${req.device_name} (${req.id})`);
+                        await fetch(`${SECRET_API}/v1/secret/request/confirm`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+                            body: JSON.stringify({ request_id: req.id, workspace_secret: existingSecret }),
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error('checkAndConfirmSecretRequests failed:', e);
+            }
+        }
+
+        let _secretRequestCheckInterval = null;
+        function startSecretRequestPolling() {
+            if (_secretRequestCheckInterval) clearInterval(_secretRequestCheckInterval);
+            _secretRequestCheckInterval = setInterval(() => {
+                if (localStorage.getItem('g4f_workspace_secret') && getSecretUserId()) {
+                    checkAndConfirmSecretRequests().catch(() => {});
+                }
+            }, 10000);
+        }
+
+        function updateSecretSyncUI(secret) {
+            const statusEl = document.getElementById('secretSyncStatus');
+            const requestBtn = document.getElementById('secretRequestBtn');
+            if (!statusEl) return;
+            if (secret) {
+                statusEl.innerHTML = '<i class="fas fa-check-circle" style="color: var(--success);"></i> Workspace secret active — this device can confirm requests from other devices.';
+                if (requestBtn) requestBtn.style.display = 'none';
+            } else {
+                statusEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i> No workspace secret. Request one from an online device.';
+                if (requestBtn) requestBtn.style.display = 'inline-flex';
+            }
         }
 
         // Load usage stats from API
@@ -2930,6 +3081,41 @@
         const storedSession = localStorage.getItem('g4f_session');
         if (storedSession) {
             sessionToken = storedSession;
+        }
+
+        // Secret request button handler
+        const secretRequestBtn = document.getElementById('secretRequestBtn');
+        if (secretRequestBtn) {
+            secretRequestBtn.addEventListener('click', async () => {
+                const userId = getSecretUserId();
+                if (!userId) {
+                    showToast('Please log in first.', 'error');
+                    return;
+                }
+                const existing = localStorage.getItem('g4f_workspace_secret');
+                if (existing) {
+                    updateSecretSyncUI(existing);
+                    return;
+                }
+                secretRequestBtn.disabled = true;
+                secretRequestBtn.innerHTML = '<span class="loading"></span> Waiting for online device...';
+                try {
+                    const secret = await requestSecretFromOnlineDevice();
+                    if (secret) {
+                        localStorage.setItem('g4f_workspace_secret', secret);
+                        updateSecretSyncUI(secret);
+                        startSecretRequestPolling();
+                        showToast('Workspace secret received from online device!');
+                    } else {
+                        showToast('No online device responded. Try again from another device.', 'error');
+                    }
+                } catch (e) {
+                    showToastFormat('Failed: {0}', 'error', e.message);
+                } finally {
+                    secretRequestBtn.disabled = false;
+                    secretRequestBtn.innerHTML = '<i class="fa-solid fa-satellite-dish"></i> Request Secret from Online Device';
+                }
+            });
         }
     </script>
 <template>Successfully signed in with Hugging Face!</template>
