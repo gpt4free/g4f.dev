@@ -445,6 +445,11 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                               <span>Logged in as: </span>
                               <strong id="cloudSyncUser"></strong>
                           </div>
+                          <div class="field" style="margin-bottom: 1rem;">
+                              <span class="label">Auto-upload to Secret Storage</span>
+                              <input type="checkbox" id="secretConversationSync" />
+                              <label for="secretConversationSync" class="toogle" title="Automatically upload conversations to your private secret storage on the local server"></label>
+                          </div>
                           <div class="cloud-sync-actions" style="display: flex; flex-direction: column; gap: 0.5rem;">
                               <button type="button" id="cloudSyncUpload" class="cloud-sync-btn">
                                   <i class="fa-solid fa-cloud-arrow-up"></i>
@@ -453,6 +458,18 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                               <button type="button" id="cloudSyncDownload" class="cloud-sync-btn">
                                   <i class="fa-solid fa-cloud-arrow-down"></i>
                                   <span>Download Conversations from Cloud</span>
+                              </button>
+                              <button type="button" id="secretSyncUpload" class="cloud-sync-btn">
+                                  <i class="fa-solid fa-lock"></i>
+                                  <span>Upload to Secret Storage</span>
+                              </button>
+                              <button type="button" id="secretSyncDownload" class="cloud-sync-btn">
+                                  <i class="fa-solid fa-lock-open"></i>
+                                  <span>Download from Secret Storage</span>
+                              </button>
+                              <button type="button" id="secretRequestBtn" class="cloud-sync-btn">
+                                  <i class="fa-solid fa-satellite-dish"></i>
+                                  <span>Get Secret from Online Device</span>
                               </button>
                               <button type="button" id="cloudSyncLogoutBtn" class="cloud-sync-btn logout">
                                   <i class="fa-solid fa-right-from-bracket"></i>
