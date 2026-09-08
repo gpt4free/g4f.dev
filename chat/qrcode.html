@@ -201,7 +201,7 @@
             }
         }
         if (share_id) {
-            const share = `${window.location.origin}/chat/v2#${encodeURIComponent(share_id)}`;
+            const share = `${window.location.origin}/chat/#${encodeURIComponent(share_id)}`;
             qrcodeStatus.innerText = share;
             qrcodeStatus.href = share;
             document.getElementById("qrcode").style.display = 'inline-block';
