@@ -45,7 +45,6 @@ domReady.then((event) => {
     translationSnipptes.forEach((text) => framework.translate(text));
 });
 
-
 function add_url_to_history(url) {
     if (!window?.pywebview) {
         try {
@@ -1937,10 +1936,10 @@ async function checkCloudSyncSession() {
                 return;
             }
         } else {
-            appStorage.removeItem("g4f_session");
-            appStorage.removeItem("g4f_user");
-            appStorage.removeItem("g4f_expires");
-            showCloudSyncLogin();
+            // appStorage.removeItem("g4f_session");
+            // appStorage.removeItem("g4f_user");
+            // appStorage.removeItem("g4f_expires");
+            // showCloudSyncLogin();
             return;
         }
     } catch (e) {
@@ -2691,54 +2690,9 @@ window.ensureWorkspaceSecret = ensureWorkspaceSecret;
 window.requestSecretFromOnlineDevice = requestSecretFromOnlineDevice;
 window.checkAndConfirmSecretRequests = checkAndConfirmSecretRequests;
 
-// Settings Search Logic
-const settingsSearch = document.getElementById('settingsSearch');
-if (settingsSearch) {
-    settingsSearch.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
-        
-        document.querySelectorAll('.settings-tab-content .field').forEach(field => {
-            const text = field.textContent.toLowerCase();
-            if (text.includes(query)) {
-                field.style.display = '';
-            } else {
-                field.style.display = 'none';
-            }
-        });
-        
-        if (query.trim() !== '') {
-            document.querySelectorAll('.settings-tab-content').forEach(tab => tab.classList.add('active'));
-            document.querySelectorAll('.settings-tab').forEach(btn => btn.classList.remove('active'));
-        } else {
-            // Restore default view (just first tab active)
-            document.querySelectorAll('.settings-tab-content').forEach(tab => tab.classList.remove('active'));
-            document.getElementById('tab-general').classList.add('active');
-            const generalTab = document.querySelector('.settings-tab[data-tab="general"]');
-            if (generalTab) generalTab.classList.add('active');
-        }
-    });
-}
-
-// Sidebar Conversation Search Logic
-const conversationSearch = document.getElementById('conversationSearch');
-if (conversationSearch) {
-    conversationSearch.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
-        document.querySelectorAll('.conversations .convo').forEach(convo => {
-            const titleEl = convo.querySelector('.convo-title');
-            if (titleEl) {
-                const text = titleEl.textContent.toLowerCase();
-                if (text.includes(query)) {
-                    convo.style.display = '';
-                } else {
-                    convo.style.display = 'none';
-                }
-            }
-        });
-    });
-}
-
 export default {
+    CLOUD_SYNC_API,
+    isTokenExpired,
     insertBackticksInTextarea,
     handleToolCalls,
     checkCloudSyncSession,

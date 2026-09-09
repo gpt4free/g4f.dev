@@ -1667,7 +1667,7 @@ function add_sources(data, message_id) {
     }
     if (data.citations) {
         const links = data.citations.map((citation, index) => {
-            return `<p>[${index+1}] <a target="_blank" href="${citation}">${citation.replace("https://www.", "").replace("https://", "")}</a></p>`;
+            return `<p>[${index+1}] <a target="_blank" href="${citation.source || citation}">${(citation.excerpts.join('\n') || citation).replace("https://www.", "").replace("https://", "")}</a></p>`;
         }).join("");
         blockquote.innerHTML = links;
     }
