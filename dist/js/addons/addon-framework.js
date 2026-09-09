@@ -627,7 +627,7 @@ const renderMarkdown = (content) => {
                     return item.text;
                 }
                 if (item.bucket_id) {
-                    size = parseInt(localStorage.getItem(`bucket:${item.bucket_id}`), 10);
+                    const size = parseInt(localStorage.getItem(`bucket:${item.bucket_id}`), 10);
                     return `**Bucket:** [[${item.bucket_id}]](${item.url})${size ? ` (${formatFileSize(size)})` : ""}`
                 }
                 return `![](${item.image_url?.url})`

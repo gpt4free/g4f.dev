@@ -3643,61 +3643,6 @@ async function upload_files(fileInput) {
     }
 }
 domReady.then(() => {
-fileInput.addEventListener('change', async (event) => {
-    if (fileInput.files.length) {
-        type = fileInput.files[0].name.split('.').pop()
-        if (type == "har") {
-            return await upload_cookies();
-        } else if (type != "json") {
-            await upload_files(fileInput);
-        }
-        fileInput.dataset.type = type
-        if (type == "json") {
-            const reader = new FileReader();
-            reader.addEventListener('load', async (event) => {
-                const data = JSON.parse(event.target.result);
-                if (data.options && "g4f" in data.options) {
-                    let count = 0;
-                    Object.keys(data).forEach(async key => {
-                        if (key == "options") {
-                            Object.keys(data[key]).forEach(keyOption => {
-                                appStorage.setItem(keyOption, data[key][keyOption]);
-                                count += 1;
-                            });
-                        } else if (!appStorage.getItem(key)) {
-                            if (key.startsWith("conversation:")) {
-                                await save_conversation(data[key]);
-                                count += 1;
-                            } else {
-                                appStorage.setItem(key, data[key]);
-                            }
-                        }
-                    });
-                    await load_conversations();
-                    await load_settings_storage();
-                    fileInput.value = "";
-                    inputCount.innerText = framework.translate('{0} Conversations/Settings were imported successfully').replace('{0}', count);
-                } else {
-                    is_cookie_file = data.api_key;
-                    if (Array.isArray(data)) {
-                        data.forEach((item) => {
-                            if (item.domain && item.name && item.value) {
-                                is_cookie_file = true;
-                            }
-                        });
-                    }
-                    if (is_cookie_file) {
-                        await upload_cookies();
-                    } else {
-                        await upload_files(fileInput);
-                    }
-                }
-            });
-            reader.readAsText(fileInput.files[0]);
-        }
-    }
-});
-
 if (!window.matchMedia("(pointer:coarse)").matches) {
     document.getElementById("image").setAttribute("multiple", "multiple");
 }

@@ -1238,7 +1238,7 @@ domReady.then(() => {
     const fileInput = document.getElementById("file");
     fileInput.addEventListener('change', async (event) => {
         if (fileInput.files.length) {
-            type = fileInput.files[0].name.split('.').pop()
+            const type = fileInput.files[0].name.split('.').pop()
             if (type == "har") {
                 return await upload_cookies();
             } else if (type != "json") {
@@ -1839,10 +1839,7 @@ function showCloudSyncLoggedIn(user) {
     if (user.id) {
         ensureWorkspaceSecret().then((secret) => {
             if (secret && appStorage.getItem("secretConversationSync") === "true") {
-                // Auto-sync conversations on login
-                syncConversationsFromSecret().then(() => {
-                    syncConversationsToSecret().catch(() => {});
-                }).catch(() => {});
+                syncSecretStorageDiff().catch(() => {});
             }
         }).catch(() => {});
     }
@@ -2224,11 +2221,16 @@ async function checkAndConfirmSecretRequests() {
 }
 
 let _secretRequestCheckInterval = null;
+let _secretRequestPollingRunning = false;
 function startSecretRequestPolling() {
     if (_secretRequestCheckInterval) clearInterval(_secretRequestCheckInterval);
     _secretRequestCheckInterval = setInterval(() => {
+        if (_secretRequestPollingRunning) return;
+        _secretRequestPollingRunning = true;
         if (appStorage.getItem("g4f_workspace_secret") && getSecretUserId()) {
-            checkAndConfirmSecretRequests().catch(() => {});
+            checkAndConfirmSecretRequests().catch(() => {}).finally(() => {
+                _secretRequestPollingRunning = false;
+            });
         }
     }, 10000);
 }
@@ -2280,7 +2282,7 @@ async function syncConversationsToSecret() {
         }
         const baseUrl = framework.backendUrl || window.location.origin;
         const headers = await getSecretHeaders();
-        const response = await fetch(`${baseUrl}/v1/secret/conversations/sync`, {
+        const response = await fetchSecretStorage(`${baseUrl}/v1/secret/conversations/sync`, {
             method: "POST",
             headers,
             body: JSON.stringify({ conversations })
@@ -2315,7 +2317,7 @@ async function syncConversationsFromSecret() {
     try {
         const baseUrl = framework.backendUrl || window.location.origin;
         const headers = await getSecretHeaders();
-        const response = await fetch(`${baseUrl}/v1/secret/conversations`, { headers });
+        const response = await fetchSecretStorage(`${baseUrl}/v1/secret/conversations`, { headers });
         if (response.ok) {
             const data = await response.json();
             const items = data.conversations || data.index || [];
@@ -2328,7 +2330,7 @@ async function syncConversationsFromSecret() {
             for (const item of items) {
                 const convId = item.id || item.conversation_id;
                 if (!convId) continue;
-                const convResp = await fetch(`${baseUrl}/v1/secret/conversations/${encodeURIComponent(convId)}`, { headers });
+                const convResp = await fetchSecretStorage(`${baseUrl}/v1/secret/conversations/${encodeURIComponent(convId)}`, { headers });
                 if (convResp.ok) {
                     const conv = await convResp.json();
                     delete conv.synced_at;
@@ -2352,6 +2354,82 @@ async function syncConversationsFromSecret() {
     }
 }
 
+let _secretStartupSyncPromise = null;
+function fetchSecretStorage(url, options) {
+    return (window.fetchFn || fetch)(url, options);
+}
+
+async function syncSecretStorageDiff() {
+    if (_secretStartupSyncPromise) return _secretStartupSyncPromise;
+    _secretStartupSyncPromise = (async () => {
+        const userId = getSecretUserId();
+        if (!userId || appStorage.getItem("secretConversationSync") !== "true") return;
+
+        try {
+            const baseUrl = framework.backendUrl || window.location.origin;
+            const headers = await getSecretHeaders();
+            const response = await fetchSecretStorage(`${baseUrl}/v1/secret/conversations`, { headers });
+            if (!response.ok) return;
+
+            const data = await response.json();
+            const remoteIndex = data.conversations || data.index || [];
+            const remoteMap = new Map(remoteIndex.map(item => [item.id || item.conversation_id, item]));
+            const localConversations = await list_conversations();
+            const localMap = new Map(localConversations.map(conversation => [conversation.id, conversation]));
+            const toUpload = [];
+            const toDownload = [];
+
+            for (const conversation of localConversations) {
+                const remote = remoteMap.get(conversation.id);
+                if (!remote || (conversation.updated || 0) > (remote.updated || 0)) {
+                    toUpload.push(conversation);
+                }
+            }
+
+            for (const item of remoteIndex) {
+                const conversationId = item.id || item.conversation_id;
+                const local = localMap.get(conversationId);
+                if (!local || (item.updated || 0) > (local.updated || 0)) {
+                    toDownload.push(conversationId);
+                }
+            }
+
+            if (toUpload.length > 0) {
+                const uploadResponse = await fetchSecretStorage(`${baseUrl}/v1/secret/conversations/sync`, {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify({ conversations: toUpload })
+                });
+                if (!uploadResponse.ok) return;
+            }
+
+            let downloaded = 0;
+            for (const conversationId of toDownload) {
+                const conversationResponse = await fetchSecretStorage(
+                    `${baseUrl}/v1/secret/conversations/${encodeURIComponent(conversationId)}`,
+                    { headers }
+                );
+                if (!conversationResponse.ok) continue;
+                const conversation = await conversationResponse.json();
+                delete conversation.synced_at;
+                delete conversation.user_id;
+                await save_conversation(conversation);
+                downloaded++;
+            }
+
+            if (downloaded > 0) await load_conversations();
+            if (toUpload.length > 0 || downloaded > 0) {
+                console.log(`Secret storage startup sync: uploaded ${toUpload.length}, downloaded ${downloaded}`);
+            }
+        } catch (e) {
+            console.error("Secret storage startup sync failed:", e);
+        }
+    })().finally(() => {
+        _secretStartupSyncPromise = null;
+    });
+    return _secretStartupSyncPromise;
+}
+
 /**
  * Auto-sync the current conversation to secret storage if the toggle is enabled.
  * Called after each conversation update.
@@ -2360,9 +2438,12 @@ let refreshOnHidden = true;
 document.addEventListener("visibilitychange", () => {
     refreshOnHidden = !document.hidden;
 });
+let _autoSyncRunning = false; 
 async function autoSyncCurrentConversation() {
     if (!refreshOnHidden) return;
     if (appStorage.getItem("secretConversationSync") !== "true") return;
+    if (_autoSyncRunning) return;
+    _autoSyncRunning = true;
 
     const userId = getSecretUserId();
     if (!userId) return;
@@ -2372,13 +2453,15 @@ async function autoSyncCurrentConversation() {
         if (!current) return;
         const baseUrl = framework.backendUrl || window.location.origin;
         const headers = await getSecretHeaders();
-        await fetch(`${baseUrl}/v1/secret/conversations`, {
+        await fetchSecretStorage(`${baseUrl}/v1/secret/conversations`, {
             method: "POST",
             headers,
             body: JSON.stringify(current)
         });
     } catch (e) {
         console.error("Auto-sync to secret storage failed:", e);
+    } finally {
+        _autoSyncRunning = false;
     }
 }
 
@@ -2394,7 +2477,7 @@ async function pullNewSecretConversations() {
     try {
         const baseUrl = framework.backendUrl || window.location.origin;
         const headers = await getSecretHeaders();
-        const response = await fetch(`${baseUrl}/v1/secret/conversations`, { headers });
+        const response = await fetchSecretStorage(`${baseUrl}/v1/secret/conversations`, { headers });
         if (!response.ok) return 0;
         const data = await response.json();
         const remoteIndex = data.conversations || data.index || [];
@@ -2412,7 +2495,7 @@ async function pullNewSecretConversations() {
             const localUpdated = local ? (local.updated || 0) : 0;
             // Pull if remote is newer or doesn't exist locally
             if (!local || remoteUpdated > localUpdated) {
-                const convResp = await fetch(`${baseUrl}/v1/secret/conversations/${encodeURIComponent(convId)}`, { headers });
+                const convResp = await fetchSecretStorage(`${baseUrl}/v1/secret/conversations/${encodeURIComponent(convId)}`, { headers });
                 if (convResp.ok) {
                     const conv = await convResp.json();
                     delete conv.synced_at;
