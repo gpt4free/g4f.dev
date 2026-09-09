@@ -155,8 +155,8 @@ const on_delete_conversation = async (conversation_id) => {
         await framework.delete(conversation.id);
     }
 
-    const { store, done } = await withStore('readwrite');
-    store.delete(conversation.id);
+    await delete_conversation(conversation.id);
+
     if (window.conversation_id == conversation_id) {
         await new_conversation();
     }
