@@ -479,7 +479,7 @@ const load_conversation = async (conversation, append = false) => {
                 if (!Array.isArray(suggestions)) {
                 window.suggestions = [suggestions];
             }
-            suggestions_el = document.createElement("div");
+            const suggestions_el = document.createElement("div");
             suggestions_el.classList.add("suggestions");
             suggestions.forEach((suggestion)=> {
                 if (!suggestion || suggestion == "answer_guess") {
@@ -490,7 +490,7 @@ const load_conversation = async (conversation, append = false) => {
                 el.innerHTML = `<span>${framework.escape(suggestion)}</span> <i class="fa-solid fa-turn-up"></i>`;
                 el.onclick = async () => {
                     window.suggestions = null;
-                    suggestions_el = chatBody.querySelector('.suggestions');
+                    const suggestions_el = chatBody.querySelector('.suggestions');
                     suggestions_el ? suggestions_el.remove() : null;
                     await handle_ask(true, suggestion);
                 }
