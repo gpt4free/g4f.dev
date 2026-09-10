@@ -92,6 +92,29 @@
     addLog(`[PROMISE ERROR] ${reason}`, 'error');
   });
 
+  // Capture navigation performance data
+  const logNavigationData = () => {
+    const navigationData = window.performance.getEntriesByType('navigation')[0];
+    if (navigationData) {
+      const status = navigationData.responseStatus;
+      const statusText = status === 0 ? 'N/A (cached/redirect)' :
+                         status >= 200 && status < 300 ? `${status} OK` :
+                         status >= 300 && status < 400 ? `${status} Redirect` :
+                         status >= 400 ? `${status} Error` : `${status}`;
+      addLog(`[NAVIGATION] ${navigationData.name}`, 'log');
+      addLog(`  responseStatus: ${statusText}`, status >= 400 ? 'error' : 'log');
+      addLog(`  type: ${navigationData.type}`, 'log');
+      addLog(`  transferSize: ${navigationData.transferSize} bytes`, 'log');
+      addLog(`  domContentLoaded: ${Math.round(navigationData.domContentLoadedEventEnd)}ms`, 'log');
+      addLog(`  loadComplete: ${Math.round(navigationData.loadEventEnd)}ms`, 'log');
+      addLog(`  DOM interactive: ${Math.round(navigationData.domInteractive)}ms`, 'log');
+      addLog(`  TTFB: ${Math.round(navigationData.responseStart)}ms`, 'log');
+    } else {
+      addLog('[NAVIGATION] No navigation entry found', 'warn');
+    }
+  };
+  logNavigationData();
+
   // Capture console API calls
   const originalConsole = console;
   const logged = [];
