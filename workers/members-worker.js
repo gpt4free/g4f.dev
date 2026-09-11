@@ -1965,7 +1965,7 @@ ${buttonsHtml}
       const keyHash = await hashApiKey(apiKey);
       const keyPrefix = apiKey.substring(0, 8);
       const expirationTtl = 7 * 24 * 60 * 60;
-      const expires = Date.now() + expirationTtl;
+      const expires = Date.now() + expirationTtl * 1000;
 
       const keyData = {
           id: generateKeyId(),

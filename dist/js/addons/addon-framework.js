@@ -482,18 +482,26 @@ async function query(prompt, options = { json: false, cache: true }) {
     if (options === true || options === false) {
         options = { json: options, cache: true };
     }
-    const encodedParams = (new URLSearchParams(options)).toString();
-    const secondPartyUrl = `https://g4f.space/ai/auto/${encodeURIComponent(prompt)}?${encodedParams}`;
+    const chatUrl = `https://g4f.space/v1/chat/completions`;
     let response;
     try {
-        response = await fetch(secondPartyUrl, {
+        response = await fetch(chatUrl, {
+            body: JSON.stringify({
+                messages: [
+                    {
+                        role: "user",
+                        content: prompt
+                    }
+                ],
+                ...(options.json ? {"response_format": {"type": "json_object"}} : {})
+            }),
             headers: localStorage.getItem("g4f_session") ? {
                 'Authorization': `Bearer ${localStorage.getItem("g4f_session")}`
             } : {}
         });
         window.captureUserTierHeaders?.(response.headers);
     } catch (e) {
-        add_error(`Error fetching URL: \`${secondPartyUrl}\``, e);
+        add_error(`Error fetching URL: \`${chatUrl}\``, e);
     }
     if (response && !response.ok) {
         const delay = parseInt(response.headers.get('Retry-After'), 10);
@@ -501,42 +509,36 @@ async function query(prompt, options = { json: false, cache: true }) {
             console.log(`Retrying after ${delay} seconds...`);
             await new Promise(resolve => setTimeout(resolve, delay * 1000));
             try {
-                response = await fetch(secondPartyUrl, {
+                response = await fetch(chatUrl, {
+                    body: JSON.stringify({
+                        messages: [
+                            {
+                                role: "user",
+                                content: prompt
+                            }
+                        ],
+                        ...(options.json ? {"response_format": {"type": "json_object"}} : {})
+                    }),
                     headers: localStorage.getItem("g4f_session") ? {
                         'Authorization': `Bearer ${localStorage.getItem("g4f_session")}`
                     } : {}
                 });
                 window.captureUserTierHeaders?.(response.headers);
             } catch (e) {
-                add_error(`Error fetching URL: \`${secondPartyUrl}\`\n ${e}`, e);
+                add_error(`Error fetching URL: \`${chatUrl}\`\n ${e}`, e);
             }
         }
     }
-    if (!response || !response.ok) {
-        if (response) {
-            add_error(`Error ${response.status} with URL: \`${secondPartyUrl}\`\n ${await response.clone().text()}`, true);
-        }
-        const firstPartyUrl = `https://g4f.space/ai/auto/${encodeURIComponent(prompt)}?${encodedParams}`;
+    if (response && response.ok) {
         try {
-            response = await fetch(firstPartyUrl);
-        } catch (e) {
-            add_error(`Error fetching fallback URL: \`${firstPartyUrl}\``, e);
-            return new Response('{"error": "All endpoints failed"}', { status: 503, headers: { 'Content-Type': 'application/json' } });
-        }
-        if (!response.ok) {
-            add_error(`Error ${response.status} with URL: \`${firstPartyUrl}\`\n ${await response.clone().text()}`, true);
-            return response;
-        }
-    }
-    if (options.json) {
-        try {
-            try {
-                await response.clone().json();
-            } catch (e) {
-                const text = await response.clone().text();
-                return new Response(filterMarkdown(text, ["json"], text), response);
+            const json = await response.clone().json();
+            const data = json.choices[0].message.content;
+            if (options.json) {
+                return new Response(filterMarkdown(data, ["json"], data), response);
             }
+            return new Response(data, response);
         } catch (e) {
+            add_error(`Error parsing JSON response from URL: \`${chatUrl}\`\n ${e}`, e);
         }
     }
     return response;
