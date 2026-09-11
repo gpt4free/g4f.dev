@@ -182,6 +182,7 @@ async function query(prompt, options = { json: false, cache: true }) {
     let response;
     try {
         response = await fetch(chatUrl, {
+            method: "POST",
             body: JSON.stringify({
                 messages: [
                     {
@@ -206,6 +207,7 @@ async function query(prompt, options = { json: false, cache: true }) {
             await new Promise(resolve => setTimeout(resolve, delay * 1000));
             try {
                 response = await fetch(chatUrl, {
+                    method: "POST",
                     body: JSON.stringify({
                         messages: [
                             {
