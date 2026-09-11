@@ -285,7 +285,7 @@ const load_conversation = async (conversation, append = false) => {
     let providers = [];
     let buffer = "";
     let completion_tokens = 0;
-    const countTokensEnabled = appStorage.getItem("countTokens") != "false";
+    const countTokensEnabled = appStorage.getItem("countTokens") != "false" && count_words_and_tokens instanceof Function;
 
     if (!append) {
         chatBody.innerHTML = "";

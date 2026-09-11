@@ -192,9 +192,12 @@ async function query(prompt, options = { json: false, cache: true }) {
                 ],
                 ...(options.json ? {"response_format": {"type": "json_object"}} : {})
             }),
-            headers: localStorage.getItem("g4f_session") ? {
-                'Authorization': `Bearer ${localStorage.getItem("g4f_session")}`
-            } : {}
+            headers: {
+                "Content-Type": "application/json",
+                ...(localStorage.getItem("g4f_session") ? {
+                    'Authorization': `Bearer ${localStorage.getItem("g4f_session")}`
+                } : {})
+            }
         });
         window.captureUserTierHeaders?.(response.headers);
     } catch (e) {
@@ -217,9 +220,12 @@ async function query(prompt, options = { json: false, cache: true }) {
                         ],
                         ...(options.json ? {"response_format": {"type": "json_object"}} : {})
                     }),
-                    headers: localStorage.getItem("g4f_session") ? {
-                        'Authorization': `Bearer ${localStorage.getItem("g4f_session")}`
-                    } : {}
+                    headers: {
+                        "Content-Type": "application/json",
+                        ...(localStorage.getItem("g4f_session") ? {
+                            'Authorization': `Bearer ${localStorage.getItem("g4f_session")}`
+                        } : {})
+                    }
                 });
                 window.captureUserTierHeaders?.(response.headers);
             } catch (e) {

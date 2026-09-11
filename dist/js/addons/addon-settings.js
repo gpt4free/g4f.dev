@@ -269,7 +269,7 @@ function count_words_and_tokens(text, model, completion_tokens, prompt_tokens, e
 
 const count_input = async () => {
     let countFocus = userInput;
-    const countTokensEnabled = appStorage.getItem("countTokens") != "false";
+    const countTokensEnabled = appStorage.getItem("countTokens") != "false" && count_words_and_tokens instanceof Function;
     if (countTokensEnabled && countFocus.value) {
         if (window.matchMedia("(pointer:coarse)")) {
             inputCount.innerText = `(${count_tokens(get_selected_model(), countFocus.value)} tokens)`;

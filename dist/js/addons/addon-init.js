@@ -1106,7 +1106,7 @@ fileInput.addEventListener('click', async (event) => {
 });
 
 const cameraInput = document.getElementById("camera");
-cameraInput.addEventListener("click", (e) => {
+cameraInput?.addEventListener("click", (e) => {
     if (window?.pywebview) {
         e.preventDefault();
         pywebview.api.take_picture();

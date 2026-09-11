@@ -2323,7 +2323,7 @@ const load_conversation = async (conversation, append = false) => {
             </button>`);
         }
 
-        countTokensEnabled = appStorage.getItem("countTokens") != "false";
+        countTokensEnabled = appStorage.getItem("countTokens") != "false" && count_words_and_tokens instanceof Function;
         let next_usage;
         let prompt_tokens; 
         if (countTokensEnabled) {
