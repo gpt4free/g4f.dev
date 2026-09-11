@@ -1571,9 +1571,6 @@
         const cancelDeleteAccountBtn = document.getElementById('cancelDeleteAccountBtn');
         const scheduledDeletionNotice = document.getElementById('scheduledDeletionNotice');
         const deletionCountdownText = document.getElementById('deletionCountdownText');
-
-        // Session token storage
-        let sessionToken = localStorage.getItem('g4f_session') || null;
         
         // Check for redirect parameter (external login request)
         const urlParams = new URLSearchParams(window.location.search);
@@ -1601,7 +1598,6 @@
         async function apiRequest(endpoint, options = {}) {
             const headers = {
                 'Content-Type': 'application/json',
-                ...(sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {}),
                 ...options.headers
             };
 
@@ -1649,21 +1645,18 @@
             const user = localStorage.getItem('g4f_user');
             if (user) {
                 const userData = JSON.parse(user);
-                // Verify session is still valid
-                if (sessionToken) {
-                    try {
-                        const result = await apiRequest('/session');
-                        if (result.authenticated) {
-                            showDashboard(result.user || userData);
-                            return;
-                        } else {
-                            console.log('Session invalid, keeping cached data for re-login');
-                            // Don't wipe localStorage on failed session check.
-                            // The token may still be valid — only clear on explicit logout.
-                        }
-                    } catch (e) {
-                        console.log('Session verification failed, using cached data');
+                try {
+                    const result = await apiRequest('/session');
+                    if (result.authenticated) {
+                        showDashboard(result.user || userData);
+                        return;
+                    } else {
+                        console.log('Session invalid, keeping cached data for re-login');
+                        // Don't wipe localStorage on failed session check.
+                        // The token may still be valid — only clear on explicit logout.
                     }
+                } catch (e) {
+                    console.log('Session verification failed, using cached data');
                 }
                 showDashboard(userData);
             } else {
@@ -2082,7 +2075,6 @@
                 try {
                     const result = await window.G4FOAuth.handleCallback(G4F_OAUTH_REDIRECT);
                     if (result) {
-                        sessionToken = result.token;
                         localStorage.setItem('g4f_session', result.token);
                         if (result.user) {
                             localStorage.setItem('g4f_user', JSON.stringify(result.user));
@@ -2124,7 +2116,6 @@
             if (session && userParam) {
                 try {
                     const user = JSON.parse(decodeURIComponent(userParam));
-                    sessionToken = session;
                     localStorage.setItem('g4f_session', session);
                     localStorage.setItem('g4f_user', JSON.stringify(user));
                     if (user.pollinations?.api_key) {
@@ -2172,7 +2163,6 @@
             }
             
             // Clear all auth data
-            sessionToken = null;
             localStorage.removeItem('g4f_user');
             localStorage.removeItem('g4f_session');
             localStorage.removeItem('g4f_api_key');
@@ -2857,7 +2847,6 @@
         async function customApiRequest(endpoint, options = {}) {
             const headers = {
                 'Content-Type': 'application/json',
-                ...(sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {}),
                 ...options.headers
             };
             
@@ -3082,9 +3071,6 @@
 
         // Restore session from localStorage
         const storedSession = localStorage.getItem('g4f_session');
-        if (storedSession) {
-            sessionToken = storedSession;
-        }
 
         // Secret request button handler
         const secretRequestBtn = document.getElementById('secretRequestBtn');
