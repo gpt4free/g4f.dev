@@ -2852,7 +2852,8 @@
             
             const response = await fetch(`${CUSTOM_API}${endpoint}`, {
                 ...options,
-                headers
+                headers,
+                credentials: 'include'
             });
             
             return response.json();
