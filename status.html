@@ -447,12 +447,11 @@
                             ${resetText ? `• ${resetText}` : ''}
                         `;
                         quotaCol.appendChild(quotaDetails);
-                      // Status badge column
-                    const statusBadge = document.createElement('span');
-                    const status2 = quota.success ? getQuotaStatus(quota.data) : { status: 'error', label: 'Error' };
-                    statusBadge.className = `status-badge status-${status2.status}`;
-                    statusBadge.textContent = status2.label;
-                    row.appendChild(statusBadge);
+                        // Status badge column
+                        const statusBadge = document.createElement('span');
+                        statusBadge.className = `status-badge status-${status.status}`;
+                        statusBadge.textContent = status.label;
+                        row.appendChild(statusBadge);
                     }).catch(e=>{
                         // Error state
                         const errorDiv = document.createElement('div');
