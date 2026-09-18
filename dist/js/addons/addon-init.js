@@ -918,7 +918,6 @@ function renderMediaSelect() {
     const oldImages = mediaSelect.querySelectorAll("a:has(img)");
     oldImages.forEach((el)=>el.remove());
     Object.entries(image_storage).forEach(async ([object_url, file]) => {
-        const bucket_id = generateUUID();
         const link = document.createElement("a");
         link.title = file.name;
         const img = document.createElement("img");
@@ -926,7 +925,6 @@ function renderMediaSelect() {
         img.onclick = async () => {
             link.remove();
             delete image_storage[object_url];
-            await framework.delete(item.bucket_id);
         }
         img.onload = () => {
             link.title += `\n${img.naturalWidth}x${img.naturalHeight}`;
@@ -1199,6 +1197,8 @@ async function upload_files(fileInput) {
                 return {type: "image_url", image_url: {url: part.url}}
             });
             await handle_ask(false, media);
+            paperclip.classList.remove("blink");
+            fileInput.value = "";
             return;
         }
 
@@ -2003,81 +2003,28 @@ function hideCloudSyncLoading() {
     }
 }
 
-async function syncConversationsToCloud() {
-    const token = appStorage.getItem("g4f_session");
-    if (!token) {
-        cloudSyncLoginRedirect();
-        return;
-    }
-    showCloudSyncLoading("Uploading conversations...");
-    try {
-        const conversations = await list_conversations();
-        if (!conversations || conversations.length === 0) {
-            hideCloudSyncLoading();
-            alert("No conversations to sync.");
-            return;
-        }
-        const response = await fetch(`${CLOUD_SYNC_API}/conversations/sync`, {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ conversations })
-        });
-        hideCloudSyncLoading();
-        if (response.ok) {
-            const data = await response.json();
-            console.log("Conversations synced to cloud:", data);
-            alert(`${conversations.length} conversations uploaded to cloud successfully!`);
-        } else {
-            const error = await response.json();
-            throw new Error(error.error || "Sync failed");
-        }
-    } catch (e) {
-        hideCloudSyncLoading();
-        console.error("Cloud sync upload failed:", e);
-        alert("Failed to upload conversations to cloud: " + e.message);
-    }
+// ============================================================
+// Secret Conversation Storage (local server or cloud, per-user)
+// ============================================================
+
+/**
+ * Resolve the secret storage API base URL and headers for the current
+ * storage mode:
+ *   - "local": the g4f backend server (/v1/secret/conversations*)
+ *   - "cloud": the members worker on auth.g4f.space, same paths
+ * Returns null if the mode is not usable (e.g. cloud without login).
+ */
+function getSecretStorageMode() {
+    return appStorage.getItem("secretStorageMode") === "cloud" ? "cloud" : "local";
 }
 
-async function syncConversationsFromCloud() {
-    const token = appStorage.getItem("g4f_session");
-    if (!token) {
-        cloudSyncLoginRedirect();
-        return;
+async function getSecretStorageTarget() {
+    if (getSecretStorageMode() === "cloud") {
+        const token = appStorage.getItem("g4f_session");
+        if (!token) return null;
+        return { baseUrl: SECRET_API, headers: await getSecretHeaders({ "Authorization": `Bearer ${token}` }) };
     }
-    showCloudSyncLoading("Downloading conversations...");
-    try {
-        const response = await fetch(`${CLOUD_SYNC_API}/conversations`, {
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (response.ok) {
-            const data = await response.json();
-            if (data.conversations && data.conversations.length > 0) {
-                for (const conv of data.conversations) {
-                    // Remove cloud-specific fields before saving locally
-                    delete conv.synced_at;
-                    delete conv.user_id;
-                    await save_conversation(conv);
-                }
-                await load_conversations();
-                hideCloudSyncLoading();
-                console.log("Conversations synced from cloud");
-                alert(`Downloaded ${data.conversations.length} conversations from cloud!`);
-            } else {
-                hideCloudSyncLoading();
-                alert("No conversations found in cloud.");
-            }
-        } else {
-            const error = await response.json();
-            throw new Error(error.error || "Sync failed");
-        }
-    } catch (e) {
-        hideCloudSyncLoading();
-        console.error("Cloud sync download failed:", e);
-        alert("Failed to download conversations from cloud: " + e.message);
-    }
+    return { baseUrl: framework.backendUrl || window.location.origin, headers: await getSecretHeaders() };
 }
 
 // ============================================================
@@ -2266,8 +2213,8 @@ async function getSecretHeaders(extra = {}) {
  * Upload all local conversations to the user's secret storage on the local server.
  */
 async function syncConversationsToSecret() {
-    const userId = getSecretUserId();
-    if (!userId) {
+    const target = await getSecretStorageTarget();
+    if (!target) {
         alert("Please log in to use Secret Storage.");
         cloudSyncLoginRedirect();
         return;
@@ -2280,11 +2227,9 @@ async function syncConversationsToSecret() {
             alert("No conversations to upload.");
             return;
         }
-        const baseUrl = framework.backendUrl || window.location.origin;
-        const headers = await getSecretHeaders();
-        const response = await fetchSecretStorage(`${baseUrl}/v1/secret/conversations/sync`, {
+        const response = await fetchSecretStorage(`${target.baseUrl}/v1/secret/conversations/sync`, {
             method: "POST",
-            headers,
+            headers: target.headers,
             body: JSON.stringify({ conversations })
         });
         hideCloudSyncLoading();
@@ -2307,17 +2252,15 @@ async function syncConversationsToSecret() {
  * Download all conversations from the user's secret storage and save locally.
  */
 async function syncConversationsFromSecret() {
-    const userId = getSecretUserId();
-    if (!userId) {
+    const target = await getSecretStorageTarget();
+    if (!target) {
         alert("Please log in to use Secret Storage.");
         cloudSyncLoginRedirect();
         return;
     }
     showCloudSyncLoading("Downloading from Secret Storage...");
     try {
-        const baseUrl = framework.backendUrl || window.location.origin;
-        const headers = await getSecretHeaders();
-        const response = await fetchSecretStorage(`${baseUrl}/v1/secret/conversations`, { headers });
+        const response = await fetchSecretStorage(`${target.baseUrl}/v1/secret/conversations`, { headers: target.headers });
         if (response.ok) {
             const data = await response.json();
             const items = data.conversations || data.index || [];
@@ -2330,7 +2273,7 @@ async function syncConversationsFromSecret() {
             for (const item of items) {
                 const convId = item.id || item.conversation_id;
                 if (!convId) continue;
-                const convResp = await fetchSecretStorage(`${baseUrl}/v1/secret/conversations/${encodeURIComponent(convId)}`, { headers });
+                const convResp = await fetchSecretStorage(`${target.baseUrl}/v1/secret/conversations/${encodeURIComponent(convId)}`, { headers: target.headers });
                 if (convResp.ok) {
                     const conv = await convResp.json();
                     delete conv.synced_at;
@@ -2366,9 +2309,9 @@ async function syncSecretStorageDiff() {
         if (!userId || appStorage.getItem("secretConversationSync") !== "true") return;
 
         try {
-            const baseUrl = framework.backendUrl || window.location.origin;
-            const headers = await getSecretHeaders();
-            const response = await fetchSecretStorage(`${baseUrl}/v1/secret/conversations`, { headers });
+            const target = await getSecretStorageTarget();
+            if (!target) return;
+            const response = await fetchSecretStorage(`${target.baseUrl}/v1/secret/conversations`, { headers: target.headers });
             if (!response.ok) return;
 
             const data = await response.json();
@@ -2395,9 +2338,9 @@ async function syncSecretStorageDiff() {
             }
 
             if (toUpload.length > 0) {
-                const uploadResponse = await fetchSecretStorage(`${baseUrl}/v1/secret/conversations/sync`, {
+                const uploadResponse = await fetchSecretStorage(`${target.baseUrl}/v1/secret/conversations/sync`, {
                     method: "POST",
-                    headers,
+                    headers: target.headers,
                     body: JSON.stringify({ conversations: toUpload })
                 });
                 if (!uploadResponse.ok) return;
@@ -2406,8 +2349,8 @@ async function syncSecretStorageDiff() {
             let downloaded = 0;
             for (const conversationId of toDownload) {
                 const conversationResponse = await fetchSecretStorage(
-                    `${baseUrl}/v1/secret/conversations/${encodeURIComponent(conversationId)}`,
-                    { headers }
+                    `${target.baseUrl}/v1/secret/conversations/${encodeURIComponent(conversationId)}`,
+                    { headers: target.headers }
                 );
                 if (!conversationResponse.ok) continue;
                 const conversation = await conversationResponse.json();
@@ -2451,11 +2394,11 @@ async function autoSyncCurrentConversation() {
         const conversations = await list_conversations();
         const current = conversations.find(c => c.id === window.conversation_id);
         if (!current) return;
-        const baseUrl = framework.backendUrl || window.location.origin;
-        const headers = await getSecretHeaders();
-        await fetchSecretStorage(`${baseUrl}/v1/secret/conversations`, {
+        const target = await getSecretStorageTarget();
+        if (!target) return;
+        await fetchSecretStorage(`${target.baseUrl}/v1/secret/conversations`, {
             method: "POST",
-            headers,
+            headers: target.headers,
             body: JSON.stringify(current)
         });
     } catch (e) {
@@ -2475,9 +2418,9 @@ async function pullNewSecretConversations() {
     const userId = getSecretUserId();
     if (!userId) return 0;
     try {
-        const baseUrl = framework.backendUrl || window.location.origin;
-        const headers = await getSecretHeaders();
-        const response = await fetchSecretStorage(`${baseUrl}/v1/secret/conversations`, { headers });
+        const target = await getSecretStorageTarget();
+        if (!target) return 0;
+        const response = await fetchSecretStorage(`${target.baseUrl}/v1/secret/conversations`, { headers: target.headers });
         if (!response.ok) return 0;
         const data = await response.json();
         const remoteIndex = data.conversations || data.index || [];
@@ -2495,7 +2438,7 @@ async function pullNewSecretConversations() {
             const localUpdated = local ? (local.updated || 0) : 0;
             // Pull if remote is newer or doesn't exist locally
             if (!local || remoteUpdated > localUpdated) {
-                const convResp = await fetchSecretStorage(`${baseUrl}/v1/secret/conversations/${encodeURIComponent(convId)}`, { headers });
+                const convResp = await fetchSecretStorage(`${target.baseUrl}/v1/secret/conversations/${encodeURIComponent(convId)}`, { headers: target.headers });
                 if (convResp.ok) {
                     const conv = await convResp.json();
                     delete conv.synced_at;
@@ -2556,16 +2499,42 @@ function cloudSyncLoginRedirect(provider = null) {
 
 // Cloud Sync button event listeners
 const cloudSyncLoginBtn = document.getElementById("cloudSyncLoginBtn");
-const cloudSyncUploadBtn = document.getElementById("cloudSyncUpload");
-const cloudSyncDownloadBtn = document.getElementById("cloudSyncDownload");
 const cloudSyncLogoutBtn = document.getElementById("cloudSyncLogoutBtn");
 const secretSyncUploadBtn = document.getElementById("secretSyncUpload");
 const secretSyncDownloadBtn = document.getElementById("secretSyncDownload");
 const secretConversationSyncToggle = document.getElementById("secretConversationSync");
+const storageModeLocalBtn = document.getElementById("storageModeLocal");
+const storageModeCloudBtn = document.getElementById("storageModeCloud");
+
+/**
+ * Highlight the active storage mode button and disable the cloud option
+ * while the user is not logged in (cloud storage requires a session).
+ */
+function updateStorageModeUI() {
+    const mode = getSecretStorageMode();
+    const loggedIn = Boolean(appStorage.getItem("g4f_session"));
+    if (storageModeLocalBtn) storageModeLocalBtn.classList.toggle("active", mode === "local");
+    if (storageModeCloudBtn) storageModeCloudBtn.classList.toggle("active", mode === "cloud");
+    if (storageModeCloudBtn) storageModeCloudBtn.disabled = !loggedIn;
+    if (storageModeCloudBtn) storageModeCloudBtn.title = loggedIn ? "Store conversations encrypted on g4f.space" : "Login required for cloud storage";
+}
+
+if (storageModeLocalBtn) storageModeLocalBtn.addEventListener("click", () => {
+    appStorage.setItem("secretStorageMode", "local");
+    updateStorageModeUI();
+});
+if (storageModeCloudBtn) storageModeCloudBtn.addEventListener("click", () => {
+    if (!appStorage.getItem("g4f_session")) {
+        alert("Please log in to use cloud secret storage.");
+        cloudSyncLoginRedirect();
+        return;
+    }
+    appStorage.setItem("secretStorageMode", "cloud");
+    updateStorageModeUI();
+});
+updateStorageModeUI();
 
 if (cloudSyncLoginBtn) cloudSyncLoginBtn.addEventListener("click", () => cloudSyncLoginRedirect());
-if (cloudSyncUploadBtn) cloudSyncUploadBtn.addEventListener("click", syncConversationsToCloud);
-if (cloudSyncDownloadBtn) cloudSyncDownloadBtn.addEventListener("click", syncConversationsFromCloud);
 if (cloudSyncLogoutBtn) cloudSyncLogoutBtn.addEventListener("click", cloudSyncLogout);
 if (secretSyncUploadBtn) secretSyncUploadBtn.addEventListener("click", syncConversationsToSecret);
 if (secretSyncDownloadBtn) secretSyncDownloadBtn.addEventListener("click", syncConversationsFromSecret);
@@ -2613,6 +2582,18 @@ if (secretConversationSyncToggle) {
     });
 }
 
+// Re-evaluate the storage mode switch after login state changes
+const _origShowCloudSyncLoggedIn = showCloudSyncLoggedIn;
+showCloudSyncLoggedIn = function(user) {
+    _origShowCloudSyncLoggedIn(user);
+    updateStorageModeUI();
+};
+const _origShowCloudSyncLogin = showCloudSyncLogin;
+showCloudSyncLogin = function() {
+    _origShowCloudSyncLogin();
+    updateStorageModeUI();
+};
+
 // Expose functions to global scope
 window.toggleMCPServer = toggleMCPServer;
 window.removeMCPServer = removeMCPServer;
@@ -2622,8 +2603,6 @@ window.renderMCPTools = renderMCPTools;
 window.refreshMCPTools = refreshMCPTools;
 window.showAddServerDialog = showAddServerDialog;
 window.cloudSyncLoginRedirect = cloudSyncLoginRedirect;
-window.syncConversationsToCloud = syncConversationsToCloud;
-window.syncConversationsFromCloud = syncConversationsFromCloud;
 window.cloudSyncLogout = cloudSyncLogout;
 window.syncConversationsToSecret = syncConversationsToSecret;
 window.syncConversationsFromSecret = syncConversationsFromSecret;
@@ -2641,8 +2620,6 @@ export default {
     handleToolCalls,
     checkCloudSyncSession,
     cloudSyncLoginRedirect,
-    syncConversationsToCloud,
-    syncConversationsFromCloud,
     cloudSyncLogout,
     new_conversation,
     load_conversations,

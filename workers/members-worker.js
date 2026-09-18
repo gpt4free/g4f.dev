@@ -639,26 +639,6 @@ var USER_TIER_LIMITS = {
                 return handleCheckSession(request, env);
             }
   
-            // Conversation cloud sync endpoints
-            if (pathname === "/members/api/conversations") {
-                if (request.method === "GET") {
-                    return handleListConversations(request, env);
-                } else if (request.method === "POST") {
-                    return handleSyncConversations(request, env);
-                }
-            }
-            if (pathname === "/members/api/conversations/sync") {
-                return handleSyncConversations(request, env);
-            }
-            if (pathname.startsWith("/members/api/conversations/") && pathname !== "/members/api/conversations/" && pathname !== "/members/api/conversations/sync") {
-                const conversationId = pathname.replace("/members/api/conversations/", "");
-                if (request.method === "GET") {
-                    return handleGetConversation(request, env, conversationId);
-                } else if (request.method === "DELETE") {
-                    return handleDeleteConversation(request, env, conversationId);
-                }
-            }
-
             if (pathname === "/members/api/jwt") {
                 return handleJwtRequest(request, env);
             }
@@ -680,6 +660,26 @@ var USER_TIER_LIMITS = {
                     return handlePollSecretRequest(request, env, requestId);
                 } else if (request.method === "DELETE") {
                     return handleDeleteSecretRequest(request, env, requestId);
+                }
+            }
+
+            // Secret conversation storage (cloud, encrypted in R2)
+            // Mirrors the Python API paths at /v1/secret/conversations*
+            if (pathname === "/v1/secret/conversations" && request.method === "GET") {
+                return handleListSecretConversations(request, env);
+            }
+            if (pathname === "/v1/secret/conversations" && request.method === "POST") {
+                return handleSaveSecretConversation(request, env);
+            }
+            if (pathname === "/v1/secret/conversations/sync" && request.method === "POST") {
+                return handleSyncSecretConversations(request, env);
+            }
+            if (pathname.startsWith("/v1/secret/conversations/")) {
+                const conversationId = pathname.replace("/v1/secret/conversations/", "");
+                if (request.method === "GET") {
+                    return handleGetSecretConversation(request, env, conversationId);
+                } else if (request.method === "DELETE") {
+                    return handleDeleteSecretConversation(request, env, conversationId);
                 }
             }
 
@@ -3662,166 +3662,291 @@ ${buttonsHtml}
 
   
   // ============================================
-  // Conversation Cloud Sync
+  // Secret Conversation Storage (cloud, per-user)
+  //
+  // Encrypted conversation sync in R2, mirroring the Python API at
+  // /v1/secret/conversations*.  Blobs use the same G4FENC container
+  // format as the Python implementation (AES-256-GCM, key derived via
+  // SHA-256 from the workspace secret), so either backend can read
+  // the other's data.
+  //
+  // Storage layout in R2:
+  //   secret/<user_id>/conversations/<conv_id>.json  (encrypted blob)
+  //   secret/<user_id>/conversations/index.json      (plaintext index)
   // ============================================
+
+  /** Derive an AES-GCM key from the workspace secret (SHA-256). */
+  async function deriveSecretKey(workspaceSecret) {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(workspaceSecret));
+    return crypto.subtle.importKey("raw", digest, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+  }
+
+  /**
+   * Encrypt a conversation object into the G4FENC container format:
+   * "G4FENC" (6) || version (1) || nonce (12) || ciphertext || tag (16)
+   */
+  async function encryptSecretConversation(obj, workspaceSecret) {
+    const raw = new TextEncoder().encode(JSON.stringify(obj));
+    const key = await deriveSecretKey(workspaceSecret);
+    const nonce = crypto.getRandomValues(new Uint8Array(12));
+    const ciphertext = new Uint8Array(
+      await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, key, raw)
+    );
+    const blob = new Uint8Array(19 + ciphertext.length);
+    blob.set(new TextEncoder().encode("G4FENC"), 0);
+    blob[6] = 1; // version
+    blob.set(nonce, 7);
+    blob.set(ciphertext, 19);
+    return blob;
+  }
+
+  /**
+   * Decrypt a G4FENC blob (or plaintext JSON fallback) back to an object.
+   * Returns null on failure (wrong secret / corrupted data).
+   */
+  async function decryptSecretConversation(data, workspaceSecret) {
+    try {
+      const bytes = new Uint8Array(data);
+      if (bytes.length < 19) return null;
+      const magic = new TextDecoder().decode(bytes.slice(0, 6));
+      if (magic !== "G4FENC") {
+        // Plaintext JSON fallback (stored before encryption was enabled)
+        return JSON.parse(new TextDecoder().decode(bytes));
+      }
+      if (bytes[6] !== 1) return null; // unsupported version
+      const key = await deriveSecretKey(workspaceSecret);
+      const plain = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: bytes.slice(7, 19) },
+        key,
+        bytes.slice(19)
+      );
+      return JSON.parse(new TextDecoder().decode(plain));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /** Sanitize a conversation ID for use as an R2 key segment. */
+  function safeConversationId(convId) {
+    return String(convId).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 128);
+  }
+
+  function secretConversationKey(userId, convId) {
+    return `secret/${userId}/conversations/${safeConversationId(convId)}.json`;
+  }
+
+  /** Insert/refresh a conversation entry in the plaintext index file. */
+  async function updateSecretConversationIndex(env, userId, conversation) {
+    const indexKey = `secret/${userId}/conversations/index.json`;
+    let index = [];
+    try {
+      const existing = await env.MEMBERS_BUCKET.get(indexKey);
+      if (existing) index = await existing.json();
+    } catch (e) {
+      index = [];
+    }
+    if (!Array.isArray(index)) index = [];
+    const convId = conversation.id;
+    index = index.filter(e => e.id !== convId);
+    index.push({
+      id: convId,
+      title: conversation.title || conversation.new_title || "",
+      updated: conversation.updated,
+      added: conversation.added,
+      items_count: Array.isArray(conversation.items) ? conversation.items.length : 0
+    });
+    index.sort((a, b) => (b.updated || b.added || 0) - (a.updated || a.added || 0));
+    await env.MEMBERS_BUCKET.put(indexKey, JSON.stringify(index, null, 2), {
+      httpMetadata: { contentType: "application/json" }
+    });
+  }
+
+  /**
+   * Handle GET /v1/secret/conversations - list the conversation index.
+   */
+  async function handleListSecretConversations(request, env) {
+    const user = await authenticateByUserId(request, env);
+    if (!user) {
+      return jsonResponse({ error: "User ID is required (provide x-user-id header)" }, 401, getCorsHeaders(request));
+    }
+
+    try {
+      const indexKey = `secret/${user.id}/conversations/index.json`;
+      const existing = await env.MEMBERS_BUCKET.get(indexKey);
+      const index = existing ? await existing.json() : [];
+      return jsonResponse({ conversations: Array.isArray(index) ? index : [] }, 200, getCorsHeaders(request));
+    } catch (error) {
+      console.error("Failed to list secret conversations:", error);
+      return jsonResponse({ error: "Failed to list secret conversations" }, 500, getCorsHeaders(request));
+    }
   
   /**
-   * Handle GET /members/api/conversations - List all synced conversations
+   * Handle POST /v1/secret/conversations - save a single conversation.
    */
-  async function handleListConversations(request, env) {
-      const user = await authenticateRequest(request, env);
-      if (!user) {
-          return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
+  async function handleSaveSecretConversation(request, env) {
+    const user = await authenticateByUserId(request, env);
+    if (!user) {
+      return jsonResponse({ error: "User ID is required (provide x-user-id header)" }, 401, getCorsHeaders(request));
+    }
+
+    let conversation;
+    try {
+      conversation = await request.json();
+    } catch (e) {
+      return jsonResponse({ error: "Invalid JSON body" }, 400, getCorsHeaders(request));
+    }
+
+    if (!conversation || !conversation.id) {
+      return jsonResponse({ error: "Conversation must have an 'id' field" }, 400, getCorsHeaders(request));
+    }
+
+    const workspaceSecret = request.headers.get("x-workspace-secret") || "";
+
+    try {
+      const key = secretConversationKey(user.id, conversation.id);
+      if (workspaceSecret) {
+        const blob = await encryptSecretConversation(conversation, workspaceSecret);
+        await env.MEMBERS_BUCKET.put(key, blob, {
+          httpMetadata: { contentType: "application/octet-stream" }
+        });
+      } else {
+        await env.MEMBERS_BUCKET.put(key, JSON.stringify(conversation, null, 2), {
+          httpMetadata: { contentType: "application/json" }
+        });
       }
-  
-      try {
-          // List all conversations from R2 for this user
-          const prefix = `conversations/${user.id}/`;
-          const listed = await env.MEMBERS_BUCKET.list({ prefix });
-          
-          const conversations = [];
-          for (const object of listed.objects) {
-              try {
-                  // Get full conversation content
-                  const convObject = await env.MEMBERS_BUCKET.get(object.key);
-                  if (convObject) {
-                      const convData = await convObject.json();
-                      conversations.push(convData);
-                  }
-              } catch (e) {
-                  console.error("Failed to load conversation:", object.key, e);
-              }
-          }
-  
-          // Sort by updated/added time, newest first
-          conversations.sort((a, b) => (b.updated || b.added || 0) - (a.updated || a.added || 0));
-  
-          return jsonResponse({ 
-              conversations,
-              count: conversations.length
-          }, 200, getCorsHeaders(request));
-      } catch (error) {
-          console.error("Failed to list conversations:", error);
-          return jsonResponse({ error: "Failed to list conversations" }, 500, getCorsHeaders(request));
-      }
+      await updateSecretConversationIndex(env, user.id, conversation);
+      return jsonResponse({ saved: true, id: conversation.id, encrypted: Boolean(workspaceSecret) }, 200, getCorsHeaders(request));
+    } catch (error) {
+      console.error("Failed to save secret conversation:", error);
+      return jsonResponse({ error: "Failed to save secret conversation" }, 500, getCorsHeaders(request));
+    }
   }
+
+  /**
+   * Handle POST /v1/secret/conversations/sync - save multiple conversations.
+   */
+  async function handleSyncSecretConversations(request, env) {
+    const user = await authenticateByUserId(request, env);
+    if (!user) {
+      return jsonResponse({ error: "User ID is required (provide x-user-id header)" }, 401, getCorsHeaders(request));
+    }
+
+    let body;
+    try {
+      body = await request.json();
+    } catch (e) {
+      return jsonResponse({ error: "Invalid JSON body" }, 400, getCorsHeaders(request));
+    }
+
+    const conversations = Array.isArray(body) ? body : (body && body.conversations) || [];
+
+    // Limit number of conversations to sync (prevent abuse)
+    const MAX_CONVERSATIONS = 1000;
+    if (conversations.length > MAX_CONVERSATIONS) {
+      return jsonResponse({ error: `Maximum ${MAX_CONVERSATIONS} conversations allowed` }, 400, getCorsHeaders(request));
+    }
+
+    const workspaceSecret = request.headers.get("x-workspace-secret") || "";
+    let saved = 0;
+    const errors = [];
+
+    for (const conversation of conversations) {
+      if (!conversation || !conversation.id) {
+        errors.push("Conversation must have an 'id' field");
+        continue;
+      }
+      try {
+        const key = secretConversationKey(user.id, conversation.id);
+        if (workspaceSecret) {
+          const blob = await encryptSecretConversation(conversation, workspaceSecret);
+          await env.MEMBERS_BUCKET.put(key, blob, {
+            httpMetadata: { contentType: "application/octet-stream" }
+          });
+        } else {
+          await env.MEMBERS_BUCKET.put(key, JSON.stringify(conversation, null, 2), {
+            httpMetadata: { contentType: "application/json" }
+          });
+        }
+        await updateSecretConversationIndex(env, user.id, conversation);
+        saved++;
+      } catch (error) {
+        errors.push(error.message || "Unknown error");
+      }
+    }
+
+    return jsonResponse({ saved, errors }, 200, getCorsHeaders(request));
   
   /**
-   * Handle POST /members/api/conversations - Sync conversations to cloud
+   * Handle GET /v1/secret/conversations/:id - retrieve one conversation.
    */
-  async function handleSyncConversations(request, env) {
-      const user = await authenticateRequest(request, env);
-      if (!user) {
-          return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
+  async function handleGetSecretConversation(request, env, conversationId) {
+    const user = await authenticateByUserId(request, env);
+    if (!user) {
+      return jsonResponse({ error: "User ID is required (provide x-user-id header)" }, 401, getCorsHeaders(request));
+    }
+
+    try {
+      const key = secretConversationKey(user.id, conversationId);
+      const object = await env.MEMBERS_BUCKET.get(key);
+
+      if (!object) {
+        return jsonResponse({ error: `Conversation '${conversationId}' not found` }, 404, getCorsHeaders(request));
       }
-  
-      if (request.method !== "POST") {
-          return jsonResponse({ error: "Method not allowed" }, 405, getCorsHeaders(request));
+
+      const workspaceSecret = request.headers.get("x-workspace-secret") || "";
+      const conversation = await decryptSecretConversation(await object.arrayBuffer(), workspaceSecret);
+      if (conversation === null) {
+        return jsonResponse({ error: "Decryption failed (wrong workspace secret?)" }, 403, getCorsHeaders(request));
       }
-  
-      try {
-          const body = await request.json();
-          const { conversations } = body;
-  
-          if (!Array.isArray(conversations)) {
-              return jsonResponse({ error: "conversations must be an array" }, 400, getCorsHeaders(request));
-          }
-  
-          // Limit number of conversations to sync (prevent abuse)
-          const MAX_CONVERSATIONS = 1000;
-          if (conversations.length > MAX_CONVERSATIONS) {
-              return jsonResponse({ 
-                  error: `Maximum ${MAX_CONVERSATIONS} conversations allowed` 
-              }, 400, getCorsHeaders(request));
-          }
-  
-          const results = [];
-          const now = new Date().toISOString();
-  
-          for (const conv of conversations) {
-              if (!conv.id) {
-                  results.push({ id: null, success: false, error: "Missing conversation ID" });
-                  continue;
-              }
-  
-              try {
-                  // Store conversation in R2
-                  const key = `conversations/${user.id}/${conv.id}.json`;
-                  await env.MEMBERS_BUCKET.put(
-                      key,
-                      JSON.stringify({
-                          ...conv,
-                          synced_at: now,
-                          user_id: user.id
-                      }),
-                      {
-                          httpMetadata: {
-                              contentType: "application/json",
-                              cacheControl: now
-                          }
-                      }
-                  );
-                  results.push({ id: conv.id, success: true });
-              } catch (err) {
-                  results.push({ id: conv.id, success: false, error: err.message });
-              }
-          }
-  
-          const successCount = results.filter(r => r.success).length;
-          return jsonResponse({
-              message: `Synced ${successCount} of ${conversations.length} conversations`,
-              results
-          }, 200, getCorsHeaders(request));
-      } catch (error) {
-          console.error("Failed to sync conversations:", error);
-          return jsonResponse({ error: "Failed to sync conversations" }, 500, getCorsHeaders(request));
-      }
+
+      return jsonResponse(conversation, 200, getCorsHeaders(request));
+    } catch (error) {
+      console.error("Failed to get secret conversation:", error);
+      return jsonResponse({ error: "Failed to get secret conversation" }, 500, getCorsHeaders(request));
+    }
   }
-  
+
   /**
-   * Handle GET /members/api/conversations/:id - Get a specific conversation
+   * Handle DELETE /v1/secret/conversations/:id - delete one conversation.
    */
-  async function handleGetConversation(request, env, conversationId) {
-      const user = await authenticateRequest(request, env);
-      if (!user) {
-          return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
+  async function handleDeleteSecretConversation(request, env, conversationId) {
+    const user = await authenticateByUserId(request, env);
+    if (!user) {
+      return jsonResponse({ error: "User ID is required (provide x-user-id header)" }, 401, getCorsHeaders(request));
+    }
+
+    try {
+      const key = secretConversationKey(user.id, conversationId);
+      const object = await env.MEMBERS_BUCKET.get(key);
+
+      if (!object) {
+        return jsonResponse({ error: `Conversation '${conversationId}' not found` }, 404, getCorsHeaders(request));
       }
-  
+
+      await env.MEMBERS_BUCKET.delete(key);
+
+      // Drop the entry from the index (best-effort)
+      const indexKey = `secret/${user.id}/conversations/index.json`;
       try {
-          const key = `conversations/${user.id}/${conversationId}.json`;
-          const object = await env.MEMBERS_BUCKET.get(key);
-  
-          if (!object) {
-              return jsonResponse({ error: "Conversation not found" }, 404, getCorsHeaders(request));
+        const existing = await env.MEMBERS_BUCKET.get(indexKey);
+        if (existing) {
+          const index = await existing.json();
+          if (Array.isArray(index)) {
+            const filtered = index.filter(e => e.id !== conversationId);
+            await env.MEMBERS_BUCKET.put(indexKey, JSON.stringify(filtered, null, 2), {
+              httpMetadata: { contentType: "application/json" }
+            });
           }
-  
-          const conversation = await object.json();
-          return jsonResponse({ conversation }, 200, getCorsHeaders(request));
-      } catch (error) {
-          console.error("Failed to get conversation:", error);
-          return jsonResponse({ error: "Failed to get conversation" }, 500, getCorsHeaders(request));
+        }
+      } catch (e) {
+        // Ignore index update failures
       }
-  }
-  
-  /**
-   * Handle DELETE /members/api/conversations/:id - Delete a synced conversation
-   */
-  async function handleDeleteConversation(request, env, conversationId) {
-      const user = await authenticateRequest(request, env);
-      if (!user) {
-          return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
-      }
-  
-      try {
-          const key = `conversations/${user.id}/${conversationId}.json`;
-          await env.MEMBERS_BUCKET.delete(key);
-  
-          return jsonResponse({ message: "Conversation deleted successfully" }, 200, getCorsHeaders(request));
-      } catch (error) {
-          console.error("Failed to delete conversation:", error);
-          return jsonResponse({ error: "Failed to delete conversation" }, 500, getCorsHeaders(request));
-      }
-  }
+
+      return jsonResponse({ deleted: true, id: conversationId }, 200, getCorsHeaders(request));
+    } catch (error) {
+      console.error("Failed to delete secret conversation:", error);
+      return jsonResponse({ error: "Failed to delete secret conversation" }, 500, getCorsHeaders(request));
+    }
 
   /**
    * Handle GET /members/api/jwt - Generate a JWT token for the authenticated user
