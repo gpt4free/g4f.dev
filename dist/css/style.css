@@ -1191,6 +1191,27 @@ form input:checked+label {
     border-color: rgba(200, 60, 60, 0.4);
 }
 
+/* Secret Storage Location switch (Local / Cloud) */
+.storage-mode-btn {
+    flex: 1;
+    width: auto;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+    opacity: 0.55;
+}
+
+.storage-mode-btn.active {
+    background: linear-gradient(135deg, rgba(110, 72, 170, 0.4), rgba(157, 80, 187, 0.4));
+    border-color: rgba(110, 72, 170, 0.6);
+    color: var(--colour-3);
+    opacity: 1;
+}
+
+.storage-mode-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
 .chat-buttons input:checked+label:after,
 .settings input:checked+label:after,
 form input:checked+label:after {
