@@ -808,6 +808,129 @@ class HuggingFace extends Client {
     }
 }
 
+class WebGPU extends Client {
+    constructor(options = {}) {
+        super({
+            ...options,
+            baseUrl: options.baseUrl || 'webgpu://local',
+            quotaEndpoint: null
+        });
+        this.id = options.id || 'webgpu';
+        this.defaultModel = options.defaultModel || 'Llama-3.1-8B-Instruct-q4f32_1-MLC';
+        this.logCallback = options.logCallback || console.log;
+        this.progressCallback = options.progressCallback || null;
 
-export { Client, Pollinations, PollinationsAI, DeepInfra, Together, Puter, HuggingFace, Worker, Audio, captureUserTierHeaders };
+        // Singleton engine cache keyed by model id
+        this._engines = {};
+        this._webllm = null;
+    }
+
+    /**
+     * Check whether the current browser supports WebGPU.
+     * @returns {Promise<boolean>}
+     */
+    static async isSupported() {
+        if (typeof navigator === 'undefined' || !navigator.gpu) return false;
+        try {
+            const adapter = await navigator.gpu.requestAdapter();
+            return !!adapter;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Lazily import @mlc-ai/web-llm from the ESM CDN.
+     */
+    async _loadWebLLM() {
+        if (this._webllm) return this._webllm;
+        this._webllm = await import(
+            /* webpackIgnore: true */
+            'https://esm.run/@mlc-ai/web-llm'
+        );
+        return this._webllm;
+    }
+
+    /**
+     * Get (or create) a cached MLC engine for the given model.
+     */
+    async _getEngine(modelId) {
+        if (this._engines[modelId]) return this._engines[modelId];
+        const webllm = await this._loadWebLLM();
+        const engine = await webllm.CreateMLCEngine(modelId, {
+            initProgressCallback: (progress) => {
+                if (this.progressCallback) {
+                    this.progressCallback(progress);
+                } else {
+                    console.log(`[WebGPU] ${progress.text}`);
+                }
+            }
+        });
+        this._engines[modelId] = engine;
+        return engine;
+    }
+
+    get chat() {
+        return {
+            completions: {
+                create: async (params) => {
+                    const modelId = params.model || this.defaultModel;
+                    const engine = await this._getEngine(modelId);
+                    const { signal, ...options } = params;
+                    options.model = modelId;
+
+                    this.logCallback && this.logCallback({ request: options, type: 'chat' });
+
+                    if (params.stream) {
+                        return this._streamWebGPU(engine, options);
+                    }
+
+                    const response = await engine.chat.completions.create(options);
+                    response.provider = 'WebGPU (local)';
+                    this.logCallback && this.logCallback({ response, type: 'chat' });
+                    return response;
+                }
+            }
+        };
+    }
+
+    get models() {
+        return {
+            list: async () => {
+                const webllm = await this._loadWebLLM();
+                // prebuiltAppConfig contains the catalogue of available models
+                const models = (webllm.prebuiltAppConfig?.model_list || []).map(m => ({
+                    id: m.model_id || m.model,
+                    name: m.model_id || m.model,
+                    type: 'chat'
+                }));
+                return models;
+            }
+        };
+    }
+
+    get images() {
+        return {
+            generate: async () => {
+                throw new Error('WebGPU provider does not support image generation. Use a cloud provider for images.');
+            },
+            edit: async () => {
+                throw new Error('WebGPU provider does not support image editing. Use a cloud provider for images.');
+            }
+        };
+    }
+
+    async *_streamWebGPU(engine, options) {
+        this.logCallback && this.logCallback({ request: options, type: 'chat' });
+        const stream = await engine.chat.completions.create({ ...options, stream: true });
+        for await (const chunk of stream) {
+            chunk.provider = 'WebGPU (local)';
+            this.logCallback && this.logCallback({ response: chunk, type: 'chat' });
+            yield chunk;
+        }
+    }
+}
+
+
+export { Client, Pollinations, PollinationsAI, DeepInfra, Together, Puter, HuggingFace, Worker, Audio, WebGPU, captureUserTierHeaders };
 export default Client;

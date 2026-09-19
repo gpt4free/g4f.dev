@@ -24,7 +24,7 @@
     <meta name="twitter:image" content="/dist/img/g4f.svg" />
 
     <!-- Canonical URL to avoid duplicate content issues -->
-    <link rel="canonical" href="https://g4f.dev/chat/v2" />
+    <link rel="canonical" href="https://g4f.dev/chat/" />
 
     <link rel="stylesheet" href="/dist/css/style.css?v={{ v }}" />
     <link rel="stylesheet" href="/dist/css/all.min.css" />
@@ -48,12 +48,9 @@
     <script src="/dist/js/sanitize-html.js" async></script>
     <script type="module">
         import container from "/dist/js/providers.js";
-        window.loadProviders = container.loadProviders;
-        window.createClient = container.createClient;
-        window.providerLocalStorage = container.providerLocalStorage;
-        window.captureUserTierHeaders = container.captureUserTierHeaders;
-        window.mergeToolCalls = container.mergeToolCalls;
-        window.Puter = container.Puter;
+        for (const [key, value] of Object.entries(container)) {
+            window[key] = value;
+        }
     </script>
     <script type="module" async>
         import { convertModel, getModelTags, isValidModel } from '/dist/js/model.js';

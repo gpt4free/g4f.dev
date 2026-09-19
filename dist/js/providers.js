@@ -1,5 +1,5 @@
 
-import { Client, Pollinations, DeepInfra, HuggingFace, Worker, Audio, captureUserTierHeaders, Puter } from "./client.js";
+import { Client, Pollinations, DeepInfra, HuggingFace, Worker, Audio, WebGPU, captureUserTierHeaders, Puter } from "./client.js";
 let fs;
 if (typeof window === "undefined") {
     fs = require("fs");
@@ -19,6 +19,7 @@ let providerClassMap = {
     "huggingface": HuggingFace,
     "puter": Puter,
     "worker": Worker,
+    "webgpu": WebGPU,
 };
 
 function mapProviderDefaults(providers) {
@@ -166,5 +167,5 @@ function mergeToolCalls(accumulator, toolCalls) {
     return accumulator;
 }
 
-export { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls, Puter };
-export default { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls, Puter };
+export { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls, Puter, WebGPU };
+export default { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls, Puter, WebGPU };

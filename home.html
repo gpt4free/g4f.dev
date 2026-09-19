@@ -366,7 +366,7 @@
 
         <!-- Buttons -->
         <div class="button-container">
-            <a href="chat/v2" class="button">Start Chat</a>
+            <a href="chat/" class="button">Start Chat</a>
             <a href="playground/" class="button">Playground</a>
             <a href="#" class="button" id="login-btn">Login</a>
         </div>
@@ -400,7 +400,7 @@
             // Login button - redirect to members with return URL
             loginBtn.addEventListener("click", (e) => {
                 e.preventDefault();
-                const returnUrl = encodeURIComponent(location.origin + '/chat/v2');
+                const returnUrl = encodeURIComponent(location.origin + '/chat/');
                 window.location.href = `/members.html?redirect=${returnUrl}`;
             });
 

@@ -20,7 +20,7 @@
     "display": "standalone",
     "scope": "/",
     "share_target": {
-        "action": "/chat/v2",
+        "action": "/chat/",
         "method": "GET",
         "enctype": "application/x-www-form-urlencoded",
         "params": {

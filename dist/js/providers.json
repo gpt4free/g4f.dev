@@ -19,11 +19,13 @@
         "eaon": {"id": "srv_mrtd0gge48cb809ab7eb", "backupUrl": "https://g4f.space/custom/srv_mrtd0gge48cb809ab7eb", "tags": "⚡"},
         "opencode": {"id": "srv_mrgy4bjz6a85b485d663", "backupUrl": "https://g4f.space/custom/srv_mrgy4bjz6a85b485d663", "tags": "🦄"},
         "orcarouter": {"id": "srv_msoxsh206cb0d89eca32", "baseUrl": "https://api.orcarouter.ai/v1", "backupUrl": "https://g4f.space/api/orcarouter", "tags": "🐳"},
-        "relayrouter": {"id": "srv_mt1wbaxgf9c946af0c58", "backupUrl": "https://g4f.space/api/relayrouter", "tags": "🔗"}
+        "relayrouter": {"id": "srv_mt1wbaxgf9c946af0c58", "backupUrl": "https://g4f.space/api/relayrouter", "tags": "🔗"},
+        "webgpu": {"label": "WebGPU (local)", "tags": "🖥️", "provider": "WebGPU"}
     },
     "defaultModels": {
         "default": "auto",
-        "puter": "anthropic:anthropic/claude-opus-4-7"
+        "puter": "anthropic:anthropic/claude-opus-4-7",
+        "webgpu": "Llama-3.1-8B-Instruct-q4f32_1-MLC"
     },
     "serverDefaultModels": {
         "srv_mp3lmkuad07322459f47": "unmoderated-gpt",

@@ -265,7 +265,7 @@ const load_conversation = async (conversation, append = false) => {
     console.debug("Conversation:", conversation.id)
 
     let conversation_title = conversation.new_title || conversation.title;
-    title = conversation_title ? `${conversation_title} - G4F` : window.title;
+    const title = conversation_title ? `${conversation_title} - G4F` : window.title;
     if (title) {
         document.title = title;
     }

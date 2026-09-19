@@ -2271,6 +2271,7 @@ async function syncConversationsFromSecret() {
             }
             let downloaded = 0;
             for (const item of items) {
+                if (item.items_count === 0) continue;
                 const convId = item.id || item.conversation_id;
                 if (!convId) continue;
                 const convResp = await fetchSecretStorage(`${target.baseUrl}/v1/secret/conversations/${encodeURIComponent(convId)}`, { headers: target.headers });
@@ -2315,9 +2316,9 @@ async function syncSecretStorageDiff() {
             if (!response.ok) return;
 
             const data = await response.json();
-            const remoteIndex = data.conversations || data.index || [];
+            const remoteIndex = (data.conversations || data.index || []).filter(item => item.items_count > 0);
             const remoteMap = new Map(remoteIndex.map(item => [item.id || item.conversation_id, item]));
-            const localConversations = await list_conversations();
+            const localConversations = (await list_conversations()).filter(item => item.items && item.items.length > 0);
             const localMap = new Map(localConversations.map(conversation => [conversation.id, conversation]));
             const toUpload = [];
             const toDownload = [];
@@ -2352,6 +2353,11 @@ async function syncSecretStorageDiff() {
                     `${target.baseUrl}/v1/secret/conversations/${encodeURIComponent(conversationId)}`,
                     { headers: target.headers }
                 );
+                if (conversationResponse.status === 403) {
+                    await save_conversation({ id: conversationId });
+                    downloaded++;
+                    continue;
+                }
                 if (!conversationResponse.ok) continue;
                 const conversation = await conversationResponse.json();
                 delete conversation.synced_at;
@@ -2431,6 +2437,7 @@ async function pullNewSecretConversations() {
 
         let pulled = 0;
         for (const item of remoteIndex) {
+            if (item.items_count === 0) continue;
             const convId = item.id || item.conversation_id;
             if (!convId) continue;
             const local = localMap.get(convId);

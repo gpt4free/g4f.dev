@@ -278,7 +278,7 @@
                 qrcodeStatus.innerText = 'Error generating QR code: ' + response.statusText;
                 return;
             }
-            const share = `${window.location.origin}/chat/v2#${encodeURIComponent(conversation.id)}`;
+            const share = `${window.location.origin}/chat/#${encodeURIComponent(conversation.id)}`;
             qrcodeStatus.innerText = share;
             qrcodeStatus.href = share;
             document.getElementById("qrcode").innerHTML = '';
