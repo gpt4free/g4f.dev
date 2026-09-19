@@ -619,6 +619,74 @@ body.liquid:not(.no-animations):not(.white) {
     font-weight: bold;
 }
 
+.message .content .provider .provider-routed {
+    color: var(--secondary, #ff816d);
+    font-style: italic;
+    margin-left: 6px;
+    cursor: help;
+}
+
+/* AI usage consent dialog */
+.ai-consent-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 9998;
+}
+
+.ai-consent-dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    max-width: 440px;
+    width: calc(100% - 40px);
+    background: var(--colour-5, #1a1525);
+    border: 1px solid var(--blur-border, #8471904d);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+}
+
+.ai-consent-dialog h2 {
+    margin: 0 0 12px;
+    font-size: 1.2rem;
+    color: var(--accent, #8b3dff);
+}
+
+.ai-consent-dialog p {
+    margin: 0 0 10px;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: var(--colour-2, #ccc);
+}
+
+.ai-consent-dialog .ai-consent-links a {
+    color: var(--conversations, #c7a2ff);
+}
+
+.ai-consent-actions {
+    margin-top: 16px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.ai-consent-actions button {
+    background: var(--accent, #8b3dff);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+.ai-consent-actions button:hover {
+    background: var(--accent-hover, #9d56ff);
+}
+
 .message .content .count {
     font-size: 12px;
     display: flex;

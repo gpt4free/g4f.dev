@@ -174,8 +174,16 @@
                     <div class="info" role="region" aria-label="GitHub Repository">
                         <i class="fa-brands fa-github" aria-hidden="true"></i>
                         <span class="convo-title">
-                            <span id="version_text" aria-live="polite">github</span> ~ 
+                            <span id="version_text" aria-live="polite">github</span> ~
                             <a href="https://github.com/gpt4free/g4f.dev" target="_blank" rel="noopener noreferrer">gpt4free/g4f.dev</a>
+                        </span>
+                    </div>
+                    <div class="info" role="region" aria-label="Legal information">
+                        <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+                        <span class="convo-title">
+                            legal ~
+                            <a href="/privacy.html" target="_blank" rel="noopener noreferrer" data-translate="true">Privacy</a> ·
+                            <a href="/terms.html" target="_blank" rel="noopener noreferrer" data-translate="true">Terms</a>
                         </span>
                     </div>
                 </section>
@@ -695,6 +703,23 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                 </nav>
             </footer>
         </main>
+
+        <!-- AI usage consent dialog -->
+        <div id="ai-consent-overlay" class="ai-consent-overlay hidden" role="presentation"></div>
+        <div id="ai-consent-dialog" class="ai-consent-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="ai-consent-title" aria-describedby="ai-consent-text">
+            <h2 id="ai-consent-title" data-translate="true">AI-Generated Content</h2>
+            <div id="ai-consent-text" data-translate="true">
+                <p><strong>This chat is powered by artificial intelligence.</strong> Answers are generated automatically and can be wrong, incomplete or biased — never rely on them without verification.</p>
+                <p>Your messages are forwarded to third-party AI providers and may be processed there. Please don't share personal or confidential information.</p>
+                <p class="ai-consent-links">
+                    <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a> ·
+                    <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms of Service</a>
+                </p>
+            </div>
+            <div class="ai-consent-actions">
+                <button type="button" id="ai-consent-accept" data-translate="true">I understand — Continue</button>
+            </div>
+        </div>
 
         <!-- Logs -->
         <section class="log hidden" aria-label="Application logs" tabindex="-1">

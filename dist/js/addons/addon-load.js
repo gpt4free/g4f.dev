@@ -194,6 +194,11 @@ async function on_api() {
 addonsLoaded.then(async () => {
     console.log("addonsLoaded, calling on_load and on_api");
 
+    // Show AI usage consent dialog before any interaction. Called first and
+    // independent of backend availability, so it also appears when startup
+    // requests fail.
+    show_ai_consent();
+
     await on_load();
     await on_api();
 
@@ -233,6 +238,29 @@ addonsLoaded.then(async () => {
         sidebar.classList.remove("minimized");
     }
 });
+
+// AI usage consent: warn about AI-generated content and third-party provider
+// forwarding before the first interaction. Accepted state is stored locally.
+function show_ai_consent() {
+    const dialog = document.getElementById("ai-consent-dialog");
+    const overlay = document.getElementById("ai-consent-overlay");
+    const accept = document.getElementById("ai-consent-accept");
+    if (!dialog || !overlay || !accept) {
+        return;
+    }
+    const storage = window.appStorage || window.localStorage;
+    if (storage.getItem("aiConsentAccepted") === "true") {
+        return;
+    }
+    dialog.classList.remove("hidden");
+    overlay.classList.remove("hidden");
+    accept.addEventListener("click", () => {
+        storage.setItem("aiConsentAccepted", "true");
+        dialog.classList.add("hidden");
+        overlay.classList.add("hidden");
+        userInput?.focus();
+    }, {once: true});
+}
 
 let refreshOnHidden = true;
 document.addEventListener("visibilitychange", () => {
