@@ -2405,7 +2405,7 @@ const load_conversation = async (conversation, append = false) => {
                 if (!Array.isArray(suggestions)) {
                 suggestions = [suggestions];
             }
-            suggestions_el = document.createElement("div");
+            let suggestions_el = document.createElement("div");
             suggestions_el.classList.add("suggestions");
             suggestions.forEach((suggestion)=> {
                 if (!suggestion || suggestion == "answer_guess") {

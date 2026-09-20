@@ -531,7 +531,7 @@ body.liquid:not(.no-animations):not(.white) {
     margin-bottom: var(--inner-gap);
     padding-bottom: var(--inner-gap);
     border-bottom: 1px solid var(--colour-3);
-    overflow: hidden;
+    overflow-y: scroll;
 }
 
 .message .reasoning_text.final {

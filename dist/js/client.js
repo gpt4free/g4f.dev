@@ -901,8 +901,9 @@ class WebGPU extends Client {
                 // prebuiltAppConfig contains the catalogue of available models
                 const models = (webllm.prebuiltAppConfig?.model_list || []).map(m => ({
                     id: m.model_id || m.model,
-                    name: m.model_id || m.model,
-                    type: 'chat'
+                    label: m.model_id || m.model,
+                    type: m.model_type == 1 ? 'embedding' : 'chat',
+                    ...m
                 }));
                 return models;
             }
