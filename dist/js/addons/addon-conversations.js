@@ -142,27 +142,35 @@ const hide_option = async (conversation_id) => {
 
 const on_delete_conversation = async (conversation_id) => {
     const conversation = await get_conversation(conversation_id);
-    for (const message of conversation.items)  {
-        if (Array.isArray(message.content)) {
-            for (const item of message.content) {
-                if (item.bucket_id) {
-                    await framework.delete(item.bucket_id);
+    if (conversation) {
+        for (const message of conversation.items)  {
+            if (Array.isArray(message.content)) {
+                for (const item of message.content) {
+                    if (item.bucket_id) {
+                        await framework.delete(item.bucket_id);
+                    }
                 }
             }
         }
-    }
-    if (conversation.share) {
-        await framework.delete(conversation.id);
+        if (conversation.share) {
+            await framework.delete(conversation.id);
+        }
+
+        await delete_conversation(conversation.id);
     }
 
-    await delete_conversation(conversation.id);
+    // Delete the server copy (secret storage) as well, so the conversation
+    // doesn't come back on the next cross-device/startup sync.
+    if (typeof window.deleteSecretConversation === "function") {
+        await window.deleteSecretConversation(conversation_id);
+    }
 
     if (window.conversation_id == conversation_id) {
         await new_conversation();
     }
 
     await load_conversations();
-    return done;
+    return true;
 };
 
 const on_star_conversation = async (conversation_id, target) => {

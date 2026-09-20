@@ -2213,6 +2213,33 @@ async function getSecretHeaders(extra = {}) {
 }
 
 /**
+ * Delete a conversation from the user's secret storage (server).
+ * Called when a conversation is deleted locally, so the server copy
+ * is removed too and doesn't come back on the next sync.
+ * Returns true if the server confirmed deletion (or had nothing to delete).
+ */
+async function deleteSecretConversation(conversationId) {
+    try {
+        if (!conversationId || !getSecretUserId()) return false;
+        const target = await getSecretStorageTarget();
+        if (!target) return false;
+        const response = await fetchSecretStorage(
+            `${target.baseUrl}/v1/secret/conversations/${encodeURIComponent(conversationId)}`,
+            { method: "DELETE", headers: target.headers }
+        );
+        if (response.ok || response.status === 404) {
+            console.log(`Conversation ${conversationId} deleted from secret storage`);
+            return true;
+        }
+        console.error(`Failed to delete conversation ${conversationId} from secret storage:`, response.statusText);
+        return false;
+    } catch (e) {
+        console.error("Secret storage delete failed:", e);
+        return false;
+    }
+}
+
+/**
  * Upload all local conversations to the user's secret storage on the local server.
  */
 async function syncConversationsToSecret() {
@@ -2224,7 +2251,8 @@ async function syncConversationsToSecret() {
     }
     showCloudSyncLoading("Uploading to Secret Storage...");
     try {
-        const conversations = await list_conversations();
+        let conversations = await list_conversations();
+        conversations = conversations.filter(c => c && c.items && c.items.length > 0);
         if (!conversations || conversations.length === 0) {
             hideCloudSyncLoading();
             alert("No conversations to upload.");
@@ -2284,6 +2312,12 @@ async function syncConversationsFromSecret() {
                     delete conv.user_id;
                     await save_conversation(conv);
                     downloaded++;
+                } else if (convResp.status === 403) {
+                    await save_conversation({ id: convId, items: [] });
+                } else if (convResp.status === 404) {
+                    await deleteSecretConversation(convId);
+                } else {
+                    console.error(`Failed to download conversation ${convId}:`, convResp.statusText);
                 }
             }
             await load_conversations();
@@ -2455,6 +2489,8 @@ async function pullNewSecretConversations() {
                     delete conv.user_id;
                     await save_conversation(conv);
                     pulled++;
+                } else if (convResp.status === 403) {
+                    await save_conversation({ id: convId, items: [] });
                 }
             }
         }
@@ -2616,6 +2652,7 @@ window.cloudSyncLoginRedirect = cloudSyncLoginRedirect;
 window.cloudSyncLogout = cloudSyncLogout;
 window.syncConversationsToSecret = syncConversationsToSecret;
 window.syncConversationsFromSecret = syncConversationsFromSecret;
+window.deleteSecretConversation = deleteSecretConversation;
 window.autoSyncCurrentConversation = autoSyncCurrentConversation;
 window.pullNewSecretConversations = pullNewSecretConversations;
 window.deriveWorkspaceSecret = deriveWorkspaceSecret;
