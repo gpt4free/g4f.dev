@@ -1426,6 +1426,9 @@ function initializeMCPUI() {
     if (mcpClient.servers.length === 0) {
          mcpClient.addServer({ name: 'Demo', url: 'https://mcp.g4f.space/mcp' });
     }
+    if (location.hostname === 'localhost' && !mcpClient.servers.some(s => s.url.includes('localhost:8765'))) {
+        mcpClient.addServer({ name: 'Local', url: 'http://localhost:8765/mcp' });
+    }
 
     // Render servers list
     renderMCPServers();

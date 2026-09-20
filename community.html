@@ -274,9 +274,7 @@
                 }
 
                 const jwtResponse = await fetch('https://auth.g4f.space/members/api/jwt', {
-                    headers: {
-                        Authorization: `Bearer ${session}`
-                    }
+                    credentials: 'include'
                 });
 
                 if (!jwtResponse.ok) {
