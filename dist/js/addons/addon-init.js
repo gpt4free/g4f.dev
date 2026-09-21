@@ -2515,7 +2515,7 @@ checkCloudSyncSession();
 // Start cross-device sync polling
 startSecretSyncPolling();
 // Start cross-device secret request polling (confirm requests from other devices)
-startSecretRequestPolling();
+// startSecretRequestPolling();
 
 // Redirect to members login page (central G4F OAuth when available)
 function cloudSyncLoginRedirect(provider = null) {

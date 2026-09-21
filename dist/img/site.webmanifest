@@ -1,6 +1,9 @@
 {
     "name": "GPT4Free",
     "short_name": "G4F",
+    "id": "/",
+    "start_url": "/",
+    "scope": "/",
     "icons": [
         {
             "src": "/dist/img/g4f.svg",
@@ -52,7 +55,7 @@
     "theme_color": "#ffffff",
     "background_color": "#ffffff",
     "display": "standalone",
-    "scope": "/",
+    "display_override": ["window-controls-overlay"],
     "share_target": {
         "action": "/chat/",
         "method": "GET",
