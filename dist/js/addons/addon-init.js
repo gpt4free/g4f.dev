@@ -2077,12 +2077,6 @@ async function ensureWorkspaceSecret() {
         appStorage.setItem("g4f_workspace_secret", secret);
         return secret;
     }
-    // No user.secret available — try requesting from an online device
-    const shared = await requestSecretFromOnlineDevice();
-    if (shared) {
-        appStorage.setItem("g4f_workspace_secret", shared);
-        return shared;
-    }
     return null;
 }
 
@@ -2252,7 +2246,7 @@ async function syncConversationsToSecret() {
     showCloudSyncLoading("Uploading to Secret Storage...");
     try {
         let conversations = await list_conversations();
-        conversations = conversations.filter(c => c && c.items && c.items.length > 0);
+        conversations = conversations.filter(c => c && c.items && c.items.length > 0 && c.title);
         if (!conversations || conversations.length === 0) {
             hideCloudSyncLoading();
             alert("No conversations to upload.");
@@ -2313,7 +2307,7 @@ async function syncConversationsFromSecret() {
                     await save_conversation(conv);
                     downloaded++;
                 } else if (convResp.status === 403) {
-                    await save_conversation({ id: convId, items: [] });
+                    await deleteSecretConversation(convId);
                 } else if (convResp.status === 404) {
                     await deleteSecretConversation(convId);
                 } else {
@@ -2355,7 +2349,7 @@ async function syncSecretStorageDiff() {
             const data = await response.json();
             const remoteIndex = (data.conversations || data.index || []).filter(item => item.items_count > 0);
             const remoteMap = new Map(remoteIndex.map(item => [item.id || item.conversation_id, item]));
-            const localConversations = (await list_conversations()).filter(item => item.items && item.items.length > 0);
+            const localConversations = (await list_conversations()).filter(item => item.items && item.items.length > 0 && item.title);
             const localMap = new Map(localConversations.map(conversation => [conversation.id, conversation]));
             const toUpload = [];
             const toDownload = [];
@@ -2391,8 +2385,7 @@ async function syncSecretStorageDiff() {
                     { headers: target.headers }
                 );
                 if (conversationResponse.status === 403) {
-                    await save_conversation({ id: conversationId });
-                    downloaded++;
+                    await deleteSecretStorageConversation(conversationId);
                     continue;
                 }
                 if (!conversationResponse.ok) continue;
@@ -2601,7 +2594,7 @@ if (secretRequestBtn) secretRequestBtn.addEventListener("click", async () => {
     secretRequestBtn.innerHTML = '<i class="fa-solid fa-satellite-dish fa-spin"></i><span>Waiting for online device...</span>';
     showCloudSyncLoading("Requesting secret from online device...");
     try {
-        const secret = await requestSecretFromOnlineDevice();
+        const secret = await deriveWorkspaceSecret();
         hideCloudSyncLoading();
         if (secret) {
             appStorage.setItem("g4f_workspace_secret", secret);
@@ -2657,7 +2650,6 @@ window.autoSyncCurrentConversation = autoSyncCurrentConversation;
 window.pullNewSecretConversations = pullNewSecretConversations;
 window.deriveWorkspaceSecret = deriveWorkspaceSecret;
 window.ensureWorkspaceSecret = ensureWorkspaceSecret;
-window.requestSecretFromOnlineDevice = requestSecretFromOnlineDevice;
 window.checkAndConfirmSecretRequests = checkAndConfirmSecretRequests;
 
 export default {
