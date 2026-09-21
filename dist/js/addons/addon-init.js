@@ -2164,20 +2164,20 @@ async function checkAndConfirmSecretRequests() {
     }
 }
 
-let _secretRequestCheckInterval = null;
-let _secretRequestPollingRunning = false;
-function startSecretRequestPolling() {
-    if (_secretRequestCheckInterval) clearInterval(_secretRequestCheckInterval);
-    _secretRequestCheckInterval = setInterval(() => {
-        if (_secretRequestPollingRunning) return;
-        _secretRequestPollingRunning = true;
-        if (appStorage.getItem("g4f_workspace_secret") && getSecretUserId()) {
-            checkAndConfirmSecretRequests().catch(() => {}).finally(() => {
-                _secretRequestPollingRunning = false;
-            });
-        }
-    }, 10000);
-}
+// let _secretRequestCheckInterval = null;
+// let _secretRequestPollingRunning = false;
+// function startSecretRequestPolling() {
+//     if (_secretRequestCheckInterval) clearInterval(_secretRequestCheckInterval);
+//     _secretRequestCheckInterval = setInterval(() => {
+//         if (_secretRequestPollingRunning) return;
+//         _secretRequestPollingRunning = true;
+//         if (appStorage.getItem("g4f_workspace_secret") && getSecretUserId()) {
+//             checkAndConfirmSecretRequests().catch(() => {}).finally(() => {
+//                 _secretRequestPollingRunning = false;
+//             });
+//         }
+//     }, 10000);
+// }
 
 /**
  * Get the user ID from the stored g4f_user JSON.

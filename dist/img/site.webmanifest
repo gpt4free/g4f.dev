@@ -9,10 +9,44 @@
             "purpose": "any"
         },
         {
-            "src": "/dist/img/g4f.svg",
-            "sizes": "any",
-            "type": "image/svg+xml",
+            "src": "/dist/img/g4f-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/dist/img/g4f-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/dist/img/g4f-maskable-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
             "purpose": "maskable"
+        },
+        {
+            "src": "/dist/img/g4f-maskable-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "/dist/img/screenshots/desktop-wide.png",
+            "sizes": "1280x720",
+            "type": "image/png",
+            "form_factor": "wide",
+            "label": "GPT4Free chat interface on desktop"
+        },
+        {
+            "src": "/dist/img/screenshots/mobile-narrow.png",
+            "sizes": "720x1280",
+            "type": "image/png",
+            "form_factor": "narrow",
+            "label": "GPT4Free chat interface on mobile"
         }
     ],
     "theme_color": "#ffffff",
