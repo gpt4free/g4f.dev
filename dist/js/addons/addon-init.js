@@ -1447,7 +1447,6 @@ function initializeMCPUI() {
 
     // PA providers
     document.getElementById('refresh-pa-providers-btn')?.addEventListener('click', loadPaProviders);
-    loadPaProviders();
 }
 
 function renderMCPServers() {
@@ -1606,6 +1605,13 @@ async function fetchPaProviders() {
 
 async function loadPaProviderSelect(optgroup) {
     optgroup = optgroup || document.getElementById('pa-providers-optgroup');
+        // Add PA Providers optgroup
+    if (!optgroup) {
+        optgroup = document.createElement("optgroup");
+        optgroup.id = "pa-providers-optgroup";
+        optgroup.label = framework.translate('PA Providers');
+        providerSelect.appendChild(optgroup);
+    }
     if (!optgroup) return;
     try {
         window._paProviders = window._paProviders || await fetchPaProviders();
@@ -1638,7 +1644,7 @@ async function loadPaProviders() {
         window._paProviders = providers;
         renderPaProviders(providers);
         // Also refresh the select dropdown
-        await loadPaProviderSelect();
+        loadPaProviderSelect();
     } catch (err) {
         const container = document.getElementById('pa-providers-list');
         if (container) container.innerHTML = `<div class="mcp-empty">Failed to load PA providers: ${escapeHtml(String(err))}</div>`;
@@ -2386,7 +2392,8 @@ async function syncSecretStorageDiff() {
                     { headers: target.headers }
                 );
                 if (conversationResponse.status === 403) {
-                    await deleteSecretStorageConversation(conversationId);
+                    await delete_conversation(conversationId);
+                    await deleteSecretConversation(conversationId);
                     continue;
                 }
                 if (!conversationResponse.ok) continue;

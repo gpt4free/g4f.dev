@@ -109,12 +109,6 @@ async function on_api() {
             }
         }
 
-        // Add PA Providers optgroup
-        const paOptgroup = document.createElement("optgroup");
-        paOptgroup.id = "pa-providers-optgroup";
-        paOptgroup.label = framework.translate('PA Providers');
-        providerSelect.appendChild(paOptgroup);
-
         async function loadCoreProvidersSelect() {
             let provider_options = [];
             await api("providers").then(async (providers) => {
@@ -127,12 +121,14 @@ async function on_api() {
             });
         }
 
+        console.log("Loading provider options...");
         await Promise.all([
             updateLiveProviderOptions(optgroup),
             loadCustomProvidersSelect(),
             loadCoreProvidersSelect()
-        ]).then(() => {
-            loadProviderModels(appStorage.getItem("provider"));
+        ]).then(async () => {
+            await loadProviderModels(appStorage.getItem("provider"));
+            await loadPaProviders();
         });
 
         set_favorite_providers();
