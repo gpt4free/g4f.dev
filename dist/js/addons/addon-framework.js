@@ -916,6 +916,8 @@ async function list_conversations() {
                     } else {
                         delete_conversation(conversation.id);
                     }
+                } else {
+                    conversations.push(conversation);
                 }
                 cursor.continue();
             } else {
