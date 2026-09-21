@@ -3752,3 +3752,48 @@ form label.toogle {
     font-size: 14px;
 }
 
+/* ---- Window Controls Overlay (PWA title bar) ----------------------- */
+/* When the chat runs as an installed PWA with the "window-controls-overlay"
+   display override (see /dist/img/site.webmanifest), the OS title bar is
+   drawn over the page. /dist/js/titlebar.js exposes the geometry as
+   --titlebar-* custom properties and toggles body.wco-active while the
+   overlay is actually visible (it is hidden in tabs and fullscreen). */
+
+:root {
+    --titlebar-x: env(titlebar-area-x, 0px);
+    --titlebar-y: env(titlebar-area-y, 0px);
+    --titlebar-width: env(titlebar-area-width, 100%);
+    --titlebar-height: env(titlebar-area-height, 0px);
+}
+
+/* App headers lift into the title bar strip and act as drag handles */
+body.wco-active .chat-top-panel,
+body.wco-active .sidebar-header,
+body.wco-active .settings-top-bar,
+body.wco-active .log-top-bar {
+    -webkit-app-region: drag;
+    app-region: drag;
+}
+
+body.wco-active .chat-top-panel {
+    padding-top: calc(10px + var(--titlebar-height));
+}
+
+body.wco-active .sidebar-header {
+    padding-top: var(--titlebar-height);
+}
+
+body.wco-active .settings-top-bar,
+body.wco-active .log-top-bar {
+    padding-top: calc(15px + var(--titlebar-height));
+}
+
+/* Keep controls inside the drag regions clickable */
+body.wco-active .chat-top-panel button,
+body.wco-active .sidebar-header button,
+body.wco-active .settings-top-bar button,
+body.wco-active .log-top-bar button {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+}
+

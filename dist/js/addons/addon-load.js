@@ -130,7 +130,6 @@ async function on_api() {
         await Promise.all([
             updateLiveProviderOptions(optgroup),
             loadCustomProvidersSelect(),
-            loadPaProviderSelect(paOptgroup),
             loadCoreProvidersSelect()
         ]).then(() => {
             loadProviderModels(appStorage.getItem("provider"));

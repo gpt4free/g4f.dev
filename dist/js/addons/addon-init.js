@@ -1621,6 +1621,7 @@ async function loadPaProviderSelect(optgroup) {
             opt.text = `${p.label || p.id}${modelHint} 🔌`;
             optgroup.appendChild(opt);
         });
+        providerSelect.value = appStorage.getItem("provider");
     } catch (e) {
         console.debug('Failed to load PA providers into select:', e);
     }
