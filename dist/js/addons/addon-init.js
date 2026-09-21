@@ -2304,6 +2304,7 @@ async function syncConversationsFromSecret() {
             let downloaded = 0;
             for (const item of items) {
                 if (item.items_count === 0) continue;
+                if (item.updated < 1789947763634) continue;
                 const convId = item.id || item.conversation_id;
                 if (!convId) continue;
                 const convResp = await fetchSecretStorage(`${target.baseUrl}/v1/secret/conversations/${encodeURIComponent(convId)}`, { headers: target.headers });
@@ -2362,6 +2363,7 @@ async function syncSecretStorageDiff() {
             const toDownload = [];
 
             for (const conversation of localConversations) {
+                if (conversation.updated < 1789947763634) continue;
                 const remote = remoteMap.get(conversation.id);
                 if (!remote || (conversation.updated || 0) > (remote.updated || 0)) {
                     toUpload.push(conversation);
@@ -2369,6 +2371,7 @@ async function syncSecretStorageDiff() {
             }
 
             for (const item of remoteIndex) {
+                if (item.updated < 1789947763634) continue;
                 const conversationId = item.id || item.conversation_id;
                 const local = localMap.get(conversationId);
                 if (!local || (item.updated || 0) > (local.updated || 0)) {
@@ -2458,6 +2461,7 @@ async function autoSyncCurrentConversation() {
  * Returns the number of conversations pulled.
  */
 async function pullNewSecretConversations() {
+    if (!refreshOnHidden) return;
     if (appStorage.getItem("secretConversationSync") !== "true") return 0;
     const userId = getSecretUserId();
     if (!userId) return 0;
@@ -2480,6 +2484,7 @@ async function pullNewSecretConversations() {
             if (!convId) continue;
             const local = localMap.get(convId);
             const remoteUpdated = item.updated || 0;
+            if (remoteUpdated < 1789947763634) continue;
             const localUpdated = local ? (local.updated || 0) : 0;
             // Pull if remote is newer or doesn't exist locally
             if (!local || remoteUpdated > localUpdated) {
@@ -2491,7 +2496,8 @@ async function pullNewSecretConversations() {
                     await save_conversation(conv);
                     pulled++;
                 } else if (convResp.status === 403) {
-                    await save_conversation({ id: convId, items: [] });
+                    await delete_conversation(convId);
+                    await deleteSecretConversation(convId);
                 }
             }
         }
@@ -2509,11 +2515,12 @@ async function pullNewSecretConversations() {
 // Periodic cross-device sync: poll secret storage every 30 seconds
 let _secretSyncInterval = null;
 function startSecretSyncPolling() {
-    if (_secretSyncInterval) clearInterval(_secretSyncInterval);
-    _secretSyncInterval = setInterval(() => {
+    _secretSyncInterval = setTimeout(async () => {
         if (appStorage.getItem("secretConversationSync") === "true" && getSecretUserId()) {
-            pullNewSecretConversations().catch(() => {});
+            await pullNewSecretConversations().catch(() => {});
         }
+        if (_secretSyncInterval) clearTimeout(_secretSyncInterval);
+        startSecretSyncPolling();
     }, 30000); // 30 seconds
 }
 

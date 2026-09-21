@@ -907,17 +907,13 @@ async function list_conversations() {
             const cursor = event.target.result;
             if (cursor) {
                 const conversation = cursor.value;
-                if (conversation.updated && conversation.updated < (Date.now() - 24 * 60 * 60 * 1000)) {
-                    const hasUserContent = conversation.items && conversation.items.some(
-                        item => item.role == 'user' && item.content && !["Hi", "Hello", "hi", "hello", "hey", ""].includes(item.content)
-                    );
-                    if (hasUserContent) {
-                        conversations.push(conversation);
-                    } else {
-                        delete_conversation(conversation.id);
-                    }
-                } else {
+                const hasUserContent = conversation.items && conversation.items.some(
+                    item => item.role == 'user' && item.content && !["Hi", "Hello", "hi", "hello", "hey", ""].includes(item.content)
+                );
+                if (hasUserContent && conversation.title) {
                     conversations.push(conversation);
+                } else {
+                    delete_conversation(conversation.id);
                 }
                 cursor.continue();
             } else {
