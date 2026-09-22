@@ -932,6 +932,246 @@ class WebGPU extends Client {
     }
 }
 
+/**
+ * Local 1-bit Bonsai models running entirely in the browser on WebGPU
+ * via @huggingface/transformers (same engine as the official HF Space).
+ */
+class Bonsai extends Client {
+    constructor(options = {}) {
+        super({
+            ...options,
+            baseUrl: options.baseUrl || "webgpu://bonsai",
+            quotaEndpoint: null,
+        });
+        this.id = options.id || "bonsai";
+        this.defaultModel = options.defaultModel || "1.7b";
+        this.logCallback = options.logCallback || console.log;
+        this.progressCallback = options.progressCallback || null;
 
-export { Client, Pollinations, PollinationsAI, DeepInfra, Together, Puter, HuggingFace, Worker, Audio, WebGPU, captureUserTierHeaders };
+        // Map friendly keys → Hugging Face model IDs (extend as new sizes appear)
+        this.MODEL_IDS = {
+            "1.7b": "onnx-community/Bonsai-1.7B-ONNX",
+            // add more when available, e.g.
+            // "8b": "onnx-community/Bonsai-8B-ONNX",
+            ...(options.modelAliases || {}),
+        };
+
+        this._pipeline = null;          // cached transformers pipeline
+        this._currentKey = null;
+        this._pastKeyValues = null;     // DynamicCache
+        this._stoppingCriteria = null;  // InterruptableStoppingCriteria
+        this._transformers = null;      // lazy-loaded module
+    }
+
+    /** Check WebGPU availability (same heuristic as the official worker). */
+    static async isSupported() {
+        if (typeof navigator === "undefined" || !navigator.gpu) return false;
+        try {
+            const adapter = await navigator.gpu.requestAdapter();
+            return !!adapter;
+        } catch {
+            return false;
+        }
+    }
+
+    /** Lazy-load @huggingface/transformers from the ESM CDN. */
+    async _loadTransformers() {
+        if (this._transformers) return this._transformers;
+        this._transformers = await import(
+            /* webpackIgnore: true */
+            "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0"
+        );
+        return this._transformers;
+    }
+
+    /** Dispose previous KV cache when switching models. */
+    _disposeCache() {
+        this._pastKeyValues?.dispose?.();
+        this._pastKeyValues = null;
+    }
+
+    /**
+     * Get (or create) a text-generation pipeline for the requested model key.
+     * Performs the same “warm-up” generate call that the official worker uses
+     * to force 1-bit kernel compilation.
+     */
+    async _getPipeline(modelKey) {
+        const modelId = this.MODEL_IDS[modelKey];
+        if (!modelId) throw new Error(`Unknown Bonsai model: ${modelKey}`);
+
+        if (this._pipeline && this._currentKey === modelKey) {
+            return this._pipeline;
+        }
+
+        // model change → drop old cache
+        if (this._currentKey && this._currentKey !== modelKey) {
+            this._disposeCache();
+        }
+        this._currentKey = modelKey;
+
+        const { pipeline, TextStreamer, DynamicCache, InterruptableStoppingCriteria } =
+            await this._loadTransformers();
+
+        this._stoppingCriteria = new InterruptableStoppingCriteria();
+
+        this.logCallback?.({ status: "loading", data: "Loading Bonsai model…" });
+
+        this._pipeline = await pipeline("text-generation", modelId, {
+            device: "webgpu",
+            dtype: "q1",
+            progress_callback: (info) => {
+                if (this.progressCallback) {
+                    this.progressCallback(info);
+                } else if (info.status === "progress") {
+                    this.logCallback?.({
+                        status: "progress",
+                        progress: info.progress,
+                        loaded: info.loaded,
+                        total: info.total,
+                    });
+                }
+            },
+        });
+
+        // Force 1-bit kernel compilation (exactly as the HF worker does)
+        this.logCallback?.({ status: "loading", data: "Optimizing model for 1-bit execution" });
+        const inputs = this._pipeline.tokenizer("a");
+        await this._pipeline.model.generate({ ...inputs, max_new_tokens: 1 });
+
+        this.logCallback?.({ status: "ready" });
+        return this._pipeline;
+    }
+
+    get chat() {
+        return {
+            completions: {
+                create: async (params) => {
+                    const modelKey = params.model || this.defaultModel;
+                    const generator = await this._getPipeline(modelKey);
+
+                    const { signal, stream, messages, ...options } = params;
+                    options.max_new_tokens ??= 1024;
+                    options.do_sample ??= false;
+
+                    this.logCallback?.({ request: { model: modelKey, ...options }, type: "chat" });
+
+                    // Always keep a DynamicCache for multi-turn
+                    this._pastKeyValues ??= new (await this._loadTransformers()).DynamicCache();
+
+                    if (stream) {
+                        return this._streamBonsai(generator, messages, options);
+                    }
+
+                    // Non-streaming path
+                    const output = await generator(messages, {
+                        ...options,
+                        past_key_values: this._pastKeyValues,
+                        stopping_criteria: this._stoppingCriteria,
+                    });
+
+                    const content = output[0].generated_text.at(-1).content;
+                    const response = {
+                        choices: [{ message: { role: "assistant", content }, finish_reason: "stop" }],
+                        model: modelKey,
+                        provider: "Bonsai (local WebGPU)",
+                    };
+                    this.logCallback?.({ response, type: "chat" });
+                    return response;
+                },
+            },
+        };
+    }
+
+    async *_streamBonsai(generator, messages, options) {
+        const { TextStreamer } = await this._loadTransformers();
+        let startTime;
+        let numTokens = 0;
+        let tps;
+
+        const streamer = new TextStreamer(generator.tokenizer, {
+            skip_prompt: true,
+            skip_special_tokens: true,
+            callback_function: (output) => {
+                // yield OpenAI-compatible chunk
+                yield {
+                    choices: [{ delta: { content: output }, index: 0 }],
+                    model: this._currentKey,
+                    provider: "Bonsai (local WebGPU)",
+                    tps,
+                    numTokens,
+                };
+            },
+            token_callback_function: () => {
+                startTime ??= performance.now();
+                if (numTokens++ > 0) {
+                    tps = (numTokens / (performance.now() - startTime)) * 1000;
+                }
+            },
+        });
+
+        this._stoppingCriteria.reset();
+
+        try {
+            await generator(messages, {
+                ...options,
+                streamer,
+                past_key_values: this._pastKeyValues,
+                stopping_criteria: this._stoppingCriteria,
+            });
+        } catch (e) {
+            if (e.name !== "AbortError") throw e;
+        }
+    }
+
+    get models() {
+        return {
+            list: async () => {
+                return Object.keys(this.MODEL_IDS).map((key) =>
+                    convertModel({
+                        id: key,
+                        label: `Bonsai ${key.toUpperCase()} (1-bit WebGPU)`,
+                        type: "chat",
+                    })
+                );
+            },
+        };
+    }
+
+    get images() {
+        return {
+            generate: async () => {
+                throw new Error("Bonsai provider does not support image generation.");
+            },
+            edit: async () => {
+                throw new Error("Bonsai provider does not support image editing.");
+            },
+        };
+    }
+
+    /** Allow the caller to abort generation (mirrors the worker’s “interrupt”). */
+    interrupt() {
+        this._stoppingCriteria?.interrupt();
+    }
+
+    /** Drop the KV cache (new conversation). */
+    reset() {
+        this._disposeCache();
+        this._stoppingCriteria?.reset();
+    }
+}
+
+export {
+    Client,
+    Pollinations,
+    PollinationsAI,
+    DeepInfra,
+    Together,
+    Puter,
+    HuggingFace,
+    Worker,
+    Audio,
+    WebGPU,
+    Bonsai,
+    captureUserTierHeaders,
+};
 export default Client;
