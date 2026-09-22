@@ -87,9 +87,27 @@ var CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Credentials": "true",
   "Access-Control-Allow-Methods": "GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key, x-user, x-ignored, x-secret, x-recognition-language, if-none-match",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key, x-user, x-user-id, x-workspace-secret, x-ignored, x-secret, x-recognition-language, if-none-match",
   "Access-Control-Expose-Headers": "Content-Type, X-User-Id, X-User-Tier, X-Provider, X-Model, X-Server, X-Url, X-Usage-Total-Tokens, X-Stream, X-Ratelimit-Model-Factor, X-Ratelimit-Remaining-Requests, X-Ratelimit-Remaining-Tokens, X-Ratelimit-Limit-Requests, X-Ratelimit-Limit-Tokens, X-Usage-Prompt-Tokens, X-Pollen-Cost"
 };
+const ALLOWED_REDIRECT_HOSTNAMES = ["localhost", "127.0.0.1", "g4f.dev", "gpt4free.github.io"];
+function isValidRedirect(url) {
+    try {
+        const parsed = new URL(url);
+        return ALLOWED_REDIRECT_HOSTNAMES.includes(parsed.hostname) || parsed.hostname.endsWith(".g4f.space");
+    } catch (e) {
+        return false;
+    }
+}
+function getCorsHeaders(request) {
+    if (!isValidRedirect(request.headers.get("Origin"))) {
+        return CORS_HEADERS;
+    }
+    return {
+        ...CORS_HEADERS,
+        "Access-Control-Allow-Origin": request.headers.get("Origin")
+    }
+}
 var EXTRA_HEADERS = {
   "HTTP-Referer": "https://g4f.dev",
   "X-OpenRouter-Title": "GPT4Free (g4f.dev)",
@@ -253,7 +271,6 @@ const BLOCKED_USERS = [
   "luciazamora99", "valrab_",
 ];
 const GPT_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "marin", "cedar", "amuch", "dan", "elan", "breeze", "cove", "ember", "fathom", "glimmer", "harp", "juniper", "maple", "orbit", "vale"];
-const LLMPLAYGROUND = {};
 function getDefaultModel(s) {
   if (s.default_model) {
     return s.default_model;
@@ -272,9 +289,16 @@ function getDefaultModel(s) {
   }
   return s.allowed_models.length > 0 ? s.allowed_models[0] : null;
 }
+// Single source of truth for POST body-cache keys — the read path
+// (getCachedBodyRequest) and the write path (handleProxyToServer) must build
+// identical keys, otherwise responses are cached but never hit.
+function getPostCacheKey(request, bodyHash) {
+  if (!bodyHash) return null;
+  return `POST:${generateCacheKey(request)}:body:${bodyHash}`;
+}
 async function getCachedBodyRequest(request, pathname, bodyHash, rateCheck, user) {
-    let postCacheKey = generateCacheKey(request);
-    if (bodyHash) postCacheKey = `POST:${postCacheKey}:body:${bodyHash}`;
+    const postCacheKey = getPostCacheKey(request, bodyHash);
+    if (!postCacheKey) return null;
     const cachedResponse = await getCachedResponse(request, postCacheKey);
     if (cachedResponse) {
       const newResponse = new Response(cachedResponse.body, cachedResponse);
@@ -298,9 +322,9 @@ async function safe(request, env, ctx) {
     // error response (status >= 400) to ERRORS_DB. Reset on every fetch.
     currentRequestContext = { request, env, ctx, pathname, skipErrorLog: false };
     if (request.method === "OPTIONS") {
-      return new Response(null, { headers: CORS_HEADERS });
+      return new Response(null, { headers: getCorsHeaders(request) });
     }
-    if (["/", "/chat", "/chat/", "/chat/", "/playground", "/playground/"].includes(pathname) && request.method != "POST") {
+    if (["/", "/chat", "/chat/", "/chat/v2", "/playground", "/playground/"].includes(pathname) && request.method != "POST") {
       const newUrl = new URL(request.url);
       newUrl.hostname = "g4f.dev";
       return Response.redirect(newUrl.toString(), 302);
@@ -383,7 +407,7 @@ async function safe(request, env, ctx) {
                 used: rateCheck.used,
                 retry_after: rateCheck.retryAfter
               }
-            }, { status: 429, headers: { "Retry-After": rateCheck.retryAfter.toString(), ...CORS_HEADERS } });
+            }, { status: 429, headers: { "Retry-After": rateCheck.retryAfter.toString(), ...getCorsHeaders(request) } });
             updateResponsefromRateCheck(newResponse, rateCheck);
             return newResponse;
           }
@@ -431,7 +455,12 @@ async function safe(request, env, ctx) {
         !userProvidedKey && request.method === "POST"
           && (pathname === "/v1/chat/completions" || pathname === "/chat/completions"
               || pathname.match(/\/chat\/completions$/))) {
-        const body = await request.clone().json();
+        let body = null;
+        try {
+          body = await request.clone().json();
+        } catch (e) {
+          body = null; // non-JSON body (e.g. form-data) — skip POST caching
+        }
         const bodyHash = await generatePostBodyHash(body);
         const cachedResponse = await getCachedBodyRequest(request, pathname, bodyHash, rateCheck, user);
         if (cachedResponse) {
@@ -487,18 +516,6 @@ async function safe(request, env, ctx) {
       }
       if (pathname.startsWith("/ai/")) {
         return handleCustomAiRoute(request, pathname, cacheKey, rateCheck, env, ctx);
-      }
-      if (pathname.startsWith("/screenshot/")) {
-        const storeResponse = await fetch(`https://pass.g4f.space${pathname}`, {headers: {"g4f-api-key": env.PASS_API_KEY}});
-        const subPath = pathname.substring("/screenshot/".length);
-        const previewUrl = subPath == "providers" ? "https://g4f.space/" + subPath : subPath;
-        let response = storeResponse;
-        if (!response.ok)
-            response = await fetch("https://pass.g4f.space/screenshot?url=" + encodeURIComponent(previewUrl), {headers: {"g4f-api-key": env.PASS_API_KEY}});
-        const newResponse = new Response(response.body, response);
-        newResponse.headers.set("cache-control", CACHE_HEADERS.LONG);
-        ctx.waitUntil(setCachedResponse(request, response, CACHE_HEADERS.LONG, cacheKey, ctx));
-        return response;
       }
       if (pathname === "/custom/api/servers") {
         return handleListServers(request, env, user);
@@ -771,35 +788,47 @@ async function authenticateRequest(request, env) {
   return null;
 }
 async function getUser(env, userId) {
+  const now = Date.now();
+  const memo = userMemoryCache.get(userId);
+  if (memo && now - memo.time < USER_CACHE_TTL) {
+    return memo.value;
+  }
+  let user = null;
   if (env.MEMBERS_KV) {
     const cached = await env.MEMBERS_KV.get(`user:${userId}`);
     if (cached) {
-      return JSON.parse(cached);
+      user = JSON.parse(cached);
     }
   }
-  if (env.MEMBERS_BUCKET) {
+  if (!user && env.MEMBERS_BUCKET) {
     const object = await env.MEMBERS_BUCKET.get(`users/${userId}.json`);
     if (object) {
-      const user = await object.json();
+      user = await object.json();
       if (env.MEMBERS_KV) {
         await env.MEMBERS_KV.put(`user:${userId}`, JSON.stringify(user), { expirationTtl: 3600 });
       }
-      return user;
     }
   }
-  return null;
+  if (user) {
+    userMemoryCache.set(userId, { time: now, value: user });
+  }
+  return user;
 }
+var USER_CACHE_TTL = 60 * 1e3;
+var userMemoryCache = new Map();
 async function saveUser(env, user) {
   if (env.MEMBERS_BUCKET) {
     await env.MEMBERS_BUCKET.put(
       `users/${user.id}.json`,
-      JSON.stringify(user, null, 2),
+      // compact JSON — pretty-printing doubled the stored size for no benefit
+      JSON.stringify(user),
       { httpMetadata: { contentType: "application/json" } }
     );
   }
   if (env.MEMBERS_KV) {
     await env.MEMBERS_KV.put(`user:${user.id}`, JSON.stringify(user), { expirationTtl: 3600 });
   }
+  userMemoryCache.set(user.id, { time: Date.now(), value: user });
 }
 async function handleListServers(request, env, user) {
   let servers = [];
@@ -823,7 +852,7 @@ async function handleListServers(request, env, user) {
     updated_at: s.updated_at,
     usage: s.usage || { requests: 0, tokens: 0 }
   }));
-  return jsonResponse({ servers: safeServers });
+  return jsonResponse({ servers: safeServers }, 200, getCorsHeaders(request));
 }
 async function handleCreateServer(request, env) {
   const user = await authenticateRequest(request, env);
@@ -1043,12 +1072,23 @@ async function handleGetServerUsage(request, env) {
     history
   });
 }
+// ---- Per-isolate memory caches ----
+// Workers isolates stay warm across requests; short-lived in-memory caches
+// here cut KV/R2 reads dramatically without serving stale data for long.
+var PUBLIC_SERVERS_CACHE_TTL = 30 * 1e3;
+var publicServersCache = { time: 0, value: null };
+
 async function getPublicServers(env, blocklist = true) {
   let publicServers = [];
-  if (env.MEMBERS_KV) {
+  const now = Date.now();
+  if (publicServersCache.value && now - publicServersCache.time < PUBLIC_SERVERS_CACHE_TTL) {
+    publicServers = publicServersCache.value;
+  } else if (env.MEMBERS_KV) {
     const indexStr = await env.MEMBERS_KV.get("public_servers_index");
     if (indexStr) {
       publicServers = JSON.parse(indexStr);
+      publicServersCache.time = now;
+      publicServersCache.value = publicServers;
     }
   }
   if (blocklist) {
@@ -1126,6 +1166,9 @@ async function handleUpdatePublicServers(request, env, user, ctx, cacheKey) {
   });
   if (ct > 0) {
     await env.MEMBERS_KV.put("public_servers_index", JSON.stringify(publicServers));
+    // keep the in-memory index in sync so follow-up reads skip the KV get
+    publicServersCache.time = Date.now();
+    publicServersCache.value = publicServers;
   }
   const safeServers = publicServers.map((s) => { delete s.api_keys; return {
     ...s,
@@ -1134,9 +1177,10 @@ async function handleUpdatePublicServers(request, env, user, ctx, cacheKey) {
   const response = jsonResponse({
     servers: safeServers
   });
-  if (ct <= 0) {
-    ctx.waitUntil(setCachedResponse(request, response, CACHE_HEADERS.LONG, cacheKey, ctx));
-  }
+  // Cache the list even when servers were just refreshed (SHORT ttl) so a
+  // burst of requests doesn't re-validate up to 10 upstream servers each.
+  // handleListPublicServers still refreshes stale entries in the background.
+  ctx.waitUntil(setCachedResponse(request, response, ct > 0 ? CACHE_HEADERS.SHORT : CACHE_HEADERS.LONG, cacheKey, ctx));
   return response;
 }
 async function handleGetServerModels(request, env, serverId, user) {
@@ -1641,7 +1685,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   // so the X-Ratelimit-* headers are set instead of "undefined". Returns a
   // 402 response directly when the IP has no credit or the request exceeds the
   // budget; signed-in users skip the gate entirely.
-  if (!user && request.method === "POST") {
+  if (!user && request.method === "POST" && !(userProvidedKey || server.api_key)) {
     const gateResult = await applyAnonymousCreditGate(env, ctx, request, user, requestBody, rateCheck);
     if (gateResult instanceof Response) return gateResult;  // 402 error response
     if (gateResult) rateCheck = gateResult;  // updated rateCheck with credit fields
@@ -1668,7 +1712,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
             "X-Server": server.id,
             "X-Provider": server.label,
             "X-User-Id": user && user.id,
-            ...CORS_HEADERS
+            ...getCorsHeaders(request)
           });
         }
       }
@@ -1709,6 +1753,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     targetUrl = URL_MAP[targetUrl];
   }
   if (server.base_url === "https://api.you.com/v1") {
+    if (subPath != "/quota")
     if (!["/chat/completions", "/answer"].includes(subPath) || request.method != "POST") {
         return jsonResponse({
           error: {
@@ -1719,16 +1764,18 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
           "X-Server": server.id,
           "X-Provider": server.label,
           "X-User-Id": user && user.id,
-          ...CORS_HEADERS
+          ...getCorsHeaders(request)
         });
     }
-    targetUrl = `${server.base_url}/answer`;
     const data = {query: (requestBody.query || requestBody.prompt || requestBody.messages)};
     if (Array.isArray(data.query)) {
       data.query = data.query.pop();
       if (data.query && data.query.content) {
         data.query = data.query.content;
       }
+    }
+    if (request.method != "POST") {
+      data.query = "Hi";
     }
     const url = 'https://api.you.com/v1/answer';
     const options = {
@@ -1744,14 +1791,14 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       body.model = "answer";
       const newResponse =  new Response(`data: ${JSON.stringify(body)}\n\ndata: [DONE]\n\n`, response);
       newResponse.headers.set("Content-Type", "text/event-stream");
-      for (const [key, value] of Object.entries(CORS_HEADERS)) {
+      for (const [key, value] of Object.entries(getCorsHeaders(request))) {
         newResponse.headers.set(key, value);
       }
       return newResponse;
     }
     body.choices = [{"message":{"content":body.answer,"role":"assistant"},"index":0}];
     const newResponse = new Response(JSON.stringify(body), response);
-    for (const [key, value] of Object.entries(CORS_HEADERS)) {
+    for (const [key, value] of Object.entries(getCorsHeaders(request))) {
       newResponse.headers.set(key, value);
     }
     return newResponse;
@@ -1784,7 +1831,6 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       if (!testBody.messages) {
         testBody.messages = [{ "role": "user", "content": "Hi" }];
         testBody.max_tokens = 1;
-        testBody.reasoning_effort = "low";
       }
       if (!testBody.stream) {
           const url = new URL(request.url);
@@ -1804,7 +1850,9 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     if (// !(request.headers.get("cache-control") || "").includes("no-cache") &&
           !userProvidedKey
           && subPath === "/chat/completions") {
-        const bodyHash = request._postBodyHash || await generatePostBodyHash(JSON.parse(fetchOptions.body));
+        // Hash the parsed request body (not the Request object — hashing the
+        // Request produced a constant key shared by every caller).
+        const bodyHash = request._postBodyHash || await generatePostBodyHash(requestBody);
         if (bodyHash) {
           const cachedResponse = await getCachedBodyRequest(request, pathname, bodyHash, rateCheck, user);
           if (cachedResponse) {
@@ -1830,7 +1878,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
           "X-Server": server.id,
           "X-Provider": server.label,
           "X-User-Id": user && user.id,
-          ...CORS_HEADERS
+          ...getCorsHeaders(request)
         } }
       );
     }
@@ -1857,7 +1905,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
           rateCheck
         ));
         const newResponse2 = new Response(response.body, response);
-        for (const [key, value] of Object.entries(CORS_HEADERS)) {
+        for (const [key, value] of Object.entries(getCorsHeaders(request))) {
           newResponse2.headers.set(key, value);
         }
         newResponse2.headers.delete("set-cookie");
@@ -1918,7 +1966,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       }
     }
     const newResponse = new Response(response.body, response);
-    for (const [key, value] of Object.entries(CORS_HEADERS)) {
+    for (const [key, value] of Object.entries(getCorsHeaders(request))) {
       newResponse.headers.set(key, value);
     }
     newResponse.headers.delete("set-cookie");
@@ -1945,10 +1993,10 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     // test prompts (ping, hello, test) return cached results instantly.
     if (!userProvidedKey && !requestBody?.stream
         && subPath.endsWith("/chat/completions") && newResponse.ok) {
-      const bodyHash = request._postBodyHash || await generatePostBodyHash(request);
-      const postCacheKey = `POST:${pathname.replace("/quota", "/chat/completions")}:body:${bodyHash}`;
-      newResponse.headers.set("X-Post-Cache-Key", postCacheKey);
-      if (bodyHash) {
+      const bodyHash = request._postBodyHash || await generatePostBodyHash(requestBody);
+      const postCacheKey = getPostCacheKey(request, bodyHash);
+      if (postCacheKey) {
+        newResponse.headers.set("X-Post-Cache-Key", postCacheKey);
         ctx.waitUntil(setCachedResponse(request, newResponse.clone(), CACHE_HEADERS.SHORT, postCacheKey, ctx));
       }
     }
@@ -2052,7 +2100,7 @@ async function persistUsageToDb(env, clientIP, provider, model, tokensUsed, prom
       promptTokens || 0,
       completionTokens || 0,
       pathname || "unknown",
-      firstMessage ? firstMessage.substring(0, 5000) : null,
+      firstMessage ? firstMessage.substring(0, 1000) : null,
       userInfo?.user_id || userInfo?.id || null,
       userInfo?.tier || null,
       userInfo?.provider || null,
@@ -2170,7 +2218,7 @@ async function updateServerUsage(env, server, tokens, model) {
       dailyUsage.models = dailyUsage.models || {};
       dailyUsage.models[model] = (dailyUsage.models[model] || 0) + 1;
     }
-    await env.MEMBERS_BUCKET.put(usagePath, JSON.stringify(dailyUsage, null, 2), {
+    await env.MEMBERS_BUCKET.put(usagePath, JSON.stringify(dailyUsage), {
       httpMetadata: { contentType: "application/json" }
     });
     if (userServer && userServer.is_public) {
@@ -2209,7 +2257,7 @@ async function updateUserDailyUsage(env, userId, tokens, provider, model) {
     if (model) {
       usageData.models[model] = (usageData.models[model] || 0) + 1;
     }
-    await env.MEMBERS_BUCKET.put(usagePath, JSON.stringify(usageData, null, 2), {
+    await env.MEMBERS_BUCKET.put(usagePath, JSON.stringify(usageData), {
       httpMetadata: { contentType: "application/json" }
     });
   } catch (e) {
@@ -2313,6 +2361,8 @@ async function updatePublicServerIndex(env, server, ownerId, action) {
   }
   await env.MEMBERS_KV.put("public_servers_index", JSON.stringify(servers));
   await env.MEMBERS_KV.delete(`server:${server.id}`);
+  publicServersCache.time = Date.now();
+  publicServersCache.value = servers;
 }
 function getRandomApiKey(apiKeysStr) {
   if (!apiKeysStr) return null;
@@ -2394,7 +2444,23 @@ async function isOnline(env, baseUrl, apiKeysStr, model) {
   }
   return data;
 }
-async function validateServer(env, baseUrl, apiKeysStr, defaultModel=null) {
+var VALIDATE_CACHE_TTL = 5 * 60 * 1e3;
+var validateServerCache = new Map();
+// Memoized wrapper — validateServer is called per server in the public-list
+// refresh loop and on every create/update; a short TTL avoids re-fetching the
+// same upstream repeatedly across requests in a warm isolate.
+async function validateServer(env, baseUrl, apiKeysStr, defaultModel = null) {
+  const cacheKey = `${baseUrl}|${defaultModel || ""}`;
+  const now = Date.now();
+  const cached = validateServerCache.get(cacheKey);
+  if (cached && now - cached.time < VALIDATE_CACHE_TTL) {
+    return cached.value;
+  }
+  const result = await validateServerUncached(env, baseUrl, apiKeysStr, defaultModel);
+  validateServerCache.set(cacheKey, { time: now, value: result });
+  return result;
+}
+async function validateServerUncached(env, baseUrl, apiKeysStr, defaultModel=null) {
   if (baseUrl == "https://api.you.com/v1") {
     return {
       valid: true,
@@ -2737,7 +2803,7 @@ ${prompt}
             }
           });
           const newResponse2 = new Response(textStream, {
-            headers: { "Content-Type": "text/plain; charset=UTF-8", ...CORS_HEADERS }
+            headers: { "Content-Type": "text/plain; charset=UTF-8", ...getCorsHeaders(request) }
           });
           newResponse2.headers.set("X-Provider", server.label);
           if (queryBody.model) newResponse2.headers.set("X-Model", queryBody.model);
@@ -2756,7 +2822,7 @@ ${prompt}
         }
       }
       const newResponse2 = new Response(response.body, response);
-      for (const [key, value] of Object.entries(CORS_HEADERS)) {
+      for (const [key, value] of Object.entries(getCorsHeaders(request))) {
         newResponse2.headers.set(key, value);
       }
       newResponse2.headers.set("X-Provider", server.label);
@@ -2778,7 +2844,7 @@ ${prompt}
     if (data.choices && data.choices[0].message.audio) {
       data = data.choices[0].message.audio.data;
       const newResponse2 = new Response(base64toBlob(data), {
-        headers: { "Content-Type": "audio/mpeg", ...CORS_HEADERS }
+        headers: { "Content-Type": "audio/mpeg", ...getCorsHeaders(request) }
       });
       ctx.waitUntil(setCachedResponse(request, newResponse2, CACHE_HEADERS.FOREVER, cacheKey, ctx));
       return newResponse2;
@@ -2799,7 +2865,7 @@ ${prompt}
       return jsonResponse({ error: { message: data || "Empty response" } }, 500);
     }
     const newResponse = new Response(data, {
-      headers: { "Content-Type": "text/plain; charset=UTF-8", ...CORS_HEADERS }
+      headers: { "Content-Type": "text/plain; charset=UTF-8", ...getCorsHeaders(request) }
     });
     newResponse.headers.set("X-Provider", server.label);
     if (queryBody.model) newResponse.headers.set("X-Model", queryBody.model);
@@ -2898,7 +2964,9 @@ async function checkUserRateLimits(env, user, request) {
   let maxTokens = parseInt(request.headers.get("x-ratelimit-remaining-tokens") || "0") || limits.tokens.perDay;
   let maxRequests = parseInt(request.headers.get("x-ratelimit-remaining-requests") || "0") || limits.requests.perDay;
   let limitTokens = parseInt(request.headers.get("x-ratelimit-limit-tokens") || "0");
-  let limitRequests = parseInt(request.headers.get("x-ratelimit-limit-tokens") || "0");
+  // was reading the tokens header — client-sent values only influence the
+  // echoed headers, remaining budget is always clamped to real usage below
+  let limitRequests = parseInt(request.headers.get("x-ratelimit-limit-requests") || "0");
   for (const window of windows) {
     const key = `rate_limit:${userId}:${window.name}`;
     const stored = await env.MEMBERS_KV.get(key);
@@ -3048,6 +3116,11 @@ function estimatePromptTokens(requestBody) {
 // credit-based rate-limit headers instead of "undefined".
 async function applyAnonymousCreditGate(env, ctx, request, user, requestBody, rateCheck) {
   if (user) return null;
+  // Skip when the gate already ran for this request (handleV1ChatCompletions
+  // gates the caller before delegating to handleProxyToServer, and the auto
+  // provider loop retries through here) — otherwise prompt tokens would be
+  // charged twice against the IP's credit.
+  if (rateCheck && rateCheck.gateApplied) return rateCheck;
   const clientIP = getClientIP(request);
   const creditCents = await getCakeCreditCents(env, clientIP);
   const tokenBudget = Math.floor(creditCents * CAKE_CREDIT_TOKENS_PER_CENT);
@@ -3060,7 +3133,11 @@ async function applyAnonymousCreditGate(env, ctx, request, user, requestBody, ra
         upgrade_url: "https://g4f.dev/members.html",
         bake_url: "https://g4f.dev/chat"
       }
-    }, 402);
+    }, 402, {
+      "X-Ratelimit-Limit-Tokens": "0",
+      "X-Ratelimit-Remaining-Tokens": "0",
+      ...getCorsHeaders(request)
+    });
   }
   if (promptTokens > tokenBudget) {
     return jsonResponse({
@@ -3073,7 +3150,11 @@ async function applyAnonymousCreditGate(env, ctx, request, user, requestBody, ra
         upgrade_url: "https://g4f.dev/members.html",
         bake_url: "https://g4f.dev/chat"
       }
-    }, 402);
+    }, 402, {
+      "X-Ratelimit-Limit-Tokens": String(tokenBudget),
+      "X-Ratelimit-Remaining-Tokens": String(tokenBudget),
+      ...getCorsHeaders(request)
+    });
   }
   // Charge the estimated prompt tokens against the IP's credit (1 token =
   // 1/CAKE_CREDIT_TOKENS_PER_CENT cent). Done in the background so the
@@ -3095,6 +3176,7 @@ async function applyAnonymousCreditGate(env, ctx, request, user, requestBody, ra
   const avgRequestTokens = Math.max(promptTokens + completionTokens, 1);
   const remainingTokens = Math.max(0, tokenBudget - promptTokens);
   rateCheck = rateCheck || {};
+  rateCheck.gateApplied = true;
   rateCheck.cakeCreditCents = creditCents;
   rateCheck.promptTokens = promptTokens;
   rateCheck.tokenBudget = tokenBudget;
@@ -3198,14 +3280,7 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, user, cacheK
   }
 
   let selectedServer = null;
-  let model = requestBody.model;
-
-  if (model.startsWith("AnyProvider:")) {
-    model = model.substring("AnyProvider:".length);
-  } else if (model.startsWith("community:")) {
-    model = model.substring("community:".length);
-  }
-  requestBody.model = model;
+  let model = requestBody.model || "";
   function shuffleArray(array) {
       for (let i = array.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
@@ -3267,6 +3342,13 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, user, cacheK
       }
     }
   }
+  if (!selectedServer) {
+    if (model.includes(":")) {
+      const provider = model.split(":")[0];
+      requestBody.model = model.substring(provider.length + 1)
+      selectedServer = await getServerByLabel(env, provider);
+    }
+  }
   let foundServers = null;
   if (!selectedServer) {
     const publicServersIndex = await getPublicServers(env);
@@ -3318,31 +3400,37 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, user, cacheK
 }
 // helper that reads usage files and returns a map of models used on a given server
 // with the total request count for each model
+var STATS_CACHE_TTL = 5 * 60 * 1e3;
+var modelStatsCache = new Map();
 async function getModelsFromStats(env, server) {
   let modelCounts = {};
   if (!env.MEMBERS_BUCKET || !server) return modelCounts;
+  const statsCacheKey = `${server.owner_id||"core"}/${server.id}`;
+  const statsNow = Date.now();
+  const statsCached = modelStatsCache.get(statsCacheKey);
+  if (statsCached && statsNow - statsCached.time < STATS_CACHE_TTL) {
+    return statsCached.value;
+  }
   try {
     const dates = [(d =>new Date(d.setDate(d.getDate()-1)))(new Date()), new Date()];
     let yesterday = true;
     for (const date of dates) {
       const dateKey = date.toISOString().split("T")[0];
-      const prefix = `custom_servers/${server.owner_id||"core"}/${server.id}/usage/${dateKey}.json`;
-      const list = await env.MEMBERS_BUCKET.list({ prefix });
-      if (list && list.objects) {
-        for (const entry of list.objects) {
-          try {
-            const rec = await env.MEMBERS_BUCKET.get(entry.key);
-            if (!rec) continue;
-            const json = await rec.json();
-            if (json && json.models) {
-              for (const [m, cnt] of Object.entries(json.models)) {
-                modelCounts[m] = (modelCounts[m] || 0) + (cnt || 0);
-              }
+      // usage files live at a deterministic daily key — a direct get is enough
+      // (the previous list+get wasted an extra R2 operation per server/day)
+      const usageKey = `custom_servers/${server.owner_id||"core"}/${server.id}/usage/${dateKey}.json`;
+      try {
+        const rec = await env.MEMBERS_BUCKET.get(usageKey);
+        if (rec) {
+          const json = await rec.json();
+          if (json && json.models) {
+            for (const [m, cnt] of Object.entries(json.models)) {
+              modelCounts[m] = (modelCounts[m] || 0) + (cnt || 0);
             }
-          } catch (e) {
-            // ignore individual read errors
           }
         }
+      } catch (e) {
+        // ignore individual read errors
       }
       if (yesterday) {
         modelCounts = Object.fromEntries(Object.entries(modelCounts).filter(([k, c])=>c>2).map(([k, c])=>[k, Math.floor(c/2)]));
@@ -3352,6 +3440,7 @@ async function getModelsFromStats(env, server) {
   } catch (e) {
     console.error("Failed to retrieve stats for server", server.id, e);
   }
+  modelStatsCache.set(statsCacheKey, { time: statsNow, value: modelCounts });
   return modelCounts;
 }
 
@@ -3363,8 +3452,11 @@ let modelToServerCache = null;
 async function handleV1Models(request, env, user) {
   const now = Date.now();
 
-  // return cached result if recent
-  if (modelsCache && now - modelsCacheTime < 60_000 * 60) {
+  const cacheUserId = user ? user.id : "anonymous";
+  // return cached result if recent — per user, so private server models of
+  // one account never leak into another account's /v1/models response
+  if (modelsCache && modelsCache.userId === cacheUserId && now - modelsCacheTime < 60_000 * 60) {
+    modelToServerCache = modelsCache.modelToServer || modelToServerCache;
     return jsonResponse(modelsCache.payload);
   }
 
@@ -3405,7 +3497,7 @@ async function handleV1Models(request, env, user) {
   result.unshift({ id: "auto", label: "Auto (random public server)" });
 
   const payload = { data: result };
-  modelsCache = { payload };
+  modelsCache = { userId: cacheUserId, payload, modelToServer: { ...modelToServerCache } };
   modelsCacheTime = now;
   return jsonResponse(payload);
 }
@@ -3446,7 +3538,9 @@ function jsonResponse(data, status = 200, headers = {}) {
 function generateCacheKey(request, extra = null) {
   const url = new URL(request.url);
   url.pathname = url.pathname.replace("/quota", "/chat/completions");
-  for (const key of Object.keys(url.searchParams)) {
+  // URLSearchParams has no enumerable own properties — Object.keys() always
+  // returned [] here, so cache keys kept every query param (cache fragmentation).
+  for (const key of [...url.searchParams.keys()]) {
     if (key === "seed" || key === "url" || key === "model") {
       continue;
     }
@@ -3454,7 +3548,7 @@ function generateCacheKey(request, extra = null) {
   }
   url.searchParams.set("_method", request.method);
   if (extra) {
-      url.searchParams.set("_extra", request.method);
+      url.searchParams.set("_extra", extra);
   }
   return url.toString();
 }
@@ -3516,19 +3610,24 @@ async function getCachedResponse(request, cacheKey = null) {
 }
 async function setCachedResponse(request, response, cacheControl, cacheKey = null, ctx = null) {
   if (!response.ok) return;
+  cacheKey = cacheKey || generateCacheKey(request);
+  // Respect upstream no-cache directives unless this is a POST body-cache
+  // entry (those are keyed by content hash and always short-lived).
   if (!cacheKey.startsWith("POST:") && (response.headers.get("Cache-Control") || "").includes("no-cache")) {
-    //return;
+    return;
   }
   try {
-    const key = cacheKey || generateCacheKey(request);
-    const cacheRequest = new Request(`https://cache.example/${key}`, {
+    const cacheRequest = new Request(`https://cache.example/${cacheKey}`, {
       method: "GET"
     });
     const responseToCache = response.clone();
-    if (!responseToCache.headers.has("Cache-Control"))
-    responseToCache.headers.set("Cache-Control", cacheControl);
+    if (!responseToCache.headers.has("Cache-Control")) {
+      responseToCache.headers.set("Cache-Control", cacheControl);
+    }
     responseToCache.headers.set("X-Cache", "HIT");
-    if (responseToCache.headers.set("Cache-Control").includes("no-cache")) return;
+    // headers.set() returns undefined — the old check crashed on every write
+    // and silently disabled the whole cache. Read the header instead.
+    if ((responseToCache.headers.get("Cache-Control") || "").includes("no-cache")) return;
     const cacheOperation = caches.default.put(cacheRequest, responseToCache);
     if (ctx) {
       ctx.waitUntil(cacheOperation);
@@ -3583,7 +3682,7 @@ async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ct
   }
   const newResponse = new Response(response.body, response);
   newResponse.headers.set("Access-Control-Allow-Origin", "*");
-  if (request.method === "GET") {
+  if (request.method === "GET" && response.ok) {
     ctx.waitUntil(setCachedResponse(request, newResponse.clone(), CACHE_HEADERS.SHORT, cacheKey, ctx));
   }
   return newResponse;
