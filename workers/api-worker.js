@@ -342,9 +342,6 @@ async function safe(request, env, ctx) {
       pathname = "/custom" + pathname;
     }
     let user = null;
-    if (pathname === "/api/errors" && request.method === "GET") {
-      return handleApiErrors(request, env, user);
-    }
     let userProvidedKey = null;
     try {
       user = await authenticateRequest(request, env);
@@ -374,6 +371,10 @@ async function safe(request, env, ctx) {
         }));
         currentRequestContext.skipErrorLog = true;
         return jsonResponse({ error: "User error: " + error.message || "Internal server error" }, 500);
+    }
+    if (pathname === "/api/errors" && request.method === "GET") {
+      // handled after authentication so the auth gate below applies
+      return handleApiErrors(request, env, user);
     }
     if ((userProvidedKey || (user && user.pollinations?.api_key)) && pathname == "/api/pollinations/models") {
       return fetch("https://pollinations.g4f-dev.workers.dev/models", {headers: {"Authorization": `Bearer ${userProvidedKey || user.pollinations?.api_key}`}});
@@ -608,7 +609,7 @@ async function safe(request, env, ctx) {
           target = `/api/${label}/chat/completions`;
         }
         if (label === "auto") {
-          server = await getRandomPublicServer(env);
+          server = await getRandomPublicServer(env, user);
         } else {
           // honor prefix serverId:model if given
           const prefixMatch = /^([^:]+):/.exec(label);
@@ -643,7 +644,7 @@ async function safe(request, env, ctx) {
         }
         const fullServer = await getServerById(env, server.id, user);
         entry.default_model = url.searchParams.get("model") || entry.default_model || getDefaultModel(entry);
-        const result = await validateServer(env, server.base_url, fullServer.api_keys, entry.default_model);
+        const result = await validateServer(env, server.base_url, fullServer.api_keys, entry.default_model, true);
         entry.base_url = result.base_url || server.base_url;
         if (!result.is_loading) entry.allowed_models = result.models || entry.allowed_models;
         entry.test_result = await isOnline(env, result.base_url, server.api_keys, entry.default_model);
@@ -776,7 +777,9 @@ async function authenticateRequest(request, env) {
       }
     }
   }
-  if (sessionToken && env.MEMBERS_KV) {
+  // g4f_ API keys were already resolved to a user above — skip the doomed
+  // session KV lookup (saves one KV read per authenticated API-key request)
+  if (sessionToken && !sessionToken.startsWith("g4f_") && env.MEMBERS_KV) {
     const sessionData = await env.MEMBERS_KV.get(`session:${sessionToken}`);
     if (sessionData) {
       const session = JSON.parse(sessionData);
@@ -878,7 +881,9 @@ async function handleCreateServer(request, env) {
     baseUrl.hostname = `${baseUrl.hostname}.nip.io`;
   }
   body.base_url = baseUrl.toString().replace(/\/$/, "");
-  const validationResult = await validateServer(env, body.base_url, body.api_keys);
+  // skip the validation memo — a user creating a server right after fixing it
+  // must not be served a stale (up to 5 min old) failure result
+  const validationResult = await validateServer(env, body.base_url, body.api_keys, null, true);
   if (!validationResult.valid) {
     return jsonResponse({
       error: `Server validation failed: ${validationResult.error}`,
@@ -887,7 +892,9 @@ async function handleCreateServer(request, env) {
   }
   body.base_url = validationResult.base_url || body.base_url;
 
-  const maxServers = USER_TIER_LIMITS[user.tier].maxServers || 3;
+  // tier can be missing/unknown on legacy accounts — fall back instead of
+  // throwing a TypeError (500) on every create request
+  const maxServers = (USER_TIER_LIMITS[user.tier] || USER_TIER_LIMITS.free).maxServers || 3;
   if ((user.custom_servers || []).length >= maxServers) {
     return jsonResponse({
       error: `Maximum ${maxServers} servers allowed for ${user.tier || "free"} tier`
@@ -969,7 +976,7 @@ async function handleUpdateServer(request, env) {
   // When auto_update_models is enabled, refresh the allowed_models from the upstream server
   if (server.auto_update_models !== false) {
     try {
-      const refreshResult = await validateServer(env, server.base_url, server.api_keys);
+      const refreshResult = await validateServer(env, server.base_url, server.api_keys, null, true);
       if (refreshResult.valid && refreshResult.models && refreshResult.models.length > 0) {
         server.allowed_models = refreshResult.models;
       }
@@ -980,7 +987,9 @@ async function handleUpdateServer(request, env) {
       console.error("Failed to refresh models on update:", e);
     }
   }
-  server.is_ollama = await isOllama(body.base_url);
+  // use the (possibly updated) server.base_url — body.base_url is undefined
+  // when only other fields like label were updated, and isOllama would throw
+  server.is_ollama = await isOllama(server.base_url);
   server.updated_at = now;
   user.updated_at = now;
   await saveUser(env, user);
@@ -1112,7 +1121,10 @@ async function handleListPublicServers(request, env, user, ctx, cacheKey) {
   return handleUpdatePublicServers(request, env, user, ctx, cacheKey);
 }
 async function handleUpdatePublicServers(request, env, user, ctx, cacheKey) {
-  const publicServers = await getPublicServers(env);
+  // Deep-copy entries: they are shared with the per-isolate memo and get
+  // mutated below (updated_at, allowed_models, test_result, api_keys delete),
+  // which would otherwise corrupt the cache and strip api_keys from KV.
+  const publicServers = (await getPublicServers(env)).map((s) => structuredClone(s));
   let ct = 0;
   publicServers.sort((a, b) => {
     const aCreated = new Date(a.updated_at || 0).getTime();
@@ -1170,10 +1182,10 @@ async function handleUpdatePublicServers(request, env, user, ctx, cacheKey) {
     publicServersCache.time = Date.now();
     publicServersCache.value = publicServers;
   }
-  const safeServers = publicServers.map((s) => { delete s.api_keys; return {
+  const safeServers = publicServers.map(({ api_keys, ...s }) => ({
     ...s,
     is_public: true,
-  }});
+  }));
   const response = jsonResponse({
     servers: safeServers
   });
@@ -1979,7 +1991,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     if (totalTokens) {
       newResponse.headers.set("X-Usage-Total-Tokens", String(totalTokens));
     }
-    if (pollenCost > 0 && rateCheck.centsToCharge > 0 && !user) {
+    if (pollenCost > 0 && rateCheck?.centsToCharge > 0 && !user) {
       const pollenDiff = ((pollenCost * 10) - (rateCheck.centsToCharge / 100)) * 100;
       if (pollenDiff > 0) {
         ctx.waitUntil(chargeCakeCreditCents(env, clientIP, pollenDiff));
@@ -2050,7 +2062,9 @@ async function createUsageTrackingStream(response, env, ctx, server, serverId, c
     }
   }
   const pollenCost = parseFloat(usage.pollen_cost);
-  if (pollenCost > 0 && rateCheck.centsToCharge && !user) {
+  // rateCheck is optional (null in handleCustomAiRoute calls) — the old
+  // unconditional access threw a TypeError inside the background tracking
+  if (pollenCost > 0 && rateCheck?.centsToCharge && !user) {
     const pollenDiff = ((pollenCost * 10) - (rateCheck.centsToCharge / 100)) * 100;
     if (pollenDiff > 0) {
       ctx.waitUntil(chargeCakeCreditCents(env, clientIP, pollenDiff));
@@ -2076,6 +2090,7 @@ function getFirstMessage(messages, fallback = "") {
     return fallback || "";
   }
   for (const msg of messages) {
+    if (!msg) continue;
     const content = typeof msg.content === "string" ? msg.content.replace(/^[\s.]+|[\s.]+$/g, "") : "";
     if (content && !content.startsWith("Today is:") && !content.startsWith("[SYSTEM]:")) {
       return content;
@@ -2151,6 +2166,14 @@ async function persistErrorToDb(env, error, context = {}) {
 //   since  (ISO 8601)           — only rows newer than this timestamp
 // Requires a signed-in user (the same gate as /api/logs). Returns newest first.
 async function handleApiErrors(request, env, user) {
+  // Error logs contain IPs, user agents, user IDs and stack traces — the
+  // comment below promised a sign-in gate but none was ever enforced and the
+  // endpoint was called before authentication ran (user was always null).
+  if (!user) {
+    return jsonResponse({
+      error: { message: "Authentication required", type: "authentication_required" }
+    }, 401);
+  }
   if (!env.ERRORS_DB) {
     return jsonResponse({ error: "Error tracking not configured (ERRORS_DB binding missing)" }, 503);
   }
@@ -2377,15 +2400,21 @@ function generateServerId() {
   return `srv_${timestamp}${randomStr}`;
 }
 async function isOllama(url) {
-  url = new URL(url);
-  url.pathname = '/';
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 2000);
-  const response = await fetch(url, {
-    signal: controller.signal
-  });
-  clearTimeout(timeout);
-  return response.ok && (await response.text()).startsWith("Ollama");
+  try {
+    url = new URL(url);
+    url.pathname = '/';
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2000);
+    const response = await fetch(url, {
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    return response.ok && (await response.text()).startsWith("Ollama");
+  } catch (e) {
+    // unreachable server, timeout or invalid URL — treat as non-Ollama
+    // instead of letting create/update server requests fail with a 500
+    return false;
+  }
 }
 async function isOnline(env, baseUrl, apiKeysStr, model) {
   if (baseUrl == "https://llmplayground.net/api") {
@@ -2449,12 +2478,14 @@ var validateServerCache = new Map();
 // Memoized wrapper — validateServer is called per server in the public-list
 // refresh loop and on every create/update; a short TTL avoids re-fetching the
 // same upstream repeatedly across requests in a warm isolate.
-async function validateServer(env, baseUrl, apiKeysStr, defaultModel = null) {
+async function validateServer(env, baseUrl, apiKeysStr, defaultModel = null, skipCache = false) {
   const cacheKey = `${baseUrl}|${defaultModel || ""}`;
   const now = Date.now();
-  const cached = validateServerCache.get(cacheKey);
-  if (cached && now - cached.time < VALIDATE_CACHE_TTL) {
-    return cached.value;
+  if (!skipCache) {
+    const cached = validateServerCache.get(cacheKey);
+    if (cached && now - cached.time < VALIDATE_CACHE_TTL) {
+      return cached.value;
+    }
   }
   const result = await validateServerUncached(env, baseUrl, apiKeysStr, defaultModel);
   validateServerCache.set(cacheKey, { time: now, value: result });
@@ -2646,7 +2677,7 @@ async function handleCustomAiRoute(request, pathname, cacheKey, rateCheck, env, 
     return newResponse;
   }
   if (!serverLabel || serverLabel === "auto") {
-    server = await getRandomPublicServer(env);
+    server = await getRandomPublicServer(env, user);
     if (!server) {
       return jsonResponse({ error: "No available servers" }, 503);
     }
@@ -2708,6 +2739,14 @@ ${prompt}
         error: `Model '${queryBody.model}' not allowed. Available models: ${server.allowed_models.join(", ")}`
       }, 400);
     }
+  }
+  // Anonymous callers are gated by cake credits here as well — /ai/ routes
+  // never reach handleProxyToServer, so without this check GET /ai/ requests
+  // would bypass the credit gate entirely.
+  if (!user) {
+    const gateResult = await applyAnonymousCreditGate(env, ctx, request, user, queryBody, rateCheck);
+    if (gateResult instanceof Response) return gateResult;
+    if (gateResult) rateCheck = gateResult;
   }
   const proxyHeaders = {
     "Content-Type": "application/json",
@@ -2908,14 +2947,11 @@ ${prompt}
     }, 502);
   }
 }
-async function getRandomPublicServer(env) {
-  const servers = AUTO_PROVIDERS;
-  const serverId = servers[Math.floor(Math.random() * servers.length)];
-  const server =  await getServerById(env, serverId);
-  if (!server) {
-    throw Error(`Server with id '${serverId}' not found`)
-  }
-  return server;
+async function getRandomPublicServer(env, user = null) {
+  if (!AUTO_PROVIDERS.length) return null;
+  const serverId = AUTO_PROVIDERS[Math.floor(Math.random() * AUTO_PROVIDERS.length)];
+  // return null instead of throwing so callers can fall back gracefully
+  return await getServerById(env, serverId, user);
 }
 function base64toBlob(base64Data) {
   const byteCharacters = atob(base64Data);
@@ -3291,9 +3327,12 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, user, cacheK
     shuffleArray(AUTO_PROVIDERS);
     for (const serverId of AUTO_PROVIDERS) {
       const randomServer = await getServerById(env, serverId, user);
+      // a dead auto-provider must be skipped, not returned as a 404 to the
+      // caller (previously it aborted the whole auto fallback loop)
+      if (!randomServer) continue;
       requestBody.model = DEFAULT_MODELS[serverId];
       const response = await handleProxyToServer(request, env, ctx, randomServer, "/chat/completions", cacheKey, user, pathname, null, rateCheck, requestBody);
-      if (response.status == 429 || response.status == 503) continue;
+      if (response.status == 429 || response.status == 503 || response.status == 404) continue;
       return response;
     }
   }
@@ -3357,7 +3396,9 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, user, cacheK
       if (serverIndex.is_hidden || serverIndex.is_offline) continue;
       let foundModel = null;
       if (serverIndex.allowed_models) {
-        for (const m in serverIndex.allowed_models) {
+        // for...in yielded array indexes ("0", "1", ...) instead of model
+        // names, so this fallback lookup never matched anything
+        for (const m of serverIndex.allowed_models) {
           if (m.split("/").pop().toLowerCase().replace(/[:.]+/, '-').trim().startsWith(checkModel)) {
             foundModel = m;
             break;

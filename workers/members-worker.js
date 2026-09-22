@@ -165,6 +165,8 @@ function REVOKE_BY_KEY_RESULT_HTML(status, message) {
   const icon = isSuccess ? "✅" : "❌";
   const title = isSuccess ? "Key Revoked" : "Revocation Failed";
   const bgColor = isSuccess ? "#1a7f37" : "#da3633";
+  // Escape the message — it can contain user-controlled data (key name, username)
+  const safeMessage = escapeHtml(message);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -227,7 +229,7 @@ function REVOKE_BY_KEY_RESULT_HTML(status, message) {
     <div class="icon">${icon}</div>
     <div class="status-badge">${isSuccess ? "SUCCESS" : "ERROR"}</div>
     <h1>${title}</h1>
-    <p class="message">${message}</p>
+    <p class="message">${safeMessage}</p>
     <a class="button" href="/members/api/keys/revoke-by-key">← Try another key</a>
   </div>
 </body>
@@ -456,6 +458,7 @@ var USER_TIER_LIMITS = {
     tokens: { perMinute: 1e6, perHour: 5e6, perDay: 1e8 },
     requests: { perMinute: 100, perHour: 2e3, perDay: 5e4 },
     days: { perTwelveDays: 12 },
+    api_keys: 0,
     burstMultiplier: 1.5
   }
 };
@@ -505,6 +508,26 @@ var USER_TIER_LIMITS = {
         }
   
         try {
+            // Per-IP gates for unauthenticated endpoints (KV cost + brute-force protection).
+            // OAuth callbacks exchange codes and write user records — gate them hardest.
+            if (pathname.includes("/callback")) {
+                const gated = await gateUnauthenticatedRequest(request, env, "oauth_callback", 30, 60 * 1000);
+                if (gated) return gated;
+            } else if (pathname.startsWith("/members/auth/") || pathname.startsWith("/members/oauth/authorize")) {
+                const gated = await gateUnauthenticatedRequest(request, env, "oauth_start", 30, 60 * 1000);
+                if (gated) return gated;
+            } else if (pathname === "/members/api/keys/revoke-by-key" || pathname === "/revoke") {
+                // Brute-force protection for the revoke-by-key endpoint
+                const gated = await gateUnauthenticatedRequest(request, env, "revoke", 10, 60 * 1000);
+                if (gated) return gated;
+            } else if (pathname === "/members/api/recent-users") {
+                const gated = await gateUnauthenticatedRequest(request, env, "recent_users", 30, 60 * 1000);
+                if (gated) return gated;
+            } else if (pathname.startsWith("/members/api/anonymous/")) {
+                const gated = await gateUnauthenticatedRequest(request, env, "anon_upgrade", 20, 60 * 1000);
+                if (gated) return gated;
+            }
+
             // OAuth endpoints (both /auth/ and /oauth/ paths supported)
             if (pathname === "/members/auth/github" || pathname === "/members/oauth/github") {
                 return handleGitHubAuth(request, env, url);
@@ -681,7 +704,8 @@ var USER_TIER_LIMITS = {
             return jsonResponse({ error: "Not found" }, 404, getCorsHeaders(request));
         } catch (error) {
             console.error("Worker error:", error);
-            return jsonResponse({ error: "Worker error: " + error.message || "Internal server error" }, 500, getCorsHeaders(request));
+            // Never leak internal error details (stack traces, KV/R2 messages) to clients
+            return jsonResponse({ error: "Internal server error" }, 500, getCorsHeaders(request));
         }
     },
 
@@ -732,26 +756,15 @@ var USER_TIER_LIMITS = {
                         }
 
                         const newTier = await calculateUserTier(user, contributors, sponsors);
-                        
+
                         if (user.tier !== newTier) {
                             const oldTier = user.tier;
                             user.tier = newTier;
                             user.updated_at = new Date().toISOString();
-                            
-                            // Save to R2
-                            await env.MEMBERS_BUCKET.put(
-                                object.key,
-                                JSON.stringify(user, null, 2),
-                                { httpMetadata: { contentType: "application/json" } }
-                            );
-                            
-                            // Update KV cache
-                            await env.MEMBERS_KV.put(
-                                `user:${user.id}`,
-                                JSON.stringify(user),
-                                { expirationTtl: 3600 }
-                            );
-                            
+
+                            // Save to R2 (compact JSON) + refresh KV caches
+                            await saveUser(env, user);
+
                             // Update API key tier in KV
                             for (const keyData of user.api_keys || []) {
                                 const keyInfo = await env.MEMBERS_KV.get(`api_key:${keyData.key_hash}`);
@@ -781,12 +794,69 @@ var USER_TIER_LIMITS = {
             }
             
             console.log(`Scheduled tier update complete: ${updatedCount} users updated, ${deletedCount} deleted, ${errorCount} errors`);
+
+            // Proactively refresh the recent-users feed cache so public
+            // requests stay on the fast path after the cron run
+            if (env.MEMBERS_BUCKET && env.MEMBERS_KV) {
+                try {
+                    const users = await refreshRecentUsersCache(env, 20);
+                    await env.MEMBERS_KV.put(RECENT_USERS_CACHE_KEY, JSON.stringify({ users }), {
+                        expirationTtl: RECENT_USERS_CACHE_TTL
+                    });
+                } catch (e) {
+                    console.error("Failed to refresh recent-users cache:", e);
+                }
+            }
         } catch (error) {
             console.error("Scheduled tier update failed:", error);
         }
     }
   };
   
+  // ============================================
+  // Unauthenticated endpoint gating (per-IP)
+  // ============================================
+
+  /**
+   * Simple per-IP rate limit for unauthenticated endpoints (KV backed).
+   * Prevents KV/R2 cost abuse and brute-forcing of public endpoints.
+   * Returns null when allowed, or a 429 Response when the limit is hit.
+   */
+  async function gateUnauthenticatedRequest(request, env, bucket, max, windowMs) {
+    if (!env.MEMBERS_KV) return null;
+    const ip = getClientIP(request);
+    if (!ip) return null;
+    const key = `ip_gate:${bucket}:${ip}`;
+    const now = Date.now();
+    let data = { count: 0, timestamp: now };
+    try {
+      const raw = await env.MEMBERS_KV.get(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (now - parsed.timestamp < windowMs) data = parsed;
+      }
+    } catch (e) { /* start fresh on parse errors */ }
+    data.count += 1;
+    data.timestamp = data.timestamp || now;
+    const ttl = Math.max(60, Math.ceil(windowMs / 1000));
+    await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
+    if (data.count > max) {
+      const retryAfter = Math.max(1, Math.ceil((windowMs - (now - data.timestamp)) / 1000));
+      return jsonResponse(
+        { error: "Too many requests", retry_after: retryAfter },
+        429,
+        { "Retry-After": retryAfter.toString(), ...getCorsHeaders(request) }
+      );
+    }
+    return null;
+  }
+
+  function getClientIP(request) {
+    return request.headers.get("CF-Connecting-IP") ||
+           request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim() ||
+           null;
+  }
+
   // ============================================
   // OAuth Handlers
   // ============================================
@@ -2262,83 +2332,107 @@ ${buttonsHtml}
                 last_reset: now
             }
         };
+        // New member — drop the cached recent-users feed so the next
+        // request rebuilds it including this user
+        await env.MEMBERS_KV.delete(RECENT_USERS_CACHE_KEY);
     } else if (!user.secret) {
         // Backfill secret for existing users who don't have one yet
         user.secret = generateUserSecret();
         user.updated_at = now;
-        await saveUser(env, user);
-        await env.MEMBERS_KV.put(`user:${user.id}`, JSON.stringify(user), { expirationTtl: 3600 });
     }
-  
+
     // Store lookup index for this user
     await env.MEMBERS_KV.put(lookupKey, userId);
-  
-    // Save user to R2
+
+    // Save user to R2 + refresh KV/memo caches (single write, was duplicated
+    // on the secret-backfill path)
     await saveUser(env, user);
-  
-    // Cache user in KV for fast access
-    await env.MEMBERS_KV.put(`user:${userId}`, JSON.stringify(user), { expirationTtl: 3600 });
-  
+
     return user;
   }
-  
+
   async function getUser(env, userId) {
-    // Try KV cache first
+    // Layer 1: per-isolate in-memory memo cache (avoids KV read latency/cost
+    // for hot users within the same worker instance)
+    const memo = userMemoryCache.get(userId);
+    const now = Date.now();
+    if (memo && now - memo.time < USER_CACHE_TTL) {
+      return memo.value;
+    }
+
+    // Layer 2: KV cache
     const cached = await env.MEMBERS_KV.get(`user:${userId}`);
     if (cached) {
-        return JSON.parse(cached);
+        const user = JSON.parse(cached);
+        memoizeUser(user);
+        return user;
     }
-  
-    // Fall back to R2
+
+    // Layer 3: R2 fallback
     const object = await env.MEMBERS_BUCKET.get(`users/${userId}.json`);
     if (!object) {
         return null;
     }
-  
+
     const user = await object.json();
-    
+
     // Cache for next time
     await env.MEMBERS_KV.put(`user:${userId}`, JSON.stringify(user), { expirationTtl: 3600 });
-    
+    memoizeUser(user);
+
     return user;
   }
-  
+
+  // Per-isolate memo cache for hot users (60s TTL, bounded size).
+  // Mirrors the api-worker pattern; drastically cuts KV reads for
+  // session-authenticated requests from the same browser.
+  const USER_CACHE_TTL = 60 * 1000;
+  const USER_CACHE_MAX = 500;
+  const userMemoryCache = new Map();
+
+  function memoizeUser(user) {
+    if (!user || !user.id) return;
+    if (userMemoryCache.size >= USER_CACHE_MAX && !userMemoryCache.has(user.id)) {
+      // Evict the oldest entry (Map preserves insertion order)
+      const oldest = userMemoryCache.keys().next().value;
+      userMemoryCache.delete(oldest);
+    }
+    userMemoryCache.set(user.id, { time: Date.now(), value: user });
+  }
+
   async function saveUser(env, user) {
+    // Compact JSON — pretty-printing doubled the stored size for no benefit
+    const serialized = JSON.stringify(user);
     await env.MEMBERS_BUCKET.put(
         `users/${user.id}.json`,
-        JSON.stringify(user, null, 2),
+        serialized,
         {
             httpMetadata: {
                 contentType: "application/json"
             }
         }
     );
-  
-    // Update cache
-    await env.MEMBERS_KV.put(`user:${user.id}`, JSON.stringify(user), { expirationTtl: 3600 });
+
+    // Update caches
+    await env.MEMBERS_KV.put(`user:${user.id}`, serialized, { expirationTtl: 3600 });
+    memoizeUser(user);
   }
 
   // Public recent-users feed — returns the most recently created users.
   // No authentication required. Only public fields are exposed:
   //   username, provider, tier, created_at, avatar
   // Used by the g4f Discord bot's live feed to announce new members.
-  async function handleGetRecentUsers(request, env) {
-    const url = new URL(request.url);
-    const limit = Math.min(parseInt(url.searchParams.get("limit") || "20", 10) || 20, 100);
+  //
+  // The feed is cached in KV (60s) and refreshed in the background so
+  // callers never pay for a full R2 scan — previously every request
+  // fetched up to hundreds of user objects from R2.
+  const RECENT_USERS_CACHE_KEY = "recent_users_cache";
+  const RECENT_USERS_CACHE_TTL = 60; // seconds
 
-    if (!env.MEMBERS_BUCKET) {
-      return jsonResponse({ users: [] }, 200, getCorsHeaders(request));
-    }
-
-    // Iterate through all user objects in R2, collecting created_at timestamps.
-    // R2 list() returns objects sorted by key, not by mtime, so we must
-    // fetch each object's JSON to read created_at. To keep this cheap we
-    // cap the scan at a reasonable number of recent objects.
+  async function refreshRecentUsersCache(env, limit) {
     const users = [];
     let listResult = await env.MEMBERS_BUCKET.list({ prefix: "users/", limit: 200 });
     while (listResult && Array.isArray(listResult.objects) && users.length < limit * 4) {
-      // Process newest keys first (R2 lists in lexicographic order; user ids
-      // are random so order is arbitrary — we sort by created_at below).
       for (const object of listResult.objects) {
         if (!object.key.endsWith('.json')) continue;
         try {
@@ -2369,16 +2463,44 @@ ${buttonsHtml}
       }
     }
 
-    // Sort by created_at descending and return the top *limit*.
     users.sort((a, b) => {
       const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
       const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
       return tb - ta;
     });
+    return users.slice(0, limit);
+  }
 
-    return jsonResponse({
-      users: users.slice(0, limit)
-    }, 200, { "Cache-Control": "public, max-age=60", ...getCorsHeaders(request) });
+  async function handleGetRecentUsers(request, env) {
+    const url = new URL(request.url);
+    const limit = Math.min(parseInt(url.searchParams.get("limit") || "20", 10) || 20, 100);
+
+    if (!env.MEMBERS_BUCKET) {
+      return jsonResponse({ users: [] }, 200, getCorsHeaders(request));
+    }
+
+    // Serve from the KV cache when fresh
+    try {
+      const cached = await env.MEMBERS_KV.get(RECENT_USERS_CACHE_KEY, { type: "json" });
+      if (cached && Array.isArray(cached.users)) {
+        return jsonResponse(cached, 200, {
+          "Cache-Control": "public, max-age=60",
+          ...getCorsHeaders(request)
+        });
+      }
+    } catch (e) { /* fall through to rebuild */ }
+
+    // Rebuild synchronously on cache miss, then cache for next time
+    const users = await refreshRecentUsersCache(env, limit);
+    const payload = { users };
+    await env.MEMBERS_KV.put(RECENT_USERS_CACHE_KEY, JSON.stringify(payload), {
+      expirationTtl: RECENT_USERS_CACHE_TTL
+    });
+
+    return jsonResponse(payload, 200, {
+      "Cache-Control": "public, max-age=60",
+      ...getCorsHeaders(request)
+    });
   }
 
   async function handleGetUser(request, env) {
@@ -2403,19 +2525,22 @@ ${buttonsHtml}
         return jsonResponse({ error: "Method not allowed" }, 405, getCorsHeaders(request));
     }
   
-    const body = await request.json();
+    let body;
+    try {
+        body = await request.json();
+    } catch (e) {
+        return jsonResponse({ error: "Invalid JSON body" }, 400, getCorsHeaders(request));
+    }
     const allowedFields = ["name", "email"];
-    
+
     for (const field of allowedFields) {
         if (body[field] !== undefined) {
             user[field] = body[field];
         }
     }
-  
+
     user.updated_at = new Date().toISOString();
     await saveUser(env, user);
-  
-    const safeUser = getSafeUser(user);
   
     return jsonResponse({ user: safeUser, message: "User updated successfully" }, 200, getCorsHeaders(request));
   }
@@ -2767,7 +2892,7 @@ ${buttonsHtml}
         return jsonResponse({ error: "Method not allowed" }, 405, getCorsHeaders(request));
     }
   
-    const body = await request.json();
+const body = await request.json().catch(() => ({}));
     const keyId = body.key_id;
   
     if (!keyId) {
@@ -2925,11 +3050,16 @@ ${buttonsHtml}
         return jsonResponse({ valid: false, error: "User not found" }, 401, getCorsHeaders(request));
     }
   
-    // Update last_used timestamp
+    // Update last_used timestamp — throttled to one write per hour per key
+    // to avoid an R2+KV write on every validation call
     const keyIndex = user.api_keys.findIndex(k => k.id === key_id);
     if (keyIndex !== -1) {
-        user.api_keys[keyIndex].last_used = new Date().toISOString();
-        await saveUser(env, user);
+        const lastUsed = user.api_keys[keyIndex].last_used
+            ? new Date(user.api_keys[keyIndex].last_used).getTime() : 0;
+        if (Date.now() - lastUsed > 60 * 60 * 1000) {
+            user.api_keys[keyIndex].last_used = new Date().toISOString();
+            await saveUser(env, user);
+        }
     }
   
     return jsonResponse({
@@ -3013,27 +3143,28 @@ ${buttonsHtml}
     const history = [];
     const now = new Date();
   
+    // Read all days in parallel — sequential gets added ~days × R2 latency
+    const dateKeys = [];
     for (let i = 0; i < days; i++) {
         const date = new Date(now);
         date.setUTCDate(date.getUTCDate() - i);
-        const dateKey = date.toISOString().split("T")[0];
-  
-        // Try to get usage for this day from R2
-        const usageData = await env.MEMBERS_BUCKET.get(`usage/${user.id}/${dateKey}.json`);
-        if (usageData) {
-            history.push(await usageData.json());
-        } else {
-            history.push({
-                date: dateKey,
-                requests: 0,
-                tokens: 0
-            });
-        }
+        dateKeys.push(date.toISOString().split("T")[0]);
     }
-  
+
+    const results = await Promise.all(dateKeys.map(async (dateKey) => {
+        try {
+            const usageData = await env.MEMBERS_BUCKET.get(`usage/${user.id}/${dateKey}.json`);
+            if (usageData) {
+                return await usageData.json();
+            }
+        } catch (e) { /* fall through to empty entry */ }
+        return { date: dateKey, requests: 0, tokens: 0 };
+    }));
+    history.push(...results);
+
     return jsonResponse({ history }, 200, getCorsHeaders(request));
   }
-  
+
   async function handleTrackUsage(request, env, ctx) {
     if (request.method !== "POST") {
         return jsonResponse({ error: "Method not allowed" }, 405, getCorsHeaders(request));
@@ -3060,9 +3191,15 @@ ${buttonsHtml}
         return jsonResponse({ error: "User not found" }, 404, getCorsHeaders(request));
     }
   
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const { requests = 1, tokens = 0, provider = null, model = null, username = null } = body;
-  
+
+    // Guard against legacy user records missing these fields
+    if (!user.usage) {
+        user.usage = { requests_today: 0, tokens_today: 0, total_requests: 0, total_tokens: 0, last_reset: new Date().toISOString() };
+    }
+    user.api_keys = user.api_keys || [];
+
     // Update user usage
     user.usage.requests_today += requests;
     user.usage.tokens_today += tokens;
@@ -3124,7 +3261,6 @@ ${buttonsHtml}
   
   async function createSession(env, userId) {
     const sessionToken = generateSessionToken();
-    const user = await getUser(env, userId);
     const expires = Date.now() + 7 * 24 * 60 * 60 * 1000;
     const sessionData = {
         user_id: userId,
@@ -3187,7 +3323,13 @@ ${buttonsHtml}
     const sessionData = await env.MEMBERS_KV.get(`session:${sessionToken}`);
     if (sessionData) {
         const session = JSON.parse(sessionData);
-        session.expires_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        const newExpiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+        // Only rewrite when the session would gain more than a day of extra
+        // lifetime — avoids a KV write on every authenticated request
+        if (new Date(session.expires_at).getTime() > newExpiresAt - 24 * 60 * 60 * 1000) {
+            return;
+        }
+        session.expires_at = new Date(newExpiresAt).toISOString();
         await env.MEMBERS_KV.put(
             `session:${sessionToken}`,
             JSON.stringify(session),
@@ -3456,8 +3598,9 @@ ${buttonsHtml}
       const results = {};
   
       const promises = keys.map(async (window) => {
-          const key = `user_rate:${userId}:${window}`;
-          const data = await env.MEMBERS_KV.get(key, { type: 'json' });
+          // Read the same `rate_limit:` keys the api-worker writes — the old
+          // `user_rate:` prefix meant this endpoint always reported zero usage
+          const key = `rate_limit:${userId}:${window}`;
   
           if (!data || (now - data.timestamp > RATE_LIMITS.windows[window])) {
               return { window, data: { tokens: 0, requests: 0, timestamp: now } };
@@ -3995,6 +4138,8 @@ ${buttonsHtml}
   //   "G4FENC" (6 bytes) + version 0x01 (1 byte) + nonce (12 bytes)
   //   + AES-256-GCM ciphertext||tag
   //   key = SHA-256(workspace_secret)
+  // The conversations/index.json listing uses the same encrypted blob
+  // format (legacy plaintext indexes are still readable).
   // ============================================================
 
   const MAX_CONVERSATIONS = 1000;
@@ -4046,8 +4191,9 @@ ${buttonsHtml}
         const nonce = bytes.slice(magic.length + 1, magic.length + 1 + 12);
         ciphertext = bytes.slice(magic.length + 1 + 12);
       } else {
-        // Plaintext fallback (legacy blobs)
-        ciphertext = bytes;
+        // Plaintext fallback (legacy blobs) — parse directly as JSON
+        const decoder = new TextDecoder();
+        return JSON.parse(decoder.decode(bytes));
       }
       const key = await deriveSecretKey(workspaceSecret);
       const plain = await crypto.subtle.decrypt(
@@ -4070,17 +4216,38 @@ ${buttonsHtml}
     return `secret/${userId}/conversations/${safeConversationId(conversationId)}.json`;
   }
 
-  async function updateSecretConversationIndex(env, userId, entry, remove = false) {
+  async function readSecretConversationIndex(env, userId, workspaceSecret) {
     const indexKey = `secret/${userId}/conversations/index.json`;
-    let index = [];
     const object = await env.MEMBERS_BUCKET.get(indexKey);
-    if (object) {
-      try {
-        index = await object.json();
-      } catch (e) {
-        index = [];
-      }
+    if (!object) {
+      return { missing: true, index: null };
     }
+    const buffer = await object.arrayBuffer();
+    // index is null when the blob cannot be decrypted (wrong secret)
+    return { missing: false, index: await decryptSecretConversation(buffer, workspaceSecret || "") };
+  }
+
+  async function writeSecretConversationIndex(env, userId, index, workspaceSecret) {
+    const indexKey = `secret/${userId}/conversations/index.json`;
+    if (workspaceSecret) {
+      const blob = await encryptSecretConversation(index, workspaceSecret);
+      await env.MEMBERS_BUCKET.put(indexKey, blob, {
+        httpMetadata: { contentType: "application/octet-stream" },
+      });
+    } else {
+      await env.MEMBERS_BUCKET.put(indexKey, JSON.stringify(index), {
+        httpMetadata: { contentType: "application/json" },
+      });
+    }
+  }
+
+  async function updateSecretConversationIndex(env, userId, entry, remove = false, workspaceSecret = null) {
+    const { missing, index: existing } = await readSecretConversationIndex(env, userId, workspaceSecret);
+    if (!missing && !Array.isArray(existing)) {
+      // Index exists but could not be decrypted — refuse to overwrite it
+      throw new Error("Failed to decrypt conversation index (wrong workspace secret?)");
+    }
+    let index = Array.isArray(existing) ? existing : [];
     index = index.filter((item) => item.id !== entry.id);
     if (!remove) {
       index.push(entry);
@@ -4088,31 +4255,34 @@ ${buttonsHtml}
     index.sort(
       (a, b) => (b.updated || b.added || 0) - (a.updated || a.added || 0)
     );
-    await env.MEMBERS_BUCKET.put(indexKey, JSON.stringify(index), {
-      httpMetadata: { contentType: "application/json" },
-    });
+    await writeSecretConversationIndex(env, userId, index, workspaceSecret);
   }
 
   /**
    * Handle GET /v1/secret/conversations
-   * List the user's stored conversations (plaintext index).
+   * List the user's stored conversations. The index is stored encrypted
+   * (AES-256-GCM, same blob format as the conversations themselves) and is
+   * decrypted with the x-workspace-secret header. Legacy plaintext
+   * indexes are still readable.
    */
   async function handleListSecretConversations(request, env) {
     const user = await authenticateByUserId(request, env);
     if (!user) {
       return jsonResponse({ error: "User ID is required (provide x-user-id header)" }, 401, getCorsHeaders(request));
     }
-    const indexKey = `secret/${user.id}/conversations/index.json`;
-    const object = await env.MEMBERS_BUCKET.get(indexKey);
-    if (!object) {
+    const workspaceSecret = request.headers.get("x-workspace-secret");
+    if (!workspaceSecret) {
+      return jsonResponse({ error: "x-workspace-secret header is required" }, 400, getCorsHeaders(request));
+    }
+    const { missing, index } = await readSecretConversationIndex(env, user.id, workspaceSecret);
+    if (missing) {
       return jsonResponse({ conversations: [] }, 200, getCorsHeaders(request));
     }
-    try {
-      const index = await object.json();
-      return jsonResponse({ conversations: index }, 200, getCorsHeaders(request));
-    } catch (e) {
-      return jsonResponse({ conversations: [] }, 200, getCorsHeaders(request));
+    if (!Array.isArray(index)) {
+      // Index exists but could not be decrypted (wrong workspace secret?)
+      return jsonResponse({ error: "Decryption failed (wrong workspace secret?)" }, 403, getCorsHeaders(request));
     }
+    return jsonResponse({ conversations: index }, 200, getCorsHeaders(request));
   }
 
   /**
@@ -4148,7 +4318,7 @@ ${buttonsHtml}
       updated: body.updated || Date.now() / 1000,
       added: body.added || Date.now() / 1000,
       items_count: Array.isArray(body.items) ? body.items.length : 0,
-    });
+    }, false, workspaceSecret);
     return jsonResponse({ saved: true, id: body.id, encrypted: true }, 200, getCorsHeaders(request));
   }
 
@@ -4180,6 +4350,7 @@ ${buttonsHtml}
     }
     let saved = 0;
     const errors = [];
+    const indexEntries = [];
     for (const conversation of conversations) {
       try {
         if (!conversation || !conversation.id) {
@@ -4191,7 +4362,7 @@ ${buttonsHtml}
         await env.MEMBERS_BUCKET.put(key, blob, {
           httpMetadata: { contentType: "application/octet-stream" },
         });
-        await updateSecretConversationIndex(env, user.id, {
+        indexEntries.push({
           id: conversation.id,
           title: conversation.title || "",
           updated: conversation.updated || Date.now() / 1000,
@@ -4203,7 +4374,35 @@ ${buttonsHtml}
         errors.push({ id: conversation && conversation.id, error: e.message });
       }
     }
+    // Update the index once for the whole batch instead of a full
+    // read-modify-write per conversation (N+1 → 2 R2 ops)
+    if (indexEntries.length > 0) {
+      try {
+        await updateSecretConversationIndexBatch(env, user.id, indexEntries, workspaceSecret);
+      } catch (e) {
+        console.error("Failed to update conversation index:", e);
+      }
+    }
     return jsonResponse({ saved, errors }, 200, getCorsHeaders(request));
+  }
+
+  /**
+   * Apply multiple index entries in a single read-modify-write cycle.
+   */
+  async function updateSecretConversationIndexBatch(env, userId, entries, workspaceSecret = null) {
+    const { missing, index: existing } = await readSecretConversationIndex(env, userId, workspaceSecret);
+    if (!missing && !Array.isArray(existing)) {
+      // Index exists but could not be decrypted — refuse to overwrite it
+      throw new Error("Failed to decrypt conversation index (wrong workspace secret?)");
+    }
+    let index = Array.isArray(existing) ? existing : [];
+    const entryIds = new Set(entries.map((e) => e.id));
+    index = index.filter((item) => !entryIds.has(item.id));
+    index.push(...entries);
+    index.sort(
+      (a, b) => (b.updated || b.added || 0) - (a.updated || a.added || 0)
+    );
+    await writeSecretConversationIndex(env, userId, index, workspaceSecret);
   }
 
   /**
@@ -4241,12 +4440,16 @@ ${buttonsHtml}
     if (!user) {
       return jsonResponse({ error: "User ID is required (provide x-user-id header)" }, 401, getCorsHeaders(request));
     }
+    const workspaceSecret = request.headers.get("x-workspace-secret");
+    if (!workspaceSecret) {
+      return jsonResponse({ error: "x-workspace-secret header is required" }, 400, getCorsHeaders(request));
+    }
     const key = secretConversationKey(user.id, conversationId);
     const object = await env.MEMBERS_BUCKET.get(key);
     if (!object) {
       return jsonResponse({ error: "Conversation not found" }, 404, getCorsHeaders(request));
     }
     await env.MEMBERS_BUCKET.delete(key);
-    await updateSecretConversationIndex(env, user.id, { id: conversationId }, true);
+    await updateSecretConversationIndex(env, user.id, { id: conversationId }, true, workspaceSecret);
     return jsonResponse({ deleted: true, id: conversationId }, 200, getCorsHeaders(request));
   }
