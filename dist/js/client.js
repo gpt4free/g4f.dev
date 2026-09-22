@@ -54,12 +54,12 @@ function extractRetryDelay(message) {
     // Regular expression to match "Try again in X seconds" where X can be integer or decimal
     const regex = /(Try again in ([0-9.]+) seconds?|Retry after ([0-9.]+)|Please retry in ([0-9.]+)s)/i;
     const match = message.match(regex);
-    
+
     const delay = match ? parseFloat(match[2] || match[3] || match[4] || '0') : 0;
     if (delay > 0) {
         return delay;
     }
-    
+
     return null;
 }
 
@@ -140,7 +140,7 @@ class Client {
             ...(this.apiKey ? { 'Authorization': `Bearer ${this.apiKey}` } : {}),
             ...(options.extraHeaders || {})
         };
-        
+
         this.modelAliases = options.modelAliases || {};
         this.swapAliases = {}
         Object.keys(this.modelAliases).forEach(key => {
@@ -165,7 +165,7 @@ class Client {
     _route(url) {
         return window.framework?.getRoutedUrl(url) ?? url;
     }
-    
+
     async _fetchWithProxyRotation(targetUrl, requestConfig={}) {
         const maxAttempts = this.proxyManager.proxies.length;
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -257,7 +257,7 @@ class Client {
             signal: this.modelsSignal?.signal
           });
           delete this.modelsSignal;
-          
+
           if (!response.ok) {
             throw new Error(`Failed to fetch models: ${response.status}`);
           }
@@ -610,11 +610,11 @@ class DeepInfra extends Client {
 
    get models() {
         const listModels = super.models.list();
-        
+
         return {
             list: async () => {
                 const modelsArray = await listModels; // Await the promise returned by listModels
-                
+
                 return modelsArray.map(model => {
                     // Check if 'metadata' exists and is null, then set type
                     if (!model.type) {
@@ -650,7 +650,6 @@ class Together extends Client {
         });
     }
 }
-
 
 class Puter extends Client {
     constructor(options = {}) {
@@ -1088,18 +1087,32 @@ class Bonsai extends Client {
         let numTokens = 0;
         let tps;
 
+        // Bridge the callback-based TextStreamer into an async generator
+        const queue = [];
+        let resolveNext = null;
+        let done = false;
+        let error = null;
+
+        const push = (value) => {
+            if (resolveNext) {
+                resolveNext({ value, done: false });
+                resolveNext = null;
+            } else {
+                queue.push(value);
+            }
+        };
+
         const streamer = new TextStreamer(generator.tokenizer, {
             skip_prompt: true,
             skip_special_tokens: true,
             callback_function: (output) => {
-                // yield OpenAI-compatible chunk
-                yield {
+                push({
                     choices: [{ delta: { content: output }, index: 0 }],
                     model: this._currentKey,
                     provider: "Bonsai (local WebGPU)",
                     tps,
                     numTokens,
-                };
+                });
             },
             token_callback_function: () => {
                 startTime ??= performance.now();
@@ -1111,15 +1124,58 @@ class Bonsai extends Client {
 
         this._stoppingCriteria.reset();
 
+        // Start generation in the background
+        const generationPromise = generator(messages, {
+            ...options,
+            streamer,
+            past_key_values: this._pastKeyValues,
+            stopping_criteria: this._stoppingCriteria,
+        }).then(() => {
+            done = true;
+            if (resolveNext) {
+                resolveNext({ value: undefined, done: true });
+                resolveNext = null;
+            }
+        }).catch((e) => {
+            if (e.name !== "AbortError") {
+                error = e;
+                done = true;
+                if (resolveNext) {
+                    resolveNext({ value: undefined, done: true });
+                    resolveNext = null;
+                }
+            } else {
+                done = true;
+                if (resolveNext) {
+                    resolveNext({ value: undefined, done: true });
+                    resolveNext = null;
+                }
+            }
+        });
+
         try {
-            await generator(messages, {
-                ...options,
-                streamer,
-                past_key_values: this._pastKeyValues,
-                stopping_criteria: this._stoppingCriteria,
-            });
-        } catch (e) {
-            if (e.name !== "AbortError") throw e;
+            while (true) {
+                if (queue.length > 0) {
+                    yield queue.shift();
+                    continue;
+                }
+                if (done) {
+                    if (error) throw error;
+                    break;
+                }
+                // Wait for the next chunk
+                const next = await new Promise((resolve) => {
+                    resolveNext = resolve;
+                });
+                if (next.done) {
+                    if (error) throw error;
+                    break;
+                }
+                yield next.value;
+            }
+        } finally {
+            // Ensure generation is fully settled
+            await generationPromise;
         }
     }
 
