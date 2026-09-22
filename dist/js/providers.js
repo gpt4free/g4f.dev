@@ -1,5 +1,5 @@
 
-import { Client, Pollinations, DeepInfra, HuggingFace, Worker, Audio, WebGPU, captureUserTierHeaders, Puter } from "./client.js";
+import { Client, Pollinations, DeepInfra, HuggingFace, Worker, Audio, WebGPU, Bonsai, captureUserTierHeaders, Puter } from "./client.js";
 let fs;
 if (typeof window === "undefined") {
     fs = require("fs");
@@ -167,5 +167,5 @@ function mergeToolCalls(accumulator, toolCalls) {
     return accumulator;
 }
 
-export { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls, Puter, WebGPU };
-export default { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls, Puter, WebGPU };
+export { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls, Puter, WebGPU, Bonsai };
+export default { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls, Puter, WebGPU, Bonsai };
