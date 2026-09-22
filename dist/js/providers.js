@@ -20,6 +20,7 @@ let providerClassMap = {
     "puter": Puter,
     "worker": Worker,
     "webgpu": WebGPU,
+    "bonsei": Bonsai,
 };
 
 function mapProviderDefaults(providers) {
