@@ -978,7 +978,7 @@ class Bonsai extends Client {
         if (this._transformers) return this._transformers;
         this._transformers = await import(
             /* webpackIgnore: true */
-            "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0"
+            "https://cdn.jsdelivr.net/npm/@huggingface/transformers"
         );
         return this._transformers;
     }
