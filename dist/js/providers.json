@@ -20,7 +20,8 @@
         "opencode": {"id": "srv_mrgy4bjz6a85b485d663", "backupUrl": "https://g4f.space/custom/srv_mrgy4bjz6a85b485d663", "tags": "🦄"},
         "orcarouter": {"id": "srv_msoxsh206cb0d89eca32", "baseUrl": "https://api.orcarouter.ai/v1", "backupUrl": "https://g4f.space/api/orcarouter", "tags": "🐳"},
         "relayrouter": {"id": "srv_mt1wbaxgf9c946af0c58", "backupUrl": "https://g4f.space/api/relayrouter", "tags": "🔗"},
-        "webgpu": {"label": "WebGPU (local)", "tags": "🖥️", "provider": "WebGPU"}
+        "webgpu": {"label": "WebGPU (local)", "tags": "🖥️", "provider": "WebGPU"},
+        "bonsai" {"label: "Bonsai (local)", "tags": "🌳", "provider": "Bonsai"}
     },
     "defaultModels": {
         "default": "auto",
