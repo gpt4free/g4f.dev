@@ -70,8 +70,8 @@ body {
     background: var(--background);
     color: var(--colour-3);
     display: flex;
-    min-height: 100vh;
-    max-height: 100vh;
+    min-height: 100dvh;
+    max-height: 100dvh;
 }
 
 body:not(.white) a:link,
@@ -106,7 +106,7 @@ body:not(.white) a:visited{
 .container {
     display: flex;
     width: 100%;
-    height: 100vh;
+    height: 100dvh;
     overflow: auto;
 }
 
@@ -2697,7 +2697,7 @@ form textarea {
   .sidebar {
     position: fixed;
     z-index: 1001; /* Higher z-index to appear above everything */
-    height: 100vh;
+    height: 100dvh;
     background: var(--background);
     transition: transform 0.3s ease, width 0.3s ease;
     transform: translateX(-100%);
@@ -3269,7 +3269,7 @@ form textarea {
     .sidebar {
         position: fixed;
         z-index: 1001;
-        height: 100vh;
+        height: 100dvh;
         background: var(--background);
         transition: transform 0.3s ease, width 0.3s ease;
         transform: translateX(-100%);

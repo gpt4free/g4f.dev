@@ -1814,19 +1814,8 @@
         }
 
         async function ensureWorkspaceSecret() {
-            const existing = localStorage.getItem('g4f_workspace_secret');
-            if (existing) return existing;
-            const secret = await deriveWorkspaceSecret();
-            if (secret) {
-                localStorage.setItem('g4f_workspace_secret', secret);
-                return secret;
-            }
-            const shared = await requestSecretFromOnlineDevice();
-            if (shared) {
-                localStorage.setItem('g4f_workspace_secret', shared);
-                return shared;
-            }
-            return null;
+            // Always derive fresh from the user record — nothing is cached.
+            return deriveWorkspaceSecret();
         }
 
         async function requestSecretFromOnlineDevice(timeoutMs = 120000) {
@@ -1865,7 +1854,7 @@
         async function checkAndConfirmSecretRequests() {
             const userId = getSecretUserId();
             if (!userId) return;
-            const existingSecret = localStorage.getItem('g4f_workspace_secret');
+            const existingSecret = await deriveWorkspaceSecret();
             if (!existingSecret) return;
             try {
                 const resp = await fetch(`${SECRET_API}/v1/secret/requests`, {
@@ -1893,7 +1882,7 @@
         function startSecretRequestPolling() {
             if (_secretRequestCheckInterval) clearInterval(_secretRequestCheckInterval);
             _secretRequestCheckInterval = setInterval(() => {
-                if (localStorage.getItem('g4f_workspace_secret') && getSecretUserId()) {
+                if (getSecretUserId()) {
                     checkAndConfirmSecretRequests().catch(() => {});
                 }
             }, 10000);
@@ -3082,28 +3071,20 @@
                     showToast('Please log in first.', 'error');
                     return;
                 }
-                const existing = localStorage.getItem('g4f_workspace_secret');
-                if (existing) {
-                    updateSecretSyncUI(existing);
-                    return;
-                }
                 secretRequestBtn.disabled = true;
-                secretRequestBtn.innerHTML = '<span class="loading"></span> Waiting for online device...';
                 try {
-                    const secret = await requestSecretFromOnlineDevice();
+                    const secret = await deriveWorkspaceSecret();
                     if (secret) {
-                        localStorage.setItem('g4f_workspace_secret', secret);
                         updateSecretSyncUI(secret);
                         startSecretRequestPolling();
-                        showToast('Workspace secret received from online device!');
+                        showToast('Workspace secret derived from your account.');
                     } else {
-                        showToast('No online device responded. Try again from another device.', 'error');
+                        showToast('No user secret available. Please log out and log in again.', 'error');
                     }
                 } catch (e) {
                     showToastFormat('Failed: {0}', 'error', e.message);
                 } finally {
                     secretRequestBtn.disabled = false;
-                    secretRequestBtn.innerHTML = '<i class="fa-solid fa-satellite-dish"></i> Request Secret from Online Device';
                 }
             });
         }

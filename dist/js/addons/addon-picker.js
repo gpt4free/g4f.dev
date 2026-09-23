@@ -513,8 +513,8 @@ const apiExport = {};
 @media (max-width: 720px) {
     .picker-panel {
         width: 100vw;
-        max-height: 100vh;
-        height: 100vh;
+        max-height: 100dvh;
+        height: 100dvh;
         border-radius: 0;
         border: none;
     }

@@ -1986,7 +1986,7 @@ async function cloudSyncLogout() {
     appStorage.removeItem("g4f_session");
     appStorage.removeItem("g4f_user");
     appStorage.removeItem("g4f_expires");
-    appStorage.removeItem("g4f_workspace_secret");
+    appStorage.removeItem("g4f_workspace_secret"); // legacy cache cleanup
     showCloudSyncLogin();
 }
 
@@ -2076,15 +2076,9 @@ async function deriveWorkspaceSecret() {
  * user.secret is not available in the local user object.
  */
 async function ensureWorkspaceSecret() {
-    // Only regenerate if not already set or user changed
-    const existing = appStorage.getItem("g4f_workspace_secret");
-    if (existing) return existing;
-    const secret = await deriveWorkspaceSecret();
-    if (secret) {
-        appStorage.setItem("g4f_workspace_secret", secret);
-        return secret;
-    }
-    return null;
+    // Always derive fresh from the user record — nothing is cached, so a
+    // changed or re-issued user.secret is picked up immediately.
+    return deriveWorkspaceSecret();
 }
 
 // ============================================================
@@ -2146,7 +2140,7 @@ async function requestSecretFromOnlineDevice(timeoutMs = 120000) {
 async function checkAndConfirmSecretRequests() {
     const userId = getSecretUserId();
     if (!userId) return;
-    const existingSecret = appStorage.getItem("g4f_workspace_secret");
+    const existingSecret = await deriveWorkspaceSecret();
     if (!existingSecret) return;
     const baseUrl = SECRET_API;
     try {
@@ -2208,7 +2202,7 @@ async function getSecretHeaders(extra = {}) {
     const headers = { "Content-Type": "application/json", ...extra };
     const userId = getSecretUserId();
     if (userId) headers["x-user-id"] = userId;
-    const secret = appStorage.getItem("g4f_workspace_secret");
+    const secret = await deriveWorkspaceSecret();
     if (secret) headers["x-workspace-secret"] = secret;
     return headers;
 }
@@ -2600,32 +2594,21 @@ if (secretRequestBtn) secretRequestBtn.addEventListener("click", async () => {
         cloudSyncLoginRedirect();
         return;
     }
-    const existing = appStorage.getItem("g4f_workspace_secret");
-    if (existing) {
-        alert("Workspace secret is already set on this device.");
-        return;
-    }
     secretRequestBtn.disabled = true;
-    secretRequestBtn.innerHTML = '<i class="fa-solid fa-satellite-dish fa-spin"></i><span>Waiting for online device...</span>';
-    showCloudSyncLoading("Requesting secret from online device...");
     try {
         const secret = await deriveWorkspaceSecret();
-        hideCloudSyncLoading();
         if (secret) {
-            appStorage.setItem("g4f_workspace_secret", secret);
-            alert("Workspace secret received from online device!");
+            alert("Workspace secret derived from your account.");
             if (appStorage.getItem("secretConversationSync") === "true") {
                 pullNewSecretConversations().catch(() => {});
             }
         } else {
-            alert("No online device responded. Make sure another device is logged in and online, then try again.");
+            alert("No user secret available. Please log out and log in again.");
         }
     } catch (e) {
-        hideCloudSyncLoading();
         alert("Failed to get secret: " + e.message);
     } finally {
         secretRequestBtn.disabled = false;
-        secretRequestBtn.innerHTML = '<i class="fa-solid fa-satellite-dish"></i><span>Get Secret from Online Device</span>';
     }
 });
 if (secretConversationSyncToggle) {

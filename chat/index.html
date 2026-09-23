@@ -27,6 +27,15 @@
     <link rel="canonical" href="https://g4f.dev/chat/" />
 
     <link rel="stylesheet" href="/dist/css/style.css?v={{ v }}" />
+    <link rel="stylesheet" href="/dist/css/chat-modern.css?v={{ v }}" />
+    <script>
+      // "Switch back to classic": disable the modern UI layer (chat-modern.css)
+      // before first paint when the user turned it off in the settings.
+      if (localStorage.getItem("modernUI") === "false") {
+        const modernLink = document.querySelector('link[href*="chat-modern.css"]');
+        if (modernLink) modernLink.disabled = true;
+      }
+    </script>
     <link rel="stylesheet" href="/dist/css/all.min.css" />
     <link rel="stylesheet" href="/dist/css/dracula.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe/dist/photoswipe.css" />
@@ -180,7 +189,7 @@
                         </span>
                     </div>
                     <div class="info" role="region" aria-label="Legal information">
-                        <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+                        ⚖️
                         <span class="convo-title">
                             legal ~
                             <a href="/privacy.html" target="_blank" rel="noopener noreferrer" data-translate="true">Privacy</a> ·
@@ -328,6 +337,11 @@
                       <span class="label">Enable Liquid Mode</span>
                       <input type="checkbox" id="liquid" checked />
                       <label for="liquid" class="toogle" title="Toggle Liquid Mode"></label>
+                  </div>
+                  <div class="field">
+                      <span class="label">Enable Modern Design</span>
+                      <input type="checkbox" id="modernUI" checked />
+                      <label for="modernUI" class="toogle" title="Toggle the modern design. Disable to switch back to the classic design"></label>
                   </div>
                   <div class="field">
                       <span class="label">Disable Animations</span>
@@ -535,7 +549,11 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                 <i class="fa-solid fa-angles-up" aria-hidden="true"></i>
             </button>
 
-            <section class="chat-body" id="chatBody" tabindex="0" aria-live="polite" aria-label="Conversation content"></section>
+            <section class="chat-body" id="chatBody" tabindex="0" aria-live="polite" aria-label="Conversation content">
+                <button id="scroll-bottom-btn" class="scroll-bottom-btn hidden" type="button" aria-label="Scroll to bottom">
+                    <i class="fa-solid fa-arrow-down" aria-hidden="true"></i>
+                </button>
+            </section>
 
             <footer class="chat-footer">
                 <div class="chat-toolbar" role="region" aria-label="Chat controls">
@@ -798,5 +816,122 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
             </footer>
         </aside>
     </div>
+
+    <!-- Modern empty state template (cloned into chatBody when no messages exist) -->
+    <template id="empty-state-template">
+        <div id="chat-empty-state" class="chat-empty-state" aria-label="Start a conversation">
+            <div class="empty-state-content">
+                <div class="empty-state-icon">
+                    <img src="/dist/img/g4f.svg" alt="" aria-hidden="true" />
+                </div>
+                <h2 class="empty-state-title" data-translate="true">How can I help you today?</h2>
+                <p class="empty-state-subtitle" data-translate="true">Ask anything — brainstorm, write, code, or explore. Pick a suggestion to get started.</p>
+                <div class="empty-state-suggestions">
+                    <button type="button" class="suggestion-card" data-prompt="Explain quantum computing in simple terms">
+                        <i class="fa-solid fa-atom" aria-hidden="true"></i>
+                        <span data-translate="true">Explain a topic</span>
+                        <small data-translate="true">Quantum computing in simple terms</small>
+                    </button>
+                    <button type="button" class="suggestion-card" data-prompt="Write a Python function that finds all prime numbers up to n">
+                        <i class="fa-solid fa-code" aria-hidden="true"></i>
+                        <span data-translate="true">Write code</span>
+                        <small data-translate="true">Find all primes up to n in Python</small>
+                    </button>
+                    <button type="button" class="suggestion-card" data-prompt="Brainstorm 10 creative names for a coffee shop run by robots">
+                        <i class="fa-solid fa-lightbulb" aria-hidden="true"></i>
+                        <span data-translate="true">Brainstorm ideas</span>
+                        <small data-translate="true">Creative names for a robot coffee shop</small>
+                    </button>
+                    <button type="button" class="suggestion-card" data-prompt="Help me write a friendly email asking my team for project updates">
+                        <i class="fa-solid fa-pen-nib" aria-hidden="true"></i>
+                        <span data-translate="true">Help me write</span>
+                        <small data-translate="true">A friendly team update email</small>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Modern UI wiring: empty state + scroll-to-bottom -->
+    <script>
+    (function () {
+        "use strict";
+
+        const chatBody = document.getElementById("chatBody");
+        if (!chatBody) return;
+
+        const EMPTY_STATE_ID = "chat-empty-state";
+        const SCROLL_BTN_ID = "scroll-bottom-btn";
+
+        const buildEmptyState = () => {
+            const existing = document.getElementById(EMPTY_STATE_ID);
+            if (existing) return existing;
+            const template = document.getElementById("empty-state-template");
+            if (!template) return null;
+            const clone = template.content.firstElementChild.cloneNode(true);
+            chatBody.appendChild(clone);
+            return clone;
+        };
+
+        const hasMessages = () => chatBody.querySelector(".message") !== null;
+
+        const updateEmptyState = () => {
+            const emptyState = document.getElementById(EMPTY_STATE_ID);
+            if (!emptyState) return;
+            emptyState.classList.toggle("hidden", hasMessages());
+        };
+
+        // Observe chat body: show empty state when no messages exist.
+        const observer = new MutationObserver(() => {
+            updateEmptyState();
+            if (!hasMessages()) buildEmptyState();
+        });
+        observer.observe(chatBody, { childList: true, subtree: false });
+
+        // Suggestion cards fill the composer and send.
+        chatBody.addEventListener("click", async (event) => {
+            const card = event.target.closest(".suggestion-card");
+            if (!card) return;
+            const prompt = card.dataset.prompt || "";
+            const userInput = document.getElementById("userInput");
+            if (userInput) userInput.value = prompt;
+            try {
+                if (typeof window.handle_ask === "function") {
+                    await window.handle_ask(true, prompt);
+                } else if (userInput) {
+                    userInput.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true }));
+                }
+            } catch (e) {
+                console.debug("suggestion-card send failed:", e);
+            }
+        });
+
+        // Scroll-to-bottom button.
+        const scrollBtn = document.getElementById(SCROLL_BTN_ID);
+        if (scrollBtn) {
+            const updateScrollBtn = () => {
+                const atBottom = chatBody.scrollTop + chatBody.clientHeight >= chatBody.scrollHeight - 60;
+                scrollBtn.classList.toggle("hidden", atBottom || !hasMessages());
+            };
+            chatBody.addEventListener("scroll", updateScrollBtn, { passive: true });
+            scrollBtn.addEventListener("click", () => {
+                chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" });
+            });
+            chatBody.addEventListener("resize", updateScrollBtn);
+            window.addEventListener("resize", updateScrollBtn);
+            setTimeout(updateScrollBtn, 500);
+        }
+
+        // Initialize on load (after addons have rendered).
+        window.domReady?.then(() => {
+            if (!hasMessages()) buildEmptyState();
+            updateEmptyState();
+            window.addonsLoaded?.then(() => setTimeout(() => {
+                updateEmptyState();
+                if (!hasMessages()) buildEmptyState();
+            }, 300));
+        });
+    })();
+    </script>
 </body>
 </html>

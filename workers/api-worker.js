@@ -1714,7 +1714,10 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       if (!userProvidedKey && !server.api_key)
       if (server.allowed_models && server.allowed_models.length > 0) {
         if (!server.allowed_models.includes(requestModel)) {
-          return jsonResponse({
+          const notAllowedPathname = pathname || subPath;
+          const cachedNotAllowed = await getCachedModelError(request, notAllowedPathname, requestModel, server.id, user?.id);
+          if (cachedNotAllowed) return cachedNotAllowed;
+          const notAllowedResponse = jsonResponse({
             error: {
               message: `Model '${requestModel}' is not allowed on this server. Allowed: ${server.allowed_models.join(", ")}`,
               type: "model_not_allowed"
@@ -1726,6 +1729,8 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
             "X-User-Id": user && user.id,
             ...getCorsHeaders(request)
           });
+          ctx.waitUntil(setCachedModelError(request, ctx, notAllowedPathname, requestModel, notAllowedResponse, server.id, user?.id));
+          return notAllowedResponse;
         }
       }
       if (requestBody.stream) {
@@ -3306,6 +3311,14 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, user, cacheK
     requestBody = {}
   }
 
+  // Repeated requests for an unknown model are served from the error cache
+  // instead of re-running the full server lookup (and re-logging the error).
+  const requestedModel = requestBody.model || "";
+  if (requestedModel && !["auto", "default"].includes(requestedModel)) {
+    const cachedModelError = await getCachedModelError(request, pathname, requestedModel, null, user?.id);
+    if (cachedModelError) return cachedModelError;
+  }
+
   // Anonymous users are gated by their baked cake credits instead of a fixed
   // daily rate limit. Signed-in users (user != null) skip this check and fall
   // through to the normal tier limits.
@@ -3415,7 +3428,9 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, user, cacheK
     }
   }
   if (!selectedServer && !foundServers) {
-    return jsonResponse({ error: `No server found that supports model '${model}'` }, 404);
+    const notFoundResponse = jsonResponse({ error: `No server found that supports model '${model}'` }, 404);
+    ctx.waitUntil(setCachedModelError(request, ctx, pathname, model, notFoundResponse, null, user?.id));
+    return notFoundResponse;
   }
 
   if (foundServers) {
@@ -3678,6 +3693,47 @@ async function setCachedResponse(request, response, cacheControl, cacheKey = nul
   } catch (e) {
     console.error("Cache write error:", e);
   }
+}
+// Cache "model not found" / "model not allowed" error responses so repeated
+// requests for the same unknown model short-circuit from the edge cache
+// instead of re-running the full server lookup and flooding /api/errors
+// (these two errors made up the bulk of the error log). Short TTL so newly
+// added servers/models start working quickly again.
+var MODEL_ERROR_CACHE_TTL = "public, max-age=3600";
+function getModelErrorCacheKey(pathname, model, serverId = null, userId = null) {
+  return `MODEL-ERROR:${pathname || "-"}:${serverId || "-"}:${userId || "anon"}:${String(model || "").toLowerCase()}`;
+}
+async function getCachedModelError(request, pathname, model, serverId = null, userId = null) {
+  try {
+    const cacheRequest = new Request(`https://cache.example/${getModelErrorCacheKey(pathname, model, serverId, userId)}`, { method: "GET" });
+    const cached = await caches.default.match(cacheRequest);
+    if (cached) {
+      const newResponse = new Response(cached.body, cached);
+      newResponse.headers.set("X-Cache", "HIT");
+      newResponse.headers.set("X-Model-Error-Cache", "HIT");
+      // the first (uncached) response stored user-specific headers — drop them
+      newResponse.headers.delete("X-User-Id");
+      newResponse.headers.delete("X-User-Tier");
+      return newResponse;
+    }
+  } catch (e) { }
+  return null;
+}
+// Store an error response created by jsonResponse (which logged it once to
+// ERRORS_DB). Cached hits bypass jsonResponse, so repeats are not logged.
+async function setCachedModelError(request, ctx, pathname, model, response, serverId = null, userId = null) {
+  try {
+    const responseToCache = response.clone();
+    responseToCache.headers.set("Cache-Control", MODEL_ERROR_CACHE_TTL);
+    responseToCache.headers.set("X-Cache", "HIT");
+    const cacheRequest = new Request(`https://cache.example/${getModelErrorCacheKey(pathname, model, serverId, userId)}`, { method: "GET" });
+    const cacheOperation = caches.default.put(cacheRequest, responseToCache);
+    if (ctx) {
+      ctx.waitUntil(cacheOperation);
+    } else {
+      await cacheOperation;
+    }
+  } catch (e) { }
 }
 async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ctx) {
   // block anonymous requests originating from certain cloud providers

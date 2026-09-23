@@ -172,6 +172,15 @@ async function on_api() {
             }
         });
     }
+    const modernUI = document.getElementById("modernUI");
+    if (modernUI) {
+        modernUI.addEventListener('change', async (event) => {
+            const link = document.querySelector('link[href*="chat-modern.css"]');
+            if (link) {
+                link.disabled = !event.target.checked;
+            }
+        });
+    }
     const disableAnimations = document.getElementById("disableAnimations");
     if (disableAnimations) {
         disableAnimations.addEventListener('change', async (event) => {

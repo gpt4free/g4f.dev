@@ -2008,7 +2008,10 @@ function sanitizeSelector(input) {
 }
 
 async function set_conversation_title(conversation_id, title) {
-    conversation = await get_conversation(conversation_id)
+    const conversation = await get_conversation(conversation_id)
+    if (!conversation) {
+        return;
+    }
     conversation.new_title = title;
     delete conversation.share;
     const new_id = sanitize(title, " ");
