@@ -1216,6 +1216,187 @@ class Bonsai extends Client {
     }
 }
 
+/**
+ * Bonsai 2 (Ternary-Bonsai-2-27B) running entirely in the browser on WebGPU
+ * via the local bonsai2-engine (GGUF, 1-bit ternary weights).
+ */
+class Bonsai2 extends Client {
+    constructor(options = {}) {
+        super({
+            ...options,
+            baseUrl: options.baseUrl || "webgpu://bonsai2",
+            quotaEndpoint: null,
+        });
+        this.id = options.id || "bonsai2";
+        this.defaultModel = options.defaultModel || "27b";
+        this.logCallback = options.logCallback || console.log;
+        this.progressCallback = options.progressCallback || null;
+
+        // Friendly keys → GGUF model ids on Hugging Face
+        this.MODEL_IDS = {
+            "27b": "prism-ml/Ternary-Bonsai-2-27B-gguf",
+            ...(options.modelAliases || {}),
+        };
+
+        this._engine = null;        // cached bonsai2 engine instance
+        this._currentKey = null;
+        this._engineModule = null;  // lazy-loaded module
+    }
+
+    /** Check WebGPU availability (same heuristic as the other local providers). */
+    static async isSupported() {
+        if (typeof navigator === "undefined" || !navigator.gpu) return false;
+        try {
+            const adapter = await navigator.gpu.requestAdapter();
+            return !!adapter;
+        } catch {
+            return false;
+        }
+    }
+
+    /** Lazy-load the local bonsai2 engine module. */
+    async _loadEngineModule() {
+        if (this._engineModule) return this._engineModule;
+        this._engineModule = await import("./vendor/bonsai2-engine.js");
+        return this._engineModule;
+    }
+
+    /** Dispose the loaded engine (model switch or explicit release). */
+    _disposeEngine() {
+        this._engine?.dispose?.();
+        this._engine = null;
+        this._currentKey = null;
+    }
+
+    /**
+     * Get (or create) a loaded engine for the requested model key.
+     * Reports load progress via progressCallback / logCallback.
+     */
+    async _getEngine(modelKey) {
+        const modelId = this.MODEL_IDS[modelKey];
+        if (!modelId) throw new Error(`Unknown Bonsai 2 model: ${modelKey}`);
+
+        if (this._engine && this._currentKey === modelKey) {
+            return this._engine;
+        }
+
+        // model change → drop old engine
+        if (this._engine && this._currentKey !== modelKey) {
+            this._disposeEngine();
+        }
+
+        const { Bonsai2Engine } = await this._loadEngineModule();
+
+        const onProgress = (info) => {
+            if (this.progressCallback) {
+                this.progressCallback(info);
+            } else if (info?.message) {
+                this.logCallback?.({ status: info.status || "loading", data: info.message });
+            }
+        };
+
+        this.logCallback?.({ status: "loading", data: "Loading Bonsai 2 model…" });
+
+        this._engine = await Bonsai2Engine.load(modelId, { onProgress });
+        this._currentKey = modelKey;
+
+        this.logCallback?.({ status: "ready" });
+        return this._engine;
+    }
+
+    get chat() {
+        return {
+            completions: {
+                create: async (params) => {
+                    const modelKey = params.model || this.defaultModel;
+                    const engine = await this._getEngine(modelKey);
+
+                    const { signal, stream, messages, ...options } = params;
+                    options.maxNewTokens ??= 1024;
+
+                    this.logCallback?.({ request: { model: modelKey, ...options }, type: "chat" });
+
+                    if (stream) {
+                        return this._streamBonsai2(engine, messages, options, signal);
+                    }
+
+                    // Non-streaming path
+                    let content = "";
+                    for await (const part of engine.generate(messages, options)) {
+                        if (signal?.aborted) break;
+                        content = part.text;
+                    }
+
+                    const response = {
+                        choices: [{ message: { role: "assistant", content }, finish_reason: "stop" }],
+                        model: modelKey,
+                        provider: "Bonsai 2 (local WebGPU)",
+                    };
+                    this.logCallback?.({ response, type: "chat" });
+                    return response;
+                },
+            },
+        };
+    }
+
+    async *_streamBonsai2(engine, messages, options, signal) {
+        let startTime;
+        let numTokens = 0;
+        let tps;
+
+        for await (const part of engine.generate(messages, options)) {
+            if (signal?.aborted) break;
+            numTokens++;
+            startTime ??= performance.now();
+            if (startTime) {
+                tps = (numTokens / (performance.now() - startTime)) * 1000;
+            }
+            yield {
+                choices: [{ delta: { content: part.delta ?? "" }, index: 0 }],
+                model: this._currentKey,
+                provider: "Bonsai 2 (local WebGPU)",
+                tps,
+                numTokens,
+            };
+        }
+    }
+
+    get models() {
+        return {
+            list: async () => {
+                return Object.keys(this.MODEL_IDS).map((key) =>
+                    convertModel({
+                        id: key,
+                        label: `Bonsai 2 ${key.toUpperCase()} (WebGPU)`,
+                        type: "chat",
+                    })
+                );
+            },
+        };
+    }
+
+    get images() {
+        return {
+            generate: async () => {
+                throw new Error("Bonsai 2 provider does not support image generation.");
+            },
+            edit: async () => {
+                throw new Error("Bonsai 2 provider does not support image editing.");
+            },
+        };
+    }
+
+    /** Abort the current generation (the engine loop checks the signal). */
+    interrupt() {
+        // handled via AbortSignal passed in create(); nothing cached to reset
+    }
+
+    /** Drop the engine cache (new conversation). */
+    reset() {
+        // Keep the loaded engine; only generation state is per-call.
+    }
+}
+
 export {
     Client,
     Pollinations,
@@ -1228,6 +1409,7 @@ export {
     Audio,
     WebGPU,
     Bonsai,
+    Bonsai2,
     captureUserTierHeaders,
 };
 export default Client;

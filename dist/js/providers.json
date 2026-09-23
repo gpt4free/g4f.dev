@@ -21,12 +21,14 @@
         "orcarouter": {"id": "srv_msoxsh206cb0d89eca32", "baseUrl": "https://api.orcarouter.ai/v1", "backupUrl": "https://g4f.space/api/orcarouter", "tags": "🐳"},
         "relayrouter": {"id": "srv_mt1wbaxgf9c946af0c58", "backupUrl": "https://g4f.space/api/relayrouter", "tags": "🔗"},
         "webgpu": {"label": "WebGPU (local)", "tags": "🖥️", "provider": "WebGPU"},
-        "bonsai": {"label": "Bonsai (local)", "tags": "🌳", "provider": "Bonsai"}
+        "bonsai": {"label": "Bonsai (local)", "tags": "🌳", "provider": "Bonsai"},
+        "bonsai2": {"label": "Bonsai 2 (local)", "tags": "🌲", "provider": "Bonsai2"}
     },
     "defaultModels": {
         "default": "auto",
         "puter": "anthropic:anthropic/claude-opus-4-7",
-        "webgpu": "Llama-3.1-8B-Instruct-q4f32_1-MLC"
+        "webgpu": "Llama-3.1-8B-Instruct-q4f32_1-MLC",
+        "bonsai2": "27b"
     },
     "serverDefaultModels": {
         "srv_mp3lmkuad07322459f47": "unmoderated-gpt",

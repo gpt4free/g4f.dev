@@ -885,7 +885,24 @@ const apiExport = {};
     // Fetch models for a single provider via direct fetch.
     // Live providers:   https://g4f.space/api/{name}/models
     // Custom servers:   https://g4f.space/custom/{serverId}/models
+    // Local WebGPU providers (webgpu/bonsai/bonsai2) list their models client-side.
+    const LOCAL_WEBGPU_PROVIDERS = {
+        'webgpu': [
+            { id: 'Llama-3.1-8B-Instruct-q4f32_1-MLC', label: 'Llama-3.1-8B-Instruct-q4f32_1-MLC', type: 'chat', default: true },
+        ],
+        'bonsai': [
+            { id: '1.7b', label: 'Bonsai 1.7B (1-bit WebGPU)', type: 'chat', default: true },
+        ],
+        'bonsai2': [
+            { id: '27b', label: 'Bonsai 2 27B (WebGPU)', type: 'chat', default: true },
+        ],
+    };
+
     async function fetchLiveProviderModels(providerName) {
+        const localModels = LOCAL_WEBGPU_PROVIDERS[providerName];
+        if (localModels) {
+            return localModels;
+        }
         let url;
         if (providerName.startsWith('https://') || providerName.startsWith('http://')) {
             url = `${providerName}/models`;

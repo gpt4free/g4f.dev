@@ -4182,13 +4182,14 @@ const body = await request.json().catch(() => ({}));
       const bytes = new Uint8Array(buffer);
       const magic = new TextEncoder().encode("G4FENC");
       let ciphertext;
+      let nonce;
       if (
         bytes.length > magic.length + 1 + 12 &&
         magic.every((b, i) => bytes[i] === b)
       ) {
         const version = bytes[magic.length];
         if (version !== 1) return null;
-        const nonce = bytes.slice(magic.length + 1, magic.length + 1 + 12);
+        nonce = bytes.slice(magic.length + 1, magic.length + 1 + 12);
         ciphertext = bytes.slice(magic.length + 1 + 12);
       } else {
         // Plaintext fallback (legacy blobs) — parse directly as JSON
@@ -4212,6 +4213,59 @@ const body = await request.json().catch(() => ({}));
     return String(id).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 128);
   }
 
+  /**
+   * Compute the workspace secret server-side from the user record.
+   * Mirrors the client-side derivation: hex(SHA-256(`${user.id}:${user.secret}`)).
+   * Returns null when the user record has no secret.
+   */
+  async function computeWorkspaceSecret(user) {
+    if (!user || !user.id || !user.secret) return null;
+    const encoder = new TextEncoder();
+    const digest = await crypto.subtle.digest(
+      "SHA-256",
+      encoder.encode(`${user.id}:${user.secret}`)
+    );
+    return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  /**
+   * Constant-time string comparison when the runtime supports it
+   * (crypto.subtle.timingSafeEqual is a Workers extension), with a
+   * plain fallback elsewhere. Both inputs are fixed-length hex digests.
+   */
+  function secureCompareStrings(a, b) {
+    if (a === b) return true;
+    if (!a || !b || a.length !== b.length) return false;
+    if (crypto.subtle && typeof crypto.subtle.timingSafeEqual === "function") {
+      const encoder = new TextEncoder();
+      return crypto.subtle.timingSafeEqual(encoder.encode(a).buffer, encoder.encode(b).buffer);
+    }
+    let diff = 0;
+    for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    return diff === 0;
+  }
+
+  /**
+   * Validate the x-workspace-secret header against the secret computed
+   * from the user record. Returns { secret } on success or { error, status }
+   * on failure. Used by all secret-conversation endpoints so blobs and the
+   * index are always encrypted with the current, correct key.
+   */
+  async function validateWorkspaceSecret(request, user) {
+    const headerSecret = request.headers.get("x-workspace-secret");
+    if (!headerSecret) {
+      return { error: "x-workspace-secret header is required", status: 400 };
+    }
+    const computedSecret = await computeWorkspaceSecret(user);
+    if (!computedSecret) {
+      return { error: "User record has no secret to derive the workspace secret from", status: 403 };
+    }
+    if (!secureCompareStrings(headerSecret, computedSecret)) {
+      return { error: "Workspace secret mismatch: the x-workspace-secret header does not match the secret derived from your account.", status: 403 };
+    }
+    return { secret: computedSecret };
+  }
+
   function secretConversationKey(userId, conversationId) {
     return `secret/${userId}/conversations/${safeConversationId(conversationId)}.json`;
   }
@@ -4225,6 +4279,47 @@ const body = await request.json().catch(() => ({}));
     const buffer = await object.arrayBuffer();
     // index is null when the blob cannot be decrypted (wrong secret)
     return { missing: false, index: await decryptSecretConversation(buffer, workspaceSecret || "") };
+  }
+
+  /**
+   * Rebuild the conversation index from the stored blobs. Used when the
+   * index is missing or undecryptable (old/wrong workspace secret):
+   * blobs that still decrypt with the current secret are re-indexed,
+   * unreadable blobs are deleted (old/wrong key data).
+   */
+  async function rebuildSecretConversationIndex(env, userId, workspaceSecret) {
+    const prefix = `secret/${userId}/conversations/`;
+    const indexKey = `${prefix}index.json`;
+    const index = [];
+    let cursor;
+    do {
+      const list = await env.MEMBERS_BUCKET.list(cursor ? { prefix, cursor } : { prefix });
+      for (const object of list.objects || []) {
+        if (object.key === indexKey) continue;
+        const stored = await env.MEMBERS_BUCKET.get(object.key);
+        if (!stored) continue;
+        const buffer = await stored.arrayBuffer();
+        const conversation = await decryptSecretConversation(buffer, workspaceSecret);
+        if (!conversation || !conversation.id) {
+          // Blob was encrypted with an old/wrong key — delete it
+          await env.MEMBERS_BUCKET.delete(object.key);
+          continue;
+        }
+        index.push({
+          id: conversation.id,
+          title: conversation.title || "",
+          updated: conversation.updated || Date.now(),
+          added: conversation.added || Date.now(),
+          items_count: Array.isArray(conversation.items) ? conversation.items.length : 0,
+        });
+      }
+      cursor = list.truncated ? list.cursor : undefined;
+    } while (cursor);
+    index.sort(
+      (a, b) => (b.updated || b.added || 0) - (a.updated || a.added || 0)
+    );
+    await writeSecretConversationIndex(env, userId, index, workspaceSecret);
+    return index;
   }
 
   async function writeSecretConversationIndex(env, userId, index, workspaceSecret) {
@@ -4243,11 +4338,17 @@ const body = await request.json().catch(() => ({}));
 
   async function updateSecretConversationIndex(env, userId, entry, remove = false, workspaceSecret = null) {
     const { missing, index: existing } = await readSecretConversationIndex(env, userId, workspaceSecret);
-    if (!missing && !Array.isArray(existing)) {
-      // Index exists but could not be decrypted — refuse to overwrite it
-      throw new Error("Failed to decrypt conversation index (wrong workspace secret?)");
+    let index;
+    if (missing) {
+      index = [];
+    } else if (!Array.isArray(existing)) {
+      // Index exists but could not be decrypted (old/wrong workspace secret).
+      // Rebuild it from the stored blobs instead of failing forever.
+      console.warn(`Rebuilding undecryptable conversation index for user ${userId} (wrong workspace secret)`);
+      index = await rebuildSecretConversationIndex(env, userId, workspaceSecret);
+    } else {
+      index = existing;
     }
-    let index = Array.isArray(existing) ? existing : [];
     index = index.filter((item) => item.id !== entry.id);
     if (!remove) {
       index.push(entry);
@@ -4270,17 +4371,22 @@ const body = await request.json().catch(() => ({}));
     if (!user) {
       return jsonResponse({ error: "User ID is required (provide x-user-id header)" }, 401, getCorsHeaders(request));
     }
-    const workspaceSecret = request.headers.get("x-workspace-secret");
-    if (!workspaceSecret) {
-      return jsonResponse({ error: "x-workspace-secret header is required" }, 400, getCorsHeaders(request));
+    // Validate the header against the secret computed from the user record
+    // (a stale client cache would break decryption).
+    const validated = await validateWorkspaceSecret(request, user);
+    if (validated.error) {
+      return jsonResponse({ error: validated.error }, validated.status, getCorsHeaders(request));
     }
-    const { missing, index } = await readSecretConversationIndex(env, user.id, workspaceSecret);
-    if (missing) {
-      return jsonResponse({ conversations: [] }, 200, getCorsHeaders(request));
-    }
-    if (!Array.isArray(index)) {
-      // Index exists but could not be decrypted (wrong workspace secret?)
-      return jsonResponse({ error: "Decryption failed (wrong workspace secret?)" }, 403, getCorsHeaders(request));
+    const computedSecret = validated.secret;
+    const { missing, index } = await readSecretConversationIndex(env, user.id, computedSecret);
+    if (missing || !Array.isArray(index)) {
+      // No index (or it could not be decrypted with the correct secret,
+      // e.g. it was written with a previous user.secret). Rebuild the
+      // index from the stored blobs: readable conversations are
+      // re-indexed, unreadable ones (old/wrong key) are deleted.
+      const rebuilt = await rebuildSecretConversationIndex(env, user.id, computedSecret);
+      console.warn(`Rebuilt conversation index for user ${user.id} (missing or wrong workspace secret)`);
+      return jsonResponse({ conversations: rebuilt, rebuilt_index: true }, 200, getCorsHeaders(request));
     }
     return jsonResponse({ conversations: index }, 200, getCorsHeaders(request));
   }
@@ -4303,10 +4409,11 @@ const body = await request.json().catch(() => ({}));
     if (!body || !body.id) {
       return jsonResponse({ error: "conversation.id is required" }, 400, getCorsHeaders(request));
     }
-    const workspaceSecret = request.headers.get("x-workspace-secret");
-    if (!workspaceSecret) {
-      return jsonResponse({ error: "x-workspace-secret header is required" }, 400, getCorsHeaders(request));
+    const validated = await validateWorkspaceSecret(request, user);
+    if (validated.error) {
+      return jsonResponse({ error: validated.error }, validated.status, getCorsHeaders(request));
     }
+    const workspaceSecret = validated.secret;
     const blob = await encryptSecretConversation(body, workspaceSecret);
     const key = secretConversationKey(user.id, body.id);
     await env.MEMBERS_BUCKET.put(key, blob, {
@@ -4315,8 +4422,8 @@ const body = await request.json().catch(() => ({}));
     await updateSecretConversationIndex(env, user.id, {
       id: body.id,
       title: body.title || "",
-      updated: body.updated || Date.now() / 1000,
-      added: body.added || Date.now() / 1000,
+      updated: body.updated || Date.now(),
+      added: body.added || Date.now(),
       items_count: Array.isArray(body.items) ? body.items.length : 0,
     }, false, workspaceSecret);
     return jsonResponse({ saved: true, id: body.id, encrypted: true }, 200, getCorsHeaders(request));
@@ -4344,10 +4451,11 @@ const body = await request.json().catch(() => ({}));
     if (conversations.length > MAX_CONVERSATIONS) {
       return jsonResponse({ error: `Too many conversations (max ${MAX_CONVERSATIONS})` }, 400, getCorsHeaders(request));
     }
-    const workspaceSecret = request.headers.get("x-workspace-secret");
-    if (!workspaceSecret) {
-      return jsonResponse({ error: "x-workspace-secret header is required" }, 400, getCorsHeaders(request));
+    const validated = await validateWorkspaceSecret(request, user);
+    if (validated.error) {
+      return jsonResponse({ error: validated.error }, validated.status, getCorsHeaders(request));
     }
+    const workspaceSecret = validated.secret;
     let saved = 0;
     const errors = [];
     const indexEntries = [];
@@ -4365,8 +4473,8 @@ const body = await request.json().catch(() => ({}));
         indexEntries.push({
           id: conversation.id,
           title: conversation.title || "",
-          updated: conversation.updated || Date.now() / 1000,
-          added: conversation.added || Date.now() / 1000,
+          updated: conversation.updated || Date.now(),
+          added: conversation.added || Date.now(),
           items_count: Array.isArray(conversation.items) ? conversation.items.length : 0,
         });
         saved++;
@@ -4376,14 +4484,16 @@ const body = await request.json().catch(() => ({}));
     }
     // Update the index once for the whole batch instead of a full
     // read-modify-write per conversation (N+1 → 2 R2 ops)
+    let index_updated = false;
     if (indexEntries.length > 0) {
       try {
         await updateSecretConversationIndexBatch(env, user.id, indexEntries, workspaceSecret);
+        index_updated = true;
       } catch (e) {
         console.error("Failed to update conversation index:", e);
       }
     }
-    return jsonResponse({ saved, errors }, 200, getCorsHeaders(request));
+    return jsonResponse({ saved, errors, index_updated }, 200, getCorsHeaders(request));
   }
 
   /**
@@ -4391,11 +4501,17 @@ const body = await request.json().catch(() => ({}));
    */
   async function updateSecretConversationIndexBatch(env, userId, entries, workspaceSecret = null) {
     const { missing, index: existing } = await readSecretConversationIndex(env, userId, workspaceSecret);
-    if (!missing && !Array.isArray(existing)) {
-      // Index exists but could not be decrypted — refuse to overwrite it
-      throw new Error("Failed to decrypt conversation index (wrong workspace secret?)");
+    let index;
+    if (missing) {
+      index = [];
+    } else if (!Array.isArray(existing)) {
+      // Index exists but could not be decrypted (old/wrong workspace secret).
+      // Rebuild it from the stored blobs instead of failing forever.
+      console.warn(`Rebuilding undecryptable conversation index for user ${userId} (wrong workspace secret)`);
+      index = await rebuildSecretConversationIndex(env, userId, workspaceSecret);
+    } else {
+      index = existing;
     }
-    let index = Array.isArray(existing) ? existing : [];
     const entryIds = new Set(entries.map((e) => e.id));
     index = index.filter((item) => !entryIds.has(item.id));
     index.push(...entries);
@@ -4414,10 +4530,11 @@ const body = await request.json().catch(() => ({}));
     if (!user) {
       return jsonResponse({ error: "User ID is required (provide x-user-id header)" }, 401, getCorsHeaders(request));
     }
-    const workspaceSecret = request.headers.get("x-workspace-secret");
-    if (!workspaceSecret) {
-      return jsonResponse({ error: "x-workspace-secret header is required" }, 400, getCorsHeaders(request));
+    const validated = await validateWorkspaceSecret(request, user);
+    if (validated.error) {
+      return jsonResponse({ error: validated.error }, validated.status, getCorsHeaders(request));
     }
+    const workspaceSecret = validated.secret;
     const key = secretConversationKey(user.id, conversationId);
     const object = await env.MEMBERS_BUCKET.get(key);
     if (!object) {
@@ -4426,7 +4543,17 @@ const body = await request.json().catch(() => ({}));
     const buffer = await object.arrayBuffer();
     const conversation = await decryptSecretConversation(buffer, workspaceSecret);
     if (!conversation) {
-      return jsonResponse({ error: "Decryption failed (wrong workspace secret?)" }, 403, getCorsHeaders(request));
+      // Blob was encrypted with an old/wrong key and is unreadable —
+      // delete it and drop its index entry instead of failing forever.
+      await env.MEMBERS_BUCKET.delete(key);
+      try {
+        await updateSecretConversationIndex(env, user.id, { id: conversationId }, true, workspaceSecret);
+      } catch (e) {
+        // Index itself is undecryptable — rebuild it from the remaining blobs
+        await rebuildSecretConversationIndex(env, user.id, workspaceSecret);
+      }
+      console.warn(`Deleted undecryptable conversation ${conversationId} for user ${user.id} (wrong workspace secret)`);
+      return jsonResponse({ error: "Conversation deleted (encrypted with an old/wrong workspace secret)" }, 404, getCorsHeaders(request));
     }
     return jsonResponse(conversation, 200, getCorsHeaders(request));
   }
@@ -4440,16 +4567,22 @@ const body = await request.json().catch(() => ({}));
     if (!user) {
       return jsonResponse({ error: "User ID is required (provide x-user-id header)" }, 401, getCorsHeaders(request));
     }
-    const workspaceSecret = request.headers.get("x-workspace-secret");
-    if (!workspaceSecret) {
-      return jsonResponse({ error: "x-workspace-secret header is required" }, 400, getCorsHeaders(request));
+    const validated = await validateWorkspaceSecret(request, user);
+    if (validated.error) {
+      return jsonResponse({ error: validated.error }, validated.status, getCorsHeaders(request));
     }
+    const workspaceSecret = validated.secret;
     const key = secretConversationKey(user.id, conversationId);
     const object = await env.MEMBERS_BUCKET.get(key);
     if (!object) {
       return jsonResponse({ error: "Conversation not found" }, 404, getCorsHeaders(request));
     }
     await env.MEMBERS_BUCKET.delete(key);
-    await updateSecretConversationIndex(env, user.id, { id: conversationId }, true, workspaceSecret);
+    try {
+      await updateSecretConversationIndex(env, user.id, { id: conversationId }, true, workspaceSecret);
+    } catch (e) {
+      // Index itself is undecryptable (old/wrong key) — rebuild it
+      await rebuildSecretConversationIndex(env, user.id, workspaceSecret);
+    }
     return jsonResponse({ deleted: true, id: conversationId }, 200, getCorsHeaders(request));
   }
