@@ -1198,8 +1198,7 @@ label[for="micro"] {
 
 /* Model / provider controls */
 .chat-buttons {
-    gap: 8px;
-    padding: 2px 2px 0;
+    gap: 2px;
 }
 
 .chat-buttons select,
