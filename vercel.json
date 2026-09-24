@@ -1,15 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [
-    {
-      "source": "/api/g4f-worker/:path*",
-      "destination": "/api/[[...route]]"
-    },
-    {
-      "source": "/api/g4f-worker",
-      "destination": "/api/[[...route]]"
-    }
-  ],
   "crons": [
     {
       "path": "/api/g4f-worker/cron/cleanup",

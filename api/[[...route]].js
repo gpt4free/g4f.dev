@@ -4,9 +4,12 @@
 // so it runs unmodified on Vercel's edge runtime. This adapter only bridges
 // the platform-specific parts:
 //
-//   1. Restores the original request path. vercel.json rewrites mount the
-//      worker under /api/g4f-worker/... (a prefix the worker itself never
-//      uses, so native /api/... calls stay unambiguous).
+//   1. Restores the original request path. This optional catch-all route
+//      natively matches every /api/... request (no rewrites needed — a
+//      same-application rewrite would deliver the destination path, not the
+//      original one). The worker is mounted under /api/g4f-worker/... (a
+//      prefix the worker itself never uses, so native /api/... calls stay
+//      unambiguous); the prefix is stripped below.
 //   2. Builds a Cloudflare-style `env` from Vercel environment variables,
 //      with optional Upstash Redis backing for the KV / R2-shaped bindings.
 //   3. Shims the Cloudflare-only `caches.default` Cache API, `ctx.waitUntil`
@@ -133,9 +136,10 @@ function buildEnv() {
 }
 
 // ---- request adaptation -----------------------------------------------------
-// vercel.json rewrites mount the worker at /api/g4f-worker/<original-path>.
-// Strip that marker prefix and rebuild the URL against the forwarded host so
-// cache keys, redirects and server-label routing see the original URL.
+// The worker is mounted at /api/g4f-worker/<original-path> (the optional
+// catch-all route matches natively, so request.url still carries the true
+// path). Strip that marker prefix and rebuild the URL against the forwarded
+// host so cache keys, redirects and server-label routing see the original URL.
 const MOUNT_PREFIX = "/g4f-worker";
 
 async function adaptRequest(request) {
