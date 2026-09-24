@@ -1029,10 +1029,12 @@ async function handleDeleteServer(request, env) {
   if (env.MEMBERS_BUCKET) {
     await env.MEMBERS_BUCKET.put(
       `custom_servers/${user.id}/${server.id}_deleted.json`,
+      // compact JSON — tombstones are rarely read and pretty-printing
+      // doubled the stored object size
       JSON.stringify({
         ...server,
         deleted_at: (/* @__PURE__ */ new Date()).toISOString()
-      }, null, 2),
+      }),
       { httpMetadata: { contentType: "application/json" } }
     );
   }
@@ -1058,23 +1060,27 @@ async function handleGetServerUsage(request, env) {
   }
   const history = [];
   const now = /* @__PURE__ */ new Date();
+  const dateKeys = [];
   for (let i = 0; i < days; i++) {
     const date = new Date(now);
     date.setUTCDate(date.getUTCDate() - i);
-    const dateKey = date.toISOString().split("T")[0];
-    if (env.MEMBERS_BUCKET) {
-      const usageData = await env.MEMBERS_BUCKET.get(
-        `custom_servers/${user.id}/${serverId}/usage/${dateKey}.json`
-      );
-      if (usageData) {
-        history.push(await usageData.json());
-      } else {
-        history.push({ date: dateKey, requests: 0, tokens: 0 });
-      }
-    } else {
-      history.push({ date: dateKey, requests: 0, tokens: 0 });
-    }
+    dateKeys.push(date.toISOString().split("T")[0]);
   }
+  // Read all days in parallel — sequential gets added ~days × R2 latency
+  const results = await Promise.all(dateKeys.map(async (dateKey) => {
+    if (env.MEMBERS_BUCKET) {
+      try {
+        const usageData = await env.MEMBERS_BUCKET.get(
+          `custom_servers/${user.id}/${serverId}/usage/${dateKey}.json`
+        );
+        if (usageData) {
+          return await usageData.json();
+        }
+      } catch (e) { /* fall through to empty entry */ }
+    }
+    return { date: dateKey, requests: 0, tokens: 0 };
+  }));
+  history.push(...results);
   return jsonResponse({
     server_id: serverId,
     total_usage: server.usage || { requests: 0, tokens: 0 },
@@ -2213,45 +2219,185 @@ async function handleApiErrors(request, env, user) {
     return jsonResponse({ error: "Failed to query error logs: " + e.message }, 500);
   }
 }
+// ---- R2 usage write coalescing (Class A cost control) ----
+// R2 bills Class A operations (puts) at ~12x the rate of Class B (gets).
+// updateServerUsage/updateUserDailyUsage used to do a full read-modify-write
+// — one put per chat completion — on the same handful of daily files, plus a
+// saveUser put for the server owner and a KV index write. Deltas are now
+// accumulated in-isolate and flushed:
+//   - USAGE_FLUSH_DELAY_MS after the first delta for a key (bursts collapse
+//     into a single read-modify-write), or
+//   - immediately once USAGE_MAX_BUFFERED_DELTAS deltas pile up.
+// The returned promise settles after the flush, so ctx.waitUntil() callers
+// keep the isolate alive until the data is durable. A crash can lose at most
+// one flush window of usage counters — acceptable for analytics data.
+var USAGE_FLUSH_DELAY_MS = 5 * 1e3;
+var USAGE_MAX_BUFFERED_DELTAS = 25;
+// usage file path -> { delta, timer, flushPromise }
+var usageBuffers = new Map();
+// userId -> buffered per-server deltas applied to the owner's user record
+var userUsageBuffers = new Map();
+
+function emptyUsageDelta() {
+  return { requests: 0, tokens: 0, models: {}, providers: {} };
+}
+
+function mergeUsageDelta(delta, inc) {
+  delta.requests += inc.requests || 0;
+  delta.tokens += inc.tokens || 0;
+  if (inc.model) delta.models[inc.model] = (delta.models[inc.model] || 0) + 1;
+  if (inc.provider) delta.providers[inc.provider] = (delta.providers[inc.provider] || 0) + 1;
+}
+
+// Buffers one usage increment for an R2 daily usage file. Returns a promise
+// that settles once the buffered deltas for this path have been written (or
+// re-buffered after a transient failure).
+function bufferUsageDelta(env, path, inc) {
+  let entry = usageBuffers.get(path);
+  if (!entry) {
+    entry = { delta: emptyUsageDelta(), timer: null, flushPromise: null };
+    usageBuffers.set(path, entry);
+  }
+  mergeUsageDelta(entry.delta, inc);
+  if (!entry.flushPromise) {
+    if (entry.delta.requests >= USAGE_MAX_BUFFERED_DELTAS) {
+      entry.flushPromise = flushUsageBuffer(env, path);
+    } else {
+      entry.flushPromise = new Promise((resolve) => {
+        entry.timer = setTimeout(() => {
+          entry.timer = null;
+          flushUsageBuffer(env, path).then(resolve, resolve);
+        }, USAGE_FLUSH_DELAY_MS);
+      });
+    }
+  }
+  return entry.flushPromise;
+}
+
+async function flushUsageBuffer(env, path) {
+  const entry = usageBuffers.get(path);
+  if (!entry) return;
+  usageBuffers.delete(path);
+  if (entry.timer) clearTimeout(entry.timer);
+  const delta = entry.delta;
+  try {
+    const existing = await env.MEMBERS_BUCKET.get(path);
+    const usage = existing ? await existing.json() : {
+      date: path.split("/").pop().replace(/\.json$/, ""),
+      requests: 0,
+      tokens: 0
+    };
+    usage.requests = (usage.requests || 0) + delta.requests;
+    usage.tokens = (usage.tokens || 0) + delta.tokens;
+    if (Object.keys(delta.models).length > 0) {
+      usage.models = usage.models || {};
+      for (const [m, c] of Object.entries(delta.models)) {
+        usage.models[m] = (usage.models[m] || 0) + c;
+      }
+    }
+    if (Object.keys(delta.providers).length > 0) {
+      usage.providers = usage.providers || {};
+      for (const [p, c] of Object.entries(delta.providers)) {
+        usage.providers[p] = (usage.providers[p] || 0) + c;
+      }
+    }
+    await env.MEMBERS_BUCKET.put(path, JSON.stringify(usage), {
+      httpMetadata: { contentType: "application/json" }
+    });
+  } catch (e) {
+    console.error("Failed to flush usage buffer:", path, e);
+    // re-buffer the deltas and schedule a retry — without a timer they would
+    // sit in the map forever when no further deltas arrive
+    const retry = usageBuffers.get(path) || { delta: emptyUsageDelta(), timer: null, flushPromise: null };
+    mergeUsageDelta(retry.delta, delta);
+    usageBuffers.set(path, retry);
+    if (!retry.timer && !retry.flushPromise) {
+      retry.flushPromise = new Promise((resolve) => {
+        retry.timer = setTimeout(() => {
+          retry.timer = null;
+          flushUsageBuffer(env, path).then(resolve, resolve);
+        }, USAGE_FLUSH_DELAY_MS);
+      });
+    }
+  }
+}
+
+// Buffers per-server usage increments that live on the owner's user record
+// (server.usage counters). Collapses one saveUser put per completion into one
+// put per flush window, and batches the public-server index update with it.
+function bufferUserServerUsage(env, userId, serverId, tokens, lastUsed, isPublic) {
+  let entry = userUsageBuffers.get(userId);
+  if (!entry) {
+    entry = { deltas: new Map(), pending: 0, timer: null, flushPromise: null };
+    userUsageBuffers.set(userId, entry);
+  }
+  let d = entry.deltas.get(serverId);
+  if (!d) {
+    d = { requests: 0, tokens: 0, last_used: lastUsed, is_public: false };
+    entry.deltas.set(serverId, d);
+  }
+  d.requests += 1;
+  d.tokens += tokens || 0;
+  d.last_used = lastUsed;
+  d.is_public = d.is_public || isPublic;
+  entry.pending += 1;
+  if (!entry.flushPromise) {
+    if (entry.pending >= USAGE_MAX_BUFFERED_DELTAS) {
+      entry.flushPromise = flushUserUsageBuffer(env, userId);
+    } else {
+      entry.flushPromise = new Promise((resolve) => {
+        entry.timer = setTimeout(() => {
+          entry.timer = null;
+          flushUserUsageBuffer(env, userId).then(resolve, resolve);
+        }, USAGE_FLUSH_DELAY_MS);
+      });
+    }
+  }
+  return entry.flushPromise;
+}
+
+async function flushUserUsageBuffer(env, userId) {
+  const entry = userUsageBuffers.get(userId);
+  if (!entry) return;
+  userUsageBuffers.delete(userId);
+  if (entry.timer) clearTimeout(entry.timer);
+  try {
+    const user = await getUser(env, userId);
+    if (!user) return;
+    let publicServer = null;
+    for (const [serverId, d] of entry.deltas) {
+      const server = (user.custom_servers || []).find((s) => s.id === serverId);
+      if (!server) continue;
+      server.usage = server.usage || { requests: 0, tokens: 0, last_used: null };
+      server.usage.requests += d.requests;
+      server.usage.tokens += d.tokens;
+      server.usage.last_used = d.last_used;
+      if (d.is_public) publicServer = server;
+    }
+    user.updated_at = new Date().toISOString();
+    await saveUser(env, user);
+    if (publicServer) {
+      await updatePublicServerIndex(env, publicServer, userId, "update");
+    }
+  } catch (e) {
+    console.error("Failed to flush user usage buffer:", userId, e);
+  }
+}
+
 async function updateServerUsage(env, server, tokens, model) {
   if (!env.MEMBERS_BUCKET) return;
   try {
     const now = /* @__PURE__ */ new Date();
-    let userServer;
-    if (server.owner_id) {
-      const user = await getUser(env, server.owner_id);
-      if (!user) return;
-      const serverIndex = (user.custom_servers || []).findIndex((s) => s.id === server.id);
-      if (serverIndex === -1) return;
-      userServer = user.custom_servers[serverIndex];
-      userServer.usage = userServer.usage || { requests: 0, tokens: 0 };
-      userServer.usage.requests += 1;
-      userServer.usage.tokens += tokens;
-      userServer.usage.last_used = now.toISOString();
-      user.updated_at = now.toISOString();
-      await saveUser(env, user);
-    }
     const dateKey = now.toISOString().split("T")[0];
     const usagePath = `custom_servers/${server.owner_id||"core"}/${server.id}/usage/${dateKey}.json`;
-    let dailyUsage;
-    const existing = await env.MEMBERS_BUCKET.get(usagePath);
-    if (existing) {
-      dailyUsage = await existing.json();
-    } else {
-      dailyUsage = { date: dateKey, requests: 0, tokens: 0, models: {} };
+    const flushes = [bufferUsageDelta(env, usagePath, { requests: 1, tokens, model })];
+    if (server.owner_id) {
+      // owner-side counters (server.usage on the user record + public index
+      // refresh) are buffered as well — a saveUser put per completion was
+      // the single largest source of Class A operations
+      flushes.push(bufferUserServerUsage(env, server.owner_id, server.id, tokens, now.toISOString(), !!server.is_public));
     }
-    dailyUsage.requests += 1;
-    dailyUsage.tokens += tokens;
-    if (model) {
-      dailyUsage.models = dailyUsage.models || {};
-      dailyUsage.models[model] = (dailyUsage.models[model] || 0) + 1;
-    }
-    await env.MEMBERS_BUCKET.put(usagePath, JSON.stringify(dailyUsage), {
-      httpMetadata: { contentType: "application/json" }
-    });
-    if (userServer && userServer.is_public) {
-      await updatePublicServerIndex(env, userServer, server.owner_id, "update");
-    }
+    await Promise.all(flushes);
     // invalidate models cache so next /v1/models reflects new counts
     // modelsCacheTime = 0;
     return usagePath;
@@ -2264,30 +2410,7 @@ async function updateUserDailyUsage(env, userId, tokens, provider, model) {
   try {
     const dateKey = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
     const usagePath = `usage/${userId}/${dateKey}.json`;
-    let usageData;
-    const existing = await env.MEMBERS_BUCKET.get(usagePath);
-    if (existing) {
-      usageData = await existing.json();
-    } else {
-      usageData = {
-        date: dateKey,
-        requests: 0,
-        tokens: 0,
-        providers: {},
-        models: {}
-      };
-    }
-    usageData.requests += 1;
-    usageData.tokens += tokens || 0;
-    if (provider) {
-      usageData.providers[provider] = (usageData.providers[provider] || 0) + 1;
-    }
-    if (model) {
-      usageData.models[model] = (usageData.models[model] || 0) + 1;
-    }
-    await env.MEMBERS_BUCKET.put(usagePath, JSON.stringify(usageData), {
-      httpMetadata: { contentType: "application/json" }
-    });
+    await bufferUsageDelta(env, usagePath, { requests: 1, tokens: tokens || 0, provider, model });
   } catch (e) {
     console.error("Failed to update user daily usage:", e);
   }
@@ -3625,15 +3748,19 @@ async function generatePostBodyHash(body) {
       'say "ok" exactly. no other text.',
       "1+1=? one word",
       "who are you, and what can you do?",
+      "reply with exactly: ok",
       "111",
-      "what's 1 + 1?"
+      "what's 1 + 1?",
+      "what is 2+2? reply in one short sentence",
+      "respond with exactly the single word: ready",
+      "hello, are you gpt 3.5?"
     ].includes(lastContent)
     || lastContent.endsWith("reply with the result only")
     || lastContent.startsWith("reply with just:")
     || lastContent.startsWith("reply with exactly:")
     || lastContent.startsWith("say ok")) {
       const model = body.model || '';
-      return (model || body.stream) ? `${model}:${body.stream}:test` : null;
+      return `${model}:${body.stream}:test`;
     }
     for (const msg of messages) {
       if (msg && msg.content && typeof msg.content === 'string') {

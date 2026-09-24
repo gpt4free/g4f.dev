@@ -1,0 +1,20 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/**": {
+      "runtime": "edge"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/g4f-worker/:path*",
+      "destination": "/api/[[...route]]?path=:path*"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/g4f-worker/cron/cleanup",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}
