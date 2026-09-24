@@ -1,14 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "functions": {
-    "api/**": {
-      "runtime": "edge"
-    }
-  },
   "rewrites": [
     {
       "source": "/api/g4f-worker/:path*",
-      "destination": "/api/[[...route]]?path=:path*"
+      "destination": "/api/[[...route]]"
+    },
+    {
+      "source": "/api/g4f-worker",
+      "destination": "/api/[[...route]]"
     }
   ],
   "crons": [
