@@ -885,6 +885,7 @@ const prepare_messages = (messages, message_index = -1, do_continue = false, do_
     // The message_index is null on count total tokens
     if (!do_continue && document.getElementById('history')?.checked && do_filter && message_index != null) {
         let filtered_messages = [];
+        let last_message;
         while (last_message = messages.pop()) {
             if (last_message["role"] == "user") {
                 filtered_messages.push(last_message);

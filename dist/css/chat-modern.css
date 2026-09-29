@@ -559,7 +559,7 @@ input, select, textarea, button {
     width: 17px;
     height: 17px;
     font-size: 9px;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     background: var(--surface-3);
