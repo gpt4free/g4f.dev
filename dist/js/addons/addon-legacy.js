@@ -68,7 +68,7 @@ const translationSnipptes = [
     "Search Off", "Search On", "Recognition On", "Recognition Off", "Delete Conversation",
     "Favorite Models:", "Stop Recording", "Record Audio", "Upload Audio", "No Title", "1 Copy",
     "Delete all conversations?", "Error Occurred", "Remaining:", "Balance:", "Reasoning", "Credits:",
-    "Login", "Login to", "Enable", "Invalid API key", "Waiting for tool response...", "Hide Models with One Provider"
+    "Login", "Login to", "Enable", "Invalid API key", "Waiting for tool response..."
 ];
 
 let providers = [

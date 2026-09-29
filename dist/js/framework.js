@@ -244,6 +244,20 @@ async function query(prompt, options = { json: false, cache: true }) {
         } catch (e) {
             add_error(`Error parsing JSON response from URL: \`${chatUrl}\`\n ${e}`, e);
         }
+    } else {
+        const session = await LanguageModel.create({
+            expectedInputs: [
+                { type: "text", languages: ["en"] }
+            ],
+            expectedOutputs: [
+                { type: "text", languages: [navigator.language] }
+            ],
+            initialPrompts: [],
+        });
+        return new Response(await session.prompt([{
+            role: "user",
+            content: prompt
+        }]));
     }
     return response;
 }

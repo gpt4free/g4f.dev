@@ -274,11 +274,6 @@
                       <label for="download_media" class="toogle" title="Download and save generated images, audios, and videos"></label>
                   </div>
                   <div class="field">
-                      <span class="label">Hide Models with One Provider</span>
-                      <input type="checkbox" id="hideOneProviderModels" checked />
-                      <label for="hideOneProviderModels" class="toogle" title="Hide models that only have one provider (no backup)"></label>
-                  </div>
-                  <div class="field">
                       <span class="label">Automatic Orientation (16:9 or 9:16)</span>
                       <input type="checkbox" id="automaticOrientation" checked />
                       <label for="automaticOrientation" class="toogle" title="Auto-orient generated media"></label>
@@ -873,7 +868,7 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
             return clone;
         };
 
-        const hasMessages = () => chatBody.querySelector(".message") !== null;
+        const hasMessages = () => chatBody.querySelector(".message, .suggestion") !== null;
 
         const updateEmptyState = () => {
             const emptyState = document.getElementById(EMPTY_STATE_ID);

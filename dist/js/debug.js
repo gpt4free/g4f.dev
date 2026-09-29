@@ -14,6 +14,7 @@
     top: 0;
     right: 0;
     width: 400px;
+    max-width: 100%;
     max-height: 90vh;
     overflow: auto;
     background: rgba(0,0,0,0.85);
@@ -35,6 +36,7 @@
     line.className = `g4f-debug-${type}`;
     logEl.appendChild(line);
     logEl.scrollTop = logEl.scrollHeight;
+    logEl.style.display = 'block';
   };
 
   // Capture failed network requests
@@ -147,9 +149,11 @@
     }
     if (isEscape) {
         logEl.innerHTML = '';
+        logEl.style.display = 'none';
     }
   }
   document.onclick = function(evt) {
     logEl.innerHTML = '';
+    logEl.style.display = 'none';
   }
 })();
