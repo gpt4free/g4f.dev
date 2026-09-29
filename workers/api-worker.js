@@ -3201,28 +3201,85 @@ async function getCakeCreditCents(env, clientIP) {
     const raw = await env.CAKE_KV.get(`cakes:credit:${clientIP}`);
     if (!raw) return 0;
     const n = Number(raw);
-    return Number.isFinite(n) && n > 0 ? n : 0;
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    // subtract charges buffered in this isolate but not yet flushed, so
+    // bursts inside one flush window can't overspend the credit
+    const pending = cakeCreditBuffers.get(clientIP);
+    return Math.max(0, n - (pending ? pending.cents : 0));
   } catch {
     return 0;
   }
 }
 
-// Decrement the caller's cake credit (in cents) by the spent prompt tokens.
-// Uses a simple compare-and-swap over CAKE_KV. Best-effort: if the CAS fails
-// (concurrent bake/charge) we leave the credit untouched rather than retry.
-async function chargeCakeCreditCents(env, clientIP, centsToCharge) {
-  if (!env.CAKE_KV || !clientIP || !centsToCharge || centsToCharge <= 0) return;
+// ---- KV write coalescing for cake-credit charges ----
+// KV bills write operations (the first 1M/month are included). Charging
+// credit used to do a full KV read-modify-write per anonymous completion.
+// Charges are now accumulated in-isolate and flushed once per flush window,
+// mirroring the R2 usage buffering above — bursts collapse into a single
+// get+put. getCakeCreditCents subtracts pending charges so the anonymous
+// gate stays accurate within the flush window.
+var KV_WRITE_FLUSH_DELAY_MS = 5 * 1e3;
+// clientIP -> { cents, timer, flushPromise }
+var cakeCreditBuffers = new Map();
+
+function bufferCakeCreditCharge(env, clientIP, cents) {
+  if (!env.CAKE_KV || !clientIP || !cents || cents <= 0) return null;
+  let entry = cakeCreditBuffers.get(clientIP);
+  if (!entry) {
+    entry = { cents: 0, timer: null, flushPromise: null };
+    cakeCreditBuffers.set(clientIP, entry);
+  }
+  entry.cents += cents;
+  if (!entry.flushPromise) {
+    entry.flushPromise = new Promise((resolve) => {
+      entry.timer = setTimeout(() => {
+        entry.timer = null;
+        flushCakeCreditBuffer(env, clientIP).then(resolve, resolve);
+      }, KV_WRITE_FLUSH_DELAY_MS);
+    });
+  }
+  return entry.flushPromise;
+}
+
+async function flushCakeCreditBuffer(env, clientIP) {
+  const entry = cakeCreditBuffers.get(clientIP);
+  if (!entry) return;
+  cakeCreditBuffers.delete(clientIP);
+  if (entry.timer) clearTimeout(entry.timer);
   try {
     const key = `cakes:credit:${clientIP}`;
     const raw = await env.CAKE_KV.get(key);
-    if (!raw) return;
+    if (!raw) return;  // no credit record — nothing to charge against
     const current = Number(raw);
     if (!Number.isFinite(current)) return;
-    const next = Math.max(0, current - centsToCharge);
+    const next = Math.max(0, current - entry.cents);
+    if (next === current) return;  // fully clamped — skip the write
     await env.CAKE_KV.put(key, String(next));
-  } catch {
-    // non-fatal — the request already succeeded
+  } catch (e) {
+    console.error("Failed to flush cake credit buffer:", clientIP, e);
+    // re-buffer the charge and schedule a retry — without a timer it would
+    // sit in the map forever when no further charges arrive
+    const retry = cakeCreditBuffers.get(clientIP) || { cents: 0, timer: null, flushPromise: null };
+    retry.cents += entry.cents;
+    cakeCreditBuffers.set(clientIP, retry);
+    if (!retry.timer && !retry.flushPromise) {
+      retry.flushPromise = new Promise((resolve) => {
+        retry.timer = setTimeout(() => {
+          retry.timer = null;
+          flushCakeCreditBuffer(env, clientIP).then(resolve, resolve);
+        }, KV_WRITE_FLUSH_DELAY_MS);
+      });
+    }
   }
+}
+
+// Decrement the caller's cake credit (in cents) by the spent prompt tokens.
+// Best-effort: charges are buffered in-isolate and flushed once per window;
+// if a flush ultimately fails the charge is dropped rather than retried
+// (the request already succeeded).
+async function chargeCakeCreditCents(env, clientIP, centsToCharge) {
+  if (!env.CAKE_KV || !clientIP || !centsToCharge || centsToCharge <= 0) return;
+  await bufferCakeCreditCharge(env, clientIP, centsToCharge);
 }
 
 // Estimate the prompt tokens of a chat-completion request body by summing
@@ -3351,32 +3408,99 @@ async function applyAnonymousCreditGate(env, ctx, request, user, requestBody, ra
   rateCheck.maxRequests = Math.floor(remainingTokens / avgRequestTokens);
   return rateCheck;
 }
-async function updateUserRateLimit(env, userId, ctx) {
-  if (!env.MEMBERS_KV) return;
-  const now = Date.now();
-  const windows = [
-    // { name: "minute", duration: RATE_LIMITS.windows.minute },
-    // { name: "hour", duration: RATE_LIMITS.windows.hour },
-    { name: "day", duration: RATE_LIMITS.windows.day }
-  ];
-  for (const window of windows) {
-    const key = `rate_limit:${userId}:${window.name}`;
-    const dataStr = await env.MEMBERS_KV.get(key);
-    let data;
-    if (dataStr) {
-      data = JSON.parse(dataStr);
-      if (now - data.timestamp >= window.duration) {
-        data = { requests: 1, tokens: 0, timestamp: now };
-      } else {
-        data.requests += 1;
-      }
-    } else {
-      data = { requests: 1, tokens: 0, timestamp: now };
-    }
-    const elapsed = now - data.timestamp;
-    const ttl = Math.max(60, Math.ceil((window.duration - elapsed) / 1e3) + 60);
-    await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
+// ---- KV write coalescing for rate-limit counters ----
+// KV bills write operations (the first 1M/month are included). The counters
+// used to do a full KV read-modify-write per request — updateUserRateLimit
+// put the day key once per request and updateUserTokenUsage put the
+// minute/hour/day keys once per completion (4 writes total). Deltas are now
+// accumulated in-isolate and flushed once per flush window, mirroring the
+// R2 usage buffering above. Request counters still only feed the day window
+// and token counters still feed all three, matching the old split. This also
+// removes the read-modify-write race between the two old writers. A crash
+// can lose at most one flush window of counter increments — acceptable for
+// rate-limit accounting.
+var RATE_LIMIT_MAX_BUFFERED_REQUESTS = 25;
+// userId -> { requests, tokens, timer, flushPromise }
+var rateLimitBuffers = new Map();
+
+function bufferRateLimitDelta(env, userId, requests, tokens) {
+  if (!env.MEMBERS_KV || !userId || (!requests && !tokens)) return null;
+  let entry = rateLimitBuffers.get(userId);
+  if (!entry) {
+    entry = { requests: 0, tokens: 0, timer: null, flushPromise: null };
+    rateLimitBuffers.set(userId, entry);
   }
+  entry.requests += requests;
+  entry.tokens += tokens;
+  if (!entry.flushPromise) {
+    if (entry.requests >= RATE_LIMIT_MAX_BUFFERED_REQUESTS) {
+      entry.flushPromise = flushRateLimitBuffer(env, userId);
+    } else {
+      entry.flushPromise = new Promise((resolve) => {
+        entry.timer = setTimeout(() => {
+          entry.timer = null;
+          flushRateLimitBuffer(env, userId).then(resolve, resolve);
+        }, KV_WRITE_FLUSH_DELAY_MS);
+      });
+    }
+  }
+  return entry.flushPromise;
+}
+
+async function flushRateLimitBuffer(env, userId) {
+  const entry = rateLimitBuffers.get(userId);
+  if (!entry) return;
+  rateLimitBuffers.delete(userId);
+  if (entry.timer) clearTimeout(entry.timer);
+  try {
+    const now = Date.now();
+    // request counters only feed the day window (as updateUserRateLimit
+    // did); token counters feed all three windows (as updateUserTokenUsage
+    // did) — minute/hour keys are skipped when no tokens were consumed
+    const windows = [
+      { name: "day", duration: RATE_LIMITS.windows.day, requests: entry.requests, tokens: entry.tokens }
+    ];
+    if (entry.tokens > 0) {
+      windows.push(
+        { name: "minute", duration: RATE_LIMITS.windows.minute, requests: 0, tokens: entry.tokens },
+        { name: "hour", duration: RATE_LIMITS.windows.hour, requests: 0, tokens: entry.tokens }
+      );
+    }
+    for (const window of windows) {
+      const key = `rate_limit:${userId}:${window.name}`;
+      const stored = await env.MEMBERS_KV.get(key);
+      let data = stored ? JSON.parse(stored) : null;
+      if (!data || now - (data.timestamp || 0) >= window.duration) {
+        data = { requests: 0, tokens: 0, timestamp: now };
+      }
+      data.requests = (data.requests || 0) + window.requests;
+      data.tokens = (data.tokens || 0) + window.tokens;
+      const elapsed = now - data.timestamp;
+      const ttl = Math.max(60, Math.ceil((window.duration - elapsed) / 1e3) + 60);
+      await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
+    }
+  } catch (e) {
+    console.error("Failed to flush rate-limit buffer:", userId, e);
+    // re-buffer the deltas and schedule a retry — without a timer they would
+    // sit in the map forever when no further deltas arrive
+    const retry = rateLimitBuffers.get(userId) || { requests: 0, tokens: 0, timer: null, flushPromise: null };
+    retry.requests += entry.requests;
+    retry.tokens += entry.tokens;
+    rateLimitBuffers.set(userId, retry);
+    if (!retry.timer && !retry.flushPromise) {
+      retry.flushPromise = new Promise((resolve) => {
+        retry.timer = setTimeout(() => {
+          retry.timer = null;
+          flushRateLimitBuffer(env, userId).then(resolve, resolve);
+        }, KV_WRITE_FLUSH_DELAY_MS);
+      });
+    }
+  }
+}
+
+async function updateUserRateLimit(env, userId, ctx) {
+  // coalesced — see bufferRateLimitDelta above
+  await bufferRateLimitDelta(env, userId, 1, 0);
 }
 function getModelFactor(model) {
   if (!model) {
@@ -3397,31 +3521,8 @@ function getModelTokens(model, tokens) {
   return getModelFactor(model) * tokens;
 }
 async function updateUserTokenUsage(env, userId, tokens, ctx) {
-  if (!env.MEMBERS_KV || !tokens) return;
-  const now = Date.now();
-  const windows = [
-    { name: "minute", duration: RATE_LIMITS.windows.minute },
-    { name: "hour", duration: RATE_LIMITS.windows.hour },
-    { name: "day", duration: RATE_LIMITS.windows.day }
-  ];
-  for (const window of windows) {
-    const key = `rate_limit:${userId}:${window.name}`;
-    const dataStr = await env.MEMBERS_KV.get(key);
-    let data;
-    if (dataStr) {
-      data = JSON.parse(dataStr);
-      if (now - data.timestamp >= window.duration) {
-        data = { requests: data.requests || 0, tokens, timestamp: now };
-      } else {
-        data.tokens = (data.tokens || 0) + tokens;
-      }
-    } else {
-      data = { requests: 0, tokens, timestamp: now };
-    }
-    const elapsed = now - data.timestamp;
-    const ttl = Math.max(60, Math.ceil((window.duration - elapsed) / 1e3) + 60);
-    await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
-  }
+  // coalesced — see bufferRateLimitDelta above
+  await bufferRateLimitDelta(env, userId, 0, tokens || 0);
 }
 async function handleV1ChatCompletions(request, env, ctx, pathname, user, cacheKey, rateCheck) {
   if (!modelToServerCache) {

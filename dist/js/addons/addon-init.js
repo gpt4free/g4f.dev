@@ -1975,10 +1975,16 @@ async function cloudSyncLogout() {
     const token = appStorage.getItem("g4f_session");
     if (token) {
         try {
-            await fetch(`${CLOUD_SYNC_API}/logout`, {
-                method: "POST",
-                headers: { "Authorization": `Bearer ${token}` }
-            });
+            if (window.G4FOAuth && window.G4FOAuth.revoke) {
+                // OAuth-compatible logout (RFC 7009 revocation endpoint) —
+                // also clears the g4f_session cookie server-side
+                await window.G4FOAuth.revoke(token);
+            } else {
+                await fetch(`${CLOUD_SYNC_API}/logout`, {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+            }
         } catch (e) {
             console.error("Logout failed:", e);
         }

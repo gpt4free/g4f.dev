@@ -732,6 +732,7 @@ var USER_TIER_LIMITS = {
             let updatedCount = 0;
             let errorCount = 0;
             let deletedCount = 0;
+            let unusedCount = 0;
             
             while (listResult && Array.isArray(listResult.objects)) {
                 for (const object of listResult.objects) {
@@ -753,6 +754,15 @@ var USER_TIER_LIMITS = {
                                 deletedCount++;
                                 continue;
                             }
+                        }
+
+                        // Remove unused users — no login and no API key usage
+                        // within UNUSED_USER_DAYS. Admins are never removed.
+                        if (isUserUnused(user)) {
+                            console.log(`Deleting unused user ${user.username} (${user.provider}) — inactive for over ${UNUSED_USER_DAYS} days`);
+                            await performUserDeletion(env, user);
+                            unusedCount++;
+                            continue;
                         }
 
                         const newTier = await calculateUserTier(user, contributors, sponsors);
@@ -793,7 +803,7 @@ var USER_TIER_LIMITS = {
                 listResult = await env.MEMBERS_BUCKET.list({ prefix: "users/", limit: 100, cursor: listResult.cursor });
             }
             
-            console.log(`Scheduled tier update complete: ${updatedCount} users updated, ${deletedCount} deleted, ${errorCount} errors`);
+            console.log(`Scheduled tier update complete: ${updatedCount} users updated, ${deletedCount} deleted, ${unusedCount} unused removed, ${errorCount} errors`);
 
             // Proactively refresh the recent-users feed cache so public
             // requests stay on the fast path after the cron run
@@ -1284,7 +1294,7 @@ var USER_TIER_LIMITS = {
     let provider;
     let username;
 
-    if (stateData.user) {
+    if (stateData.user?.provider && stateData.user?.username) {
         provider = stateData.user.provider;
         username = stateData.user.username;
     } else if (airforceUser.github_username) {
@@ -1427,8 +1437,7 @@ var USER_TIER_LIMITS = {
       // Return JSON session for programmatic use
       const safeUser = getSafeUser(user);
   
-      const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
-    const cookie = `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=None; Secure`;
+      const cookie = buildSessionCookie(sessionToken);
   
       return new Response(JSON.stringify({ session: sessionToken, user: safeUser }), {
           status: 200,
@@ -1872,8 +1881,7 @@ ${buttonsHtml}
           "Location": redirect.toString()
       };
       if (sessionToken) {
-          const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
-          headers["Set-Cookie"] = `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=None; Secure`;
+          headers["Set-Cookie"] = buildSessionCookie(sessionToken);
       }
 
       return new Response(null, {
@@ -1977,9 +1985,8 @@ ${buttonsHtml}
           const { sessionToken, _ } = await createSession(env, user.id);
 
           // Set refreshed session cookie
-          const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
-          const cookieHeader = sessionToken 
-                ? `g4f_session=${sessionToken}; Path=/; Expires=${cookieExpiry}; SameSite=None; Secure; HttpOnly`
+          const cookieHeader = sessionToken
+                ? buildSessionCookie(sessionToken)
                 : null;
 
           const headers = {
@@ -2166,8 +2173,9 @@ ${buttonsHtml}
   /**
    * POST /members/oauth/revoke  (RFC 7009)
    *
-   * Revokes an active access token (session token).  The client must
-   * authenticate itself with client_id + client_secret.  Revoking an
+   * Revokes an active access token.  Accepts both OAuth access tokens
+   * (temporary login keys, g4f_...) and session tokens (gfs_...).  The client
+   * must authenticate itself with client_id + client_secret.  Revoking an
    * already-expired or unknown token returns 200 per the RFC.
    *
    * Body (form-encoded or JSON):
@@ -2208,22 +2216,53 @@ ${buttonsHtml}
 
       const token = params.token;
       if (token) {
-          // Resolve as a temp login key and revoke it — per RFC 7009 §2.2 always return 200
-          const resolved = await resolveTempLoginKey(env, token);
-          if (resolved) {
-              await env.MEMBERS_KV.delete(`api_key:${resolved.keyHash}`);
-              // Remove from user's api_keys list
-              const user = resolved.user;
-              const keyIndex = (user.api_keys || []).findIndex(k => k.id === resolved.keyId);
-              if (keyIndex !== -1) {
-                  user.api_keys.splice(keyIndex, 1);
-                  user.updated_at = new Date().toISOString();
-                  await saveUser(env, user);
+          if (token.startsWith("gfs_")) {
+              // Session token — delete the session and drop it from the
+              // owner's session index so it can no longer be used.
+              const sessionDataStr = await env.MEMBERS_KV.get(`session:${token}`);
+              if (sessionDataStr) {
+                  try {
+                      const session = JSON.parse(sessionDataStr);
+                      if (session.user_id) {
+                          const sessionsKey = `user_sessions:${session.user_id}`;
+                          const sessionsList = await env.MEMBERS_KV.get(sessionsKey);
+                          if (sessionsList) {
+                              const remaining = JSON.parse(sessionsList).filter(t => t !== token);
+                              if (remaining.length > 0) {
+                                  await env.MEMBERS_KV.put(sessionsKey, JSON.stringify(remaining), { expirationTtl: 7 * 24 * 60 * 60 });
+                              } else {
+                                  await env.MEMBERS_KV.delete(sessionsKey);
+                              }
+                          }
+                      }
+                  } catch (e) { /* ignore malformed session data */ }
+                  await env.MEMBERS_KV.delete(`session:${token}`);
+              }
+          } else {
+              // Resolve as a temp login key and revoke it — per RFC 7009 §2.2 always return 200
+              const resolved = await resolveTempLoginKey(env, token);
+              if (resolved) {
+                  await env.MEMBERS_KV.delete(`api_key:${resolved.keyHash}`);
+                  // Remove from user's api_keys list
+                  const user = resolved.user;
+                  const keyIndex = (user.api_keys || []).findIndex(k => k.id === resolved.keyId);
+                  if (keyIndex !== -1) {
+                      user.api_keys.splice(keyIndex, 1);
+                      user.updated_at = new Date().toISOString();
+                      await saveUser(env, user);
+                  }
               }
           }
       }
 
-      return new Response(null, { status: 200, headers: getCorsHeaders(request) });
+      // Clear the session cookie on logout — same attributes as when set
+      return new Response(null, {
+          status: 200,
+          headers: {
+              "Set-Cookie": buildClearSessionCookie(),
+              ...getCorsHeaders(request)
+          }
+      });
   }
 
   /**
@@ -2295,9 +2334,15 @@ ${buttonsHtml}
   // ============================================
   
   async function createOrUpdateUser(env, userData) {
-    const lookupKey = `user_lookup:${userData.provider}:${userData.username}`;
-    let userId = await env.MEMBERS_KV.get(lookupKey);
-    
+    // A missing username would collide accounts in the lookup index under
+    // "undefined" (e.g. Airforce profiles without a username). Existing
+    // users keep their stored username; new users get a unique fallback.
+    const hasUsername = !!(userData.username && String(userData.username).trim());
+    const lookupKey = hasUsername
+        ? `user_lookup:${userData.provider}:${userData.username}`
+        : null;
+    let userId = lookupKey ? await env.MEMBERS_KV.get(lookupKey) : null;
+
     const now = new Date().toISOString();
     let user;
 
@@ -2305,13 +2350,18 @@ ${buttonsHtml}
         // Update existing user
         user = await getUser(env, userId);
         if (user) {
+            const storedUsername = user.username;
             user = { ...user, ...userData }
+            if (!hasUsername && storedUsername) {
+                // Provider supplied no username — keep the stored one
+                user.username = storedUsername;
+            }
             user.updated_at = now;
             user.last_login = now;
             // Tier is updated by scheduled handler, not on login
         }
     }
-  
+
     if (!user) {
         // Create new user
         userId = generateUserId();
@@ -2341,8 +2391,9 @@ ${buttonsHtml}
         user.updated_at = now;
     }
 
-    // Store lookup index for this user
-    await env.MEMBERS_KV.put(lookupKey, userId);
+    // Store lookup index for this user (username is guaranteed non-empty
+    // by the fallbacks above)
+    await env.MEMBERS_KV.put(`user_lookup:${user.provider}:${user.username}`, user.id);
 
     // Save user to R2 + refresh KV/memo caches (single write, was duplicated
     // on the secret-backfill path)
@@ -2602,6 +2653,29 @@ ${buttonsHtml}
     return jsonResponse({ message: "Account deletion cancelled" }, 200, getCorsHeaders(request));
   }
   
+  // Users without any login or API key activity for this many days are
+  // considered unused and removed by the scheduled handler
+  const UNUSED_USER_DAYS = 90;
+
+  /**
+   * Check whether a user is unused: no login and no API key usage within
+   * UNUSED_USER_DAYS. Admin accounts are never considered unused.
+   */
+  function isUserUnused(user) {
+    const adminList = ADMIN_USERS[user.provider] || [];
+    if (adminList.includes(user.username)) return false;
+
+    let lastActive = user.last_login || user.created_at;
+    for (const keyData of user.api_keys || []) {
+        if (keyData.last_used && keyData.last_used > lastActive) {
+            lastActive = keyData.last_used;
+        }
+    }
+    if (!lastActive) return false;
+
+    return (Date.now() - new Date(lastActive).getTime()) > UNUSED_USER_DAYS * 24 * 60 * 60 * 1000;
+  }
+
   /**
    * Actually perform the deletion of a user. Called by the scheduled handler
    * once the grace period has elapsed, or by handleDeleteUser for immediate
@@ -3354,7 +3428,7 @@ const body = await request.json().catch(() => ({}));
     }
   
     // Clear the session cookie
-    const clearCookie = "g4f_session=; domain=g4f.space; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=None; Secure";
+    const clearCookie = buildClearSessionCookie();
   
     return new Response(JSON.stringify({ message: "Logged out successfully" }), {
         status: 200,
@@ -3387,9 +3461,8 @@ const body = await request.json().catch(() => ({}));
   
     // Set refreshed session cookie
     const expires = Date.now() + 7 * 24 * 60 * 60 * 1000;
-    const cookieExpiry = new Date(expires).toUTCString();
-    const cookieHeader = sessionToken 
-        ? `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=None; Secure`
+    const cookieHeader = sessionToken
+        ? buildSessionCookie(sessionToken)
         : null;
   
     const headers = {
@@ -3503,7 +3576,26 @@ const body = await request.json().catch(() => ({}));
         }
     });
   }
-  
+
+  // ============================================
+  // Session Cookie Helpers
+  // ============================================
+
+  // Single source of truth for the g4f_session cookie. Every endpoint in
+  // this worker sets (and clears) the exact same cookie attributes.
+  const SESSION_COOKIE_NAME = "g4f_session";
+  const SESSION_COOKIE_DOMAIN = "g4f.space";
+  const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  function buildSessionCookie(sessionToken) {
+    const cookieExpiry = new Date(Date.now() + SESSION_MAX_AGE_MS).toUTCString();
+    return `${SESSION_COOKIE_NAME}=${sessionToken}; domain=${SESSION_COOKIE_DOMAIN}; Path=/; Expires=${cookieExpiry}; SameSite=None; Secure`;
+  }
+
+  function buildClearSessionCookie() {
+    return `${SESSION_COOKIE_NAME}=; domain=${SESSION_COOKIE_DOMAIN}; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=None; Secure`;
+  }
+
   function redirectWithError(error) {
     const redirectUrl = new URL(OAUTH_REDIRECT_URI);
     redirectUrl.searchParams.set("error", error);
@@ -3516,8 +3608,7 @@ const body = await request.json().catch(() => ({}));
     redirectUrl.searchParams.set("user", encodeURIComponent(JSON.stringify(getSafeUser(user))));
     redirectUrl.searchParams.set("expires", String(expires));
     // Set session cookie with 7 day expiry
-    const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
-    const cookie = `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=None; Secure`;
+    const cookie = buildSessionCookie(sessionToken);
     
     return new Response(null, {
         status: 302,
@@ -3551,8 +3642,7 @@ const body = await request.json().catch(() => ({}));
       }
       
       // Set session cookie with 7 day expiry
-      const cookieExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
-      const cookie = `g4f_session=${sessionToken}; domain=g4f.space; Path=/; Expires=${cookieExpiry}; SameSite=None; Secure`;
+      const cookie = buildSessionCookie(sessionToken);
       
       return new Response(null, {
           status: 302,

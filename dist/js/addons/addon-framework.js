@@ -910,7 +910,7 @@ async function list_conversations() {
                 const hasUserContent = conversation.items && conversation.items.some(
                     item => item.role == 'user' && item.content && !["Hi", "Hello", "hi", "hello", "hey", ""].includes(item.content)
                 );
-                if (hasUserContent && conversation.title) {
+                if ((hasUserContent || conversation.added > Date.now() - 24 * 60 * 60 * 1000) && conversation.title) {
                     conversations.push(conversation);
                 } else {
                     delete_conversation(conversation.id);

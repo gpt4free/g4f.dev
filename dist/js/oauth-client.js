@@ -126,5 +126,27 @@
         };
     }
 
-    window.G4FOAuth = { authorize, exchangeCode, handleCallback, OAUTH_BASE, CLIENT_ID };
+    // RFC 7009 token revocation — the OAuth-compatible logout. Revokes the
+    // given access token (temporary login key or gfs_ session token)
+    // server-side and clears the session cookie. Best-effort: never throws.
+    async function revoke(token) {
+        if (!token) return;
+        const body = new URLSearchParams({
+            token: token,
+            client_id: CLIENT_ID,
+            client_secret: CLIENT_SECRET,
+        });
+        try {
+            await fetch(`${OAUTH_BASE}/members/oauth/revoke`, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                credentials: "include",
+                body: body.toString(),
+            });
+        } catch (e) {
+            console.warn("OAuth revoke failed:", e);
+        }
+    }
+
+    window.G4FOAuth = { authorize, exchangeCode, handleCallback, revoke, OAUTH_BASE, CLIENT_ID };
 })();

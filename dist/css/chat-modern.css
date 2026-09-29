@@ -1146,7 +1146,6 @@ label[for="micro"] {
     min-height: 34px;
 }
 
-.stop_generating,
 .chat-toolbar .regenerate {
     position: absolute;
     top: 0;
