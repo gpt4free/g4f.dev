@@ -570,15 +570,6 @@ async function loadProviderModels(provider=null) {
     modelSelect.innerHTML = '';
     modelSelect.name = `model[${provider}]`;
     modelSelect.classList.remove("hidden");
-    if (!isLoading && ["Puter"].includes(provider) && !appStorage.getItem("puter.auth.token") && window.Puter) {
-        try {
-            await (new window.Puter()).signIn().then((res) => {
-                console.log('Puter signed in:', res);
-            });
-        } catch (error) {
-            add_error(error, true);
-        }
-    }
     if (await initClient()) {
         return;
     }

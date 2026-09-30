@@ -15,50 +15,28 @@
  */
 
 // ---------------------------------------------------------------------------
-// Seed servers — public Ollama instances
-// Duplicates are deduplicated at runtime via Set.
+// Seed servers — public Ollama instances (fetched from remote JSON)
 // ---------------------------------------------------------------------------
-const _SEED_LIST = [
-  "http://172.168.53.235.nip.io",
-  "http://143.223.252.208.nip.io",
-  "https://81.151.201.23.nip.io",
-  "http://20.118.15.50.nip.io",
-  "https://81.151.201.23.nip.io",
-  "http://111.206.235.125.nip.io:8080",
-  "http://111.206.235.125.nip.io:8080",
-  "http://93.87.60.133.nip.io:30005",
-  "http://42.2.170.244.nip.io",
-  "http://110.86.160.115.nip.io:6001",
-  "http://8.141.151.0.nip.io:8080",
-  "http://83.24.140.56.nip.io:8080",
-  "http://178.18.242.28.nip.io:8080",
-  "http://149.118.157.59.nip.io:8080",
-  "http://129.150.44.79.nip.io:8080",
-  "http://220.72.100.236.nip.io:8080",
-  "http://101.200.3.110.nip.io:8080", 
-  "http://161.153.3.209.nip.io:8080",
-  "http://144.24.219.208.nip.io:8080",
-  "http://46.37.122.40.nip.io:8080",
-  "http://212.36.87.58.nip.io:8080",
-  "http://156.146.235.114.nip.io:5001",
-  "http://218.147.76.163.nip.io:5001",
-  "http://156.146.235.114.nip.io:5001",
-  "http://99.6.167.132.nip.io:5001",
-  "http://108.181.152.142.nip.io:5001",
-  "http://35.138.176.97.nip.io:5001",
-  "https://lcpp.demetrisamantium.com",
-  "https://118.167.9.98.nip.io:2053",
-  "https://kobold.asozial.org",
-  "http://108.210.175.159.nip.io:5001",
-  "http://173.248.19.236.nip.io:5001",
-  "http://82.66.194.162.nip.io:5001",
-  "http://73.185.144.207.nip.io:5001",
-  "http://50.53.208.218.nip.io:5001",
-  "http://185.155.18.66.nip.io"
-];
+const SEED_URL = "https://raw.githubusercontent.com/gpt4free/g4f.dev/refs/heads/main/dist/js/swarm_seeds.json";
+let seedServers = []; // populated lazily by fetchSeedServers()
 
-// Deduplicate at module load time
-const DEFAULT_SEED_SERVERS = [...new Set(_SEED_LIST)];
+/** Fetch and cache the seed list from SEED_URL. Returns an array of URLs. */
+async function fetchSeedServers() {
+  if (seedServers.length > 0) return seedServers;
+  try {
+    const resp = await fetch(SEED_URL);
+    if (resp.ok) {
+      const data = await resp.json();
+      const servers = Array.isArray(data) ? data : data.servers;
+      if (Array.isArray(servers)) {
+        seedServers = servers.filter((s) => typeof s === "string" && s);
+      }
+    }
+  } catch (e) {
+    console.error("Failed to fetch seed list:", e);
+  }
+  return seedServers;
+}
 
 // ---------------------------------------------------------------------------
 // Config
@@ -71,10 +49,14 @@ const DEFAULT_MODEL = {
   "/v1/embeddings": "nomic-embed-text:latest"
 };
 const PROBE_BATCH_SIZE = 15; // CF Workers: max ~50 simultaneous outbound connections
-
+const NO_CACHE_HEADER = {"Cache-Control": "no-cache, no-store, must-revalidate"};
 // ---------------------------------------------------------------------------
 // Server probing
 // ---------------------------------------------------------------------------
+
+function filterModels(models) {
+    return models.filter(m => !(m.includes("/trav/") || m.includes("/x/") || m.includes("/attacker/") || m.startsWith("model-b") || m.startsWith("rev_") || m.startsWith("sysverify-") || m.startsWith("cve-") || m.startsWith("198.")));
+}
 
 /** Probe one Ollama server. Returns { url, models } or null. */
 async function probeServer(url) {
@@ -82,13 +64,13 @@ async function probeServer(url) {
     const resp = await fetch(`${url}/v1/models`, {
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
     });
-
     if (!resp.ok) return { url, error: resp.status};
     const data = await resp.json();
     const models = (data.data || [])
       .map((m) => m.id || "")
       .filter(Boolean);
-    if (models.length > 0) return { url, models };
+    const filtered = filterModels(models);
+    if (filtered.length > 0) return { url, models: filtered };
     else return {url, error: data}
   } catch(e) {
       return { url, error: e.message};
@@ -118,6 +100,8 @@ async function probeBatched(candidates, step = 0) {
 let cachedAlive = {}; // In-memory cache for the duration of the worker instance
 let cachedStep = 0;
 let workingModels = null;
+let publicServers = [];
+let cachedSeedServers = null;
 function shuffleObject(obj) {
     const entries = Object.entries(obj);
     for (let i = entries.length - 1; i > 0; i--) {
@@ -137,8 +121,27 @@ function shuffleArray(array) {
     }
     return array;
 }
+async function getSeedServers() {
+  if (cachedSeedServers) return cachedSeedServers;
+  try {
+    const resp = await fetch(SEED_URL, { signal: AbortSignal.timeout(10_000) });
+    if (resp.ok) {
+      const data = await resp.json();
+      const servers = Array.isArray(data) ? data : data.servers;
+      if (Array.isArray(servers) && servers.length > 0) {
+        cachedSeedServers = [...new Set(servers)];
+        return cachedSeedServers;
+      }
+    }
+  } catch (e) {
+    console.error("Failed to fetch seed servers:", e);
+  }
+  cachedSeedServers = [];
+  return cachedSeedServers;
+}
+
 async function discoverServers(env) {
-  const cacheRequest = new Request(`https://swarm.new.dev/servers`, {
+  const cacheRequest = new Request(`https://localhost:8080/servers`, {
     method: "GET"
   });
   if (!cachedStep) {
@@ -149,10 +152,11 @@ async function discoverServers(env) {
       cachedAlive = shuffleObject(cachedData.cachedAlive);
     }
   }
-  
-  if (cachedStep * PROBE_BATCH_SIZE >= DEFAULT_SEED_SERVERS.length) return false;
 
-  const alive = await probeBatched(DEFAULT_SEED_SERVERS, cachedStep);
+  const seedServers = await getSeedServers();
+  if (cachedStep * PROBE_BATCH_SIZE >= seedServers.length) return false;
+
+  const alive = await probeBatched(seedServers, cachedStep);
 
   if (Object.keys(alive).length > 0) {
     cachedAlive = Object.assign(cachedAlive, alive);
@@ -161,6 +165,17 @@ async function discoverServers(env) {
   const responseToCache = Response.json({cachedAlive, cachedStep})
   responseToCache.headers.set("Cache-Control", "public, max-age=86400");
   await caches.default.put(cacheRequest, responseToCache);
+
+  if (!publicServers.length) {
+    try {
+      const url = "https://g4f.space/custom/api/servers/public";
+      const response = await fetch(url);
+      const publicList = await response.json();
+      publicServers = publicList.servers.filter(s=>s.is_ollama);
+    } catch(e) {
+      console.error(e);
+    }
+  }
 
   cachedStep += 1;
   return true;
@@ -175,10 +190,22 @@ function buildModelMap(alive) {
   const modelToServers = {};
   const modelCount = {};
   for (const [serverUrl, models] of Object.entries(alive)) {
-    for (const model of models) {
+    for (const model of filterModels(models)) {
       if (!modelToServers[model]) modelToServers[model] = [];
       modelToServers[model].push(serverUrl);
       modelCount[model] = (modelCount[model] || 0) + 1;
+    }
+  }
+  for (const server of publicServers) {
+    try {
+      const url = new URL(server.base_url);
+      for (const model of filterModels(server.allowed_models)) {
+        if (!modelToServers[model]) modelToServers[model] = [];
+        modelToServers[model].push(url.origin);
+        modelCount[model] = (modelCount[model] || 0) + 1;
+      }
+    } catch(e) {
+      console.error(e);
     }
   }
   return { modelToServers, modelCount };
@@ -293,26 +320,28 @@ async function handleModels(env) {
       id,
       object: "model",
       created: ts,
-      owned_by: "swarm",
+      owned_by: "ollama-swarm",
       count: c
     }));
 
-  return Response.json({ object: "list", data }, {headers: isLoading ? {"Cache-Control": "no-cache, no-store, must-revalidate"} : {}});
+  return Response.json({ object: "list", data }, {headers: isLoading ? NO_CACHE_HEADER : {}});
 }
 
 async function handleServers(env, all = false) {
   const loading = await discoverServers(env);
   const data = all ? cachedAlive : Object.keys(cachedAlive)
+  const seedServers = await getSeedServers();
   return Response.json({
     data,
+    public_servers: publicServers.map(s=>new URL(s.base_url).origin),
     loading,
     offset: cachedStep * PROBE_BATCH_SIZE,
-    total: DEFAULT_SEED_SERVERS.length,
+    total: seedServers.length,
     working: await getWorkingModels()
-  });
+  }, { headers: NO_CACHE_HEADER});
 }
 async function getWorkingModels() {
-  const cachedResponse = await caches.default.match(new Request(`https://swarm.new.dev/working`));
+  const cachedResponse = await caches.default.match(new Request(`https://cache.example/working`));
   if (cachedResponse) {
     return await cachedResponse.json();
   }
@@ -395,7 +424,7 @@ async function handleChatCompletions(request, env, pathname, ctx) {
         workingModels[model].push(serverUrl);
         const responseToCache = Response.json(workingModels);
         responseToCache.headers.set("Cache-Control", "public, max-age=86400");
-        ctx.waitUntil(caches.default.put(new Request(`https://swarm.new.dev/working`), responseToCache));
+        ctx.waitUntil(caches.default.put(new Request(`https://cache.example/working`), responseToCache));
       }
       return resp;
     } catch (e) {
@@ -506,7 +535,7 @@ export default {
     ) {
       response = await handleChatCompletions(request, env, '/v1/embeddings', ctx);
     } else if (pathname === "/" || pathname === "/health") {
-      response = Response.json({ status: "ok", service: "swarm" });
+      response = Response.json({ status: "ok", service: "ollama-swarm" });
     } else {
       response = new Response("Not Found", { status: 404 });
     }

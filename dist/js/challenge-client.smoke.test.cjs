@@ -96,7 +96,8 @@ const challengeSandbox = {
     fetch: (url, init) => {
         const req = new b64Polyfill.Request(url, init);
         if (String(url).includes("/dist/js/snippets/")) {
-            const catalog = fs.readFileSync(path.join(__dirname, "snippets", "chat.context.json"), "utf8");
+            const name = String(url).split("/dist/js/snippets/")[1].split(/[?#]/)[0];
+            const catalog = fs.readFileSync(path.join(__dirname, "snippets", name), "utf8");
             return new b64Polyfill.Response(catalog, { status: 200 });
         }
         return cakeWorker.fetch(req, cakeEnv, {});

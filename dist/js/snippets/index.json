@@ -1,0 +1,95 @@
+{
+    "_meta": {
+        "page": "index",
+        "comment": "UI text snippets of the landing page (index.html) grouped by the headline/title of the section they appear in. The group name is sent as translation context alongside each snippet in the challenge worker's batch translation challenges (kind=translations). Groups starting with '_' are metadata. Mirrors dist/js/snippets/chat.context.json."
+    },
+    "Navigation": [
+        "Features",
+        "Models",
+        "Accessibility",
+        "Demo",
+        "Playground",
+        "Docs",
+        "Get Started"
+    ],
+    "Hero": [
+        "Now Free & Unlimited",
+        "Next Generation",
+        "AI Access",
+        "Experience the most powerful AI models without barriers. Open-source, unrestricted, and built for everyone.",
+        "Start Chatting Free",
+        "View Documentation"
+    ],
+    "Stats": [
+        "API Requests",
+        "AI Models",
+        "Free Access",
+        "Availability"
+    ],
+    "Features": [
+        "✦ Features",
+        "Built for the Future",
+        "Cutting-edge technology designed to democratize AI access for developers and users worldwide.",
+        "Lightning Fast",
+        "Optimized infrastructure delivers responses in milliseconds. No waiting, no buffering—just instant AI power at your fingertips.",
+        "Unrestricted Access",
+        "No paywalls, no rate limits, no hidden fees. Get full access to premium AI capabilities completely free, forever.",
+        "Easy Integration",
+        "Simple REST API with SDKs for Python, JavaScript, and more. Integrate AI into your projects in minutes.",
+        "Global Community",
+        "Join thousands of developers and enthusiasts building the future of open-source AI together.",
+        "Customizable",
+        "Tailor your AI experience with custom personas, system prompts, and advanced configuration options.",
+        "Open Source",
+        "Fully transparent codebase on GitHub. Audit, contribute, or fork—community driven development for everyone.",
+        "Multi-Model Support",
+        "Access GPT-5, Claude, DeepSeek, Gemini, and more—all through a single unified interface with zero friction."
+    ],
+    "Models": [
+        "✦ Models",
+        "Powered by Leading AI",
+        "Access multiple state-of-the-art AI models through our unified API."
+    ],
+    "Accessibility": [
+        "✦ Inclusive AI",
+        "AI for Everyone",
+        "Specialized tools designed to ensure AI accessibility for all users.",
+        "Screen Reader Chat",
+        "Fully accessible AI chat optimized for screen readers and visual impairments.",
+        "Speech Assistant",
+        "Text-to-speech tool for non-verbal communication with AI assistants.",
+        "Voice Assistant",
+        "Hands-free AI interaction with speech recognition and audio responses.",
+        "Try Now →"
+    ],
+    "Demo": [
+        "✦ Live Demo",
+        "Try It Now",
+        "Experience the power of GPT4Free directly in your browser.",
+        "Online — Ready",
+        "🤖 G4F Assistant",
+        "👋 Hello! I'm your",
+        "G4F assistant",
+        ". Ask me anything and I'll help you explore the power of free AI! Try asking about coding, creative writing, or problem-solving.",
+        "Type your message and press Enter...",
+        "Sorry, I encountered an error. Please try again in a moment.",
+        "Sorry, I encountered an error. Please try again."
+    ],
+    "Call to Action": [
+        "Ready to Unlock AI Power?",
+        "Join millions of users accessing cutting-edge AI models for free. No signup required — just start chatting.",
+        "Start for Free",
+        "Star on GitHub"
+    ],
+    "Footer": [
+        "Documentation",
+        "Chat",
+        "Members",
+        "Manifesto",
+        "GitHub",
+        "Community",
+        "Privacy Policy",
+        "Terms of Service",
+        "© 2026 GPT4Free Project. Open source and free forever. ✨"
+    ]
+}

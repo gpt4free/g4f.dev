@@ -197,7 +197,7 @@ function load_provider_login_urls(providersListContainer, providers = []) {
             link.textContent = framework.translate("Login");
             link.addEventListener("click", async (event) => {
                 event.preventDefault();
-                await (new window.Puter()).signIn().then((res) => {
+                await createClient("puter").signIn().then((res) => {
                     console.log('Puter signed in:', res);
                     providerBox.querySelector("input").value = res.token;
                     appStorage.setItem(storageKey, res.token);

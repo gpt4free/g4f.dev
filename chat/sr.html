@@ -43,11 +43,10 @@
     <script src="/dist/js/sanitize-html.js" async></script>
 
     <script type="module" defer>
-        import { loadProviders, createClient, providerLocalStorage, Puter }  from "../dist/js/providers.js";
+        import { loadProviders, createClient, providerLocalStorage }  from "../dist/js/providers.js";
         window.loadProviders = loadProviders;
         window.createClient = createClient;
         window.providerLocalStorage = providerLocalStorage;
-        window.Puter = Puter;
     </script>
     <script>
       const user_image = 'User: ';

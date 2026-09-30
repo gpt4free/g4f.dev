@@ -1,0 +1,32 @@
+{
+    "_meta": {
+        "page": "home",
+        "comment": "UI text snippets of the framework start page (home.html) grouped by the headline/title of the section they appear in. The group name is sent as translation context alongside each snippet in the challenge worker's batch translation challenges (kind=translations). Groups starting with '_' are metadata. Mirrors dist/js/snippets/chat.context.json."
+    },
+    "Providers Sidebar": [
+        "Providers",
+        "Toggle providers",
+        "⚡ Our Providers",
+        "Loading providers…",
+        "Failed to load providers",
+        "View All Providers →"
+    ],
+    "Main": [
+        "G4F - Chat",
+        "Welcome to the G4F Web UI!",
+        "Your AI assistant is ready to assist you.",
+        "Connected to:"
+    ],
+    "Buttons": [
+        "Start Chat",
+        "Playground",
+        "Login",
+        "Logout",
+        "You are logged in",
+        "Logged in with Hugging Face"
+    ],
+    "Footer": [
+        "© 2026 G4F. All Rights Reserved.",
+        "Powered by the G4F framework"
+    ]
+}

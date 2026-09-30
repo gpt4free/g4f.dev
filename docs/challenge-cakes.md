@@ -56,8 +56,9 @@ Challenge kinds:
 
 ## Community UI translations
 
-The chat UI ships a snippet catalog grouped by section headline
-(`dist/js/snippets/chat.context.json`):
+Each page ships a snippet catalog grouped by section headline
+(`dist/js/snippets/<page>.json` — `chat`, `index`, `home`,
+`members`, `manifesto`). The worker fetches and merges all catalogs:
 
 ```json
 {
@@ -127,7 +128,7 @@ re-solving the same topic refreshes its entry):
 | `CHALLENGE_MAX_PER_DAY` | `150` | Global issue limit. |
 | `CHALLENGE_TTL_SEC` | `300` | Challenge validity after issue. |
 | `CAKE_WORKER_URL` | `https://g4f.space/cake` | Cake worker base URL the redeem proxy forwards to. |
-| `SNIPPETS_URL` | `/dist/js/snippets/chat.context.json` | Snippet catalog for batch translations (cached 1h). |
+| `SNIPPETS_URL` | `/dist/js/snippets/chat.context.json` | Overrides all snippet catalogs with a single URL (cached 1h). By default the worker loads every per-page catalog (`chat`, `index`, `home`, `members`, `manifesto`) and merges them. |
 | `TRANSLATIONS_BATCH` | `8` | Snippets per translations challenge. |
 | `ADMIN_API_KEY` | — | Optional, for admin endpoints. |
 

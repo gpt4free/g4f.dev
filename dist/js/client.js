@@ -1,51 +1,6 @@
 import { convertModel, getModelLabel } from "./model.js";
 
 /**
- * Manages a list of CORS proxies with failover capabilities.
- */
-class CorsProxyManager {
-    /**
-     * @param {string[]} proxies - An array of CORS proxy base URLs.
-     */
-    constructor(proxies = [
-        'https://corsproxy.io/?',
-        'https://api.allorigins.win/raw?url=',
-        'https://cloudflare-cors-anywhere.queakchannel42.workers.dev/?',
-        'https://proxy.cors.sh/',
-        'https://cors-anywhere.herokuapp.com/',
-        'https://thingproxy.freeboard.io/fetch/',
-        'https://cors.bridged.cc/',
-        'https://cors-proxy.htmldriven.com/?url=',
-        'https://yacdn.org/proxy/',
-        'https://api.codetabs.com/v1/proxy?quest=',
-    ]) {
-        if (!Array.isArray(proxies) || proxies.length === 0) {
-            throw new Error('CorsProxyManager requires a non-empty array of proxy URLs.');
-        }
-        this.proxies = proxies;
-        this.currentIndex = 0;
-    }
-
-    /**
-     * Gets the full proxied URL for the current proxy.
-     * @param {string} targetUrl - The URL to be proxied.
-     * @returns {string} The full proxied URL.
-     */
-    getProxiedUrl(targetUrl) {
-        const proxy = this.proxies[this.currentIndex];
-        return proxy + encodeURIComponent(targetUrl);
-    }
-
-    /**
-     * Rotates to the next proxy in the list.
-     */
-    rotateProxy() {
-        this.currentIndex = (this.currentIndex + 1) % this.proxies.length;
-        console.warn(`Rotated to next CORS proxy: ${this.proxies[this.currentIndex]}`);
-    }
-}
-
-/**
  * Extracts the delay time (in seconds) from a "Try again in X seconds" message
  * @param {string} message - The message containing the delay
  * @returns {number|null} - The delay in seconds, or null if no match found
@@ -118,7 +73,6 @@ class Client {
             options.sleep = 10000;
         }
         this.id = options.id;
-        this.proxyManager = new CorsProxyManager();
         this.baseUrl = options.baseUrl;
         this.apiEndpoint = options.apiEndpoint || `${this.baseUrl}/chat/completions`;
         this.imageEndpoint = options.imageEndpoint || `${this.baseUrl}/images/generations`;
@@ -147,9 +101,7 @@ class Client {
           this.swapAliases[this.modelAliases[key]] = key;
         });
 
-        // Caching for models
-        this._models = [];
-
+        this._models = options.models || [];
         // Optional custom fetch function (e.g. routed through a Web Worker
         // so streaming continues when the tab is backgrounded).
         this.fetchFn = options.fetchFn || null;
@@ -164,28 +116,6 @@ class Client {
 
     _route(url) {
         return window.framework?.getRoutedUrl(url) ?? url;
-    }
-
-    async _fetchWithProxyRotation(targetUrl, requestConfig={}) {
-        const maxAttempts = this.proxyManager.proxies.length;
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-            const proxiedUrl = this.proxyManager.getProxiedUrl(targetUrl);
-            try {
-                const response = await fetch(proxiedUrl, requestConfig);
-                if (!response.ok) {
-                    throw new Error(`Proxy fetch failed with status ${response.status}`);
-                }
-                const contentType = response.headers.get('Content-Type');
-                if (contentType && !contentType.includes('application/json')) {
-                    throw new Error(`Expected JSON response, got ${contentType}`);
-                }
-                return response
-            } catch (error) {
-                console.warn(`CORS proxy attempt ${attempt + 1}/${maxAttempts} failed for ${targetUrl}:`, error.message);
-                this.proxyManager.rotateProxy();
-            }
-        }
-        throw new Error(`All CORS proxy attempts failed for ${targetUrl}.`);
     }
 
     async _sleep() {
@@ -251,6 +181,9 @@ class Client {
     get models() {
       return {
         list: async () => {
+          if (this._models && this._models.length > 0) {
+            return this._models.map((model) => convertModel(model, { defaultModel: this.defaultModel, useModelName: this.useModelName }));
+          }
           const response = await fetch(this._route(this.modelsEndpoint.replace('{model}', 'auto')), {
             method: 'GET',
             headers: this.extraHeaders,
@@ -538,8 +471,6 @@ class Pollinations extends Client {
     }
 }
 
-class PollinationsAI extends Pollinations {}
-
 class Audio extends Client {
     constructor(options = {}) {
         super({
@@ -630,24 +561,6 @@ class DeepInfra extends Client {
                 });
             }
         };
-    }
-}
-
-class Worker extends Client {}
-
-class Together extends Client {
-    constructor(options = {}) {
-        if (!options.baseUrl && !options.apiEndpoint && !options.apiKey) {
-            if (typeof localStorage !== "undefined" && localStorage.getItem("Together-api_key")) {
-                options.apiKey = localStorage.getItem("Together-api_key");
-            } else {
-                throw new Error('Together requires a "apiKey" to be set.');
-            }
-        }
-        super({
-            baseUrl: 'https://api.together.xyz/v1',
-            ...options
-        });
     }
 }
 
@@ -1438,12 +1351,15 @@ class ChromeAI extends Client {
      */
     async _getSession(systemMessages = []) {
         if (!this._session) {
+            function baseLanguage(tag) {
+                return (tag || "en").split(/[-_]/)[0].toLowerCase();
+            }
             this._session = await LanguageModel.create({
                 expectedInputs: [
                     { type: "text", languages: ["en"] }
                 ],
                 expectedOutputs: [
-                    { type: "text", languages: [navigator.language || "en"] }
+                    { type: "text", languages: [baseLanguage(navigator.language)] }
                 ],
                 initialPrompts: [],
                 monitor: this.progressCallback ? (monitor) => {
@@ -1553,20 +1469,40 @@ class ChromeAI extends Client {
     }
 }
 
+class LLM7 extends Client {
+    constructor(options) {
+        options.baseUrl = options.baseUrl ?? "https://api.llm7.io/v1";
+        options.defaultModel = options.defaultModel || "default";
+        options.models = options.models || ["default", "fast"];
+        super(options);
+    }
+}
+
 export {
     Client,
     Pollinations,
-    PollinationsAI,
     DeepInfra,
-    Together,
     Puter,
     HuggingFace,
-    Worker,
     Audio,
     WebGPU,
     Bonsai,
     Bonsai2,
     ChromeAI,
+    LLM7,
     captureUserTierHeaders,
 };
-export default Client;
+
+export default {
+    Client,
+    Pollinations,
+    DeepInfra,
+    Puter,
+    HuggingFace,
+    Audio,
+    WebGPU,
+    Bonsai,
+    Bonsai2,
+    ChromeAI,
+    LLM7,
+};

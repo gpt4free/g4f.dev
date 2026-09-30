@@ -1,5 +1,6 @@
 
-import { Client, Pollinations, DeepInfra, HuggingFace, Worker, Audio, WebGPU, Bonsai, Bonsai2, ChromeAI, captureUserTierHeaders, Puter } from "./client.js";
+import client from "./client.js";
+import { captureUserTierHeaders } from "./client.js";
 let fs;
 if (typeof window === "undefined") {
     fs = require("fs");
@@ -10,21 +11,10 @@ let defaultModels = {};
 let providerLocalStorage = {};
 let serverDefaultModels = {};
 let hiddenServers = [];
-let providerClassMap = {
-    "default": Client,
-    "pollinations": Pollinations,
-    "nectar": Pollinations,
-    "audio": Audio,
-    "deepinfra": DeepInfra,
-    "huggingface": HuggingFace,
-    "puter": Puter,
-    "worker": Worker,
-    "webgpu": WebGPU,
-    "bonsai": Bonsai,
-    "bonsai2": Bonsai2,
-    "chromeai": ChromeAI,
-};
-
+let providerClassMap = Object.fromEntries(
+    Object.entries(client).map(([key, value]) => [key.toLowerCase(), value])
+);
+console.log(providerClassMap);
 function mapProviderDefaults(providers) {
     for (const provider of Object.values(providers)) {
         if (provider.id && hiddenServers.includes(provider.id)) {
@@ -84,7 +74,7 @@ async function createClient(provider, options = {}) {
                 throw new Error("Custom provider requires a baseUrl to be set in options or in localStorage under 'Custom-api_base'.");
             }
         }
-        return new Client(options);
+        return new client.Client(options);
     }
 
     if (!providers) {
@@ -112,9 +102,9 @@ async function createClient(provider, options = {}) {
         }
         options.apiKey = options.apiKey || (typeof window !== "undefined" ? window?.localStorage.getItem("g4f_session") : undefined);
         options.sleep = options.sleep || 10000; // 10 seconds delay to avoid rate limiting
-        return new Client(options);
+        return new client.Client(options);
     }
-    const { class: ClientClass = (providerClassMap[provider] || Client), backupUrl, localStorageApiKey, tags, ...config } = providers[provider];
+    const { class: ClientClass = (providerClassMap[provider] || client.Client), backupUrl, localStorageApiKey, tags, ...config } = providers[provider];
 
     if (typeof localStorage !== "undefined") {
         if (providerLocalStorage[provider] && !options.apiKey) {
@@ -170,5 +160,5 @@ function mergeToolCalls(accumulator, toolCalls) {
     return accumulator;
 }
 
-export { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls, Puter, WebGPU, Bonsai, Bonsai2, ChromeAI };
-export default { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls, Puter, WebGPU, Bonsai, Bonsai2, ChromeAI };
+export { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls };
+export default { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls };

@@ -19,7 +19,7 @@ This JavaScript library provides a flexible interface to interact with **multipl
 
 ```html
 <script type="module">
-  import { Client, PollinationsAI, DeepInfra, Together, Puter, HuggingFace } from 'https://g4f.dev/dist/js/client.js';
+  import { Client, Pollinations, Puter, HuggingFace } from 'https://g4f.dev/dist/js/client.js';
 </script>
 ```
 
@@ -36,7 +36,7 @@ npm install @gpt4free/g4f.dev
 You can initialize a client using one of the following providers:
 
 ```js
-import { Client, PollinationsAI, DeepInfra, Together, Puter, HuggingFace } from '@gpt4free/g4f.dev';
+import { Client, PollinationsAI, Puter, HuggingFace } from '@gpt4free/g4f.dev';
 
 // Pollinations
 const client = new PollinationsAI({ apiKey: 'optional' });

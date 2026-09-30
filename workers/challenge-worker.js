@@ -248,18 +248,44 @@ function baseLanguage(tag) {
     return (tag || "en").split(/[-_]/)[0].toLowerCase();
 }
 
-/** Load the UI snippet catalog: JSON grouped by section headline
+/** Load the UI snippet catalogs: JSON files grouped by section headline
  *  ({ "<headline>": ["text", ...] }). The headline doubles as the
  *  translation context — "Send" means something else under "Message Input"
- *  than under "Legal & About". Cached in module scope (isolate lifetime). */
+ *  than under "Legal & About". One catalog per page (chat, index, home,
+ *  members, manifesto) is fetched and merged; groups starting with "_"
+ *  are metadata and dropped. Cached in module scope (isolate lifetime). */
+const SNIPPET_PAGES = [
+    "chat",
+    "index",
+    "home",
+    "members",
+    "manifesto",
+];
 let snippetsCache = null;
+let snippetsKeys = null;
 async function loadSnippets(env) {
     if (snippetsCache) return snippetsCache;
-    const url = env.SNIPPETS_URL || "/dist/js/snippets/chat.context.json";
-    const absolute = url.startsWith("http") ? url : new URL(url, "https://g4f.dev").toString();
-    const res = await fetch(absolute, { cf: { cacheTtl: 3600, cacheEverything: true } });
-    if (!res.ok) throw new Error(`snippets fetch failed: ${res.status}`);
-    snippetsCache = await res.json();
+    const base = env.SNIPPETS_URL || "/dist/js/snippets/chat.json";
+    const urls = base.startsWith("http")
+        ? [base]
+        : SNIPPET_PAGES.map((path) => new URL(`${path}.json`, "https://g4f.dev").toString());
+    const merged = {};
+    for (const url of urls) {
+        const res = await fetch(url, { cf: { cacheTtl: 3600, cacheEverything: true } });
+        if (!res.ok) throw new Error(`snippets fetch failed: ${res.status} (${url})`);
+        const catalog = await res.json();
+        for (const [headline, texts] of Object.entries(catalog)) {
+            if (headline.startsWith("_") || !Array.isArray(texts)) continue;
+            (merged[headline] = merged[headline] || []).push(...texts);
+        }
+    }
+    snippetsCache = merged;
+    snippetsKeys = [];
+    Object.entries(merged).forEach(([headline, texts]) => {
+        if (headline.startsWith("_") || !Array.isArray(texts)) return;
+        snippetsKeys.push(headline);
+        snippetsKeys.push(...texts);
+    });
     return snippetsCache;
 }
 
@@ -329,8 +355,10 @@ function validateAnswer(payload, answer, language) {
             return "missing_translations";
         }
         const sources = Object.keys(translations);
-        if (sources.length === 0) return "missing_translations";
-        if (sources.length > 100) return "too_many_translations";
+        const knownKeys = sources.filter((key) => snippetsKeys.includes(key));
+        if (sources.length === 0 || knownKeys.length === 0) return "missing_translations";
+        if (sources.length > 100 || knownKeys.length > 100) return "too_many_translations";
+        if (!("..." in translations)) return "invalid_translation";
         for (const [source, translated] of Object.entries(translations)) {
             if (typeof translated !== "string" || !translated.trim()) return "invalid_translation";
             if (translated.length > 2000) return "invalid_translation";
@@ -455,7 +483,6 @@ async function handleIssue(request, env) {
         // Fill the batch with real UI snippets; the section headline is the
         // translation context. Snippets that already have a community
         // translation for this language are skipped.
-        const batch = Number(env.TRANSLATIONS_BATCH || 8);
         let snippets;
         try {
             snippets = await loadSnippets(env);
@@ -472,6 +499,7 @@ async function handleIssue(request, env) {
             if (untranslated.length === 0) continue;
             pending.push(headline);
             pending.push(...untranslated);
+            pending.push("...");
             break;
         }
         if (pending.length === 0) {
@@ -479,7 +507,7 @@ async function handleIssue(request, env) {
         }
         payload.items = pending;
         payload.prompt =
-            `Translate these UI texts to language ${language}. ` +
+            `Translate these UI texts to language \`${language}\` (iso-code). ` +
             `Keep placeholders like {0} intact. Return as JSON: ` +
             `{"translations": {"<source text>": "<translation>"}}\n` +
             `Texts:\n${JSON.stringify({ items: Object.fromEntries(pending.map((item) => [item, ""])) }, null, 2)}`;
@@ -720,10 +748,11 @@ async function handleTranslationsSubmit(language, translations, env) {
             typeof translated === "string" && translated.trim() &&
             translated.trim().toLowerCase() !== source.trim().toLowerCase()
     );
-    if (entries.length === 0) {
+    const knownTranslations = entries.filter(([source, _]) => snippetsKeys.includes(source));
+    if (entries.length === 0 || knownTranslations.length === 0) {
         throw new Error("no_valid_translations");
     }
-    if (entries.length > 100) {
+    if (entries.length > 100 || knownTranslations.length > 100) {
         throw new Error("too_many_translations");
     }
 
@@ -733,7 +762,7 @@ async function handleTranslationsSubmit(language, translations, env) {
     let store = {};
     try { store = raw ? JSON.parse(raw) : {}; } catch { /* fresh store */ }
     let added = 0;
-    for (const [source, translated] of entries) {
+    for (const [source, translated] of knownTranslations) {
         if (!store[source]) added += 1;
         store[source] = translated.trim();
     }

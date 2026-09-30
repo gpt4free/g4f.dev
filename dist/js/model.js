@@ -213,7 +213,7 @@ function estimateModelCost(pricing, type, options = {}) {
 }
 
 function convertModel(inputModel, options = {}) {
-    const model = inputModel;
+    const model = inputModel && typeof inputModel === "object" ? {...inputModel} : { id: String(inputModel) };
     const useModelName = !!options.useModelName;
     if (!model.id || useModelName) {
         model.id = model.name || model.model_name || model.model;
