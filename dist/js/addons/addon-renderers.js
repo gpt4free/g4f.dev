@@ -78,19 +78,17 @@ function fallback_clipboard (text) {
 let iframe_container;
 let iframe;
 let iframe_close;
-domReady.then(() => {
-    iframe_container = document.querySelector(".hljs-iframe-container");
-    iframe = document.querySelector(".hljs-iframe");
-    iframe_close = Object.assign(document.createElement("button"), {
-        className: "hljs-iframe-close",
-        innerHTML: '<i class="fa-regular fa-x"></i>',
-    });
-    iframe_close.onclick = () => {
-        iframe_container.classList.add("hidden");
-        iframe.src = "";
-    }
-    iframe_container.appendChild(iframe_close);
+iframe_container = document.querySelector(".hljs-iframe-container");
+iframe = document.querySelector(".hljs-iframe");
+iframe_close = Object.assign(document.createElement("button"), {
+    className: "hljs-iframe-close",
+    innerHTML: '<i class="fa-regular fa-x"></i>',
 });
+iframe_close.onclick = () => {
+    iframe_container.classList.add("hidden");
+    iframe.src = "";
+}
+iframe_container.appendChild(iframe_close);
 
 class HtmlRenderPlugin {
     constructor(options = {}) {

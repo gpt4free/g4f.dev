@@ -5,13 +5,6 @@ const appStorage = window.localStorage || {
     length: 0,
 };
 
-const domReady = new Promise((resolve) => {
-    document.addEventListener("DOMContentLoaded", resolve);
-    if (document.readyState !== "loading" ) {
-        resolve();
-    }
-});
-
 const translationSnipptes = [
     "with", "**An error occurred:**", "Private Conversation", "New Conversation", "Regenerate", "Continue",
     "Hello! How can I assist you today?", "words", "chars", "tokens", "{0} total tokens",
@@ -36,14 +29,12 @@ window.providers = [
 
 window.client = null;
 
-domReady.then((event) => {
-    // Addon bootstrap (no-op if addon-host.js already booted us)
-    if (window.ChatAddons && typeof window.ChatAddons.boot === 'function') {
-        window.ChatAddons.boot().then(() => window.ChatAddons.enableAll());
-    }
+// Addon bootstrap (no-op if addon-host.js already booted us)
+if (window.ChatAddons && typeof window.ChatAddons.boot === 'function') {
+    window.ChatAddons.boot().then(() => window.ChatAddons.enableAll());
+}
 
-    translationSnipptes.forEach((text) => framework.translate(text));
-});
+translationSnipptes.forEach((text) => framework.translate(text));
 
 function add_url_to_history(url) {
     if (!window?.pywebview) {
@@ -74,15 +65,12 @@ const new_conversation = async (is_private = false) => {
     render_startup_questions?.();
 };
 
-domReady.then((event) => {
-    document.querySelectorAll(".new_convo_icon, .new_convo").forEach((el) => {
-        el.addEventListener("click", async () => {
-            await new_conversation(el.classList.contains("private_conversation"));
-        });
+document.querySelectorAll(".new_convo_icon, .new_convo").forEach((el) => {
+    el.addEventListener("click", async () => {
+        await new_conversation(el.classList.contains("private_conversation"));
     });
 });
 addonsLoaded.then(() => {
-    domReady.then((event) => {
         regenerate_button.addEventListener("click", async () => {
             regenerate_button.classList.add("regenerate-hidden");
             setTimeout(()=>window.regenerate_button.classList.remove("regenerate-hidden"), 3000);
@@ -131,7 +119,6 @@ addonsLoaded.then(() => {
             provider_forms.classList.add("hidden");
             chat.classList.remove("hidden");
         });
-    });
 });
 
 const toBase64 = file => new Promise((resolve, reject) => {
@@ -172,11 +159,9 @@ async function scroll_to_bottom() {
     chatBody.scrollTop = chatBody.scrollHeight;
 }
 
-domReady.then(() => {
-    chatBody.addEventListener('scroll', () => {
-        const atBottom = chatBody.scrollTop + chatBody.clientHeight >= chatBody.scrollHeight - 40;
-        autoScrollEnabled = atBottom && chatBody.clientHeight > 0;
-    });
+chatBody.addEventListener('scroll', () => {
+    const atBottom = chatBody.scrollTop + chatBody.clientHeight >= chatBody.scrollHeight - 40;
+    autoScrollEnabled = atBottom && chatBody.clientHeight > 0;
 });
 
 const clear_conversations = async () => {
@@ -458,17 +443,15 @@ const load_conversations = async () => {
     });
 };
 
-domReady.then(async () => {
-    const hide_input = document.querySelector(".chat-toolbar .hide-input");
-    hide_input.addEventListener("click", async (e) => {
-        const icon = hide_input.querySelector("i");
-        const func = icon.classList.contains("fa-angles-down") ? "add" : "remove";
-        const remv = icon.classList.contains("fa-angles-down") ? "remove" : "add";
-        icon.classList[func]("fa-angles-up");
-        icon.classList[remv]("fa-angles-down");
-        document.querySelector(".chat-footer .user-input").classList[func]("hidden");
-        document.querySelector(".chat-footer .chat-buttons").classList[func]("hidden");
-    });
+const hide_input = document.querySelector(".chat-toolbar .hide-input");
+hide_input.addEventListener("click", async (e) => {
+    const icon = hide_input.querySelector("i");
+    const func = icon.classList.contains("fa-angles-down") ? "add" : "remove";
+    const remv = icon.classList.contains("fa-angles-down") ? "remove" : "add";
+    icon.classList[func]("fa-angles-up");
+    icon.classList[remv]("fa-angles-down");
+    document.querySelector(".chat-footer .user-input").classList[func]("hidden");
+    document.querySelector(".chat-footer .chat-buttons").classList[func]("hidden");
 });
 function get_message_id() {
     const random_bytes = (Math.floor(Math.random() * 1338377565) + 2956589730).toString(
@@ -938,39 +921,34 @@ function renderMediaSelect() {
     });
 }
 
-domReady.then(() => {
-    const imageInput        = document.querySelector(".image-label");
-    imageInput ? imageInput.onclick = () => mediaSelect.classList.toggle("hidden") : null;
-    const mediaSelect = document.querySelector(".media-select");
-    mediaSelect.querySelector(".close").onclick = () => {
-        if (Object.values(image_storage).length) {
-            Object.entries(image_storage).forEach(async ([object_url, file]) => {
-                if (file instanceof File) {
-                    URL.revokeObjectURL(object_url)
-                } else if (file.bucket_id) {
-                    await framework.delete(file.bucket_id);
-                }
-            });
-            image_storage = {};
-            renderMediaSelect();
-        } else {
-            mediaSelect.classList.add("hidden");
-        }
-    }
-
-    const imageSelect = document.getElementById("image");
-    const cameraInput = document.getElementById("camera");
-
-    [imageSelect, cameraInput].filter(el=>el).forEach((el) => {
-        el.addEventListener('change', async () => {
-            if (el.files.length) {
-                Array.from(el.files).forEach((file) => {
-                    image_storage[URL.createObjectURL(file)] = file;
-                });
-                el.value = "";
-                renderMediaSelect();
+const imageInput = document.querySelector(".image-label");
+imageInput ? imageInput.onclick = () => mediaSelect.classList.toggle("hidden") : null;
+const mediaSelect = document.querySelector(".media-select");
+mediaSelect.querySelector(".close").onclick = () => {
+    if (Object.values(image_storage).length) {
+        Object.entries(image_storage).forEach(async ([object_url, file]) => {
+            if (file instanceof File) {
+                URL.revokeObjectURL(object_url)
+            } else if (file.bucket_id) {
+                await framework.delete(file.bucket_id);
             }
         });
+        image_storage = {};
+        renderMediaSelect();
+    } else {
+        mediaSelect.classList.add("hidden");
+    }
+}
+
+[document.getElementById("image"), document.getElementById("camera")].filter(el=>el).forEach((el) => {
+    el.addEventListener('change', async () => {
+        if (el.files.length) {
+            Array.from(el.files).forEach((file) => {
+                image_storage[URL.createObjectURL(file)] = file;
+            });
+            el.value = "";
+            renderMediaSelect();
+        }
     });
 });
 
@@ -1228,9 +1206,7 @@ async function upload_files(fileInput) {
     }
 }
 
-domReady.then(() => {
-    const fileInput = document.getElementById("file");
-    fileInput.addEventListener('change', async (event) => {
+fileInput.addEventListener('change', async (event) => {
         if (fileInput.files.length) {
             const type = fileInput.files[0].name.split('.').pop()
             if (type == "har") {
@@ -1292,7 +1268,6 @@ domReady.then(() => {
     chatPrompt?.addEventListener("input", async () => {
         await save_system_message();
     });
-});
 
 // Create overlay element for sidebar
 function isLive() {

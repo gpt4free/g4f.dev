@@ -31,11 +31,14 @@
  *   GET  /challenge/issue?lang=de-DE&kind=followup|translation|translations|any
  *   POST /challenge/solve      { id, ciphertext, iv, language }
  *   POST /challenge/redeem     { token }   — exchange JWT for cake credit
- *   POST /challenge/translations  { language, translations: {"en": "de", ...} }
  *   GET  /challenge/translations?lang=de-DE   — community translations
  *   GET  /challenge/followups?lang=de-DE&count=3 — community follow-up questions
  *   GET  /challenge/status
  *   GET  /challenge/health
+ *
+ * Solved challenges feed the community stores directly in /challenge/solve:
+ * "translations" answers merge into the translation store, "followup"
+ * answers into the follow-ups pool (no separate submit endpoint).
  *
  * Storage (KV: CAKE_KV, shared with the cake worker):
  *   challenge:<id>          — sealed challenge record (TTL = CHALLENGE_TTL_SEC)
@@ -245,8 +248,8 @@ function baseLanguage(tag) {
     return (tag || "en").split(/[-_]/)[0].toLowerCase();
 }
 
-/** Load the UI snippet catalog (snippets grouped by section headline) and
- *  flatten it to [{ text, context }] pairs. The headline doubles as the
+/** Load the UI snippet catalog: JSON grouped by section headline
+ *  ({ "<headline>": ["text", ...] }). The headline doubles as the
  *  translation context — "Send" means something else under "Message Input"
  *  than under "Legal & About". Cached in module scope (isolate lifetime). */
 let snippetsCache = null;
@@ -465,10 +468,10 @@ async function handleIssue(request, env) {
         let pending = [];
         for (const [headline, texts] of Object.entries(snippets)) {
             if (headline.startsWith("_") || !Array.isArray(texts)) continue;
-            texts = texts.filter((s) => !existing[s.text])
-            if (texts.length === 0) continue;
-            pending.push(headline)
-            pending.push(...texts);
+            const untranslated = texts.filter((s) => !existing[s]);
+            if (untranslated.length === 0) continue;
+            pending.push(headline);
+            pending.push(...untranslated);
             break;
         }
         if (pending.length === 0) {
@@ -599,6 +602,12 @@ async function handleSolve(request, env) {
         } catch { /* pool is best-effort */ }
     }
 
+    if (record.kind === "translations") {
+        try {
+            await handleTranslationsSubmit(record.language, answer, env);
+        } catch { /* pool is best-effort */ }
+    }
+
     // 7. Mint the private-key JWT carrying the credit claim.
     const { token, expires } = await signJwt(
         env,
@@ -695,26 +704,15 @@ async function handleRedeem(request, env) {
     return json(data, upstream.status, {}, request);
 }
 
-/** POST /challenge/translations { language, translations } — receive
- *  translated UI snippets. Accepts either a solve-JWT (same as /redeem:
- *  the batch was issued as a "translations" challenge) or an uncredited
- *  submission (stored but not paid). Valid entries are merged into the
- *  per-language community store served back to the chat UI. */
-async function handleTranslationsSubmit(request, env) {
-    let body;
-    try {
-        body = await request.json();
-    } catch {
-        return json({ error: "invalid_json" }, 400, {}, request);
-    }
-    const token = body.token || (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-    const translations = body.translations;
-    const language = baseLanguage(body.language || "");
+/** Merge solved "translations" answers into the per-language community
+ *  store. Internal helper called from handleSolve (the solve JWT already
+ *  credits the user — no separate token check here). Throws on invalid
+ *  input; the caller treats the pool as best-effort. */
+async function handleTranslationsSubmit(language, translations, env) {
+    translations = translations.translations || translations;
+    language = baseLanguage(language || "");
     if (!language || language === "en") {
-        return json({ error: "invalid_language" }, 400, {}, request);
-    }
-    if (!translations || typeof translations !== "object" || Array.isArray(translations)) {
-        return json({ error: "missing_translations", required: ["language", "translations"] }, 400, {}, request);
+        throw new Error("invalid_language");
     }
     const entries = Object.entries(translations).filter(
         ([source, translated]) =>
@@ -723,23 +721,10 @@ async function handleTranslationsSubmit(request, env) {
             translated.trim().toLowerCase() !== source.trim().toLowerCase()
     );
     if (entries.length === 0) {
-        return json({ error: "no_valid_translations" }, 400, {}, request);
+        throw new Error("no_valid_translations");
     }
     if (entries.length > 100) {
-        return json({ error: "too_many_translations", max: 100 }, 400, {}, request);
-    }
-
-    let credited = 0;
-    if (token) {
-        // Credited path: the JWT proves a translations challenge was solved.
-        const payload = await verifyJwt(env, token);
-        if (!payload) {
-            return json({ error: "invalid_or_expired_token" }, 401, {}, request);
-        }
-        if (payload.sub !== `challenge:${getClientIP(request)}`) {
-            return json({ error: "token_bound_to_other_ip" }, 403, {}, request);
-        }
-        credited = Number(payload.credit_cents) || 0;
+        throw new Error("too_many_translations");
     }
 
     // Merge into the per-language community store.
@@ -754,7 +739,7 @@ async function handleTranslationsSubmit(request, env) {
     }
     await env.CAKE_KV.put(storeKey, JSON.stringify(store), { expirationTtl: 86400 * 365 });
 
-    return json({ ok: true, language, added, total: Object.keys(store).length, credited }, 200, {}, request);
+    return { ok: true, language, added, total: Object.keys(store).length };
 }
 
 /** GET /challenge/translations?lang=de-DE — community translations for the
@@ -870,9 +855,6 @@ export default {
             }
             if (pathname === "/challenge/redeem" && request.method === "POST") {
                 return await handleRedeem(request, env);
-            }
-            if (pathname === "/challenge/translations" && request.method === "POST") {
-                return await handleTranslationsSubmit(request, env);
             }
             if (pathname === "/challenge/translations" && request.method === "GET") {
                 return await handleTranslationsGet(request, env);

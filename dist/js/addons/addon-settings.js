@@ -282,7 +282,6 @@ const count_input = async () => {
     }
 };
 addonsLoaded.then(() => {
-    domReady.then(() => {
         userInput.addEventListener("keyup", count_input);
         chatPrompt.addEventListener("keyup", count_input);
         chatPrompt.addEventListener("focus", function() {
@@ -323,7 +322,6 @@ addonsLoaded.then(() => {
                 new_conversation();
             }
         });
-    });
 });
 
 function open_settings() {

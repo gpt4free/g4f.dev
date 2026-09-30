@@ -585,7 +585,6 @@ async function loadProviderModels(provider=null) {
     await refreshModels(provider);
 };
 addonsLoaded.then(() => {
-    domReady.then(() => {
     if (providerSelect) {
         providerSelect.addEventListener("change", async () => {
             await loadProviderModels()
@@ -630,7 +629,6 @@ addonsLoaded.then(() => {
         selected[modelSelect.value] = selected_values;
         favorites[providerSelect?.value] = selected;
         appStorage.setItem("favorites", JSON.stringify(favorites));
-    });
     });
 });
 
@@ -699,80 +697,78 @@ async function get_recognition_language() {
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let stopRecognition = () => {};
 if (SpeechRecognition) {
-    domReady.then(() => {
-        const microLabel = document.querySelector(".micro-label");
-        const mircoIcon = microLabel.querySelector("i");
-        mircoIcon.classList.add("fa-microphone");
-        mircoIcon.classList.remove("fa-microphone-slash");
+    const microLabel = document.querySelector(".micro-label");
+    const mircoIcon = microLabel.querySelector("i");
+    mircoIcon.classList.add("fa-microphone");
+    mircoIcon.classList.remove("fa-microphone-slash");
 
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.maxAlternatives = 1;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
 
-        let startValue;
-        let buffer;
-        let lastDebounceTranscript;
-        recognition.onstart = function() {
-            startValue = userInput.value;
-            lastDebounceTranscript = "";
-            userInput.readOnly = true;
+    let startValue;
+    let buffer;
+    let lastDebounceTranscript;
+    recognition.onstart = function() {
+        startValue = userInput.value;
+        lastDebounceTranscript = "";
+        userInput.readOnly = true;
+        buffer = "";
+    };
+    recognition.onend = function() {
+        if (buffer) {
+            userInput.value += `${startValue ? startValue + "\n" : ""}${buffer}`;
             buffer = "";
-        };
-        recognition.onend = function() {
-            if (buffer) {
-                userInput.value += `${startValue ? startValue + "\n" : ""}${buffer}`;
-                buffer = "";
-                count_input();
-            }
-            if (microLabel.classList.contains("recognition")) {
-                recognition.start();
-            } else {
-                userInput.readOnly = false;
-                userInput.focus();
-            }
-        };
-        recognition.onresult = function(event) {
-            if (!event.results) {
+            count_input();
+        }
+        if (microLabel.classList.contains("recognition")) {
+            recognition.start();
+        } else {
+            userInput.readOnly = false;
+            userInput.focus();
+        }
+    };
+    recognition.onresult = function(event) {
+        if (!event.results) {
+            return;
+        }
+        let result = event.results[event.resultIndex];
+        let isFinal = result.isFinal && (result[0].confidence > 0);
+        let transcript = result[0].transcript;
+        if (isFinal) {
+            if(transcript == lastDebounceTranscript) {
                 return;
             }
-            let result = event.results[event.resultIndex];
-            let isFinal = result.isFinal && (result[0].confidence > 0);
-            let transcript = result[0].transcript;
-            if (isFinal) {
-                if(transcript == lastDebounceTranscript) {
-                    return;
-                }
-                lastDebounceTranscript = transcript;
-            }
-            if (transcript) {
-                inputCount.innerText = transcript;
-                if (isFinal) {
-                    buffer = `${buffer ? buffer + "\n" : ""}${transcript.trim()}`;
-                }
-            }
-        };
-
-        stopRecognition = ()=>{
-            if (microLabel.classList.contains("recognition")) {
-                microLabel.classList.remove("recognition");
-                recognition.stop();
-                count_input();
-                return true;
-            }
-            return false;
+            lastDebounceTranscript = transcript;
         }
-
-        microLabel.addEventListener("click", async (e) => {
-            if (!stopRecognition()) {
-                microLabel.classList.add("recognition");
-                microLabel.querySelector("*").innerText = framework.translate("Recognition On");
-                recognition.lang = await get_recognition_language();
-                recognition.start();
-            } else {
-                microLabel.querySelector("*").innerText = framework.translate("Recognition Off");
+        if (transcript) {
+            inputCount.innerText = transcript;
+            if (isFinal) {
+                buffer = `${buffer ? buffer + "\n" : ""}${transcript.trim()}`;
             }
-        });
+        }
+    };
+
+    stopRecognition = ()=>{
+        if (microLabel.classList.contains("recognition")) {
+            microLabel.classList.remove("recognition");
+            recognition.stop();
+            count_input();
+            return true;
+        }
+        return false;
+    }
+
+    microLabel.addEventListener("click", async (e) => {
+        if (!stopRecognition()) {
+            microLabel.classList.add("recognition");
+            microLabel.querySelector("*").innerText = framework.translate("Recognition On");
+            recognition.lang = await get_recognition_language();
+            recognition.start();
+        } else {
+            microLabel.querySelector("*").innerText = framework.translate("Recognition Off");
+        }
     });
 }
 

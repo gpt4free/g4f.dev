@@ -479,9 +479,7 @@ async function hide_settings() {
 }
 
 addonsLoaded.then(() => {
-    domReady.then(() => {
-        load_startup_questions();
-    });
+    load_startup_questions();
 });
 export default {
     load_startup_questions,

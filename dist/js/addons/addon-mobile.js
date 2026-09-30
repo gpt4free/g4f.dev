@@ -259,11 +259,9 @@ function applyMobileEnhancements() {
   document.body.classList.add('mobile-device');
 }
 addonsLoaded.then(() => {
-    domReady.then(() => {
-      if (isMobileDevice()) {
+    if (isMobileDevice()) {
         applyMobileEnhancements();
-      }
-    })
+    }
 });
 
 export default {

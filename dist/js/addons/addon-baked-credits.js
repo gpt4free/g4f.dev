@@ -125,12 +125,11 @@ function formatNumber(num) {
     return (Math.round(num * 10) / 10).toString();
 }
 
-domReady.then(() => {
-    // Shared DOM refs used by tier/cake UI below (tierLimitsRow is declared
-    // at module scope above so updateCakeCredits can unhide it)
+// Shared DOM refs used by tier/cake UI below (tierLimitsRow is declared
+// at module scope above so updateCakeCredits can unhide it)
 
-    // Listen for user tier updates from API responses
-    window.addEventListener('userTierUpdate', (event) => {
+// Listen for user tier updates from API responses
+window.addEventListener('userTierUpdate', (event) => {
         const userInfo = event.detail;
         const infoBar = document.getElementById('user-tier-info');
         const tierText = document.getElementById('user-tier-text');
@@ -163,7 +162,7 @@ domReady.then(() => {
                 if (tierLimitsRow) tierLimitsRow.classList.remove('hidden');
             }
         }
-    });
+
 });
 
 // Settings tabs functionality

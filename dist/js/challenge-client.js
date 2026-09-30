@@ -238,26 +238,6 @@
             throw Object.assign(new Error(redeemData.error || `redeem failed: ${redeemRes.status}`), { status: redeemRes.status });
         }
 
-        // 5b. Batch "translations" challenges: donate the translated UI
-        //     snippets to the community store (POST /challenge/translations).
-        //     The solve-JWT is attached so the submission is credited.
-        if (payload.kind === "translations" && answer.translations && typeof answer.translations === "object") {
-            try {
-                await fetch(`${CHALLENGE_ENDPOINT}/translations`, {
-                    method: "POST",
-                    credentials: "include",
-                    headers: authHeaders({ "Content-Type": "application/json" }),
-                    body: JSON.stringify({
-                        token: solveData.token,
-                        language,
-                        translations: answer.translations,
-                    }),
-                });
-            } catch (e) {
-                console.warn("[G4FChallenge] translation donation failed:", e);
-            }
-        }
-
         state.solved += 1;
         state.credits += redeemData.credit_cents || challenge.credit_cents || 5;
         console.info(
