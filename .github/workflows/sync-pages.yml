@@ -16,6 +16,11 @@ on:
   push:
     branches: ["main"]
 
+  # Pull-based syncs on the mirror run every 5 min; this catches anything
+  # they miss (e.g. after a failed run) on a schedule too
+  schedule:
+    - cron: "*/5 * * * *"
+
   # Run manually from the Actions tab — enter the mirror repo name to sync
   workflow_dispatch:
     inputs:
