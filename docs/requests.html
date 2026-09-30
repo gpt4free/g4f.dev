@@ -465,7 +465,7 @@
 
 <span class="pl-c"># Define the payload</span>
 <span class="pl-s1">payload</span> <span class="pl-c1">=</span> {
-    <span class="pl-s">"model"</span>: <span class="pl-s">"gpt-4o"</span>,
+    <span class="pl-s">"model"</span>: <span class="pl-s">"auto"</span>,
     <span class="pl-s">"temperature"</span>: <span class="pl-c1">0.9</span>,
     <span class="pl-s">"messages"</span>: [{<span class="pl-s">"role"</span>: <span class="pl-s">"system"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello, how are you?"</span>}]
 }
@@ -715,7 +715,7 @@
 
 <span class="pl-k">async</span> <span class="pl-k">def</span> <span class="pl-en">main</span>():
     <span class="pl-s1">chat_url</span> <span class="pl-c1">=</span> <span class="pl-s">"http://localhost/v1/chat/completions"</span>
-    <span class="pl-s1">model</span> <span class="pl-c1">=</span> <span class="pl-s">"gpt-4o"</span>
+    <span class="pl-s1">model</span> <span class="pl-c1">=</span> <span class="pl-s">"auto"</span>
     <span class="pl-s1">messages</span> <span class="pl-c1">=</span> [{<span class="pl-s">"role"</span>: <span class="pl-s">"system"</span>, <span class="pl-s">"content"</span>: <span class="pl-s">"Hello, how are you?"</span>}]
     <span class="pl-s1">output_queue</span> <span class="pl-c1">=</span> <span class="pl-en">Queue</span>()
 

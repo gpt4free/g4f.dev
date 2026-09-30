@@ -377,27 +377,13 @@
 
                 <nav class="chat-buttons" role="navigation" aria-label="Chat options">
                     <div class="field">
-                        <div class="model-selector hidden" role="region" aria-label="Model search and suggestions">
-                            <div id="model-suggestions" class="suggestions-dropdown" aria-live="polite"></div>
-                            <input
-                              type="text"
-                              id="model-search"
-                              placeholder="Search models (e.g. 'gpt-4', 'claude')..."
-                              autocomplete="off"
-                              autocapitalize="off"
-                              autocorrect="off"
-                              spellcheck="false"
-                              aria-label="Search models"
-                            />
-                        </div>
-                        <br>
                         <label for="model" class="sr-only">Select AI Model</label>
                         <select name="model" id="model" aria-describedby="modelHelp"></select>
                         <small id="modelHelp" class="sr-only">Select AI model to use for conversations.</small>
                     </div>
                     <div class="field">
-                        <button id="model_edit" type="button" aria-label="Edit model settings">
-                            <i class="fa-solid fa-edit" aria-hidden="true"></i>
+                        <button id="open_picker" type="button" aria-label="Open provider and model picker" title="Browse all providers & models">
+                            <i class="fa-solid fa-table-list" aria-hidden="true"></i>
                         </button>
                     </div>
                     <div class="field">

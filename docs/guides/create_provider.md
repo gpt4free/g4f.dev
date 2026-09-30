@@ -53,7 +53,7 @@ __all__ = [
 import g4f
 
 response = g4f.ChatCompletion.create(
-    model='gpt-4o',
+    model='auto',
     provider=g4f.Provider.PROVIDERNAME,
     messages=[{"role": "user", "content": "test"}],
     stream=True

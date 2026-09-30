@@ -86,7 +86,7 @@
         "Select AI Model",
         "Model: Default",
         "Select AI model to use for conversations.",
-        "Search models (e.g. 'gpt-4', 'claude', 'gemini')...",
+        "Search models (e.g. 'gpt', 'grok', 'claude', 'gemini')...",
         "Browse all providers & models",
         "Select Provider",
         "Provider: Auto",
@@ -95,13 +95,11 @@
         "Show hidden",
         "Show hidden & disabled providers",
         "Refresh models",
-        "Search by model name (e.g. gpt-4, claude, gemini)...",
+        "Search by model name (e.g. gpt, grok, claude, gemini)...",
         "Models",
         "Select a model to see base URL & quick actions",
         "Log/Routing URL",
-        "Route all requests through local backend for logging",
-        "Refine Files with spaCy",
-        "Enable file refinement with spaCy"
+        "Route all requests through local backend for logging"
     ],
     "Settings": [
         "Settings",

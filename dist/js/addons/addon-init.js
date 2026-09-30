@@ -992,10 +992,6 @@ function connectToSSE(url, do_refine, bucket_id) {
         } else if (data.action == "download") {
             inputCount.innerText = `${framework.translate('Download:')} ${data.count} files`;
         } else if (data.action == "done") {
-            if (do_refine) {
-                connectToSSE(`${framework.backendUrl}/backend-api/v2/files/${encodeURIComponent(bucket_id)}?refine_chunks_with_spacy=true`, false, bucket_id);
-                return;
-            }
             fileInput.value = "";
             paperclip.classList.remove("blink");
             if (!data.size) {
@@ -1049,8 +1045,7 @@ async function upload_files(fileInput) {
         const count = result.files.length + result.media.length;
         inputCount.innerText = framework.translate('{0} File(s) uploaded successfully').replace('{0}', count);
         if (result.files.length > 0) {
-            let do_refine = document.getElementById("refine")?.checked;
-            connectToSSE(`${framework.backendUrl}/backend-api/v2/files/${bucket_id}/stream`, do_refine, bucket_id);
+            connectToSSE(`${framework.backendUrl}/backend-api/v2/files/${bucket_id}/stream`, false, bucket_id);
         } else {
             paperclip.classList.remove("blink");
             fileInput.value = "";
