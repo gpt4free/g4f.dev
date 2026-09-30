@@ -268,7 +268,7 @@ async function loadSnippets(env) {
     const base = env.SNIPPETS_URL || "/dist/js/snippets/chat.json";
     const urls = base.startsWith("http")
         ? [base]
-        : SNIPPET_PAGES.map((path) => new URL(`${path}.json`, "https://g4f.dev").toString());
+        : SNIPPET_PAGES.map((path) => new URL(`/dist/js/snippets/${path}.json`, "https://g4f.dev").toString());
     const merged = {};
     for (const url of urls) {
         const res = await fetch(url, { cf: { cacheTtl: 3600, cacheEverything: true } });
