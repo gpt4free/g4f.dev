@@ -172,8 +172,6 @@ async function scroll_to_bottom() {
     chatBody.scrollTop = chatBody.scrollHeight;
 }
 
-let autoScrollEnabled = true;
-
 domReady.then(() => {
     chatBody.addEventListener('scroll', () => {
         const atBottom = chatBody.scrollTop + chatBody.clientHeight >= chatBody.scrollHeight - 40;
@@ -480,44 +478,40 @@ function get_message_id() {
 
     return BigInt(`0b${unix}${random_bytes}`).toString();
 };
-
-domReady.then(async () => {
-    const sidebar_buttons = document.querySelectorAll(".mobile-sidebar-toggle");
+sidebar_buttons.forEach((el) => {
+    if (el.dataset.click) {
+        return;
+    }
+    el.dataset.click = true;
+    el.addEventListener("click", async (e) => {
+    e.preventDefault();
+    // Animate sidebar buttons
     sidebar_buttons.forEach((el) => {
-        if (el.dataset.click) {
-            return;
+        el.classList.toggle("rotated");
+    });
+    // For desktop
+    if (window.innerWidth >= 640) {
+        // Toggle between shown and minimized only
+        if (sidebar.classList.contains("shown")) {
+            // Change from shown to minimized
+            sidebar.classList.remove("shown");
+            sidebar.classList.add("minimized");
+        } else {
+            // Change from minimized to shown
+            sidebar.classList.remove("minimized");
+            sidebar.classList.add("shown");
         }
-        el.dataset.click = true;
-        el.addEventListener("click", async (e) => {
-        e.preventDefault();
-        // Animate sidebar buttons
-        sidebar_buttons.forEach((el) => {
-            el.classList.toggle("rotated");
-        });
-        // For desktop
-        if (window.innerWidth >= 640) {
-            // Toggle between shown and minimized only
-            if (sidebar.classList.contains("shown")) {
-                // Change from shown to minimized
-                sidebar.classList.remove("shown");
-                sidebar.classList.add("minimized");
-            } else {
-                // Change from minimized to shown
-                sidebar.classList.remove("minimized");
-                sidebar.classList.add("shown");
-            }
-        } 
-        // For mobile
-        else {
-            if (sidebar.classList.contains("shown")) {
-                // Hide sidebar on mobile
-                sidebar.classList.remove("shown");
-            } else {
-                // Show sidebar on mobile
-                sidebar.classList.add("shown");
-            }
+    } 
+    // For mobile
+    else {
+        if (sidebar.classList.contains("shown")) {
+            // Hide sidebar on mobile
+            sidebar.classList.remove("shown");
+        } else {
+            // Show sidebar on mobile
+            sidebar.classList.add("shown");
         }
-        });
+    }
     });
 });
 
@@ -1048,7 +1042,7 @@ audioButton.addEventListener('click', async (event) => {
     t.innerText = framework.translate("Stop Recording");
 
     try {
-        stream = await navigator.mediaDevices.getUserMedia({
+        const stream = await navigator.mediaDevices.getUserMedia({
             audio: true
         });
 
@@ -2677,4 +2671,10 @@ export default {
     initClient,
     updateLiveProviderOptions,
     mcpClient,
+    connectToSSE,
+    get_message_id,
+    formatFileSize,
+    add_url_to_history,
+    autoScrollEnabled,
+    isLive,
 }

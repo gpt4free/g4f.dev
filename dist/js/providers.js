@@ -1,5 +1,5 @@
 
-import { Client, Pollinations, DeepInfra, HuggingFace, Worker, Audio, WebGPU, Bonsai, Bonsai2, captureUserTierHeaders, Puter } from "./client.js";
+import { Client, Pollinations, DeepInfra, HuggingFace, Worker, Audio, WebGPU, Bonsai, Bonsai2, ChromeAI, captureUserTierHeaders, Puter } from "./client.js";
 let fs;
 if (typeof window === "undefined") {
     fs = require("fs");
@@ -22,6 +22,7 @@ let providerClassMap = {
     "webgpu": WebGPU,
     "bonsai": Bonsai,
     "bonsai2": Bonsai2,
+    "chromeai": ChromeAI,
 };
 
 function mapProviderDefaults(providers) {
@@ -169,5 +170,5 @@ function mergeToolCalls(accumulator, toolCalls) {
     return accumulator;
 }
 
-export { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls, Puter, WebGPU, Bonsai, Bonsai2 };
-export default { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls, Puter, WebGPU, Bonsai, Bonsai2 };
+export { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls, Puter, WebGPU, Bonsai, Bonsai2, ChromeAI };
+export default { loadProviders, createClient, providerLocalStorage, captureUserTierHeaders, mergeToolCalls, Puter, WebGPU, Bonsai, Bonsai2, ChromeAI };

@@ -1397,6 +1397,162 @@ class Bonsai2 extends Client {
     }
 }
 
+/**
+ * Chrome built-in AI provider (Gemini Nano) using the Prompt API.
+ * Runs entirely locally in Chrome: https://developer.chrome.com/docs/ai/prompt-api
+ */
+class ChromeAI extends Client {
+    constructor(options = {}) {
+        super({
+            ...options,
+            baseUrl: options.baseUrl || 'chrome://local',
+            quotaEndpoint: null
+        });
+        this.id = options.id || 'chromeai';
+        this.defaultModel = options.defaultModel || 'gemini-nano';
+        this.logCallback = options.logCallback || console.log;
+        this.progressCallback = options.progressCallback || null;
+
+        // Cached LanguageModel session
+        this._session = null;
+    }
+
+    /**
+     * Check whether the Chrome built-in Prompt API is available.
+     * @returns {Promise<boolean>}
+     */
+    static async isSupported() {
+        if (typeof self === 'undefined' || !self.LanguageModel) return false;
+        try {
+            const availability = await self.LanguageModel.availability();
+            return !!availability && availability !== 'unavailable';
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Get (or create) the cached LanguageModel session.
+     * System prompts are not accepted by session.prompt() and must be passed
+     * via initialPrompts, so they are applied on a cheap session clone.
+     */
+    async _getSession(systemMessages = []) {
+        if (!this._session) {
+            this._session = await LanguageModel.create({
+                expectedInputs: [
+                    { type: "text", languages: ["en"] }
+                ],
+                expectedOutputs: [
+                    { type: "text", languages: [navigator.language || "en"] }
+                ],
+                initialPrompts: [],
+                monitor: this.progressCallback ? (monitor) => {
+                    monitor.addEventListener('downloadprogress', (e) => {
+                        this.progressCallback({
+                            progress: e.loaded,
+                            text: `Downloading Gemini Nano: ${Math.round(e.loaded * 100)}%`
+                        });
+                    });
+                } : undefined,
+            });
+        }
+        if (systemMessages.length) {
+            try {
+                return await this._session.clone({ initialPrompts: systemMessages });
+            } catch {
+                // Older Chrome versions may not support clone(); fall back to the base session.
+            }
+        }
+        return this._session;
+    }
+
+    get chat() {
+        return {
+            completions: {
+                create: async (params) => {
+                    const { signal, stream, messages, ...options } = params;
+                    const model = params.model || this.defaultModel;
+                    const systemMessages = (messages || []).filter((m) => m.role === "system");
+                    const promptMessages = (messages || []).filter((m) => m.role !== "system");
+                    const input = promptMessages.length ? promptMessages : "";
+                    const session = await this._getSession(systemMessages);
+
+                    this.logCallback && this.logCallback({ request: { model, messages, ...options }, type: 'chat' });
+
+                    if (stream) {
+                        return this._streamChromeAI(session, input, model, signal);
+                    }
+
+                    const content = await session.prompt(input);
+                    const response = {
+                        choices: [{ message: { role: "assistant", content }, finish_reason: "stop" }],
+                        model,
+                        provider: "Chrome AI (local Gemini Nano)",
+                    };
+                    this.logCallback && this.logCallback({ response, type: 'chat' });
+                    return response;
+                }
+            }
+        };
+    }
+
+    async *_streamChromeAI(session, input, model, signal) {
+        let startTime;
+        let numTokens = 0;
+        let tps;
+
+        for await (const chunk of session.promptStreaming(input)) {
+            if (signal?.aborted) break;
+            numTokens++;
+            startTime ??= performance.now();
+            if (startTime) {
+                tps = (numTokens / (performance.now() - startTime)) * 1000;
+            }
+            yield {
+                choices: [{ delta: { content: chunk ?? "" }, index: 0 }],
+                model,
+                provider: "Chrome AI (local Gemini Nano)",
+                tps,
+                numTokens,
+            };
+        }
+    }
+
+    get models() {
+        return {
+            list: async () => {
+                return [convertModel({
+                    id: 'gemini-nano',
+                    label: 'Gemini Nano (Chrome built-in)',
+                    type: 'chat',
+                })];
+            }
+        };
+    }
+
+    get images() {
+        return {
+            generate: async () => {
+                throw new Error('Chrome AI provider does not support image generation. Use a cloud provider for images.');
+            },
+            edit: async () => {
+                throw new Error('Chrome AI provider does not support image editing. Use a cloud provider for images.');
+            }
+        };
+    }
+
+    /** Abort the current generation. */
+    interrupt() {
+        try { this._session?.interrupt?.(); } catch { /* noop */ }
+    }
+
+    /** Destroy the cached session (frees model resources). */
+    reset() {
+        try { this._session?.destroy?.(); } catch { /* noop */ }
+        this._session = null;
+    }
+}
+
 export {
     Client,
     Pollinations,
@@ -1410,6 +1566,7 @@ export {
     WebGPU,
     Bonsai,
     Bonsai2,
+    ChromeAI,
     captureUserTierHeaders,
 };
 export default Client;

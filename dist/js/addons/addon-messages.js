@@ -78,6 +78,7 @@ const prepare_messages = (messages, message_index = -1, do_continue = false, do_
     // The message_index is null on count total tokens
     if (!do_continue && document.getElementById('history')?.checked && do_filter && message_index != null) {
         let filtered_messages = [];
+        let last_message;
         while (last_message = messages.pop()) {
             if (last_message["role"] == "user") {
                 filtered_messages.push(last_message);
@@ -299,11 +300,18 @@ async function add_message_chunk(message, message_id, provider, finish_message=n
     } else if (message.type == "provider") {
         provider_storage[message_id] = message.provider;
         let provider_el = content_map.content.querySelector('.provider');
+        const requested_provider = providerSelect?.value;
+        const requested_label = providerSelect?.options[providerSelect?.selectedIndex]?.dataset?.label;
+        const routed = message.provider.name && requested_provider
+            && message.provider.name != requested_provider
+            && requested_provider != "AnyProvider"
+            && requested_provider != "default";
         provider_el.innerHTML = `
             <a href="${message.provider.url}" target="_blank">
                 ${message.provider.label ? message.provider.label : message.provider.name}
             </a>
             ${message.provider.model ? ' ' + framework.translate('with') + ' ' + message.provider.model : ''}
+            ${routed ? `<span class="provider-routed" title="${framework.escape(`Requested: ${requested_label || requested_provider}`)}">↯ ${framework.translate('routed from')} ${framework.escape(requested_label || requested_provider)}</span>` : ''}
         `;
     } else if (message.type == "message") {
         console.error(message.message)
@@ -557,7 +565,7 @@ function getExtraBody(provider) {
 export default {
     prepare_messages,
     load_provider_parameters,
-    //add_message_chunk,
+    add_message_chunk,
     add_sources,
     renderer,
     is_stopped,

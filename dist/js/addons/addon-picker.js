@@ -885,7 +885,7 @@ const apiExport = {};
     // Fetch models for a single provider via direct fetch.
     // Live providers:   https://g4f.space/api/{name}/models
     // Custom servers:   https://g4f.space/custom/{serverId}/models
-    // Local WebGPU providers (webgpu/bonsai/bonsai2) list their models client-side.
+    // Local client-side providers (webgpu/bonsai/bonsai2/chromeai) list their models client-side.
     const LOCAL_WEBGPU_PROVIDERS = {
         'webgpu': [
             { id: 'Llama-3.1-8B-Instruct-q4f32_1-MLC', label: 'Llama-3.1-8B-Instruct-q4f32_1-MLC', type: 'chat', default: true },
@@ -895,6 +895,9 @@ const apiExport = {};
         ],
         'bonsai2': [
             { id: '27b', label: 'Bonsai 2 27B (WebGPU)', type: 'chat', default: true },
+        ],
+        'chromeai': [
+            { id: 'gemini-nano', label: 'Gemini Nano (Chrome built-in)', type: 'chat', default: true },
         ],
     };
 

@@ -280,4 +280,6 @@ export default {
     isMobileDevice,
     applyMobileEnhancements,
     showLogPanel,
+    hideLog,
+    logRequestResponse,
 };

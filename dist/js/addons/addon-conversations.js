@@ -30,13 +30,6 @@ async function scroll_to_bottom() {
     chatBody.scrollTop = chatBody.scrollHeight;
 }
 
-let autoScrollEnabled = true;
-
-chatBody.addEventListener('scroll', () => {
-    const atBottom = chatBody.scrollTop + chatBody.clientHeight >= chatBody.scrollHeight - 40;
-    autoScrollEnabled = atBottom && chatBody.clientHeight > 0;
-});
-
 const clear_conversations = async () => {
     const box_conversations = document.querySelector(`#box_conversations, .top`);
     const elements = box_conversations.childNodes;
@@ -718,6 +711,19 @@ const add_message = async (
     }
 };
 
+const delete_conversations = async () => {
+    if (!confirm(framework.translate("Delete all conversations?"))) {
+        return;
+    }
+    // Delete all conversations
+    const { store, done } = await withStore('readwrite');
+    store.clear();
+
+    hide_sidebar();
+    await new_conversation();
+    return done;
+};
+
 export default {
     show_option,
     hide_option,
@@ -732,5 +738,11 @@ export default {
     add_message,
     safe_load_conversation,
     load_conversation,
-    load_conversations
+    load_conversations,
+    set_conversation,
+    delete_conversations,
+    scroll_to_bottom,
+    update_conversation,
+    sanitize,
+    sanitizeSelector
 };

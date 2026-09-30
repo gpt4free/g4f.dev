@@ -76,10 +76,12 @@ function fallback_clipboard (text) {
     document.body.removeChild(textBox);
 }
 let iframe_container;
+let iframe;
+let iframe_close;
 domReady.then(() => {
     iframe_container = document.querySelector(".hljs-iframe-container");
-    const iframe = document.querySelector(".hljs-iframe");
-    const iframe_close = Object.assign(document.createElement("button"), {
+    iframe = document.querySelector(".hljs-iframe");
+    iframe_close = Object.assign(document.createElement("button"), {
         className: "hljs-iframe-close",
         innerHTML: '<i class="fa-regular fa-x"></i>',
     });
@@ -414,4 +416,8 @@ export default {
     showNotification,
     showErrorPopup,
     closeErrorPopup,
+    get_message_el,
+    iframe_container,
+    iframe,
+    iframe_close,
 };

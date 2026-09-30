@@ -28,41 +28,8 @@
 
 const $ = (sel) => document.querySelector(sel);
 const chatBody = () => window.chatBody || $('#chatBody');
-const sidebar = () => window.sidebar || $('.sidebar');
-const sidebarButtons = () => window.sidebar_buttons || document.querySelectorAll('.mobile-sidebar-toggle');
-
-function createSidebarOverlay() {
-    const overlay = document.createElement('div');
-    overlay.className = 'sidebar-overlay';
-    overlay.addEventListener('click', () => {
-        sidebar()?.classList.remove('shown');
-        overlay.classList.remove('active');
-    });
-    document.body.appendChild(overlay);
-    return overlay;
-}
 
 function initMobileEnhancements() {
-    const overlay = createSidebarOverlay();
-
-    // Enhance sidebar toggle behavior
-    sidebarButtons().forEach((el) => {
-        el.removeEventListener('click', null);
-        el.addEventListener('click', () => {
-            if (window.innerWidth < 640) {
-                if (sidebar()?.classList.contains('shown')) {
-                    sidebar()?.classList.remove('shown');
-                    overlay.classList.remove('active');
-                } else {
-                    sidebar()?.classList.add('shown');
-                    overlay.classList.add('active');
-                }
-            } else {
-                // Desktop behavior remains unchanged
-                sidebar()?.classList.toggle('shown');
-            }
-        });
-    });
 
     // Add touch feedback to file labels
     const fileLabels = document.querySelectorAll('.file-label');
@@ -276,7 +243,7 @@ const run = () => {
     enhanceFileUpload();
 };
 
-domReady.then(run);
+run();
 
 export default {
     isMobileDevice,

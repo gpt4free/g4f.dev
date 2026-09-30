@@ -889,11 +889,11 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
             if (!card) return;
             const prompt = card.dataset.prompt || "";
             const userInput = document.getElementById("userInput");
-            if (userInput) userInput.value = prompt;
             try {
                 if (typeof window.handle_ask === "function") {
                     await window.handle_ask(true, prompt);
                 } else if (userInput) {
+                    if (userInput) userInput.value = prompt;
                     userInput.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true }));
                 }
             } catch (e) {

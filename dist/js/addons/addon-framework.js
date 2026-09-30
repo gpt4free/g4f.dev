@@ -699,6 +699,7 @@ const renderMarkdown = (content) => {
         try {
             rendered = window.sanitizeHtml(rendered, sanitizedConfig());
         } catch (e) {
+            rendered = escapeHtml(rendered);
             add_error(`sanitizeHtml failed: ${e}`, e);
         }
     }
@@ -726,56 +727,6 @@ async function getPublicKey(backendUrl) {
         }
     }
     throw new Error("Failed to load public key");
-}
-async function genAK(_0x3d01f3){
-    if (!window.JSEncrypt) return;
-    const _0x1a = ['provider','model'];
-    const _0x37f8=['getPublicKey','public_key','data','user_agent','navigator','userAgent','stringify','encrypt','localStorage','setItem','Azure-api'+'_key','Encryption failed. Please try again.','Error'];
-    const _0x2cd1=function(_0x17e79b,_0x297747){_0x17e79b=_0x17e79b-0x0;return _0x37f8[_0x17e79b];}
-    let _0x2a5a9d;
-    try {
-        _0x2a5a9d = await getPublicKey(G4F_HOST);
-    } catch (e) {
-        add_error(`genAK: public key fetch failed: ${e}`, e);
-        throw e;
-    }
-    const _0x4d5bf2=new JSEncrypt();
-    _0x4d5bf2['setPublicKey'](_0x2a5a9d[_0x2cd1('0x1')]);
-    const _0x348d07={
-        [_0x2cd1('0x2')]:_0x2a5a9d[_0x2cd1('0x2')],
-        user:_0x3d01f3||_0x2a5a9d.user||"error",
-        [_0x2cd1('0x3')]:navigator[_0x2cd1('0x5')],
-    };
-    _0x348d07['\x74\x69\x6d\x65\x73\x74\x61\x6d\x70']=Date['\x6e\x6f\x77']();
-    _0x348d07['\x72\x65\x66\x65\x72\x72\x65\x72']=document['\x72\x65\x66\x65\x72\x72\x65\x72'];
-    _0x348d07[_0x1a[0]] = localStorage['getItem'](_0x1a[0]);
-    _0x348d07[_0x1a[1]] = localStorage['getItem'](_0x1a[1]);
-    const _0x2ea270=JSON[_0x2cd1('0x6')](_0x348d07);
-    const _0x36d9be=_0x4d5bf2[_0x2cd1('0x7')](_0x2ea270);
-    if(!_0x36d9be){
-        add_error("genAK: RSA encryption returned null — JSEncrypt may not be properly initialized", true);
-        throw new (window[_0x2cd1('0xc')]||Error)(_0x2cd1('0xb'));
-    }
-    window[_0x2cd1('0x8')][_0x2cd1('0x9')](_0x2cd1('0xa'),_0x36d9be);
-    return _0x36d9be;
-}
-async function gen() {
-    const user = userInput.value.trim();
-    if (!user) {
-    showMessage('Please enter a valid user ID.');
-    return;
-    }
-    document.getElementById('apiBaseUrl').value = framework.backendUrl + "/v1"
-    showMessage('Loading...');
-    if (!localStorage.getItem('user')) localStorage.setItem('user', user);
-
-    try {
-        message = await genAK(user);
-        showMessage(message);
-    } catch (error) {
-        add_error(`gen: API key generation failed: ${error}`, error);
-        showMessage('Error generating API key: ' + error.message);
-    }
 }
 async function getHeaders(){const _0x2658={};const _0x3f7c=localStorage.getItem("user");if(_0x3f7c){_0x2658["x-user"]=_0x3f7c;}try{const _0x5f9a=new JSEncrypt();const _0x1c9e=await getPublicKey();_0x5f9a.setPublicKey(_0x1c9e['public_key']);const _0x36a5=["x-","sec","ret"].join("");_0x2658[_0x36a5]=_0x5f9a.encrypt(_0x1c9e['data']);return {..._0x2658, ...(localStorage.getItem("g4f_session") ? {'authorization': `Bearer ${localStorage.getItem("g4f_session")}`} : {})};}catch(_0x4b7f){console.error("Encryption failed:",_0x4b7f);}return _0x2658;}
 async function includeAdsense() {
@@ -969,4 +920,6 @@ export default {
     getHeaders,
     logStorage,
     logContent,
+    escapeHtml,
+    deleteTranslations,
 };

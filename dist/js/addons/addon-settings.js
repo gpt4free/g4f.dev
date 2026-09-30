@@ -267,8 +267,9 @@ function count_words_and_tokens(text, model, completion_tokens, prompt_tokens, e
     return `(${count_words(text)} ${framework.translate('words')}, ${count_chars(text)} ${framework.translate('chars')}, ${completion_tokens ? completion_tokens : count_tokens(model, text, prompt_tokens)} ${framework.translate('tokens')}${addEstimatedCost})`;
 }
 
+let countFocus = userInput;
+
 const count_input = async () => {
-    let countFocus = userInput;
     const countTokensEnabled = appStorage.getItem("countTokens") != "false" && count_words_and_tokens instanceof Function;
     if (countTokensEnabled && countFocus.value) {
         if (window.matchMedia("(pointer:coarse)")) {
@@ -325,6 +326,20 @@ addonsLoaded.then(() => {
     });
 });
 
+function open_settings() {
+    if (settings.classList.contains("hidden")) {
+        chat.classList.add("hidden");
+        sidebar.classList.remove("shown");
+        settings.classList.remove("hidden");
+        add_url_to_history("#settings");
+    } else {
+        settings.classList.add("hidden");
+        chat.classList.remove("hidden");
+        add_url_to_history(window.conversation_id ? `#${window.conversation_id}` : window.location.search);
+    }
+    logStorage?.classList.add("hidden");
+}
+
 export default {
     register_settings_storage,
     load_settings_storage,
@@ -335,4 +350,5 @@ export default {
     count_chars,
     count_words_and_tokens,
     count_input,
+    open_settings,
 };
