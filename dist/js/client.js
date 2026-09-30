@@ -1470,7 +1470,7 @@ class ChromeAI extends Client {
 }
 
 class LLM7 extends Client {
-    constructor(options) {
+    constructor(options = {}) {
         options.baseUrl = options.baseUrl ?? "https://api.llm7.io/v1";
         options.defaultModel = options.defaultModel || "default";
         options.models = options.models || ["default", "fast"];

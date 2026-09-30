@@ -594,13 +594,6 @@ async function handleSolve(request, env) {
         return json({ error, kind: record.kind }, 400, {}, request);
     }
 
-    // 4. Dedup: the exact same answer may only be credited once per day.
-    const dedupKey = `challenge:seen:${await answerHash(ip, payload, answer)}`;
-    if (await env.CAKE_KV.get(dedupKey)) {
-        return json({ error: "duplicate_answer" }, 409, {}, request);
-    }
-    await env.CAKE_KV.put(dedupKey, "1", { expirationTtl: 86400 });
-
     // 5. Enforce the daily solve limit.
     const solvedRaw = await env.CAKE_KV.get(`challenge:solved:${ip}`);
     let solved = { count: 0, day: dayKey() };
@@ -635,6 +628,13 @@ async function handleSolve(request, env) {
             await handleTranslationsSubmit(record.language, answer, env);
         } catch { /* pool is best-effort */ }
     }
+
+    // 4. Dedup: the exact same answer may only be credited once per day.
+    const dedupKey = `challenge:seen:${await answerHash(ip, payload, answer)}`;
+    if (await env.CAKE_KV.get(dedupKey)) {
+        return json({ error: "duplicate_answer" }, 409, {}, request);
+    }
+    await env.CAKE_KV.put(dedupKey, "1", { expirationTtl: 86400 });
 
     // 7. Mint the private-key JWT carrying the credit claim.
     const { token, expires } = await signJwt(
