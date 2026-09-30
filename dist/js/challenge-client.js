@@ -204,12 +204,6 @@
         //    prompt from them so the model sees each snippet with its
         //    section headline as context.
         let prompt = payload.prompt;
-        if (payload.kind === "translations" && Array.isArray(payload.items) && payload.items.length) {
-            const list = payload.items
-                .map((item) => `- ${JSON.stringify(item.text)} (context: ${item.context})`)
-                .join("\n");
-            prompt = `${payload.prompt}\n\n${list}`;
-        }
         const raw = await runPrompt(prompt);
         const answer = parseJsonLoose(raw);
         if (!answer) throw new Error("local model returned no JSON");

@@ -33,6 +33,7 @@
  *   POST /challenge/redeem     { token }   — exchange JWT for cake credit
  *   POST /challenge/translations  { language, translations: {"en": "de", ...} }
  *   GET  /challenge/translations?lang=de-DE   — community translations
+ *   GET  /challenge/followups?lang=de-DE&count=3 — community follow-up questions
  *   GET  /challenge/status
  *   GET  /challenge/health
  *
@@ -42,6 +43,9 @@
  *   challenge:rate:<ip>     — per-IP issue counter (TTL = 1 day)
  *   challenge:translations:<lang> — community translations per language
  *                                   ({"snippet": "translation"}, TTL = 1 year)
+ *   challenge:followups:<lang>  — community follow-up questions per language
+ *                                 ([{topic, q}], fed by solved followup
+ *                                 challenges, TTL = 30 days)
  *   cakes:credit:<ip>       — the cake worker's credit ledger (credited here)
  *
  * Environment variables:
@@ -252,16 +256,8 @@ async function loadSnippets(env) {
     const absolute = url.startsWith("http") ? url : new URL(url, "https://g4f.dev").toString();
     const res = await fetch(absolute, { cf: { cacheTtl: 3600, cacheEverything: true } });
     if (!res.ok) throw new Error(`snippets fetch failed: ${res.status}`);
-    const catalog = await res.json();
-    const pairs = [];
-    for (const [headline, texts] of Object.entries(catalog)) {
-        if (headline.startsWith("_") || !Array.isArray(texts)) continue;
-        for (const text of texts) {
-            if (typeof text === "string" && text.trim()) pairs.push({ text, context: headline });
-        }
-    }
-    snippetsCache = pairs;
-    return pairs;
+    snippetsCache = await res.json();
+    return snippetsCache;
 }
 
 /** Build the challenge payload for a kind + language. The plaintext task is
@@ -368,6 +364,38 @@ async function answerHash(ip, payload, answer) {
 }
 
 // ---------------------------------------------------------------------------
+// Community follow-ups pool
+// ---------------------------------------------------------------------------
+
+const FOLLOWUPS_MAX_TOPICS = 100;
+
+/** Add a solved question set to the per-language follow-ups pool. The pool
+ *  is what GET /challenge/followups serves to the chat UI, so solved
+ *  challenges become free suggestions for everyone. Best-effort: callers
+ *  wrap this in try/catch. */
+async function addFollowups(env, language, topic, questions) {
+    const lang = baseLanguage(language);
+    const clean = (questions || [])
+        .filter((q) => typeof q === "string" && q.trim().length >= 3 && q.trim().length <= 500)
+        .map((q) => q.trim());
+    if (!lang || clean.length < 2) return;
+    const storeKey = `challenge:followups:${lang}`;
+    const raw = await env.CAKE_KV.get(storeKey);
+    let pool = [];
+    try { pool = raw ? JSON.parse(raw) : []; } catch { pool = []; }
+    // Skip exact duplicates (the solve dedup only blocks them for a day).
+    const fingerprint = clean.join("|").toLowerCase();
+    if (pool.some((entry) => (entry.q || []).join("|").toLowerCase() === fingerprint)) return;
+    // One entry per topic (a re-solved topic refreshes its questions).
+    const filtered = pool.filter((entry) => entry.topic !== topic);
+    filtered.push({ topic: topic || "general", q: clean, at: Date.now() });
+    while (filtered.length > FOLLOWUPS_MAX_TOPICS) {
+        filtered.shift(); // drop the oldest entries
+    }
+    await env.CAKE_KV.put(storeKey, JSON.stringify(filtered), { expirationTtl: 86400 * 30 });
+}
+
+// ---------------------------------------------------------------------------
 // KV helpers
 // ---------------------------------------------------------------------------
 
@@ -434,22 +462,24 @@ async function handleIssue(request, env) {
         const existingRaw = await env.CAKE_KV.get(`challenge:translations:${baseLanguage(language)}`);
         let existing = {};
         try { existing = existingRaw ? JSON.parse(existingRaw) : {}; } catch { /* fresh store */ }
-        const pending = snippets.filter((s) => !existing[s.text]);
+        let pending = [];
+        for (const [headline, texts] of Object.entries(snippets)) {
+            if (headline.startsWith("_") || !Array.isArray(texts)) continue;
+            texts = texts.filter((s) => !existing[s.text])
+            if (texts.length === 0) continue;
+            pending.push(headline)
+            pending.push(...texts);
+            break;
+        }
         if (pending.length === 0) {
             return json({ error: "all_translated", language }, 200, {}, request);
         }
-        // Random sample without replacement.
-        const items = [];
-        const pool = pending.slice();
-        while (items.length < Math.min(batch, pool.length)) {
-            items.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
-        }
-        payload.items = items;
+        payload.items = pending;
         payload.prompt =
-            `Translate these UI texts to ${language}. "context" is the section ` +
-            `headline they appear under — use it to disambiguate meaning. ` +
+            `Translate these UI texts to language ${language}. ` +
             `Keep placeholders like {0} intact. Return as JSON: ` +
-            `{"translations": {"<source text>": "<translation>"}}`;
+            `{"translations": {"<source text>": "<translation>"}}\n` +
+            `Texts:\n${JSON.stringify({ items: pending }, null, 2)}`;
     }
 
     const { ciphertext, iv } = await sealPayload(env, payload);
@@ -457,7 +487,7 @@ async function handleIssue(request, env) {
 
     await env.CAKE_KV.put(
         `challenge:${id}`,
-        JSON.stringify({ ip, kind: payload.kind, language: payload.language, issued_at: Date.now() }),
+        JSON.stringify({ ip, kind: payload.kind, language: payload.language, topic: payload.topic, issued_at: Date.now() }),
         { expirationTtl: ttlSec }
     );
     await incrementIssuedCount(env, ip);
@@ -560,6 +590,14 @@ async function handleSolve(request, env) {
 
     // 6. Burn the challenge so it can't be solved twice.
     await env.CAKE_KV.delete(`challenge:${id}`);
+
+    // 6b. Feed the community follow-ups pool: a solved question set becomes
+    //     a suggestion the chat UI can serve to every visitor for free.
+    if (record.kind === "followup" && Array.isArray(answer.q)) {
+        try {
+            await addFollowups(env, record.language, record.topic, answer.q);
+        } catch { /* pool is best-effort */ }
+    }
 
     // 7. Mint the private-key JWT carrying the credit claim.
     const { token, expires } = await signJwt(
@@ -738,6 +776,35 @@ async function handleTranslationsGet(request, env) {
     );
 }
 
+/** GET /challenge/followups?lang=de-DE&count=3 — community follow-up
+ *  questions for the chat UI's suggestion chips, fed by solved followup
+ *  challenges. Same response shape as the model-generated suggestions
+ *  ({q: [...]}), so the UI can use it as a free first try. */
+async function handleFollowupsGet(request, env) {
+    const url = new URL(request.url);
+    const language = baseLanguage(url.searchParams.get("lang") || "en");
+    const count = Math.min(Math.max(Number(url.searchParams.get("count")) || 3, 1), 8);
+    const raw = await env.CAKE_KV.get(`challenge:followups:${language}`);
+    let pool = [];
+    try { pool = raw ? JSON.parse(raw) : []; } catch { pool = []; }
+    if (pool.length === 0) {
+        return json({ error: "no_followups", language }, 404, {}, request);
+    }
+    // Random topic, shuffled questions — repeat visits see variety.
+    const entry = pool[Math.floor(Math.random() * pool.length)];
+    const shuffled = entry.q.slice();
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return json(
+        { ok: true, language, topic: entry.topic, q: shuffled.slice(0, count) },
+        200,
+        { "Cache-Control": "public, max-age=60" },
+        request
+    );
+}
+
 /** GET /challenge/status — current IP's challenge stats. */
 async function handleStatus(request, env) {
     const ip = getClientIP(request);
@@ -810,6 +877,9 @@ export default {
             if (pathname === "/challenge/translations" && request.method === "GET") {
                 return await handleTranslationsGet(request, env);
             }
+            if (pathname === "/challenge/followups" && request.method === "GET") {
+                return await handleFollowupsGet(request, env);
+            }
             if (pathname === "/challenge/status" && request.method === "GET") {
                 return await handleStatus(request, env);
             }
@@ -817,7 +887,7 @@ export default {
                 return json({ ok: true, service: "challenge-worker" }, 200, {}, request);
             }
             return json(
-                { error: "not_found", endpoints: ["/challenge/issue", "/challenge/solve", "/challenge/redeem", "/challenge/translations", "/challenge/status"] },
+                { error: "not_found", endpoints: ["/challenge/issue", "/challenge/solve", "/challenge/redeem", "/challenge/translations", "/challenge/followups", "/challenge/status"] },
                 404,
                 {},
                 request

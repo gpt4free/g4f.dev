@@ -22,6 +22,9 @@
     });
 })();
 
+const logStorage = document.querySelector(".log");
+const logContent = document.querySelector(".log-content");
+
 function showLogPanel() {
     logStorage?.classList.remove("hidden");
     settings?.classList.add("hidden");
@@ -29,11 +32,9 @@ function showLogPanel() {
     chat.classList.add("hidden");
 }
 
-domReady.then(() => {
-  const showLogButton = document.querySelectorAll("#showLog, .show_log");
-  showLogButton.forEach(button => {
-      button.addEventListener("click", showLogPanel);
-  });
+const showLogButton = document.querySelectorAll("#showLog, .show_log");
+showLogButton.forEach(button => {
+    button.addEventListener("click", showLogPanel);
 });
 
 
@@ -152,17 +153,6 @@ window.addEventListener('load', () => {
   if (window.matchMedia('(max-width: 640px)').matches || window.matchMedia('(pointer: coarse)').matches) {
     initMobileEnhancements();
   }
-});
-
-// Handle orientation changes
-window.addEventListener('orientationchange', () => {
-  // Adjust UI based on new orientation
-  setTimeout(() => {
-    document.querySelector(".container").style.maxHeight = window.innerHeight + "px";
-
-    // Adjust media content display
-    // adjustMediaContentForOrientation();
-  }, 200);
 });
 
 // // Adaptive Media Content Display
