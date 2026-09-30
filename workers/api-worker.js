@@ -2020,7 +2020,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       const postCacheKey = getPostCacheKey(request, bodyHash);
       if (postCacheKey) {
         newResponse.headers.set("X-Post-Cache-Key", postCacheKey);
-        ctx.waitUntil(setCachedResponse(request, newResponse.clone(), CACHE_HEADERS.SHORT, postCacheKey, ctx));
+        ctx.waitUntil(setCachedResponse(request, newResponse.clone(), postCacheKey.endsWith(".test") ? CACHE_HEADERS.MEDIUM : CACHE_HEADERS.FOREVER, postCacheKey, ctx));
       }
     }
     if (user) {
