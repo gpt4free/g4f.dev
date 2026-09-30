@@ -379,6 +379,12 @@ async function handleIssue(request, env) {
         ciphertext,
         iv,
         algorithm: "AES-GCM",
+        // The seal secret, published to the client. The challenge encryption
+        // is obfuscation against casual scrapers, not secrecy: the secret is
+        // by design also available in the page bundle, and the real gate is
+        // server-side answer validation. Deployments that embed the secret
+        // in the page and want to withhold it can strip this field.
+        keySalt: env.CHALLENGE_SECRET || "g4f-challenge-dev-secret",
         kind, // hint only — the sealed payload is authoritative
         language: payload.language,
         ttl: ttlSec,

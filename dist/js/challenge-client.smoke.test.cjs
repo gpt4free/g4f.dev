@@ -122,6 +122,7 @@ function check(name, cond) {
     check("issue has ciphertext", typeof challenge.ciphertext === "string" && challenge.ciphertext.length > 0);
     check("issue has iv", typeof challenge.iv === "string" && challenge.iv.length > 0);
     check("issue kind is followup or translation", ["followup", "translation"].includes(challenge.kind));
+    check("issue includes keySalt for client decrypt", typeof challenge.keySalt === "string" && challenge.keySalt.length > 0);
 
     // The plaintext task must NOT be in the response body.
     const rawBody = JSON.stringify(challenge);

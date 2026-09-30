@@ -239,8 +239,10 @@
         state.rounds += 1;
         try {
             await solveOnce();
+            state.consecutiveFailures = 0;
         } catch (err) {
             state.failed += 1;
+            state.consecutiveFailures = (state.consecutiveFailures || 0) + 1;
             if (err.status === 429) {
                 // Daily limit — stop for this session.
                 console.info("[G4FChallenge] daily limit reached; stopping");
@@ -248,6 +250,11 @@
                 return;
             }
             console.warn("[G4FChallenge] round failed:", err.message);
+            if (state.consecutiveFailures >= 3) {
+                console.warn("[G4FChallenge] 3 consecutive failures; stopping — fix the cause and reload to retry");
+                stop();
+                return;
+            }
         }
         scheduleNext();
     }
