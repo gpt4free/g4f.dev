@@ -4,6 +4,14 @@
     {
       "source": "/:path*",
       "destination": "/api/worker?path=/:path*"
+    },
+    {
+      "source": "/challenge",
+      "destination": "/api/challenge?path=/challenge"
+    },
+    {
+      "source": "/challenge/:path*",
+      "destination": "/api/challenge?path=/challenge/:path*"
     }
   ],
   "crons": [
