@@ -590,7 +590,12 @@ export default {
         }
 
         if (pathname === "/challenge/health") {
-            return json({ ok: true, service: "challenge-worker", kv: Boolean(env.CAKE_KV) }, 200, {}, request);
+            return json({
+                ok: true,
+                service: "challenge-worker",
+                kv: Boolean(env.CAKE_KV),
+                kv_source: env.CHALLENGE_KV_SOURCE || null,
+            }, 200, {}, request);
         }
 
         // Degrade gracefully when the KV binding is missing (e.g. the Upstash

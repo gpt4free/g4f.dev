@@ -86,6 +86,75 @@ class UpstashKv {
   }
 }
 
+// Vercel Blob KV shim (fallback when no Upstash vars are set).
+// Blob is an object store without native TTL, so expiration is emulated:
+// values written with a TTL are wrapped as {"v": <value>, "e": <expiresMs>}
+// and get() treats expired entries as missing (lazily deleting them).
+// Only BLOB_READ_WRITE_TOKEN is required — the token is store-scoped.
+class BlobKv {
+  constructor(token) {
+    this.token = token;
+    this.base = "https://blob.vercel-storage.com";
+  }
+  async get(key) {
+    try {
+      const res = await fetch(`${this.base}/${encodeURIComponent(key)}`, {
+        headers: { "Authorization": `Bearer ${this.token}` }
+      });
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error(`Blob ${res.status}: ${await res.text()}`);
+      const raw = await res.text();
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && "v" in parsed) {
+          if (typeof parsed.e === "number" && parsed.e < Date.now()) {
+            await this.delete(key); // lazy TTL cleanup
+            return null;
+          }
+          return parsed.v;
+        }
+        return raw; // legacy/plain value without wrapper
+      } catch {
+        return raw;
+      }
+    } catch (e) {
+      console.error("Blob KV get failed:", e);
+      return null;
+    }
+  }
+  async put(key, value, options = {}) {
+    const ttl = options?.expirationTtl;
+    const body = ttl
+      ? JSON.stringify({ v: String(value), e: Date.now() + Math.max(1, Math.floor(ttl)) * 1000 })
+      : String(value);
+    try {
+      const res = await fetch(`${this.base}/${encodeURIComponent(key)}`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${this.token}`,
+          "x-vercel-blob-content-type": "text/plain; charset=utf-8",
+          // Deterministic paths — a KV key must overwrite, not version.
+          "x-vercel-blob-add-random-suffix": "0"
+        },
+        body
+      });
+      if (!res.ok) throw new Error(`Blob ${res.status}: ${await res.text()}`);
+    } catch (e) {
+      console.error("Blob KV put failed:", e);
+    }
+  }
+  async delete(key) {
+    try {
+      await fetch(`${this.base}/${encodeURIComponent(key)}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${this.token}` }
+      });
+    } catch (e) {
+      console.error("Blob KV delete failed:", e);
+    }
+  }
+}
+
 function buildEnv() {
   const env = {
     CHALLENGE_SECRET: process.env.CHALLENGE_SECRET,
@@ -96,12 +165,48 @@ function buildEnv() {
     CHALLENGE_TTL_SEC: process.env.CHALLENGE_TTL_SEC,
     ADMIN_API_KEY: process.env.ADMIN_API_KEY
   };
-  // Upstash REST credentials — also accept the Vercel Marketplace variable
-  // names (KV_REST_API_URL/KV_REST_API_TOKEN) used by the Upstash integration.
-  const upstashUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-  if (upstashUrl && upstashToken) {
-    env.CAKE_KV = new UpstashKv(upstashUrl, upstashToken);
+  // KV backend selection. Vercel Marketplace/Integration variables are
+  // PREFIXED with the store name — e.g. a store named "cake-kv" exposes
+  // CAKE_KV_KV_REST_API_URL / CAKE_KV_KV_REST_API_TOKEN (and a read-only
+  // CAKE_KV_KV_REST_API_READ_ONLY_TOKEN). We detect any *_KV_REST_API_URL
+  // and use its matching token, preferring read-write over read-only.
+  // Plain UPSTASH_REDIS_REST_URL/TOKEN and unprefixed KV_REST_API_* are
+  // also accepted. Vercel Blob (BLOB_READ_WRITE_TOKEN) is the last resort;
+  // its ledger is store-local and NOT shared with the Cloudflare cake worker.
+  const upstashCandidates = [];
+  for (const [name, value] of Object.entries(process.env)) {
+    const match = name.match(/^(.*)_KV_REST_API_URL$/);
+    if (match && value) {
+      const prefix = match[1]; // e.g. "CAKE_KV" or "UPSTASH_REDIS"
+      const rwToken = process.env[`${prefix}_KV_REST_API_TOKEN`];
+      const roToken = process.env[`${prefix}_KV_REST_API_READ_ONLY_TOKEN`];
+      upstashCandidates.push({
+        url: value,
+        token: rwToken || roToken,
+        source: prefix === "UPSTASH_REDIS" ? "upstash" : `marketplace:${prefix.toLowerCase()}`,
+        readWrite: Boolean(rwToken),
+      });
+    }
+  }
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    upstashCandidates.push({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      source: "upstash",
+      readWrite: true,
+    });
+  }
+  // Prefer read-write bindings, then the store literally named for this use.
+  upstashCandidates.sort((a, b) => (b.readWrite - a.readWrite) || (b.source < a.source ? -1 : 1));
+  const upstash = upstashCandidates[0];
+  if (upstash && upstash.token) {
+    env.CAKE_KV = new UpstashKv(upstash.url, upstash.token);
+    // Non-secret diagnostic for /challenge/health: which variable pair backed
+    // the binding (values are never exposed).
+    env.CHALLENGE_KV_SOURCE = upstash.source;
+  } else if (process.env.BLOB_READ_WRITE_TOKEN) {
+    env.CAKE_KV = new BlobKv(process.env.BLOB_READ_WRITE_TOKEN);
+    env.CHALLENGE_KV_SOURCE = "blob";
   }
   return env;
 }
