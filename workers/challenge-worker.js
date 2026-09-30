@@ -589,18 +589,34 @@ export default {
             return new Response(null, { headers: corsHeaders(request) });
         }
 
+        if (pathname === "/challenge/health") {
+            return json({ ok: true, service: "challenge-worker", kv: Boolean(env.CAKE_KV) }, 200, {}, request);
+        }
+
+        // Degrade gracefully when the KV binding is missing (e.g. the Upstash
+        // env vars are not configured on a deployment) — a clear 503 beats a
+        // crashed function (FUNCTION_INVOCATION_FAILED).
+        if (!env.CAKE_KV || typeof env.CAKE_KV.get !== "function") {
+            return json(
+                { error: "kv_unavailable", message: "CAKE_KV binding is not configured on this deployment." },
+                503,
+                {},
+                request
+            );
+        }
+
         try {
             if (pathname === "/challenge/issue" && request.method === "GET") {
-                return handleIssue(request, env);
+                return await handleIssue(request, env);
             }
             if (pathname === "/challenge/solve" && request.method === "POST") {
-                return handleSolve(request, env);
+                return await handleSolve(request, env);
             }
             if (pathname === "/challenge/redeem" && request.method === "POST") {
-                return handleRedeem(request, env);
+                return await handleRedeem(request, env);
             }
             if (pathname === "/challenge/status" && request.method === "GET") {
-                return handleStatus(request, env);
+                return await handleStatus(request, env);
             }
             if (pathname === "/challenge/health") {
                 return json({ ok: true, service: "challenge-worker" }, 200, {}, request);

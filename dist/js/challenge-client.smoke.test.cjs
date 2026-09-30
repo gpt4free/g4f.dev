@@ -103,8 +103,15 @@ function check(name, cond) {
 (async () => {
     console.log("challenge-worker smoke test");
 
+    // Missing KV binding must degrade to a JSON 503, not crash the function.
+    const envNoKv = { ...env, CAKE_KV: undefined };
+    let res = await worker.fetch(makeRequest("https://g4f.dev/challenge/issue?lang=de-DE"), envNoKv, {});
+    check("missing KV returns 503", res.status === 503);
+    const noKvBody = await res.json();
+    check("missing KV error is kv_unavailable", noKvBody.error === "kv_unavailable");
+
     // Health
-    let res = await worker.fetch(makeRequest("https://g4f.dev/challenge/health"), env, {});
+    res = await worker.fetch(makeRequest("https://g4f.dev/challenge/health"), env, {});
     check("health returns ok", res.status === 200);
 
     // Issue (encrypted challenge)

@@ -96,8 +96,10 @@ function buildEnv() {
     CHALLENGE_TTL_SEC: process.env.CHALLENGE_TTL_SEC,
     ADMIN_API_KEY: process.env.ADMIN_API_KEY
   };
-  const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
-  const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  // Upstash REST credentials — also accept the Vercel Marketplace variable
+  // names (KV_REST_API_URL/KV_REST_API_TOKEN) used by the Upstash integration.
+  const upstashUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
   if (upstashUrl && upstashToken) {
     env.CAKE_KV = new UpstashKv(upstashUrl, upstashToken);
   }
