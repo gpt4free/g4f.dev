@@ -28,6 +28,8 @@
   panel.innerHTML = '<pre></pre>';
   document.body.appendChild(panel);
   const logEl = panel.querySelector('pre');
+  logEl.style.display = 'none'; // initially hidden
+  logEl.classList.add('notranslate');
 
   // Helper to add log entry
   const addLog = (msg, type = 'log') => {
