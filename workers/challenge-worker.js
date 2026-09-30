@@ -414,9 +414,9 @@ async function handleIssue(request, env) {
     const kindParam = (url.searchParams.get("kind") || "any").toLowerCase();
     const kind = ["followup", "translation", "translations"].includes(kindParam)
         ? kindParam
-        : Math.random() < 0.5
+        : Math.random() < 0.2
             ? "followup"
-            : "translation";
+            : "translations";
     const language = url.searchParams.get("lang") || "en";
 
     const payload = buildChallengePayload(kind, language);
