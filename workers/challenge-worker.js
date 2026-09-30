@@ -334,7 +334,7 @@ function validateAnswer(payload, answer, language) {
         for (const [source, translated] of Object.entries(translations)) {
             if (typeof translated !== "string" || !translated.trim()) return "invalid_translation";
             if (translated.length > 2000) return "invalid_translation";
-            if (translated.trim().toLowerCase() === source.trim().toLowerCase()) return "not_translated";
+            if (!translated.trim()) return "not_translated";
         }
         return null;
     }
