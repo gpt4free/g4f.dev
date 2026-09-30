@@ -44,6 +44,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # Don't persist the workflow's GITHUB_TOKEN as an http extraheader:
+          # it would override the PAGES_TOKEN credentials in the push URL and
+          # authenticate the mirror push as github-actions[bot] (403).
+          persist-credentials: false
 
       - name: Push all changes to the mirror
         env:
