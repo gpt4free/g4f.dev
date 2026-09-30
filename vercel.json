@@ -2,16 +2,16 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
-      "source": "/:path*",
-      "destination": "/api/worker?path=/:path*"
-    },
-    {
       "source": "/challenge",
       "destination": "/api/challenge?path=/challenge"
     },
     {
       "source": "/challenge/:path*",
       "destination": "/api/challenge?path=/challenge/:path*"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/api/worker?path=/:path*"
     }
   ],
   "crons": [
