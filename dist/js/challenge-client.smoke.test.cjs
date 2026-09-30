@@ -337,7 +337,10 @@ function check(name, cond) {
     check("translations get returns 200", res.status === 200);
     const served = await res.json();
     check("solved batch stored", served.translations[batchPayload.items[0]] === "DE: " + batchPayload.items[0]);
-    check("served translations count matches", served.count === batchPayload.items.length);
+    // The "..." sentinel is a canary (never stored), everything else lands
+    // in the community store — headline included.
+    check("served translations count matches",
+        served.count === batchPayload.items.filter((text) => text !== "...").length);
 
     // Untranslated source must be skipped on the next batch issue.
     res = await worker.fetch(makeRequest("https://g4f.dev/challenge/issue?lang=de-DE&kind=translations"), env, {});
@@ -348,7 +351,8 @@ function check(name, cond) {
             `  return unsealPayload(${JSON.stringify(env.CHALLENGE_SECRET)}, ${JSON.stringify(batch2.ciphertext)}, ${JSON.stringify(batch2.iv)});\n})()`,
             clientSandbox
         );
-        check("next batch skips translated snippets", payload2.items.every((text) => !batchAnswer.translations[text]));
+        check("next batch skips translated snippets",
+            payload2.items.filter((text) => text !== "...").every((text) => !batchAnswer.translations[text]));
     } else {
         check("next batch reports all_translated", batch2.error === "all_translated");
     }

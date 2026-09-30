@@ -232,32 +232,86 @@
         const answer = parseJsonLoose(raw);
         if (!answer) throw new Error("local model returned no JSON");
 
-        // 4. Seal the answer and submit.
+        // 4. Seal the answer and submit. Only transient failures (network
+        //    errors, 5xx) are retried with the same sealed submission — the
+        //    model's translations should not be lost to a blip. Definitive
+        //    rejections (4xx) are never retried: the worker burns the
+        //    challenge on the first solve attempt, so resubmitting the same
+        //    id can only return challenge_not_found_or_expired.
         const sealed = await sealPayload(secret, answer);
-        const solveRes = await fetch(`${CHALLENGE_ENDPOINT}/solve`, {
-            method: "POST",
-            credentials: "include",
-            headers: authHeaders({ "Content-Type": "application/json" }),
-            body: JSON.stringify({
-                id: challenge.id,
-                ciphertext: sealed.ciphertext,
-                iv: sealed.iv,
-                language,
-            }),
-        });
-        const solveData = await solveRes.json().catch(() => ({}));
+        const SOLVE_ATTEMPTS = 5;
+        let solveRes, solveData;
+        for (let attempt = 1; attempt <= SOLVE_ATTEMPTS; attempt++) {
+            try {
+                solveRes = await fetch(`${CHALLENGE_ENDPOINT}/solve`, {
+                    method: "POST",
+                    credentials: "include",
+                    headers: authHeaders({ "Content-Type": "application/json" }),
+                    body: JSON.stringify({
+                        id: challenge.id,
+                        ciphertext: sealed.ciphertext,
+                        iv: sealed.iv,
+                        language,
+                    }),
+                });
+            } catch (err) {
+                if (attempt < SOLVE_ATTEMPTS) {
+                    console.warn(`[G4FChallenge] solve attempt ${attempt}/${SOLVE_ATTEMPTS} network error; retrying the same translations`);
+                    await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+                    continue;
+                }
+                throw err;
+            }
+            solveData = await solveRes.json().catch(() => ({}));
+            if (solveRes.ok && solveData.ok) break;
+            if (solveRes.status >= 500 && attempt < SOLVE_ATTEMPTS) {
+                console.warn(`[G4FChallenge] solve attempt ${attempt}/${SOLVE_ATTEMPTS} failed (${solveData.error || solveRes.status}); retrying the same translations`);
+                await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+                continue;
+            }
+            break; // 4xx or retries exhausted — definitive
+        }
         if (!solveRes.ok || !solveData.ok) {
+            // duplicate_answer: this exact answer was already credited today
+            // and its translations were persisted on that first submission —
+            // the work is done, so treat the round as complete instead of
+            // failing it (a retry could never succeed anyway).
+            if (solveData.error === "duplicate_answer") {
+                console.info("[G4FChallenge] answer already credited today; translations were kept");
+                return null;
+            }
             throw Object.assign(new Error(solveData.error || `solve failed: ${solveRes.status}`), { status: solveRes.status });
         }
 
-        // 5. Exchange the JWT for cake credit.
-        const redeemRes = await fetch(`${CAKE_ENDPOINT}/redeem`, {
-            method: "POST",
-            credentials: "include",
-            headers: authHeaders({ "Content-Type": "application/json" }),
-            body: JSON.stringify({ token: solveData.token }),
-        });
-        const redeemData = await redeemRes.json().catch(() => ({}));
+        // 5. Exchange the JWT for cake credit — only transient failures
+        //    (network errors, 5xx) are retried; 4xx is definitive.
+        const REDEEM_ATTEMPTS = 5;
+        let redeemRes, redeemData;
+        for (let attempt = 1; attempt <= REDEEM_ATTEMPTS; attempt++) {
+            try {
+                redeemRes = await fetch(`${CAKE_ENDPOINT}/redeem`, {
+                    method: "POST",
+                    credentials: "include",
+                    headers: authHeaders({ "Content-Type": "application/json" }),
+                    body: JSON.stringify({ token: solveData.token }),
+                });
+            } catch (err) {
+                if (attempt < REDEEM_ATTEMPTS) {
+                    console.warn(`[G4FChallenge] redeem attempt ${attempt}/${REDEEM_ATTEMPTS} network error; retrying`);
+                    await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+                    continue;
+                }
+                throw err;
+            }
+            redeemData = await redeemRes.json().catch(() => ({}));
+            if (redeemRes.ok && redeemData.ok) break;
+            if (redeemRes.status >= 500 && attempt < REDEEM_ATTEMPTS) {
+                console.warn(`[G4FChallenge] redeem attempt ${attempt}/${REDEEM_ATTEMPTS} failed (${redeemData.error || redeemRes.status}); retrying`);
+                await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+                continue;
+            }
+            break; // 4xx or retries exhausted — definitive
+        }
         if (!redeemRes.ok || !redeemData.ok) {
             throw Object.assign(new Error(redeemData.error || `redeem failed: ${redeemRes.status}`), { status: redeemRes.status });
         }
