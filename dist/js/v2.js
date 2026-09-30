@@ -1,5 +1,7 @@
 const v = "{{ v }}";
-const addons = [["framework", "core", "globals", "worker", "load"], ["init"], ["photoswipe", "host", "manager"], ["api-worker", "voice-preview", "baked-credits", "highlight", "renderers", "mobile-experience", "ask", "messages", "ask-gpt", "conversations", "settings", "providers-ui", "providers-models", "mobile", "theme-manager", "picker"]];
+// "framework" is loaded as a classic script (dist/js/framework.js) by the
+// pages themselves — it no longer ships as an addon chunk.
+const addons = [["core", "globals", "worker", "load"], ["init"], ["photoswipe", "host", "manager"], ["api-worker", "voice-preview", "baked-credits", "highlight", "renderers", "mobile-experience", "ask", "messages", "ask-gpt", "conversations", "settings", "providers-ui", "providers-models", "mobile", "theme-manager", "picker"]];
 
 window.domReady = new Promise((resolve) => {
     if (document.readyState === "loading") {

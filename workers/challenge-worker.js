@@ -28,9 +28,11 @@
  * enough for a small local model while still requiring real work.
  *
  * Endpoints:
- *   GET  /challenge/issue?lang=de-DE&kind=followup|translation|any
+ *   GET  /challenge/issue?lang=de-DE&kind=followup|translation|translations|any
  *   POST /challenge/solve      { id, ciphertext, iv, language }
  *   POST /challenge/redeem     { token }   — exchange JWT for cake credit
+ *   POST /challenge/translations  { language, translations: {"en": "de", ...} }
+ *   GET  /challenge/translations?lang=de-DE   — community translations
  *   GET  /challenge/status
  *   GET  /challenge/health
  *
@@ -38,6 +40,8 @@
  *   challenge:<id>          — sealed challenge record (TTL = CHALLENGE_TTL_SEC)
  *   challenge:seen:<hash>   — answer dedup (TTL = 1 day)
  *   challenge:rate:<ip>     — per-IP issue counter (TTL = 1 day)
+ *   challenge:translations:<lang> — community translations per language
+ *                                   ({"snippet": "translation"}, TTL = 1 year)
  *   cakes:credit:<ip>       — the cake worker's credit ledger (credited here)
  *
  * Environment variables:
@@ -51,6 +55,10 @@
  *   CHALLENGE_MAX_PER_DAY — max challenges issued per IP/day (default: 150)
  *   CAKE_WORKER_URL       — base URL of the cake worker that owns the ledger
  *                           and redeems tokens (default: https://g4f.space/cake)
+ *   SNIPPETS_URL          — JSON file with UI snippets grouped by section
+ *                           headline (context), e.g. /dist/js/snippets/chat.context.json.
+ *                           Same-origin by default; must be fetchable from this worker.
+ *   TRANSLATIONS_BATCH    — snippets per translations challenge (default: 8)
  *   ADMIN_API_KEY         — bearer token for admin endpoints
  */
 
@@ -233,6 +241,29 @@ function baseLanguage(tag) {
     return (tag || "en").split(/[-_]/)[0].toLowerCase();
 }
 
+/** Load the UI snippet catalog (snippets grouped by section headline) and
+ *  flatten it to [{ text, context }] pairs. The headline doubles as the
+ *  translation context — "Send" means something else under "Message Input"
+ *  than under "Legal & About". Cached in module scope (isolate lifetime). */
+let snippetsCache = null;
+async function loadSnippets(env) {
+    if (snippetsCache) return snippetsCache;
+    const url = env.SNIPPETS_URL || "/dist/js/snippets/chat.context.json";
+    const absolute = url.startsWith("http") ? url : new URL(url, "https://g4f.dev").toString();
+    const res = await fetch(absolute, { cf: { cacheTtl: 3600, cacheEverything: true } });
+    if (!res.ok) throw new Error(`snippets fetch failed: ${res.status}`);
+    const catalog = await res.json();
+    const pairs = [];
+    for (const [headline, texts] of Object.entries(catalog)) {
+        if (headline.startsWith("_") || !Array.isArray(texts)) continue;
+        for (const text of texts) {
+            if (typeof text === "string" && text.trim()) pairs.push({ text, context: headline });
+        }
+    }
+    snippetsCache = pairs;
+    return pairs;
+}
+
 /** Build the challenge payload for a kind + language. The plaintext task is
  *  only ever sent sealed — the client decrypts it locally. */
 function buildChallengePayload(kind, language) {
@@ -258,6 +289,12 @@ function buildChallengePayload(kind, language) {
                 `Return as JSON: {"text": "<translation>"}`,
             text,
         };
+    }
+    if (kind === "translations") {
+        // Batch mode: translate real UI snippets (filled in by handleIssue,
+        // which can await loadSnippets) — the result feeds the community
+        // translation store served back to the chat UI.
+        return { kind: "translations", language: lang, items: [] };
     }
     // Default: follow-up questions (same shape the chat UI generates).
     const topics = [
@@ -286,6 +323,22 @@ function buildChallengePayload(kind, language) {
 function validateAnswer(payload, answer, language) {
     if (!answer || typeof answer !== "object") return "answer_not_json";
     const lang = baseLanguage(language);
+    if (payload.kind === "translations") {
+        // Batch: expect { translations: { "<source>": "<translation>" } }.
+        const translations = answer.translations || answer;
+        if (!translations || typeof translations !== "object" || Array.isArray(translations)) {
+            return "missing_translations";
+        }
+        const sources = Object.keys(translations);
+        if (sources.length === 0) return "missing_translations";
+        if (sources.length > 100) return "too_many_translations";
+        for (const [source, translated] of Object.entries(translations)) {
+            if (typeof translated !== "string" || !translated.trim()) return "invalid_translation";
+            if (translated.length > 2000) return "invalid_translation";
+            if (translated.trim().toLowerCase() === source.trim().toLowerCase()) return "not_translated";
+        }
+        return null;
+    }
     if (payload.kind === "translation") {
         const text = answer.text;
         if (typeof text !== "string" || !text.trim()) return "missing_text";
@@ -359,7 +412,7 @@ async function handleIssue(request, env) {
     }
 
     const kindParam = (url.searchParams.get("kind") || "any").toLowerCase();
-    const kind = ["followup", "translation"].includes(kindParam)
+    const kind = ["followup", "translation", "translations"].includes(kindParam)
         ? kindParam
         : Math.random() < 0.5
             ? "followup"
@@ -367,6 +420,38 @@ async function handleIssue(request, env) {
     const language = url.searchParams.get("lang") || "en";
 
     const payload = buildChallengePayload(kind, language);
+    if (kind === "translations") {
+        // Fill the batch with real UI snippets; the section headline is the
+        // translation context. Snippets that already have a community
+        // translation for this language are skipped.
+        const batch = Number(env.TRANSLATIONS_BATCH || 8);
+        let snippets;
+        try {
+            snippets = await loadSnippets(env);
+        } catch (err) {
+            return json({ error: "snippets_unavailable", message: String(err) }, 503, {}, request);
+        }
+        const existingRaw = await env.CAKE_KV.get(`challenge:translations:${baseLanguage(language)}`);
+        let existing = {};
+        try { existing = existingRaw ? JSON.parse(existingRaw) : {}; } catch { /* fresh store */ }
+        const pending = snippets.filter((s) => !existing[s.text]);
+        if (pending.length === 0) {
+            return json({ error: "all_translated", language }, 200, {}, request);
+        }
+        // Random sample without replacement.
+        const items = [];
+        const pool = pending.slice();
+        while (items.length < Math.min(batch, pool.length)) {
+            items.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+        }
+        payload.items = items;
+        payload.prompt =
+            `Translate these UI texts to ${language}. "context" is the section ` +
+            `headline they appear under — use it to disambiguate meaning. ` +
+            `Keep placeholders like {0} intact. Return as JSON: ` +
+            `{"translations": {"<source text>": "<translation>"}}`;
+    }
+
     const { ciphertext, iv } = await sealPayload(env, payload);
     const id = uuidv4();
 
@@ -392,8 +477,6 @@ async function handleIssue(request, env) {
         language: payload.language,
         ttl: ttlSec,
         credit_cents: Number(env.CAKE_CREDIT_CENTS || 5),
-        instruction:
-            "Decrypt (AES-GCM, key = SHA-256 of the shared secret) and run the prompt through your local LanguageModel. POST the encrypted result to /challenge/solve.",
     }, 200, {}, request);
 }
 
@@ -499,7 +582,6 @@ async function handleSolve(request, env) {
         credit_cents: creditCents,
         solved_today: solved.count + 1,
         limit_per_day: perDay,
-        instruction: "Exchange this token for cakes via POST /challenge/redeem { token }.",
     }, 200, {}, request);
 }
 
@@ -575,6 +657,87 @@ async function handleRedeem(request, env) {
     return json(data, upstream.status, {}, request);
 }
 
+/** POST /challenge/translations { language, translations } — receive
+ *  translated UI snippets. Accepts either a solve-JWT (same as /redeem:
+ *  the batch was issued as a "translations" challenge) or an uncredited
+ *  submission (stored but not paid). Valid entries are merged into the
+ *  per-language community store served back to the chat UI. */
+async function handleTranslationsSubmit(request, env) {
+    let body;
+    try {
+        body = await request.json();
+    } catch {
+        return json({ error: "invalid_json" }, 400, {}, request);
+    }
+    const token = body.token || (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+    const translations = body.translations;
+    const language = baseLanguage(body.language || "");
+    if (!language || language === "en") {
+        return json({ error: "invalid_language" }, 400, {}, request);
+    }
+    if (!translations || typeof translations !== "object" || Array.isArray(translations)) {
+        return json({ error: "missing_translations", required: ["language", "translations"] }, 400, {}, request);
+    }
+    const entries = Object.entries(translations).filter(
+        ([source, translated]) =>
+            typeof source === "string" && source.trim() &&
+            typeof translated === "string" && translated.trim() &&
+            translated.trim().toLowerCase() !== source.trim().toLowerCase()
+    );
+    if (entries.length === 0) {
+        return json({ error: "no_valid_translations" }, 400, {}, request);
+    }
+    if (entries.length > 100) {
+        return json({ error: "too_many_translations", max: 100 }, 400, {}, request);
+    }
+
+    let credited = 0;
+    if (token) {
+        // Credited path: the JWT proves a translations challenge was solved.
+        const payload = await verifyJwt(env, token);
+        if (!payload) {
+            return json({ error: "invalid_or_expired_token" }, 401, {}, request);
+        }
+        if (payload.sub !== `challenge:${getClientIP(request)}`) {
+            return json({ error: "token_bound_to_other_ip" }, 403, {}, request);
+        }
+        credited = Number(payload.credit_cents) || 0;
+    }
+
+    // Merge into the per-language community store.
+    const storeKey = `challenge:translations:${language}`;
+    const raw = await env.CAKE_KV.get(storeKey);
+    let store = {};
+    try { store = raw ? JSON.parse(raw) : {}; } catch { /* fresh store */ }
+    let added = 0;
+    for (const [source, translated] of entries) {
+        if (!store[source]) added += 1;
+        store[source] = translated.trim();
+    }
+    await env.CAKE_KV.put(storeKey, JSON.stringify(store), { expirationTtl: 86400 * 365 });
+
+    return json({ ok: true, language, added, total: Object.keys(store).length, credited }, 200, {}, request);
+}
+
+/** GET /challenge/translations?lang=de-DE — community translations for the
+ *  chat UI's translateAll() to reuse instead of re-translating everything. */
+async function handleTranslationsGet(request, env) {
+    const url = new URL(request.url);
+    const language = baseLanguage(url.searchParams.get("lang") || "");
+    if (!language || language === "en") {
+        return json({ error: "invalid_language" }, 400, {}, request);
+    }
+    const raw = await env.CAKE_KV.get(`challenge:translations:${language}`);
+    let translations = {};
+    try { translations = raw ? JSON.parse(raw) : {}; } catch { /* fresh store */ }
+    return json(
+        { language, count: Object.keys(translations).length, translations },
+        200,
+        { "Cache-Control": "public, max-age=300" },
+        request
+    );
+}
+
 /** GET /challenge/status — current IP's challenge stats. */
 async function handleStatus(request, env) {
     const ip = getClientIP(request);
@@ -641,6 +804,12 @@ export default {
             if (pathname === "/challenge/redeem" && request.method === "POST") {
                 return await handleRedeem(request, env);
             }
+            if (pathname === "/challenge/translations" && request.method === "POST") {
+                return await handleTranslationsSubmit(request, env);
+            }
+            if (pathname === "/challenge/translations" && request.method === "GET") {
+                return await handleTranslationsGet(request, env);
+            }
             if (pathname === "/challenge/status" && request.method === "GET") {
                 return await handleStatus(request, env);
             }
@@ -648,7 +817,7 @@ export default {
                 return json({ ok: true, service: "challenge-worker" }, 200, {}, request);
             }
             return json(
-                { error: "not_found", endpoints: ["/challenge/issue", "/challenge/solve", "/challenge/redeem", "/challenge/status"] },
+                { error: "not_found", endpoints: ["/challenge/issue", "/challenge/solve", "/challenge/redeem", "/challenge/translations", "/challenge/status"] },
                 404,
                 {},
                 request

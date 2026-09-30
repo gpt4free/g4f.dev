@@ -91,9 +91,14 @@ const cakeWorker = loadWorker("../../workers/cake-worker.js", {
 const challengeSandbox = {
     ...b64Polyfill,
     navigator: { language: "de-DE" },
-    // Route the challenge worker's CAKE_WORKER_URL fetch to the cake worker.
+    // Route the challenge worker's CAKE_WORKER_URL fetch to the cake worker
+    // and its SNIPPETS_URL fetch to the local snippet catalog.
     fetch: (url, init) => {
         const req = new b64Polyfill.Request(url, init);
+        if (String(url).includes("/dist/js/snippets/")) {
+            const catalog = fs.readFileSync(path.join(__dirname, "snippets", "chat.context.json"), "utf8");
+            return new b64Polyfill.Response(catalog, { status: 200 });
+        }
         return cakeWorker.fetch(req, cakeEnv, {});
     },
 };
@@ -267,7 +272,8 @@ function check(name, cond) {
     check("direct redeem credits ledger", directRedeem.total_credits === 10);
     check("direct redeem updates user index", (() => {
         const entry = JSON.parse(env.CAKE_KV.store.get("cakes:user_index:0.0.0.0"));
-        return entry.total === 1 && entry.today === 1;
+        // The proxy redeem earlier in the run shares this KV, so both count.
+        return entry.total === 2 && entry.today === 2;
     })());
 
     res = await cakeWorker.fetch(
@@ -281,6 +287,74 @@ function check(name, cond) {
         cakeEnv, {}
     );
     check("direct tampered token rejected", res.status === 401);
+
+    // ---- Batch "translations" challenges (UI snippets + headline context) ----
+    console.log("\nchallenge-worker /challenge/translations smoke test");
+    res = await worker.fetch(makeRequest("https://g4f.dev/challenge/issue?lang=de-DE&kind=translations"), env, {});
+    check("translations issue returns 200", res.status === 200);
+    const batchChallenge = await res.json();
+    check("translations challenge sealed", typeof batchChallenge.ciphertext === "string" && batchChallenge.ciphertext.length > 0);
+
+    const batchPayload = await vm.runInContext(
+        `${fromBase64UrlMatch[0]}\n${toBase64UrlMatch[0]}\n(async () => {\n${unsealMatch[0]}\n` +
+        `  return unsealPayload(${JSON.stringify(env.CHALLENGE_SECRET)}, ${JSON.stringify(batchChallenge.ciphertext)}, ${JSON.stringify(batchChallenge.iv)});\n})()`,
+        clientSandbox
+    );
+    check("batch payload has items", Array.isArray(batchPayload.items) && batchPayload.items.length > 0);
+    check("batch items carry headline context", batchPayload.items.every((item) => item.text && item.context));
+    check("batch prompt asks for translations map", batchPayload.prompt.includes("translations"));
+
+    const batchAnswer = { translations: {} };
+    batchPayload.items.forEach((item) => { batchAnswer.translations[item.text] = "DE: " + item.text; });
+    const sealedBatch = await sealFn(batchAnswer);
+    res = await worker.fetch(
+        makeRequest("https://g4f.dev/challenge/solve", "POST", {
+            id: batchChallenge.id, ciphertext: sealedBatch.ciphertext, iv: sealedBatch.iv, language: "de-DE",
+        }),
+        env, {}
+    );
+    check("batch solve returns 200", res.status === 200);
+    const batchToken = (await res.json()).token;
+
+    // Receive endpoint: credited submission with the solve-JWT.
+    res = await worker.fetch(
+        makeRequest("https://g4f.dev/challenge/translations", "POST", {
+            token: batchToken, language: "de-DE", translations: batchAnswer.translations,
+        }),
+        env, {}
+    );
+    check("translations submit returns 200", res.status === 200);
+    const submitData = await res.json();
+    check("translations submit counts entries", submitData.added === batchPayload.items.length);
+
+    // Serve endpoint: the chat UI reuses these instead of re-translating.
+    res = await worker.fetch(makeRequest("https://g4f.dev/challenge/translations?lang=de-DE"), env, {});
+    check("translations get returns 200", res.status === 200);
+    const served = await res.json();
+    check("served translations match", served.translations[batchPayload.items[0].text] === "DE: " + batchPayload.items[0].text);
+
+    // Untranslated source must be skipped on the next batch issue.
+    res = await worker.fetch(makeRequest("https://g4f.dev/challenge/issue?lang=de-DE&kind=translations"), env, {});
+    const batch2 = await res.json();
+    if (batch2.ciphertext) {
+        const payload2 = await vm.runInContext(
+            `${fromBase64UrlMatch[0]}\n${toBase64UrlMatch[0]}\n(async () => {\n${unsealMatch[0]}\n` +
+            `  return unsealPayload(${JSON.stringify(env.CHALLENGE_SECRET)}, ${JSON.stringify(batch2.ciphertext)}, ${JSON.stringify(batch2.iv)});\n})()`,
+            clientSandbox
+        );
+        check("next batch skips translated snippets", payload2.items.every((item) => !batchAnswer.translations[item.text]));
+    } else {
+        check("next batch reports all_translated", batch2.error === "all_translated");
+    }
+
+    // Invalid submissions are rejected.
+    res = await worker.fetch(
+        makeRequest("https://g4f.dev/challenge/translations", "POST", { language: "de-DE", translations: { "Send": "Send" } }),
+        env, {}
+    );
+    check("untranslated submission rejected", res.status === 400);
+    res = await worker.fetch(makeRequest("https://g4f.dev/challenge/translations?lang=en"), env, {});
+    check("english store rejected", res.status === 400);
 
     console.log(`\n${passed} passed, ${failed} failed`);
     process.exit(failed ? 1 : 0);

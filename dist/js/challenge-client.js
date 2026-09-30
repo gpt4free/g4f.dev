@@ -1,15 +1,17 @@
 /**
- * G4F Challenge Client — fast-track cakes via the local LanguageModel
+ * G4F Challenge Client — fast-track cakes via the local model
  *
  * Complements the proof-of-work cake baker: instead of grinding SHA-256
  * nonces, the browser solves small AI tasks (follow-up questions,
- * translations) with Chrome's built-in Gemini Nano (Prompt API /
- * LanguageModel) and exchanges the encrypted result for a signed JWT that
- * is redeemed for cake credit — a much faster way to get the first cakes.
+ * translations) with a local model — client.js's ChromeAI (built-in
+ * Gemini Nano / Prompt API), falling back to the 1-bit Bonsai model on
+ * WebGPU — and exchanges the encrypted result for a signed JWT that is
+ * redeemed for cake credit — a much faster way to get the first cakes.
  *
  * Flow (all challenge payloads travel encrypted, AES-GCM):
  *   1. GET  /challenge/issue?lang=<navigator.language>&kind=...
- *   2. Decrypt the sealed task locally, run it through LanguageModel
+ *   2. Decrypt the sealed task locally, run it through the local model
+ *      (client.js: ChromeAI / Gemini Nano, fallback Bonsai 1-bit WebGPU)
  *   3. POST /challenge/solve { id, ciphertext, iv }  → { token }
  *   4. POST /challenge/redeem { token }              → cake credit
  *
@@ -17,8 +19,8 @@
  *   - start() / stop() / status()
  *   - solveOnce() — single challenge round (debug)
  *
- * Auto-runs on chat/members pages when the local LanguageModel is
- * available; it never sends plaintext tasks or answers over the wire.
+ * Auto-runs on chat/members pages when a local model is available; it
+ * never sends plaintext tasks or answers over the wire.
  */
 (function () {
     "use strict";
@@ -46,31 +48,60 @@
         failed: 0,
         credits: 0,        // cents credited this session
         timer: null,
-        session: null,     // cached LanguageModel session
     };
 
-    // ---- Local LanguageModel (Chrome built-in Prompt API) ---------------
+    // ---- Local inference via client.js ----------------------------------
 
-    /** Check whether the browser exposes the Prompt API. */
+    // Cached client instance (module-level, survives stop/start).
+    let _client = null;
+    let _clientPromise = null;
+
+    /** Load the local chat client from client.js: ChromeAI (built-in
+     *  Gemini Nano) first; if the Prompt API is unavailable (non-Chrome
+     *  browsers), fall back to the 1-bit Bonsai model on WebGPU. */
+    async function getClient() {
+        if (_client) return _client;
+        if (!_clientPromise) {
+            _clientPromise = (async () => {
+                // challenge-client.js is a classic script — load the ES
+                // module dynamically.
+                const { ChromeAI, Bonsai } = await import("./client.js");
+                if (await ChromeAI.isSupported()) {
+                    return new ChromeAI({ logCallback: () => {} });
+                }
+                if (await Bonsai.isSupported()) {
+                    console.info("[G4FChallenge] LanguageModel unavailable — falling back to Bonsai 1-bit (WebGPU)");
+                    return new Bonsai({ logCallback: () => {} });
+                }
+                return null;
+            })().catch((e) => {
+                console.warn("[G4FChallenge] loading client.js failed:", e);
+                _clientPromise = null; // allow retry on the next round
+                return null;
+            });
+        }
+        const client = await _clientPromise;
+        if (client) _client = client;
+        return _client;
+    }
+
+    /** Check whether any local model client is available. */
     async function isSupported() {
         try {
-            if (typeof self === "undefined" || !self.LanguageModel) return false;
-            const availability = await self.LanguageModel.availability();
-            return !!availability && availability !== "unavailable";
+            return !!(await getClient());
         } catch {
             return false;
         }
     }
 
-    /** Get (or create) the cached LanguageModel session. */
-    async function getSession() {
-        if (state.session) return state.session;
-        state.session = await LanguageModel.create({
-            expectedInputs: [{ type: "text", languages: ["en"] }],
-            expectedOutputs: [{ type: "text", languages: [navigator.language || "en"] }],
-            initialPrompts: [],
+    /** Run a prompt through the local client (OpenAI-style chat API). */
+    async function runPrompt(prompt) {
+        const client = await getClient();
+        if (!client) throw new Error("no local model available");
+        const response = await client.chat.completions.create({
+            messages: [{ role: "user", content: prompt }],
         });
-        return state.session;
+        return response.choices[0].message.content;
     }
 
     // ---- Crypto helpers (mirror the worker's AES-GCM sealing) -----------
@@ -168,9 +199,18 @@
         if (!secret) throw new Error("no challenge secret available");
         const payload = await unsealPayload(secret, challenge.ciphertext, challenge.iv);
 
-        // 3. Run the prompt through the local LanguageModel.
-        const session = await getSession();
-        const raw = await session.prompt(payload.prompt);
+        // 3. Run the prompt through the local model (client.js). Batch
+        //    "translations" challenges carry the items inline — build the
+        //    prompt from them so the model sees each snippet with its
+        //    section headline as context.
+        let prompt = payload.prompt;
+        if (payload.kind === "translations" && Array.isArray(payload.items) && payload.items.length) {
+            const list = payload.items
+                .map((item) => `- ${JSON.stringify(item.text)} (context: ${item.context})`)
+                .join("\n");
+            prompt = `${payload.prompt}\n\n${list}`;
+        }
+        const raw = await runPrompt(prompt);
         const answer = parseJsonLoose(raw);
         if (!answer) throw new Error("local model returned no JSON");
 
@@ -202,6 +242,26 @@
         const redeemData = await redeemRes.json().catch(() => ({}));
         if (!redeemRes.ok || !redeemData.ok) {
             throw Object.assign(new Error(redeemData.error || `redeem failed: ${redeemRes.status}`), { status: redeemRes.status });
+        }
+
+        // 5b. Batch "translations" challenges: donate the translated UI
+        //     snippets to the community store (POST /challenge/translations).
+        //     The solve-JWT is attached so the submission is credited.
+        if (payload.kind === "translations" && answer.translations && typeof answer.translations === "object") {
+            try {
+                await fetch(`${CHALLENGE_ENDPOINT}/translations`, {
+                    method: "POST",
+                    credentials: "include",
+                    headers: authHeaders({ "Content-Type": "application/json" }),
+                    body: JSON.stringify({
+                        token: solveData.token,
+                        language,
+                        translations: answer.translations,
+                    }),
+                });
+            } catch (e) {
+                console.warn("[G4FChallenge] translation donation failed:", e);
+            }
         }
 
         state.solved += 1;
@@ -273,8 +333,10 @@
             clearTimeout(state.timer);
             state.timer = null;
         }
-        try { state.session?.destroy?.(); } catch { /* noop */ }
-        state.session = null;
+        // Free per-session resources but keep the client cached: ChromeAI
+        // destroys its Gemini Nano session, Bonsai only drops the KV cache
+        // (the downloaded model stays warm for the next start).
+        try { _client?.reset?.(); } catch { /* noop */ }
     }
 
     function status() {
@@ -313,7 +375,7 @@
             if (await isSupported()) {
                 start();
             } else {
-                console.info("[G4FChallenge] local LanguageModel unavailable — cake baker handles credits");
+                console.info("[G4FChallenge] no local model (LanguageModel / Bonsai WebGPU) — cake baker handles credits");
             }
         };
         if (document.readyState === "loading") {

@@ -19,16 +19,23 @@ Client                          Worker (/challenge)                    KV (CAKE_
   │  ◀──────── {token (JWT), credit_cents} ───▶│ mark solved, dedup hash  │
   │  POST /challenge/redeem {token}   │                                   │
   │──────────────────────────────────▶│ verify HS256, IP-bound, replay    │
+  │                                   │   proxy → cake worker /cake/redeem│
   │  ◀──────── {credited, total_credits} ────│ cakes:credit:<ip> += cents │
 ```
+
+The same infrastructure powers **community UI translations**: solved batch
+challenges translate the chat UI snippets, and the results are served back to
+every visitor — see [Community UI translations](#community-ui-translations).
 
 ## Endpoints
 
 | Method | Path                  | Description |
 |--------|-----------------------|-------------|
-| GET    | `/challenge/issue?lang=<lang>&kind=followup\|translation\|any` | Returns an encrypted challenge. The plaintext prompt is **never** sent in cleartext. |
+| GET    | `/challenge/issue?lang=<lang>&kind=followup\|translation\|translations\|any` | Returns an encrypted challenge. The plaintext prompt is **never** sent in cleartext. |
 | POST   | `/challenge/solve`    | Body: `{id, ciphertext, iv, language}` (answer sealed with AES-GCM). Returns `{token, credit_cents}`. |
-| POST   | `/challenge/redeem`   | Body: `{token}` (or `Authorization: Bearer <token>`). Credits the cake ledger. |
+| POST   | `/challenge/redeem`   | Body: `{token}` (or `Authorization: Bearer <token>`). Proxy — verifies locally, then credits via the cake worker's `POST /cake/redeem` (`CAKE_WORKER_URL`). |
+| POST   | `/challenge/translations` | Body: `{language, translations, token?}`. Receives community UI translations; a valid solve-JWT credits the submitter. |
+| GET    | `/challenge/translations?lang=<lang>` | Serves the community translation store for the UI (`Cache-Control: max-age=300`). |
 | GET    | `/challenge/status`   | Current IP's `solved_today`, `credit_cents`, limits. |
 | GET    | `/challenge/health`   | Liveness probe. |
 
@@ -38,6 +45,41 @@ Challenge kinds:
   answer `{"q": ["...", "...", "..."]}` (2–8 questions, 3–500 chars each).
 - **translation** — translate a random English snippet, answer `{"text": "..."}`
   (5–2000 chars, must differ from the source).
+- **translations** — batch mode: translate up to `TRANSLATIONS_BATCH` real UI
+  snippets from the catalog, answer `{"translations": {"<source>": "<translation>"}}`.
+  Each item carries the section headline as `context` to disambiguate meaning.
+  Snippets that already have a community translation are skipped; if none are
+  left, the issue returns `{error: "all_translated"}`.
+
+## Community UI translations
+
+The chat UI ships a snippet catalog grouped by section headline
+(`dist/js/snippets/chat.context.json`):
+
+```json
+{
+  "_meta": {"comment": "headline: [texts] — headline is the translation context"},
+  "Message Input": ["Send", "Attach file", "Type a message…"],
+  "Settings":      ["Appearance", "Language"]
+}
+```
+
+The flow closes a loop where clients earn cakes for translating the UI they
+use, and every visitor benefits:
+
+1. `GET /challenge/issue?kind=translations&lang=de-DE` samples untranslated
+   snippets and seals them (with headline context) into the challenge.
+2. The client's local `LanguageModel` translates the batch; the sealed answer
+   is validated server-side and earns a JWT.
+3. Redeeming the JWT credits the ledger **and** the client donates the
+   translations to `POST /challenge/translations` (authenticated by the same
+   token, so credit and contribution are IP-bound together).
+4. `framework.translateAll()` fetches `GET /challenge/translations?lang=…`
+   first and reuses those community translations before asking the local model
+   for anything still missing.
+
+Submissions are filtered (non-empty strings, must differ from the source,
+≤100 entries, `en` excluded) and merged into the per-language store.
 
 ## Security model
 
@@ -66,6 +108,9 @@ Challenge kinds:
 | `CHALLENGE_PER_IP_PER_DAY` | `100` | Per-IP issue limit. |
 | `CHALLENGE_MAX_PER_DAY` | `150` | Global issue limit. |
 | `CHALLENGE_TTL_SEC` | `300` | Challenge validity after issue. |
+| `CAKE_WORKER_URL` | `https://g4f.space/cake` | Cake worker base URL the redeem proxy forwards to. |
+| `SNIPPETS_URL` | `/dist/js/snippets/chat.context.json` | Snippet catalog for batch translations (cached 1h). |
+| `TRANSLATIONS_BATCH` | `8` | Snippets per translations challenge. |
 | `ADMIN_API_KEY` | — | Optional, for admin endpoints. |
 
 ## KV keys (all in `CAKE_KV`)
@@ -76,7 +121,8 @@ Challenge kinds:
 | `challenge:seen:<hash>` | 24h | Answer dedup — same answer never double-credits. |
 | `challenge:rate:<ip>` | 24h | Per-IP issue counter. |
 | `challenge:solved:<ip>` | 24h | Per-IP solve counter (shown in `/status`). |
-| `challenge:redeemed:<hash>` | 900s | Token replay marker. |
+| `challenge:redeemed:<hash>` | 900s | Token replay marker (written by both workers — the cake worker computes the identical hash for `/cake/redeem`). |
+| `challenge:translations:<lang>` | 365d | Community translation store per base language, served to the UI. |
 | `cakes:credit:<ip>` | — | **Shared cake ledger** — same key `cake-worker.js` writes on PoW bakes and `api-worker.js` reads for anonymous usage gating. |
 
 ## Deployment
@@ -113,6 +159,8 @@ G4FChallenge.status();
 - On successful redeem it dispatches
   `window.dispatchEvent(new CustomEvent("g4f:cake:accepted", {detail: {...}}))`,
   which `addon-baked-credits.js` already listens for — no extra wiring needed.
+- For `translations` challenges it additionally donates the answer to
+  `POST /challenge/translations` after redeeming (failures are non-fatal).
 - Stops polling on 429 (rate limit) or when `LanguageModel` is unavailable
   (non-Chrome browsers simply fall back to PoW baking).
 
@@ -123,7 +171,12 @@ cd g4f.dev
 node dist/js/challenge-client.smoke.test.cjs
 ```
 
-25 checks covering: issue (encrypted, no plaintext leak), client-side decrypt
+48 checks covering: issue (encrypted, no plaintext leak), client-side decrypt
 via the real client code path, solve, token issuance, replay rejection,
-redeem + ledger credit, double-redeem rejection, tampered-token rejection,
-invalid-answer rejection, and status reporting.
+redeem + ledger credit (both via the `/challenge/redeem` proxy and directly
+on the cake worker's `/cake/redeem`, sharing one in-memory KV), double-redeem
+rejection, tampered-token rejection, invalid-answer rejection, status
+reporting — plus the full translations round: batch issue with headline
+context, solve, credited submission to `POST /challenge/translations`, serving
+via `GET /challenge/translations?lang=…`, skip-already-translated on the next
+batch, and rejection of invalid submissions.

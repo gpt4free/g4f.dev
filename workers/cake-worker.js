@@ -364,8 +364,6 @@ async function handleIssue(request, env) {
         uuids: newUuids,
         difficulty: Number(env.CAKE_DIFFICULTY || 16),
         algorithm: "sha256",
-        instruction:
-            "For each uuid, choose a salt and find a nonce so that sha256(uuid + ':' + salt + ':' + nonce) starts with the required number of zero bits. Submit via POST /cake/bake.",
         credit_cents: Number(env.CAKE_CREDIT_CENTS || 5),
         baked_today: daily.count,
         limit_per_day: perDay,
