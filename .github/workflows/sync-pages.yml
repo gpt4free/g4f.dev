@@ -1,9 +1,11 @@
 # Syncs every change from this repo (gpt4free/g4f.dev) to the GitHub Pages
 # mirror repository (by default hlohaus/hlohaus.github.io).
 #
-# The mirror keeps its own workflow files, so its main is merged in before
-# pushing — a plain push would be rejected as non-fast-forward whenever the
-# mirror has commits of its own.
+# Pushes CONTENT ONLY: a single commit on top of the mirror's main with this
+# repo's files, while the mirror keeps its own .github (workflows) and CNAME.
+# This avoids GitHub's "refusing to allow a Personal Access Token to create
+# or update workflow" rejection — a PAT without the workflow scope may not
+# push workflow files, so none are included in the pushed diff.
 #
 # Requires the secret PAGES_TOKEN: a personal access token with push
 # (contents:write) access to the mirror repository. Because the push uses a
@@ -67,11 +69,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git remote add mirror "https://x-access-token:${MIRROR_TOKEN}@github.com/${MIRROR_REPO}.git"
-          git fetch mirror main
-          if git merge-base --is-ancestor mirror/main HEAD; then
-            echo "Mirror is behind — fast-forwarding to ${GITHUB_SHA}"
-          else
-            echo "Mirror diverged — merging mirror/main before pushing"
-            git merge mirror/main --no-edit -m "Merge mirror state before sync"
+          git fetch mirror
+
+          # Build a single content commit on top of the mirror's main:
+          # upstream's files, but the mirror keeps its own .github (workflows)
+          # and CNAME. Content-only, so the PAT needs no workflow scope.
+          git checkout -B sync mirror/main
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name '.github' ! -name 'CNAME' -exec rm -rf {} +
+          git checkout "${GITHUB_SHA}" -- . ':(exclude).github'
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Mirror already up to date."
+            exit 0
           fi
-          git push mirror HEAD:main
+          git commit -m "Sync content from gpt4free/g4f.dev@${GITHUB_SHA::7}"
+          git push mirror sync:main
