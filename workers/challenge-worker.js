@@ -482,7 +482,7 @@ async function handleIssue(request, env) {
             `Translate these UI texts to language ${language}. ` +
             `Keep placeholders like {0} intact. Return as JSON: ` +
             `{"translations": {"<source text>": "<translation>"}}\n` +
-            `Texts:\n${JSON.stringify({ items: pending }, null, 2)}`;
+            `Texts:\n${JSON.stringify({ items: Object.fromEntries(pending.map((item) => [item, ""])) }, null, 2)}`;
     }
 
     const { ciphertext, iv } = await sealPayload(env, payload);

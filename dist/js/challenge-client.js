@@ -50,6 +50,28 @@
         timer: null,
     };
 
+    // ---- AI request logging ---------------------------------------------
+
+    // Ring buffer of local-model request/response events. client.js calls
+    // logCallback({request}) before inference and logCallback({response})
+    // after; Bonsai additionally emits {status, data} progress events.
+    const AI_LOG_MAX = 20;
+    const aiLog = [];
+    function logAiEvent(event) {
+        const entry = { at: new Date().toISOString(), ...event };
+        aiLog.push(entry);
+        if (aiLog.length > AI_LOG_MAX) aiLog.shift();
+        try {
+            if (event.request) {
+                console.debug("%c[G4FChallenge] AI request →", "color:#6366f1;font-weight:bold", event.request);
+            } else if (event.response) {
+                console.debug("%c[G4FChallenge] AI response ←", "color:#22c55e;font-weight:bold", event.response);
+            } else if (event.status) {
+                console.debug(`[G4FChallenge] model ${event.status}:`, event.data || "");
+            }
+        } catch { /* logging must never break a round */ }
+    }
+
     // ---- Local inference via client.js ----------------------------------
 
     // Cached client instance (module-level, survives stop/start).
@@ -67,11 +89,11 @@
                 // module dynamically.
                 const { ChromeAI, Bonsai } = await import("./client.js");
                 if (await ChromeAI.isSupported()) {
-                    return new ChromeAI({ logCallback: () => {} });
+                    return new ChromeAI({ logCallback: logAiEvent });
                 }
                 if (await Bonsai.isSupported()) {
                     console.info("[G4FChallenge] LanguageModel unavailable — falling back to Bonsai 1-bit (WebGPU)");
-                    return new Bonsai({ logCallback: () => {} });
+                    return new Bonsai({ logCallback: logAiEvent });
                 }
                 return null;
             })().catch((e) => {
@@ -204,7 +226,9 @@
         //    prompt from them so the model sees each snippet with its
         //    section headline as context.
         let prompt = payload.prompt;
+        console.debug("[G4FChallenge] challenge payload:", payload);
         const raw = await runPrompt(prompt);
+        console.debug("[G4FChallenge] raw model output:", raw);
         const answer = parseJsonLoose(raw);
         if (!answer) throw new Error("local model returned no JSON");
 
@@ -323,7 +347,12 @@
         };
     }
 
-    window.G4FChallenge = { start, stop, status, solveOnce, isSupported };
+    /** Last AI request/response events (debugging, e.g. in the console). */
+    function getLog() {
+        return aiLog.map((entry) => ({ ...entry }));
+    }
+
+    window.G4FChallenge = { start, stop, status, solveOnce, isSupported, getLog };
 
     // Auto-start on chat and members pages when the Prompt API exists.
     const path = window.location.pathname;

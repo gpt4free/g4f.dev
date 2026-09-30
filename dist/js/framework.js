@@ -5,8 +5,24 @@ const DB_NAME = 'chat-db';
 const STORE_NAME = 'conversations';
 const VERSION = 1;
 
-const logStorage = document.querySelector(".log");
-const logContent = document.querySelector(".log-content") || logStorage;
+// Log panel elements are resolved lazily: this classic script runs in <head>
+// before the body (and the .log section) exists, so an eager query would
+// return null. Resolved on DOMContentLoaded and re-queried whenever the
+// cached node is no longer connected (e.g. after a UI re-render).
+let logStorage = null;
+let logContent = null;
+function resolveLogElements() {
+    if (!logStorage || !logStorage.isConnected) {
+        logStorage = document.querySelector(".log");
+        logContent = document.querySelector(".log-content") || logStorage;
+    }
+    return logContent;
+}
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", resolveLogElements);
+} else {
+    resolveLogElements();
+}
 
 let privateConversation = null;
 
@@ -125,7 +141,7 @@ const ErrorTracker = (() => {
 
     // --- visual log rendering ---
     function _renderToLog(entry) {
-        if (!window.logContent) return;
+        if (!resolveLogElements()) return;
         const p = document.createElement("p");
         p.className = `error-entry error-${entry.severity}`;
         p.dataset.errorId = entry.id;
@@ -943,8 +959,14 @@ Object.assign(window, {
     add_error,
     ErrorTracker,
     getHeaders,
-    logStorage,
-    logContent,
     escapeHtml,
     deleteTranslations,
+});
+
+// Live bindings for the log panel: getters so window.logStorage /
+// window.logContent always reflect the current elements instead of the
+// null captured at head-parse time.
+Object.defineProperties(window, {
+    logStorage: { get: () => logStorage, configurable: true },
+    logContent: { get: () => logContent, configurable: true },
 });
