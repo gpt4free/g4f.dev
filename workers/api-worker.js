@@ -100,13 +100,17 @@ function isValidRedirect(url) {
     }
 }
 function getCorsHeaders(request) {
-    if (!isValidRedirect(request.headers.get("Origin"))) {
-        return CORS_HEADERS;
+    const origin = request.headers.get("Origin");
+    // Echo the origin for known app origins and any localhost dev server —
+    // required because clients use credentials: "include", which the browser
+    // rejects when Access-Control-Allow-Origin is "*".
+    if (origin && (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) || isValidRedirect(origin))) {
+        return {
+            ...CORS_HEADERS,
+            "Access-Control-Allow-Origin": origin
+        };
     }
-    return {
-        ...CORS_HEADERS,
-        "Access-Control-Allow-Origin": request.headers.get("Origin")
-    }
+    return CORS_HEADERS;
 }
 var EXTRA_HEADERS = {
   "HTTP-Referer": "https://g4f.dev",
@@ -698,8 +702,12 @@ var custom_worker_default = {
     try {
       const response = await safe(request, env, ctx);
       const newResponse = new Response(response.body, response);
-      for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
-        newResponse.headers.set(key, value);
+      // Only default to "*" when the handler didn't already set a CORS
+      // origin (e.g. echoed origins for credentialed requests).
+      if (!newResponse.headers.has("Access-Control-Allow-Origin")) {
+        for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
+          newResponse.headers.set(key, value);
+        }
       }
       return newResponse;
     } catch (error) {

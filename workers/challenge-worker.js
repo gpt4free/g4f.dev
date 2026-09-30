@@ -515,9 +515,6 @@ async function handleRedeem(request, env) {
     if (!payload) {
         return json({ error: "invalid_or_expired_token" }, 401, {}, request);
     }
-    if (payload.redeemed) {
-        return json({ error: "token_already_redeemed" }, 409, {}, request);
-    }
 
     // The token is bound to the IP that solved the challenge.
     if (payload.sub !== `challenge:${ip}`) {
@@ -529,6 +526,14 @@ async function handleRedeem(request, env) {
         return json({ error: "no_credit" }, 400, {}, request);
     }
 
+    // Replay protection: a signed JWT is immutable, so redemption state lives
+    // in a KV marker. Its TTL (900s) outlives the token TTL (600s), after
+    // which verifyJwt rejects the token anyway.
+    const redeemedKey = `challenge:redeemed:${await answerHash(ip, { kind: "redeem" }, { jti: payload.challenge_id })}`;
+    if (await env.CAKE_KV.get(redeemedKey)) {
+        return json({ error: "token_already_redeemed" }, 409, {}, request);
+    }
+
     // Credit the shared cake ledger (same key the cake worker uses).
     const creditKey = `cakes:credit:${ip}`;
     const raw = await env.CAKE_KV.get(creditKey);
@@ -536,12 +541,8 @@ async function handleRedeem(request, env) {
     const total = current + cents;
     await env.CAKE_KV.put(creditKey, String(total));
 
-    // Mark the token as redeemed (TTL = token lifetime + slack).
-    await env.CAKE_KV.put(
-        `challenge:redeemed:${await answerHash(ip, { kind: "redeem" }, { jti: payload.challenge_id })}`,
-        "1",
-        { expirationTtl: 900 }
-    );
+    // Mark the token as redeemed.
+    await env.CAKE_KV.put(redeemedKey, "1", { expirationTtl: 900 });
 
     return json({
         ok: true,

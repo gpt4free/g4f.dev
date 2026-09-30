@@ -74,6 +74,10 @@ vm.createContext(sandbox);
 vm.runInContext(workerSource, sandbox);
 const worker = sandbox.worker;
 
+// Separate contextified sandbox for the client crypto round-trip.
+const clientSandbox = { ...b64Polyfill };
+vm.createContext(clientSandbox);
+
 const env = {
     CAKE_KV: makeKv(),
     CHALLENGE_SECRET: "test-secret-passphrase",
@@ -122,13 +126,17 @@ function check(name, cond) {
     check("client has unsealPayload", !!unsealMatch);
     const sealMatch = clientSrc.match(/async function sealPayload[\s\S]*?\n    \}/);
     check("client has sealPayload", !!sealMatch);
+    const fromBase64UrlMatch = clientSrc.match(/function fromBase64Url[\s\S]*?\n    \}/);
+    check("client has fromBase64Url", !!fromBase64UrlMatch);
+    const toBase64UrlMatch = clientSrc.match(/function toBase64Url[\s\S]*?\n    \}/);
+    check("client has toBase64Url", !!toBase64UrlMatch);
     const clientCrypto = vm.runInContext(
-        `(async () => {\n${unsealMatch[0]}\n${sealMatch[0]}\n` +
+        `${fromBase64UrlMatch[0]}\n${toBase64UrlMatch[0]}\n(async () => {\n${unsealMatch[0]}\n${sealMatch[0]}\n` +
         `  const secret = ${JSON.stringify(env.CHALLENGE_SECRET)};\n` +
         `  const payload = await unsealPayload(secret, ${JSON.stringify(challenge.ciphertext)}, ${JSON.stringify(challenge.iv)});\n` +
         `  return { payload, seal: (a) => sealPayload(secret, a) };\n` +
         `})()`,
-        { ...b64Polyfill }
+        clientSandbox
     );
     const { payload } = await clientCrypto;
     check("client decrypted the challenge", payload && typeof payload.prompt === "string");
