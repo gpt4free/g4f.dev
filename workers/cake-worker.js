@@ -23,6 +23,7 @@
  *   cakes:user_index:<ip>           — KV aggregated per-IP user stats for /cake/users
  *   cakes:today_ips                  — KV list of IPs that baked today (TTL = 1 day, resets daily)
  *   cake:<uuid>                     — KV object storing { ip, baked_at, hash, salt } (TTL = 365 days)
+ *   challenge:redeemed:<hash>        — challenge-JWT replay marker (TTL = 900s, written by /cake/redeem)
  *
  * Environment variables:
  *   CAKE_KV              — KV namespace binding
@@ -32,6 +33,8 @@
  *   CAKE_ISSUE_BATCH     — number of UUIDs issued per /cake/issue call (default: 5)
  *   CAKE_ISSUE_TTL_SEC   — seconds before an issued UUID expires (default: 600)
  *   ADMIN_API_KEY        — bearer token for admin endpoints
+ *   CHALLENGE_JWT_SECRET — HMAC secret shared with challenge-worker.js; the
+ *                          credit JWTs it mints are redeemed via /cake/redeem
  */
 
 const ALLOWED_ORIGINS = new Set([
@@ -212,6 +215,114 @@ async function addCredit(env, ip, cents, user, country) {
     }
 
     return current + cents;
+}
+
+// ---------------------------------------------------------------------------
+// Challenge-JWT redemption (fast-track cakes from challenge-worker.js)
+// ---------------------------------------------------------------------------
+
+function fromBase64Url(text) {
+    const base64 = text.replace(/-/g, "+").replace(/_/g, "/");
+    const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+    const binary = atob(base64 + padding);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+}
+
+/** Verify an HS256 JWT minted by challenge-worker.js (shared
+ *  CHALLENGE_JWT_SECRET). Returns the payload or null. */
+async function verifyChallengeJwt(env, token) {
+    try {
+        const parts = token.split(".");
+        if (parts.length !== 3) return null;
+        const key = await crypto.subtle.importKey(
+            "raw",
+            new TextEncoder().encode(env.CHALLENGE_JWT_SECRET || env.CHALLENGE_SECRET || "g4f-challenge-dev-secret"),
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["verify"]
+        );
+        const valid = await crypto.subtle.verify(
+            "HMAC",
+            key,
+            fromBase64Url(parts[2]),
+            new TextEncoder().encode(`${parts[0]}.${parts[1]}`)
+        );
+        if (!valid) return null;
+        const payload = JSON.parse(new TextDecoder().decode(fromBase64Url(parts[1])));
+        if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null;
+        return payload;
+    } catch {
+        return null;
+    }
+}
+
+/** Replay-marker key for redeemed challenge JWTs. MUST match
+ *  challenge-worker.js answerHash(ip, { kind: "redeem" }, { jti }) so both
+ *  workers agree on the key in the shared CAKE_KV. */
+async function redeemMarkerKey(ip, challengeId) {
+    const data = new TextEncoder().encode(
+        JSON.stringify({ ip, kind: "redeem", answer: { jti: challengeId } })
+    );
+    const digest = await crypto.subtle.digest("SHA-256", data);
+    return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** POST /cake/redeem { token } — redeem a challenge-worker credit JWT.
+ *  The JWT (HS256, CHALLENGE_JWT_SECRET) carries sub: "challenge:<ip>" and
+ *  credit_cents. The credit is applied to the IP embedded in the token, so a
+ *  proxied redemption (challenge worker → here) credits the original solver
+ *  even though the request originates from the proxy's egress IP — and a
+ *  stolen token only benefits its embedded IP, never the redeemer's. */
+async function handleChallengeRedeem(request, env) {
+    let body;
+    try {
+        body = await request.json();
+    } catch {
+        return json({ error: "invalid_json" }, 400, {}, request);
+    }
+    const token = body.token || (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+    if (!token) {
+        return json({ error: "missing_token" }, 400, {}, request);
+    }
+
+    const payload = await verifyChallengeJwt(env, token);
+    if (!payload) {
+        return json({ error: "invalid_or_expired_token" }, 401, {}, request);
+    }
+    if (!payload.sub || !payload.sub.startsWith("challenge:")) {
+        return json({ error: "invalid_token_subject" }, 400, {}, request);
+    }
+    const ip = payload.sub.slice("challenge:".length);
+    const cents = Number(payload.credit_cents) || 0;
+    if (cents <= 0) {
+        return json({ error: "no_credit" }, 400, {}, request);
+    }
+
+    // Replay protection — same marker the challenge worker pre-checks.
+    const redeemedKey = `challenge:redeemed:${await redeemMarkerKey(ip, payload.challenge_id)}`;
+    if (await env.CAKE_KV.get(redeemedKey)) {
+        return json({ error: "token_already_redeemed" }, 409, {}, request);
+    }
+
+    // Credit via the cake worker's own ledger path — this also updates the
+    // user index / today-IPs so challenge earnings appear in /cake/users.
+    const user = normalizeUser(request.headers.get("X-User"));
+    const country = request.headers.get("CF-IPCountry") || null;
+    const total = await addCredit(env, ip, cents, user, country);
+
+    // Mark the token as redeemed (TTL 900s > token TTL 600s).
+    await env.CAKE_KV.put(redeemedKey, "1", { expirationTtl: 900 });
+
+    return json({
+        ok: true,
+        credited: cents,
+        credit_cents: cents,
+        total_credits: total,
+        total_credit_cents: total,
+        bound_to_ip: ip,
+    }, 200, {}, request);
 }
 
 // ---------------------------------------------------------------------------
@@ -413,7 +524,6 @@ async function handleStatus(request, env) {
 }
 
 async function handleCreditByIP(request, env, ip) {
-    const auth = request.headers.get("Authorization") || "";
     if (!env.ADMIN_API_KEY || auth !== `Bearer ${env.ADMIN_API_KEY}`) {
         return json({ error: "unauthorized" }, 401, {}, request);
     }
@@ -547,6 +657,9 @@ export default {
             if (pathname === "/cake/status" && request.method === "GET") {
                 return handleStatus(request, env);
             }
+            if (pathname === "/cake/redeem" && request.method === "POST") {
+                return handleChallengeRedeem(request, env);
+            }
             if (pathname.startsWith("/cake/credit/") && request.method === "GET") {
                 const ip = decodeURIComponent(pathname.slice("/cake/credit/".length));
                 return handleCreditByIP(request, env, ip);
@@ -557,7 +670,7 @@ export default {
             if (pathname === "/cake/health") {
                 return json({ ok: true, service: "cake-worker" }, 200, {}, request);
             }
-            return json({ error: "not_found", endpoints: ["/cake/issue", "/cake/bake", "/cake/status", "/cake/users"] }, 404, {}, request);
+            return json({ error: "not_found", endpoints: ["/cake/issue", "/cake/bake", "/cake/redeem", "/cake/status", "/cake/users"] }, 404, {}, request);
         } catch (err) {
             return json({ error: "internal", message: String(err) }, 500, {}, request);
         }

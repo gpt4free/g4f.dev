@@ -17,8 +17,9 @@
  *       match, length, dedup), and mints a short-lived private-key JWT
  *       (HS256, signed with CHALLENGE_JWT_SECRET) that carries the credit.
  *   4. The JWT is exchanged for cakes: POST /challenge/redeem forwards the
- *       token's credit to the cake worker's credit ledger (CAKE_KV), so the
- *       user gets their first cakes without any hashing.
+ *       token to the cake worker's POST /cake/redeem, which re-verifies it
+ *       and credits the shared ledger (CAKE_KV) — the user gets their first
+ *       cakes without any hashing.
  *
  * Why encrypted challenges? The plaintext task never crosses the wire, so
  * the client must actually run its local model to produce an answer — the
@@ -48,6 +49,8 @@
  *   CHALLENGE_PER_IP_PER_DAY — max solved challenges per IP/day (default: 100)
  *   CHALLENGE_TTL_SEC     — seconds before an issued challenge expires (default: 300)
  *   CHALLENGE_MAX_PER_DAY — max challenges issued per IP/day (default: 150)
+ *   CAKE_WORKER_URL       — base URL of the cake worker that owns the ledger
+ *                           and redeems tokens (default: https://g4f.space/cake)
  *   ADMIN_API_KEY         — bearer token for admin endpoints
  */
 
@@ -501,8 +504,10 @@ async function handleSolve(request, env) {
 }
 
 /** POST /challenge/redeem { token } — exchange a solve-JWT for cake credit.
- *  The credit lands in the shared CAKE_KV ledger the cake worker and the
- *  API worker's anonymous gate read, so it is spendable immediately. */
+ *  Redemption lives on the cake worker (the ledger owner): the token is
+ *  forwarded to POST /cake/redeem, which re-verifies it, replay-marks it and
+ *  credits cakes:credit:<ip> via the cake worker's own addCredit (so challenge
+ *  earnings also show up in /cake/users). */
 async function handleRedeem(request, env) {
     const ip = getClientIP(request);
 
@@ -517,47 +522,57 @@ async function handleRedeem(request, env) {
         return json({ error: "missing_token" }, 400, {}, request);
     }
 
+    // Verify locally first — fast rejection of garbage/tampered/foreign-IP
+    // tokens without a round-trip to the cake worker.
     const payload = await verifyJwt(env, token);
     if (!payload) {
         return json({ error: "invalid_or_expired_token" }, 401, {}, request);
     }
-
-    // The token is bound to the IP that solved the challenge.
     if (payload.sub !== `challenge:${ip}`) {
         return json({ error: "token_bound_to_other_ip" }, 403, {}, request);
     }
-
-    const cents = Number(payload.credit_cents) || 0;
-    if (cents <= 0) {
+    if ((Number(payload.credit_cents) || 0) <= 0) {
         return json({ error: "no_credit" }, 400, {}, request);
     }
 
-    // Replay protection: a signed JWT is immutable, so redemption state lives
-    // in a KV marker. Its TTL (900s) outlives the token TTL (600s), after
-    // which verifyJwt rejects the token anyway.
+    // Local replay pre-check. The marker is written by the cake worker into
+    // the SHARED CAKE_KV using the same hash, so this saves the upstream call
+    // on double redemptions. Its TTL (900s) outlives the token TTL (600s),
+    // after which verifyJwt rejects the token anyway.
     const redeemedKey = `challenge:redeemed:${await answerHash(ip, { kind: "redeem" }, { jti: payload.challenge_id })}`;
     if (await env.CAKE_KV.get(redeemedKey)) {
         return json({ error: "token_already_redeemed" }, 409, {}, request);
     }
 
-    // Credit the shared cake ledger (same key the cake worker uses).
-    const creditKey = `cakes:credit:${ip}`;
-    const raw = await env.CAKE_KV.get(creditKey);
-    const current = raw ? Number(raw) || 0 : 0;
-    const total = current + cents;
-    await env.CAKE_KV.put(creditKey, String(total));
-
-    // Mark the token as redeemed.
-    await env.CAKE_KV.put(redeemedKey, "1", { expirationTtl: 900 });
-
-    return json({
-        ok: true,
-        credited: cents,
-        credit_cents: cents,
-        total_credits: total,
-        total_credit_cents: total,
-        bound_to_ip: ip,
-    }, 200, {}, request);
+    // Forward to the cake worker — the ledger owner. It re-verifies the JWT
+    // and credits the IP embedded in the token (payload.sub), so the proxy's
+    // egress IP does not affect attribution.
+    const base = (env.CAKE_WORKER_URL || "https://g4f.space/cake").replace(/\/+$/, "");
+    let upstream;
+    try {
+        upstream = await fetch(`${base}/redeem`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Origin": request.headers.get("Origin") || "",
+                "X-User": request.headers.get("X-User") || "",
+                "X-Forwarded-For": ip,
+            },
+            body: JSON.stringify({ token }),
+        });
+    } catch (err) {
+        return json({ error: "cake_worker_unreachable", message: String(err) }, 502, {}, request);
+    }
+    const data = await upstream.json().catch(() => ({}));
+    if (!upstream.ok) {
+        return json(
+            data && data.error ? data : { error: "redeem_failed", upstream_status: upstream.status },
+            upstream.status,
+            {},
+            request
+        );
+    }
+    return json(data, upstream.status, {}, request);
 }
 
 /** GET /challenge/status — current IP's challenge stats. */

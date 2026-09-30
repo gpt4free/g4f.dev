@@ -1,6 +1,8 @@
 /**
  * Headless smoke test for the challenge worker + client crypto round-trip.
- * Run: node g4f.dev/dist/js/challenge-client.smoke.test.js
+ * The challenge worker's /challenge/redeem proxies to the cake worker's
+ * /cake/redeem, so both workers are loaded here and wired together.
+ * Run: node dist/js/challenge-client.smoke.test.cjs
  */
 "use strict";
 const fs = require("fs");
@@ -37,6 +39,7 @@ const b64Polyfill = {
             this.status = init.status || 200;
             this.headers = new Map(Object.entries(init.headers || {}));
         }
+        get ok() { return this.status >= 200 && this.status < 300; }
         async json() { return JSON.parse(this.body); }
     },
     Request: class {
@@ -63,27 +66,50 @@ function makeKv() {
     };
 }
 
-// ---- Load the worker --------------------------------------------------------
-const workerPath = path.join(__dirname, "..", "..", "workers", "challenge-worker.js");
-let workerSource = fs.readFileSync(workerPath, "utf8");
-// Strip the ESM export for CommonJS evaluation.
-workerSource = workerSource.replace(/export default \{/, "var worker = {");
+// ---- Load the workers ------------------------------------------------------
+function loadWorker(relPath, sandbox) {
+    let source = fs.readFileSync(path.join(__dirname, relPath), "utf8");
+    // Strip the ESM export for CommonJS evaluation.
+    source = source.replace(/export default \{/, "var worker = {");
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox);
+    return sandbox.worker;
+}
 
-const sandbox = { ...b64Polyfill, navigator: { language: "de-DE" } };
-vm.createContext(sandbox);
-vm.runInContext(workerSource, sandbox);
-const worker = sandbox.worker;
+// The cake worker owns the ledger; both workers share one KV instance so the
+// replay markers and cakes:credit keys line up exactly like in production.
+const sharedKv = makeKv();
+const cakeEnv = {
+    CAKE_KV: sharedKv,
+    CHALLENGE_JWT_SECRET: "test-jwt-secret",
+};
+const cakeWorker = loadWorker("../../workers/cake-worker.js", {
+    ...b64Polyfill,
+    caches: { default: { match: async () => undefined, put: async () => {} } },
+});
+
+const challengeSandbox = {
+    ...b64Polyfill,
+    navigator: { language: "de-DE" },
+    // Route the challenge worker's CAKE_WORKER_URL fetch to the cake worker.
+    fetch: (url, init) => {
+        const req = new b64Polyfill.Request(url, init);
+        return cakeWorker.fetch(req, cakeEnv, {});
+    },
+};
+const worker = loadWorker("../../workers/challenge-worker.js", challengeSandbox);
 
 // Separate contextified sandbox for the client crypto round-trip.
 const clientSandbox = { ...b64Polyfill };
 vm.createContext(clientSandbox);
 
 const env = {
-    CAKE_KV: makeKv(),
+    CAKE_KV: sharedKv,
     CHALLENGE_SECRET: "test-secret-passphrase",
     CHALLENGE_JWT_SECRET: "test-jwt-secret",
     CAKE_CREDIT_CENTS: "5",
     CHALLENGE_TTL_SEC: "300",
+    CAKE_WORKER_URL: "https://cake.test/cake",
 };
 
 function makeRequest(url, method = "GET", body = null) {
@@ -211,6 +237,50 @@ function check(name, cond) {
     const statusData = await res.json();
     check("status shows solved_today", statusData.solved_today === 1);
     check("status shows credit", statusData.credit_cents === 5);
+
+    // ---- Direct redemption on the cake worker (the ledger owner) ----
+    console.log("\ncake-worker /cake/redeem smoke test");
+    res = await worker.fetch(makeRequest("https://g4f.dev/challenge/issue?lang=de-DE&kind=translation"), env, {});
+    const c3 = await res.json();
+    const payload3 = await vm.runInContext(
+        `${fromBase64UrlMatch[0]}\n${toBase64UrlMatch[0]}\n(async () => {\n${unsealMatch[0]}\n` +
+        `  return unsealPayload(${JSON.stringify(env.CHALLENGE_SECRET)}, ${JSON.stringify(c3.ciphertext)}, ${JSON.stringify(c3.iv)});\n})()`,
+        clientSandbox
+    );
+    check("second challenge decrypted", payload3 && typeof payload3.prompt === "string");
+    const sealed3 = await sealFn({ text: "Fuchs" + "x".repeat(20) });
+    res = await worker.fetch(
+        makeRequest("https://g4f.dev/challenge/solve", "POST", {
+            id: c3.id, ciphertext: sealed3.ciphertext, iv: sealed3.iv, language: "de-DE",
+        }),
+        env, {}
+    );
+    check("second solve returns 200", res.status === 200);
+    const token3 = (await res.json()).token;
+
+    res = await cakeWorker.fetch(
+        makeRequest("https://g4f.space/cake/redeem", "POST", { token: token3 }),
+        cakeEnv, {}
+    );
+    check("direct /cake/redeem returns 200", res.status === 200);
+    const directRedeem = await res.json();
+    check("direct redeem credits ledger", directRedeem.total_credits === 10);
+    check("direct redeem updates user index", (() => {
+        const entry = JSON.parse(env.CAKE_KV.store.get("cakes:user_index:0.0.0.0"));
+        return entry.total === 1 && entry.today === 1;
+    })());
+
+    res = await cakeWorker.fetch(
+        makeRequest("https://g4f.space/cake/redeem", "POST", { token: token3 }),
+        cakeEnv, {}
+    );
+    check("direct double redeem rejected", res.status === 409);
+
+    res = await cakeWorker.fetch(
+        makeRequest("https://g4f.space/cake/redeem", "POST", { token: token3.slice(0, -2) + "xx" }),
+        cakeEnv, {}
+    );
+    check("direct tampered token rejected", res.status === 401);
 
     console.log(`\n${passed} passed, ${failed} failed`);
     process.exit(failed ? 1 : 0);

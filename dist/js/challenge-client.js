@@ -25,6 +25,7 @@
 
     // Configuration -------------------------------------------------------
     const CHALLENGE_ENDPOINT = "https://beta.g4f.dev/challenge"; // same-origin via route
+    const CAKE_ENDPOINT = "https://g4f.space/cake"; // same-origin via route
     const POLL_INTERVAL_MS = 5000;   // wait between challenge rounds
     const MAX_ROUNDS_PER_SESSION = 50;
     const STORAGE_KEY = "g4f_challenge_client";
@@ -192,7 +193,7 @@
         }
 
         // 5. Exchange the JWT for cake credit.
-        const redeemRes = await fetch(`${CHALLENGE_ENDPOINT}/redeem`, {
+        const redeemRes = await fetch(`${CAKE_ENDPOINT}/redeem`, {
             method: "POST",
             credentials: "include",
             headers: authHeaders({ "Content-Type": "application/json" }),

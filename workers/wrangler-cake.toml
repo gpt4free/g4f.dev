@@ -22,3 +22,5 @@ MEMBERS_API_BASE = "https://g4f.dev/members/api"
 
 # Secret bindings (set via `wrangler secret put`):
 # - MEMBERS_JWT_SECRET: shared secret with members-worker for cross-worker auth
+# - CHALLENGE_JWT_SECRET: HMAC secret shared with challenge-worker.js; its
+#   credit JWTs are redeemed here via POST /cake/redeem

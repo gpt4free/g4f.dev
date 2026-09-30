@@ -163,6 +163,7 @@ function buildEnv() {
     CHALLENGE_PER_IP_PER_DAY: process.env.CHALLENGE_PER_IP_PER_DAY,
     CHALLENGE_MAX_PER_DAY: process.env.CHALLENGE_MAX_PER_DAY,
     CHALLENGE_TTL_SEC: process.env.CHALLENGE_TTL_SEC,
+    CAKE_WORKER_URL: process.env.CAKE_WORKER_URL,
     ADMIN_API_KEY: process.env.ADMIN_API_KEY
   };
   // KV backend selection. Vercel Marketplace/Integration variables are
