@@ -1,0 +1,62 @@
+# Syncs every change from this repo (gpt4free/g4f.dev) to the GitHub Pages
+# mirror repository (by default hlohaus/hlohaus.github.io).
+#
+# The mirror keeps its own workflow files, so its main is merged in before
+# pushing — a plain push would be rejected as non-fast-forward whenever the
+# mirror has commits of its own.
+#
+# Requires the secret PAGES_TOKEN: a personal access token with push
+# (contents:write) access to the mirror repository. Because the push uses a
+# PAT, it also triggers the mirror's "Deploy static content to Pages"
+# workflow, which publishes the update.
+name: Sync to Pages mirror
+
+on:
+  # Sync on every push to the default branch
+  push:
+    branches: ["main"]
+
+  # Run manually from the Actions tab — enter the mirror repo name to sync
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: "Mirror repository (owner/name)"
+        required: false
+        default: "hlohaus/hlohaus.github.io"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "pages-mirror-sync"
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push all changes to the mirror
+        env:
+          MIRROR_REPO: ${{ github.event.inputs.repo || 'hlohaus/hlohaus.github.io' }}
+          MIRROR_TOKEN: ${{ secrets.PAGES_TOKEN }}
+        run: |
+          if [ -z "$MIRROR_TOKEN" ]; then
+            echo "::error::Secret PAGES_TOKEN is not set. Create a personal access token with push access to ${MIRROR_REPO}, then add it as the PAGES_TOKEN secret in this repository's Settings > Secrets > Actions."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add mirror "https://x-access-token:${MIRROR_TOKEN}@github.com/${MIRROR_REPO}.git"
+          git fetch mirror main
+          if git merge-base --is-ancestor mirror/main HEAD; then
+            echo "Mirror is behind — fast-forwarding to ${GITHUB_SHA}"
+          else
+            echo "Mirror diverged — merging mirror/main before pushing"
+            git merge mirror/main --no-edit -m "Merge mirror state before sync"
+          fi
+          git push mirror HEAD:main
