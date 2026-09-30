@@ -492,19 +492,25 @@ async function handleIssue(request, env) {
         const existingRaw = await env.CAKE_KV.get(`challenge:translations:${baseLanguage(language)}`);
         let existing = {};
         try { existing = existingRaw ? JSON.parse(existingRaw) : {}; } catch { /* fresh store */ }
-        let pending = [];
+        const batch = Math.min(Math.max(Number(env.TRANSLATIONS_BATCH) || 8, 2), 50);
+        const candidates = [];
         for (const [headline, texts] of Object.entries(snippets)) {
             if (headline.startsWith("_") || !Array.isArray(texts)) continue;
             const untranslated = texts.filter((s) => !existing[s]);
             if (untranslated.length === 0) continue;
-            pending.push(headline);
-            pending.push(...untranslated);
-            pending.push("...");
-            break;
+            candidates.push([headline, untranslated]);
         }
-        if (pending.length === 0) {
+        if (candidates.length === 0) {
             return json({ error: "all_translated", language }, 200, {}, request);
         }
+        // Pick among the groups with the most untranslated texts (weighted,
+        // not deterministic) — a single stubborn group must not keep serving
+        // the identical challenge while other groups wait. Capped at
+        // TRANSLATIONS_BATCH texts per challenge.
+        candidates.sort((a, b) => b[1].length - a[1].length);
+        const top = candidates.slice(0, Math.min(3, candidates.length));
+        const [headline, untranslated] = top[Math.floor(Math.random() * top.length)];
+        const pending = [headline, ...untranslated.slice(0, batch), "..."];
         payload.items = pending;
         payload.prompt =
             `Translate these UI texts to language \`${language}\` (iso-code). ` +
@@ -749,8 +755,11 @@ async function handleTranslationsSubmit(language, translations, env) {
     const entries = Object.entries(translations).filter(
         ([source, translated]) =>
             typeof source === "string" && source.trim() &&
-            typeof translated === "string" && translated.trim() &&
-            translated.trim().toLowerCase() !== source.trim().toLowerCase()
+            typeof translated === "string" && translated.trim()
+        // Identity translations (translation === source) are kept: proper
+        // nouns and brand names ("Cloud (g4f.space)", "GitHub") legitimately
+        // translate to themselves, and rejecting them would leave their
+        // group permanently untranslated — re-serving the same challenge.
     );
     const knownTranslations = entries.filter(([source, _]) => snippetsKeys.includes(source));
     if (entries.length === 0 || knownTranslations.length === 0) {
