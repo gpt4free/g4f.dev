@@ -45,6 +45,12 @@ jobs:
           MIRROR_REPO: ${{ github.event.inputs.repo || 'hlohaus/hlohaus.github.io' }}
           MIRROR_TOKEN: ${{ secrets.PAGES_TOKEN }}
         run: |
+          # No-op when this file runs in the mirror repo (it gets there via
+          # the sync) — only the origin repo pushes to the mirror.
+          if [ "$GITHUB_REPOSITORY" != "gpt4free/g4f.dev" ]; then
+            echo "Skipping: this workflow only syncs from gpt4free/g4f.dev, not from ${GITHUB_REPOSITORY}."
+            exit 0
+          fi
           if [ -z "$MIRROR_TOKEN" ]; then
             echo "::error::Secret PAGES_TOKEN is not set. Create a personal access token with push access to ${MIRROR_REPO}, then add it as the PAGES_TOKEN secret in this repository's Settings > Secrets > Actions."
             exit 1
