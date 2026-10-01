@@ -452,7 +452,7 @@ function escapeHtml(str) {
 let newTranslations = [];
 framework.translate = (text, escape = true) => {
     const stripText = text.replace(/\s+/g, ' ').trim();
-    if (stripText && !stripText.startsWith("https://")) {
+    if (stripText && !stripText.startsWith("https://") && !stripText.startsWith("http://")) {
         const startWithSpace = text.startsWith(" ");
         const endWithSpace = text.endsWith(" ");
         if (!newTranslations.includes(stripText)) {

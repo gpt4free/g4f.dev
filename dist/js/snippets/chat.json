@@ -198,7 +198,8 @@
         "Upload to Secret Storage",
         "Download from Secret Storage",
         "Get Secret from Online Device",
-        "Close"
+        "Close",
+        "Login required for cloud storage"
     ],
     "MCP & Tools": [
         "MCP Servers",
