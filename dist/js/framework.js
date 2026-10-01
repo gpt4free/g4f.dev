@@ -619,6 +619,7 @@ framework.translateAll = async () => {
         return false;
     }
     if (newTranslations.length === 0) {
+        console.log("No new translations to process.");
         return false;
     }
     // Collect every text rendered so far, keeping translations that are
@@ -639,7 +640,9 @@ framework.translateAll = async () => {
                 }
             }
         }
-    } catch (e) { /* community store unavailable — translate everything */ }
+    } catch (e) { 
+        add_error(`Community translation store unavailable: ${e}`, e);
+    }
     const missing = Object.fromEntries(Object.entries(allTranslations).filter(([, translated]) => !translated));
     if (Object.keys(missing).length === 0) {
         storeTranslations(allTranslations);
