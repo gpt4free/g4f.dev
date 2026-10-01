@@ -27,14 +27,22 @@ const cakeCreditsText = document.getElementById('cake-credits-text');
 const tierLimitsRow = document.getElementById('tier-limits-row');
 
 function formatCakeCredits(cents, bakedToday) {
-    const dollars = (cents / 100).toFixed(2);
-    return `<i class="fa-solid fa-cake-candles" aria-hidden="true"></i> $${dollars}`;
+    return `<i class="fa-solid fa-cake-candles" aria-hidden="true"></i> ${formatCakeDollars(cents)}`;
+}
+
+/** Format cents as dollars, keeping sub-cent amounts visible:
+ *  >= $0.01 → two decimals, below → four decimals (e.g. $0.0019). */
+function formatCakeDollars(cents) {
+    const dollars = (cents || 0) / 100;
+    return dollars > 0 && dollars < 0.01
+        ? `$${dollars.toFixed(4)}`
+        : `$${dollars.toFixed(2)}`;
 }
 
 function updateCakeCredits(cents, bakedToday) {
     if (!cakeCreditsText) return;
     cakeCreditsText.innerHTML = formatCakeCredits(cents || 0, bakedToday);
-    cakeCreditsText.title = `Baked credits: $${((cents || 0) / 100).toFixed(2)}${bakedToday != null ? ` · ${bakedToday} baked today` : ''}`;
+    cakeCreditsText.title = `Baked credits: ${formatCakeDollars(cents)}${bakedToday != null ? ` · ${bakedToday} baked today` : ''}`;
     if (tierLimitsRow) tierLimitsRow.classList.remove('hidden');
 }
 
@@ -206,6 +214,7 @@ if (savedTab) {
 
 export default {
     formatCakeCredits,
+    formatCakeDollars,
     updateCakeCredits,
     refreshCakeStatus,
 };

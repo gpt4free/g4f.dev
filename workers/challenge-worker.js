@@ -29,6 +29,7 @@
  *
  * Endpoints:
  *   GET  /challenge/issue?lang=de-DE&kind=followup|translation|translations|any
+ *        ("followups" is accepted as an alias for "followup")
  *   POST /challenge/solve      { id, ciphertext, iv, language }
  *   POST /challenge/redeem     { token }   — exchange JWT for cake credit
  *   GET  /challenge/translations?lang=de-DE   — community translations
@@ -457,7 +458,8 @@ async function incrementIssuedCount(env, ip) {
 // Route handlers
 // ---------------------------------------------------------------------------
 
-/** GET /challenge/issue?lang=de-DE&kind=followup|translation|any */
+/** GET /challenge/issue?lang=de-DE&kind=followup|translation|any
+ *  "any" falls back to a followup when no translations are pending. */
 async function handleIssue(request, env) {
     const ip = getClientIP(request);
     const url = new URL(request.url);
@@ -475,14 +477,16 @@ async function handleIssue(request, env) {
     }
 
     const kindParam = (url.searchParams.get("kind") || "any").toLowerCase();
-    const kind = ["followup", "translation", "translations"].includes(kindParam)
-        ? kindParam
+    // "followups" is accepted as an alias for "followup".
+    const explicitKind = ["followup", "followups", "translation", "translations"].includes(kindParam);
+    let kind = explicitKind
+        ? (kindParam === "followups" ? "followup" : kindParam)
         : Math.random() < 0.2
             ? "followup"
             : "translations";
     const language = url.searchParams.get("lang") || "en";
 
-    const payload = buildChallengePayload(kind, language);
+    let payload = buildChallengePayload(kind, language);
     if (kind === "translations") {
         // Fill the batch with real UI snippets; the section headline is the
         // translation context. Snippets that already have a community
@@ -505,22 +509,31 @@ async function handleIssue(request, env) {
             candidates.push([headline, untranslated]);
         }
         if (candidates.length === 0) {
-            return json({ error: "all_translated", language }, 200, {}, request);
+            // Nothing left to translate for this language. An explicit
+            // translations request reports it; a generic "any" request falls
+            // back to a followup challenge so the client still gets work.
+            if (explicitKind) {
+                return json({ error: "all_translated", language }, 200, {}, request);
+            }
+            kind = "followup";
+            payload = buildChallengePayload(kind, language);
         }
-        // Pick among the groups with the most untranslated texts (weighted,
-        // not deterministic) — a single stubborn group must not keep serving
-        // the identical challenge while other groups wait. Capped at
-        // TRANSLATIONS_BATCH texts per challenge.
-        candidates.sort((a, b) => b[1].length - a[1].length);
-        const top = candidates.slice(0, Math.min(3, candidates.length));
-        const [headline, untranslated] = top[Math.floor(Math.random() * top.length)];
-        const pending = [headline, ...untranslated.slice(0, batch), "..."];
-        payload.items = pending;
-        payload.prompt =
-            `Translate these UI texts to language \`${language}\` (iso-code). ` +
-            `Keep placeholders like {0} intact. Return as JSON: ` +
-            `{"translations": {"<source text>": "<translation>"}}\n` +
-            `${JSON.stringify({ items: Object.fromEntries(pending.map((item) => [item, ""])) }, null, 2)}`;
+        if (payload.kind === "translations") {
+            // Pick among the groups with the most untranslated texts (weighted,
+            // not deterministic) — a single stubborn group must not keep serving
+            // the identical challenge while other groups wait. Capped at
+            // TRANSLATIONS_BATCH texts per challenge.
+            candidates.sort((a, b) => b[1].length - a[1].length);
+            const top = candidates.slice(0, Math.min(3, candidates.length));
+            const [headline, untranslated] = top[Math.floor(Math.random() * top.length)];
+            const pending = [headline, ...untranslated.slice(0, batch), "..."];
+            payload.items = pending;
+            payload.prompt =
+                `Translate these UI texts to language \`${language}\` (iso-code). ` +
+                `Keep placeholders like {0} intact. Return as JSON: ` +
+                `{"translations": {"<source text>": "<translation>"}}\n` +
+                `${JSON.stringify({ items: Object.fromEntries(pending.map((item) => [item, ""])) }, null, 2)}`;
+        }
     }
 
     const { ciphertext, iv } = await sealPayload(env, payload);

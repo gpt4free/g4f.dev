@@ -229,6 +229,16 @@
         "{0} unlinked successfully",
         "Failed: {0}"
     ],
+    "G4F Render": [
+        "G4F Render - AI Generated Content",
+        "📄 G4F Render",
+        "Enter a prompt to generate content...",
+        "Generating…",
+        "Generating content...",
+        "Clear",
+        "📋 History",
+        "No history yet"
+    ],
     "Footer": [
         "© 2026 GPT4Free Project. All rights reserved.",
         "GitHub",

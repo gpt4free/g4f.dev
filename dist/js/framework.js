@@ -525,14 +525,9 @@ try {
     add_error(`Backend connection init failed: ${e}`, e);
 }
 window.addEventListener('load', async () => {
-    if (!document.body.classList.contains("translate")) {
-        framework.translateElements();
-        return;
-    }
+    framework.translateElements();
     const missing = newTranslations.filter(text => !framework.translations[text]);
     if (missing.length === 0) {
-        // Everything is translated already — just apply it to the DOM.
-        framework.translateElements();
         return;
     }
     try {
@@ -646,6 +641,9 @@ framework.translateAll = async () => {
     const missing = Object.fromEntries(Object.entries(allTranslations).filter(([, translated]) => !translated));
     if (Object.keys(missing).length === 0) {
         storeTranslations(allTranslations);
+        // Apply to the DOM here too — this path previously returned without
+        // rendering, leaving the first visit in the source language.
+        framework.translateElements();
         return allTranslations;
     }
     const jsonTranslations = "\n\n```json\n" + JSON.stringify(missing, null, 4) + "\n```";

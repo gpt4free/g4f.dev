@@ -1994,7 +1994,11 @@
         function updateCakeCreditsLive(cents, bakedToday) {
             const creditsEl = document.getElementById('statCredits');
             if (!creditsEl || typeof cents !== 'number') return;
-            creditsEl.textContent = '$' + (cents / 100).toFixed(2);
+            const dollars = cents / 100;
+            // Keep sub-cent amounts visible (e.g. $0.0019 instead of $0.00).
+            creditsEl.textContent = dollars > 0 && dollars < 0.01
+                ? '$' + dollars.toFixed(4)
+                : '$' + dollars.toFixed(2);
             creditsEl.title = (bakedToday != null ? bakedToday + ' cakes baked' : 'Baked credits');
         }
 
