@@ -276,7 +276,11 @@ async function loadSnippets(env) {
         const catalog = await res.json();
         for (const [headline, texts] of Object.entries(catalog)) {
             if (headline.startsWith("_") || !Array.isArray(texts)) continue;
-            (merged[headline] = merged[headline] || []).push(...texts);
+            // Headlines like "Navigation"/"Footer" exist in several catalogs;
+            // merge without duplicates so batches never carry the same text
+            // twice (the answer map is keyed by source text).
+            const mergedTexts = merged[headline] || [];
+            merged[headline] = [...new Set([...mergedTexts, ...texts])];
         }
     }
     snippetsCache = merged;

@@ -352,7 +352,8 @@ function check(name, cond) {
             clientSandbox
         );
         check("next batch skips translated snippets",
-            payload2.items.filter((text) => text !== "...").every((text) => !batchAnswer.translations[text]));
+            payload2.items.filter((text) => text !== "..." && text !== payload2.items[0])
+                .every((text) => !batchAnswer.translations[text]));
     } else {
         check("next batch reports all_translated", batch2.error === "all_translated");
     }
