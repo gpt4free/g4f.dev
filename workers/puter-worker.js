@@ -147,6 +147,7 @@ async function handleStreamingResponse(env, ctx, response, model, promptTokens) 
     const decoder = new TextDecoder();
     let buffer = "";
     let completionTokens = 0;
+    let toolCallIndex = 0;
 
     try {
       while (true) {
@@ -164,7 +165,10 @@ async function handleStreamingResponse(env, ctx, response, model, promptTokens) 
           
           try {
             const data = JSON.parse(line);
-            const chunk = createStreamChunk(data, model);
+            const chunk = createStreamChunk(data, model, toolCallIndex);
+            if (data.type === "tool_use") {
+              toolCallIndex += 1;
+            }
             await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
             completionTokens += 1;
           } catch (e) {
@@ -210,11 +214,56 @@ async function handleStreamingResponse(env, ctx, response, model, promptTokens) 
 }
 
 /**
+ * Normalize a tool call into OpenAI schema shape.
+ * Ensures `function.arguments` is a JSON-encoded string and that
+ * `index`, `id` and `type` fields are present.
+ *
+ * @param {Object} tc - Raw tool call (OpenAI, Anthropic tool_use or flat form)
+ * @param {number} index - Streaming index for the tool call
+ * @returns {Object} Normalized OpenAI tool call
+ */
+function normalizeToolCall(tc, index = 0) {
+  if (!tc || typeof tc !== 'object') return null;
+  const call = { ...tc };
+  let fn = call.function;
+  if (!fn || typeof fn !== 'object') {
+    // Anthropic-style tool_use block or flat form
+    fn = {
+      name: call.name,
+      arguments: call.input !== undefined ? call.input : call.arguments
+    };
+    delete call.name;
+    delete call.input;
+    delete call.arguments;
+  }
+  let args = fn.arguments;
+  if (typeof args !== 'string') {
+    try {
+      args = JSON.stringify(args ?? {});
+    } catch (e) {
+      args = '{}';
+    }
+  }
+  if (!call.id) {
+    call.id = `call_${index}`;
+  }
+  return {
+    ...call,
+    index: typeof call.index === 'number' ? call.index : index,
+    type: call.type || 'function',
+    function: {
+      name: fn.name,
+      arguments: args
+    }
+  };
+}
+
+/**
  * Create a streaming chunk in OpenAI format
  */
-function createStreamChunk(data, model) {
+function createStreamChunk(data, model, toolCallIndex = 0) {
   const delta = {};
-  
+
   if (data.reasoning) {
     delta.reasoning_content = data.reasoning;
   }
@@ -222,15 +271,17 @@ function createStreamChunk(data, model) {
     delta.content = Array.isArray(data.text) && data.text ? data.text[0].text : data.text;
   }
   if (data.type === "tool_use") {
-    delta.tool_calls = [{
-        id: data.id,
-        type: 'function',
-        function: {
-            name: data.name,
-            arguments: data.input
-        }
-    }]
-  }
+    const normalized = normalizeToolCall({
+      id: data.id,
+      type: 'function',
+      function: {
+        name: data.name,
+        arguments: data.input
+      }
+    }, toolCallIndex);
+    if (normalized) {
+      delta.tool_calls = [normalized];
+    }
 
   // Determine finish_reason
   let finishReason = data.tool_calls ? "tool_calls" : "stop";
@@ -292,14 +343,17 @@ async function handleNonStreamingResponse(env, ctx, response, requestId, model, 
     
     // Add tool calls if present
     if (result.tool_use) {
-      responseObj.choices[0].message.tool_calls = [{
-          id: result.id,
-          type: 'function',
-          function: {
-              name: result.name,
-              arguments: result.input
-          }
-      }];
+      const normalized = normalizeToolCall({
+        id: result.id,
+        type: 'function',
+        function: {
+          name: result.name,
+          arguments: result.input
+        }
+      }, 0);
+      if (normalized) {
+        responseObj.choices[0].message.tool_calls = [normalized];
+      }
     }
     
     return Response.json(responseObj, { headers: CORS_HEADERS });
