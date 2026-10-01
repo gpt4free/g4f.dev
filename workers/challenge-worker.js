@@ -338,7 +338,8 @@ function buildChallengePayload(kind, language) {
         language: lang,
         prompt:
             `Suggest 3 short follow-up questions about ${topic}. ` +
-            `Use first-person language. Return as JSON: {"q": ["...", "...", "..."]}`,
+            `Use first-person language. Return as JSON: {"q": ["...", "...", "..."]}\n` +
+            `Response in language \`${language}\` (iso-code)`,
         topic,
     };
 }
@@ -347,7 +348,6 @@ function buildChallengePayload(kind, language) {
  *  error string or null when the answer is acceptable. */
 function validateAnswer(payload, answer, language) {
     if (!answer || typeof answer !== "object") return "answer_not_json";
-    const lang = baseLanguage(language);
     if (payload.kind === "translations") {
         // Batch: expect { translations: { "<source>": "<translation>" } }.
         const translations = answer.translations || answer;
@@ -359,8 +359,8 @@ function validateAnswer(payload, answer, language) {
         if (sources.length === 0 || knownKeys.length === 0) return "missing_translations";
         if (sources.length > 100 || knownKeys.length > 100) return "too_many_translations";
         if (!("..." in translations)) return "invalid_translation";
-        for (const [source, translated] of Object.entries(translations)) {
-            if (typeof translated !== "string" || !translated.trim()) return "invalid_translation";
+        for (const translated of Object.values(translations)) {
+            if (typeof translated !== "string") return "invalid_translation";
             if (translated.length > 2000) return "invalid_translation";
             if (!translated.trim()) return "not_translated";
         }
@@ -375,7 +375,7 @@ function validateAnswer(payload, answer, language) {
         return null;
     }
     // followup: expect a non-empty "q" array (or "questions") of strings.
-    const questions = answer.q || answer.questions;
+    const questions = answer.q || answer.questions || answer;
     if (!Array.isArray(questions) || questions.length < 2) return "missing_questions";
     if (questions.length > 8) return "too_many_questions";
     for (const q of questions) {
@@ -516,7 +516,7 @@ async function handleIssue(request, env) {
             `Translate these UI texts to language \`${language}\` (iso-code). ` +
             `Keep placeholders like {0} intact. Return as JSON: ` +
             `{"translations": {"<source text>": "<translation>"}}\n` +
-            `Texts:\n${JSON.stringify({ items: Object.fromEntries(pending.map((item) => [item, ""])) }, null, 2)}`;
+            `${JSON.stringify({ items: Object.fromEntries(pending.map((item) => [item, ""])) }, null, 2)}`;
     }
 
     const { ciphertext, iv } = await sealPayload(env, payload);
@@ -600,17 +600,6 @@ async function handleSolve(request, env) {
         return json({ error, kind: record.kind }, 400, {}, request);
     }
 
-    // 4. Dedup: the exact same answer may only be credited once per day.
-    //    Checked before burning/crediting so a duplicate wastes neither the
-    //    challenge nor a daily solve slot — its translations were already
-    //    persisted on the first submission, and the client treats this
-    //    response as "round complete".
-    // const dedupKey = `challenge:seen:${await answerHash(ip, payload, answer)}`;
-    // if (await env.CAKE_KV.get(dedupKey)) {
-    //     return json({ error: "duplicate_answer" }, 409, {}, request);
-    // }
-    // await env.CAKE_KV.put(dedupKey, "1", { expirationTtl: 86400 });
-
     // 5. Enforce the daily solve limit.
     const solvedRaw = await env.CAKE_KV.get(`challenge:solved:${ip}`);
     let solved = { count: 0, day: dayKey() };
@@ -645,6 +634,17 @@ async function handleSolve(request, env) {
             await handleTranslationsSubmit(record.language, answer, env);
         } catch { /* pool is best-effort */ }
     }
+
+    // 7. Dedup: the exact same answer may only be credited once per day.
+    //    Checked before burning/crediting so a duplicate wastes neither the
+    //    challenge nor a daily solve slot — its translations were already
+    //    persisted on the first submission, and the client treats this
+    //    response as "round complete".
+    const dedupKey = `challenge:seen:${await answerHash(ip, payload, answer)}`;
+    if (await env.CAKE_KV.get(dedupKey)) {
+        return json({ error: "duplicate_answer" }, 409, {}, request);
+    }
+    await env.CAKE_KV.put(dedupKey, "1", { expirationTtl: 86400 });
 
     // 7. Mint the private-key JWT carrying the credit claim.
     const { token, expires } = await signJwt(
