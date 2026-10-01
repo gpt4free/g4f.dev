@@ -184,7 +184,8 @@
         "Credits:",
         "Tokens remaining/limit",
         "Requests remaining/limit",
-        "Baked credits: $0.00 · 0 baked today"
+        "Baked credits: $0.00 · 0 baked today",
+        "Credits earned by baking proof-of-work cakes"
     ],
     "Cloud & Storage": [
         "Cloud Sync",

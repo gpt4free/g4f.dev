@@ -1336,7 +1336,7 @@ function renderMCPTools() {
                            id="mcp-tool-${tool.toolId}" 
                            ${mcpClient.isToolSelected(tool.toolId) ? 'checked' : ''}
                            onchange="toggleMCPTool('${tool.toolId}')">
-                    <label for="mcp-tool-${tool.toolId}">
+                    <label for="mcp-tool-${tool.toolId}" class="notranslate">
                         <span class="mcp-tool-name">${escapeHtml(tool.name)}</span>
                         ${tool.description ? `<span class="mcp-tool-desc">${escapeHtml(tool.description)}</span>` : ''}
                     </label>

@@ -452,7 +452,7 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                           <div class="cloud-sync-user-info" style="margin-bottom: 1rem; padding: 0.75rem; background: var(--blur-bg); border-radius: 8px;">
                               <i class="fa-solid fa-user"></i>
                               <span>Logged in as: </span>
-                              <strong id="cloudSyncUser"></strong>
+                              <strong id="cloudSyncUser" class="notranslate"></strong>
                           </div>
                           <div class="field" style="margin-bottom: 1rem;">
                               <span class="label">Auto-upload to Secret Storage</span>
@@ -678,20 +678,6 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                             <option value="" selected>Model: Default</option>
                         </select>
                         <small id="modelHelp" class="sr-only">Select AI model to use for conversations.</small>
-
-                        <div class="model-selector hidden" role="region" aria-label="Model search and suggestions">
-                            <div id="model-suggestions" class="suggestions-dropdown" aria-live="polite"></div>
-                            <input
-                              type="text"
-                              id="model-search"
-                              placeholder="Search models (e.g. 'gpt-4', 'claude')..."
-                              autocomplete="off"
-                              autocapitalize="off"
-                              autocorrect="off"
-                              spellcheck="false"
-                              aria-label="Search models"
-                            />
-                        </div>
                     </div>
                     <div class="field">
                         <button id="open_picker" type="button" aria-label="Open provider and model picker" title="Browse all providers & models">
