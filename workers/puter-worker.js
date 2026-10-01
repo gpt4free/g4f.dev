@@ -282,6 +282,7 @@ function createStreamChunk(data, model, toolCallIndex = 0) {
     if (normalized) {
       delta.tool_calls = [normalized];
     }
+  }
 
   // Determine finish_reason
   let finishReason = data.tool_calls ? "tool_calls" : "stop";
