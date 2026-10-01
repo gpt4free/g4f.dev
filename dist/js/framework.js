@@ -536,9 +536,9 @@ window.addEventListener('load', async () => {
         return;
     }
     try {
-        if (await framework.translateAll()) {
-            framework.translateElements();
-        }
+        // translateAll() persists and applies whatever it could translate
+        // (community store and/or model) — no reload needed.
+        await framework.translateAll();
     } catch (e) {
         add_error(e, true);
     }
@@ -652,39 +652,41 @@ framework.translateAll = async () => {
     const languageName = navigator.language === "de" ? 'de-DE' : navigator.language === "es" ? 'es-ES' : navigator.language;
     const jsonLanguage = "`" + languageName + "`";
     const prompt = `Translate the following text snippets in a JSON object to ${jsonLanguage}: ${jsonTranslations} (iso-code)`;
-    let response;
+    // Ask the model for the missing snippets. A failure here must not
+    // discard the translations collected so far (community + stored).
+    let translations = null;
     try {
-        response = await query(prompt, true);
+        const response = await query(prompt, true);
+        if (response && response.ok) {
+            translations = await response.json();
+        } else {
+            add_error(`Translation query failed: HTTP ${response ? response.status : "no response"}`, true);
+        }
     } catch (e) {
         add_error(`Translation query failed: ${e}`, e);
-        return false;
-    }
-    let translations;
-    try {
-        translations = await response.json();
-    } catch (e) {
-        add_error(`Translation response parse failed: ${e}`, e);
-        return false;
     }
     // The model may wrap the result in a per-language object.
-    if (translations[navigator.language] && typeof translations[navigator.language] === 'object' && Object.keys(translations[navigator.language]).length > 0) {
+    if (translations && translations[navigator.language] && typeof translations[navigator.language] === 'object' && Object.keys(translations[navigator.language]).length > 0) {
         translations = translations[navigator.language];
     }
-    if (typeof translations === 'object' && translations[newTranslations[0]]) {
+    if (translations && typeof translations === 'object' && translations[newTranslations[0]]) {
         // Merge the model's answers into the full map instead of replacing it.
         for (const [text, translated] of Object.entries(translations)) {
             if (text in allTranslations && translated) {
                 allTranslations[text] = translated;
             }
         }
-        storeTranslations(allTranslations);
-    } else if (Object.keys(missing).length < newTranslations.length) {
-        // Model failed but community/stored translations covered part of the UI.
-        storeTranslations(allTranslations);
-    } else {
+    } else if (translations) {
         add_error("Invalid translations received: " + JSON.stringify(translations), true);
     }
-    return allTranslations;
+    // Persist and apply whatever is covered — even when the model query
+    // failed, community/stored translations must still reach the UI.
+    if (Object.values(allTranslations).some(Boolean)) {
+        storeTranslations(allTranslations);
+        framework.translateElements();
+        return allTranslations;
+    }
+    return false;
 }
 
 function deleteTranslations() {

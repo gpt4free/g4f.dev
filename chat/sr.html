@@ -214,12 +214,12 @@
                           <i class="fa-solid fa-pencil" aria-hidden="true"></i>
                           <span>Export Settings</span>
                       </button>
-                      <button type="button" onclick="this.querySelector('.fa-spin').classList.remove('hidden'); framework.translateAll().then(() => {window.location.reload()}).catch(() => {this.querySelector('.fa-spin').classList.add('hidden')})" aria-label="Translate user interface">
+                      <button type="button" onclick="this.querySelector('.fa-spin').classList.remove('hidden'); framework.translateAll().then(() => {this.querySelector('.fa-spin').classList.add('hidden')}).catch(() => {this.querySelector('.fa-spin').classList.add('hidden')})" aria-label="Translate user interface">
                           <i class="fa-solid fa-language" aria-hidden="true"></i>
                           <span>Translate UI</span>
                           <i class="fas fa-spinner fa-spin hidden" aria-hidden="true"></i>
                       </button>
-                      <button type="button" onclick="localStorage.getItem(framework.translationKey) ? (delete_translations() || window.location.reload()) : null" aria-label="Delete translations">
+                      <button type="button" onclick="localStorage.getItem(framework.translationKey) ? (deleteTranslations() && window.location.reload()) : null" aria-label="Delete translations">
                           <i class="fa-solid fa-trash" aria-hidden="true"></i>
                           <span>Delete Translations</span>
                       </button>
