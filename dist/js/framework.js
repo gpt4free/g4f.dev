@@ -1,3 +1,29 @@
+/* ================================================================== *
+ * g4f.dev framework — shared runtime for all pages
+ *
+ * Classic script (no build step), loaded in <head> before the addons.
+ * Everything public is exposed as window globals plus the `framework`
+ * object at the end of this file.
+ *
+ * Sections:
+ *   1. Constants & environment
+ *   2. Log panel (lazy element resolution)
+ *   3. ErrorTracker
+ *   4. Error reporting (add_error)
+ *   5. Backend connection
+ *   6. Translations
+ *   7. DOM & string utilities
+ *   8. Markdown rendering & model queries
+ *   9. Auth headers
+ *  10. Conversation storage (IndexedDB)
+ *  11. Ads & iframe messaging
+ *  12. Public API exports
+ * ================================================================== */
+
+// ---------------------------------------------------------------------------
+// 1. Constants & environment
+// ---------------------------------------------------------------------------
+
 const G4F_HOST = "https://g4f.dev";
 const G4F_WILDCARD = ".g4f.dev";
 const G4F_HOST_PASS = "https://g4f.space";
@@ -5,12 +31,32 @@ const DB_NAME = 'chat-db';
 const STORE_NAME = 'conversations';
 const VERSION = 1;
 
-// Log panel elements are resolved lazily: this classic script runs in <head>
-// before the body (and the .log section) exists, so an eager query would
-// return null. Resolved on DOMContentLoaded and re-queried whenever the
-// cached node is no longer connected (e.g. after a UI re-render).
+const isG4fHost = window.location.origin === G4F_HOST || window.location.origin.endsWith(G4F_WILDCARD);
+
+window.framework = {}
+
+if (localStorage.getItem("debugMode") === "true") {
+    if (!document.querySelector('script[src="https://g4f.dev/dist/js/debug.js"]')) {
+        if (window.location === window.parent.location) {
+            const debugEl = document.createElement('script');
+            debugEl.src = 'https://g4f.dev/dist/js/debug.js';
+            document.head.appendChild(debugEl);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 2. Log panel (lazy element resolution)
+//
+// This classic script runs in <head> before the body (and the .log section)
+// exists, so an eager query would return null. Resolved on DOMContentLoaded
+// and re-queried whenever the cached node is no longer connected (e.g. after
+// a UI re-render).
+// ---------------------------------------------------------------------------
+
 let logStorage = null;
 let logContent = null;
+
 function resolveLogElements() {
     if (!logStorage || !logStorage.isConnected) {
         logStorage = document.querySelector(".log");
@@ -18,6 +64,7 @@ function resolveLogElements() {
     }
     return logContent;
 }
+
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", resolveLogElements);
 } else {
@@ -26,21 +73,21 @@ if (document.readyState === "loading") {
 
 let privateConversation = null;
 
-/* ================================================================== *
- * Advanced Error Tracking System
- *
- * ErrorTracker captures all browser errors (console.error, window.onerror,
- * unhandled promise rejections, resource load failures, network errors)
- * and stores them in a ring buffer with rich metadata. It provides:
- *   - Categorized error types (js, resource, promise, network, console)
- *   - Severity levels (error, warn, info)
- *   - Stack trace extraction and formatting
- *   - Deduplication of repeated errors
- *   - Error rate tracking and burst detection
- *   - Export to JSON for the MCP agent
- *   - Visual error log in the .log-content panel
- *   - Global API via window.ErrorTracker for other scripts/addons
- * ================================================================== */
+// ---------------------------------------------------------------------------
+// 3. ErrorTracker
+// ============================================================================
+//  * ErrorTracker captures all browser errors (console.error, window.onerror,
+//  * unhandled promise rejections, resource load failures, network errors)
+//  * and stores them in a ring buffer with rich metadata. It provides:
+//  *   - Categorized error types (js, resource, promise, network, console)
+//  *   - Severity levels (error, warn, info)
+//  *   - Stack trace extraction and formatting
+//  *   - Deduplication of repeated errors
+//  *   - Error rate tracking and burst detection
+//  *   - Export to JSON for the MCP agent
+//  *   - Visual error log in the .log-content panel
+//  *   - Global API via window.ErrorTracker for other scripts/addons
+//  * ================================================================== */
 const ErrorTracker = (() => {
     const MAX_ERRORS = 200;
     const MAX_DEDUP = 50;
@@ -321,9 +368,12 @@ if (localStorage.getItem("debugMode") === "true") {
     }
 }
 
-/* ================================================================== *
- * Legacy add_error — now delegates to ErrorTracker
- * ================================================================== */
+// ---------------------------------------------------------------------------
+// 4. Error reporting (add_error)
+//
+// Legacy entry point used by all addons — now delegates to ErrorTracker.
+// ---------------------------------------------------------------------------
+
 function add_error(event, log = false) {
     if (log instanceof Error) {
         log.message = event + " " + (log.message || "");
@@ -339,13 +389,9 @@ function add_error(event, log = false) {
 
 window.addEventListener('error', add_error, true);
 
-if (window.location.origin === G4F_HOST || window.location.origin.endsWith(G4F_WILDCARD)) {
-    window.oauthConfig = {
-        clientId: '762e4f6f-2af6-437c-ad93-944cc17f9d23',
-        scopes: ['inference-api']
-    }
-}
-window.framework = {}
+// ---------------------------------------------------------------------------
+// 5. Backend connection
+// ---------------------------------------------------------------------------
 
 const checkUrls = [];
 if (window.location.protocol === "file:") {
@@ -363,7 +409,6 @@ async function checkUrl(url, connectStatus) {
         response = await fetch(`${url}/backend-api/v2/version?cache=true`, {signal: AbortSignal.timeout(10000)});
     } catch (error) {
         console.debug("Error check url: ", url, error);
-        ErrorTracker.onError ? null : null; // ensure installed
         console.warn(`Backend unreachable: ${url} — ${error.message || error}`);
         return false;
     }
@@ -423,7 +468,21 @@ function hasWords(text) {
     return text.trim().match(/[a-zA-Z]+/gu)?.length > 0;
 }
 framework.translationKey = "translations" + document.location.pathname;
-framework.translations = JSON.parse(localStorage.getItem(framework.translationKey) || "{}");
+framework.translations = (() => {
+    try {
+        return JSON.parse(localStorage.getItem(framework.translationKey) || "{}");
+    } catch (e) {
+        return {};
+    }
+})();
+
+// Persist translations and update the in-memory copy, so translateElements()
+// can apply freshly fetched translations without a reload.
+function storeTranslations(translations) {
+    framework.translations = translations;
+    localStorage.setItem(framework.translationKey, JSON.stringify(translations));
+}
+
 framework.translateElements = function (elements = null) {
     if (!framework.translations) {
         return;
@@ -470,12 +529,14 @@ window.addEventListener('load', async () => {
         framework.translateElements();
         return;
     }
-    if (Object.keys(framework.translations).length === newTranslations.length) {
-        console.log("No new translations found.");
+    const missing = newTranslations.filter(text => !framework.translations[text]);
+    if (missing.length === 0) {
+        // Everything is translated already — just apply it to the DOM.
+        framework.translateElements();
         return;
     }
     try {
-        if (framework.translations || await framework.translateAll()) {
+        if (await framework.translateAll()) {
             framework.translateElements();
         }
     } catch (e) {
@@ -499,26 +560,28 @@ async function query(prompt, options = { json: false, cache: true }) {
         options = { json: options, cache: true };
     }
     const chatUrl = `https://g4f.space/v1/chat/completions`;
+    const body = {
+        messages: [
+            {
+                role: "user",
+                content: prompt
+            }
+        ],
+        ...(options.json ? {"response_format": {"type": "json_object"}} : {})
+    };
+    const request = () => fetch(chatUrl, {
+        method: "POST",
+        body: JSON.stringify(body),
+        headers: {
+            "Content-Type": "application/json",
+            ...(localStorage.getItem("g4f_session") ? {
+                'Authorization': `Bearer ${localStorage.getItem("g4f_session")}`
+            } : {})
+        }
+    });
     let response;
     try {
-        response = await fetch(chatUrl, {
-            method: "POST",
-            body: JSON.stringify({
-                messages: [
-                    {
-                        role: "user",
-                        content: prompt
-                    }
-                ],
-                ...(options.json ? {"response_format": {"type": "json_object"}} : {})
-            }),
-            headers: {
-                "Content-Type": "application/json",
-                ...(localStorage.getItem("g4f_session") ? {
-                    'Authorization': `Bearer ${localStorage.getItem("g4f_session")}`
-                } : {})
-            }
-        });
+        response = await request();
         window.captureUserTierHeaders?.(response.headers);
     } catch (e) {
         add_error(`Error fetching URL: \`${chatUrl}\``, e);
@@ -529,24 +592,7 @@ async function query(prompt, options = { json: false, cache: true }) {
             console.log(`Retrying after ${delay} seconds...`);
             await new Promise(resolve => setTimeout(resolve, delay * 1000));
             try {
-                response = await fetch(chatUrl, {
-                    method: "POST",
-                    body: JSON.stringify({
-                        messages: [
-                            {
-                                role: "user",
-                                content: prompt
-                            }
-                        ],
-                        ...(options.json ? {"response_format": {"type": "json_object"}} : {})
-                    }),
-                    headers: {
-                        "Content-Type": "application/json",
-                        ...(localStorage.getItem("g4f_session") ? {
-                            'Authorization': `Bearer ${localStorage.getItem("g4f_session")}`
-                        } : {})
-                    }
-                });
+                response = await request();
                 window.captureUserTierHeaders?.(response.headers);
             } catch (e) {
                 add_error(`Error fetching URL: \`${chatUrl}\`\n ${e}`, e);
@@ -575,9 +621,11 @@ framework.translateAll = async () => {
     if (newTranslations.length === 0) {
         return false;
     }
-    let allTranslations = {};
+    // Collect every text rendered so far, keeping translations that are
+    // already known so a refetch never loses them.
+    const allTranslations = {};
     newTranslations.forEach(text => {
-        allTranslations[text] = "";
+        allTranslations[text] = framework.translations[text] || "";
     });
     // Reuse community translations from the challenge worker first — only
     // snippets nobody has translated yet go to the model.
@@ -594,7 +642,7 @@ framework.translateAll = async () => {
     } catch (e) { /* community store unavailable — translate everything */ }
     const missing = Object.fromEntries(Object.entries(allTranslations).filter(([, translated]) => !translated));
     if (Object.keys(missing).length === 0) {
-        localStorage.setItem(framework.translationKey, JSON.stringify(allTranslations));
+        storeTranslations(allTranslations);
         return allTranslations;
     }
     const jsonTranslations = "\n\n```json\n" + JSON.stringify(missing, null, 4) + "\n```";
@@ -615,19 +663,27 @@ framework.translateAll = async () => {
         add_error(`Translation response parse failed: ${e}`, e);
         return false;
     }
+    // The model may wrap the result in a per-language object.
     if (translations[navigator.language] && typeof translations[navigator.language] === 'object' && Object.keys(translations[navigator.language]).length > 0) {
         translations = translations[navigator.language];
     }
     if (typeof translations === 'object' && translations[newTranslations[0]]) {
-        localStorage.setItem(framework.translationKey, JSON.stringify(translations));
+        // Merge the model's answers into the full map instead of replacing it.
+        for (const [text, translated] of Object.entries(translations)) {
+            if (text in allTranslations && translated) {
+                allTranslations[text] = translated;
+            }
+        }
+        storeTranslations(allTranslations);
     } else if (Object.keys(missing).length < newTranslations.length) {
-        // Model failed but community translations covered part of the UI.
-        localStorage.setItem(framework.translationKey, JSON.stringify(allTranslations));
+        // Model failed but community/stored translations covered part of the UI.
+        storeTranslations(allTranslations);
     } else {
         add_error("Invalid translations received: " + JSON.stringify(translations), true);
     }
-    return translations;
+    return allTranslations;
 }
+
 function deleteTranslations() {
     let hasDeleted = false;
     for (let i = 0; i < localStorage.length; i++) {
@@ -742,6 +798,10 @@ const renderMarkdown = (content) => {
     }
     return rendered;
 };
+// ---------------------------------------------------------------------------
+// 7. DOM & string utilities
+// ---------------------------------------------------------------------------
+
 function nl2br(str) {
     const div = document.createElement('div');
     div.appendChild(document.createTextNode(str));
@@ -933,10 +993,10 @@ const delete_conversation = async (id) => {
 };
 
 function chunkArray(array, chunkSize) {
-  return Array.from(
-    { length: Math.ceil(array.length / chunkSize) },
-    (_, index) => array.slice(index * chunkSize, index * chunkSize + chunkSize)
-  );
+    return Array.from(
+        { length: Math.ceil(array.length / chunkSize) },
+        (_, index) => array.slice(index * chunkSize, index * chunkSize + chunkSize)
+    );
 }
 
 if (window.location.origin === G4F_HOST || window.location.origin.endsWith(G4F_WILDCARD)) {
