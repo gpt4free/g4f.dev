@@ -5,20 +5,6 @@ const appStorage = window.localStorage || {
     length: 0,
 };
 
-const translationSnipptes = [
-    "with", "**An error occurred:**", "Private Conversation", "New Conversation", "Regenerate", "Continue",
-    "Hello! How can I assist you today?", "words", "chars", "tokens", "{0} total tokens",
-    "{0} Messages were imported", "{0} File(s) uploaded successfully",
-    "{0} Conversations/Settings were imported successfully",
-    "No content found", "Files are loaded successfully",
-    "Importing conversations...", "New version:", "Providers API key", "Providers (Enable/Disable)",
-    "Get API key", "Uploading files...", "Invalid link", "Loading...", "Live Providers", "Custom Providers",
-    "Search Off", "Search On", "Recognition On", "Recognition Off", "Delete Conversation",
-    "Favorite Models:", "Stop Recording", "Record Audio", "Upload Audio", "No Title", "1 Copy",
-    "Delete all conversations?", "Error Occurred", "Remaining:", "Balance:", "Reasoning", "Credits:",
-    "Login", "Login to", "Enable", "Invalid API key", "Waiting for tool response...",
-];
-
 window.providers = [
     {"name": "Airforce", "label": "Api.Airforce", "login_url": "https://panel.api.airforce/dashboard", "active_by_default": true},
     {"name": "HuggingFace", "login_url": "https://huggingface.co/settings/tokens", "active_by_default": true},
@@ -33,8 +19,6 @@ window.client = null;
 if (window.ChatAddons && typeof window.ChatAddons.boot === 'function') {
     window.ChatAddons.boot().then(() => window.ChatAddons.enableAll());
 }
-
-translationSnipptes.forEach((text) => framework.translate(text));
 
 function add_url_to_history(url) {
     if (!window?.pywebview) {
@@ -70,55 +54,102 @@ document.querySelectorAll(".new_convo_icon, .new_convo").forEach((el) => {
         await new_conversation(el.classList.contains("private_conversation"));
     });
 });
-addonsLoaded.then(() => {
-        regenerate_button.addEventListener("click", async () => {
-            regenerate_button.classList.add("regenerate-hidden");
-            setTimeout(()=>window.regenerate_button.classList.remove("regenerate-hidden"), 3000);
-            const all_pinned = document.querySelectorAll("#pin_container button.pinned")
-            if (all_pinned.length > 0) {
-                all_pinned.forEach((el) => ask_gpt(get_message_id(), -1, true, el.dataset.provider, el.dataset.model, "variant"));
-            } else {
-                await ask_gpt(get_message_id(), -1, true, null, null, "variant");
-            }
+
+
+searchButton.addEventListener("click", async () => {
+    setTimeout(() => userInput.focus(), 100);
+    searchButton.classList.toggle("active");
+    (searchButton.querySelector("*")).innerText = (searchButton.classList.contains("active") ? framework.translate("Search On") : framework.translate("Search Off"));
+});
+
+async function save_storage(settings=false) {
+    let filename = `${settings ? 'settings' : 'chat'} ${new Date().toLocaleString()}.json`.replaceAll(":", "-");
+    let data = {"options": {"g4f": ""}};
+    if (!settings) {
+        const conversations = await list_conversations();
+        conversations.forEach((conversation) => {
+            data[`conversation:${conversation.id}`] = conversation;
         });
-        stop_generating.addEventListener("click", async () => {
-            window.regenerate_button.classList.remove("regenerate-hidden");
-            stop_generating.classList.add("stop_generating-hidden");
-            // Stop the picker's auto-fallback retry chain so it doesn't
-            // re-invoke ask_gpt with another provider after we abort.
-            if (typeof window.resetFallback === "function") {
-                window.resetFallback();
+    }
+    for (let i = 0; i < appStorage.length; i++) {
+        let key = appStorage.key(i);
+        let item = appStorage.getItem(key);
+        if (key.startsWith("conversation:")) {
+            if (!settings) {
+                data[key] = JSON.parse(item);
             }
-            let key;
-            for (key in controller_storage) {
-                if (!controller_storage[key].signal.aborted) {
-                    console.log(`aborted ${window.conversation_id} #${key}`);
-                    try {
-                        controller_storage[key].abort();
-                    } finally {
-                        // Also abort the worker-side fetch if applicable
-                        workerAbort(key);
-                        let message = message_storage[key];
-                        if (message) {
-                            content_storage[key].inner.innerHTML += " [aborted]";
-                            message_storage[key] += " [aborted]";
-                        }
+        } else if (key.startsWith("bucket:")) {
+            if (!settings) {
+                data[key] = item;
+            }
+        } else if (settings && !key.endsWith("-form") && !key.endsWith("user")) {
+            data["options"][key] = item;
+        } 
+    }
+    data = JSON.stringify(data, null, 4);
+    const blob = new Blob([data], {type: 'application/json'});
+    const elem = window.document.createElement('a');
+    elem.href = window.URL.createObjectURL(blob);
+    elem.download = filename;        
+    document.body.appendChild(elem);
+    elem.click();        
+    document.body.removeChild(elem);
+}
+
+addonsLoaded.then(() => {
+    searchButton.addEventListener("click", async () => {
+        setTimeout(() => userInput.focus(), 100);
+        searchButton.classList.toggle("active");
+        (searchButton.querySelector("*")).innerText = (searchButton.classList.contains("active") ? framework.translate("Search On") : framework.translate("Search Off"));
+    });
+    regenerate_button.addEventListener("click", async () => {
+        regenerate_button.classList.add("regenerate-hidden");
+        setTimeout(()=>window.regenerate_button.classList.remove("regenerate-hidden"), 3000);
+        const all_pinned = document.querySelectorAll("#pin_container button.pinned")
+        if (all_pinned.length > 0) {
+            all_pinned.forEach((el) => ask_gpt(get_message_id(), -1, true, el.dataset.provider, el.dataset.model, "variant"));
+        } else {
+            await ask_gpt(get_message_id(), -1, true, null, null, "variant");
+        }
+    });
+    stop_generating.addEventListener("click", async () => {
+        window.regenerate_button.classList.remove("regenerate-hidden");
+        stop_generating.classList.add("stop_generating-hidden");
+        // Stop the picker's auto-fallback retry chain so it doesn't
+        // re-invoke ask_gpt with another provider after we abort.
+        if (typeof window.resetFallback === "function") {
+            window.resetFallback();
+        }
+        let key;
+        for (key in controller_storage) {
+            if (!controller_storage[key].signal.aborted) {
+                console.log(`aborted ${window.conversation_id} #${key}`);
+                try {
+                    controller_storage[key].abort();
+                } finally {
+                    // Also abort the worker-side fetch if applicable
+                    workerAbort(key);
+                    let message = message_storage[key];
+                    if (message) {
+                        content_storage[key].inner.innerHTML += " [aborted]";
+                        message_storage[key] += " [aborted]";
                     }
                 }
             }
-            await safe_load_conversation(window.conversation_id);
-        });
-        document.querySelector(".media-player .fa-x").addEventListener("click", ()=>{
-            const media_player = document.querySelector(".media-player");
-            media_player.classList.remove("show");
-            const audio = document.querySelector(".media-player audio");
-            media_player.removeChild(audio);
-        });
-        document.getElementById("close_provider_forms").addEventListener("click", async () => {
-            const provider_forms = document.querySelector(".provider_forms");
-            provider_forms.classList.add("hidden");
-            chat.classList.remove("hidden");
-        });
+        }
+        await safe_load_conversation(window.conversation_id);
+    });
+    document.querySelector(".media-player .fa-x").addEventListener("click", ()=>{
+        const media_player = document.querySelector(".media-player");
+        media_player.classList.remove("show");
+        const audio = document.querySelector(".media-player audio");
+        media_player.removeChild(audio);
+    });
+    document.getElementById("close_provider_forms").addEventListener("click", async () => {
+        const provider_forms = document.querySelector(".provider_forms");
+        provider_forms.classList.add("hidden");
+        chat.classList.remove("hidden");
+    });
 });
 
 const toBase64 = file => new Promise((resolve, reject) => {
