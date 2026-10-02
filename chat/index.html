@@ -911,5 +911,47 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
         });
     })();
     </script>
+
+    <!-- Extension bridge: lets the gpt4free browser extension side panel
+         inject prompts (quick actions, page context) into this chat.
+         Conversations themselves persist in this page's IndexedDB, so
+         nothing needs to be synced back to the extension. -->
+    <script>
+    (function () {
+        "use strict";
+        const CHAT_ORIGIN = location.origin;
+
+        function announce() {
+            try { window.parent.postMessage({ type: "g4f-chat:ready" }, "*"); } catch (e) { /* ignore */ }
+        }
+        announce();
+        window.addEventListener("load", announce);
+        window.addonsLoaded?.then(announce);
+
+        async function askFromExtension(prompt) {
+            if (!prompt || typeof prompt !== "string") return;
+            try {
+                if (typeof window.handle_ask === "function") {
+                    await window.handle_ask(true, prompt);
+                } else {
+                    const userInput = document.getElementById("userInput");
+                    if (!userInput) return;
+                    userInput.value = prompt;
+                    userInput.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true }));
+                }
+            } catch (e) {
+                console.debug("g4f-ext bridge ask failed:", e);
+            }
+        }
+
+        window.addEventListener("message", (event) => {
+            if (event.origin !== CHAT_ORIGIN && event.source !== window.parent) return;
+            const data = event.data || {};
+            if (data.type === "g4f-ext:ask" && typeof data.prompt === "string") {
+                askFromExtension(data.prompt);
+            }
+        });
+    })();
+    </script>
 </body>
 </html>
