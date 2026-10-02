@@ -961,6 +961,18 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
             }
         }
 
+        // Quick-action fallback: the side panel may deliver a prompt via a
+        // #q=<prompt> hash (e.g. when postMessage would fire before this
+        // page is ready). Consume it once on load, then scrub the hash so
+        // a manual reload does not re-run the prompt.
+        try {
+            const m = /^#q=(.+)$/.exec(location.hash || "");
+            if (m) {
+                history.replaceState(null, "", location.pathname + location.search);
+                askFromExtension(decodeURIComponent(m[1]));
+            }
+        } catch (e) { /* ignore */ }
+
         window.addEventListener("message", (event) => {
             if (event.origin !== CHAT_ORIGIN && event.source !== window.parent) return;
             const data = event.data || {};

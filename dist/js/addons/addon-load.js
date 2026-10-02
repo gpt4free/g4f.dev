@@ -352,6 +352,9 @@ async function on_load() {
     } else {
         await load_conversations();
     }
+    if (chatParams.get("q")) {
+        await handle_ask(true, chatParams.get("q"));
+    }
     // Ensure sidebar is shown by default on desktop
     if (window.innerWidth >= 640) {
         sidebar.classList.add("shown");

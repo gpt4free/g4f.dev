@@ -530,6 +530,9 @@ window.addEventListener('load', async () => {
     if (missing.length === 0) {
         return;
     }
+    if (!document.body.classList.contains("translate")) {
+        return;
+    }
     try {
         // translateAll() persists and applies whatever it could translate
         // (community store and/or model) — no reload needed.
@@ -841,19 +844,16 @@ async function includeAdsense() {
 }
 
 // Global listener for content-rendered messages from child iframes
-if (!framework._iframeResizeListenerAdded) {
-    framework._iframeResizeListenerAdded = true;
-    window.addEventListener('message', (event) => {
-        if (event.data && event.data.type === 'g4f-content-rendered') {
-            const iframes = document.querySelectorAll('iframe');
-            iframes.forEach(iframe => {
-                if (iframe.contentWindow === event.source) {
-                    iframe.style.height = event.data.height + 'px';
-                }
-            });
-        }
-    });
-}
+window.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'g4f-content-rendered') {
+        const iframes = document.querySelectorAll('iframe');
+        iframes.forEach(iframe => {
+            if (iframe.contentWindow === event.source) {
+                iframe.style.height = event.data.height + 'px';
+            }
+        });
+    }
+});
 
 framework.query = query;
 framework.markdown = renderMarkdown;

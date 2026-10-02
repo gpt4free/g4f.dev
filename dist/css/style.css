@@ -3680,6 +3680,10 @@ form label.toogle {
     animation: pulse 2s infinite;
 }
 
+.empty-state-icon img {
+    max-width: 33%;
+}
+
 .empty-state-title {
     font-size: 28px;
     font-weight: 600;

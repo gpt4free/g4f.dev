@@ -52,8 +52,8 @@ function get_selected_model() {
 // ------------------------------------------------------------------
 const ask_gpt = async (message_id, message_index = -1, regenerate = false, provider = null, model = null, action = null, message = null) => {
     if (!model && !provider) {
-        model = get_selected_model();
-        provider = providerSelect?.value;
+        model = get_selected_model() || appStorage.getItem('model');
+        provider = providerSelect?.value || appStorage.getItem('provider');
     }
     const selectedOption = modelSelect.options[modelSelect.selectedIndex];
     const modelType = selectedOption?.dataset.type || 'chat';
