@@ -988,6 +988,9 @@ const delete_conversation = async (id) => {
     try {
         const { store, done } = await withStore('readwrite');
         store.delete(id);
+        if (window.deleteSecretConversation) {
+            window.deleteSecretConversation(id);
+        }
         return done;
     } catch (e) {
         add_error(`delete_conversation failed for id "${id}": ${e}`, e);

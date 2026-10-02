@@ -6,6 +6,9 @@
   if (window.g4fDebug) {
     return; // already initialized
   }
+  const logStorage = document.querySelector(".log");
+  const logContent = document.querySelector(".log-content") || logStorage;
+
   // Create panel element
   const panel = document.createElement('div');
   panel.id = 'g4f-debug-panel';
@@ -28,7 +31,7 @@
   panel.innerHTML = '<pre></pre>';
   document.body.appendChild(panel);
   const logEl = panel.querySelector('pre');
-  logEl.style.display = 'none'; // initially hidden
+  panel.style.display = 'none'; // initially hidden
   logEl.classList.add('notranslate');
 
   // Helper to add log entry
@@ -36,9 +39,14 @@
     const line = document.createElement('div');
     line.textContent = msg;
     line.className = `g4f-debug-${type}`;
-    logEl.appendChild(line);
-    logEl.scrollTop = logEl.scrollHeight;
-    logEl.style.display = 'block';
+    if (logContent) {
+      logContent.appendChild(line);
+      logContent.scrollTop = logContent.scrollHeight;
+    } else {
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+      panel.style.display = 'block';
+    }
   };
 
   // Capture failed network requests
@@ -151,11 +159,11 @@
     }
     if (isEscape) {
         logEl.innerHTML = '';
-        logEl.style.display = 'none';
+        panel.style.display = 'none';
     }
   }
   document.onclick = function(evt) {
     logEl.innerHTML = '';
-    logEl.style.display = 'none';
+    panel.style.display = 'none';
   }
 })();
