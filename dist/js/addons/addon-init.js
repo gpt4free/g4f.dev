@@ -1724,6 +1724,10 @@ function handleCloudSyncCallback() {
             }
             showCloudSyncLoggedIn(result.user);
             if (openSettings) open_settings();
+            // Running as the login popup: notify the framed chat and close.
+            if (window.G4FOAuth && window.G4FOAuth.closeAuthPopup) {
+                window.G4FOAuth.closeAuthPopup();
+            }
         }).catch((e) => {
             console.error("OAuth callback failed:", e);
         });
@@ -2375,7 +2379,11 @@ function cloudSyncLoginRedirect(provider = null) {
     const returnUrl = encodeURIComponent(window.location.href.split("#")[0]);
     const conversation = window.conversation_id ? `&conversation=${encodeURIComponent(window.conversation_id)}` : "";
     const providerParam = provider ? `&provider=${encodeURIComponent(provider)}` : "";
-    window.location.href = `/members.html?redirect=${returnUrl}${conversation}${providerParam}`;
+    const loginUrl = `/members.html?redirect=${returnUrl}${conversation}${providerParam}`;
+    // Inside an iframe: open login in a popup instead of navigating the
+    // frame away from the chat (helper comes from oauth-client.js).
+    if (window.G4FOAuth && window.G4FOAuth.openAuthPopup && window.G4FOAuth.openAuthPopup(loginUrl)) return;
+    window.location.href = loginUrl;
 }
 
 // Cloud Sync button event listeners

@@ -320,7 +320,12 @@ async function on_load() {
                 conversation: window.conversation_id || null,
             });
         } else {
-            window.location.href='/members.html?redirect='+encodeURIComponent(location.href.split('#')[0])+'&conversation='+encodeURIComponent(window.conversation_id);
+            const loginUrl = '/members.html?redirect=' + encodeURIComponent(location.href.split('#')[0]) + '&conversation=' + encodeURIComponent(window.conversation_id);
+            // Inside an iframe: open login in a popup instead of navigating
+            // the frame away from the chat.
+            if (!(window.G4FOAuth && window.G4FOAuth.openAuthPopup && window.G4FOAuth.openAuthPopup(loginUrl))) {
+                window.location.href = loginUrl;
+            }
         }
         return;
     }

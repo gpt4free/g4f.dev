@@ -88,12 +88,14 @@
                 // challenge-client.js is a classic script — load the ES
                 // module dynamically.
                 const { ChromeAI, Bonsai, LLM7 } = await import("./client.js");
-                if (await ChromeAI.isSupported()) {
-                    return new ChromeAI({ logCallback: logAiEvent });
-                }
-                if (await Bonsai.isSupported()) {
-                    console.info("[G4FChallenge] LanguageModel unavailable — falling back to Bonsai 1-bit (WebGPU)");
-                    return new Bonsai({ logCallback: logAiEvent });
+                if (window.self === window.top) {
+                    if (await ChromeAI.isSupported()) {
+                        return new ChromeAI({ logCallback: logAiEvent });
+                    }
+                    if (await Bonsai.isSupported()) {
+                        console.info("[G4FChallenge] LanguageModel unavailable — falling back to Bonsai 1-bit (WebGPU)");
+                        return new Bonsai({ logCallback: logAiEvent });
+                    }
                 }
                 return new LLM7();
             })().catch((e) => {

@@ -931,13 +931,30 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
         async function askFromExtension(prompt) {
             if (!prompt || typeof prompt !== "string") return;
             try {
+                // The early "ready" announcement fires before addons load, so
+                // wait for addonsLoaded (which defines window.handle_ask)
+                // before delivering the prompt. Fall back to the composer if
+                // addons never become available.
+                if (window.addonsLoaded instanceof Promise) {
+                    await Promise.race([
+                        window.addonsLoaded,
+                        new Promise((resolve) => setTimeout(resolve, 5000)),
+                    ]);
+                }
                 if (typeof window.handle_ask === "function") {
                     await window.handle_ask(true, prompt);
                 } else {
                     const userInput = document.getElementById("userInput");
                     if (!userInput) return;
                     userInput.value = prompt;
-                    userInput.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true }));
+                    const sendButton = document.getElementById("sendButton");
+                    if (sendButton) {
+                        sendButton.click();
+                    } else {
+                        // The composer's Enter handler listens on keydown
+                        // (keyCode 13), not keyup.
+                        userInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", keyCode: 13, bubbles: true }));
+                    }
                 }
             } catch (e) {
                 console.debug("g4f-ext bridge ask failed:", e);

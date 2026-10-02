@@ -26,6 +26,54 @@
     const VERIFIER_KEY = "g4f_oauth_verifier";
     const STATE_KEY = "g4f_oauth_state";
 
+    // --- Framed-context helpers -------------------------------------------
+    // When the chat runs inside an iframe (e.g. the browser-extension side
+    // panel), assigning window.location.href would navigate the frame away
+    // from the chat. Instead the auth URL is opened in a popup window; the
+    // popup shares localStorage/sessionStorage with the framed page (same
+    // origin), so the session written by the callback is immediately
+    // visible here once we refresh the UI.
+    function isFramed() {
+        try {
+            return window.self !== window.top;
+        } catch (e) {
+            return true; // cross-origin access to window.top throws => framed
+        }
+    }
+
+    // Open an auth URL in a centered popup window. Returns the popup
+    // window handle (or null when blocked / not framed).
+    function openAuthPopup(url, name) {
+        if (!isFramed()) return null;
+        const w = Math.min(520, window.screen.width - 40);
+        const h = Math.min(760, window.screen.height - 80);
+        const x = Math.max(0, Math.round((window.screen.width - w) / 2));
+        const y = Math.max(0, Math.round((window.screen.height - h) / 2));
+        const popup = window.open(
+            url,
+            name || "g4f-login",
+            `width=${w},height=${h},left=${x},top=${y},popup=yes`
+        );
+        if (popup) {
+            try { popup.opener = window; } catch (e) { /* ignore */ }
+            popup.focus();
+        } else {
+            console.warn("Login popup blocked - falling back to navigation");
+        }
+        return popup;
+    }
+
+    // Notify the opener (the framed chat that spawned this popup) that the
+    // login finished, then close the popup. No-op outside popups.
+    function closeAuthPopup() {
+        if (!window.opener || window.opener === window) return false;
+        try {
+            window.opener.postMessage({ type: "g4f-login:done" }, "*");
+        } catch (e) { /* ignore */ }
+        window.close();
+        return true;
+    }
+
     function randomString(length) {
         const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
         const bytes = new Uint8Array(length);
@@ -65,7 +113,11 @@
             code_challenge: challenge,
             code_challenge_method: "S256",
         });
-        window.location.href = `${OAUTH_BASE}/members/oauth/authorize?${params.toString()}`;
+        const authUrl = `${OAUTH_BASE}/members/oauth/authorize?${params.toString()}`;
+        // Inside an iframe: open the flow in a popup instead of navigating
+        // the frame away from the chat.
+        if (openAuthPopup(authUrl)) return;
+        window.location.href = authUrl;
     }
 
     async function exchangeCode(code, redirectUri, provider=null) {
@@ -148,5 +200,31 @@
         }
     }
 
-    window.G4FOAuth = { authorize, exchangeCode, handleCallback, revoke, OAUTH_BASE, CLIENT_ID };
+    window.G4FOAuth = {
+        authorize,
+        exchangeCode,
+        handleCallback,
+        revoke,
+        isFramed,
+        openAuthPopup,
+        closeAuthPopup,
+        OAUTH_BASE,
+        CLIENT_ID
+    };
+
+    // When this page runs as the login popup, close it automatically once
+    // the OAuth callback stored the session (same origin => shared storage).
+    window.addEventListener("load", () => {
+        if (window.opener && new URLSearchParams(window.location.search).get("code")) {
+            setTimeout(closeAuthPopup, 800);
+        }
+    });
+
+    // When this page runs framed, refresh the login UI whenever the popup
+    // writes the session into the shared localStorage.
+    window.addEventListener("storage", (event) => {
+        if (isFramed() && (event.key === "g4f_session" || event.key === "g4f_user" || event.key === "g4f_expires")) {
+            window.dispatchEvent(new CustomEvent("g4f-login:changed"));
+        }
+    });
 })();

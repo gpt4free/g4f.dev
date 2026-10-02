@@ -89,6 +89,10 @@ const MembersAuth = (() => {
 
     if (handled) {
       window.history.replaceState({}, document.title, `${window.location.pathname}#/providers`);
+      // Running as the login popup: notify the framed page and close.
+      if (window.G4FOAuth && window.G4FOAuth.closeAuthPopup) {
+        window.G4FOAuth.closeAuthPopup();
+      }
     }
     return handled;
   }
@@ -135,15 +139,27 @@ const MembersAuth = (() => {
   }
 
   async function login(provider) {
+    // Inside an iframe: open login in a popup instead of navigating the
+    // frame away from the app (helpers come from oauth-client.js).
+    const openPopup = (url) => {
+      if (window.G4FOAuth && window.G4FOAuth.openAuthPopup) {
+        return window.G4FOAuth.openAuthPopup(url, "g4f-login");
+      }
+      return null;
+    };
     if (provider === 'pollinations') {
       const params = new URLSearchParams({
         redirect: getCurrentUrl(),
         provider: 'pollinations'
       });
-      window.location.href = `/members.html?${params.toString()}`;
+      const url = `/members.html?${params.toString()}`;
+      if (openPopup(url)) return;
+      window.location.href = url;
       return;
     }
-    window.location.href = `${AUTH_BASE}/members/auth/${provider}?redirect=${encodeURIComponent(getCurrentUrl())}`;
+    const authUrl = `${AUTH_BASE}/members/auth/${provider}?redirect=${encodeURIComponent(getCurrentUrl())}`;
+    if (openPopup(authUrl)) return;
+    window.location.href = authUrl;
   }
 
   async function logout() {
