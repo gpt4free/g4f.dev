@@ -261,6 +261,12 @@ export default async function handler(request, event) {
   let pathname = url.pathname;
   if (pathname.startsWith("/api/")) pathname = pathname.slice("/api".length);
   if (pathname === "/v1" || pathname.startsWith("/v1/")) pathname = pathname.slice("/v1".length) || "/";
+  // Quota mapping: OpenRouter has no /quota endpoint — key usage/limit info
+  // lives at /key and is returned for whichever key resolves for this
+  // request (user key or server-side default).
+  if (pathname === "/quota") {
+    pathname = "/key";
+  }
   // Resolve the key before stripping credentials from the query string.
   const apiKey = resolveApiKey(request, url);
   const usingDefaultKey = !hasUserApiKey(request, url) && Boolean(apiKey);

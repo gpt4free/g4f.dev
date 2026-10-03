@@ -58,6 +58,13 @@ try {
   }
 } catch (e) { /* shims are best-effort */ }
 
+let logContent;
+
+document.addEventListener("DOMContentLoaded", () => {
+  const logStorage = document.querySelector(".log");
+  logContent = document.querySelector(".log-content") || logStorage;
+});
+
 const ErrorTracker = window.ErrorTracker || (() => {
     const MAX_ERRORS = 200;
     const MAX_DEDUP = 50;
@@ -327,8 +334,6 @@ if (window.framework) window.framework.errors = ErrorTracker;
   if (window.g4fDebug) {
     return; // already initialized
   }
-  const logStorage = document.querySelector(".log");
-  const logContent = document.querySelector(".log-content") || logStorage;
 
   // Create panel element
   const panel = document.createElement('div');
@@ -367,9 +372,9 @@ if (window.framework) window.framework.errors = ErrorTracker;
     const line = document.createElement('div');
     line.textContent = msg;
     line.className = `g4f-debug-${type}`;
-    logEl.appendChild(line);
-    logEl.scrollTop = logEl.scrollHeight;
-    panel.style.display = 'block';
+    (logContent || logEl).appendChild(line);
+    (logContent || logEl).scrollTop = (logContent || logEl).scrollHeight;
+    if (!logContent) panel.style.display = 'block';
   };
 
   // --- ErrorTracker stream: entries render here, not in the page console ---
@@ -414,18 +419,31 @@ if (window.framework) window.framework.errors = ErrorTracker;
       addLog('[NAVIGATION] No navigation entry found', 'warn');
     }
   };
-  logNavigationData();
 
   // Capture console log/info (warn/error arrive via the ErrorTracker stream).
-  ['log', 'info'].forEach((method) => {
-    const orig = console[method];
-    console[method] = (...args) => {
-      const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
-      logged.push(msg);
-      addLog(`[${method.toUpperCase()}] ${msg}`, 'log');
-      if (orig) orig.apply(console, args);
-    };
+['log', 'info', 'warn', 'error'].forEach((method) => {
+  const originalMethod = console[method];
+  console[method] = new Proxy(originalMethod, {
+    apply(target, thisArg, args) {
+        const result = Reflect.apply(target, thisArg, args);
+        try {
+            const msg = args.map(a => 
+            a && a.message 
+                ? `${typeof a}: ${a.message}` 
+                : JSON.stringify(typeof a === 'object' ? Object.fromEntries(Object.entries(a).map(([k, v]) => [k, String(v)])) : a)
+            ).join(' ');
+
+            logged.push(msg);
+            addLog(`[${method.toUpperCase()}] ${msg}`, 'log');
+        } catch (e) {
+            // Fail-silent catch wrapper block so hooks never crash your application thread
+        }
+        return result;
+    }
   });
+});
+
+  logNavigationData();
 
   // Expose API for external control
   const hide = () => {
