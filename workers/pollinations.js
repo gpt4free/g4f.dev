@@ -1076,6 +1076,28 @@ async function handlePath(dir, path, request, env) {
 }
 
 /**
+ * Handle GET /quota - account balance proxy. When the caller supplies no
+ * API key of their own, the worker's default key is used so anonymous
+ * clients can still read the shared account's remaining balance instead
+ * of getting a 401 from upstream.
+ */
+async function handleQuota(request, env) {
+  const authHeader = request.headers.get("Authorization");
+  let providerKey;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const tokens = authHeader.substring(7).split(/\s+/);
+    providerKey = tokens.find(t => t && !t.startsWith("g4f_"));
+  }
+  const key = providerKey || env.POLLINATIONS_API_KEY;
+  if (key) {
+    return await fetch(POLLINATIONS_ACCOUNT_BALANCE, {
+      headers: { "Authorization": `Bearer ${key}` }
+    });
+  }
+  return await fetch(POLLINATIONS_ACCOUNT_BALANCE, request);
+}
+
+/**
  * Generic authenticated proxy for the remaining `/v1/*` generation endpoints
  * on gen.pollinations.ai that don't need custom handling:
  *   - POST /v1/embeddings
@@ -1530,7 +1552,7 @@ export default {
       } else if (path.endsWith("/models") && request.method === "GET") {
         response = await handleListModels(request, env, path.substring(1).split("/")[0]);
       } else if (path.endsWith("/quota") && request.method === "GET") {
-        response = await handlePath("account", "balance", request, env);
+        response = await handleQuota(request, env);
       } else if (path.endsWith("/chat/completions") && request.method === "POST") {
         response = await handleChatCompletion(request, env, ctx);
       } else if (path.endsWith("/images/generations") && request.method === "POST") {
