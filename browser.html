@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G4F - AI Web Browser Tool</title>
+    <link rel="icon" href="/dist/img/g4f.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
+    <style>
+        :root {
+            --bg-main: #0c0a12;
+            --bg-card: rgba(23, 19, 34, 0.85);
+            --border-card: rgba(139, 61, 255, 0.2);
+            --text-primary: #f3e8ff;
+            --text-secondary: #a799c7;
+            --text-muted: #6b5e8a;
+            --accent: #8b3dff;
+            --accent-light: #a855f7;
+            --accent-glow: rgba(139, 61, 255, 0.4);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: rgba(12, 10, 18, 0.9);
+            border-bottom: 1px solid var(--border-card);
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.2s ease;
+        }
+
+        .nav-link:hover { color: #fff; }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            width: 100%;
+            flex: 1;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .title {
+            font-size: 2.25rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff, #c084fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 16px 20px;
+            background: var(--bg-card);
+            border: 2px solid var(--border-card);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .search-input:focus { border-color: var(--accent-light); }
+
+        .btn-search {
+            padding: 0 28px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .results-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 2rem;
+            min-height: 400px;
+            line-height: 1.7;
+        }
+
+        .results-box img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 4rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="nav-link">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Back to Dashboard</span>
+        </a>
+        <span style="font-weight: 700; color: var(--accent-light);">AI Web Browser Tool</span>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <h1 class="title"><i class="fa-solid fa-globe"></i> AI Web Browser & Search</h1>
+            <p style="color: var(--text-secondary);">Perform real-time web searches, fetch live news, and summarize online context using G4F backend tools.</p>
+        </div>
+
+        <form id="browser-search-form" class="search-bar">
+            <input type="text" id="browser-input" class="search-input" placeholder="Search the web or type query (e.g. latest tech news)..." required>
+            <button type="submit" class="btn-search">Search</button>
+        </form>
+
+        <div class="results-box" id="results-container">
+            <p style="color: var(--text-muted); text-align: center; margin-top: 5rem;">Enter a search query above to browse the web with AI intelligence.</p>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('browser-search-form');
+        const input = document.getElementById('browser-input');
+        const container = document.getElementById('results-container');
+        const md = window.markdownit();
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const query = input.value.trim();
+            if (!query) return;
+
+            container.innerHTML = `
+                <div class="loading-spinner">
+                    <i class="fa-solid fa-spinner fa-spin fa-2x" style="color: var(--accent-light); margin-bottom: 1rem;"></i>
+                    <p>Searching the web for "${query}"...</p>
+                </div>
+            `;
+
+            try {
+                const prompt = encodeURIComponent("Summarize search results clearly with headings and bullet points.");
+                const search = encodeURIComponent(query);
+                const res = await fetch(`/backend-api/v2/create?prompt=${prompt}&stream=0&web_search=${search}`);
+                const text = await res.text();
+                
+                container.innerHTML = md.render(text || 'No response returned.');
+            } catch (err) {
+                container.innerHTML = `<p style="color: #ef4444;">Error fetching search results: ${err.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

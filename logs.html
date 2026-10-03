@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G4F - Backend System Logs</title>
+    <link rel="icon" href="/dist/img/g4f.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-main: #0c0a12;
+            --bg-card: rgba(23, 19, 34, 0.85);
+            --border-card: rgba(139, 61, 255, 0.2);
+            --text-primary: #f3e8ff;
+            --text-secondary: #a799c7;
+            --text-muted: #6b5e8a;
+            --accent-light: #a855f7;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: rgba(12, 10, 18, 0.9);
+            border-bottom: 1px solid var(--border-card);
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            width: 100%;
+            flex: 1;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .title {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff, #c084fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            background: rgba(139, 61, 255, 0.2);
+            border: 1px solid var(--border-card);
+            color: #fff;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .log-terminal {
+            background: #090710;
+            border: 1px solid var(--border-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            font-family: monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            min-height: 500px;
+            max-height: 700px;
+            overflow-y: auto;
+            color: #d4d4d8;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 6px;
+            word-break: break-all;
+        }
+
+        .log-tag {
+            color: var(--accent-light);
+            font-weight: bold;
+        }
+
+        .log-time {
+            color: var(--text-muted);
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="nav-link">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Back to Dashboard</span>
+        </a>
+        <span style="font-weight: 700; color: var(--accent-light);">Backend System Logs</span>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <h1 class="title"><i class="fa-solid fa-terminal"></i> Real-time Backend Logs</h1>
+            <div class="actions">
+                <button class="btn" id="refresh-logs-btn"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
+            </div>
+        </div>
+
+        <div class="log-terminal" id="terminal-body">
+            <p style="color: var(--text-muted);">Loading backend logs...</p>
+        </div>
+    </div>
+
+    <script>
+        const terminalEl = document.getElementById('terminal-body');
+        const refreshBtn = document.getElementById('refresh-logs-btn');
+
+        async function fetchLogs() {
+            try {
+                const res = await fetch('/backend-api/v2/log?limit=100');
+                if (!res.ok) throw new Error('Failed to fetch logs');
+                const data = await res.json();
+                
+                if (!data.logs || !data.logs.length) {
+                    terminalEl.innerHTML = '<p style="color: var(--text-muted);">No backend log records recorded yet.</p>';
+                    return;
+                }
+
+                terminalEl.innerHTML = data.logs.map(log => `
+                    <div class="log-entry">
+                        <span class="log-tag">[LOG]</span>
+                        <span class="log-time">${new Date().toLocaleTimeString()}</span>
+                        <span>${escapeHtml(JSON.stringify(log))}</span>
+                    </div>
+                `).join('');
+            } catch (err) {
+                terminalEl.innerHTML = `<p style="color: #ef4444;">Error fetching logs: ${err.message}</p>`;
+            }
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        refreshBtn.addEventListener('click', fetchLogs);
+        fetchLogs();
+    </script>
+</body>
+</html>

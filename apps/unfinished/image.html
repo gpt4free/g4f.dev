@@ -1,282 +1,859 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Advanced AI Image Generator & Editor</title>
-<link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Studio - G4F Tools</title>
+    <link rel="icon" href="/dist/img/g4f.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-main: #0b0914;
+            --bg-card: rgba(20, 16, 32, 0.85);
+            --bg-input: rgba(30, 24, 48, 0.9);
+            --border-card: rgba(139, 61, 255, 0.2);
+            --border-focus: rgba(168, 85, 247, 0.6);
+            --text-primary: #f3e8ff;
+            --text-secondary: #a799c7;
+            --text-muted: #6b5e8a;
+            --accent: #8b3dff;
+            --accent-light: #a855f7;
+            --accent-glow: rgba(139, 61, 255, 0.4);
+            --success: #22c55e;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            background-image: 
+                radial-gradient(circle at 10% 10%, rgba(139, 61, 255, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 90% 90%, rgba(168, 85, 247, 0.1) 0%, transparent 40%);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header Navigation */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: rgba(11, 9, 20, 0.9);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-card);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.2s ease;
+        }
+
+        .nav-link:hover {
+            color: #fff;
+        }
+
+        .nav-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #fff, #d8b4fe);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        /* Main Workspace Layout */
+        .workspace {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 2rem;
+            max-width: 1500px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            width: 100%;
+            flex: 1;
+        }
+
+        /* Left Control Panel */
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 1.75rem;
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            height: fit-content;
+        }
+
+        .panel-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #fff;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-card);
+            border-radius: 10px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.25s ease;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 90px;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 14px var(--accent-glow);
+        }
+
+        .form-select optgroup {
+            background: #141020;
+            color: var(--accent-light);
+            font-weight: 700;
+        }
+
+        .form-select option {
+            background: #141020;
+            color: #fff;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            padding: 14px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px var(--accent-glow);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            padding: 10px;
+            background: rgba(139, 61, 255, 0.15);
+            border: 1px solid var(--border-card);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(139, 61, 255, 0.3);
+            border-color: var(--accent-light);
+        }
+
+        /* Right Canvas & Gallery Area */
+        .stage-area {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .canvas-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 2rem;
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 520px;
+            position: relative;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            max-width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #06050a;
+            border-radius: 12px;
+            padding: 10px;
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+
+        canvas {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+        }
+
+        .placeholder-box {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 4rem 2rem;
+        }
+
+        .placeholder-box i {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            color: rgba(168, 85, 247, 0.3);
+        }
+
+        /* Editing Toolbar */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            width: 100%;
+            margin-top: 1.5rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            justify-content: center;
+        }
+
+        /* Gallery Section */
+        .gallery-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+        }
+
+        .gallery-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .gallery-item {
+            aspect-ratio: 1;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border-card);
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .gallery-item:hover {
+            transform: scale(1.04);
+            border-color: var(--accent-light);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        @media (max-width: 1024px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
-<h1>AI Image Generator & Editor</h1>
+    <!-- Top Bar -->
+    <nav class="navbar">
+        <a href="/" class="nav-link">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Back to Dashboard</span>
+        </a>
+        <span class="nav-title"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Image Studio</span>
+    </nav>
 
-<div class="container">
-    <!-- Prompt and Model Selection -->
-    <div class="controls">
-        <textarea id="prompt" placeholder="Enter your image prompt here..." rows="3"></textarea>
-        <select id="modelSelect">
-            <option value="PollinationsAI">PollinationsAI</option>
-            <option value="Together">Together</option>
-        </select>
-        <button id="generateBtn">Generate Image</button>
-        <button id="downloadBtn" disabled>Download Image</button>
+    <!-- Workspace -->
+    <div class="workspace">
+        <!-- Controls Panel -->
+        <aside class="panel">
+            <h2 class="panel-title">
+                <i class="fa-solid fa-sliders"></i> Generator Parameters
+            </h2>
+
+            <!-- Prompt -->
+            <div class="form-group">
+                <label class="form-label" for="prompt">
+                    <span>Image Prompt</span>
+                    <span style="cursor:pointer; color: var(--accent-light);" id="random-prompt-btn"><i class="fa-solid fa-dice"></i> Sample</span>
+                </label>
+                <textarea id="prompt" class="form-textarea" placeholder="A futuristic cyberpunk city with neon lights and flying cars, 8k resolution, cinematic lighting..."></textarea>
+            </div>
+
+            <!-- Provider & Model Selection -->
+            <div class="form-group">
+                <label class="form-label" for="modelSelect">Select Model & Provider</label>
+                <select id="modelSelect" class="form-select">
+                    <optgroup label="☁️ Cloudflare Workers AI (ai.g4f-dev.workers.dev)" id="optgroup-cloudflare">
+                        <option value="cloudflare:@cf/leonardo/lucid-origin" selected>CF Lucid Origin (Leonardo)</option>
+                        <option value="cloudflare:@cf/black-forest-labs/flux-1-schnell">CF Flux 1 Schnell</option>
+                        <option value="cloudflare:@cf/stabilityai/stable-diffusion-xl-base-1.0">CF SDXL Base 1.0</option>
+                        <option value="cloudflare:@cf/bytedance/stable-diffusion-xl-lightning">CF SDXL Lightning</option>
+                        <option value="cloudflare:@cf/lykon/dreamshaper-8-lcm">CF DreamShaper 8 LCM</option>
+                    </optgroup>
+
+                    <optgroup label="⚡ Pollinations & Community (g4f.space API)" id="optgroup-community">
+                        <option value="community:flux">Flux 1.0 (Default)</option>
+                        <option value="pollinations:flux-realism">Flux Realism (Photorealistic)</option>
+                        <option value="pollinations:flux-anime">Flux Anime (Anime & Manga)</option>
+                        <option value="pollinations:flux-3d">Flux 3D Render</option>
+                        <option value="pollinations:flux-caveduck">Flux Caveduck (Stylized)</option>
+                        <option value="pollinations:turbo">SD Turbo (Ultra Fast)</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- Aspect Ratio & Resolution -->
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label" for="aspectRatio">Aspect Ratio</label>
+                    <select id="aspectRatio" class="form-select">
+                        <option value="512x512">1:1 Square (512x512)</option>
+                        <option value="1024x1024">1:1 HD (1024x1024)</option>
+                        <option value="1024x576">16:9 Landscape</option>
+                        <option value="576x1024">9:16 Portrait</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="seedInput">Seed (Optional)</label>
+                    <input type="number" id="seedInput" class="form-input" placeholder="Random">
+                </div>
+            </div>
+
+            <!-- Generate Button -->
+            <button id="generateBtn" class="btn-primary">
+                <i class="fa-solid fa-sparkles"></i> Generate Image
+            </button>
+        </aside>
+
+        <!-- Main Stage Area -->
+        <main class="stage-area">
+            <!-- Canvas Display Card -->
+            <div class="canvas-card">
+                <div class="canvas-wrapper" id="canvas-container">
+                    <div class="placeholder-box" id="placeholder">
+                        <i class="fa-solid fa-image"></i>
+                        <p>Configure parameters on the left and click <strong>Generate Image</strong></p>
+                    </div>
+                    <canvas id="imageCanvas" style="display: none;"></canvas>
+                </div>
+
+                <!-- Canvas Editing Controls -->
+                <div class="toolbar" id="toolbar" style="display: none;">
+                    <button class="btn-secondary" id="downloadBtn"><i class="fa-solid fa-download"></i> Download</button>
+                    <button class="btn-secondary" id="rotateLeftBtn"><i class="fa-solid fa-rotate-left"></i> Left 15°</button>
+                    <button class="btn-secondary" id="rotateRightBtn"><i class="fa-solid fa-rotate-right"></i> Right 15°</button>
+                    <button class="btn-secondary" id="brightPlusBtn"><i class="fa-solid fa-sun"></i> Bright +</button>
+                    <button class="btn-secondary" id="brightMinusBtn"><i class="fa-solid fa-moon"></i> Bright -</button>
+                    <button class="btn-secondary" id="contrastPlusBtn"><i class="fa-solid fa-circle-half-stroke"></i> Contrast</button>
+                    <button class="btn-secondary" id="cropBtn"><i class="fa-solid fa-crop"></i> Center Crop</button>
+                    <button class="btn-secondary" id="resetEditBtn"><i class="fa-solid fa-undo"></i> Reset Edit</button>
+                </div>
+            </div>
+
+            <!-- History Gallery -->
+            <div class="gallery-card">
+                <h3 class="gallery-title">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Session History
+                </h3>
+                <div class="gallery-grid" id="galleryGrid">
+                    <div style="color: var(--text-muted); font-size: 0.85rem;">No images generated in this session yet.</div>
+                </div>
+            </div>
+        </main>
     </div>
 
-    <!-- Image Display and Editing Controls -->
-    <div class="image-section">
-        <canvas id="imageCanvas" width="512" height="512"></canvas>
-        <div class="editing-controls">
-            <button id="cropBtn">Crop</button>
-            <button id="rotateLeftBtn">Rotate Left</button>
-            <button id="rotateRightBtn">Rotate Right</button>
-            <button id="brightnessUpBtn">Brightness +</button>
-            <button id="brightnessDownBtn">Brightness -</button>
-            <button id="resetBtn">Reset</button>
-        </div>
-    </div>
-</div>
+    <script>
+        // DOM Elements
+        const promptEl = document.getElementById('prompt');
+        const modelSelectEl = document.getElementById('modelSelect');
+        const optgroupCommunityEl = document.getElementById('optgroup-community');
+        const optgroupCloudflareEl = document.getElementById('optgroup-cloudflare');
+        const aspectRatioEl = document.getElementById('aspectRatio');
+        const seedInputEl = document.getElementById('seedInput');
+        const generateBtn = document.getElementById('generateBtn');
+        const randomPromptBtn = document.getElementById('random-prompt-btn');
 
-<script type="module">
-  // Import necessary modules
-import { PollinationsAI, Together } from 'https://g4f.dev/dist/js/client.js';
-// Create an instance of the client with desired providers
-const client = new PollinationsAI();
-const togetherClient = new Together();
+        const canvas = document.getElementById('imageCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const placeholder = document.getElementById('placeholder');
+        const toolbar = document.getElementById('toolbar');
 
-// DOM elements
-const promptEl = document.getElementById('prompt');
-const modelSelectEl = document.getElementById('modelSelect');
-const generateBtn = document.getElementById('generateBtn');
-const downloadBtn = document.getElementById('downloadBtn');
-const canvas = document.getElementById('imageCanvas');
-const ctx = canvas.getContext('2d');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const rotateLeftBtn = document.getElementById('rotateLeftBtn');
+        const rotateRightBtn = document.getElementById('rotateRightBtn');
+        const brightPlusBtn = document.getElementById('brightPlusBtn');
+        const brightMinusBtn = document.getElementById('brightMinusBtn');
+        const contrastPlusBtn = document.getElementById('contrastPlusBtn');
+        const cropBtn = document.getElementById('cropBtn');
+        const resetEditBtn = document.getElementById('resetEditBtn');
+        const galleryGrid = document.getElementById('galleryGrid');
 
-const cropBtn = document.getElementById('cropBtn');
-const rotateLeftBtn = document.getElementById('rotateLeftBtn');
-const rotateRightBtn = document.getElementById('rotateRightBtn');
-const brightnessUpBtn = document.getElementById('brightnessUpBtn');
-const brightnessDownBtn = document.getElementById('brightnessDownBtn');
-const resetBtn = document.getElementById('resetBtn');
+        // State
+        let originalImageData = null;
+        let imageState = { rotation: 0, brightness: 1, contrast: 1 };
+        let history = [];
 
-(async () => {
-    // Load models dynamically based on selected provider
-    let models = await client.models.list();
-    models = models.filter((model)=>model.type=="image")
-    let togetherModels = await togetherClient.models.list();
-    togetherModels = togetherModels.filter((model)=>model.type=="image")
-    modelSelectEl.innerHTML = [...models, ...togetherModels].map(model => `<option value="${model.id}">${model.id}</option>`).join('');
-})();
-
-// Image state
-let originalImage = null;
-let displayedImage = null;
-let imageParams = {
-    rotation: 0,
-    brightness: 1,
-    cropStart: null,
-    cropEnd: null
-};
-
-// Generate Image Function
-async function generateImage() {
-    const prompt = promptEl.value;
-    const model = modelSelectEl.value;
-
-    // Show loading indicator
-    generateBtn.disabled = true;
-    generateBtn.textContent = 'Generating...';
-
-    try {
-        const response = await (model.includes('/') ? togetherClient : client).images.generate({
-            model: model,
-            prompt: prompt
-        });
-
-        if (response.data && response.data.length > 0) {
-            const imageUrl = response.data[0].url;
+        // Dynamic Fetch Models from https://g4f.space/api/community/models (filtering image: true)
+        async function fetchCommunityModels() {
             try {
-                await loadImageToCanvas(imageUrl);
-            } catch (error) {
-                const maxAttempts = client.proxyManager.proxies.length;
-                for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                    const proxiedUrl = client.proxyManager.getProxiedUrl(imageUrl);
-                    try {
-                        await loadImageToCanvas(proxiedUrl);
-                    } catch (error) {
-                        console.warn(`CORS proxy attempt ${attempt + 1}/${maxAttempts} failed for ${imageUrl}:`, error.message);
-                        this.proxyManager.rotateProxy();
+                const res = await fetch('https://g4f.space/api/community/models');
+                if (!res.ok) return;
+                const json = await res.json();
+                const items = json.data || [];
+                
+                // Strict filter for models with "image": true
+                const imageModels = items.filter(m => m.image === true || m.category === 'image');
+                if (imageModels.length > 0) {
+                    const existingOptions = Array.from(optgroupCommunityEl.querySelectorAll('option')).map(o => o.value);
+                    imageModels.forEach(m => {
+                        const val = `community:${m.id}`;
+                        if (!existingOptions.includes(val)) {
+                            const opt = document.createElement('option');
+                            opt.value = val;
+                            opt.textContent = `${m.name || m.id} (${m.publisher || m.owned_by || 'Community'})`;
+                            optgroupCommunityEl.appendChild(opt);
+                        }
+                    });
+                }
+            } catch (err) {
+                console.warn('Failed to load dynamic community models:', err);
+            }
+        }
+
+        // Live Load Cloudflare Image Models from https://ai.g4f-dev.workers.dev/v1/models
+        const CF_WORKERS_BASE = 'https://ai.g4f-dev.workers.dev';
+
+        function isImageModel(m) {
+            // /v1/models returns task as object, e.g. {"name": "Text-to-Image", ...}
+            const taskName = String((m.task && (m.task.name || m.task)) || '').toLowerCase();
+            if (taskName) return taskName.includes('text-to-image');
+            // Fallback: detect image models by id when no task info is present
+            const id = String(m.id || m.model || '').toLowerCase();
+            return /@cf\/.+(stable-diffusion|diffusion|flux|dreamshaper|photon|recraft|sd[bx-])/.test(id);
+        }
+
+        function prettyModelName(id) {
+            const parts = id.split('/');
+            const name = parts[parts.length - 1];
+            return name.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        }
+
+        function addCloudflareOptions(models) {
+            const existingOptions = Array.from(optgroupCloudflareEl.querySelectorAll('option')).map(o => o.value);
+            let added = 0;
+            models.forEach(m => {
+                const modelId = m.id || m.model || m.name;
+                if (!modelId) return;
+                const val = `cloudflare:${modelId}`;
+                if (!existingOptions.includes(val)) {
+                    existingOptions.push(val);
+                    const opt = document.createElement('option');
+                    opt.value = val;
+                    opt.textContent = prettyModelName(modelId);
+                    opt.title = modelId;
+                    optgroupCloudflareEl.appendChild(opt);
+                    added++;
+                }
+            });
+            return added;
+        }
+
+        async function fetchCloudflareModels() {
+            let models = [];
+            // 1. Live load from the Cloudflare workers /v1/models endpoint
+            try {
+                const res = await fetch(`${CF_WORKERS_BASE}/v1/models`);
+                if (res.ok) {
+                    const json = await res.json();
+                    const data = json.data || json;
+                    if (Array.isArray(data)) {
+                        models = data.filter(isImageModel);
                     }
                 }
+            } catch (e) {
+                console.warn('Failed to live load models from ai.g4f-dev.workers.dev:', e);
             }
-            downloadBtn.disabled = false;
-        } else {
-            alert('No image generated. Try a different prompt or model.');
+
+            // 2. Fallback: local backend provider models endpoint
+            if (!models.length) {
+                try {
+                    const res = await fetch('/backend-api/v2/models/Cloudflare');
+                    if (res.ok) {
+                        const json = await res.json();
+                        models = json.filter(m => m.image === true || m.vision === true || (m.model && (m.model.includes('diffusion') || m.model.includes('image'))));
+                    }
+                } catch (e) {}
+            }
+
+            // 3. Fallback: g4f.space Cloudflare models API
+            if (!models.length) {
+                try {
+                    const res = await fetch('https://g4f.space/api/cloudflare/models');
+                    if (res.ok) {
+                        const json = await res.json();
+                        const data = json.data || json;
+                        models = data.filter(m => m.image === true || (m.id && m.id.includes('@cf/')));
+                    }
+                } catch (e) {}
+            }
+
+            if (models.length > 0) {
+                addCloudflareOptions(models);
+            }
         }
-    } catch (err) {
-        console.error('Error generating image:', err);
-        alert('Error generating image.');
-    }
-    generateBtn.disabled = false;
-    generateBtn.textContent = 'Generate Image';
-}
 
-// Load image onto canvas
-function loadImageToCanvas(url) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "Anonymous"; // Enable CORS for image manipulation
-        img.onload = () => {
-            // Resize canvas to image size
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, 0, 0);
-            originalImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            resetImageParams();
-            resolve();
-        };
-        img.onerror = reject;
-        img.src = url;
-    });
-}
+        fetchCommunityModels();
+        fetchCloudflareModels();
 
-// Reset image parameters
-function resetImageParams() {
-    imageParams.rotation = 0;
-    imageParams.brightness = 1;
-    redrawImage();
-}
+        // Sample Prompts
+        const samplePrompts = [
+            "A majestic glowing phoenix rising from stardust, digital art, highly detailed, 8k",
+            "An isometric futuristic glass bioluminescent greenhouse on Mars, vibrant colors",
+            "Cute fluffy baby dragon sitting on a pile of glowing crystals, 3D render",
+            "A serene Japanese temple surrounded by cherry blossoms in misty morning light",
+            "Cyberpunk samurai cat standing under rain-soaked neon billboards, photorealistic"
+        ];
 
-// Redraw the image with current parameters
-function redrawImage() {
-    // Reset to original
-    ctx.putImageData(originalImage, 0, 0);
+        randomPromptBtn.addEventListener('click', () => {
+            const idx = Math.floor(Math.random() * samplePrompts.length);
+            promptEl.value = samplePrompts[idx];
+        });
 
-    // Apply brightness
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.filter = `brightness(${imageParams.brightness})`;
+        // Image Generation Logic connecting to Cloudflare Worker API & Community API
+        generateBtn.addEventListener('click', async () => {
+            const prompt = promptEl.value.trim();
+            if (!prompt) {
+                alert('Please enter an image prompt!');
+                return;
+            }
 
-    // Save state
-    ctx.save();
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
 
-    // Apply rotation
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate((imageParams.rotation * Math.PI) / 180);
-    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+            try {
+                const modelVal = modelSelectEl.value;
+                const [provider, modelName] = modelVal.split(':');
+                const [width, height] = aspectRatioEl.value.split('x').map(Number);
+                const seed = seedInputEl.value ? parseInt(seedInputEl.value) : Math.floor(Math.random() * 100000);
 
-    // Redraw
-    ctx.drawImage(canvas, 0, 0);
+                let imageUrl = '';
 
-    ctx.restore();
+                if (provider === 'community' || provider === 'pollinations') {
+                    // Try g4f.space community image generations endpoint
+                    try {
+                        const res = await fetch('https://g4f.space/api/community/images/generations', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                model: modelName,
+                                prompt: prompt,
+                                n: 1,
+                                size: `${width}x${height}`
+                            })
+                        });
+                        
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.data && data.data.length > 0) {
+                                const item = data.data[0];
+                                imageUrl = item.url || (item.b64_json ? `data:image/png;base64,${item.b64_json}` : '');
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Community API endpoint failed, switching to direct pollinations URL fallback:', e);
+                    }
 
-    // Reset filter
-    ctx.filter = 'none';
-}
+                    // Fallback to direct pollinations URL (only pass simple model ids pollinations understands)
+                    if (!imageUrl) {
+                        const cleanPrompt = encodeURIComponent(prompt);
+                        const knownPollModels = ['flux', 'turbo', 'flux-realism', 'flux-anime', 'flux-3d', 'flux-caveduck'];
+                        const pollModel = knownPollModels.includes(modelName) ? modelName : 'flux';
+                        imageUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}?model=${pollModel}&width=${width}&height=${height}&seed=${seed}&nologo=true`;
+                    }
+                } else if (provider === 'cloudflare') {
+                    // Cloudflare Worker AI run API: POST https://ai.g4f-dev.workers.dev/
+                    // body: { model, input: { prompt, ... } } -> { result: { image: "<base64>" } }
+                    const attemptPayloads = [
+                        { model: modelName, input: { prompt: prompt, width: width, height: height, seed: seed } },
+                        // some models (e.g. flux-1-schnell) reject width/height/seed
+                        { model: modelName, input: { prompt: prompt } }
+                    ];
+                    for (const payload of attemptPayloads) {
+                        try {
+                            const res = await fetch(`${CF_WORKERS_BASE}/`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                            if (!res.ok) continue;
+                            const data = await res.json();
+                            const b64 = data && data.result && data.result.image;
+                            if (b64) {
+                                const mime = b64.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
+                                imageUrl = `data:${mime};base64,${b64}`;
+                                break;
+                            }
+                            // empty result = model queued asynchronously, no inline image
+                        } catch (e) {
+                            console.warn('Cloudflare Workers API error:', e);
+                        }
+                    }
 
-// Event Listeners
-generateBtn.addEventListener('click', generateImage);
+                    if (!imageUrl) {
+                        // Fallback to Pollinations
+                        imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${seed}&nologo=true`;
+                    }
+                } else {
+                    const promptParam = encodeURIComponent(prompt);
+                    const res = await fetch(`/backend-api/v2/create?prompt=${promptParam}&model=${modelName}&provider=${provider}`);
+                    if (!res.ok) throw new Error(`Backend response error: ${res.statusText}`);
+                    const text = await res.text();
+                    
+                    const match = text.match(/!\[.*?\]\((https?:\/\/.*?)\)/) || text.match(/(https?:\/\/\S+\.(?:png|jpg|jpeg|webp))/i);
+                    if (match && match[1]) {
+                        imageUrl = match[1];
+                    } else {
+                        imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${seed}&nologo=true`;
+                    }
+                }
 
-downloadBtn.addEventListener('click', () => {
-    const link = document.createElement('a');
-    link.download = 'generated_image.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-});
+                await loadImageToCanvas(imageUrl);
+                addToHistory(imageUrl, prompt);
+            } catch (err) {
+                console.error('Image generation failed:', err);
+                alert(`Error generating image: ${err.message || err}`);            } finally {
+                // ALWAYS restore button state
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = '<i class="fa-solid fa-sparkles"></i> Generate Image';
+            }
+        });
 
-// Editing Controls
-cropBtn.addEventListener('click', () => {
-    alert('Crop feature is simplified. Select crop area and then press OK.');
-    // Simple crop: crop the center square
-    const size = Math.min(canvas.width, canvas.height);
-    const startX = (canvas.width - size) / 2;
-    const startY = (canvas.height - size) / 2;
-    const imageData = ctx.getImageData(startX, startY, size, size);
-    canvas.width = size;
-    canvas.height = size;
-    ctx.putImageData(imageData, 0, 0);
-    originalImage = ctx.getImageData(0, 0, size, size);
-    resetImageParams();
-});
+        // Safe Load Image to Canvas via Blob (Fixes Canvas Taint & SecurityError)
+        async function loadImageToCanvas(url) {
+            if (!url) {
+                throw new Error('No image URL returned by provider.');
+            }
+            let objectUrl = url;
+            let isBlobUrl = false;
 
-rotateLeftBtn.addEventListener('click', () => {
-    imageParams.rotation -= 15;
-    redrawImage();
-});
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+                try {
+                    const response = await fetch(url, { mode: 'cors' });
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        objectUrl = URL.createObjectURL(blob);
+                        isBlobUrl = true;
+                    } else {
+                        console.warn(`Image resource responded with ${response.status} ${response.statusText}`);
+                    }
+                } catch (fetchErr) {
+                    console.warn('Direct fetch for blob failed, attempting direct load:', fetchErr);
+                }
+            }
 
-rotateRightBtn.addEventListener('click', () => {
-    imageParams.rotation += 15;
-    redrawImage();
-});
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.onload = () => {
+                    try {
+                        canvas.width = img.width || 512;
+                        canvas.height = img.height || 512;
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
 
-brightnessUpBtn.addEventListener('click', () => {
-    imageParams.brightness += 0.1;
-    redrawImage();
-});
+                        try {
+                            originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        } catch (e) {
+                            console.warn('ImageData extraction warning:', e);
+                            originalImageData = null;
+                        }
 
-brightnessDownBtn.addEventListener('click', () => {
-    imageParams.brightness = Math.max(0, imageParams.brightness - 0.1);
-    redrawImage();
-});
+                        placeholder.style.display = 'none';
+                        canvas.style.display = 'block';
+                        toolbar.style.display = 'flex';
+                        resetParams();
+                        if (isBlobUrl) URL.revokeObjectURL(objectUrl);
+                        resolve();
+                    } catch (err) {
+                        if (isBlobUrl) URL.revokeObjectURL(objectUrl);
+                        reject(err);
+                    }
+                };
 
-resetBtn.addEventListener('click', () => {
-    resetImageParams();
-});
+                img.onerror = (err) => {
+                    if (isBlobUrl) URL.revokeObjectURL(objectUrl);
+                    reject(new Error(`Failed to load image resource into canvas (${String(objectUrl).slice(0, 80)}...).`));
+                };
 
-// Optional: You can add more advanced editing like free crop, brush, etc., with additional UI.
+                img.src = objectUrl;
+            });
+        }
 
-// Initialize: disable download button initially
-downloadBtn.disabled = true;
-</script>
-<style>
-body {
-    font-family: Arial, sans-serif;
-    margin: 20px;
-    background-color: #f0f0f0;
-}
-h1 {
-    text-align: center;
-}
-.container {
-    max-width: 1000px;
-    margin: 0 auto;
-}
-.controls {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 20px;
-}
-#prompt {
-    width: 100%;
-    padding: 10px;
-    font-size: 1em;
-}
-#modelSelect {
-    padding: 10px;
-    font-size: 1em;
-}
-button {
-    padding: 10px;
-    font-size: 1em;
-    cursor: pointer;
-}
-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-.image-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-#imageCanvas {
-    border: 2px solid #333;
-}
-.editing-controls {
-    margin-top: 10px;
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-</style>
+        // Add to Session Gallery
+        function addToHistory(url, promptText) {
+            history.unshift({ url, prompt: promptText });
+            galleryGrid.innerHTML = history.map((item, idx) => `
+                <div class="gallery-item" onclick="loadImageToCanvas('${item.url}')" title="${escapeHtml(item.prompt)}">
+                    <img src="${item.url}" alt="Generated Image ${idx + 1}" loading="lazy">
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // Canvas Controls & Filters
+        function resetParams() {
+            imageState = { rotation: 0, brightness: 1, contrast: 1 };
+            applyCanvasTransform();
+        }
+
+        function applyCanvasTransform() {
+            if (!originalImageData) return;
+            ctx.putImageData(originalImageData, 0, 0);
+            ctx.filter = `brightness(${imageState.brightness}) contrast(${imageState.contrast})`;
+            ctx.drawImage(canvas, 0, 0);
+            ctx.filter = 'none';
+        }
+
+        rotateLeftBtn.addEventListener('click', () => {
+            imageState.rotation -= 15;
+            applyCanvasTransform();
+        });
+
+        rotateRightBtn.addEventListener('click', () => {
+            imageState.rotation += 15;
+            applyCanvasTransform();
+        });
+
+        brightPlusBtn.addEventListener('click', () => {
+            imageState.brightness += 0.15;
+            applyCanvasTransform();
+        });
+
+        brightMinusBtn.addEventListener('click', () => {
+            imageState.brightness = Math.max(0.2, imageState.brightness - 0.15);
+            applyCanvasTransform();
+        });
+
+        contrastPlusBtn.addEventListener('click', () => {
+            imageState.contrast += 0.2;
+            applyCanvasTransform();
+        });
+
+        cropBtn.addEventListener('click', () => {
+            if (!canvas.width || !canvas.height) return;
+            try {
+                const size = Math.min(canvas.width, canvas.height);
+                const startX = (canvas.width - size) / 2;
+                const startY = (canvas.height - size) / 2;
+                const croppedData = ctx.getImageData(startX, startY, size, size);
+                canvas.width = size;
+                canvas.height = size;
+                ctx.putImageData(croppedData, 0, 0);
+                originalImageData = ctx.getImageData(0, 0, size, size);
+                resetParams();
+            } catch (e) {
+                console.error('Crop failed:', e);
+            }
+        });
+
+        resetEditBtn.addEventListener('click', resetParams);
+
+        downloadBtn.addEventListener('click', () => {
+            try {
+                const link = document.createElement('a');
+                link.download = `ai_generated_${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } catch (e) {
+                alert('Downloading image failed: ' + e.message);
+            }
+        });
+    </script>
 </body>
 </html>

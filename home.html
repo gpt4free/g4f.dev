@@ -1,507 +1,826 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G4F - Framework</title>
-    <link rel="icon" href="dist/img/g4f.svg" type="image/svg+xml">
-    <link rel="shortcut icon" href="dist/img/g4f.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="dist/img/g4f.svg">
-    <link rel="manifest" href="dist/img/site.webmanifest">
+    <title>G4F - Framework & Tools Hub</title>
+    <link rel="icon" href="/dist/img/g4f.svg" type="image/svg+xml">
+    <link rel="shortcut icon" href="/dist/img/g4f.svg" type="image/svg+xml">
+    <link rel="manifest" href="/dist/img/site.webmanifest">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         :root {
-            --colour-1: #000000;
-            --colour-2: #ccc;
-            --colour-3: #e4d4ff;
-            --colour-4: #f0f0f0;
-            --colour-5: #181818;
-            --colour-6: #242424;
+            --bg-main: #0c0a12;
+            --bg-card: rgba(23, 19, 34, 0.75);
+            --bg-card-hover: rgba(35, 29, 52, 0.9);
+            --border-card: rgba(139, 61, 255, 0.18);
+            --border-hover: rgba(168, 85, 247, 0.5);
+            --text-primary: #f3e8ff;
+            --text-secondary: #a799c7;
+            --text-muted: #6b5e8a;
             --accent: #8b3dff;
-            --gradient: #1a1a1a;
-            --background: #16101b;
-            --size: 70vw;
-            --top: 50%;
-            --blur: 40px;
-            --opacity: 0.6;
+            --accent-light: #a855f7;
+            --accent-glow: rgba(139, 61, 255, 0.4);
+            --success: #22c55e;
+            --warning: #eab308;
+            --sidebar-width: 340px;
         }
 
-        @import url("https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap");
-
-        /* Body and text color */
-        body {
-            background: var(--background);
-            color: var(--colour-3);
-            font-family: "Inter", sans-serif;
-            height: 100vh;
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            overflow: hidden;
-            font-weight: bold;
         }
 
-        /* Container for the main content */
-        .container {
+        body {
+            background-color: var(--bg-main);
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(139, 61, 255, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(168, 85, 247, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, rgba(15, 12, 25, 1) 0%, rgba(12, 10, 18, 1) 100%);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100%;
-            text-align: center;
-            z-index: 1;
-            transition: transform 0.25s ease-in;
-            padding-right: 320px;
         }
 
-        .container.slide {
-            transform: translateX(-100%);
-            transition: transform 0.15s ease-out;
-        }
-
-        /* ---- Advertising sidebar ---- */
-        .ad-sidebar {
-            position: fixed;
-            top: 0;
-            right: 0;
-            width: 320px;
-            height: 100vh;
-            background: rgba(22, 16, 27, 0.92);
-            backdrop-filter: blur(16px);
-            border-left: 1px solid rgba(139, 61, 255, 0.2);
-            z-index: 900;
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.3s ease;
-        }
-
-        .ad-sidebar.collapsed {
-            transform: translateX(320px);
-        }
-
-        .ad-sidebar-header {
-            padding: 1.2rem 1.5rem;
-            border-bottom: 1px solid rgba(139, 61, 255, 0.15);
+        /* Top Navigation Bar */
+        .navbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 1.25rem 2.5rem;
+            background: rgba(12, 10, 18, 0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-card);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
-        .ad-sidebar-header h3 {
-            margin: 0;
-            font-size: 1rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            background: linear-gradient(to right, var(--accent), #c87fff);
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .brand-logo {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: #fff;
+            box-shadow: 0 0 16px var(--accent-glow);
+        }
+
+        .brand-text {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #ffffff, #d8b4fe);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
         }
 
-        .ad-sidebar-count {
-            font-size: 0.75rem;
-            color: var(--colour-2);
-            background: rgba(139, 61, 255, 0.15);
-            padding: 2px 8px;
-            border-radius: 10px;
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
         }
 
-        .ad-sidebar-toggle {
-            position: fixed;
-            top: 50%;
-            right: 320px;
-            transform: translateY(-50%);
-            background: rgba(139, 61, 255, 0.8);
-            border: none;
-            border-radius: 8px 0 0 8px;
-            color: white;
-            cursor: pointer;
-            padding: 12px 6px;
-            z-index: 901;
-            transition: right 0.3s ease, background 0.2s ease;
-            writing-mode: vertical-rl;
-            font-size: 0.7rem;
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #4ade80;
+            font-size: 0.825rem;
             font-weight: 600;
-            letter-spacing: 1px;
-            text-transform: uppercase;
+            padding: 6px 14px;
+            border-radius: 20px;
         }
 
-        .ad-sidebar-toggle.collapsed {
-            right: 0;
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--success);
+            box-shadow: 0 0 10px var(--success);
+            animation: pulse-dot 2s infinite;
         }
 
-        .ad-sidebar-toggle:hover {
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        .btn-toggle-sidebar {
+            background: rgba(139, 61, 255, 0.15);
+            border: 1px solid var(--border-card);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.25s ease;
+        }
+
+        .btn-toggle-sidebar:hover {
             background: var(--accent);
+            border-color: var(--accent-light);
+            box-shadow: 0 0 16px var(--accent-glow);
         }
 
-        .ad-sidebar-body {
+        /* Main Container */
+        .main-layout {
+            display: flex;
+            flex: 1;
+            position: relative;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 3rem 2.5rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            margin-bottom: 3.5rem;
+        }
+
+        .hero-title {
+            font-size: 3rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #ffffff 0%, #e9d5ff 50%, #c084fc 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .hero-subtitle {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            max-width: 650px;
+            margin: 0 auto 2rem;
+            line-height: 1.6;
+        }
+
+        /* Quick Search / Prompt Bar */
+        .search-box {
+            max-width: 680px;
+            margin: 0 auto 1.5rem;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 18px 140px 18px 24px;
+            background: rgba(23, 19, 34, 0.85);
+            border: 2px solid var(--border-card);
+            border-radius: 14px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            backdrop-filter: blur(12px);
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-light);
+            box-shadow: 0 0 24px var(--accent-glow);
+        }
+
+        .search-btn {
+            position: absolute;
+            right: 8px;
+            top: 8px;
+            bottom: 8px;
+            padding: 0 24px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px var(--accent-glow);
+        }
+
+        /* Tools Grid Section */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.75rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            color: var(--accent-light);
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3.5rem;
+        }
+
+        /* Tool Card Component */
+        .tool-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 1.75rem;
+            text-decoration: none;
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(12px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tool-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(to right, transparent, var(--accent-light), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-5px);
+            background: var(--bg-card-hover);
+            border-color: var(--border-hover);
+            box-shadow: 0 12px 32px rgba(139, 61, 255, 0.2);
+        }
+
+        .tool-card:hover::before {
+            opacity: 1;
+        }
+
+        .card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+        }
+
+        .card-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            background: rgba(139, 61, 255, 0.12);
+            border: 1px solid rgba(168, 85, 247, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--accent-light);
+            transition: transform 0.3s ease;
+        }
+
+        .tool-card:hover .card-icon {
+            transform: scale(1.1);
+            background: rgba(139, 61, 255, 0.25);
+            color: #fff;
+        }
+
+        .card-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+
+        .card-desc {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-action {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--accent-light);
+            transition: gap 0.2s ease;
+        }
+
+        .tool-card:hover .card-action {
+            gap: 12px;
+            color: #fff;
+        }
+
+        /* Sidebar Drawer */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: rgba(15, 12, 23, 0.95);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid var(--border-card);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 73px;
+            right: 0;
+            bottom: 0;
+            z-index: 90;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(100%);
+        }
+
+        .sidebar-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-card);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sidebar-title {
+            font-size: 1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sidebar-search {
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .sidebar-search-input {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-card);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .sidebar-body {
             flex: 1;
             overflow-y: auto;
             padding: 0.75rem;
         }
 
-        .ad-sidebar-body::-webkit-scrollbar {
-            width: 4px;
-        }
-        .ad-sidebar-body::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .ad-sidebar-body::-webkit-scrollbar-thumb {
-            background: rgba(139, 61, 255, 0.3);
-            border-radius: 4px;
-        }
-
-        .ad-provider-item {
+        .provider-item {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 8px 10px;
-            border-radius: 8px;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 10px;
             text-decoration: none;
-            color: var(--colour-3);
-            transition: background 0.2s ease, transform 0.15s ease;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
             margin-bottom: 4px;
         }
 
-        .ad-provider-item:hover {
-            background: rgba(139, 61, 255, 0.12);
-            transform: translateX(-3px);
+        .provider-item:hover {
+            background: rgba(139, 61, 255, 0.15);
+            transform: translateX(-2px);
         }
 
-        .ad-provider-logo {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
+        .provider-logo {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
             object-fit: cover;
-            flex-shrink: 0;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .ad-provider-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .ad-provider-name {
-            font-size: 0.82rem;
+        .provider-name {
+            font-size: 0.9rem;
             font-weight: 600;
+            flex: 1;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        .ad-provider-badges {
+        .provider-badges {
             display: flex;
             gap: 4px;
-            margin-top: 2px;
         }
 
-        .ad-badge {
+        .p-badge {
             font-size: 0.6rem;
-            padding: 1px 5px;
+            font-weight: 700;
+            padding: 2px 5px;
             border-radius: 4px;
-            font-weight: 600;
             text-transform: uppercase;
         }
 
-        .ad-badge.image { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
-        .ad-badge.vision { background: rgba(40, 167, 69, 0.2); color: #28a745; }
-        .ad-badge.video { background: rgba(220, 53, 69, 0.2); color: #dc3545; }
-        .ad-badge.audio { background: rgba(23, 162, 184, 0.2); color: #17a2b8; }
-        .ad-badge.auth { background: rgba(108, 117, 125, 0.2); color: #adb5bd; }
+        .p-badge.working { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+        .p-badge.auth { background: rgba(234, 179, 8, 0.2); color: #fde047; }
+        .p-badge.image { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
 
-        .ad-sidebar-footer {
-            padding: 0.75rem 1.5rem;
-            border-top: 1px solid rgba(139, 61, 255, 0.15);
-            text-align: center;
-        }
-
-        .ad-sidebar-footer a {
-            color: var(--accent);
-            text-decoration: none;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .ad-sidebar-footer a:hover {
-            text-decoration: underline;
-        }
-
-        .ad-loading {
+        /* Footer */
+        .footer {
             text-align: center;
             padding: 2rem;
-            color: var(--colour-2);
-            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            margin-top: auto;
         }
 
-        @media (max-width: 768px) {
-            .ad-sidebar { width: 260px; }
-            .ad-sidebar.collapsed { transform: translateX(260px); }
-            .ad-sidebar-toggle { right: 260px; }
-            .ad-sidebar-toggle.collapsed { right: 0; }
-            .container { padding-right: 0; }
-        }
-
-        .slide-button {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: var(--colour-4);
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            padding: 6px 8px;
-        }
-
-        header {
-            font-size: 3rem;
-            text-transform: uppercase;
-            margin: 20px;
-            color: var(--colour-4);
-        }
-
-        iframe {
-            background: transparent;
-            width: 100%;
-            border: none;
-        }
-
-        #background {
-            height: 100%;
-            position: absolute;
-            object-fit: cover;
-            object-position: center;
-            width: 100%;
-            background: black;
-        }
-
-        .container * {
-            z-index: 2;
-        }
-
-        .description {
-            font-size: 1.2rem;
-            margin-bottom: 30px;
-            color: var(--colour-2);
-        }
-
-        .button {
-            background-color: var(--accent);
-            color: var(--colour-3);
-            border: none;
-            padding: 15px 30px;
-            font-size: 1.1rem;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            margin-top: 15px;
-            width: 100%;
-            max-width: 400px;
-            font-weight: bold;
+        .footer a {
+            color: var(--text-secondary);
             text-decoration: none;
-            white-space: nowrap;
         }
 
-        .button:hover {
-            background-color: #7a2ccd;
+        .footer a:hover {
+            color: var(--accent-light);
         }
 
-        .button-container {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .footer {
-            margin-top: 30px;
-            font-size: 0.9rem;
-            color: var(--colour-2);
-        }
-
-        .hidden {
-            display: none;
+        @media (max-width: 992px) {
+            .tools-grid {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                width: 100%;
+                top: 73px;
+            }
         }
     </style>
-    <link rel="stylesheet" href="dist/css/all.min.css">
-    <script src="dist/js/framework.js" defer></script>
 </head>
-<body class="translate">
-    <iframe id="background" src="background.html"></iframe>
-
-    <button class="slide-button">
-        <i class="fa-solid fa-arrow-left"></i>
-    </button>
-
-    <!-- Advertising Sidebar -->
-    <button class="ad-sidebar-toggle" id="ad-toggle" title="Toggle providers">
-        Providers
-    </button>
-    <aside class="ad-sidebar" id="ad-sidebar">
-        <div class="ad-sidebar-header">
-            <h3>⚡ Our Providers</h3>
-            <span class="ad-sidebar-count" id="ad-count">…</span>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="/" class="brand">
+            <div class="brand-logo">
+                <i class="fa-solid fa-bolt"></i>
+            </div>
+            <span class="brand-text">G4F Framework</span>
+        </a>
+        <div class="nav-actions">
+            <div class="status-badge" id="backend-status-badge">
+                <span class="status-dot"></span>
+                <span id="backend-status-text">Backend Active</span>
+            </div>
+            <button class="btn-toggle-sidebar" id="toggle-sidebar-btn">
+                <i class="fa-solid fa-cubes"></i>
+                <span>Providers</span>
+            </button>
         </div>
-        <div class="ad-sidebar-body" id="ad-body">
-            <div class="ad-loading">Loading providers…</div>
-        </div>
-        <div class="ad-sidebar-footer">
-            <a href="/providers/">View All Providers →</a>
-        </div>
-    </aside>
+    </nav>
 
-    <!-- Main Content -->
-    <div class="container">
-        <header>
-            G4F - Chat
-        </header>
-        <div class="description">
-            <span>Welcome to the G4F Web UI!</span><br>
-            <span>Your AI assistant is ready to assist you.</span>
-        </div>
+    <div class="main-layout">
+        <!-- Main Content Area -->
+        <main class="content-area">
+            <!-- Hero Header -->
+            <section class="hero">
+                <h1 class="hero-title">G4F AI Tools & Dashboard</h1>
+                <p class="hero-subtitle">
+                    Access high-performance AI tools, web search, real-time backend logs, model status, and multi-provider endpoints.
+                </p>
 
-        <div class="connected">
-            <p><strong>Connected to:</strong><span> </span><span id="connect_status">...</span></p>
-        </div>
+                <!-- Search & Quick Query Box -->
+                <form action="/chat/" method="GET" class="search-box">
+                    <input type="text" name="prompt" class="search-input" id="search-query-input" placeholder="Ask AI or enter prompt to jump straight into chat..." autocomplete="off">
+                    <button type="submit" class="search-btn">
+                        <i class="fa-solid fa-paper-plane"></i> Launch
+                    </button>
+                </form>
+            </section>
 
-        <!-- Buttons -->
-        <div class="button-container">
-            <a href="chat/" class="button">Start Chat</a>
-            <a href="playground/" class="button">Playground</a>
-            <a href="#" class="button" id="login-btn">Login</a>
-        </div>
-        <p id="user-status" class="hidden" style="margin-top: 15px; color: var(--colour-2);"></p>
-        <a href="#" class="button hidden" id="logout-btn" style="max-width: 200px;">Logout</a>
-        <script type="module">
-            // Define appStorage for consistent storage access
-            const appStorage = window.localStorage || {
-                setItem: (key, value) => self[key] = value,
-                getItem: (key) => self[key],
-                removeItem: (key) => delete self[key],
-                length: 0
-            };
+            <!-- Tools Section -->
+            <section>
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fa-solid fa-toolbox"></i> Backend Tools & Modules
+                    </h2>
+                </div>
 
-            const loginBtn = document.getElementById("login-btn");
-            const logoutBtn = document.getElementById("logout-btn");
-            const userStatus = document.getElementById("user-status");
+                <div class="tools-grid">
+                    <!-- Tool 1: AI Browser -->
+                    <a href="/browser" class="tool-card" id="tool-card-browser">
+                        <div>
+                            <div class="card-top">
+                                <div class="card-icon">
+                                    <i class="fa-solid fa-globe"></i>
+                                </div>
+                                <span class="card-badge">Web Search</span>
+                            </div>
+                            <h3 class="card-title">AI Web Browser</h3>
+                            <p class="card-desc">Search the live web with AI assistance, scrape pages, summarize news, and extract real-time web context.</p>
+                        </div>
+                        <div class="card-action">
+                            <span>Open Browser</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </div>
+                    </a>
 
-            localStorage.removeItem("backendUrl");
-            framework.connectToBackend(document.getElementById("connect_status"));
+                    <!-- Tool 2: Backend Logs -->
+                    <a href="/logs" class="tool-card" id="tool-card-logs">
+                        <div>
+                            <div class="card-top">
+                                <div class="card-icon">
+                                    <i class="fa-solid fa-terminal"></i>
+                                </div>
+                                <span class="card-badge">Inspector</span>
+                            </div>
+                            <h3 class="card-title">Backend Logs</h3>
+                            <p class="card-desc">Inspect real-time API logs, track prompt executions, audit incoming requests, and view system trace logs.</p>
+                        </div>
+                        <div class="card-action">
+                            <span>View Logs</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </div>
+                    </a>
 
-            // Check if user is logged in
-            const storedApiKey = appStorage.getItem("g4f_session");
-            if (storedApiKey) {
-                loginBtn.classList.add("hidden");
-                logoutBtn.classList.remove("hidden");
-                userStatus.classList.remove("hidden");
-                userStatus.textContent = framework.translate("You are logged in");
-            }
+                    <!-- Tool 3: Usage Stats -->
+                    <a href="/stats" class="tool-card" id="tool-card-stats">
+                        <div>
+                            <div class="card-top">
+                                <div class="card-icon">
+                                    <i class="fa-solid fa-chart-pie"></i>
+                                </div>
+                                <span class="card-badge">Analytics</span>
+                            </div>
+                            <h3 class="card-title">Usage & Statistics</h3>
+                            <p class="card-desc">Detailed request breakdown, token usage stats, top model performance metrics, and usage history charts.</p>
+                        </div>
+                        <div class="card-action">
+                            <span>View Stats</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </div>
+                    </a>
 
-            // Login button - redirect to members with return URL
-            loginBtn.addEventListener("click", (e) => {
-                e.preventDefault();
-                const returnUrl = encodeURIComponent(location.origin + '/chat/');
-                window.location.href = `/members.html?redirect=${returnUrl}`;
-            });
+                    <!-- Tool 4: System Status -->
+                    <a href="/status" class="tool-card" id="tool-card-status">
+                        <div>
+                            <div class="card-top">
+                                <div class="card-icon">
+                                    <i class="fa-solid fa-server"></i>
+                                </div>
+                                <span class="card-badge">Health Monitor</span>
+                            </div>
+                            <h3 class="card-title">System & Provider Status</h3>
+                            <p class="card-desc">Real-time availability monitoring, quota limits, working model endpoints, and service health check.</p>
+                        </div>
+                        <div class="card-action">
+                            <span>Check Status</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </div>
+                    </a>
 
-            // Logout button
-            logoutBtn.addEventListener("click", (e) => {
-                e.preventDefault();
-                appStorage.removeItem("g4f_session");
-                loginBtn.classList.remove("hidden");
-                logoutBtn.classList.add("hidden");
-                userStatus.classList.add("hidden");
-            });
-        </script>
+                    <!-- Tool 5: Providers Catalog -->
+                    <a href="/providers" class="tool-card" id="tool-card-providers">
+                        <div>
+                            <div class="card-top">
+                                <div class="card-icon">
+                                    <i class="fa-solid fa-layer-group"></i>
+                                </div>
+                                <span class="card-badge">Catalog</span>
+                            </div>
+                            <h3 class="card-title">AI Providers Catalog</h3>
+                            <p class="card-desc">Explore 100+ supported free & auth-based AI provider integrations, supported vision models, and streaming capabilities.</p>
+                        </div>
+                        <div class="card-action">
+                            <span>Explore Providers</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </div>
+                    </a>
 
-        <!-- Footer -->
-        <div class="footer">
-            <p>&copy; 2026 G4F. All Rights Reserved.</p>
-            <p>Powered by the G4F framework</p>
-        </div>
+                    <!-- Tool 6: Chat App -->
+                    <a href="/chat/" class="tool-card" id="tool-card-chat">
+                        <div>
+                            <div class="card-top">
+                                <div class="card-icon">
+                                    <i class="fa-solid fa-comments"></i>
+                                </div>
+                                <span class="card-badge">Chat Interface</span>
+                            </div>
+                            <h3 class="card-title">G4F Chat Assistant</h3>
+                            <p class="card-desc">Full-featured conversational UI supporting multi-model switches, custom prompts, code highlighting, and session memory.</p>
+                        </div>
+                        <div class="card-action">
+                            <span>Start Chat</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </div>
+                    </a>
+
+                    <!-- Tool 7: Image Studio -->
+                    <a href="/apps/unfinished/image.html" class="tool-card" id="tool-card-images">
+                        <div>
+                            <div class="card-top">
+                                <div class="card-icon">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                </div>
+                                <span class="card-badge">Generative</span>
+                            </div>
+                            <h3 class="card-title">AI Image Studio</h3>
+                            <p class="card-desc">Generate images using Flux, Stable Diffusion, Pollinations, and DALL-E models with custom aspect ratios.</p>
+                        </div>
+                        <div class="card-action">
+                            <span>Create Images</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </div>
+                    </a>
+
+                    <!-- Tool 8: Web Apps Hub -->
+                    <a href="/apps/" class="tool-card" id="tool-card-apps">
+                        <div>
+                            <div class="card-top">
+                                <div class="card-icon">
+                                    <i class="fa-solid fa-shapes"></i>
+                                </div>
+                                <span class="card-badge">Mini-Apps</span>
+                            </div>
+                            <h3 class="card-title">Web Apps & Utilities</h3>
+                            <p class="card-desc">Collection of interactive web utilities including model testers, code previewers, games, and developer tools.</p>
+                        </div>
+                        <div class="card-action">
+                            <span>Open Apps Hub</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </div>
+                    </a>
+
+                    <!-- Tool 9: API Documentation -->
+                    <a href="/v1" class="tool-card" id="tool-card-v1">
+                        <div>
+                            <div class="card-top">
+                                <div class="card-icon">
+                                    <i class="fa-solid fa-code"></i>
+                                </div>
+                                <span class="card-badge">REST API</span>
+                            </div>
+                            <h3 class="card-title">OpenAI-Compatible API</h3>
+                            <p class="card-desc">Connect external applications like LangChain, AutoGen, and Continue using standard `/v1/chat/completions` endpoints.</p>
+                        </div>
+                        <div class="card-action">
+                            <span>View API Docs</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </div>
+                    </a>
+                </div>
+            </section>
+        </main>
+
+        <!-- Sidebar Drawer (Providers) -->
+        <aside class="sidebar collapsed" id="providers-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">
+                    <i class="fa-solid fa-server" style="color: var(--accent-light);"></i>
+                    <span>Providers Catalog</span>
+                </div>
+                <span class="card-badge" id="sidebar-provider-count">0 Active</span>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" id="sidebar-filter-input" class="sidebar-search-input" placeholder="Filter providers...">
+            </div>
+            <div class="sidebar-body" id="sidebar-providers-list">
+                <div style="text-align:center; padding: 2rem; color: var(--text-muted);">Loading providers...</div>
+            </div>
+        </aside>
     </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 G4F Framework. All Rights Reserved. | <a href="https://github.com/xtekky/gpt4free" target="_blank">GitHub Repository</a></p>
+    </footer>
+
     <script>
-        (async () => {
-            const container = document.querySelector('.container');
-            const button = document.querySelector('.slide-button');
-            const slideIcon = button.querySelector('i');
-            button.onclick = () => {
-                if (container.classList.contains('slide')) {
-                    container.classList.remove('slide');
-                    slideIcon.classList.remove('fa-arrow-right');
-                    slideIcon.classList.add('fa-arrow-left');
-                } else {
-                    container.classList.add('slide');
-                    slideIcon.classList.remove('fa-arrow-left');
-                    slideIcon.classList.add('fa-arrow-right');
-                }
-            }
-        })();
+        // Sidebar Toggle Logic
+        const toggleBtn = document.getElementById('toggle-sidebar-btn');
+        const sidebar = document.getElementById('providers-sidebar');
+        const filterInput = document.getElementById('sidebar-filter-input');
+        const providersListEl = document.getElementById('sidebar-providers-list');
+        const countEl = document.getElementById('sidebar-provider-count');
 
-        // ---- Advertising sidebar: load providers ----
-        (async () => {
-            const sidebar = document.getElementById('ad-sidebar');
-            const toggle = document.getElementById('ad-toggle');
-            const body = document.getElementById('ad-body');
-            const countEl = document.getElementById('ad-count');
+        let allProviders = [];
 
-            // Toggle sidebar
-            toggle.addEventListener('click', () => {
-                sidebar.classList.toggle('collapsed');
-                toggle.classList.toggle('collapsed');
-            });
+        toggleBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+        });
 
-            // Build logo URL (same logic as provider detail page)
-            function logoUrl(name) {
-                return 'https://g4f.space/logo/' + name
-                    .replace('MetaAIAccount', 'Facebook AI')
-                    .replace('MetaAI', 'Facebook AI')
-                    .replace('Aria', '')
-                    .replace('OpenAI', 'ChatGPT')
-                    .replace('Video', 'TV')
-                    .replace('Phi-4', 'Windows')
-                    .replace('(Text Generation)', '')
-                    .replace('Glhf', 'AI')
-                    .replace('GithubCopilot', 'GitHub Copilot')
-                    .replace('PerplexityApi', 'Perplexity API')
-                    .replace('Gemini', '')
-                    .replace('API', '')
-                    .replace('-2.5M', '')
-                    .replace('grok', 'xAI')
-                    .replace('Qwen_Qwen_3', 'Qwen')
-                    .replace('Yupp', 'with yupp')
-                    .replace('groq', 'Groq');
-            }
-
+        // Fetch Providers for Sidebar
+        async function loadProviders() {
             try {
                 const res = await fetch('/backend-api/v2/providers');
-                const providers = await res.json();
-                countEl.textContent = providers.length;
-
-                // Shuffle and take first 40 for the sidebar
-                const shuffled = [...providers].sort(() => Math.random() - 0.5).slice(0, 40);
-
-                body.innerHTML = shuffled.map(p => {
-                    const badges = [];
-                    if (p.image) badges.push('<span class="ad-badge image">IMG</span>');
-                    if (p.vision) badges.push('<span class="ad-badge vision">VIS</span>');
-                    if (p.video) badges.push('<span class="ad-badge video">VID</span>');
-                    if (p.audio) badges.push('<span class="ad-badge audio">AUD</span>');
-                    if (p.auth) badges.push('<span class="ad-badge auth">AUTH</span>');
-                    return `<a class="ad-provider-item" href="/providers/${encodeURIComponent(p.name)}">
-                        <img class="ad-provider-logo notranslate" src="${logoUrl(p.name)}" alt="${p.name}" loading="lazy" onerror="this.style.opacity=0.3" />
-                        <div class="ad-provider-info">
-                            <div class="ad-provider-name notranslate">${p.label || p.name}</div>
-                            <div class="ad-provider-badges">${badges.join('')}</div>
-                        </div>
-                    </a>`;
-                }).join('');
-            } catch (e) {
-                body.innerHTML = '<div class="ad-loading">Failed to load providers</div>';
+                if (!res.ok) throw new Error('Failed to fetch');
+                allProviders = await res.json();
+                countEl.textContent = `${allProviders.length} Total`;
+                renderSidebarProviders(allProviders);
+            } catch (err) {
+                providersListEl.innerHTML = '<div style="text-align:center; padding: 2rem; color: #ef4444;">Failed to load providers</div>';
             }
-        })();
+        }
+
+        function logoUrl(name) {
+            return 'https://g4f.space/logo/' + name
+                .replace('MetaAIAccount', 'Facebook AI')
+                .replace('MetaAI', 'Facebook AI')
+                .replace('OpenAI', 'ChatGPT')
+                .replace('Gemini', '')
+                .replace('API', '');
+        }
+
+        function renderSidebarProviders(list) {
+            if (!list.length) {
+                providersListEl.innerHTML = '<div style="text-align:center; padding: 1.5rem; color: var(--text-muted);">No providers match filter</div>';
+                return;
+            }
+            providersListEl.innerHTML = list.map(p => {
+                const badges = [];
+                if (p.working) badges.push('<span class="p-badge working">WORK</span>');
+                if (p.auth) badges.push('<span class="p-badge auth">AUTH</span>');
+                if (p.image) badges.push('<span class="p-badge image">IMG</span>');
+
+                return `
+                    <a href="/providers/${encodeURIComponent(p.name)}" class="provider-item">
+                        <img src="${logoUrl(p.name)}" class="provider-logo" alt="${p.name}" loading="lazy" onerror="this.style.opacity=0.3">
+                        <span class="provider-name">${p.label || p.name}</span>
+                        <div class="provider-badges">${badges.join('')}</div>
+                    </a>
+                `;
+            }).join('');
+        }
+
+        filterInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = allProviders.filter(p => (p.label || p.name).toLowerCase().includes(query));
+            renderSidebarProviders(filtered);
+        });
+
+        // Fetch Backend System Status
+        async function checkBackendStatus() {
+            try {
+                const res = await fetch('/backend-api/v2/status');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('backend-status-text').textContent = `v${data.version || '2.0'} Active`;
+                }
+            } catch (e) {}
+        }
+
+        loadProviders();
+        checkBackendStatus();
     </script>
-<template>You are logged in</template>
-<template>Logged in with Hugging Face</template>
 </body>
 </html>
