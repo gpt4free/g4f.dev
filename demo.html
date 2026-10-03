@@ -187,12 +187,13 @@
             } else if (randIdx < 6) {
                 search = "developer news";
             } else {
-                search = (navigator.language == "de" ? "news in deutsch" : navigator.language == "en" ? "world news" : `news in ${navigator.language}`);
+                const language = framework.getLanguage();
+                search = (language == "de" ? "news in deutsch" : language == "en" ? "world news" : `news in ${language}`);
             }
             let summaryPrompt = "Present the news from the search results in a clear and organized markdown format.";
             summaryPrompt += "\nInclude a headline, a brief summary, key points, and one or more relevant images with proper attribution.";
             summaryPrompt += "\nEnsure the content is concise, well-structured, and visually appealing.";
-            summaryPrompt += `\nResponse in language: ${navigator.language} (iso-code)`;
+            summaryPrompt += `\nResponse in language: ${framework.getLanguage()} (iso-code)`;
             const url = `${framework.backendUrl}/backend-api/v2/create?prompt=${summaryPrompt}&stream=1&web_search=${search}`;
             const response = await fetch(url, {
                 method: 'GET'

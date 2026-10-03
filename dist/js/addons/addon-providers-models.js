@@ -669,21 +669,22 @@ async function get_recognition_language() {
     if (lang) {
         return lang;
     }
-    if (navigator.language == "en") {
+    const language = framework.getLanguage();
+    if (language == "en") {
         return "en-US";
     }
-    let locale = navigator.language;
+    let locale = language;
     if (!locale.includes("-")) {
-        locale = appStorage.getItem(navigator.language);
+        locale = appStorage.getItem(language);
         if (locale) {
             return locale;
         }
         try {
-            const prompt = 'Response the full locale in JSON. Example: {"locale": "en-US"} Language: ' + navigator.language
+            const prompt = 'Response the full locale in JSON. Example: {"locale": "en-US"} Language: ' + language
             const response = await framework.query(prompt, true);
-            locale = (await response.json()).locale || navigator.language;
+            locale = (await response.json()).locale || language;
             if (locale.includes("-")) {
-                appStorage.setItem(navigator.language, locale);
+                appStorage.setItem(language, locale);
             }
         } catch (e) {
             add_error(e, true);

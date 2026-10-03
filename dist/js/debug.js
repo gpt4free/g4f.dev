@@ -796,6 +796,8 @@ if (window.framework) window.framework.errors = ErrorTracker;
 
 (() => {
   if (window.g4fDebug) {
+    // Re-injection acts as a clickable handle: re-show the hidden panel.
+    try { window.g4fDebug.show && window.g4fDebug.show(); } catch (e) { /* noop */ }
     return; // already initialized
   }
 
@@ -913,10 +915,13 @@ if (window.framework) window.framework.errors = ErrorTracker;
   const hide = () => {
     logEl.innerHTML = '';
     panel.style.display = 'none';
+    // also hide error lines rendered outside the panel (e.g. .log-content)
+    document.querySelectorAll('.g4f-debug-error').forEach(el => { el.style.display = 'none'; });
   };
   window.g4fDebug = {
     clear: hide,
     hide,
+    show: () => { panel.style.display = 'block'; },
     getLogs: () => logged.slice(),
   };
 

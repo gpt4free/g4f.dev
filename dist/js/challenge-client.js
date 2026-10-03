@@ -205,7 +205,7 @@
 
     /** Run one challenge: issue → decrypt → local inference → solve → redeem. */
     async function solveOnce() {
-        const language = navigator.language || "en";
+        const language = window.framework?.getLanguage?.() || navigator.language || "en";
         // 1. Issue (encrypted challenge).
         const issueRes = await fetch(
             `${CHALLENGE_ENDPOINT}/issue?lang=${encodeURIComponent(language)}&kind=any`,

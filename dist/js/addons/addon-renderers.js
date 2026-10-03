@@ -337,8 +337,9 @@ async function showErrorPopup(errorMessage) {
     }
 
     let translatedResponse;
-    if (!navigator.language.startsWith('en')) {
-        translatedResponse = framework.query(`Translate this document to (${navigator.language}):\n\`\`\`html\n${hintsHtml}\`\`\``)
+    const language = framework.getLanguage();
+    if (!language.startsWith('en')) {
+        translatedResponse = framework.query(`Translate this document to (${language}):\n\`\`\`html\n${hintsHtml}\`\`\``)
     }
 
     // Create popup

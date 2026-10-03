@@ -398,8 +398,8 @@ Example:
     ]
 }
 \`\`\``;
-    if (appStorage.getItem(framework.translationKey) && navigator.language.startsWith("en") == false) {
-        prompt += `\nRespond in ${navigator.language}.`;
+    if (appStorage.getItem(framework.translationKey) && framework.getLanguage().startsWith("en") == false) {
+        prompt += `\nRespond in ${framework.getLanguage()}.`;
     }
     try {
         const response = await framework.query(prompt, {json: true, seed: Math.floor(Date.now() / 1000 / 3600 / 24 / 3)});
@@ -436,8 +436,8 @@ async function load_follow_up_questions(messages, new_response) {
   ]
 }
 \`\`\``;
-    if (appStorage.getItem(framework.translationKey) && navigator.language.startsWith("en") == false) {
-        prompt += `\n\nRespond in language ${navigator.language}.`;
+    if (appStorage.getItem(framework.translationKey) && framework.getLanguage().startsWith("en") == false) {
+        prompt += `\n\nRespond in language ${framework.getLanguage()}.`;
     }
     const new_messages = [{role: "assistant", content: new_response}, {role: "user", content: prompt}];
     console.log("Loading follow up questions with messages:", new_messages);

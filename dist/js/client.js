@@ -1359,7 +1359,7 @@ class ChromeAI extends Client {
                     { type: "text", languages: ["en"] }
                 ],
                 expectedOutputs: [
-                    { type: "text", languages: [baseLanguage(navigator.language)] }
+                    { type: "text", languages: [baseLanguage(window.framework?.getLanguage?.() || navigator.language)] }
                 ],
                 initialPrompts: [],
                 monitor: this.progressCallback ? (monitor) => {

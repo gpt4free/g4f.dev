@@ -129,8 +129,23 @@ async function checkUrl(url, connectStatus) {
 framework.backendUrl = localStorage.getItem('backendUrl') || '';
 framework.logUrl = localStorage.getItem('log_routing') === 'true' ? `${framework.backendUrl}/api` : '';
 framework.getRoutedUrl = (url) => framework.logUrl ? `${framework.logUrl}/${url}` : url;
-framework.language = navigator.language === "de" ? 'de-DE' : navigator.language === "es" ? 'es-ES' : navigator.language;
-framework.language = !framework.language || framework.language.startsWith("en") ? "en-US" : framework.language;
+// Central language resolution: the language package selected on the language
+// selection page wins, navigator.language is the fallback. Everything that
+// needs "the user's language" should go through this helper.
+framework.getLanguage = () => {
+    const selected = framework.getSelectedLanguage ? framework.getSelectedLanguage() : null;
+    return selected || navigator.language || "en-US";
+};
+// Normalized display locale ("de" → "de-DE", "en*" → "en-US"), always
+// reflecting the current selection.
+Object.defineProperty(framework, "language", {
+    get: () => {
+        const lang = framework.getLanguage();
+        const locale = lang === "de" ? 'de-DE' : lang === "es" ? 'es-ES' : lang;
+        return !locale || locale.startsWith("en") ? "en-US" : locale;
+    },
+    configurable: true,
+});
 
 framework.connectToBackend = async (connectStatus) => {
     for (const url of checkUrls) {
@@ -202,12 +217,33 @@ function storeGlobalTranslations(store) {
     } catch (e) { /* private mode — in-memory copy still works */ }
 }
 
+// Single-selection policy: only one community language package stays loaded
+// at a time. The language selection page stores the chosen base language here
+// and unloads the previous package when a new one is picked.
+const SELECTED_LANGUAGE_KEY = "selectedTranslationLanguage";
+framework.getSelectedLanguage = () => {
+    try {
+        return localStorage.getItem(SELECTED_LANGUAGE_KEY);
+    } catch (e) {
+        return null;
+    }
+};
+framework.setSelectedLanguage = (language) => {
+    try {
+        if (language) {
+            localStorage.setItem(SELECTED_LANGUAGE_KEY, language);
+        } else {
+            localStorage.removeItem(SELECTED_LANGUAGE_KEY);
+        }
+    } catch (e) { /* private mode — selection stays in-memory only */ }
+};
+
 /** Fetch the community translation store for one base language and merge it
  *  into the global store. Returns the entry: {language, count, translations,
  *  total?, remaining?, percent?} — progress fields come from the worker when
  *  its snippet catalog is loadable. */
 framework.loadGlobalTranslations = async (language) => {
-    const base = (language || navigator.language || "en").split(/[-_]/)[0].toLowerCase();
+    const base = (language || framework.getLanguage() || "en").split(/[-_]/)[0].toLowerCase();
     if (!base || base === "en") {
         throw new Error("invalid_language");
     }
@@ -321,7 +357,7 @@ window.addEventListener('load', async () => {
     if (missing.length === 0) {
         return;
     }
-    if (!document.body.classList.contains("translate")) {
+    if (!document.body.classList.contains("translate") && !framework.getSelectedLanguage()) {
         return;
     }
     try {
@@ -404,7 +440,8 @@ async function query(prompt, options = { json: false, cache: true }) {
 }
 
 framework.translateAll = async () => {
-    if (navigator.language === "en" || navigator.language.startsWith("en-")) {
+    const targetLanguage = framework.getLanguage();
+    if (targetLanguage === "en" || targetLanguage.startsWith("en-")) {
         return false;
     }
     if (newTranslations.length === 0) {
@@ -420,10 +457,10 @@ framework.translateAll = async () => {
     // Reuse community translations from the global store / challenge worker
     // first — only snippets nobody has translated yet go to the model.
     try {
-        const base = navigator.language.split(/[-_]/)[0].toLowerCase();
+        const base = targetLanguage.split(/[-_]/)[0].toLowerCase();
         let community = framework.globalTranslations?.[base]?.translations;
         if (!community || Object.keys(community).length === 0) {
-            const entry = await framework.loadGlobalTranslations(navigator.language);
+            const entry = await framework.loadGlobalTranslations(targetLanguage);
             community = entry.translations;
         }
         for (const [text, translated] of Object.entries(community || {})) {
@@ -443,7 +480,7 @@ framework.translateAll = async () => {
         return allTranslations;
     }
     const jsonTranslations = "\n\n```json\n" + JSON.stringify(missing, null, 4) + "\n```";
-    const languageName = navigator.language === "de" ? 'de-DE' : navigator.language === "es" ? 'es-ES' : navigator.language;
+    const languageName = targetLanguage === "de" ? 'de-DE' : targetLanguage === "es" ? 'es-ES' : targetLanguage;
     const jsonLanguage = "`" + languageName + "`";
     const prompt = `Translate the following text snippets in a JSON object to ${jsonLanguage}: ${jsonTranslations} (iso-code)`;
     // Ask the model for the missing snippets. A failure here must not
@@ -460,8 +497,8 @@ framework.translateAll = async () => {
         add_error(`Translation query failed: ${e}`, e);
     }
     // The model may wrap the result in a per-language object.
-    if (translations && translations[navigator.language] && typeof translations[navigator.language] === 'object' && Object.keys(translations[navigator.language]).length > 0) {
-        translations = translations[navigator.language];
+    if (translations && translations[targetLanguage] && typeof translations[targetLanguage] === 'object' && Object.keys(translations[targetLanguage]).length > 0) {
+        translations = translations[targetLanguage];
     }
     if (translations && typeof translations === 'object' && translations[newTranslations[0]]) {
         // Merge the model's answers into the full map instead of replacing it.
@@ -820,6 +857,8 @@ Object.assign(window, {
     escapeHtml,
     deleteTranslations,
     storeGlobalTranslations,
+    getSelectedLanguage: framework.getSelectedLanguage,
+    setSelectedLanguage: framework.setSelectedLanguage,
 });
 
 // Live bindings for the log panel: getters so window.logStorage /
