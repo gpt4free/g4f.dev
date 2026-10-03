@@ -149,6 +149,7 @@ Examples
 - **Open Source:** [GitHub: gpt4free/g4f.dev](https://github.com/gpt4free/g4f.dev)
 - **Contribute & Report Bugs:** PRs & issues are welcome!
 - **Project Website:** [https://g4f.dev/](https://g4f.dev/)
+- **Legal:** The homepage and documentation may display ads served by Google AdSense. Usage logs and parts of prompts may be stored for up to 14 days to detect abuse and multiple accounts; account data of optional member accounts is kept for at least 90 days. See the [Privacy Policy](https://g4f.dev/privacy.html) and [Terms of Service](https://g4f.dev/terms.html).
 - **Pollinations AI:**  
   <img src="https://image.pollinations.ai/prompt/Create+a+logo+for+Pollinations+AI+featuring+an+abstract+flower+blooming+digital+petals+glowing+center+futuristic+font+Pollinations+AI?width=512&height=256&nologo=true" height="80">
 

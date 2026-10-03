@@ -6,7 +6,80 @@
  * 
  * Environment Variables:
  * - POLLINATIONS_API_KEY: Optional API key for Pollinations AI (enables gen.pollinations.ai endpoints for premium features)
+ * - RATE_LIMIT_PER_MINUTE: Optional per-IP request cap per 60s window (default 30)
  */
+
+// ---------------------------------------------------------------------------
+// Basic per-IP rate limiting (fixed window, in-memory)
+// ---------------------------------------------------------------------------
+// The counter lives in module scope, so on serverless/edge runtimes it is
+// per-isolate (best effort) — enough to shed abusive traffic without
+// external state. Stale buckets are swept lazily once per window.
+
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const DEFAULT_RATE_LIMIT_PER_MINUTE = 30;
+const rateLimitBuckets = new Map();
+let rateLimitLastSweep = 0;
+
+function sweepRateLimitBuckets(now) {
+  if (now - rateLimitLastSweep < RATE_LIMIT_WINDOW_MS) return;
+  rateLimitLastSweep = now;
+  for (const [key, bucket] of rateLimitBuckets) {
+    if (bucket.resetAt <= now) rateLimitBuckets.delete(key);
+  }
+}
+
+function checkRateLimit(ip, max) {
+  const now = Date.now();
+  sweepRateLimitBuckets(now);
+  let bucket = rateLimitBuckets.get(ip);
+  if (!bucket || bucket.resetAt <= now) {
+    bucket = { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
+    rateLimitBuckets.set(ip, bucket);
+  }
+  bucket.count += 1;
+  const allowed = bucket.count <= max;
+  return {
+    allowed,
+    limit: max,
+    remaining: Math.max(0, max - bucket.count),
+    resetAt: bucket.resetAt,
+    retryAfter: allowed ? 0 : Math.max(1, Math.ceil((bucket.resetAt - now) / 1000))
+  };
+}
+
+function getClientIp(request) {
+  return (
+    request.headers.get("cf-connecting-ip") ||
+    request.headers.get("x-real-ip") ||
+    (request.headers.get("x-forwarded-for") || "").split(",")[0].trim() ||
+    "unknown"
+  );
+}
+
+function rateLimitExceededResponse(result) {
+  return new Response(JSON.stringify({
+    error: {
+      message: `Rate limit exceeded. Retry in ${result.retryAfter}s.`,
+      type: "rate_limit_error",
+      code: 429
+    }
+  }), {
+    status: 429,
+    headers: {
+      "Content-Type": "application/json",
+      "Retry-After": String(result.retryAfter),
+      "X-RateLimit-Limit": String(result.limit),
+      "X-RateLimit-Remaining": String(result.remaining),
+      "X-RateLimit-Reset": String(Math.ceil(result.resetAt / 1000))
+    }
+  });
+}
+
+function getRateLimitPerMinute(env) {
+  const parsed = Number(env?.RATE_LIMIT_PER_MINUTE);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_RATE_LIMIT_PER_MINUTE;
+}
 
 const POLLINATIONS_TEXT_API = "https://text.pollinations.ai/openai";
 const POLLINATIONS_IMAGE_API = "https://image.pollinations.ai/prompt/{prompt}";
@@ -53,6 +126,7 @@ const pricingCache = {
   text: { fetchedAt: 0, data: [] },
   image: { fetchedAt: 0, data: [] },
   free: { fetchedAt: 0, data: [] },
+  "legacy-text": { fetchedAt: 0, data: [] },
 };
 
 async function fetchPricingRegistry(url) {
@@ -70,7 +144,11 @@ async function getPricingRegistry(kind) {
     return slot.data;
   }
   const url =
-    kind === "image" ? POLLINATIONS_IMAGE_MODELS_API : kind === "free" ? POLLINATIONS_FREE_MODELS_API : POLLINATIONS_MODELS_API;
+    kind === "image"
+      ? POLLINATIONS_IMAGE_MODELS_API
+      : kind === "free"
+        ? POLLINATIONS_FREE_MODELS_API
+          : POLLINATIONS_MODELS_API;
   try {
     const data = await fetchPricingRegistry(url);
     slot.data = Array.isArray(data) ? data : data.data || [];
@@ -115,6 +193,57 @@ async function getModelPricing(modelName) {
     }
   }
   return null;
+}
+
+/**
+ * Case-insensitive membership check for a model id in a registry. Handles
+ * both object entries (name / id / aliases fields) and plain string arrays.
+ */
+function registryHasModel(registry, lower) {
+  for (const entry of registry) {
+    if (typeof entry === "string") {
+      if (entry.toLowerCase() === lower) return true;
+    } else if (entry && typeof entry === "object") {
+      if (typeof entry.name === "string" && entry.name.toLowerCase() === lower) return true;
+      if (typeof entry.id === "string" && entry.id.toLowerCase() === lower) return true;
+      if (Array.isArray(entry.aliases) && entry.aliases.some((a) => typeof a === "string" && a.toLowerCase() === lower)) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Validate that a model id exists in the current Pollinations model
+ * registries. `kinds` selects which registries to consult ("text",
+ * "legacy-text", "image", "free"). Fails open (returns true) when none of
+ * the selected registries returned any data, so a registry outage never
+ * blocks traffic.
+ */
+async function isKnownModel(modelName, kinds = ["text", "image", "free"]) {
+  if (!modelName || typeof modelName !== "string") return true;
+  const resolved = resolveModel(modelName);
+  const lower = resolved.toLowerCase();
+  let anyData = false;
+  for (const kind of kinds) {
+    const registry = await getPricingRegistry(kind);
+    if (!registry.length) continue;
+    anyData = true;
+    if (registryHasModel(registry, lower)) return true;
+  }
+  return !anyData;
+}
+
+function modelNotFoundResponse(modelName) {
+  return new Response(JSON.stringify({
+    error: {
+      message: `The model \`${modelName}\` does not exist or is not in the current model list.`,
+      type: "invalid_request_error",
+      code: "model_not_found"
+    }
+  }), {
+    status: 404,
+    headers: { "Content-Type": "application/json" }
+  });
 }
 
 /**
@@ -920,6 +1049,12 @@ async function handleChatCompletion(request, env, ctx) {
   const body = await request.json();
   const model = resolveModel(body.model);
 
+  // Reject model ids that are not in the current Pollinations model list
+  // (text + legacy text + free registries; fails open on registry outages).
+  if (body.model && !(await isKnownModel(body.model, ["text", "legacy-text", "free"]))) {
+    return modelNotFoundResponse(body.model);
+  }
+
   // Extract API key if provided
   const authHeader = request.headers.get("Authorization");
   let apiKey = env.POLLINATIONS_API_KEY;
@@ -983,6 +1118,12 @@ async function handleImageGeneration(request, env, ctx) {
   delete body.size;
   const response_format = body.response_format || "url";
   delete body.response_format;
+
+  // Reject model ids that are not in the current Pollinations model list
+  // (image + free registries; fails open on registry outages).
+  if (body.model && !(await isKnownModel(body.model, ["image", "free"]))) {
+    return modelNotFoundResponse(body.model);
+  }
 
   // Extract API key if provided
   const authHeader = request.headers.get("Authorization");
@@ -1150,6 +1291,12 @@ export default {
       return handleOptions();
     }
 
+    // Basic per-IP rate limiting
+    const rateResult = checkRateLimit(getClientIp(request), getRateLimitPerMinute(env));
+    if (!rateResult.allowed) {
+      return addCorsHeaders(rateLimitExceededResponse(rateResult));
+    }
+
     let response;
 
     try {
@@ -1218,7 +1365,16 @@ export default {
       });
     }
 
-    return addCorsHeaders(response);
+    const corsResponse = addCorsHeaders(response);
+    const headers = new Headers(corsResponse.headers);
+    headers.set("X-RateLimit-Limit", String(rateResult.limit));
+    headers.set("X-RateLimit-Remaining", String(rateResult.remaining));
+    headers.set("X-RateLimit-Reset", String(Math.ceil(rateResult.resetAt / 1000)));
+    return new Response(corsResponse.body, {
+      status: corsResponse.status,
+      statusText: corsResponse.statusText,
+      headers
+    });
   }
 };
 

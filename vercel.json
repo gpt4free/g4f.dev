@@ -2,6 +2,16 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "polli.g4f.dev" }],
+      "destination": "/api/pollinations?path=/:path*"
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "open.g4f.dev" }],
+      "destination": "/api/openrouter?path=/:path*"
+    },
+    {
       "source": "/challenge",
       "destination": "/api/challenge?path=/challenge"
     },

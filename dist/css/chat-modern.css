@@ -658,6 +658,12 @@ input, select, textarea, button {
 }
 
 /* Provider chip */
+.chat-body .message .content .provider a {
+    color: var(--text-2);
+    font-weight: 600;
+    transition: color 0.15s ease;
+}
+
 .message .content .provider,
 .message .content .provider a {
     display: inline-flex;
@@ -671,14 +677,7 @@ input, select, textarea, button {
     border-radius: 999px;
     padding: 3px 10px;
     width: fit-content;
-    margin-bottom: 4px;
     text-decoration: none;
-}
-
-.message .content .provider a {
-    color: var(--text-2);
-    font-weight: 600;
-    transition: color 0.15s ease;
 }
 
 .message .content .provider a:hover {
@@ -694,6 +693,7 @@ input, select, textarea, button {
     gap: 2px;
     opacity: 0.75;
     transition: opacity 0.2s ease;
+    font-size: 11px;
 }
 
 .message:hover .content .count {
