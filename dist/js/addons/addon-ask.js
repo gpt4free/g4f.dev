@@ -84,7 +84,7 @@ const handle_ask = async (do_ask_gpt = true, message = null) => {
     highlight(message_el);
     if (do_ask_gpt) {
         const all_pinned = document.querySelectorAll("#pin_container button.pinned")
-        if (all_pinned.length > 0) {
+        if (all_pinned.length > 1) {
             all_pinned.forEach((el, idx) => ask_gpt(
                 idx == 0 ? message_id : get_message_id(),
                 -1,

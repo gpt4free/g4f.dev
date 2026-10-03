@@ -55,6 +55,50 @@ document.querySelectorAll(".new_convo_icon, .new_convo").forEach((el) => {
     });
 });
 
+document.getElementById("pin")?.addEventListener("click", async () => {
+    add_pinned(providerSelect?.value, get_selected_model());
+});
+
+(async () => {
+    JSON.parse(appStorage.getItem("pinned") || "[]").forEach((el) => {
+        add_pinned(el.provider, el.model, false);
+    });
+})();
+
+function add_pinned(selected_provider, selected_model, save=true) {
+    if (save) {
+        const all_pinned_saved = JSON.parse(appStorage.getItem("pinned") || "[]");
+        appStorage.setItem("pinned", JSON.stringify([{
+            provider: selected_provider?.value || selected_provider,
+            model: selected_model?.value || selected_model,
+        }, ...all_pinned_saved]));
+    }
+    const pinned = document.createElement("button");
+    pinned.classList.add("pinned");
+    if (selected_provider) pinned.dataset.provider = selected_provider.value || selected_provider;
+    if (selected_model) pinned.dataset.model = selected_model.value || selected_model;
+    pinned.innerHTML = `
+        <span>
+        ${selected_provider && selected_provider.dataset ? selected_provider.dataset.label || selected_provider.text : selected_provider}
+        ${selected_provider && selected_model ? "/" : ""}
+        ${selected_model && selected_model.dataset ? selected_model.dataset.label || selected_model.text : selected_model}
+        </span>
+        <i class="fa-regular fa-circle-xmark"></i>`;
+    pinned.addEventListener("click", () => {
+        pin_container.removeChild(pinned);
+        let all_pinned = JSON.parse(appStorage.getItem("pinned") || "[]");
+        all_pinned = all_pinned.filter((el) => {
+            return el.provider != pinned.dataset.provider || el.model != pinned.dataset.model;
+        });
+        appStorage.setItem("pinned", JSON.stringify(all_pinned));
+    });
+    let all_pinned = pin_container.querySelectorAll(".pinned");
+    while (all_pinned.length > 4) {
+        pin_container.removeChild(all_pinned[0])
+        all_pinned = pin_container.querySelectorAll(".pinned");
+    }
+    pin_container.appendChild(pinned);
+}
 
 searchButton.addEventListener("click", async () => {
     setTimeout(() => userInput.focus(), 100);
@@ -97,16 +141,11 @@ async function save_storage(settings=false) {
 }
 
 addonsLoaded.then(() => {
-    searchButton.addEventListener("click", async () => {
-        setTimeout(() => userInput.focus(), 100);
-        searchButton.classList.toggle("active");
-        (searchButton.querySelector("*")).innerText = (searchButton.classList.contains("active") ? framework.translate("Search On") : framework.translate("Search Off"));
-    });
     regenerate_button.addEventListener("click", async () => {
         regenerate_button.classList.add("regenerate-hidden");
         setTimeout(()=>window.regenerate_button.classList.remove("regenerate-hidden"), 3000);
         const all_pinned = document.querySelectorAll("#pin_container button.pinned")
-        if (all_pinned.length > 0) {
+        if (all_pinned.length > 1) {
             all_pinned.forEach((el) => ask_gpt(get_message_id(), -1, true, el.dataset.provider, el.dataset.model, "variant"));
         } else {
             await ask_gpt(get_message_id(), -1, true, null, null, "variant");
@@ -128,7 +167,6 @@ addonsLoaded.then(() => {
                     controller_storage[key].abort();
                 } finally {
                     // Also abort the worker-side fetch if applicable
-                    workerAbort(key);
                     let message = message_storage[key];
                     if (message) {
                         content_storage[key].inner.innerHTML += " [aborted]";

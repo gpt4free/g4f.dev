@@ -1640,15 +1640,26 @@ const apiExport = {};
         if (failedProvider && failedModel) {
             markTried(failedProvider, failedModel);
         }
-        // Build candidates starting AFTER the just-failed pair, so we
-        // advance through the picker's list instead of jumping back to
-        // the first (default) model.
-        const candidates = buildFallbackCandidates(failedProvider, failedModel);
-        if (!candidates.length) {
+        // A single pinned provider/model is the preferred fallback.
+        const pinnedButtons = document.querySelectorAll('#pin_container button.pinned');
+        let next = null;
+        if (pinnedButtons.length === 1) {
+            const { provider, model } = pinnedButtons[0].dataset;
+            const key = `${provider}/${model}`;
+            if (provider && model && !fallback.tried.has(key)) {
+                next = { provider, model, key };
+            }
+        }
+        if (!next) {
+            // Build candidates starting AFTER the just-failed pair, so we
+            // advance through the picker's list instead of jumping back to
+            // the first (default) model.
+            next = buildFallbackCandidates(failedProvider, failedModel)[0];
+        }
+        if (!next) {
             fallback.active = false;
             return false;
         }
-        const next = candidates[0];
         console.info(`Picker: auto-fallback → ${next.provider}/${next.model} (attempt ${fallback.retryCount + 1}/${MAX_FALLBACK_RETRIES})`);
         notify(`Retrying with ${next.provider}/${next.model}`, 'info');
         fallback.active = true;
