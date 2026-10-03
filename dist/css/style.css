@@ -3671,6 +3671,7 @@ form label.toogle {
     text-align: center;
     max-width: 600px;
     padding: 20px;
+    max-height: 100%;
 }
 
 .empty-state-icon {

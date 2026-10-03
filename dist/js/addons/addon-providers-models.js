@@ -293,6 +293,8 @@ function setFavoriteModels(provider, defaultModel) {
     modelSelect.appendChild(optgroup);
 }
 
+const MAX_FAVORITE_PROVIDERS = 5;
+
 function set_favorite_providers() {
     const optgroup = document.createElement('optgroup');
     optgroup.label = framework.translate("Favorite Providers:");
@@ -301,7 +303,7 @@ function set_favorite_providers() {
         favorites = {};
         favorites[providerSelect.value] = 0;
     }
-    Object.keys(favorites).forEach((key) => {
+    Object.keys(favorites).slice(-MAX_FAVORITE_PROVIDERS).forEach((key) => {
         const value_option = providerSelect.querySelector(`option[value="${key}"]`)
         if (value_option) {
             const option = value_option.cloneNode(true);
@@ -587,15 +589,20 @@ addonsLoaded.then(() => {
                 const optgroup = providerSelect.querySelector('optgroup:last-child');
                 if (optgroup) {
                     optgroup.appendChild(option);
-                    if (optgroup.childElementCount > 5) {
-                        delete favorites[optgroup.firstChild.value];
-                        optgroup.removeChild(optgroup.firstChild);
-                    }
                 }
             }
             const selected_values = favorites[providerSelect.value] ? favorites[providerSelect.value] + 1 : 1;
             delete favorites[providerSelect.value];
             favorites[providerSelect.value] = selected_values;
+            // Keep only the most recently used providers.
+            const keep = Object.keys(favorites).slice(-MAX_FAVORITE_PROVIDERS);
+            Object.keys(favorites).forEach((key) => {
+                if (!keep.includes(key)) delete favorites[key];
+            });
+            const favGroup = providerSelect.querySelector('optgroup:last-child');
+            favGroup?.querySelectorAll('option').forEach((opt) => {
+                if (!keep.includes(opt.value)) opt.remove();
+            });
             appStorage.setItem("favorite_providers", JSON.stringify(favorites));
         });
     }
