@@ -12,6 +12,9 @@
 // Placeholder bearer values ("Bearer g4f", "Bearer null", ...) count as
 // "no key", so the server-side default applies.
 //
+// When the server-side default key is used (no user-supplied key), the
+// GET /v1/models listing is filtered down to free models only.
+//
 // Environment variables:
 //   OPENROUTER_API_KEY     - optional default key (used when 1-3 are absent)
 //   RATE_LIMIT_PER_MINUTE  - optional per-IP cap (default 15/min)
@@ -132,6 +135,29 @@ function resolveApiKey(request, url) {
   );
 }
 
+/**
+ * True when the request carries a user-supplied key (header or query
+ * param), as opposed to falling back to the server-side default key.
+ */
+function hasUserApiKey(request, url) {
+  return Boolean(
+    normalizeKey(request.headers.get("Authorization")) ||
+    normalizeKey(request.headers.get("x-api-key")) ||
+    normalizeKey(url.searchParams.get("api_key"))
+  );
+}
+
+/**
+ * Free-model check for OpenRouter model entries: either an explicit
+ * ":free" id suffix or zero prompt/completion pricing.
+ */
+function isFreeModel(model) {
+  if (!model) return false;
+  if (typeof model.id === "string" && model.id.endsWith(":free")) return true;
+  const pricing = model.pricing || {};
+  return Number(pricing.prompt) === 0 && Number(pricing.completion) === 0;
+}
+
 export const config = { runtime: "edge" };
 
 const MOUNT_PREFIX = "/api/openrouter";
@@ -191,6 +217,7 @@ export default async function handler(request, event) {
   if (pathname === "/v1" || pathname.startsWith("/v1/")) pathname = pathname.slice("/v1".length) || "/";
   // Resolve the key before stripping credentials from the query string.
   const apiKey = resolveApiKey(request, url);
+  const usingDefaultKey = !hasUserApiKey(request, url) && Boolean(apiKey);
   url.searchParams.delete("api_key");
   if (pathname === "/" || pathname === "") {
     return addCorsHeaders(new Response(JSON.stringify({
@@ -209,6 +236,33 @@ export default async function handler(request, event) {
     headers.set("Authorization", `Bearer ${apiKey}`);
   } else {
     headers.delete("Authorization");
+  }
+
+  // With the server-side default key, only free models are exposed.
+  if (usingDefaultKey && request.method === "GET" && (pathname === "/models" || pathname === "/models/")) {
+    try {
+      const modelsResponse = await fetch(upstreamUrl, { method: "GET", headers });
+      if (!modelsResponse.ok) {
+        return addCorsHeaders(new Response(modelsResponse.body, modelsResponse));
+      }
+      const data = await modelsResponse.json();
+      if (Array.isArray(data?.data)) {
+        data.data = data.data.filter(isFreeModel);
+      }
+      return addCorsHeaders(new Response(JSON.stringify(data), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "X-RateLimit-Limit": String(rateResult.limit),
+          "X-RateLimit-Remaining": String(rateResult.remaining),
+          "X-RateLimit-Reset": String(Math.ceil(rateResult.resetAt / 1000))
+        }
+      }));
+    } catch (error) {
+      return addCorsHeaders(new Response(JSON.stringify({
+        error: { message: error.message, type: "api_error", code: 502 }
+      }), { status: 502, headers: { "Content-Type": "application/json" } }));
+    }
   }
 
   let response;

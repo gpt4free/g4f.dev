@@ -7,6 +7,9 @@
  * Environment Variables:
  * - POLLINATIONS_API_KEY: Optional API key for Pollinations AI (enables gen.pollinations.ai endpoints for premium features)
  * - RATE_LIMIT_PER_MINUTE: Optional per-IP request cap per 60s window (default 30)
+ *
+ * GET /v1/models shows only free models when no user API key is supplied
+ * (i.e. the server-side default key applies).
  */
 
 // ---------------------------------------------------------------------------
@@ -237,6 +240,30 @@ function modelNotFoundResponse(modelName) {
   return new Response(JSON.stringify({
     error: {
       message: `The model \`${modelName}\` does not exist or is not in the current model list.`,
+      type: "invalid_request_error",
+      code: "model_not_found"
+    }
+  }), {
+    status: 404,
+    headers: { "Content-Type": "application/json" }
+  });
+}
+
+/**
+ * Check that a model id is in the free registry (image.pollinations.ai/models).
+ * Fails open when the free registry is unavailable, so a registry outage
+ * never blocks traffic.
+ */
+async function isFreeModel(modelName) {
+  const registry = await getPricingRegistry("free");
+  if (!registry.length) return true;
+  return registryHasModel(registry, resolveModel(modelName).toLowerCase());
+}
+
+function freeModelOnlyResponse(modelName) {
+  return new Response(JSON.stringify({
+    error: {
+      message: `The model \`${modelName}\` is not available without an API key. Only free models are allowed — provide your own key for paid models.`,
       type: "invalid_request_error",
       code: "model_not_found"
     }
@@ -898,6 +925,13 @@ async function handleListModels(request, env, mode) {
     providerKey = tokens.find(t => t && !t.startsWith('g4f_'));
   }
 
+  // Without a user-supplied key the server-side default key applies —
+  // only free models are exposed in the listing.
+  const freeOnly = !providerKey;
+  if (freeOnly && mode !== "free") {
+    mode = "free";
+  }
+
   if (providerKey && ["free", "community"].includes(mode)) {
     const balance = await fetch(POLLINATIONS_ACCOUNT_BALANCE, {
       headers: {"Authorization": `Bearer ${providerKey}`}
@@ -1058,12 +1092,18 @@ async function handleChatCompletion(request, env, ctx) {
   // Extract API key if provided
   const authHeader = request.headers.get("Authorization");
   let apiKey = env.POLLINATIONS_API_KEY;
+  let providerKey;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const tokens = authHeader.substring(7).split(/\s+/);
-    const providerKey = tokens.find(t => t && !t.startsWith('g4f_'));
+    providerKey = tokens.find(t => t && !t.startsWith('g4f_'));
     if (providerKey) {
       apiKey = providerKey;
     }
+  }
+
+  // With the server-side default key, only free models are allowed.
+  if (!providerKey && body.model && !(await isFreeModel(body.model))) {
+    return freeModelOnlyResponse(body.model);
   }
 
   const useGen = !!apiKey;
@@ -1128,12 +1168,18 @@ async function handleImageGeneration(request, env, ctx) {
   // Extract API key if provided
   const authHeader = request.headers.get("Authorization");
   let apiKey = env.POLLINATIONS_API_KEY;
+  let providerKey;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const tokens = authHeader.substring(7).split(/\s+/);
-    const providerKey = tokens.find(t => t && !t.startsWith('g4f_'));
+    providerKey = tokens.find(t => t && !t.startsWith('g4f_'));
     if (providerKey) {
       apiKey = providerKey;
     }
+  }
+
+  // With the server-side default key, only free models are allowed.
+  if (!providerKey && body.model && !(await isFreeModel(body.model))) {
+    return freeModelOnlyResponse(body.model);
   }
 
   if (!prompt) {

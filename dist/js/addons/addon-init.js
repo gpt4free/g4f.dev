@@ -1938,9 +1938,93 @@ async function getSecretStorageTarget() {
     if (getSecretStorageMode() === "cloud") {
         const token = appStorage.getItem("g4f_session");
         if (!token) return null;
-        return { baseUrl: SECRET_API, headers: await getSecretHeaders({ "Authorization": `Bearer ${token}` }) };
+        const secret = await deriveWorkspaceSecret();
+        const headers = await getSecretHeaders({ "Authorization": `Bearer ${token}` });
+        if (secret) {
+            // Ask the server for raw ciphertext blobs so conversations are
+            // decrypted locally with the private account secret (E2E).
+            headers["x-raw-blob"] = "true";
+        }
+        return { baseUrl: SECRET_API, headers, cloud: true, secret };
     }
-    return { baseUrl: framework.backendUrl || window.location.origin, headers: await getSecretHeaders() };
+    return { baseUrl: framework.backendUrl || window.location.origin, headers: await getSecretHeaders(), cloud: false, secret: null };
+}
+
+// ---------------------------------------------------------------
+// Client-side (E2E) encryption for cloud secret storage.
+// Conversations are encrypted in the browser with the private
+// workspace secret (derived from the account) before upload, so the
+// cloud only ever stores ciphertext. Blob format matches the server:
+// "G4FENC" || version(1) || nonce(12) || AES-256-GCM ciphertext.
+// ---------------------------------------------------------------
+
+async function deriveConversationKey(secret) {
+    const keyMaterial = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret));
+    return crypto.subtle.importKey("raw", keyMaterial, "AES-GCM", false, ["encrypt", "decrypt"]);
+}
+
+function uint8ArrayToBase64(bytes) {
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+}
+
+function base64ToUint8Array(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+}
+
+async function encryptConversationBlob(conversation, secret) {
+    const key = await deriveConversationKey(secret);
+    const nonce = crypto.getRandomValues(new Uint8Array(12));
+    const raw = new TextEncoder().encode(JSON.stringify(conversation));
+    const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, key, raw);
+    const magic = new TextEncoder().encode("G4FENC");
+    const blob = new Uint8Array(magic.length + 1 + nonce.length + ciphertext.byteLength);
+    blob.set(magic, 0);
+    blob.set([1], magic.length);
+    blob.set(nonce, magic.length + 1);
+    blob.set(new Uint8Array(ciphertext), magic.length + 1 + nonce.length);
+    return blob;
+}
+
+async function decryptConversationBlob(buffer, secret) {
+    try {
+        const bytes = new Uint8Array(buffer);
+        const magic = new TextEncoder().encode("G4FENC");
+        if (bytes.length > magic.length + 1 + 12 && magic.every((b, i) => bytes[i] === b)) {
+            if (bytes[magic.length] !== 1) return null;
+            const nonce = bytes.slice(magic.length + 1, magic.length + 13);
+            const ciphertext = bytes.slice(magic.length + 13);
+            const key = await deriveConversationKey(secret);
+            const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: nonce }, key, ciphertext);
+            return JSON.parse(new TextDecoder().decode(plain));
+        }
+        // Legacy plaintext blob
+        return JSON.parse(new TextDecoder().decode(bytes));
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Encrypt a conversation for cloud upload: returns the metadata envelope
+ * (used by the server index) plus the base64 ciphertext blob. The
+ * conversation content never leaves the browser in plaintext.
+ */
+async function encryptConversationForUpload(conversation, secret) {
+    const blob = await encryptConversationBlob(conversation, secret);
+    return {
+        id: conversation.id,
+        title: conversation.title || "",
+        updated: conversation.updated || Date.now(),
+        added: conversation.added || Date.now(),
+        items_count: Array.isArray(conversation.items) ? conversation.items.length : 0,
+        encrypted: true,
+        blob: uint8ArrayToBase64(blob)
+    };
 }
 
 // ============================================================
@@ -2159,6 +2243,15 @@ async function syncConversationsToSecret() {
             alert("No conversations to upload.");
             return;
         }
+        // Cloud mode: encrypt client-side with the private account secret
+        if (target.cloud) {
+            if (!target.secret) {
+                hideCloudSyncLoading();
+                alert("No private secret available. Please log out and log in again.");
+                return;
+            }
+            conversations = await Promise.all(conversations.map(c => encryptConversationForUpload(c, target.secret)));
+        }
         const response = await fetchSecretStorage(`${target.baseUrl}/v1/secret/conversations/sync`, {
             method: "POST",
             headers: target.headers,
@@ -2209,7 +2302,11 @@ async function syncConversationsFromSecret() {
                 if (!convId) continue;
                 const convResp = await fetchSecretStorage(`${target.baseUrl}/v1/secret/conversations/${encodeURIComponent(convId)}`, { headers: target.headers });
                 if (convResp.ok) {
-                    const conv = await convResp.json();
+                    const conv = target.cloud ? await decryptConversationBlob(await convResp.arrayBuffer(), target.secret) : await convResp.json();
+                    if (!conv) {
+                        console.error(`Failed to decrypt conversation ${convId} with your private secret`);
+                        continue;
+                    }
                     delete conv.synced_at;
                     delete conv.user_id;
                     await save_conversation(conv);
@@ -2280,10 +2377,19 @@ async function syncSecretStorageDiff() {
             }
 
             if (toUpload.length > 0) {
+                // Cloud mode: encrypt client-side with the private account secret.
+                // Never upload plaintext conversations to the cloud.
+                if (target.cloud && !target.secret) {
+                    console.warn("Cloud sync skipped: no private secret available for encryption.");
+                    return;
+                }
+                const payload = target.cloud
+                    ? await Promise.all(toUpload.map(c => encryptConversationForUpload(c, target.secret)))
+                    : toUpload;
                 const uploadResponse = await fetchSecretStorage(`${target.baseUrl}/v1/secret/conversations/sync`, {
                     method: "POST",
                     headers: target.headers,
-                    body: JSON.stringify({ conversations: toUpload })
+                    body: JSON.stringify({ conversations: payload })
                 });
                 if (!uploadResponse.ok) return;
             }
@@ -2300,7 +2406,8 @@ async function syncSecretStorageDiff() {
                     continue;
                 }
                 if (!conversationResponse.ok) continue;
-                const conversation = await conversationResponse.json();
+                const conversation = target.cloud ? await decryptConversationBlob(await conversationResponse.arrayBuffer(), target.secret) : await conversationResponse.json();
+                if (!conversation) continue;
                 delete conversation.synced_at;
                 delete conversation.user_id;
                 await save_conversation(conversation);
@@ -2343,10 +2450,17 @@ async function autoSyncCurrentConversation() {
         if (!current) return;
         const target = await getSecretStorageTarget();
         if (!target) return;
+        // Cloud mode: encrypt client-side with the private account secret.
+        // Never upload plaintext conversations to the cloud.
+        if (target.cloud && !target.secret) {
+            console.warn("Auto-sync skipped: no private secret available for encryption.");
+            return;
+        }
+        const payload = target.cloud ? await encryptConversationForUpload(current, target.secret) : current;
         await fetchSecretStorage(`${target.baseUrl}/v1/secret/conversations`, {
             method: "POST",
             headers: target.headers,
-            body: JSON.stringify(current)
+            body: JSON.stringify(payload)
         });
     } catch (e) {
         console.error("Auto-sync to secret storage failed:", e);
@@ -2390,7 +2504,8 @@ async function pullNewSecretConversations() {
             if (!local || remoteUpdated > localUpdated) {
                 const convResp = await fetchSecretStorage(`${target.baseUrl}/v1/secret/conversations/${encodeURIComponent(convId)}`, { headers: target.headers });
                 if (convResp.ok) {
-                    const conv = await convResp.json();
+                    const conv = target.cloud ? await decryptConversationBlob(await convResp.arrayBuffer(), target.secret) : await convResp.json();
+                    if (!conv) continue;
                     delete conv.synced_at;
                     delete conv.user_id;
                     await save_conversation(conv);

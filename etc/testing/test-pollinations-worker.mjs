@@ -24,9 +24,11 @@ globalThis.fetch = async (url) => {
 };
 
 const env = { RATE_LIMIT_PER_MINUTE: "3" };
+// Paid models are blocked without a user key (free-only with the default
+// key), so generation requests carry a user key to exercise the proxy path.
 const mkReq = (model) => new Request("https://polli.g4f.dev/v1/chat/completions", {
   method: "POST",
-  headers: { "Content-Type": "application/json", "x-real-ip": "1.2.3.4" },
+  headers: { "Content-Type": "application/json", "x-real-ip": "1.2.3.4", "Authorization": "Bearer sk-user" },
   body: JSON.stringify({ model, messages: [{ role: "user", content: "hi" }] })
 });
 
@@ -51,7 +53,7 @@ if (r.status !== 429) throw new Error("expected 429 after exceeding cap");
 // 4) Different IP is unaffected
 r = await worker.fetch(new Request("https://polli.g4f.dev/v1/chat/completions", {
   method: "POST",
-  headers: { "Content-Type": "application/json", "x-real-ip": "5.6.7.8" },
+  headers: { "Content-Type": "application/json", "x-real-ip": "5.6.7.8", "Authorization": "Bearer sk-user" },
   body: JSON.stringify({ model: "openai", messages: [{ role: "user", content: "hi" }] })
 }), env, {});
 console.log("other ip:", r.status);
