@@ -31,7 +31,7 @@ const CORS_HEADERS = {
 // `best` = most capable, `fast` = lowest latency.
 const PREVIEW_TEXT_MODELS = [
   { id: "nvidia/nemotron-3-ultra-550b-a55b", label: "Nemotron 3 Ultra 550B", best: true },
-  { id: "zai/glm-5-3", label: "GLM 5.3 753B", best: true },
+  { id: "z-ai/glm-5.3", label: "GLM 5.3 753B", best: true },
   { id: "moonshotai/kimi-k3", label: "Kimi K3", best: true },
   { id: "nvidia/nemotron-3-super-120b-a12b", label: "Nemotron 3 Super 120B" },
   { id: "deepseek-ai/deepseek-v4.1-flash", label: "DeepSeek V4.1 Flash", fast: true },
@@ -42,25 +42,25 @@ const PREVIEW_TEXT_MODELS = [
   { id: "nvidia/diffusiongemma-26b-a4b-it", label: "DiffusionGemma 26B A4B" },
   { id: "openai/gpt-oss-20b", label: "GPT-OSS 20B", fast: true },
   { id: "nvidia/nemotron-3.5-lightning-30b-a3b", label: "Nemotron 3.5 Lightning 30B", fast: true },
-  { id: "zai/glm-5-3-flash", label: "GLM 5.3 Flash", fast: true }
+  { id: "z-ai/glm-5.3-flash", label: "GLM 5.3 Flash", fast: true }
 ];
 
 // Ranked candidate order per selection strategy (first successful wins).
 const AUTO_RANK = [
   "nvidia/nemotron-3-ultra-550b-a55b",
-  "zai/glm-5-3",
+  "z-ai/glm-5.3",
   "moonshotai/kimi-k3",
   "nvidia/nemotron-3-super-120b-a12b",
   "deepseek-ai/deepseek-v4.1-flash",
   "nvidia/nemotron-3.5-lightning-30b-a3b",
-  "zai/glm-5-3-flash",
+  "z-ai/glm-5.3-flash",
   "google/gemma-4-31b-it",
   "openai/gpt-oss-20b"
 ];
 const BEST_RANK = AUTO_RANK.slice(0, 6);
 const FAST_RANK = [
   "nvidia/nemotron-3.5-lightning-30b-a3b",
-  "zai/glm-5-3-flash",
+  "z-ai/glm-5.3-flash",
   "deepseek-ai/deepseek-v4.1-flash",
   "openai/gpt-oss-20b",
   "nvidia/laguna-xs-2.1",

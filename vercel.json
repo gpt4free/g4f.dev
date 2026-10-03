@@ -17,6 +17,11 @@
       "destination": "/api/nvidia?path=/:path*"
     },
     {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "nvidia.g4f.dev" }],
+      "destination": "/api/nvidia?path=/:path*"
+    },
+    {
       "source": "/challenge",
       "destination": "/api/challenge?path=/challenge"
     },
