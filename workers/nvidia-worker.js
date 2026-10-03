@@ -148,7 +148,10 @@ async function getAvailableModels(env) {
       });
       if (response.ok) {
         const data = await response.json();
-        live = new Set((data?.data || []).map((m) => basename(m.id)));
+        const ids = (data?.data || []).map((m) => basename(m.id)).filter(Boolean);
+        // only trust a non-empty live catalog — an empty response would
+        // otherwise filter out every static model
+        if (ids.length) live = new Set(ids);
       }
     } catch (error) {
       console.error("NVIDIA catalog fetch failed:", error);
@@ -186,14 +189,24 @@ async function handleModels(request, env) {
   const available = await getAvailableModels(env);
   return jsonResponse({
     object: "list",
-    data: available.map((m) => ({
-      id: m.id,
-      object: "model",
-      owned_by: "nvidia",
-      label: m.label,
-      best: !!m.best,
-      fast: !!m.fast
-    }))
+    data: [
+      {
+        id: "auto",
+        object: "model",
+        owned_by: "g4f",
+        label: "Auto (best available preview model)",
+        best: true,
+        fast: true
+      },
+      ...available.map((m) => ({
+        id: m.id,
+        object: "model",
+        owned_by: "nvidia",
+        label: m.label,
+        best: !!m.best,
+        fast: !!m.fast
+      }))
+    ]
   });
 }
 

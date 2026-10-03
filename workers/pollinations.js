@@ -941,6 +941,14 @@ function wrapStreamResponse(originalResponse, body, costFields, resolvedModel, p
 async function handleListModels(request, env, mode) {
   const models = [];
 
+  // "auto" first: best free model, resolved at chat time
+  models.push({
+    id: "auto",
+    object: "model",
+    created: 0,
+    owned_by: "pollinations"
+  });
+
   
   // Extract API key if provided
   const authHeader = request.headers.get("Authorization");
