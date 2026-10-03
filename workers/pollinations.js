@@ -1110,22 +1110,65 @@ async function handleGenProxy(request, env) {
 }
 
 /**
+ * Return up to *limit* best available free text model names (zero pollen
+ * cost, non-agent, non-paid), sorted by upstream health success rate.
+ */
+async function getBestFreeTextModels(limit = 4) {
+  const registry = await getPricingRegistry("text");
+  const candidates = [];
+  for (const entry of registry) {
+    if (!entry || typeof entry !== "object" || !entry.name) continue;
+    if (entry.agent || entry.paid_only) continue;
+    const pricing = entry.pricing || {};
+    const cost = (Number(pricing.promptTextTokens) || 0) + (Number(pricing.completionTextTokens) || 0);
+    if (cost > 0) continue;
+    const health = entry.health || {};
+    candidates.push({ name: entry.name, score: Number(health.success_rate) || 0 });
+  }
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates.slice(0, limit).map((c) => c.name);
+}
+
+/**
+ * Auto/default model candidates: best free models when a key is available
+ * (gen endpoint), otherwise the anonymous legacy endpoint models
+ * ("openai-fast", then omit the model so upstream picks its default).
+ */
+async function getAutoModelCandidates(apiKey, limit = 4) {
+  if (apiKey) {
+    const models = await getBestFreeTextModels(limit);
+    if (models.length) return models;
+  }
+  return ["openai-fast", ""];
+}
+
+/**
+ * A chat response is usable when it contains non-empty assistant content
+ * and is not a bare "User Safety: safe" moderation stub. Blocked prompts
+ * on the legacy endpoint return an empty object `{}` — also treated as
+ * a failure so the next model can be tried.
+ */
+function isValidChatResponse(data) {
+  if (!data || typeof data !== "object" || data.error) return false;
+  const choices = data.choices;
+  if (!Array.isArray(choices) || choices.length === 0) return false;
+  const message = choices[0] && choices[0].message;
+  const content = message && message.content;
+  if (typeof content !== "string" || !content.trim()) return false;
+  if (/^user\s*safety\s*:\s*safe\s*$/i.test(content.trim())) return false;
+  return true;
+}
+
+/**
  * Handle POST /v1/chat/completions - Chat completion
+ *
+ * Auto/default model: a missing, "auto" or "default" model selects the
+ * best available free model (highest health success rate). Failed attempts
+ * (upstream error, empty content or "User Safety: safe" stub) are retried
+ * with up to 3 other models before the last response is returned.
  */
 async function handleChatCompletion(request, env, ctx) {
   const body = await request.json();
-  const model = resolveModel(body.model);
-
-  // Reject model ids that are not in the current Pollinations model list
-  // (text + legacy text + free registries; fails open on registry outages).
-  if (body.model && !(await isKnownModel(body.model, ["text", "legacy-text", "free"]))) {
-    return modelNotFoundResponse(body.model);
-  }
-
-  // Agent models are disallowed entirely (even with a user key).
-  if (body.model && (await isAgentModel(body.model, "text"))) {
-    return agentModelResponse(body.model);
-  }
 
   // Extract API key if provided
   const authHeader = request.headers.get("Authorization");
@@ -1139,18 +1182,44 @@ async function handleChatCompletion(request, env, ctx) {
     }
   }
 
-  // With the server-side default key, only free models are allowed.
-  if (!providerKey && body.model && !(await isFreeModel(body.model))) {
-    return freeModelOnlyResponse(body.model);
+  const rawModel = typeof body.model === "string" ? body.model.trim() : "";
+  const isAuto = !rawModel || ["auto", "default"].includes(rawModel.toLowerCase());
+
+  if (!isAuto) {
+    // Reject model ids that are not in the current Pollinations model list
+    // (text + legacy text + free registries; fails open on registry outages).
+    if (!(await isKnownModel(rawModel, ["text", "legacy-text", "free"]))) {
+      return modelNotFoundResponse(rawModel);
+    }
+
+
+    // Agent models are disallowed entirely (even with a user key).
+    if (await isAgentModel(rawModel, "text")) {
+      return agentModelResponse(rawModel);
+    }
+
+
+    // With the server-side default key, only free models are allowed.
+    if (!providerKey && !(await isFreeModel(rawModel))) {
+      return freeModelOnlyResponse(rawModel);
+    }
   }
 
   const useGen = !!apiKey;
   const textApiUrl = useGen ? POLLINATIONS_GEN_TEXT_API : POLLINATIONS_TEXT_API;
 
-  const requestBody = {
-    ...body,
-    model: model
-  };
+  // Candidate models: the requested model (or best free models in auto
+  // mode) plus up to 3 fallbacks for retries.
+  const MAX_MODELS = 4;
+  let candidates;
+  if (isAuto) {
+    candidates = await getAutoModelCandidates(apiKey, MAX_MODELS);
+  } else {
+    const resolved = resolveModel(rawModel);
+    const fallbacks = (await getAutoModelCandidates(apiKey, MAX_MODELS))
+      .filter((m) => m && m !== resolved);
+    candidates = [resolved, ...fallbacks].slice(0, MAX_MODELS);
+  }
 
   const headers = {
     "Content-Type": "application/json"
@@ -1159,25 +1228,85 @@ async function handleChatCompletion(request, env, ctx) {
     headers["Authorization"] = `Bearer ${apiKey}`;
   }
 
-  const response = await fetch(textApiUrl, {
-    method: "POST",
-    headers: headers,
-    body: JSON.stringify(requestBody)
-  });
+  const streaming = body.stream === true;
+  let lastResponse = null;
 
-  if (!response.ok) {
-    return new Response(response.body, {
+  for (const candidate of candidates) {
+    const requestBody = { ...body };
+    if (candidate) {
+      requestBody.model = candidate;
+    } else {
+      delete requestBody.model;
+    }
+
+    let response;
+    try {
+      response = await fetch(textApiUrl, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(requestBody)
+      });
+    } catch (e) {
+      lastResponse = null;
+      continue;
+    }
+
+    if (!response.ok) {
+      // Auth/credit errors won't improve with another model — return as-is.
+      if ([401, 402, 403].includes(response.status)) {
+        return new Response(response.body, {
+          status: response.status,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+      lastResponse = response;
+      continue;
+    }
+
+    // Pollinations attaches `x-usage-*` headers to the final response. For
+    // streaming responses (`stream: true`) the headers are sent on the SSE
+    // "trailer" – we need to copy them into a new Response before the body
+    // stream is consumed by the client. Streaming bodies cannot be checked
+    // for content, so they are passed through on the first attempt.
+    const contentType = response.headers.get("content-type") || "";
+    if (streaming || contentType.includes("text/event-stream")) {
+      if (!providerKey) {
+          return response;
+      }
+      return await attachPollenCost(response, candidate);
+    }
+
+    let data;
+    try {
+      data = await response.json();
+    } catch (e) {
+      lastResponse = response;
+      continue;
+    }
+
+    if (isValidChatResponse(data)) {
+      // Re-create the response so the cost headers can be attached while
+      // preserving the upstream `x-usage-*` headers.
+      const okResponse = new Response(JSON.stringify(data), {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers
+      });
+      return await attachPollenCost(okResponse, candidate);
+    }
+    lastResponse = new Response(JSON.stringify(data), {
       status: response.status,
-      headers: { "Content-Type": "application/json" }
+      statusText: response.statusText,
+      headers: response.headers
     });
   }
 
-  // Pollinations attaches `x-usage-*` headers to the final response. For
-  // streaming responses (`stream: true`) the headers are sent on the SSE
-  // "trailer" – we need to copy them into a new Response before the body
-  // stream is consumed by the client.
-  const costed = await attachPollenCost(response, model);
-  return costed;
+  if (lastResponse) {
+    return lastResponse;
+  }
+  return new Response(JSON.stringify({
+    error: { message: "All model attempts failed", type: "api_error", code: 502 }
+  }), { status: 502, headers: { "Content-Type": "application/json" } });
 }
 
 /**

@@ -1,0 +1,34 @@
+{
+    "_meta": {
+        "page": "community",
+        "comment": "UI text snippets of the community forum (community.html) grouped by the headline/title of the section they appear in. The group name is sent as translation context alongside each snippet in the challenge worker's batch translation challenges (kind=translations). Groups starting with '_' are metadata. Mirrors dist/js/snippets/chat.context.json."
+    },
+    "Community Forum": [
+        "Community Forum",
+        "Join our community:",
+        "Logged in as {0}",
+        "Login to post"
+    ],
+    "New Post": [
+        "Ask a question or post to the Community...",
+        "Post",
+        "Posting...",
+        "Error posting: {0}",
+        "You are not authenticated. Please log in again.",
+        "Failed to fetch authentication token: {0}",
+        "Authentication token was missing from response."
+    ],
+    "Posts": [
+        "Loading posts...",
+        "No posts yet.",
+        "Unknown",
+        "Copy",
+        "Copied",
+        "Report",
+        "Please enter the reason for reporting this post:",
+        "Report submitted successfully.",
+        "Failed to submit report.",
+        "Failed to copy post content.",
+        "Failed to load posts."
+    ]
+}

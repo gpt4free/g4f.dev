@@ -261,6 +261,8 @@ const SNIPPET_PAGES = [
     "home",
     "members",
     "manifesto",
+    "community",
+    "playground",
 ];
 let snippetsCache = null;
 let snippetsKeys = null;

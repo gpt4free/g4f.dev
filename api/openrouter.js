@@ -158,6 +158,52 @@ function isFreeModel(model) {
   return Number(pricing.prompt) === 0 && Number(pricing.completion) === 0;
 }
 
+// Auto/default routing: `openrouter/free` is OpenRouter's own free-models
+// router (randomly picks among free models); it is tried first, followed by
+// concrete free model ids from the /models listing as retry candidates.
+const AUTO_MODEL = "openrouter/free";
+// "openrouter/free" itself is treated as auto routing: the router sometimes
+// answers with a bare "User Safety: safe" stub, so it gets the same
+// validation + retry treatment as missing/"auto"/"default" models.
+const AUTO_MODEL_NAMES = new Set(["auto", "default", "openrouter/auto", "openrouter/free"]);
+const MAX_AUTO_ATTEMPTS = 4;
+
+/**
+ * A chat response is usable when it contains non-empty assistant content
+ * and is not a bare "User Safety: safe" moderation stub. Empty content
+ * (e.g. `{}` bodies or empty strings) counts as a failure so the next
+ * model can be tried.
+ */
+function isValidChatResponse(data) {
+  if (!data || typeof data !== "object" || data.error) return false;
+  const choices = data.choices;
+  if (!Array.isArray(choices) || choices.length === 0) return false;
+  const message = choices[0] && choices[0].message;
+  const content = message && message.content;
+  if (typeof content !== "string" || !content.trim()) return false;
+  if (/^user\s*safety\s*:\s*safe\s*$/i.test(content.trim())) return false;
+  return true;
+}
+
+/**
+ * Fetch the current model listing and return up to *limit* free model ids
+ * (excluding the auto router itself). Returns [] on any failure.
+ */
+async function getFreeModelIds(headers, limit = 3) {
+  try {
+    const response = await fetch(`${OPENROUTER_API}/models`, { method: "GET", headers });
+    if (!response.ok) return [];
+    const data = await response.json();
+    if (!Array.isArray(data?.data)) return [];
+    return data.data
+      .filter((m) => isFreeModel(m) && m.id !== AUTO_MODEL)
+      .map((m) => m.id)
+      .slice(0, limit);
+  } catch (e) {
+    return [];
+  }
+}
+
 export const config = { runtime: "edge" };
 
 const MOUNT_PREFIX = "/api/openrouter";
@@ -206,7 +252,7 @@ export default async function handler(request, event) {
     return addCorsHeaders(rateLimitExceededResponse(rateResult));
   }
 
-  const adapted = await adaptRequest(request);
+  let adapted = await adaptRequest(request);
   const url = new URL(adapted.url);
 
   // Normalize the incoming path onto the OpenRouter base (…/api/v1):
@@ -262,6 +308,89 @@ export default async function handler(request, event) {
       return addCorsHeaders(new Response(JSON.stringify({
         error: { message: error.message, type: "api_error", code: 502 }
       }), { status: 502, headers: { "Content-Type": "application/json" } }));
+    }
+  }
+
+  // Auto/default model + retry handling for chat completions when the
+  // server-side default key is used: a missing, "auto" or "default" model
+  // routes to `openrouter/free`; failed attempts (upstream error, empty
+  // content or "User Safety: safe" stub) are retried with up to 3 other
+  // free models before the last response is returned.
+  if (usingDefaultKey && request.method === "POST" && pathname === "/chat/completions") {
+    // Read the body once (text, so malformed JSON can still be forwarded).
+    let rawText = null;
+    try {
+      rawText = await adapted.text();
+    } catch (e) {
+      rawText = null;
+    }
+    let body = null;
+    try {
+      body = rawText ? JSON.parse(rawText) : null;
+    } catch (e) {
+      body = null;
+    }
+    const rawModel = body && typeof body === "object" && typeof body.model === "string"
+      ? body.model.trim()
+      : "";
+    const isAuto = Boolean(
+      body && typeof body === "object" && !body.stream &&
+      (!rawModel || AUTO_MODEL_NAMES.has(rawModel.toLowerCase()))
+    );
+    if (!isAuto && rawText !== null) {
+      // The body stream was consumed for inspection — rebuild the request
+      // for the plain passthrough below.
+      adapted = new Request(upstreamUrl, {
+        method: "POST",
+        headers,
+        body: rawText
+      });
+    }
+    if (isAuto) {
+        const fallbacks = await getFreeModelIds(headers, MAX_AUTO_ATTEMPTS - 1);
+        const candidates = [AUTO_MODEL, ...fallbacks];
+        let lastData = null;
+        let lastStatus = 0;
+        for (const candidate of candidates) {
+          let attemptResponse;
+          try {
+            attemptResponse = await fetch(`${OPENROUTER_API}/chat/completions`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({ ...body, model: candidate })
+            });
+          } catch (error) {
+            continue;
+          }
+          if (!attemptResponse.ok) {
+            // Auth/credit errors won't improve with another model.
+            if ([401, 402, 403].includes(attemptResponse.status)) {
+              return addCorsHeaders(new Response(attemptResponse.body, attemptResponse));
+            }
+            lastStatus = attemptResponse.status;
+            try { lastData = await attemptResponse.json(); } catch (e) { lastData = null; }
+            continue;
+          }
+          let data;
+          try {
+            data = await attemptResponse.json();
+          } catch (e) {
+            lastStatus = attemptResponse.status;
+            continue;
+          }
+          if (isValidChatResponse(data)) {
+            return addCorsHeaders(new Response(JSON.stringify(data), {
+              status: attemptResponse.status,
+              statusText: attemptResponse.statusText,
+              headers: attemptResponse.headers
+            }));
+          }
+          lastData = data;
+          lastStatus = attemptResponse.status;
+        }
+        return addCorsHeaders(new Response(JSON.stringify(
+          lastData || { error: { message: "All model attempts failed", type: "api_error", code: 502 } }
+        ), { status: lastStatus || 502, headers: { "Content-Type": "application/json" } }));
     }
   }
 

@@ -8,10 +8,12 @@ const textModels = { data: [
   { name: 'openai-large', paid_only: false, pricing: { promptTextTokens: 0.001, completionTextTokens: 0.002 } },
   { name: 'openai-large:free', paid_only: false, pricing: { promptTextTokens: 0, completionTextTokens: 0 } },
   { name: 'qwen-coder', paid_only: true, pricing: { promptTextTokens: 0, completionTextTokens: 0 } },
+  { name: 'community/x-test/agent-model', agent: true, paid_only: false, pricing: { promptTextTokens: 0, completionTextTokens: 0 } },
 ]};
 const imageModels = [
   { name: 'flux', paid_only: false, pricing: { completionImageTokens: 0 }, output_modalities: ['image'] },
   { name: 'flux-pro', paid_only: false, pricing: { completionImageTokens: 0.05 }, output_modalities: ['image'] },
+  { name: 'agent-image', agent: true, paid_only: false, pricing: { completionImageTokens: 0 }, output_modalities: ['image'] },
 ];
 const FREE_REGISTRY = ['openai-large:free', 'flux', 'gemini'];
 
@@ -38,26 +40,34 @@ let ids = (await res.json()).data.map(m => m.id);
 check('models listing free-only with default key',
   ids.includes('openai-large:free') && ids.includes('flux') && !ids.includes('openai-large') && !ids.includes('flux-pro') && !ids.includes('qwen-coder'));
 
-// 2. /v1/models with user key -> full list
+// 2. /v1/models with user key -> full list, but agent models removed
 res = await worker.fetch(new Request('https://polli.g4f.dev/v1/models', { headers: { Authorization: 'Bearer sk-user' } }), env, {});
 ids = (await res.json()).data.map(m => m.id);
 check('models listing full with user key', ids.includes('openai-large') && ids.includes('flux-pro'));
+check('agent models removed from listing', !ids.includes('community/x-test/agent-model') && !ids.includes('agent-image'));
 
-// 3. chat/completions with paid model + default key -> 404
+// 3. chat/completions with agent model -> 404 even with user key
+res = await worker.fetch(new Request('https://polli.g4f.dev/v1/chat/completions', {
+  method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer sk-user' },
+  body: JSON.stringify({ model: 'community/x-test/agent-model', messages: [{ role: 'user', content: 'hi' }] })
+}), env, {});
+check('agent chat model blocked even with user key', res.status === 404);
+
+// 4. chat/completions with paid model + default key -> 404
 res = await worker.fetch(new Request('https://polli.g4f.dev/v1/chat/completions', {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ model: 'openai-large', messages: [{ role: 'user', content: 'hi' }] })
 }), env, {});
 check('paid chat model blocked with default key', res.status === 404);
 
-// 4. chat/completions with free model + default key -> allowed
+// 5. chat/completions with free model + default key -> allowed
 res = await worker.fetch(new Request('https://polli.g4f.dev/v1/chat/completions', {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ model: 'openai-large:free', messages: [{ role: 'user', content: 'hi' }] })
 }), env, {});
 check('free chat model allowed with default key', res.status === 200);
 
-// 5. chat/completions with paid model + user key -> allowed
+// 6. chat/completions with paid model + user key -> allowed
 res = await worker.fetch(new Request('https://polli.g4f.dev/v1/chat/completions', {
   method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer sk-user' },
   body: JSON.stringify({ model: 'openai-large', messages: [{ role: 'user', content: 'hi' }] })
@@ -65,21 +75,28 @@ res = await worker.fetch(new Request('https://polli.g4f.dev/v1/chat/completions'
 check('paid chat model allowed with user key', res.status === 200);
 check('user key forwarded upstream', capturedAuth === 'Bearer sk-user');
 
-// 6. images/generations with paid model + default key -> 404
+// 7. images/generations with paid model + default key -> 404
 res = await worker.fetch(new Request('https://polli.g4f.dev/v1/images/generations', {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ model: 'flux-pro', prompt: 'a cat' })
 }), env, {});
 check('paid image model blocked with default key', res.status === 404);
 
-// 7. images/generations with free model + default key -> allowed
+// 8. images/generations with agent model -> 404 even with user key
+res = await worker.fetch(new Request('https://polli.g4f.dev/v1/images/generations', {
+  method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer sk-user' },
+  body: JSON.stringify({ model: 'agent-image', prompt: 'a cat' })
+}), env, {});
+check('agent image model blocked even with user key', res.status === 404);
+
+// 9. images/generations with free model + default key -> allowed
 res = await worker.fetch(new Request('https://polli.g4f.dev/v1/images/generations', {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ model: 'flux', prompt: 'a cat' })
 }), env, {});
 check('free image model allowed with default key', res.status === 200);
 
-// 8. images/generations with paid model + user key -> allowed
+// 10. images/generations with paid model + user key -> allowed
 res = await worker.fetch(new Request('https://polli.g4f.dev/v1/images/generations', {
   method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer sk-user' },
   body: JSON.stringify({ model: 'flux-pro', prompt: 'a cat' })
