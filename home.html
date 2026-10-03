@@ -489,9 +489,9 @@
                     if (p.audio) badges.push('<span class="ad-badge audio">AUD</span>');
                     if (p.auth) badges.push('<span class="ad-badge auth">AUTH</span>');
                     return `<a class="ad-provider-item" href="/providers/${encodeURIComponent(p.name)}">
-                        <img class="ad-provider-logo" src="${logoUrl(p.name)}" alt="${p.name}" loading="lazy" onerror="this.style.opacity=0.3" />
+                        <img class="ad-provider-logo notranslate" src="${logoUrl(p.name)}" alt="${p.name}" loading="lazy" onerror="this.style.opacity=0.3" />
                         <div class="ad-provider-info">
-                            <div class="ad-provider-name">${p.label || p.name}</div>
+                            <div class="ad-provider-name notranslate">${p.label || p.name}</div>
                             <div class="ad-provider-badges">${badges.join('')}</div>
                         </div>
                     </a>`;
