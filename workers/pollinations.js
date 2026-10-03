@@ -274,6 +274,31 @@ function freeModelOnlyResponse(modelName) {
 }
 
 /**
+ * True when the registry entry for *modelName* is flagged as an agent
+ * model (`agent: true`). Agent models are disallowed entirely: they are
+ * hidden from listings and rejected on generation endpoints.
+ */
+async function isAgentModel(modelName, kind = "text") {
+  const registry = await getPricingRegistry(kind);
+  if (!registry.length) return false;
+  const entry = findPricingEntry(registry, resolveModel(modelName));
+  return Boolean(entry && entry.agent);
+}
+
+function agentModelResponse(modelName) {
+  return new Response(JSON.stringify({
+    error: {
+      message: `The model \`${modelName}\` is not available. Agent models are not supported.`,
+      type: "invalid_request_error",
+      code: "model_not_found"
+    }
+  }), {
+    status: 404,
+    headers: { "Content-Type": "application/json" }
+  });
+}
+
+/**
  * Extract per-component token counts from `x-usage-*` response headers.
  * Keys mirror Pollinations' header naming (see shared/registry/usage-headers.ts).
  */
@@ -950,6 +975,10 @@ async function handleListModels(request, env, mode) {
       const textData = await textResponse.json();
       const textModels = textData.data || textData || [];
       for (const model of textModels) {
+        // Agent models are removed from all listings.
+        if (model.agent) {
+          continue;
+        }
         if (["free", "community"].includes(mode) && model.paid_only) {
           continue;
         }
@@ -992,6 +1021,10 @@ async function handleListModels(request, env, mode) {
     if (imageResponse.ok) {
       const imageData = await imageResponse.json();
       for (const model of imageData) {
+        // Agent models are removed from all listings.
+        if (model.agent) {
+          continue;
+        }
         if (["free", "community"].includes(mode) && model.paid_only) {
           continue;
         }
@@ -1089,6 +1122,11 @@ async function handleChatCompletion(request, env, ctx) {
     return modelNotFoundResponse(body.model);
   }
 
+  // Agent models are disallowed entirely (even with a user key).
+  if (body.model && (await isAgentModel(body.model, "text"))) {
+    return agentModelResponse(body.model);
+  }
+
   // Extract API key if provided
   const authHeader = request.headers.get("Authorization");
   let apiKey = env.POLLINATIONS_API_KEY;
@@ -1163,6 +1201,11 @@ async function handleImageGeneration(request, env, ctx) {
   // (image + free registries; fails open on registry outages).
   if (body.model && !(await isKnownModel(body.model, ["image", "free"]))) {
     return modelNotFoundResponse(body.model);
+  }
+
+  // Agent models are disallowed entirely (even with a user key).
+  if (body.model && (await isAgentModel(body.model, "image"))) {
+    return agentModelResponse(body.model);
   }
 
   // Extract API key if provided
