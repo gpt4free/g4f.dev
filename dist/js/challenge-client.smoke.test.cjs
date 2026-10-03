@@ -118,8 +118,7 @@ const env = {
     CAKE_WORKER_URL: "https://cake.test/cake",
 };
 
-function makeRequest(url, method = "GET", body = null) {
-    const headers = {};
+function makeRequest(url, method = "GET", body = null, headers = {}) {
     if (body) headers["Content-Type"] = "application/json";
     return new b64Polyfill.Request(url, { method, body: body ? JSON.stringify(body) : undefined, headers });
 }
@@ -360,6 +359,49 @@ function check(name, cond) {
 
     res = await worker.fetch(makeRequest("https://g4f.dev/challenge/translations?lang=en"), env, {});
     check("english store rejected", res.status === 400);
+
+    // ---- Translations progress, language listing & admin clear ------------
+    console.log("\nchallenge-worker translations listing smoke test");
+
+    res = await worker.fetch(makeRequest("https://g4f.dev/challenge/translations?lang=de-DE"), env, {});
+    check("translations get returns progress fields", res.status === 200);
+    const servedProgress = await res.json();
+    check("progress total matches catalog size", typeof servedProgress.total === "number" && servedProgress.total > 0);
+    check("progress remaining consistent",
+        servedProgress.remaining === Math.max(0, servedProgress.total - servedProgress.count));
+    check("progress percent consistent",
+        servedProgress.percent === Math.round((servedProgress.count / servedProgress.total) * 1000) / 10);
+
+    res = await worker.fetch(makeRequest("https://g4f.dev/challenge/translations/languages"), env, {});
+    check("languages listing returns 200", res.status === 200);
+    const listing = await res.json();
+    check("languages listing contains de", Array.isArray(listing.languages) && listing.languages.some((l) => l.language === "de"));
+    const deEntry = listing.languages.find((l) => l.language === "de");
+    check("languages entry carries count + progress",
+        deEntry && deEntry.count === servedProgress.count && deEntry.total === servedProgress.total &&
+        deEntry.remaining === servedProgress.remaining && deEntry.percent === servedProgress.percent);
+    check("languages listing sorted by count desc",
+        listing.languages.every((l, i, arr) => i === 0 || arr[i - 1].count >= l.count));
+
+    res = await worker.fetch(makeRequest("https://g4f.dev/challenge/translations", "DELETE"), env, {});
+    check("clear without admin key rejected", res.status === 401);
+    res = await worker.fetch(
+        makeRequest("https://g4f.dev/challenge/translations", "DELETE", null, { Authorization: "Bearer wrong-key" }),
+        env, {}
+    );
+    check("clear with wrong admin key rejected", res.status === 401);
+
+    const adminEnv = { ...env, ADMIN_API_KEY: "test-admin-key" };
+    res = await worker.fetch(
+        makeRequest("https://g4f.dev/challenge/translations?lang=de", "DELETE", null, { Authorization: "Bearer test-admin-key" }),
+        adminEnv, {}
+    );
+    check("admin clear single language returns 200", res.status === 200);
+    const cleared = await res.json();
+    check("admin clear reports deleted language", cleared.ok === true && cleared.deleted_languages.includes("de"));
+    res = await worker.fetch(makeRequest("https://g4f.dev/challenge/translations?lang=de-DE"), env, {});
+    const afterClear = await res.json();
+    check("cleared language store is empty", afterClear.count === 0 && Object.keys(afterClear.translations).length === 0);
 
     console.log(`\n${passed} passed, ${failed} failed`);
     process.exit(failed ? 1 : 0);

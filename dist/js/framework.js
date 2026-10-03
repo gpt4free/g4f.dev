@@ -180,6 +180,93 @@ framework.translations = (() => {
     }
 })();
 
+// ---- Global translations store -------------------------------------------
+// Community translations from the challenge worker, kept per base language
+// ("de-DE" → "de") in localStorage under "globalTranslations". Used by
+// translateAll() as a free first source and by the translations UI to show
+// coverage per language.
+const GLOBAL_TRANSLATIONS_KEY = "globalTranslations";
+const CHALLENGE_TRANSLATIONS_URL = "https://beta.g4f.dev/challenge/translations";
+framework.globalTranslations = (() => {
+    try {
+        return JSON.parse(localStorage.getItem(GLOBAL_TRANSLATIONS_KEY) || "{}");
+    } catch (e) {
+        return {};
+    }
+})();
+
+function storeGlobalTranslations(store) {
+    framework.globalTranslations = store || {};
+    try {
+        localStorage.setItem(GLOBAL_TRANSLATIONS_KEY, JSON.stringify(framework.globalTranslations));
+    } catch (e) { /* private mode — in-memory copy still works */ }
+}
+
+/** Fetch the community translation store for one base language and merge it
+ *  into the global store. Returns the entry: {language, count, translations,
+ *  total?, remaining?, percent?} — progress fields come from the worker when
+ *  its snippet catalog is loadable. */
+framework.loadGlobalTranslations = async (language) => {
+    const base = (language || navigator.language || "en").split(/[-_]/)[0].toLowerCase();
+    if (!base || base === "en") {
+        throw new Error("invalid_language");
+    }
+    const response = await fetch(`${CHALLENGE_TRANSLATIONS_URL}?lang=${encodeURIComponent(base)}`);
+    if (!response.ok) {
+        throw new Error(`translations fetch failed: HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    const entry = {
+        language: data.language || base,
+        count: data.count || 0,
+        translations: data.translations || {},
+    };
+    if (typeof data.total === "number") {
+        entry.total = data.total;
+        entry.remaining = data.remaining;
+        entry.percent = data.percent;
+    }
+    const store = framework.globalTranslations || {};
+    store[entry.language] = entry;
+    storeGlobalTranslations(store);
+    return entry;
+};
+
+/** List every language in the community store with translation counts and
+ *  translated percent: {languages: [{language, count, total?, remaining?,
+ *  percent?}], total_snippets}. Cached for 60s by the worker. */
+framework.listGlobalTranslations = async () => {
+    const response = await fetch(`${CHALLENGE_TRANSLATIONS_URL}/languages`);
+    if (!response.ok) {
+        throw new Error(`translations listing failed: HTTP ${response.status}`);
+    }
+    return await response.json();
+};
+
+/** Clear translations: without arguments the global community store (and,
+ *  with clearLocal, the per-page localStorage copies too). With a language,
+ *  only that language's community entry is dropped. Server-side clearing is
+ *  an admin action on the worker (DELETE /challenge/translations). */
+framework.clearTranslations = (language = null, clearLocal = false) => {
+    let cleared = false;
+    if (language) {
+        const base = String(language).split(/[-_]/)[0].toLowerCase();
+        if (framework.globalTranslations && framework.globalTranslations[base]) {
+            delete framework.globalTranslations[base];
+            cleared = true;
+        }
+    } else if (framework.globalTranslations && Object.keys(framework.globalTranslations).length) {
+        framework.globalTranslations = {};
+        cleared = true;
+    }
+    if (clearLocal) {
+        cleared = deleteTranslations() || cleared;
+        framework.translations = {};
+    }
+    storeGlobalTranslations(framework.globalTranslations);
+    return cleared;
+};
+
 // Persist translations and update the in-memory copy, so translateElements()
 // can apply freshly fetched translations without a reload.
 function storeTranslations(translations) {
@@ -330,19 +417,21 @@ framework.translateAll = async () => {
     newTranslations.forEach(text => {
         allTranslations[text] = framework.translations[text] || "";
     });
-    // Reuse community translations from the challenge worker first — only
-    // snippets nobody has translated yet go to the model.
+    // Reuse community translations from the global store / challenge worker
+    // first — only snippets nobody has translated yet go to the model.
     try {
-        const communityRes = await fetch(`https://beta.g4f.dev/challenge/translations?lang=${encodeURIComponent(navigator.language)}`);
-        if (communityRes.ok) {
-            const community = (await communityRes.json()).translations || {};
-            for (const [text, translated] of Object.entries(community)) {
-                if (allTranslations.hasOwnProperty(text) && translated) {
-                    allTranslations[text] = translated;
-                }
+        const base = navigator.language.split(/[-_]/)[0].toLowerCase();
+        let community = framework.globalTranslations?.[base]?.translations;
+        if (!community || Object.keys(community).length === 0) {
+            const entry = await framework.loadGlobalTranslations(navigator.language);
+            community = entry.translations;
+        }
+        for (const [text, translated] of Object.entries(community || {})) {
+            if (allTranslations.hasOwnProperty(text) && translated) {
+                allTranslations[text] = translated;
             }
         }
-    } catch (e) { 
+    } catch (e) {
         add_error(`Community translation store unavailable: ${e}`, e);
     }
     const missing = Object.fromEntries(Object.entries(allTranslations).filter(([, translated]) => !translated));
@@ -730,6 +819,7 @@ Object.assign(window, {
     getHeaders,
     escapeHtml,
     deleteTranslations,
+    storeGlobalTranslations,
 });
 
 // Live bindings for the log panel: getters so window.logStorage /

@@ -37,7 +37,9 @@ questions, and both are served back to every visitor — see
 | GET    | `/challenge/issue?lang=<lang>&kind=followup\|translation\|translations\|any` | Returns an encrypted challenge. The plaintext prompt is **never** sent in cleartext. |
 | POST   | `/challenge/solve`    | Body: `{id, ciphertext, iv, language}` (answer sealed with AES-GCM). Returns `{token, credit_cents}`. |
 | POST   | `/challenge/redeem`   | Body: `{token}` (or `Authorization: Bearer <token>`). Proxy — verifies locally, then credits via the cake worker's `POST /cake/redeem` (`CAKE_WORKER_URL`). |
-| GET    | `/challenge/translations?lang=<lang>` | Serves the community translation store for the UI (`Cache-Control: max-age=300`). |
+| GET    | `/challenge/translations?lang=<lang>` | Serves the community translation store for the UI (`Cache-Control: max-age=300`), plus progress fields: `total` (catalog size), `remaining`, `percent` translated. |
+| GET    | `/challenge/translations/languages` | Lists every language in the store: `{languages: [{language, count, total, remaining, percent}], total_snippets}`, sorted by count descending (`Cache-Control: max-age=60`). |
+| DELETE | `/challenge/translations[?lang=<lang>]` | Clears the community store — one language, or all when `lang` is omitted. Admin only (`Authorization: Bearer <ADMIN_API_KEY>`). |
 | GET    | `/challenge/followups?lang=<lang>&count=<n>` | Serves random follow-up questions from the community pool (`Cache-Control: max-age=60`; 404 `{error: "no_followups"}` when empty). |
 | GET    | `/challenge/status`   | Current IP's `solved_today`, `credit_cents`, limits. |
 | GET    | `/challenge/health`   | Liveness probe. |
@@ -80,9 +82,14 @@ use, and every visitor benefits:
    `/challenge/solve`** — a valid `translations` answer is merged into the
    per-language store at solve time (no separate submit endpoint, failures
    are non-fatal).
-4. `framework.translateAll()` fetches `GET /challenge/translations?lang=…`
-   first and reuses those community translations before asking the local model
-   for anything still missing.
+4. `framework.translateAll()` reuses the **global translations store**
+   (`framework.globalTranslations`, persisted in localStorage under
+   `globalTranslations`) — populated via `framework.loadGlobalTranslations(lang)`
+   from `GET /challenge/translations?lang=…` — before asking the local model
+   for anything still missing. `framework.listGlobalTranslations()` returns
+   the per-language listing with translated percent;
+   `framework.clearTranslations([lang][, clearLocal])` clears the client-side
+   store (server-side clearing is the admin `DELETE` above).
 
 Submissions are filtered (non-empty strings, must differ from the source,
 ≤100 entries, `en` excluded) and merged into the per-language store.

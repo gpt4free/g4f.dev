@@ -84,6 +84,25 @@ class UpstashKv {
       console.error("KV delete failed:", e);
     }
   }
+  // Cloudflare-KV-shaped list({prefix, cursor, limit}) via SCAN. Returns
+  // {keys: [{name}], list_complete, cursor?} so workers can enumerate keys.
+  async list(options = {}) {
+    const prefix = options.prefix || "";
+    const limit = Math.min(Math.max(Number(options.limit) || 100, 1), 1000);
+    const args = ["SCAN", String(options.cursor || "0"), "COUNT", String(limit)];
+    if (prefix) args.push("MATCH", `${prefix}*`);
+    try {
+      const [cursor, keys] = await this.command(args);
+      return {
+        keys: (keys || []).map((name) => ({ name })),
+        list_complete: cursor === "0",
+        ...(cursor !== "0" ? { cursor } : {}),
+      };
+    } catch (e) {
+      console.error("KV list failed:", e);
+      return { keys: [], list_complete: true };
+    }
+  }
 }
 
 // Vercel Blob KV shim (fallback when no Upstash vars are set).

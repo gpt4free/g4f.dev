@@ -33,6 +33,11 @@
  *   POST /challenge/solve      { id, ciphertext, iv, language }
  *   POST /challenge/redeem     { token }   — exchange JWT for cake credit
  *   GET  /challenge/translations?lang=de-DE   — community translations
+ *        (+ total/remaining/percent progress against the snippet catalog)
+ *   GET  /challenge/translations/languages  — every language in the store
+ *        with its translation count, remaining and translated percent
+ *   DELETE /challenge/translations[?lang=de-DE] — clear the community store
+ *        (one language or all; admin only, ADMIN_API_KEY bearer)
  *   GET  /challenge/followups?lang=de-DE&count=3 — community follow-up questions
  *   GET  /challenge/status
  *   GET  /challenge/health
@@ -92,7 +97,7 @@ function corsHeaders(request) {
     return {
         "Access-Control-Allow-Origin": allowed ? origin : "null",
         "Access-Control-Allow-Credentials": "true",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Forwarded-For, X-User",
         "Access-Control-Expose-Headers": "X-Cake-Credit",
         "Vary": "Origin",
@@ -804,7 +809,10 @@ async function handleTranslationsSubmit(language, translations, env) {
 }
 
 /** GET /challenge/translations?lang=de-DE — community translations for the
- *  chat UI's translateAll() to reuse instead of re-translating everything. */
+ *  chat UI's translateAll() to reuse instead of re-translating everything.
+ *  The response also carries progress against the snippet catalog (total
+ *  known texts, remaining untranslated, translated percent) — omitted when
+ *  the catalog is temporarily unavailable. */
 async function handleTranslationsGet(request, env) {
     const url = new URL(request.url);
     const language = baseLanguage(url.searchParams.get("lang") || "");
@@ -814,12 +822,93 @@ async function handleTranslationsGet(request, env) {
     const raw = await env.CAKE_KV.get(`challenge:translations:${language}`);
     let translations = {};
     try { translations = raw ? JSON.parse(raw) : {}; } catch { /* fresh store */ }
+    const result = { language, count: Object.keys(translations).length, translations };
+    try {
+        await loadSnippets(env);
+        result.total = snippetsKeys.length;
+        result.remaining = Math.max(0, result.total - result.count);
+        result.percent = result.total ? Math.round((result.count / result.total) * 1000) / 10 : 100;
+    } catch { /* catalog unavailable — progress fields omitted */ }
     return json(
-        { language, count: Object.keys(translations).length, translations },
+        result,
         200,
         { "Cache-Control": "public, max-age=300" },
         request
     );
+}
+
+/** List KV keys with a prefix via the KV list API. The Upstash shim
+ *  implements list() with SCAN; stores without list support (e.g. the
+ *  Vercel Blob shim) yield an empty list — callers degrade gracefully. */
+async function listKvKeys(env, prefix) {
+    if (!env.CAKE_KV || typeof env.CAKE_KV.list !== "function") return [];
+    const names = [];
+    let cursor;
+    try {
+        do {
+            const page = await env.CAKE_KV.list(cursor ? { prefix, cursor } : { prefix });
+            for (const key of page.keys || []) names.push(key.name);
+            cursor = page.list_complete ? undefined : page.cursor;
+        } while (cursor);
+    } catch { /* listing is best-effort */ }
+    return names;
+}
+
+/** GET /challenge/translations/languages — every language in the community
+ *  translation store with its translation count and, when the snippet
+ *  catalog is loadable, the remaining untranslated texts and the translated
+ *  percent. Sorted by count, descending. */
+async function handleTranslationsLanguages(request, env) {
+    const prefix = "challenge:translations:";
+    const names = await listKvKeys(env, prefix);
+    let total = null;
+    try {
+        await loadSnippets(env);
+        total = snippetsKeys.length;
+    } catch { /* progress fields omitted */ }
+    const languages = [];
+    for (const name of names) {
+        const language = name.slice(prefix.length);
+        if (!language) continue;
+        const raw = await env.CAKE_KV.get(name);
+        let count = 0;
+        try { count = Object.keys(JSON.parse(raw || "{}")).length; } catch { /* skip broken store */ }
+        const entry = { language, count };
+        if (total !== null) {
+            entry.total = total;
+            entry.remaining = Math.max(0, total - count);
+            entry.percent = total ? Math.round((count / total) * 1000) / 10 : 100;
+        }
+        languages.push(entry);
+    }
+    languages.sort((a, b) => b.count - a.count || (a.language < b.language ? -1 : 1));
+    return json(
+        { languages, count: languages.length, total_snippets: total },
+        200,
+        { "Cache-Control": "public, max-age=60" },
+        request
+    );
+}
+
+/** DELETE /challenge/translations[?lang=de-DE] — clear the community
+ *  translation store (one language, or every language when lang is
+ *  omitted). Admin only: requires the ADMIN_API_KEY bearer token. */
+async function handleTranslationsDelete(request, env) {
+    const auth = request.headers.get("Authorization") || "";
+    if (!env.ADMIN_API_KEY || auth !== `Bearer ${env.ADMIN_API_KEY}`) {
+        return json({ error: "unauthorized" }, 401, {}, request);
+    }
+    const url = new URL(request.url);
+    const language = baseLanguage(url.searchParams.get("lang") || "");
+    const prefix = "challenge:translations:";
+    const names = await listKvKeys(env, prefix);
+    const deleted = [];
+    for (const name of names) {
+        if (language && name.slice(prefix.length) !== language) continue;
+        await env.CAKE_KV.delete(name);
+        deleted.push(name.slice(prefix.length));
+    }
+    return json({ ok: true, deleted_languages: deleted, count: deleted.length }, 200, {}, request);
 }
 
 /** GET /challenge/followups?lang=de-DE&count=3 — community follow-up
@@ -917,8 +1006,14 @@ export default {
             if (pathname === "/challenge/redeem" && request.method === "POST") {
                 return await handleRedeem(request, env);
             }
+            if (pathname === "/challenge/translations/languages" && request.method === "GET") {
+                return await handleTranslationsLanguages(request, env);
+            }
             if (pathname === "/challenge/translations" && request.method === "GET") {
                 return await handleTranslationsGet(request, env);
+            }
+            if (pathname === "/challenge/translations" && request.method === "DELETE") {
+                return await handleTranslationsDelete(request, env);
             }
             if (pathname === "/challenge/followups" && request.method === "GET") {
                 return await handleFollowupsGet(request, env);
@@ -930,7 +1025,7 @@ export default {
                 return json({ ok: true, service: "challenge-worker" }, 200, {}, request);
             }
             return json(
-                { error: "not_found", endpoints: ["/challenge/issue", "/challenge/solve", "/challenge/redeem", "/challenge/translations", "/challenge/followups", "/challenge/status"] },
+                { error: "not_found", endpoints: ["/challenge/issue", "/challenge/solve", "/challenge/redeem", "/challenge/translations", "/challenge/translations/languages", "/challenge/followups", "/challenge/status"] },
                 404,
                 {},
                 request

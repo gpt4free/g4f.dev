@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>G4F - Language Selection</title>
+
+    <meta name="description" content="Choose your language, load community translation packages and track UI translation progress for G4F." />
+    <meta name="keywords" content="G4F, GPT4Free, languages, translations, community, i18n" />
+    <meta name="author" content="GPT4Free Team" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="G4F - Language Selection" />
+    <meta property="og:description" content="Community UI translations: coverage per language, load packages, clear stores." />
+    <meta property="og:url" content="https://g4f.dev/language-selection.html" />
+    <meta property="og:site_name" content="GPT4Free Documentation" />
+    <link rel="canonical" href="https://g4f.dev/language-selection.html" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/g4f.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/g4f-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/g4f-16x16.png" />
+    <link rel="manifest" href="/dist/img/site.webmanifest" />
+
+    <style>
+        :root {
+            --lime: #a3e635;
+            --lime-bright: #bef264;
+            --lime-dim: #84cc16;
+            --lime-glow: rgba(163, 230, 53, 0.25);
+            --bg: #0b100a;
+            --panel: rgba(163, 230, 53, 0.05);
+            --panel-border: rgba(163, 230, 53, 0.16);
+            --text: #eef5e4;
+            --muted: #9fb08c;
+            --danger: #f87171;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background:
+                radial-gradient(60vw 60vw at 85% -10%, rgba(163, 230, 53, 0.12), transparent 60%),
+                radial-gradient(50vw 50vw at -10% 110%, rgba(132, 204, 22, 0.10), transparent 60%),
+                linear-gradient(180deg, #0b100a 0%, #0e140b 60%, #0b100a 100%);
+            color: var(--text);
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding: 24px 16px 60px;
+        }
+        .wrap { max-width: 900px; margin: 0 auto; }
+
+        header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 22px;
+        }
+        h1 {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--lime-bright), var(--lime-dim));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle { width: 100%; color: var(--muted); font-size: 14px; margin: 2px 0 0; }
+        .spacer { flex: 1; }
+
+        button {
+            font-family: inherit;
+            border-radius: 10px;
+            border: 1px solid var(--panel-border);
+            background: var(--panel);
+            color: var(--text);
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        button:hover:not(:disabled) { border-color: var(--lime); color: var(--lime-bright); box-shadow: 0 0 14px var(--lime-glow); }
+        button:disabled { opacity: 0.45; cursor: not-allowed; }
+        button.primary { background: linear-gradient(135deg, var(--lime-dim), var(--lime)); border-color: var(--lime); color: #0b100a; font-weight: 600; }
+        button.primary:hover:not(:disabled) { filter: brightness(1.1); color: #0b100a; }
+        button.danger { border-color: rgba(248, 113, 113, 0.4); color: var(--danger); }
+        button.danger:hover:not(:disabled) { border-color: var(--danger); box-shadow: 0 0 14px rgba(248, 113, 113, 0.2); color: var(--danger); }
+        button.small { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .stat {
+            background: var(--panel);
+            border: 1px solid var(--panel-border);
+            border-radius: 14px;
+            padding: 14px 16px;
+        }
+        .stat .value { font-size: 24px; font-weight: 700; color: var(--lime-bright); }
+        .stat .label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            background: var(--panel);
+            border: 1px solid var(--panel-border);
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin-bottom: 18px;
+        }
+        .toolbar input[type="password"] {
+            font-family: inherit;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            color: var(--text);
+            padding: 7px 10px;
+            font-size: 13px;
+            width: 180px;
+            outline: none;
+        }
+        .toolbar input[type="password"]:focus { border-color: var(--lime); }
+        .toolbar .hint { font-size: 12px; color: var(--muted); }
+
+        .lang-list { display: flex; flex-direction: column; gap: 10px; }
+        .lang {
+            display: grid;
+            grid-template-columns: 44px 1fr auto;
+            gap: 14px;
+            align-items: center;
+            background: var(--panel);
+            border: 1px solid var(--panel-border);
+            border-radius: 14px;
+            padding: 12px 16px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .lang:hover { border-color: rgba(163, 230, 53, 0.45); box-shadow: 0 0 18px rgba(163, 230, 53, 0.08); }
+        .lang.current { border-color: var(--lime); box-shadow: 0 0 18px var(--lime-glow); }
+        .flag { font-size: 26px; text-align: center; }
+        .lang-main { min-width: 0; }
+        .lang-name { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .lang-name code { font-size: 11px; color: var(--muted); background: rgba(0, 0, 0, 0.3); padding: 2px 6px; border-radius: 6px; }
+        .badge {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: rgba(163, 230, 53, 0.15);
+            color: var(--lime-bright);
+            border: 1px solid rgba(163, 230, 53, 0.3);
+        }
+        .badge.local { background: rgba(56, 189, 248, 0.12); color: #7dd3fc; border-color: rgba(56, 189, 248, 0.3); }
+        .bar {
+            height: 8px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: linear-gradient(90deg, var(--lime-dim), var(--lime-bright));
+            box-shadow: 0 0 10px var(--lime-glow);
+            transition: width 0.5s ease;
+        }
+        .bar-fill.zero { background: rgba(163, 230, 53, 0.15); box-shadow: none; }
+        .lang-meta { font-size: 12px; color: var(--muted); margin-top: 5px; }
+        .lang-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+        .loading, .error {
+            text-align: center;
+            padding: 40px;
+            color: var(--muted);
+        }
+        .error { color: var(--danger); }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(11, 16, 10, 0.95);
+            border: 1px solid var(--lime);
+            color: var(--lime-bright);
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 13px;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 100;
+            box-shadow: 0 0 24px var(--lime-glow);
+            max-width: 90vw;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast.error { border-color: var(--danger); color: var(--danger); box-shadow: 0 0 24px rgba(248, 113, 113, 0.2); }
+
+        footer { margin-top: 24px; font-size: 12px; color: var(--muted); text-align: center; }
+        footer a { color: var(--lime); text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+
+        @media (max-width: 560px) {
+            .lang { grid-template-columns: 36px 1fr; }
+            .lang-actions { grid-column: 1 / -1; justify-content: flex-start; }
+        }
+    </style>
+    <script src="dist/js/framework.js" defer></script>
+</head>
+<body>
+    <div class="wrap">
+        <header>
+            <h1>🌐 Language Selection</h1>
+            <button id="refresh-btn" class="primary">Refresh</button>
+            <p class="subtitle">Community UI translations — coverage per language, load packages into your local store or clear them.</p>
+        </header>
+
+        <section class="stats">
+            <div class="stat"><div class="value" id="stat-langs">–</div><div class="label">Languages started</div></div>
+            <div class="stat"><div class="value" id="stat-total">–</div><div class="label">UI snippets total</div></div>
+            <div class="stat"><div class="value" id="stat-mine">–</div><div class="label">Your language</div></div>
+        </section>
+
+        <section class="toolbar">
+            <button id="load-mine" class="primary">⬇️ Load my language</button>
+            <button id="clear-local" class="danger">🗑️ Clear local translations</button>
+            <input type="password" id="admin-key" placeholder="Admin key (server clear)" autocomplete="off" />
+            <button id="clear-server" class="danger">☁️ Clear server store</button>
+            <span class="hint">Server clear needs the admin key — one language or all.</span>
+        </section>
+
+        <section class="lang-list" id="lang-list">
+            <div class="loading">Loading languages…</div>
+        </section>
+
+        <footer>
+            Translations are contributed by the community via
+            <a href="https://g4f.dev/chat/">chat translation challenges</a> —
+            solve challenges with your local model to earn cakes and fill your language.
+            See the <a href="https://g4f.dev/docs/challenge-cakes">docs</a>.
+        </footer>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        "use strict";
+
+        const TRANSLATIONS_URL = "https://beta.g4f.dev/challenge/translations";
+
+        // Popular target languages shown even when nothing is translated yet,
+        // so every visitor can see where their language stands (0%).
+        const SEED_LANGUAGES = [
+            "de", "es", "fr", "it", "pt", "nl", "pl", "ru", "uk", "tr",
+            "zh", "ja", "ko", "hi", "ar", "id", "vi", "th", "sv", "da",
+            "fi", "nb", "cs", "el", "he", "hu", "ro", "bg",
+        ];
+
+        const baseLang = (tag) => String(tag || "").split(/[-_]/)[0].toLowerCase();
+        const displayNames = (() => {
+            try { return new Intl.DisplayNames(["en"], { type: "language" }); } catch { return null; }
+        })();
+        const langName = (code) => {
+            try { return displayNames ? (displayNames.of(code) || code) : code; } catch { return code; }
+        };
+        const flagEmoji = (code) => {
+            const region = { de: "DE", es: "ES", fr: "FR", it: "IT", pt: "PT", nl: "NL", pl: "PL", ru: "RU", uk: "UA", tr: "TR", zh: "CN", ja: "JP", ko: "KR", hi: "IN", ar: "SA", id: "ID", vi: "VN", th: "TH", sv: "SE", da: "DK", fi: "FI", nb: "NO", cs: "CZ", el: "GR", he: "IL", hu: "HU", ro: "RO", bg: "BG" }[code];
+            if (!region) return "🌐";
+            return String.fromCodePoint(...[...region].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
+        };
+
+        function toast(message, isError = false) {
+            const el = document.getElementById("toast");
+            el.textContent = message;
+            el.classList.toggle("error", isError);
+            el.classList.add("show");
+            clearTimeout(el._timer);
+            el._timer = setTimeout(() => el.classList.remove("show"), 3200);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement("div");
+            div.appendChild(document.createTextNode(text));
+            return div.innerHTML;
+        }
+
+        let listing = { languages: [], total_snippets: null };
+
+        async function refresh() {
+            const listEl = document.getElementById("lang-list");
+            listEl.innerHTML = '<div class="loading">Loading languages…</div>';
+            try {
+                listing = await framework.listGlobalTranslations();
+            } catch (e) {
+                // Graceful degradation: show the seed languages at 0% and the
+                // reason, so the page stays usable when the worker is down.
+                listing = { languages: [], total_snippets: null };
+                render();
+                const banner = document.createElement("div");
+                banner.className = "error";
+                banner.textContent = `Community store unreachable (${String(e.message || e)}) — showing available languages with 0%.`;
+                listEl.prepend(banner);
+                return;
+            }
+            render();
+        }
+
+        function render() {
+            const listEl = document.getElementById("lang-list");
+            const total = listing.total_snippets;
+            const store = framework.globalTranslations || {};
+            const current = baseLang(navigator.language);
+
+            // Merge the server listing with the seed languages (0% entries).
+            const byLang = new Map(listing.languages.map((l) => [l.language, l]));
+            for (const code of SEED_LANGUAGES) {
+                if (!byLang.has(code)) {
+                    byLang.set(code, { language: code, count: 0, total, remaining: total, percent: 0, seed: true });
+                }
+            }
+            const languages = [...byLang.values()].sort((a, b) =>
+                (b.count || 0) - (a.count || 0) || a.language.localeCompare(b.language));
+
+            document.getElementById("stat-langs").textContent =
+                listing.languages.length ? `${listing.languages.length}` : "0";
+            document.getElementById("stat-total").textContent = total !== null && total !== undefined ? total : "–";
+            const mine = listing.languages.find((l) => l.language === current);
+            document.getElementById("stat-mine").textContent =
+                mine && typeof mine.percent === "number" ? `${mine.percent}%` : (mine ? `${mine.count}` : "0%");
+
+            listEl.innerHTML = "";
+            for (const entry of languages) {
+                const isCurrent = entry.language === current;
+                const inStore = Boolean(store[entry.language]);
+                const percent = typeof entry.percent === "number" ? entry.percent : null;
+                const count = entry.count || 0;
+                const totalShown = entry.total !== undefined ? entry.total : total;
+
+                const row = document.createElement("div");
+                row.className = "lang" + (isCurrent ? " current" : "");
+                row.innerHTML = `
+                    <div class="flag">${flagEmoji(entry.language)}</div>
+                    <div class="lang-main">
+                        <div class="lang-name">
+                            ${escapeHtml(langName(entry.language))}
+                            <code>${escapeHtml(entry.language)}</code>
+                            ${isCurrent ? '<span class="badge">your language</span>' : ""}
+                            ${inStore ? '<span class="badge local">loaded</span>' : ""}
+                        </div>
+                        <div class="bar"><div class="bar-fill${percent ? "" : " zero"}" style="width:${percent || 0}%"></div></div>
+                        <div class="lang-meta">${
+                            percent === null
+                                ? `${count} translations`
+                                : `${percent}% translated — ${count}${totalShown ? ` / ${totalShown}` : ""} texts, ${entry.remaining ?? "?"} remaining`
+                        }</div>
+                    </div>
+                    <div class="lang-actions">
+                        ${entry.seed
+                            ? `<a class="small" style="color:var(--lime);font-size:12px;align-self:center" href="https://g4f.dev/chat/" title="Solve translation challenges in chat">Start translating →</a>`
+                            : `<button class="small primary" data-action="load" data-lang="${escapeHtml(entry.language)}">⬇️ Load</button>
+                               <button class="small danger" data-action="clear" data-lang="${escapeHtml(entry.language)}">🗑️ Clear</button>
+                               <button class="small danger" data-action="server-clear" data-lang="${escapeHtml(entry.language)}">☁️ Server</button>`}
+                    </div>`;
+                listEl.appendChild(row);
+            }
+        }
+
+        document.getElementById("lang-list").addEventListener("click", async (event) => {
+            const btn = event.target.closest("button[data-action]");
+            if (!btn) return;
+            const lang = btn.dataset.lang;
+            const action = btn.dataset.action;
+            btn.disabled = true;
+            try {
+                if (action === "load") {
+                    const entry = await framework.loadGlobalTranslations(lang);
+                    toast(`Loaded ${entry.count} translations for "${lang}" into the global store`);
+                } else if (action === "clear") {
+                    const cleared = framework.clearTranslations(lang);
+                    toast(cleared ? `Cleared "${lang}" from the local store` : `"${lang}" was not in the local store`, !cleared);
+                } else if (action === "server-clear") {
+                    const key = document.getElementById("admin-key").value.trim();
+                    if (!key) {
+                        toast("Enter the admin key first", true);
+                        return;
+                    }
+                    const res = await fetch(`${TRANSLATIONS_URL}?lang=${encodeURIComponent(lang)}`, {
+                        method: "DELETE",
+                        headers: { "Authorization": `Bearer ${key}` },
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        toast(`Server clear failed: ${data.error || res.status}`, true);
+                        return;
+                    }
+                    framework.clearTranslations(lang);
+                    toast(`Server store for "${lang}" cleared (${data.count} language(s))`);
+                }
+                render();
+            } catch (e) {
+                toast(String(e.message || e), true);
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById("refresh-btn").addEventListener("click", refresh);
+
+        document.getElementById("load-mine").addEventListener("click", async (event) => {
+            const btn = event.currentTarget;
+            btn.disabled = true;
+            try {
+                const entry = await framework.loadGlobalTranslations(navigator.language);
+                toast(`Loaded ${entry.count} translations for "${entry.language}"`);
+                render();
+            } catch (e) {
+                toast(String(e.message || e) === "invalid_language"
+                    ? "English is the source language — nothing to load"
+                    : String(e.message || e), true);
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById("clear-local").addEventListener("click", (event) => {
+            const btn = event.currentTarget;
+            btn.disabled = true;
+            try {
+                const cleared = framework.clearTranslations(null, true);
+                toast(cleared ? "Local translation stores cleared — reload pages to re-translate" : "Nothing to clear", !cleared);
+                render();
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById("clear-server").addEventListener("click", async (event) => {
+            const btn = event.currentTarget;
+            const key = document.getElementById("admin-key").value.trim();
+            if (!key) {
+                toast("Enter the admin key first", true);
+                return;
+            }
+            if (!confirm("Clear the WHOLE community translation store on the server?")) return;
+            btn.disabled = true;
+            try {
+                const res = await fetch(TRANSLATIONS_URL, {
+                    method: "DELETE",
+                    headers: { "Authorization": `Bearer ${key}` },
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    toast(`Server clear failed: ${data.error || res.status}`, true);
+                    return;
+                }
+                framework.clearTranslations();
+                toast(`Server store cleared (${data.count} language(s))`);
+                await refresh();
+            } catch (e) {
+                toast(String(e.message || e), true);
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        window.addEventListener("DOMContentLoaded", refresh);
+    </script>
+</body>
+</html>
