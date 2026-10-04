@@ -111,12 +111,23 @@ async function on_api() {
 
         async function loadCoreProvidersSelect() {
             let provider_options = [];
+            // Try cache first (IndexedDB, fallback localStorage) so the
+            // provider dropdown is populated even when the API is unreachable.
+            const cached = await window.cache?.providers?.get();
+            if (Array.isArray(cached) && cached.length > 0) {
+                await load_providers(cached, provider_options, providersListContainer, providersToggleContainer);
+            }
             await api("providers").then(async (providers) => {
                 await load_providers(providers, provider_options, providersListContainer, providersToggleContainer);
+                window.cache?.providers?.set(providers);
             }).catch(async (e)=>{
-                add_error(e, true);
+                if (!Array.isArray(cached) || cached.length === 0) {
+                    add_error(e, true);
+                } else {
+                    console.warn("Providers API failed, using cached providers:", e);
+                }
                 providerSelect.querySelectorAll("option:not([data-live])").forEach((el)=>el.remove());
-                await load_provider_login_urls(providersListContainer, providers);
+                await load_provider_login_urls(providersListContainer, cached || []);
                 await load_settings(provider_options);
             });
         }
@@ -127,8 +138,11 @@ async function on_api() {
             loadCustomProvidersSelect(),
             loadCoreProvidersSelect()
         ]).then(async () => {
-            await loadProviderModels(appStorage.getItem("provider"));
+            // Load PA providers first so window._paProviders is populated
+            // before the selected provider's models are restored — otherwise
+            // a selected PA provider renders no models on reload.
             await loadPaProviders();
+            await loadProviderModels(appStorage.getItem("provider"));
         });
 
         set_favorite_providers();

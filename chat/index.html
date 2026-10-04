@@ -976,8 +976,19 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
         window.addEventListener("message", (event) => {
             if (event.origin !== CHAT_ORIGIN && event.source !== window.parent) return;
             const data = event.data || {};
+            if (data.type === "g4f-ext:hello") {
+                // Mark the host as the browser-extension side panel: login
+                // popups are then requested via g4f-ext:open-auth instead
+                // of window.open (suppressed inside the side panel).
+                window.g4fExtHost = true;
+            }
             if (data.type === "g4f-ext:ask" && typeof data.prompt === "string") {
                 askFromExtension(data.prompt);
+            }
+            if (data.type === "g4f-ext:auth-done") {
+                // The login popup closed: refresh the login UI (the storage
+                // event does not always fire across windows).
+                window.dispatchEvent(new CustomEvent("g4f-login:changed"));
             }
         });
     })();

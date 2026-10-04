@@ -1,6 +1,6 @@
-
 import client from "./client.js";
 import { captureUserTierHeaders } from "./client.js";
+
 let fs;
 if (typeof window === "undefined") {
     fs = require("fs");
@@ -14,7 +14,7 @@ let hiddenServers = [];
 let providerClassMap = Object.fromEntries(
     Object.entries(client).map(([key, value]) => [key.toLowerCase(), value])
 );
-console.log(providerClassMap);
+
 function mapProviderDefaults(providers) {
     for (const provider of Object.values(providers)) {
         if (provider.id && hiddenServers.includes(provider.id)) {

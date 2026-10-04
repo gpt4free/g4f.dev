@@ -1538,12 +1538,26 @@ async function loadPaProviders() {
     try {
         const providers = await fetchPaProviders();
         window._paProviders = providers;
+        // Cache the PA list so it can be restored when /pa/providers is
+        // unreachable on a later reload.
+        window.cache?.set('pa_providers', providers);
         renderPaProviders(providers);
         // Also refresh the select dropdown
         loadPaProviderSelect();
     } catch (err) {
+        // Fall back to the cached PA list so a selected PA provider still
+        // has models after reload when the backend is unreachable.
+        if (!window._paProviders) {
+            const cached = await window.cache?.get('pa_providers');
+            if (Array.isArray(cached) && cached.length > 0) {
+                console.warn('PA providers fetch failed, using cached list:', err);
+                window._paProviders = cached;
+                renderPaProviders(cached);
+                loadPaProviderSelect();
+            }
+        }
         const container = document.getElementById('pa-providers-list');
-        if (container) container.innerHTML = `<div class="mcp-empty">Failed to load PA providers: ${escapeHtml(String(err))}</div>`;
+        if (container && !window._paProviders) container.innerHTML = `<div class="mcp-empty">Failed to load PA providers: ${escapeHtml(String(err))}</div>`;
     } finally {
         if (btn) {
             btn.disabled = false;

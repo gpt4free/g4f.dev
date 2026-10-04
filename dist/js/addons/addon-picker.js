@@ -696,90 +696,60 @@ const apiExport = {};
     const FETCH_RETRIES = 0;      // 2 retries = 3 total attempts
 
     // ------------------------------------------------------------------
-    // IndexedDB-backed persistent cache.
-    // Replaces sessionStorage/localStorage (which have ~5MB quotas and
-    // throw QuotaExceededError on the full provider+model list).
-    // IndexedDB has much larger limits (50MB–unlimited).
+    // Persistent cache via the shared cache addon (addon-cache.js):
+    // IndexedDB first, localStorage fallback. Replaces the legacy
+    // picker-only IndexedDB database (g4f_picker_cache), which is
+    // migrated once and then removed.
     // ------------------------------------------------------------------
-    const IDB_NAME = 'g4f_picker_cache';
-    const IDB_VERSION = 1;
-    const IDB_STORE = 'cache'; // single object store, keyed by name
     const MODEL_CACHE_TTL = 60 * 60 * 1000;       // 1 hour
     const PROVIDER_CACHE_TTL = 60 * 60 * 1000;    // 1 hour
+    const CACHE_CONTAINER_TTL = 24 * 60 * 60 * 1000; // container outlives its entries
 
-    let idbReady = null; // Promise<IDDatabase | null>
+    const MODEL_CACHE_KEY = 'picker_models';
+    const PROVIDER_CACHE_KEY = 'picker_providers';
 
-    function openIDB() {
-        if (idbReady) return idbReady;
-        idbReady = new Promise((resolve) => {
-            if (typeof indexedDB === 'undefined') { resolve(null); return; }
-            try {
-                const req = indexedDB.open(IDB_NAME, IDB_VERSION);
-                req.onupgradeneeded = () => {
-                    const db = req.result;
-                    if (!db.objectStoreNames.contains(IDB_STORE)) {
-                        db.createObjectStore(IDB_STORE);
-                    }
-                };
-                req.onsuccess = () => resolve(req.result);
-                req.onerror = () => resolve(null);
-            } catch (e) { resolve(null); }
-        });
-        return idbReady;
-    }
+    // Shared cache (IndexedDB with localStorage fallback).
+    const sharedCache = () => window.cache;
 
-    function idbGet(key) {
-        return openIDB().then(db => {
-            if (!db) return null;
-            return new Promise((resolve) => {
+    // One-time migration from the legacy picker-only IndexedDB database.
+    (async () => {
+        try {
+            if (typeof indexedDB === 'undefined') return;
+            const legacy = await new Promise((resolve) => {
                 try {
-                    const tx = db.transaction(IDB_STORE, 'readonly');
-                    const req = tx.objectStore(IDB_STORE).get(key);
-                    req.onsuccess = () => resolve(req.result || null);
+                    const req = indexedDB.open('g4f_picker_cache', 1);
+                    req.onsuccess = () => {
+                        const db = req.result;
+                        if (!db.objectStoreNames.contains('cache')) { resolve(null); return; }
+                        const tx = db.transaction('cache', 'readonly');
+                        const getModels = tx.objectStore('cache').get('models');
+                        const getProviders = tx.objectStore('cache').get('providers');
+                        tx.oncomplete = () => resolve({ models: getModels.result, providers: getProviders.result });
+                        tx.onerror = () => resolve(null);
+                    };
                     req.onerror = () => resolve(null);
                 } catch (e) { resolve(null); }
             });
-        });
-    }
-
-    function idbSet(key, value) {
-        return openIDB().then(db => {
-            if (!db) return false;
-            return new Promise((resolve) => {
-                try {
-                    const tx = db.transaction(IDB_STORE, 'readwrite');
-                    tx.objectStore(IDB_STORE).put(value, key);
-                    tx.oncomplete = () => resolve(true);
-                    tx.onerror = () => resolve(false);
-                } catch (e) { resolve(false); }
-            });
-        });
-    }
-
-    function idbClear() {
-        return openIDB().then(db => {
-            if (!db) return false;
-            return new Promise((resolve) => {
-                try {
-                    const tx = db.transaction(IDB_STORE, 'readwrite');
-                    tx.objectStore(IDB_STORE).clear();
-                    tx.oncomplete = () => resolve(true);
-                    tx.onerror = () => resolve(false);
-                } catch (e) { resolve(false); }
-            });
-        });
-    }
+            if (legacy && (legacy.models || legacy.providers)) {
+                if (legacy.models) await sharedCache()?.set(MODEL_CACHE_KEY, legacy.models, CACHE_CONTAINER_TTL);
+                const legacyProviders = legacy.providers?.data || legacy.providers;
+                if (legacyProviders && Array.isArray(legacyProviders.models)) {
+                    await sharedCache()?.set(PROVIDER_CACHE_KEY, legacyProviders, PROVIDER_CACHE_TTL);
+                }
+            }
+            if (legacy) indexedDB.deleteDatabase('g4f_picker_cache');
+        } catch (e) { /* migration is best-effort */ }
+    })();
 
     // In-memory model cache (hot path, synchronous reads).
-    // Hydrated from IndexedDB on init; writes go to both.
+    // Hydrated from the shared cache on init; writes go to both.
     const modelCache = new Map(); // url -> { data, expires }
-    const MODEL_CACHE_KEY = 'models';
     let modelCacheHydrated = false;
 
-    // Restore persisted model cache from IndexedDB into memory (async, fire-and-forget)
+    // Restore persisted model cache from the shared cache into memory (async, fire-and-forget)
     (async () => {
         try {
-            const saved = await idbGet(MODEL_CACHE_KEY);
+            const saved = await sharedCache()?.get(MODEL_CACHE_KEY);
             if (saved && typeof saved === 'object') {
                 const now = Date.now();
                 for (const [url, entry] of Object.entries(saved)) {
@@ -798,7 +768,7 @@ const apiExport = {};
             for (const [url, entry] of modelCache.entries()) {
                 obj[url] = entry;
             }
-            await idbSet(MODEL_CACHE_KEY, obj);
+            await sharedCache()?.set(MODEL_CACHE_KEY, obj, CACHE_CONTAINER_TTL);
         } catch (e) { /* keep in-memory only */ }
     }
 
@@ -818,34 +788,38 @@ const apiExport = {};
 
     async function clearModelCache() {
         modelCache.clear();
-        await idbClear();
+        try {
+            await sharedCache()?.remove(MODEL_CACHE_KEY);
+            await sharedCache()?.remove(PROVIDER_CACHE_KEY);
+        } catch (e) {}
     }
 
-    // Providers cache (full state.providers array) — read/written via IndexedDB.
-    const PROVIDER_CACHE_KEY = 'providers';
+    // Providers cache (the full "All Providers" entry) — via the shared
+    // cache (IndexedDB with localStorage fallback).
 
     async function getCachedProviders() {
         try {
-            const entry = await idbGet(PROVIDER_CACHE_KEY);
-            if (entry && entry.expires > Date.now() && Array.isArray(entry.data)) {
-                return entry.data;
+            const entry = await sharedCache()?.get(PROVIDER_CACHE_KEY);
+            if (entry && Array.isArray(entry.models)) {
+                return entry;
             }
         } catch (e) {}
         return null;
     }
 
-    // One-time migration: remove legacy localStorage/sessionStorage keys
-    // that caused QuotaExceededError. Fire-and-forget.
+    // One-time migration: remove legacy sessionStorage key that caused
+    // QuotaExceededError. (The legacy 'picker_providers' localStorage key
+    // is now owned by the shared cache and must not be removed.)
+    // Fire-and-forget.
     (async () => {
         try {
-            localStorage.removeItem('picker_providers');
             sessionStorage.removeItem('picker_model_cache');
         } catch (e) {}
     })();
 
     async function setCachedProviders(providers) {
         try {
-            await idbSet(PROVIDER_CACHE_KEY, { data: providers, expires: Date.now() + PROVIDER_CACHE_TTL });
+            await sharedCache()?.set(PROVIDER_CACHE_KEY, providers, PROVIDER_CACHE_TTL);
         } catch (e) {}
     }
 
@@ -964,7 +938,7 @@ const apiExport = {};
         try {
             state.providers = [];
             const cachedProviders = await getCachedProviders();
-            if (Array.isArray(cachedProviders) && cachedProviders.length > 0) {
+            if (cachedProviders && Array.isArray(cachedProviders.models)) {
                 await loadProvidersState(cachedProviders);
             }
             const seen = new Set();
@@ -1218,7 +1192,7 @@ const apiExport = {};
             }
 
             await setCachedProviders(allEntry);
-            if (!Array.isArray(cachedProviders) || cachedProviders.length <= 0) {
+            if (!cachedProviders || !Array.isArray(cachedProviders.models)) {
                 await loadProvidersState(allEntry);
             }
         } catch (e) {

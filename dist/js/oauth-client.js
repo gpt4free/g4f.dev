@@ -41,10 +41,20 @@
         }
     }
 
-    // Open an auth URL in a centered popup window. Returns the popup
-    // window handle (or null when blocked / not framed).
+    // Open an auth URL in a centered popup window. Returns a truthy value
+    // when the login window was opened (or handed to the host frame) and
+    // null when the caller should navigate the current frame instead.
     function openAuthPopup(url, name) {
         if (!isFramed()) return null;
+        // Inside the browser-extension side panel, window.open() from this
+        // cross-origin frame is suppressed (or opens a full tab). The host
+        // panel listens for this message and opens a real popup window.
+        if (window.g4fExtHost) {
+            try {
+                window.parent.postMessage({ type: "g4f-ext:open-auth", url: String(url) }, "*");
+                return true;
+            } catch (e) { /* fall through to window.open */ }
+        }
         const w = Math.min(520, window.screen.width - 40);
         const h = Math.min(760, window.screen.height - 80);
         const x = Math.max(0, Math.round((window.screen.width - w) / 2));
@@ -57,10 +67,16 @@
         if (popup) {
             try { popup.opener = window; } catch (e) { /* ignore */ }
             popup.focus();
-        } else {
-            console.warn("Login popup blocked - falling back to navigation");
+            return true;
         }
-        return popup;
+        // Popup blocked: ask the host frame to open it (the g4f extension
+        // side panel handles this; other embedders ignore the message).
+        try {
+            window.parent.postMessage({ type: "g4f-ext:open-auth", url: String(url) }, "*");
+            return true;
+        } catch (e) { /* ignore */ }
+        console.warn("Login popup blocked - falling back to navigation");
+        return null;
     }
 
     // Notify the opener (the framed chat that spawned this popup) that the

@@ -495,26 +495,52 @@ async function refreshModels(provider) {
     // PA providers expose models via the pa providers list, not the models API
     if (provider && String(provider).startsWith("pa:")) {
         const paId = provider.slice(3);
-        const paEntry = window._paProviders && window._paProviders.find(p => p.id === paId);
+        let paEntry = window._paProviders && window._paProviders.find(p => p.id === paId);
+        if (!paEntry) {
+            // PA list not loaded yet (e.g. /pa/providers failed) — fall back
+            // to the cached PA provider entry so models still render.
+            const cachedPa = await window.cache?.get(`pa:${paId}`);
+            if (cachedPa && Array.isArray(cachedPa.models) && cachedPa.models.length > 0) {
+                console.log("PA providers not loaded, using cached entry for:", paId);
+                paEntry = cachedPa;
+            }
+        }
         console.log("PA provider entry for provider:", provider, paEntry);
         if (paEntry && Array.isArray(paEntry.models) && paEntry.models.length > 0) {
             setProviderModels(paEntry.models, provider);
+            window.cache?.set(`pa:${paId}`, paEntry);
         }
         return;
     }
-    let models = appStorage.getItem(`${provider}:models`);
-    if (models) {
-        models = JSON.parse(models);
-        setProviderModels(models, provider);
+    // Serve cached models first (IndexedDB, fallback localStorage) so the
+    // dropdown is populated even when the models API is unreachable.
+    const cached = await window.cache?.models?.get(provider);
+    if (Array.isArray(cached) && cached.length > 0) {
+        setProviderModels(cached, provider);
     }
-    const [new_models, quota] = await Promise.all([api('models', provider), get_quota(provider)]);
-    if (new_models) {
-        setProviderModels(new_models, provider, quota);
-        appStorage.setItem(`${provider}:models`, JSON.stringify(new_models));
+    try {
+        const [new_models, quota] = await Promise.all([api('models', provider), get_quota(provider)]);
+        if (new_models) {
+            setProviderModels(new_models, provider, quota);
+            window.cache?.models?.set(provider, new_models);
+        } else if (!Array.isArray(cached) || cached.length === 0) {
+            add_error(new Error("No models available for provider: " + provider), true);
+        }
+    } catch (e) {
+        console.warn("Models API failed for provider:", provider, e);
+        if (!Array.isArray(cached) || cached.length === 0) {
+            add_error(e, true);
+        }
     }
 }
 async function loadClientModels() {
     modelSelect.innerHTML = `<option value="" disabled selected>${framework.translate("Loading...")}</option>`;
+    const cacheProvider = providerSelect?.value || "default";
+    // Serve cached models first so the dropdown is populated even offline.
+    const cached = await window.cache?.models?.get(cacheProvider);
+    if (Array.isArray(cached) && cached.length > 0) {
+        setProviderModels(cached, cacheProvider);
+    }
     try {
 
         if (providerModelSignal) {
@@ -552,9 +578,13 @@ async function loadClientModels() {
         if (models.length > 2) {
             setFavoriteModels(providerSelect?.value, window.client.defaultModel || models[0].id);
         }
+        window.cache?.models?.set(cacheProvider, models);
     } catch (err) {
         console.error('Model load failed:', err);
-        modelSelect.innerHTML = "";
+        // Keep cached options if available, otherwise clear the dropdown.
+        if (!Array.isArray(cached) || cached.length === 0) {
+            modelSelect.innerHTML = "";
+        }
     }
 }
 async function loadProviderModels(provider=null) {
