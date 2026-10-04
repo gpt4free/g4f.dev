@@ -633,7 +633,9 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
     }
     if (!customOptgroup) return;
     
-    try {
+    // Fetch the merged server list (public + private). Throws on failure so
+    // the SWR wrapper can fall back to the cached copy.
+    const fetchServers = async () => {
         let privateData;
         if (appStorage.getItem("g4f_session")) {
             const url = "https://g4f.space/custom/api/servers";
@@ -655,6 +657,12 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
                 data = data.concat(privateData.servers.filter(server => !publicServerIds.has(server.id)));
             }
         }
+        return data;
+    };
+
+    // Render a server list into the dropdown + toggle list.
+    const renderServers = async (data) => {
+        if (!Array.isArray(data) || data.length === 0) return;
 
         // Filter out servers that are already live in the dropdown
         const liveServerIds = Object.values(await window.loadProviders()).map(p => p.id);
@@ -662,7 +670,7 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
 
         // Store servers globally for client creation
         window.customServers = data;
-        
+
         data.forEach(server => {
             let isEnabled = appStorage.getItem(`enableCustomServer_${server.id}`);
             if (isEnabled === null) {
@@ -683,7 +691,7 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
                     option.dataset.defaultModel = server.default_model;
                 }
                 option.dataset.label = server.label;
-                
+
                 // Build label with model count if available
                 let label = server.label || server.id;
                 if (server.allowed_models && server.allowed_models.length > 0) {
@@ -723,16 +731,21 @@ async function loadCustomProvidersFromAPI(customOptgroup, providersContainer = n
                 }
             }
         });
-    } catch (e) {
+    };
+
+    // Stale-while-revalidate: render cached servers immediately (even when
+    // expired), then re-fetch in the background and re-render when the
+    // fresh list differs.
+    await window.cache?.servers?.swr(fetchServers, renderServers).catch((e) => {
         console.debug("Failed to load custom providers from API:", e);
-    }
+    });
 }
 
 function get_media_size(text) {
     if (Array.isArray(text) || !text) {
         return null;
     }
-    
+
     // Check for base64-encoded image in markdown format: [![alt](data:image/...))](...)
     const imageMarkdownMatch = text.match(/!\[.*?\]\(data:image\/[^;]+;base64,([A-Za-z0-9+/=]+)\)/);
     if (imageMarkdownMatch && imageMarkdownMatch[1]) {
@@ -1670,7 +1683,7 @@ async function handleToolCalls(toolCalls, messages, model, provider, message_id,
             if (provider == "Custom") {
                 apiBase = appStorage.getItem("Custom-api_base");
             }
-            const ignored = Array.from(settings.querySelectorAll("input.provider:not(:checked)")).map((el)=>el.value);
+            const ignored = Array.from(settings.querySelectorAll("input.provider:not(:checked):not(.custom-server)")).map((el)=>el.value);
             await api("conversation", {
                 id: message_id,
                 conversation_id: window.conversation_id,

@@ -22,8 +22,6 @@
     })
 })();
 
-let providerModelSignal = null;
-
 async function api(ressource, args=null, files=null, message_id=null, finish_message=null) {
     if (window?.pywebview) {
         if (args !== null) {
@@ -45,11 +43,6 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
     let url = `${framework.backendUrl}/backend-api/v2/${ressource}`;
     let response;
     if (ressource == "models" && args) {
-        if (providerModelSignal) {
-            providerModelSignal.abort();
-        }
-        providerModelSignal = new AbortController();
-
         const api_key = get_api_key_by_provider(args);
         if (api_key) {
             headers['x-api-key'] = api_key;
@@ -58,7 +51,7 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
         if (api_base) {
             headers['x-api-base'] = api_base;
         }
-        const ignored = Array.from(settings.querySelectorAll("input.provider:not(:checked)")).map((el)=>el.value);
+        const ignored = Array.from(settings.querySelectorAll("input.provider:not(:checked):not(.custom-server")).map((el)=>el.value);
         if (ignored.length > 0 && args == "AnyProvider") {
             args += '?ignored=' + encodeURIComponent(ignored.join(" "));
         }
@@ -67,7 +60,6 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
         response = await fetch(url, {
             method: 'GET',
             headers: headers,
-            signal: providerModelSignal.signal,
         });
     } else if (ressource == "conversation") {
         let body = JSON.stringify(args);
@@ -512,46 +504,48 @@ async function refreshModels(provider) {
         }
         return;
     }
-    // Serve cached models first (IndexedDB, fallback localStorage) so the
-    // dropdown is populated even when the models API is unreachable.
-    // Stale (expired) entries are accepted — better than an empty dropdown.
-    const cached = await window.cache?.models?.get(provider, true);
-    if (Array.isArray(cached) && cached.length > 0) {
-        setProviderModels(cached, provider);
-    }
-    try {
-        const [new_models, quota] = await Promise.all([api('models', provider), get_quota(provider)]);
-        if (new_models) {
-            setProviderModels(new_models, provider, quota);
-            window.cache?.models?.set(provider, new_models);
-        } else if (!Array.isArray(cached) || cached.length === 0) {
-            add_error(new Error("No models available for provider: " + provider), true);
+    // Stale-while-revalidate: render cached models immediately (even when
+    // expired), then re-fetch in the background and re-render when the
+    // fresh list differs.
+    await window.cache?.models?.swr(
+        provider,
+        async () => {
+            const [new_models, quota] = await Promise.all([api('models', provider), get_quota(provider)]);
+            if (!new_models) {
+                throw new Error("No models available for provider: " + provider);
+            }
+            // Quota labels are UI-only — strip them before caching so stale
+            // copies don't accumulate "Remaining: x%" suffixes.
+            new_models.forEach((model) => {
+                delete model.remaining_percent;
+                if (model.label) {
+                    model.label = model.label.replaceAll(" ✅", "").replaceAll(" ⚠️", "");
+                }
+            });
+            return new_models;
+        },
+        (cached) => {
+            // Skip rendering when the user switched to another provider in
+            // the meantime — the cached copy belongs to a stale request.
+            if ((providerSelect?.value || "default") !== provider) return;
+            setProviderModels(cached, provider);
         }
-    } catch (e) {
+    ).catch((e) => {
         console.warn("Models API failed for provider:", provider, e);
-        if (!Array.isArray(cached) || cached.length === 0) {
-            add_error(e, true);
-        }
-    }
+        add_error(e, true);
+    });
 }
 async function loadClientModels() {
     modelSelect.innerHTML = `<option value="" disabled selected>${framework.translate("Loading...")}</option>`;
     const cacheProvider = providerSelect?.value || "default";
-    // Serve cached models first so the dropdown is populated even offline.
-    // Stale (expired) entries are accepted — better than an empty dropdown.
-    const cached = await window.cache?.models?.get(cacheProvider, true);
-    if (Array.isArray(cached) && cached.length > 0) {
-        setProviderModels(cached, cacheProvider);
-    }
-    try {
-
-        if (providerModelSignal) {
-            providerModelSignal.abort();
-        }
-        providerModelSignal = new AbortController();
-        window.client.modelsSignal = providerModelSignal;
-        const [models, quota] = await Promise.all([window.client.models.list(), window.client.getQuota().catch(() => undefined)]);
-        setQuotaInfo(models, quota);
+    // Stale-while-revalidate: render cached models immediately (even when
+    // expired), then re-fetch in the background and re-render when the
+    // fresh list differs.
+    const renderModels = (models) => {
+        // Skip rendering when the user switched to another provider in the
+        // meantime — the fetch belongs to a stale request.
+        if ((providerSelect?.value || "default") !== cacheProvider) return;
+        setQuotaInfo(models, null);
         modelSelect.innerHTML = '';
         models.forEach(model => {
             if (window.isValidModel && !isValidModel(model)) {
@@ -578,16 +572,32 @@ async function loadClientModels() {
             modelSelect.appendChild(opt);
         });
         if (models.length > 2) {
-            setFavoriteModels(providerSelect?.value, window.client.defaultModel || models[0].id);
+            setFavoriteModels(providerSelect?.value, window.client?.defaultModel || models[0].id);
         }
-        window.cache?.models?.set(cacheProvider, models);
-    } catch (err) {
+    };
+    await window.cache?.models?.swr(
+        cacheProvider,
+        async () => {
+            const [models, quota] = await Promise.all([window.client.models.list(), window.client.getQuota().catch(() => undefined)]);
+            setQuotaInfo(models, quota);
+            // Quota labels are UI-only — strip them before caching so stale
+            // copies don't accumulate "Remaining: x%" suffixes.
+            models.forEach((model) => {
+                delete model.remaining_percent;
+                if (model.label) {
+                    model.label = model.label.replaceAll(" ✅", "").replaceAll(" ⚠️", "");
+                }
+            });
+            return models;
+        },
+        renderModels
+    ).catch((err) => {
         console.error('Model load failed:', err);
         // Keep cached options if available, otherwise clear the dropdown.
-        if (!Array.isArray(cached) || cached.length === 0) {
+        if (modelSelect.querySelector('option[value=""]')) {
             modelSelect.innerHTML = "";
         }
-    }
+    });
 }
 async function loadProviderModels(provider=null) {
     const isLoading = !!provider;

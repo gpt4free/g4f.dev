@@ -533,7 +533,7 @@ const load_conversation = async (conversation, append = false) => {
     await register_message_buttons();
     highlight(chatBody);
     regenerate_button.classList.remove("regenerate-hidden");
-    chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" });
+    chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: document.body.classList.contains("no-animations") ? "auto" : "smooth" });
 };
 
 async function safe_load_conversation(conversation_id) {

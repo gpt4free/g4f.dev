@@ -111,25 +111,24 @@ async function on_api() {
 
         async function loadCoreProvidersSelect() {
             let provider_options = [];
-            // Try cache first (IndexedDB, fallback localStorage) so the
-            // provider dropdown is populated even when the API is unreachable.
-            // Stale (expired) entries are accepted — better than an empty list.
-            const cached = await window.cache?.providers?.get(true);
-            if (Array.isArray(cached) && cached.length > 0) {
-                await load_providers(cached, provider_options, providersListContainer, providersToggleContainer);
-            }
-            await api("providers").then(async (providers) => {
-                await load_providers(providers, provider_options, providersListContainer, providersToggleContainer);
-                window.cache?.providers?.set(providers);
-            }).catch(async (e)=>{
-                if (!Array.isArray(cached) || cached.length === 0) {
-                    add_error(e, true);
-                } else {
-                    console.warn("Providers API failed, using cached providers:", e);
-                }
+            // Stale-while-revalidate: render cached providers immediately
+            // (even when expired), then re-fetch in the background and
+            // re-render the dropdown when the fresh list differs.
+            const renderProviders = (providers) => {
+                if (!Array.isArray(providers) || providers.length === 0) return;
+                providerSelect.querySelectorAll("optgroup:not(#live-providers-optgroup):not(#custom-providers-optgroup)").forEach((el)=>el.remove());
                 providerSelect.querySelectorAll("option:not([data-live])").forEach((el)=>el.remove());
-                await load_provider_login_urls(providersListContainer, cached || []);
-                await load_settings(provider_options);
+                load_providers(providers, provider_options, providersListContainer, providersToggleContainer);
+            };
+            await window.cache?.providers?.swr(
+                () => api("providers"),
+                renderProviders
+            ).catch((e) => {
+                console.warn("Providers API failed, using cached providers:", e);
+                add_error(e, true);
+                providerSelect.querySelectorAll("option:not([data-live])").forEach((el)=>el.remove());
+                load_provider_login_urls(providersListContainer, []);
+                load_settings(provider_options);
             });
         }
 
@@ -215,6 +214,8 @@ addonsLoaded.then(async () => {
     // requests fail.
     show_ai_consent();
 
+    cleanupStorage();
+
     await on_load();
     await on_api();
 
@@ -254,6 +255,34 @@ addonsLoaded.then(async () => {
         sidebar.classList.remove("minimized");
     }
 });
+
+// One-time storage cleanup after load:
+//   1. Remove legacy "models:*" cache keys — the model cache moved to
+//      IndexedDB (addon-cache.js) and localStorage copies are dead weight
+//      that can trigger QuotaExceededError.
+//   2. Remove empty "*-api_key" entries (and their orphaned "-expires"
+//      keys) left behind by cleared API key inputs.
+function cleanupStorage() {
+    try {
+        const storage = window.localStorage;
+        if (!storage || typeof storage.key !== 'function') return;
+        const keys = [];
+        for (let i = 0; i < storage.length; i++) {
+            keys.push(storage.key(i));
+        }
+        for (const key of keys) {
+            if (!key) continue;
+            if (key.startsWith("models:")) {
+                storage.removeItem(key);
+            } else if (key.endsWith("-api_key") && !storage.getItem(key)) {
+                storage.removeItem(key);
+                storage.removeItem(key.replace("-api_key", "-expires"));
+            }
+        }
+    } catch (e) {
+        console.debug("Storage cleanup failed:", e);
+    }
+}
 
 // AI usage consent: warn about AI-generated content and third-party provider
 // forwarding before the first interaction. Accepted state is stored locally.

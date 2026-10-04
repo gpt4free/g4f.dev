@@ -1673,17 +1673,14 @@ form .label {
 /* ---------------------------------------------------------------------
    15. Motion preferences
    --------------------------------------------------------------------- */
-body.no-animations .message:last-child,
-body.no-animations .empty-state-icon img,
-body.no-animations .stop_generating button i {
-    animation: none;
-}
-
-body.no-animations .suggestion-card,
-body.no-animations .suggestions .suggestion,
-body.no-animations .scroll-bottom-btn,
-body.no-animations .chat-footer .send-buttons button {
-    transition: none;
+/* "Disable Animations" setting: disable every animation and transition
+   in the modern UI layer, not just a few select elements. */
+body.no-animations *,
+body.no-animations *::before,
+body.no-animations *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

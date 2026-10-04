@@ -609,7 +609,22 @@ async function handleSolve(request, env) {
         return json({ error: "challenge_not_issued_to_ip", ip }, 403, {}, request);
     }
 
-    // 2. Unseal the client's encrypted answer.
+    // 2. Enforce the daily solve limit before any crypto or validation
+    //    work — a spent quota must fail fast (the client checks /status
+    //    before issuing, but races and other clients still land here).
+    const solvedRaw = await env.CAKE_KV.get(`challenge:solved:${ip}`);
+    let solved = { count: 0, day: dayKey() };
+    if (solvedRaw) {
+        try {
+            const parsed = JSON.parse(solvedRaw);
+            if (parsed.day === dayKey()) solved = parsed;
+        } catch { /* fresh counter */ }
+    }
+    if (solved.count >= perDay) {
+        return json({ error: "daily_limit_reached", limit: perDay }, 429, { "Retry-After": "3600" }, request);
+    }
+
+    // 3. Unseal the client's encrypted answer.
     const answer = await unsealPayload(env, ciphertext, iv);
     if (!answer) {
         return json({ error: "decrypt_failed" }, 400, {}, request);
@@ -624,25 +639,13 @@ async function handleSolve(request, env) {
         return json({ error, kind: record.kind }, 400, {}, request);
     }
 
-    // 5. Enforce the daily solve limit.
-    const solvedRaw = await env.CAKE_KV.get(`challenge:solved:${ip}`);
-    let solved = { count: 0, day: dayKey() };
-    if (solvedRaw) {
-        try {
-            const parsed = JSON.parse(solvedRaw);
-            if (parsed.day === dayKey()) solved = parsed;
-        } catch { /* fresh counter */ }
-    }
-    if (solved.count >= perDay) {
-        return json({ error: "daily_limit_reached", limit: perDay }, 429, { "Retry-After": "3600" }, request);
-    }
+    // 5. Count the solve against the daily quota and burn the challenge so
+    //    it can't be solved twice.
     await env.CAKE_KV.put(
         `challenge:solved:${ip}`,
         JSON.stringify({ count: solved.count + 1, day: dayKey() }),
         { expirationTtl: 86400 }
     );
-
-    // 6. Burn the challenge so it can't be solved twice.
     await env.CAKE_KV.delete(`challenge:${id}`);
 
     // 6b. Feed the community follow-ups pool: a solved question set becomes
@@ -951,12 +954,15 @@ async function handleStatus(request, env) {
             if (parsed.day === dayKey()) solved = parsed;
         } catch { /* fresh counter */ }
     }
+    const issued = await getIssuedCount(env, ip);
     const creditRaw = await env.CAKE_KV.get(`cakes:credit:${ip}`);
     const credit = creditRaw ? Number(creditRaw) || 0 : 0;
     return json({
         ip,
         solved_today: solved.count,
         limit_per_day: Number(env.CHALLENGE_PER_IP_PER_DAY || 100),
+        issued_today: issued,
+        issue_limit_per_day: Number(env.CHALLENGE_MAX_PER_DAY || 150),
         credit_cents: credit,
         credit_usd: (credit / 100).toFixed(4),
     }, 200, {}, request);

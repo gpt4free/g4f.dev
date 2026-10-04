@@ -500,15 +500,22 @@ framework.translateAll = async () => {
     if (translations && translations[targetLanguage] && typeof translations[targetLanguage] === 'object' && Object.keys(translations[targetLanguage]).length > 0) {
         translations = translations[targetLanguage];
     }
-    if (translations && typeof translations === 'object' && translations[newTranslations[0]]) {
+    if (translations && typeof translations === 'object') {
         // Merge the model's answers into the full map instead of replacing it.
+        // Models often answer only part of a batch or rephrase keys — accept
+        // every entry whose key matches a requested snippet (whitespace
+        // normalized) and only report an error when nothing usable came back.
+        let matched = 0;
         for (const [text, translated] of Object.entries(translations)) {
-            if (text in allTranslations && translated) {
-                allTranslations[text] = translated;
+            const key = String(text).replace(/\s+/g, ' ').trim();
+            if (key in allTranslations && translated) {
+                allTranslations[key] = translated;
+                matched += 1;
             }
         }
-    } else if (translations) {
-        add_error("Invalid translations received: " + JSON.stringify(translations), true);
+        if (matched === 0) {
+            add_error("Invalid translations received: " + JSON.stringify(translations), true);
+        }
     }
     // Persist and apply whatever is covered — even when the model query
     // failed, community/stored translations must still reach the UI.

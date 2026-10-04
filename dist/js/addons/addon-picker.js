@@ -1770,13 +1770,15 @@ const apiExport = {};
 
     // Expose the real functions on the export container so v2.js
     // copies them to window.* (window.tryNextProvider, etc.)
-    apiExport.open = open;
-    apiExport.close = close;
-    apiExport.refresh = () => { state.loaded = false; clearModelCache(); return loadAll(); };
+    apiExport.picker = {
+        open,
+        close,
+        refresh: () => { state.loaded = false; clearModelCache(); return loadAll(); },
+        quickSelect
+    };
     apiExport.tryNextProvider = tryNextProvider;
     apiExport.resetFallback = resetFallback;
     apiExport.isFallbackActive = () => fallback.active;
-    apiExport.quickSelect = quickSelect;
 })();
 
 export default apiExport;
