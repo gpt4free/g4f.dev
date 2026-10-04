@@ -19,7 +19,7 @@
 
         load() {
             return (async () => {
-                await initCache();
+                await initIDB();
             })();
         }
     });
@@ -146,26 +146,31 @@ function createCacheEntry(data, ttl) {
 
 // Accepts any non-null data (arrays, objects, primitives).
 function isCacheEntryValid(entry) {
-    return entry && entry.expires > Date.now()
-        && entry.data !== undefined && entry.data !== null;
+    return entry && entry.data !== undefined && entry.data !== null;
 }
 
-// Get from cache (tries IndexedDB first, falls back to localStorage)
-async function cacheGet(key, ttl) {
+function isCacheEntryFresh(entry) {
+    return isCacheEntryValid(entry) && entry.expires > Date.now();
+}
+
+// Get from cache (tries IndexedDB first, falls back to localStorage).
+// With allowStale, expired entries are still served — used as a fallback
+// when the network fails so the UI never renders empty.
+async function cacheGet(key, allowStale = false) {
     // Try IndexedDB first
     if (idbAvailable) {
         const entry = await idbGet(key);
-        if (isCacheEntryValid(entry)) {
+        if (allowStale ? isCacheEntryValid(entry) : isCacheEntryFresh(entry)) {
             return entry.data;
         }
     }
-    
+
     // Fallback to localStorage
     try {
         const stored = appStorage.getItem(key);
         if (stored) {
             const entry = JSON.parse(stored);
-            if (isCacheEntryValid(entry)) {
+            if (allowStale ? isCacheEntryValid(entry) : isCacheEntryFresh(entry)) {
                 return entry.data;
             }
         }
@@ -200,6 +205,26 @@ async function cacheSet(key, data, ttl) {
     return true;
 }
 
+// Stale-while-revalidate: serve fresh cache, fetch on miss, and fall
+// back to stale (expired) cache when the fetch fails — so consumers
+// always get data as long as any cached copy exists.
+async function cacheFetch(key, fetcher, ttl) {
+    const cached = await cacheGet(key);
+    if (cached !== null) return cached;
+    try {
+        const data = await fetcher();
+        cacheSet(key, data, ttl);
+        return data;
+    } catch (e) {
+        const stale = await cacheGet(key, true);
+        if (stale !== null) {
+            console.warn('Cache: fetch failed for', key, '— serving stale cache:', e);
+            return stale;
+        }
+        throw e;
+    }
+}
+
 // Remove from cache
 async function cacheRemove(key) {
     if (idbAvailable) {
@@ -211,17 +236,16 @@ async function cacheRemove(key) {
             } catch (e) {}
         }
     }
-    
+
     try {
         appStorage.removeItem(key);
     } catch (e) {}
 }
 
-// ------------------------------------------------------------------
 // Providers Cache
 // ------------------------------------------------------------------
-async function getCachedProviders() {
-    return await cacheGet(PROVIDERS_CACHE_KEY, PROVIDERS_CACHE_TTL);
+async function getCachedProviders(allowStale = false) {
+    return await cacheGet(PROVIDERS_CACHE_KEY, allowStale);
 }
 
 async function setCachedProviders(providers) {
@@ -239,9 +263,9 @@ function getModelsCacheKey(provider) {
     return MODELS_CACHE_PREFIX + provider;
 }
 
-async function getCachedModels(provider) {
+async function getCachedModels(provider, allowStale = false) {
     const key = getModelsCacheKey(provider);
-    return await cacheGet(key, MODELS_CACHE_TTL);
+    return await cacheGet(key, allowStale);
 }
 
 async function setCachedModels(provider, models) {
@@ -261,16 +285,19 @@ window.cache = {
     init: initIDB,
     get: cacheGet,
     set: cacheSet,
+    fetch: cacheFetch,
     remove: cacheRemove,
     clear: idbClear,
     providers: {
-        get: getCachedProviders,
+        get: (allowStale) => cacheGet(PROVIDERS_CACHE_KEY, allowStale),
         set: setCachedProviders,
+        fetch: (fetcher) => cacheFetch(PROVIDERS_CACHE_KEY, fetcher, PROVIDERS_CACHE_TTL),
         clear: clearCachedProviders
     },
     models: {
-        get: getCachedModels,
+        get: (provider, allowStale) => cacheGet(getModelsCacheKey(provider), allowStale),
         set: setCachedModels,
+        fetch: (provider, fetcher) => cacheFetch(getModelsCacheKey(provider), fetcher, MODELS_CACHE_TTL),
         clear: clearCachedModels
     },
     isIDBAvailable: () => idbAvailable
@@ -279,20 +306,9 @@ window.cache = {
 // Initialize on load
 initIDB();
 
-// Export for module system
-export default {
-    init: initIDB,
-    get: cacheGet,
-    set: cacheSet,
-    remove: cacheRemove,
-    providers: {
-        get: getCachedProviders,
-        set: setCachedProviders,
-        clear: clearCachedProviders
-    },
-    models: {
-        get: getCachedModels,
-        set: setCachedModels,
-        clear: clearCachedModels
-    }
-};
+// Export for module system.
+// Do NOT export fetch/get/set/providers/models at the top level:
+// v2.js spreads default exports onto window, which would clobber
+// window.fetch, window.providers, window.models, etc.
+// The full API is exposed via window.cache (set above).
+export default { cache: window.cache };

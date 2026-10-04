@@ -499,7 +499,7 @@ async function refreshModels(provider) {
         if (!paEntry) {
             // PA list not loaded yet (e.g. /pa/providers failed) — fall back
             // to the cached PA provider entry so models still render.
-            const cachedPa = await window.cache?.get(`pa:${paId}`);
+            const cachedPa = await window.cache?.get(`pa:${paId}`, true);
             if (cachedPa && Array.isArray(cachedPa.models) && cachedPa.models.length > 0) {
                 console.log("PA providers not loaded, using cached entry for:", paId);
                 paEntry = cachedPa;
@@ -514,7 +514,8 @@ async function refreshModels(provider) {
     }
     // Serve cached models first (IndexedDB, fallback localStorage) so the
     // dropdown is populated even when the models API is unreachable.
-    const cached = await window.cache?.models?.get(provider);
+    // Stale (expired) entries are accepted — better than an empty dropdown.
+    const cached = await window.cache?.models?.get(provider, true);
     if (Array.isArray(cached) && cached.length > 0) {
         setProviderModels(cached, provider);
     }
@@ -537,7 +538,8 @@ async function loadClientModels() {
     modelSelect.innerHTML = `<option value="" disabled selected>${framework.translate("Loading...")}</option>`;
     const cacheProvider = providerSelect?.value || "default";
     // Serve cached models first so the dropdown is populated even offline.
-    const cached = await window.cache?.models?.get(cacheProvider);
+    // Stale (expired) entries are accepted — better than an empty dropdown.
+    const cached = await window.cache?.models?.get(cacheProvider, true);
     if (Array.isArray(cached) && cached.length > 0) {
         setProviderModels(cached, cacheProvider);
     }

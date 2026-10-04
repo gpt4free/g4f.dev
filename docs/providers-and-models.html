@@ -453,6 +453,103 @@ print(response)
         window.selectedProviderKey = '';
         window.selectedModel = 'auto';
 
+        // ------------------------------------------------------------------
+        // Persistent cache (IndexedDB with localStorage fallback).
+        // Same database/store/entry shape as the chat app's addon-cache.js.
+        // ------------------------------------------------------------------
+        const CACHE_DB = 'g4f_cache';
+        const CACHE_STORE = 'cache';
+        const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+        let _cacheDB = null;
+
+        function openCache() {
+            if (_cacheDB) return _cacheDB;
+            _cacheDB = new Promise((resolve) => {
+                if (typeof indexedDB === 'undefined') { resolve(null); return; }
+                try {
+                    const req = indexedDB.open(CACHE_DB, 1);
+                    req.onupgradeneeded = () => {
+                        if (!req.result.objectStoreNames.contains(CACHE_STORE)) {
+                            req.result.createObjectStore(CACHE_STORE);
+                        }
+                    };
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => resolve(null);
+                } catch (e) { resolve(null); }
+            });
+            return _cacheDB;
+        }
+
+        async function cacheRead(key, allowStale = false) {
+            try {
+                const db = await openCache();
+                if (db) {
+                    const entry = await new Promise((resolve) => {
+                        try {
+                            const req = db.transaction(CACHE_STORE, 'readonly').objectStore(CACHE_STORE).get(key);
+                            req.onsuccess = () => resolve(req.result || null);
+                            req.onerror = () => resolve(null);
+                        } catch (e) { resolve(null); }
+                    });
+                    if (entry && entry.data != null && (allowStale || entry.expires > Date.now())) {
+                        return entry.data;
+                    }
+                }
+            } catch (e) {}
+            try {
+                const stored = localStorage.getItem(key);
+                if (stored) {
+                    const entry = JSON.parse(stored);
+                    if (entry && entry.data != null && (allowStale || entry.expires > Date.now())) {
+                        return entry.data;
+                    }
+                }
+            } catch (e) {}
+            return null;
+        }
+
+        async function cacheWrite(key, data, ttl = CACHE_TTL) {
+            const entry = { data, expires: Date.now() + ttl, version: 1 };
+            let hasIDB = false;
+            try {
+                const db = await openCache();
+                hasIDB = !!db;
+                if (db) {
+                    await new Promise((resolve) => {
+                        try {
+                            const tx = db.transaction(CACHE_STORE, 'readwrite');
+                            tx.objectStore(CACHE_STORE).put(entry, key);
+                            tx.oncomplete = () => resolve(true);
+                            tx.onerror = () => resolve(false);
+                        } catch (e) { resolve(false); }
+                    });
+                }
+            } catch (e) {}
+            // Mirror to localStorage as fallback (skip large payloads when
+            // IndexedDB is available — localStorage has ~5MB quotas).
+            try {
+                const json = JSON.stringify(entry);
+                if (!hasIDB || json.length < 1024 * 1024) localStorage.setItem(key, json);
+            } catch (e) {}
+            return true;
+        }
+
+        // Fetch with cache: serve fresh cache first, fetch on miss,
+        // fall back to stale cache when the network fails.
+        async function cachedJSON(key, fetcher, ttl = CACHE_TTL) {
+            const cached = await cacheRead(key);
+            if (cached !== null) return cached;
+            try {
+                const data = await fetcher();
+                cacheWrite(key, data, ttl);
+                return data;
+            } catch (e) {
+                const stale = await cacheRead(key, true);
+                if (stale !== null) return stale;
+                throw e;
+            }
+        }
+
         // Model type icons
         const modelTags = { image: "🎨", vision: "👓", audio: "🎧", video: "🎥" };
 
@@ -606,12 +703,22 @@ print(response)
                 const modelDiv = document.createElement('div');
                 modelDiv.className = 'models-list';
                 (async () => {
-                    try {
-                        const client = await createClient(key);
-                        p.models = await client.models.list();
-                        p.models = p.models.map(m => m.id);
-                    } catch (error) {
-                        p.models = [];
+                    // Serve cached models first (IndexedDB, localStorage fallback)
+                    const cacheKey = `docs_js_models:${key}`;
+                    const cachedModels = await cacheRead(cacheKey);
+                    if (Array.isArray(cachedModels) && cachedModels.length > 0) {
+                        p.models = cachedModels.map(m => m.id || m);
+                    } else {
+                        try {
+                            const client = await createClient(key);
+                            const modelsList = await client.models.list();
+                            cacheWrite(cacheKey, modelsList);
+                            p.models = modelsList.map(m => m.id);
+                        } catch (error) {
+                            // Fall back to stale cache before giving up
+                            const stale = await cacheRead(cacheKey, true);
+                            p.models = Array.isArray(stale) ? stale.map(m => m.id || m) : [];
+                        }
                     }
                     if(p.models.length === 0) return;
                     p.models.slice(0, 5).forEach(m => {
@@ -656,29 +763,33 @@ print(response)
         // Function to load and render Custom Providers (from custom/api/servers)
         async function loadCustomProviders() {
             const tableId = "custom-providers-table";
-            const url = "https://g4f.space/custom/api/servers";
-            const resp = await fetch(url, {
-                headers: {'Authorization': `Bearer ${localStorage.getItem("g4f_session") || ""}`}
-            });
-            const public_url = "https://g4f.space/custom/api/servers/public";
-            const public_resp = await fetch(public_url);
+            const render = (data) => renderProviderTable(
+                tableId,
+                data,
+                p => p.name || p.label || p.key,
+                p => Array.isArray(p.models) && p.models.length > 0 ? p.models : (Array.isArray(p.allowed_models) ? p.allowed_models : []),
+                p => p.tags || "",
+                p => p.meta || ""
+            );
             try {
-                let data = await public_resp.json();
-                data = data.servers;
-                let privateData = await resp.json();
-                if (privateData.servers) {
-                    data = data.concat(privateData.servers.filter(server=>!server.is_public));
-                }
+                const data = await cachedJSON("docs_custom", async () => {
+                    const url = "https://g4f.space/custom/api/servers";
+                    const resp = await fetch(url, {
+                        headers: {'Authorization': `Bearer ${localStorage.getItem("g4f_session") || ""}`}
+                    });
+                    const public_url = "https://g4f.space/custom/api/servers/public";
+                    const public_resp = await fetch(public_url);
+                    let servers = await public_resp.json();
+                    servers = servers.servers;
+                    const privateData = await resp.json();
+                    if (privateData.servers) {
+                        servers = servers.concat(privateData.servers.filter(server=>!server.is_public));
+                    }
+                    return servers;
+                });
 
                 // data is an array of custom provider objects
-                renderProviderTable(
-                    tableId,
-                    data,
-                    p => p.name || p.label || p.key,
-                    p => Array.isArray(p.models) && p.models.length > 0 ? p.models : (Array.isArray(p.allowed_models) ? p.allowed_models : []),
-                    p => p.tags || "",
-                    p => p.meta || ""
-                );
+                render(data);
             } catch (e) {
                 document.getElementById(tableId).innerHTML = `<div style='color:red'>Error loading custom providers: ${e}</div>`;
             }
@@ -689,11 +800,7 @@ print(response)
             const providersUrl = `${framework.backendUrl}/backend-api/v2/providers`;
             const modelsUrl = `${framework.backendUrl}/backend-api/v2/models`;
             const table = document.getElementById("core-providers-table");
-            try {
-                const [providers, models] = await Promise.all([
-                    fetch(providersUrl).then(r => r.json()),
-                    fetch(modelsUrl).then(r => r.json())
-                ]);
+            const renderTable = (providers, models) => {
                 providers.sort((a, b) => (a.label || a.name).localeCompare(b.label || b.name));
                 table.innerHTML = "";
                 providers.forEach(p => {
@@ -749,6 +856,16 @@ print(response)
                     table.appendChild(row);
                     table.appendChild(modelDiv);
                 });
+            };
+            try {
+                const {providers, models} = await cachedJSON("docs_core", async () => {
+                    const [p, m] = await Promise.all([
+                        fetch(providersUrl).then(r => r.json()),
+                        fetch(modelsUrl).then(r => r.json())
+                    ]);
+                    return {providers: p, models: m};
+                });
+                renderTable(providers, models);
             } catch (e) {
                 table.innerHTML = `<div style='color:red'>Error loading data: ${e}</div>`;
             }
@@ -779,10 +896,13 @@ print(response)
             try {
                 const providersUrl = `${framework.backendUrl}/backend-api/v2/providers`;
                 const modelsUrl = `${framework.backendUrl}/backend-api/v2/models`;
-                const [providers, models] = await Promise.all([
-                    fetch(providersUrl).then(r => r.json()),
-                    fetch(modelsUrl).then(r => r.json())
-                ]);
+                const {providers, models} = await cachedJSON("docs_core", async () => {
+                    const [p, m] = await Promise.all([
+                        fetch(providersUrl).then(r => r.json()),
+                        fetch(modelsUrl).then(r => r.json())
+                    ]);
+                    return {providers: p, models: m};
+                });
                 window.selectorModels = models;
                 
                 // Add separator
@@ -849,8 +969,10 @@ print(response)
                     }
                 } else if (value && window.selectorProviders[value] && value !== 'default') {
                     try {
-                        const client = await createClient(value);
-                        const modelsList = await client.models.list();
+                        const modelsList = await cachedJSON(`docs_js_models:${value}`, async () => {
+                            const client = await createClient(value);
+                            return await client.models.list();
+                        });
                         modelSelect.innerHTML = '<option value="">Select a model</option>';
                         modelsList.forEach(m => {
                             const option = document.createElement('option');

@@ -598,9 +598,13 @@ function updateCustomProviderOption(apiBaseValue) {
 
 async function updateLiveProviderOptions(optgroup) {
     try {
+        const isLocalhost = ["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname);
         Object.entries(await window.loadProviders()).forEach(([name, config]) => {
             if (name === "custom") {
                 return; // Skip custom here, will be added separately
+            }
+            if (config.localhostOnly && !isLocalhost) {
+                return; // CORS-proxy providers are only usable (free) on localhost
             }
             if (["together", "huggingface", "typegpt"].includes(name) && !appStorage.getItem(window.providerLocalStorage[name])) {
                 return;
@@ -1547,8 +1551,9 @@ async function loadPaProviders() {
     } catch (err) {
         // Fall back to the cached PA list so a selected PA provider still
         // has models after reload when the backend is unreachable.
+        // Stale (expired) entries are accepted — better than an empty list.
         if (!window._paProviders) {
-            const cached = await window.cache?.get('pa_providers');
+            const cached = await window.cache?.get('pa_providers', true);
             if (Array.isArray(cached) && cached.length > 0) {
                 console.warn('PA providers fetch failed, using cached list:', err);
                 window._paProviders = cached;

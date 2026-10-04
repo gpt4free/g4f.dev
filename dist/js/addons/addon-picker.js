@@ -751,9 +751,10 @@ const apiExport = {};
         try {
             const saved = await sharedCache()?.get(MODEL_CACHE_KEY);
             if (saved && typeof saved === 'object') {
-                const now = Date.now();
+                // Keep expired entries too — they serve as stale fallback
+                // when fetches fail (fresh entries are preferred at read time).
                 for (const [url, entry] of Object.entries(saved)) {
-                    if (entry && entry.expires > now) {
+                    if (entry && entry.data !== undefined && entry.data !== null) {
                         modelCache.set(url, entry);
                     }
                 }
@@ -772,12 +773,11 @@ const apiExport = {};
         } catch (e) { /* keep in-memory only */ }
     }
 
-    function getCachedModels(url) {
+    function getCachedModels(url, allowStale = false) {
         const entry = modelCache.get(url);
-        if (entry && entry.expires > Date.now()) {
+        if (entry && (allowStale || entry.expires > Date.now())) {
             return entry.data;
         }
-        if (entry) modelCache.delete(url); // expired
         return null;
     }
 
@@ -852,6 +852,13 @@ const apiExport = {};
                     console.warn(`Picker: ${label} error on attempt ${attempt + 1}`, e);
                 }
             }
+        }
+        // All attempts failed — serve a stale (expired) cached copy if one
+        // exists, so the picker still shows the last known model list.
+        const stale = getCachedModels(url, true);
+        if (stale !== null) {
+            console.warn(`Picker: ${label} fetch failed — serving stale cache`);
+            return { ok: true, status: 200, data: stale };
         }
         return { ok: false, status: 0, data: null };
     }
@@ -1021,6 +1028,8 @@ const apiExport = {};
                     && !appStorage.getItem(window.providerLocalStorage[name])) {
                     continue;
                 }
+                // CORS-proxy providers (Kilo, OpenCode) only on localhost
+                if (config.localhostOnly && !['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname)) continue;
                 seen.add(name);
                 const isHidden = !!config.is_hidden;
                 const isDisabled = isProviderDisabled(name);

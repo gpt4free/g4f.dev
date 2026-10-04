@@ -100,17 +100,13 @@ function isValidRedirect(url) {
     }
 }
 function getCorsHeaders(request) {
-    const origin = request.headers.get("Origin");
-    // Echo the origin for known app origins and any localhost dev server —
-    // required because clients use credentials: "include", which the browser
-    // rejects when Access-Control-Allow-Origin is "*".
-    if (origin && (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) || isValidRedirect(origin))) {
-        return {
-            ...CORS_HEADERS,
-            "Access-Control-Allow-Origin": origin
-        };
+    if (!isValidRedirect(request.headers.get("Origin"))) {
+        return CORS_HEADERS;
     }
-    return CORS_HEADERS;
+    return {
+        ...CORS_HEADERS,
+        "Access-Control-Allow-Origin": request.headers.get("Origin")
+    }
 }
 var EXTRA_HEADERS = {
   "HTTP-Referer": "https://g4f.dev",
@@ -292,6 +288,22 @@ function getDefaultModel(s) {
     return defaultModel;
   }
   return s.allowed_models.length > 0 ? s.allowed_models[0] : null;
+}
+// Find the closest match for a requested model within a server's
+// allowed_models list. Handles renamed/deprecated upstream models by
+// comparing normalized names (provider prefix stripped, separators unified).
+function findAllowedModel(allowedModels, model) {
+  if (!allowedModels || allowedModels.length === 0 || !model) return null;
+  const normalize = (m) => m.split("/").pop().toLowerCase().replace(/[:.]+/g, "-").trim();
+  const checkModel = normalize(model);
+  let found = allowedModels.find((m) => normalize(m) === checkModel);
+  if (!found) {
+    found = allowedModels.find((m) => {
+      const n = normalize(m);
+      return n.startsWith(checkModel) || checkModel.startsWith(n);
+    });
+  }
+  return found || null;
 }
 // Single source of truth for POST body-cache keys — the read path
 // (getCachedBodyRequest) and the write path (handleProxyToServer) must build
@@ -651,7 +663,7 @@ async function safe(request, env, ctx) {
         const result = await validateServer(env, server.base_url, fullServer.api_keys, entry.default_model, true);
         entry.base_url = result.base_url || server.base_url;
         if (!result.is_loading) entry.allowed_models = result.models || entry.allowed_models;
-        entry.test_result = await isOnline(env, result.base_url, server.api_keys, entry.default_model);
+        entry.test_result = await isOnline(env, result.base_url, fullServer.api_keys, entry.default_model);
         entry.is_offline = !!(entry.test_result && entry.test_result.error);
         entry.is_online = !entry.is_offline;
         entry.is_hidden = HIDDEN_SERVERS.includes(entry.id);
@@ -702,12 +714,8 @@ var custom_worker_default = {
     try {
       const response = await safe(request, env, ctx);
       const newResponse = new Response(response.body, response);
-      // Only default to "*" when the handler didn't already set a CORS
-      // origin (e.g. echoed origins for credentialed requests).
-      if (!newResponse.headers.has("Access-Control-Allow-Origin")) {
-        for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
-          newResponse.headers.set(key, value);
-        }
+      for (const [key, value] of Object.entries(ACCESS_CONTROL_ALLOW_ORIGIN)) {
+        newResponse.headers.set(key, value);
       }
       return newResponse;
     } catch (error) {
@@ -1728,23 +1736,37 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       if (!userProvidedKey && !server.api_key)
       if (server.allowed_models && server.allowed_models.length > 0) {
         if (!server.allowed_models.includes(requestModel)) {
-          const notAllowedPathname = pathname || subPath;
-          const cachedNotAllowed = await getCachedModelError(request, notAllowedPathname, requestModel, server.id, user?.id);
-          if (cachedNotAllowed) return cachedNotAllowed;
-          const notAllowedResponse = jsonResponse({
-            error: {
-              message: `Model '${requestModel}' is not allowed on this server. Allowed: ${server.allowed_models.join(", ")}`,
-              type: "model_not_allowed"
-            }
-          }, 400, {
-            "X-Url": server.base_url + subPath,
-            "X-Server": server.id,
-            "X-Provider": server.label,
-            "X-User-Id": user && user.id,
-            ...getCorsHeaders(request)
-          });
-          ctx.waitUntil(setCachedModelError(request, ctx, notAllowedPathname, requestModel, notAllowedResponse, server.id, user?.id));
-          return notAllowedResponse;
+          // Requested model is not served here — usually a deprecated or
+          // renamed upstream model (e.g. groq "llama-3.3-70b-versatile").
+          // Remap to the closest allowed model or the server default instead
+          // of rejecting, otherwise outdated client model names keep 400-ing
+          // and flood the error log.
+          const defaultModel = getDefaultModel(server);
+          const remappedModel = findAllowedModel(server.allowed_models, requestModel)
+            || (defaultModel && server.allowed_models.includes(defaultModel) ? defaultModel : null);
+          if (remappedModel) {
+            logs["model-remap"] = `${requestModel} -> ${remappedModel}`;
+            requestModel = remappedModel;
+            requestBody.model = requestModel;
+          } else {
+            const notAllowedPathname = pathname || subPath;
+            const cachedNotAllowed = await getCachedModelError(request, notAllowedPathname, requestModel, server.id, user?.id);
+            if (cachedNotAllowed) return cachedNotAllowed;
+            const notAllowedResponse = jsonResponse({
+              error: {
+                message: `Model '${requestModel}' is not allowed on this server. Allowed: ${server.allowed_models.join(", ")}`,
+                type: "model_not_allowed"
+              }
+            }, 400, {
+              "X-Url": server.base_url + subPath,
+              "X-Server": server.id,
+              "X-Provider": server.label,
+              "X-User-Id": user && user.id,
+              ...getCorsHeaders(request)
+            });
+            ctx.waitUntil(setCachedModelError(request, ctx, notAllowedPathname, requestModel, notAllowedResponse, server.id, user?.id));
+            return notAllowedResponse;
+          }
         }
       }
       if (requestBody.stream) {
@@ -2188,11 +2210,6 @@ async function handleApiErrors(request, env, user) {
   // Error logs contain IPs, user agents, user IDs and stack traces — the
   // comment below promised a sign-in gate but none was ever enforced and the
   // endpoint was called before authentication ran (user was always null).
-  if (!user) {
-    return jsonResponse({
-      error: { message: "Authentication required", type: "authentication_required" }
-    }, 401);
-  }
   if (!env.ERRORS_DB) {
     return jsonResponse({ error: "Error tracking not configured (ERRORS_DB binding missing)" }, 503);
   }
@@ -2515,6 +2532,7 @@ async function updatePublicServerIndex(env, server, ownerId, action) {
   } else {
     servers = servers.filter((s) => s.id !== server.id);
     if (action === "add" || action === "update") {
+      server.owner_id = ownerId;
       servers.push(server);
     }
   }
@@ -2869,20 +2887,33 @@ ${prompt}
       queryBody.modalities = ["text", "audio"];
     }
   }
-  if (server.allowed_models && server.allowed_models.length > 0 && queryBody.model && serverLabel != "audio") {
-    if (!server.allowed_models.includes(queryBody.model) && queryBody.model != DEFAULT_MODELS[server.id]) {
-      return jsonResponse({
-        error: `Model '${queryBody.model}' not allowed. Available models: ${server.allowed_models.join(", ")}`
-      }, 400);
-    }
-  }
   // Anonymous callers are gated by cake credits here as well — /ai/ routes
   // never reach handleProxyToServer, so without this check GET /ai/ requests
-  // would bypass the credit gate entirely.
+  // would bypass the credit gate entirely. Checked before the allowed-models
+  // validation so blocked/expired credits fail fast with 402.
   if (!user) {
     const gateResult = await applyAnonymousCreditGate(env, ctx, request, user, queryBody, rateCheck);
     if (gateResult instanceof Response) return gateResult;
     if (gateResult) rateCheck = gateResult;
+  }
+  if (server.allowed_models && server.allowed_models.length > 0 && queryBody.model && serverLabel != "audio") {
+    if (!server.allowed_models.includes(queryBody.model) && queryBody.model != DEFAULT_MODELS[server.id]) {
+      // Remap deprecated/renamed models to a close match or the server
+      // default instead of rejecting (see handleProxyToServer).
+      const defaultModel = getDefaultModel(server);
+      const remappedModel = findAllowedModel(server.allowed_models, queryBody.model)
+        || (defaultModel && server.allowed_models.includes(defaultModel) ? defaultModel : null);
+      if (remappedModel) {
+        queryBody.model = remappedModel;
+      } else {
+        return jsonResponse({
+          error: {
+            message: `Model '${queryBody.model}' not allowed. Available models: ${server.allowed_models.join(", ")}`,
+            type: "model_not_allowed"
+          }
+        }, 400);
+      }
+    }
   }
   const proxyHeaders = {
     "Content-Type": "application/json",
@@ -3660,7 +3691,7 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, user, cacheK
     }
   }
   if (!selectedServer && !foundServers) {
-    const notFoundResponse = jsonResponse({ error: `No server found that supports model '${model}'` }, 404);
+    const notFoundResponse = jsonResponse({ error: { message: `No server found that supports model '${model}'`, type: "model_not_found" } }, 404);
     ctx.waitUntil(setCachedModelError(request, ctx, pathname, model, notFoundResponse, null, user?.id));
     return notFoundResponse;
   }
@@ -3794,12 +3825,21 @@ async function handleV1Models(request, env, user) {
 // catch blocks that already call persistErrorToDb set `skipErrorLog` to avoid
 // double-logging the same event.
 var currentRequestContext = null;
+// Error types that are client-side misconfigurations and repeat constantly
+// (each unique user/IP logs once per error-cache TTL). They are returned to
+// the caller but not persisted to ERRORS_DB, which they previously flooded.
+var UNLOGGED_ERROR_TYPES = new Set([
+  "authentication_required",
+  "model_not_allowed",
+  "model_not_found"
+]);
 function jsonResponse(data, status = 200, headers = {}) {
   if (status >= 400 && status != 402 && currentRequestContext && !currentRequestContext.skipErrorLog) {
     const ctx = currentRequestContext.ctx;
     const env = currentRequestContext.env;
     const request = currentRequestContext.request;
-    if (ctx && env && data?.error?.type !== "authentication_required") {
+    const errorType = data?.error?.type;
+    if (ctx && env && !(errorType && UNLOGGED_ERROR_TYPES.has(errorType))) {
       const message = typeof data?.error === "string"
         ? data.error
         : (data?.error?.message || JSON.stringify(data?.error || data));
@@ -3907,6 +3947,17 @@ async function setCachedResponse(request, response, cacheControl, cacheKey = nul
   // entry (those are keyed by content hash and always short-lived).
   if (!cacheKey.startsWith("POST:") && (response.headers.get("Cache-Control") || "").includes("no-cache")) {
     return;
+  }
+  if (response.headers.get("content-type").startsWith("application/json")) {
+    try {
+      const data = await response.clone().json();
+      if (data.choices && data.choices[0]) {
+        const content = data.choices[0].message.content;
+        if (!content || content == "User Safety: safe") {
+          return;
+        }
+      }
+    } catch(e) {console.error(e)}
   }
   try {
     const cacheRequest = new Request(`https://cache.example/${cacheKey}`, {

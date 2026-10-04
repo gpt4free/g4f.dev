@@ -113,7 +113,8 @@ async function on_api() {
             let provider_options = [];
             // Try cache first (IndexedDB, fallback localStorage) so the
             // provider dropdown is populated even when the API is unreachable.
-            const cached = await window.cache?.providers?.get();
+            // Stale (expired) entries are accepted — better than an empty list.
+            const cached = await window.cache?.providers?.get(true);
             if (Array.isArray(cached) && cached.length > 0) {
                 await load_providers(cached, provider_options, providersListContainer, providersToggleContainer);
             }
@@ -137,13 +138,10 @@ async function on_api() {
             updateLiveProviderOptions(optgroup),
             loadCustomProvidersSelect(),
             loadCoreProvidersSelect()
-        ]).then(async () => {
-            // Load PA providers first so window._paProviders is populated
-            // before the selected provider's models are restored — otherwise
-            // a selected PA provider renders no models on reload.
-            await loadPaProviders();
-            await loadProviderModels(appStorage.getItem("provider"));
-        });
+        ]);
+
+        await loadPaProviders();
+        await loadProviderModels(appStorage.getItem("provider"));
 
         set_favorite_providers();
     } else {

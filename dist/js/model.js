@@ -18,7 +18,7 @@ function getModelLabel(model) {
         label = `${model.id || ""}`.replace("models/", "");
     }
     if (model.default) {
-        label += ` (${framework.translate("default")})`;
+        label += ` (${window?.framework?.translate ? framework.translate("default") : "default"})`;
     }
     if (model.cost_label) {
         label += ` (${model.cost_label})`;

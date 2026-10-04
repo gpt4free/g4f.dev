@@ -5,8 +5,10 @@
  * nonces, the browser solves small AI tasks (follow-up questions,
  * translations) with a local model — client.js's ChromeAI (built-in
  * Gemini Nano / Prompt API), falling back to the 1-bit Bonsai model on
- * WebGPU — and exchanges the encrypted result for a signed JWT that is
- * redeemed for cake credit — a much faster way to get the first cakes.
+ * WebGPU, then to a random network provider (LLM7, plus Kilo/OpenCode
+ * on localhost) — and exchanges the encrypted result for a signed JWT
+ * that is redeemed for cake credit — a much faster way to get the
+ * first cakes.
  *
  * Flow (all challenge payloads travel encrypted, AES-GCM):
  *   1. GET  /challenge/issue?lang=<navigator.language>&kind=...
@@ -18,6 +20,13 @@
  * The module exposes window.G4FChallenge:
  *   - start() / stop() / status()
  *   - solveOnce() — single challenge round (debug)
+ *
+ * When the user's own language is fully translated (/challenge/issue
+ * answers "all_translated"), the loop moves on to the next language with
+ * untranslated snippets — a donated round. Donated rounds deliberately
+ * skip the local WebGPU model (Bonsai) and run on a network provider
+ * (LLM7, plus Kilo/OpenCode on localhost) instead, so the visitor's GPU
+ * is never spent on community work.
  *
  * Auto-runs on chat/members pages when a local model is available; it
  * never sends plaintext tasks or answers over the wire.
@@ -48,6 +57,8 @@
         failed: 0,
         credits: 0,        // cents credited this session
         timer: null,
+        language: null,    // donated language currently being translated
+        donating: false,   // translating a language other than the user's own
     };
 
     // ---- AI request logging ---------------------------------------------
@@ -74,20 +85,32 @@
 
     // ---- Local inference via client.js ----------------------------------
 
-    // Cached client instance (module-level, survives stop/start).
+    // Cached client instances (module-level, survive stop/start): the
+    // local-first client for the user's own language and a network-only
+    // client for donated rounds (other languages, no WebGPU).
     let _client = null;
     let _clientPromise = null;
+    let _networkClient = null;
+    let _networkClientPromise = null;
+
+    /** Network fallback providers. Kilo and OpenCode need a CORS proxy
+     *  that is only guaranteed to work (free) on localhost — elsewhere
+     *  (e.g. g4f.dev production) LLM7 is the only network option. */
+    function isLocalhost() {
+        return ["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location?.hostname);
+    }
 
     /** Load the local chat client from client.js: ChromeAI (built-in
      *  Gemini Nano) first; if the Prompt API is unavailable (non-Chrome
-     *  browsers), fall back to the 1-bit Bonsai model on WebGPU. */
+     *  browsers), fall back to the 1-bit Bonsai model on WebGPU, then
+     *  to a random network provider (LLM7, Kilo, OpenCode). */
     async function getClient() {
         if (_client) return _client;
         if (!_clientPromise) {
             _clientPromise = (async () => {
                 // challenge-client.js is a classic script — load the ES
                 // module dynamically.
-                const { ChromeAI, Bonsai, LLM7 } = await import("./client.js");
+                const { ChromeAI, Bonsai, LLM7, Kilo, OpenCode } = await import("./client.js");
                 if (window.self === window.top) {
                     if (await ChromeAI.isSupported()) {
                         return new ChromeAI({ logCallback: logAiEvent });
@@ -97,7 +120,11 @@
                         return new Bonsai({ logCallback: logAiEvent });
                     }
                 }
-                return new LLM7();
+                const network = [LLM7];
+                if (isLocalhost()) network.push(Kilo, OpenCode);
+                const ClientClass = network[Math.floor(Math.random() * network.length)];
+                console.info(`[G4FChallenge] no local model — using network provider: ${ClientClass.name}`);
+                return new ClientClass({ logCallback: logAiEvent });
             })().catch((e) => {
                 console.warn("[G4FChallenge] loading client.js failed:", e);
                 _clientPromise = null; // allow retry on the next round
@@ -109,6 +136,31 @@
         return _client;
     }
 
+    /** Network-only client for donated rounds (languages other than the
+     *  user's own): deliberately skips the local models (ChromeAI and the
+     *  1-bit Bonsai WebGPU engine) so the visitor's device never grinds
+     *  community work — a network provider does the inference instead. */
+    async function getNetworkClient() {
+        if (_networkClient) return _networkClient;
+        if (!_networkClientPromise) {
+            _networkClientPromise = (async () => {
+                const { LLM7, Kilo, OpenCode } = await import("./client.js");
+                const network = [LLM7];
+                if (isLocalhost()) network.push(Kilo, OpenCode);
+                const ClientClass = network[Math.floor(Math.random() * network.length)];
+                console.info(`[G4FChallenge] donated language — network provider instead of WebGPU: ${ClientClass.name}`);
+                return new ClientClass({ logCallback: logAiEvent });
+            })().catch((e) => {
+                console.warn("[G4FChallenge] loading client.js failed:", e);
+                _networkClientPromise = null; // allow retry on the next round
+                return null;
+            });
+        }
+        const client = await _networkClientPromise;
+        if (client) _networkClient = client;
+        return _networkClient;
+    }
+
     /** Check whether any local model client is available. */
     async function isSupported() {
         try {
@@ -118,14 +170,29 @@
         }
     }
 
-    /** Run a prompt through the local client (OpenAI-style chat API). */
-    async function runPrompt(prompt) {
-        const client = await getClient();
-        if (!client) throw new Error("no local model available");
-        const response = await client.chat.completions.create({
-            messages: [{ role: "user", content: prompt }],
-        });
-        return response.choices[0].message.content;
+    /** Run a prompt through a client (OpenAI-style chat API). Donated
+     *  rounds (languages other than the user's own) pass networkOnly to
+     *  keep the local WebGPU model out of community work. */
+    async function runPrompt(prompt, networkOnly = false) {
+        const client = networkOnly ? await getNetworkClient() : await getClient();
+        if (!client) throw new Error(networkOnly ? "no network provider available" : "no local model available");
+        try {
+            const response = await client.chat.completions.create({
+                messages: [{ role: "user", content: prompt }],
+            });
+            return response.choices[0].message.content;
+        } catch (e) {
+            // Drop the cached client so the next round re-selects —
+            // possibly a different random network provider.
+            if (networkOnly) {
+                _networkClient = null;
+                _networkClientPromise = null;
+            } else {
+                _client = null;
+                _clientPromise = null;
+            }
+            throw e;
+        }
     }
 
     // ---- Crypto helpers (mirror the worker's AES-GCM sealing) -----------
@@ -203,19 +270,67 @@
         return null;
     }
 
-    /** Run one challenge: issue → decrypt → local inference → solve → redeem. */
-    async function solveOnce() {
-        const language = window.framework?.getLanguage?.() || navigator.language || "en";
-        // 1. Issue (encrypted challenge).
-        const issueRes = await fetch(
-            `${CHALLENGE_ENDPOINT}/issue?lang=${encodeURIComponent(language)}&kind=any`,
-            { credentials: "include", headers: authHeaders() }
-        );
-        if (!issueRes.ok) {
-            const err = await issueRes.json().catch(() => ({}));
-            throw Object.assign(new Error(err.error || `issue failed: ${issueRes.status}`), { status: issueRes.status });
+    /** Pick the next language to translate when the current one is done:
+     *  the community store entry with the most untranslated texts,
+     *  excluding the user's own language and everything already finished.
+     *  Returns a base language code or null when nothing is left. */
+    async function pickNextLanguage(userBase, exclude = []) {
+        try {
+            const res = await fetch(`${CHALLENGE_ENDPOINT}/translations/languages`);
+            if (!res.ok) return null;
+            const data = await res.json();
+            const candidates = (data.languages || [])
+                .filter((l) => l.language && l.language !== userBase && !exclude.includes(l.language))
+                .filter((l) => l.remaining === undefined || l.remaining > 0);
+            candidates.sort((a, b) => (b.remaining ?? b.count ?? 0) - (a.remaining ?? a.count ?? 0));
+            return candidates[0]?.language || null;
+        } catch {
+            return null;
         }
-        const challenge = await issueRes.json();
+    }
+
+    /** Run one challenge: issue → decrypt → inference → solve → redeem. */
+    async function solveOnce() {
+        const userLanguage = window.framework?.getLanguage?.() || navigator.language || "en";
+        const userBase = userLanguage.split(/[-_]/)[0].toLowerCase();
+        let language = state.language || userLanguage;
+        let challenge = null;
+
+        // 1. Issue (encrypted challenge). When a language comes back fully
+        //    translated, move on to the next one with untranslated snippets —
+        //    donated rounds run on a network provider, not the local WebGPU
+        //    model (see runPrompt below).
+        const exclude = [];
+        for (let pick = 0; pick < 4; pick++) {
+            const issueRes = await fetch(
+                `${CHALLENGE_ENDPOINT}/issue?lang=${encodeURIComponent(language)}&kind=any`,
+                { credentials: "include", headers: authHeaders() }
+            );
+            if (!issueRes.ok) {
+                const err = await issueRes.json().catch(() => ({}));
+                throw Object.assign(new Error(err.error || `issue failed: ${issueRes.status}`), { status: issueRes.status });
+            }
+            challenge = await issueRes.json();
+            if (challenge.error !== "all_translated") break;
+            const finished = language.split(/[-_]/)[0].toLowerCase();
+            exclude.push(finished);
+            console.info(`[G4FChallenge] "${finished}" is fully translated`);
+            const next = await pickNextLanguage(userBase, exclude);
+            if (!next) {
+                state.language = null;
+                state.donating = false;
+                throw Object.assign(new Error("all_translated"), { allTranslated: true });
+            }
+            state.language = next;
+            state.donating = true;
+            language = next;
+            console.info(`[G4FChallenge] continuing with "${next}" — donated rounds use a network provider, not the local WebGPU model`);
+        }
+        if (!challenge || challenge.error === "all_translated") {
+            throw Object.assign(new Error("all_translated"), { allTranslated: true });
+        }
+        const challengeBase = (challenge.language || language || "en").split(/[-_]/)[0].toLowerCase();
+        const donating = challengeBase !== userBase;
 
         // 2. Decrypt locally — the plaintext task never touched the client
         //    side of the wire unencrypted.
@@ -223,13 +338,14 @@
         if (!secret) throw new Error("no challenge secret available");
         const payload = await unsealPayload(secret, challenge.ciphertext, challenge.iv);
 
-        // 3. Run the prompt through the local model (client.js). Batch
-        //    "translations" challenges carry the items inline — build the
-        //    prompt from them so the model sees each snippet with its
-        //    section headline as context.
+        // 3. Run the prompt through the model (client.js) — the local model
+        //    for the user's own language, a network provider for donated
+        //    rounds. Batch "translations" challenges carry the items inline
+        //    — the prompt lists each snippet with its section headline as
+        //    context.
         let prompt = payload.prompt;
         console.debug("[G4FChallenge] challenge payload:", payload);
-        const raw = await runPrompt(prompt);
+        const raw = await runPrompt(prompt, donating);
         console.debug("[G4FChallenge] raw model output:", raw);
         const answer = parseJsonLoose(raw);
         if (!answer) throw new Error("local model returned no JSON");
@@ -322,6 +438,7 @@
         state.credits += redeemData.credit_cents || challenge.credit_cents || 5;
         console.info(
             "%c[G4FChallenge] solved%c kind=" + payload.kind +
+            (donating ? ` lang=${challengeBase} (donated)` : "") +
             " credit=" + (redeemData.credit_cents || "?") +
             "¢ total=" + (redeemData.total_credits ?? "?") + "¢",
             "color:#22c55e;font-weight:bold", "color:inherit"
@@ -356,6 +473,12 @@
             await solveOnce();
             state.consecutiveFailures = 0;
         } catch (err) {
+            if (err.allTranslated) {
+                // Every language (own + donated) is fully translated.
+                console.info("[G4FChallenge] every language fully translated; stopping");
+                stop();
+                return;
+            }
             state.failed += 1;
             state.consecutiveFailures = (state.consecutiveFailures || 0) + 1;
             if (err.status === 429) {
@@ -387,10 +510,11 @@
             clearTimeout(state.timer);
             state.timer = null;
         }
-        // Free per-session resources but keep the client cached: ChromeAI
+        // Free per-session resources but keep the clients cached: ChromeAI
         // destroys its Gemini Nano session, Bonsai only drops the KV cache
         // (the downloaded model stays warm for the next start).
         try { _client?.reset?.(); } catch { /* noop */ }
+        try { _networkClient?.reset?.(); } catch { /* noop */ }
     }
 
     function status() {
@@ -400,6 +524,8 @@
             solved: state.solved,
             failed: state.failed,
             credits: state.credits,
+            language: state.language,
+            donating: state.donating,
         };
     }
 

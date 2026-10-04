@@ -105,6 +105,10 @@ class Client {
         // Optional custom fetch function (e.g. routed through a Web Worker
         // so streaming continues when the tab is backgrounded).
         this.fetchFn = options.fetchFn || null;
+        // Optional fallback API base (e.g. a g4f backend exposing the same
+        // provider at {backendUrl}/api/{Provider}). Used when the primary
+        // endpoint is unreachable (CORS, proxy or network failures).
+        this.fallbackBaseUrl = options.fallbackBaseUrl !== undefined ? options.fallbackBaseUrl : null;
     }
 
     /**
@@ -116,6 +120,48 @@ class Client {
 
     _route(url) {
         return window.framework?.getRoutedUrl(url) ?? url;
+    }
+
+    /**
+     * Internal: fallback endpoint base, or null when no fallback is available.
+     * Subclasses may resolve this lazily (e.g. from framework.backendUrl).
+     */
+    _getFallbackBaseUrl() {
+        return this.fallbackBaseUrl || null;
+    }
+
+    /**
+     * Internal: map a primary endpoint URL to its fallback counterpart by
+     * replacing the primary base URL with the fallback base URL.
+     */
+    _fallbackUrl(url) {
+        const fallbackBase = this._getFallbackBaseUrl();
+        if (!fallbackBase || !this.baseUrl || !url.startsWith(this.baseUrl)) {
+            return null;
+        }
+        return fallbackBase + url.slice(this.baseUrl.length);
+    }
+
+    /**
+     * Internal: fetch with automatic fallback when the primary endpoint is
+     * unreachable (network/CORS errors) or clearly broken (403/404/405/5xx).
+     * Upstream responses like 401/429 are returned untouched.
+     */
+    async _fetchWithFallback(url, options) {
+        const fallbackUrl = this._fallbackUrl(url);
+        let response;
+        try {
+            response = await this._fetch(url, options);
+        } catch (err) {
+            if (!fallbackUrl) throw err;
+            console.warn(`Request to ${url} failed (${err.message || err}), retrying via fallback: ${fallbackUrl}`);
+            return this._fetch(fallbackUrl, options);
+        }
+        if (!response.ok && fallbackUrl && [403, 404, 405, 500, 501, 502, 503, 504].includes(response.status)) {
+            console.warn(`Request to ${url} failed with status ${response.status}, retrying via fallback: ${fallbackUrl}`);
+            return this._fetch(fallbackUrl, options);
+        }
+        return response;
     }
 
     async _sleep() {
@@ -159,7 +205,7 @@ class Client {
                     signal: signal
                 };
                 await this._sleep();
-                let response = await this._fetch(this._route(this.apiEndpoint.replace('{model}', orginalModel)), requestOptions);
+                let response = await this._fetchWithFallback(this._route(this.apiEndpoint.replace('{model}', orginalModel)), requestOptions);
                 if (response.status === 429) {
                     const delay = parseInt(response.headers.get('Retry-After'), 10) || extractRetryDelay(await response.clone().text()) || this.sleep / 1000 || 10;
                     if (delay > 0 && delay <= 30) {
@@ -184,7 +230,7 @@ class Client {
           if (this._models && this._models.length > 0) {
             return this._models.map((model) => convertModel(model, { defaultModel: this.defaultModel, useModelName: this.useModelName }));
           }
-          const response = await fetch(this._route(this.modelsEndpoint.replace('{model}', 'auto')), {
+          const response = await this._fetchWithFallback(this._route(this.modelsEndpoint.replace('{model}', 'auto')), {
             method: 'GET',
             headers: this.extraHeaders,
             signal: this.modelsSignal?.signal
@@ -235,7 +281,7 @@ class Client {
         Object.entries(params).forEach(([key, value]) => {
             formData.append(key, value);
         });
-        const response = await this._fetch(this._route(imageEndpoint), {
+        const response = await this._fetchWithFallback(this._route(imageEndpoint), {
             method: 'POST',
             body: formData,
             ...requestOptions
@@ -424,7 +470,7 @@ class Client {
         };
         this.logCallback && this.logCallback({request: params, type: 'image'});
         await this._sleep();
-        let response = await this._fetch(this._route(imageEndpoint), requestOptions);
+        let response = await this._fetchWithFallback(this._route(imageEndpoint), requestOptions);
         captureUserTierHeaders(response.headers);
         if (!response.ok) {
             const delay = parseInt(response.headers.get('Retry-After'), 10) || extractRetryDelay(await response.clone().text()) || this.sleep / 1000;
@@ -1479,6 +1525,137 @@ class LLM7 extends Client {
     }
 }
 
+/**
+ * Default CORS proxy prefix for providers whose APIs do not send CORS
+ * headers (Kilo, OpenCode, ...). corsfix.com is free for localhost and
+ * registered domains. Pass `corsProxy: false` to disable proxying or
+ * `corsProxy: "https://my-proxy/?"` to use a custom prefix.
+ */
+const DEFAULT_CORS_PROXY = "https://proxy.corsfix.com/?";
+
+function withCorsProxy(url, proxy = DEFAULT_CORS_PROXY) {
+    if (!proxy || url.startsWith(proxy)) return url;
+    return proxy + url;
+}
+
+function randomClientId(prefix) {
+    const uuid = typeof crypto?.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+    return `${prefix}_${uuid.replaceAll("-", "").slice(0, 24)}`;
+}
+
+/**
+ * Kilo Gateway (kilo.ai) — OpenAI compatible API with a free tier.
+ * Anonymous access is limited to free models (e.g. "kilo-auto/free");
+ * pass an apiKey to unlock all models. The API does not send CORS
+ * headers, so requests are routed through a CORS proxy by default.
+ * When the proxy or API is unreachable, requests fall back to a g4f
+ * backend exposing the provider at {backendUrl}/api/Kilo.
+ */
+class Kilo extends Client {
+    constructor(options = {}) {
+        const corsProxy = options.corsProxy === undefined ? DEFAULT_CORS_PROXY : options.corsProxy;
+        const baseUrl = options.baseUrl || "https://api.kilo.ai/api/gateway/v1";
+        super({
+            defaultModel: "kilo-auto/free",
+            quotaEndpoint: null,
+            ...options,
+            baseUrl: withCorsProxy(baseUrl, corsProxy),
+        });
+        this.id = options.id || "kilo";
+        this.corsProxy = corsProxy;
+    }
+
+    /**
+     * Fallback: g4f backend proxying the same provider at {backendUrl}/api/Kilo.
+     * Resolved lazily so a backend connected after client creation is still used.
+     * Pass `fallbackBaseUrl: false` to disable the fallback.
+     */
+    _getFallbackBaseUrl() {
+        if (this.fallbackBaseUrl !== null) {
+            return this.fallbackBaseUrl || null;
+        }
+        const backendUrl = (typeof window !== "undefined" && window.framework?.backendUrl) || "";
+        return backendUrl ? `${backendUrl}/api/Kilo` : null;
+    }
+
+    get models() {
+        return {
+            list: async () => {
+                const models = await super.models.list();
+                if (this.apiKey) {
+                    return models;
+                }
+                // Anonymous requests are restricted to the free tier
+                return models.filter((model) =>
+                    model.id === "kilo-auto/free" || model.id.endsWith(":free")
+                );
+            }
+        };
+    }
+}
+
+/**
+ * OpenCode Zen (opencode.ai) — OpenAI compatible API with free models.
+ * Free models require the "public" access token plus OpenCode client
+ * headers. The API does not send CORS headers, so requests are routed
+ * through a CORS proxy by default. When the proxy or API is unreachable,
+ * requests fall back to a g4f backend exposing the provider at
+ * {backendUrl}/api/OpenCode.
+ */
+class OpenCode extends Client {
+    constructor(options = {}) {
+        const corsProxy = options.corsProxy === undefined ? DEFAULT_CORS_PROXY : options.corsProxy;
+        const baseUrl = options.baseUrl || "https://opencode.ai/zen/v1";
+        super({
+            defaultModel: "big-pickle",
+            quotaEndpoint: null,
+            ...options,
+            apiKey: options.apiKey || "public",
+            baseUrl: withCorsProxy(baseUrl, corsProxy),
+            extraHeaders: {
+                "x-opencode-client": "cli",
+                "x-opencode-project": "global",
+                "x-opencode-session": randomClientId("ses"),
+                "x-opencode-request": randomClientId("msg"),
+                ...(options.extraHeaders || {})
+            },
+        });
+        this.id = options.id || "opencode";
+        this.corsProxy = corsProxy;
+    }
+
+    /**
+     * Fallback: g4f backend proxying the same provider at {backendUrl}/api/OpenCode.
+     * Resolved lazily so a backend connected after client creation is still used.
+     * Pass `fallbackBaseUrl: false` to disable the fallback.
+     */
+    _getFallbackBaseUrl() {
+        if (this.fallbackBaseUrl !== null) {
+            return this.fallbackBaseUrl || null;
+        }
+        const backendUrl = (typeof window !== "undefined" && window.framework?.backendUrl) || "";
+        return backendUrl ? `${backendUrl}/api/OpenCode` : null;
+    }
+
+    get models() {
+        return {
+            list: async () => {
+                const models = await super.models.list();
+                if (this.apiKey && this.apiKey !== "public") {
+                    return models;
+                }
+                // Anonymous requests are restricted to the free tier
+                return models.filter((model) =>
+                    model.id.startsWith("big-") ||
+                    model.id.endsWith("-free") || model.id.endsWith(":free")
+                );
+            }
+        };
+    }
+}
+
 export {
     Client,
     Pollinations,
@@ -1491,6 +1668,9 @@ export {
     Bonsai2,
     ChromeAI,
     LLM7,
+    Kilo,
+    OpenCode,
+    withCorsProxy,
     captureUserTierHeaders,
 };
 
@@ -1506,4 +1686,6 @@ export default {
     Bonsai2,
     ChromeAI,
     LLM7,
+    Kilo,
+    OpenCode,
 };

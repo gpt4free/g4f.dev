@@ -307,6 +307,10 @@
                           <i class="fa-solid fa-pencil" aria-hidden="true"></i>
                           <span>Export Settings</span>
                       </button>
+                      <button type="button" onclick="open_language_selection();" aria-label="Open language selection">
+                          <i class="fa-solid fa-globe" aria-hidden="true"></i>
+                          <span>Language Selection</span>
+                      </button>
                       <button type="button" onclick="this.querySelector('.fa-spin').classList.remove('hidden'); framework.translateAll().then(() => {this.querySelector('.fa-spin').classList.add('hidden')}).catch(() => {this.querySelector('.fa-spin').classList.add('hidden')})" aria-label="Translate user interface">
                           <i class="fa-solid fa-language" aria-hidden="true"></i>
                           <span>Translate UI</span>
@@ -990,6 +994,77 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                 // event does not always fire across windows).
                 window.dispatchEvent(new CustomEvent("g4f-login:changed"));
             }
+        });
+    })();
+    </script>
+
+    <!-- Language selection: opens /language-selection.html in the full-size
+         message iframe. Shown automatically on first load (until a language
+         package is picked or the overlay is closed). When a package is
+         loaded or unloaded inside it, the selection page posts
+         "g4f-language:changed" and this page reloads, so the language
+         instance (framework.translations and framework.language) is rebuilt
+         from the new package on load. -->
+    <script>
+    (function () {
+        "use strict";
+
+        // Set once the selection was closed or a package picked — the
+        // automatic first-load prompt then stays off.
+        const LANGUAGE_PROMPT_KEY = "languageSelectionPrompted";
+        const wasDismissed = () => {
+            try { return localStorage.getItem(LANGUAGE_PROMPT_KEY) === "true"; } catch (e) { return true; }
+        };
+        const markDismissed = () => {
+            try { localStorage.setItem(LANGUAGE_PROMPT_KEY, "true"); } catch (e) { /* ignore */ }
+        };
+
+        const getContainer = () => window.iframe_container || document.querySelector(".hljs-iframe-container");
+        const getFrame = () => window.iframe || (getContainer() ? getContainer().querySelector(".hljs-iframe") : null);
+
+        const close_language_selection = () => {
+            const container = getContainer();
+            const frame = getFrame();
+            if (container) {
+                container.classList.add("hidden");
+                container.setAttribute("aria-hidden", "true");
+            }
+            if (frame) frame.src = "";
+        };
+
+        window.open_language_selection = function () {
+            const container = getContainer();
+            const frame = getFrame();
+            if (!container || !frame) return;
+            frame.title = "Language selection";
+            frame.src = "/language-selection.html";
+            container.classList.remove("hidden");
+            container.setAttribute("aria-hidden", "false");
+        };
+
+        window.addEventListener("message", (event) => {
+            if (event.origin !== location.origin) return;
+            const data = event.data || {};
+            if (data.type === "g4f-language:changed") {
+                markDismissed();
+                close_language_selection();
+                // Drop per-page translations of the previous package, so the
+                // language instance is rebuilt from the new one on load.
+                if (window.deleteTranslations) window.deleteTranslations();
+                window.location.reload();
+            }
+            if (data.type === "g4f-language:dismiss") {
+                markDismissed();
+                close_language_selection();
+            }
+        });
+
+        // First visit (no language package picked, not dismissed before):
+        // show the language selection in the full-size iframe on load.
+        window.addEventListener("load", () => {
+            if (wasDismissed()) return;
+            if (framework.getSelectedLanguage && framework.getSelectedLanguage()) return;
+            window.open_language_selection();
         });
     })();
     </script>

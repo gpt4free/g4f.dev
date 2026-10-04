@@ -291,6 +291,66 @@
             return div.innerHTML;
         }
 
+        // When framed (e.g. opened from /chat/ in the full-size iframe), tell
+        // the parent that a language package changed, so it can reload and
+        // rebuild its language instance from the newly loaded package.
+        function notifyParent(action, language) {
+            if (window.self === window.top) return;
+            try {
+                window.parent.postMessage({ type: "g4f-language:changed", action, language: language || null }, "*");
+            } catch (e) { /* ignore */ }
+        }
+
+        // Framed mode: let the user continue without picking a language —
+        // the parent marks the prompt as dismissed and hides the overlay.
+        function notifyParentDismiss() {
+            if (window.self === window.top) return;
+            try {
+                window.parent.postMessage({ type: "g4f-language:dismiss" }, "*");
+            } catch (e) { /* ignore */ }
+        }
+
+        // "Continue" in the visitor's own language (e.g. "Continue" for
+        // English users), so the first-time overlay can be passed without
+        // loading any translation package.
+        const CONTINUE_LABELS = {
+            en: "Continue", de: "Fortfahren", es: "Continuar", fr: "Continuer",
+            it: "Continua", pt: "Continuar", nl: "Doorgaan", pl: "Kontynuuj",
+            ru: "Продолжить", uk: "Продовжити", tr: "Devam et", zh: "继续",
+            ja: "続ける", ko: "계속", hi: "जारी रखें", ar: "متابعة",
+            id: "Lanjutkan", vi: "Tiếp tục", th: "ต่อไป", sv: "Fortsätt",
+            da: "Fortsæt", fi: "Jatka", nb: "Fortsett", no: "Fortsett",
+            cs: "Pokračovat", el: "Συνέχεια", he: "המשך", hu: "Folytatás",
+            ro: "Continuare", bg: "Продължи",
+        };
+        function continueLabel() {
+            const lang = (window.framework && framework.getLanguage)
+                ? framework.getLanguage()
+                : (navigator.language || "en");
+            const base = String(lang).split(/[-_]/)[0].toLowerCase();
+            return CONTINUE_LABELS[base] || CONTINUE_LABELS.en;
+        }
+        if (window.self !== window.top) {
+            const addContinueButton = () => {
+                const header = document.querySelector("header");
+                if (!header || document.getElementById("continue-btn")) return;
+                const continueBtn = document.createElement("button");
+                continueBtn.id = "continue-btn";
+                continueBtn.className = "primary";
+                continueBtn.textContent = continueLabel();
+                continueBtn.title = "Continue without loading a language package";
+                continueBtn.addEventListener("click", notifyParentDismiss);
+                header.appendChild(continueBtn);
+            };
+            // Deferred framework.js runs before DOMContentLoaded: the label
+            // then also respects an already selected language package.
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", addContinueButton);
+            } else {
+                addContinueButton();
+            }
+        }
+
         let listing = { languages: [], total_snippets: null };
 
         async function refresh() {
@@ -390,12 +450,14 @@
                     const entry = await framework.loadGlobalTranslations(lang);
                     framework.setSelectedLanguage(lang);
                     toast(`Loaded ${entry.count} translations for "${lang}" — "${previous && previous !== lang ? previous : "nothing"}" unloaded`);
+                    notifyParent("load", lang);
                 } else if (action === "unload") {
                     const cleared = framework.clearTranslations(lang);
                     if (window.deleteTranslations) window.deleteTranslations();
                     if (framework.getSelectedLanguage() === lang) {
                         framework.setSelectedLanguage(null);
                     }
+                    if (cleared) notifyParent("unload", lang);
                     toast(cleared ? `Unloaded "${lang}"` : `"${lang}" was not loaded`, !cleared);
                 }
                 render();
@@ -421,6 +483,7 @@
                 const entry = await framework.loadGlobalTranslations(lang);
                 framework.setSelectedLanguage(baseLang(entry.language));
                 toast(`Loaded ${entry.count} translations for "${entry.language}"`);
+                notifyParent("load", baseLang(entry.language));
                 render();
             } catch (e) {
                 toast(String(e.message || e) === "invalid_language"
@@ -439,6 +502,7 @@
                 const cleared = selected ? framework.clearTranslations(selected) : false;
                 if (cleared) {
                     framework.setSelectedLanguage(null);
+                    notifyParent("unload", selected);
                 }
                 toast(cleared ? `Unloaded "${selected}" — reload pages to re-translate` : "No language selected", !cleared);
                 render();

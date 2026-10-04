@@ -53,11 +53,36 @@ const client = new Together({ apiKey: 'required' });
 // Puter
 const client = new Puter();
 
+// Kilo Gateway (free tier, no API key required)
+const client = new Kilo();
+
+// OpenCode Zen (free tier, no API key required)
+const client = new OpenCode();
+
 // Custom (e.g., local GPT4Free instance)
 const client = new Client({ baseUrl: 'http://localhost:8080/v1', apiKey: 'secret' });
 ```
 
 All clients conform to the same method interfaces for completions, models, and image generation.
+
+### CORS Proxy Providers
+
+The `Kilo` and `OpenCode` APIs do not send CORS headers, so requests are routed
+through a CORS proxy (`https://proxy.corsfix.com/?`) by default. corsfix is free
+for `localhost` — for production on `g4f.dev` a free [corsfix](https://corsfix.com)
+registration for your domain is required. You can customize or disable proxying:
+
+```js
+// Use a custom CORS proxy
+const client = new Kilo({ corsProxy: 'https://my-proxy/?' });
+
+// Disable proxying (e.g. when calling from a server or extension)
+const client = new Kilo({ corsProxy: false });
+```
+
+Anonymous (keyless) access is restricted to free models: `kilo-auto/free` and
+models ending in `:free` for Kilo, models ending in `-free`/`:free` for OpenCode.
+Pass an `apiKey` to unlock all models.
 
 ---
 

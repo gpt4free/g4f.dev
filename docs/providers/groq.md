@@ -24,13 +24,17 @@ Ultra-fast AI inference powered by Groq's LPU (Language Processing Unit) technol
 
 ## Available Models
 
-- `llama-3.3-70b-versatile`
-- `llama-3.1-8b-instant`
-- `llama3-70b-8192`
-- `llama3-8b-8192`
-- `mixtral-8x7b-32768`
-- `gemma2-9b-it`
-- `gpt-oss-120b`
+- `openai/gpt-oss-120b`
+- `openai/gpt-oss-20b`
+- `qwen/qwen3.8-27b`
+- `allam-2-7b`
+- `whisper-large-v3` (audio transcription)
+- `whisper-large-v3-turbo` (audio transcription)
+- `canopylabs/orpheus-v1-english` (audio)
+
+> Deprecated models like `llama-3.3-70b-versatile` or `mixtral-8x7b-32768` were
+> removed from Groq. The g4f proxy automatically remaps such requests to
+> `openai/gpt-oss-120b`.
 
 ## Examples
 
@@ -46,7 +50,7 @@ client = Client(
 )
 
 response = client.chat.completions.create(
-    model="llama-3.3-70b-versatile",
+    model="openai/gpt-oss-120b",
     messages=[
         {"role": "user", "content": "Explain the theory of relativity"}
     ],
@@ -65,7 +69,7 @@ const response = await fetch('https://api.groq.com/openai/v1/chat/completions', 
         'Authorization': 'Bearer YOUR_GROQ_API_KEY'
     },
     body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-120b',
         messages: [
             { role: 'user', content: 'Hello!' }
         ]
@@ -88,7 +92,7 @@ client = Client(
 )
 
 stream = client.chat.completions.create(
-    model="llama-3.3-70b-versatile",
+    model="openai/gpt-oss-120b",
     messages=[
         {"role": "user", "content": "Write a poem about AI"}
     ],

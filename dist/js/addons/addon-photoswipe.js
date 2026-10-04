@@ -534,18 +534,27 @@ ChatAddons.register({
         // Initialize the main lightbox
         createLightbox();
 
-        // Show demo screen on first install
+        // Show the demo intro only on reinstall — never on the very first
+        // install. unload() clears the demo flag, so enabling the addon
+        // again after disabling/uninstalling shows the intro once.
+        const INSTALLED_KEY = 'photoswipe_installed';
         const DEMO_KEY = 'photoswipe_demo_shown';
-        if (!localStorage.getItem(DEMO_KEY)) {
-            // Wait for DOM to be ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', showDemoScreen);
-            } else {
-                // Small delay so the UI is fully rendered
-                setTimeout(showDemoScreen, 500);
-            }
-            localStorage.setItem(DEMO_KEY, '1');
+        const isReinstall = localStorage.getItem(INSTALLED_KEY) === '1';
+        localStorage.setItem(INSTALLED_KEY, '1');
+        if (!isReinstall || localStorage.getItem(DEMO_KEY)) return;
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', showDemoScreen);
+        } else {
+            // Small delay so the UI is fully rendered
+            setTimeout(showDemoScreen, 500);
         }
+        localStorage.setItem(DEMO_KEY, '1');
+    },
+
+    unload() {
+        // Reinstall (enable after disable/uninstall) shows the intro again.
+        localStorage.removeItem('photoswipe_demo_shown');
     },
 
     // Allow re-showing demo via settings or command
