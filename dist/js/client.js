@@ -1371,7 +1371,7 @@ class ChromeAI extends Client {
         this.defaultModel = options.defaultModel || 'gemini-nano';
         this.logCallback = options.logCallback || console.log;
         this.progressCallback = options.progressCallback || null;
-
+        this.allowedLanguages = options.allowedLanguages || ["de", "en", "es", "fr", "ja"];
         // Cached LanguageModel session
         this._session = null;
     }
@@ -1381,6 +1381,7 @@ class ChromeAI extends Client {
      * @returns {Promise<boolean>}
      */
     static async isSupported() {
+        if (!this.allowedLanguages.includes(this.getLanguage())) return false;
         if (typeof self === 'undefined' || !self.LanguageModel) return false;
         try {
             const availability = await self.LanguageModel.availability();
@@ -1390,6 +1391,13 @@ class ChromeAI extends Client {
         }
     }
 
+    static get getLanguage() {
+        function baseLanguage(tag) {
+            return (tag || "en").split(/[-_]/)[0].toLowerCase();
+        }
+        return baseLanguage(window.framework?.getLanguage?.() || navigator.language);
+    }
+
     /**
      * Get (or create) the cached LanguageModel session.
      * System prompts are not accepted by session.prompt() and must be passed
@@ -1397,15 +1405,13 @@ class ChromeAI extends Client {
      */
     async _getSession(systemMessages = []) {
         if (!this._session) {
-            function baseLanguage(tag) {
-                return (tag || "en").split(/[-_]/)[0].toLowerCase();
-            }
+            const userLanguage = this.getLanguage();
             this._session = await LanguageModel.create({
                 expectedInputs: [
-                    { type: "text", languages: ["en"] }
+                    { type: "text", languages: ["en", userLanguage] }
                 ],
                 expectedOutputs: [
-                    { type: "text", languages: [baseLanguage(window.framework?.getLanguage?.() || navigator.language)] }
+                    { type: "text", languages: ["en", userLanguage] }
                 ],
                 initialPrompts: [],
                 monitor: this.progressCallback ? (monitor) => {
