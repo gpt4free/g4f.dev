@@ -1371,9 +1371,19 @@ class ChromeAI extends Client {
         this.defaultModel = options.defaultModel || 'gemini-nano';
         this.logCallback = options.logCallback || console.log;
         this.progressCallback = options.progressCallback || null;
-        this.allowedLanguages = options.allowedLanguages || ["de", "en", "es", "fr", "ja"];
         // Cached LanguageModel session
         this._session = null;
+    }
+
+    static get allowedLanguages() {
+        return ["de", "en", "es", "fr", "ja"];
+    }
+
+    static get currentLanguage() {
+        function baseLanguage(tag) {
+            return (tag || "en").split(/[-_]/)[0].toLowerCase();
+        }
+        return baseLanguage(window.framework?.getLanguage?.() || navigator.language);
     }
 
     /**
@@ -1381,7 +1391,7 @@ class ChromeAI extends Client {
      * @returns {Promise<boolean>}
      */
     static async isSupported() {
-        if (!this.allowedLanguages.includes(this.getLanguage())) return false;
+        if (!ChromeAI.allowedLanguages.includes(ChromeAI.currentLanguage)) return false;
         if (typeof self === 'undefined' || !self.LanguageModel) return false;
         try {
             const availability = await self.LanguageModel.availability();
@@ -1391,12 +1401,6 @@ class ChromeAI extends Client {
         }
     }
 
-    static get getLanguage() {
-        function baseLanguage(tag) {
-            return (tag || "en").split(/[-_]/)[0].toLowerCase();
-        }
-        return baseLanguage(window.framework?.getLanguage?.() || navigator.language);
-    }
 
     /**
      * Get (or create) the cached LanguageModel session.
@@ -1405,13 +1409,12 @@ class ChromeAI extends Client {
      */
     async _getSession(systemMessages = []) {
         if (!this._session) {
-            const userLanguage = this.getLanguage();
             this._session = await LanguageModel.create({
                 expectedInputs: [
-                    { type: "text", languages: ["en", userLanguage] }
+                    { type: "text", languages: ["en", this.currentLanguage] }
                 ],
                 expectedOutputs: [
-                    { type: "text", languages: ["en", userLanguage] }
+                    { type: "text", languages: ["en", this.currentLanguage] }
                 ],
                 initialPrompts: [],
                 monitor: this.progressCallback ? (monitor) => {
