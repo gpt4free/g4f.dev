@@ -598,30 +598,37 @@ function updateCustomProviderOption(apiBaseValue) {
 
 async function updateLiveProviderOptions(optgroup) {
     try {
-        const isLocalhost = ["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname);
-        Object.entries(await window.loadProviders()).forEach(([name, config]) => {
-            if (name === "custom") {
-                return; // Skip custom here, will be added separately
-            }
-            if (config.localhostOnly && !isLocalhost) {
-                return; // CORS-proxy providers are only usable (free) on localhost
-            }
-            if (["together", "huggingface", "typegpt"].includes(name) && !appStorage.getItem(window.providerLocalStorage[name])) {
-                return;
-            }
-            let option = document.createElement("option");
-            if (config.is_hidden || config.is_offline) {
-                option.disabled = true;
-            }
-            option.value = name;
-            option.dataset.live = "true";
-            option.text = (config.label || name) + (config.tags ? ` ${config.tags} 🟢` : " 🟢");
-            if (config.id) {
-                option.dataset.serverId = config.id;
-            }
-            optgroup.appendChild(option);
+        await window.cache?.liveProviders?.swr(window.loadProviders || (()=>[]), (providers) => {
+            const isLocalhost = ["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname);
+            Object.entries(providers).forEach(([name, config]) => {
+                if (name === "custom") {
+                    return; // Skip custom here, will be added separately
+                }
+                if (config.localhostOnly && !isLocalhost) {
+                    return; // CORS-proxy providers are only usable (free) on localhost
+                }
+                if (["together", "huggingface", "typegpt"].includes(name) && !appStorage.getItem(window.providerLocalStorage[name])) {
+                    return;
+                }
+                let option = document.createElement("option");
+                if (config.is_hidden || config.is_offline) {
+                    option.disabled = true;
+                }
+                if (name === "default") {
+                    option.selected = true;
+                }
+                option.value = name;
+                option.dataset.live = "true";
+                option.text = (config.label || name) + (config.tags ? ` ${config.tags} 🟢` : " 🟢");
+                if (config.id) {
+                    option.dataset.serverId = config.id;
+                }
+                optgroup.appendChild(option);
+            });
+        }).catch((e) => {
+            console.debug("Failed to load live providers from API:", e);
         });
-        providerSelect.value = "default";
+        
     } catch(e) {
         add_error(e, true);
     }

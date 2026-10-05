@@ -3844,7 +3844,10 @@ var currentRequestContext = null;
 var UNLOGGED_ERROR_TYPES = new Set([
   "authentication_required",
   "model_not_allowed",
-  "model_not_found"
+  "model_not_found",
+  // v1 endpoints reject user-provided keys with a static 403; this fires on
+  // every misconfigured client request and previously flooded /api/errors.
+  "authentication_error"
 ]);
 function jsonResponse(data, status = 200, headers = {}) {
   if (status >= 400 && status != 402 && currentRequestContext && !currentRequestContext.skipErrorLog) {

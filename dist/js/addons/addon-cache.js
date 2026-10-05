@@ -37,8 +37,8 @@ const PROVIDERS_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 const MODELS_CACHE_PREFIX = 'models:';
 const MODELS_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
-const CORE_PROVIDERS_CACHE_KEY = 'core_providers';
-const CORE_PROVIDERS_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+const LIVE_PROVIDERS_CACHE_KEY = 'live_providers';
+const LIVE_PROVIDERS_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
 const SERVERS_CACHE_KEY = 'servers';
 const SERVERS_CACHE_TTL = 60 * 60 * 1000; // 1 hour
@@ -340,16 +340,16 @@ async function clearCachedModels(provider) {
 // ------------------------------------------------------------------
 // Core Providers Cache (/backend-api/v2/providers)
 // ------------------------------------------------------------------
-async function getCachedCoreProviders(allowStale = false) {
-    return await cacheGet(CORE_PROVIDERS_CACHE_KEY, allowStale);
+async function getCachedLiveProviders(allowStale = false) {
+    return await cacheGet(LIVE_PROVIDERS_CACHE_KEY, allowStale);
 }
 
-async function setCachedCoreProviders(providers) {
-    return await cacheSet(CORE_PROVIDERS_CACHE_KEY, providers, CORE_PROVIDERS_CACHE_TTL);
+async function setCachedLiveProviders(providers) {
+    return await cacheSet(LIVE_PROVIDERS_CACHE_KEY, providers, LIVE_PROVIDERS_CACHE_TTL);
 }
 
-async function clearCachedCoreProviders() {
-    return await cacheRemove(CORE_PROVIDERS_CACHE_KEY);
+async function clearCachedLiveProviders() {
+    return await cacheRemove(LIVE_PROVIDERS_CACHE_KEY);
 }
 
 // ------------------------------------------------------------------
@@ -386,12 +386,12 @@ window.cache = {
         swr: (fetcher, onUpdate) => cacheSWR(PROVIDERS_CACHE_KEY, fetcher, PROVIDERS_CACHE_TTL, onUpdate),
         clear: clearCachedProviders
     },
-    coreProviders: {
-        get: (allowStale) => cacheGet(CORE_PROVIDERS_CACHE_KEY, allowStale),
-        set: setCachedCoreProviders,
-        fetch: (fetcher) => cacheFetch(CORE_PROVIDERS_CACHE_KEY, fetcher, CORE_PROVIDERS_CACHE_TTL),
-        swr: (fetcher, onUpdate) => cacheSWR(CORE_PROVIDERS_CACHE_KEY, fetcher, CORE_PROVIDERS_CACHE_TTL, onUpdate),
-        clear: clearCachedCoreProviders
+    liveProviders: {
+        get: (allowStale) => cacheGet(LIVE_PROVIDERS_CACHE_KEY, allowStale),
+        set: setCachedLiveProviders,
+        fetch: (fetcher) => cacheFetch(LIVE_PROVIDERS_CACHE_KEY, fetcher, LIVE_PROVIDERS_CACHE_TTL),
+        swr: (fetcher, onUpdate) => cacheSWR(LIVE_PROVIDERS_CACHE_KEY, fetcher, LIVE_PROVIDERS_CACHE_TTL, onUpdate),
+        clear: clearCachedLiveProviders
     },
     models: {
         get: (provider, allowStale) => cacheGet(getModelsCacheKey(provider), allowStale),
