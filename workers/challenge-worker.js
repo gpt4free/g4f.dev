@@ -488,9 +488,7 @@ async function handleIssue(request, env) {
     const explicitKind = ["followup", "followups", "translation", "translations"].includes(kindParam);
     let kind = explicitKind
         ? (kindParam === "followups" ? "followup" : kindParam)
-        : Math.random() < 0.1
-            ? "followup"
-            : "translations";
+        : "translations";
     const language = url.searchParams.get("lang") || "en";
 
     let payload = buildChallengePayload(kind, language);
