@@ -416,6 +416,11 @@
             throw Object.assign(new Error(solveData.error || `solve failed: ${solveRes.status}`), { status: solveRes.status });
         }
 
+        if (!solveData.token) {
+            console.error("[G4FChallenge] solve succeeded but no token was returned");
+            return null;
+        }
+
         // 5. Exchange the JWT for cake credit — only transient failures
         //    (network errors, 5xx) are retried; 4xx is definitive.
         const REDEEM_ATTEMPTS = 5;

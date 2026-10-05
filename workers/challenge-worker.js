@@ -666,7 +666,7 @@ async function handleSolve(request, env) {
     let token, expires;
     if (perDay > solved.count) {
         // 7. Mint the private-key JWT carrying the credit claim.
-        [token, expires] = await signJwt(
+        ({ token, expires } = await signJwt(
             env,
             {
                 sub: `challenge:${ip}`,
@@ -676,7 +676,7 @@ async function handleSolve(request, env) {
                 challenge_id: id,
             },
             600
-        );
+        ));
     }
 
 
