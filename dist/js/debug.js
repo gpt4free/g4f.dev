@@ -896,7 +896,7 @@ if (window.framework) window.framework.errors = ErrorTracker;
             const msg = args.map(a => 
             a && a.message 
                 ? `${typeof a}: ${a.message}` 
-                : JSON.stringify(typeof a === 'object' ? Object.fromEntries(Object.entries(a).map(([k, v]) => [k, String(v)])) : a)
+                : String(typeof a === 'object' ? JSON.stringify(Array.isArray(a) ? a.map(String) : Object.fromEntries(Object.entries(a).map(([k, v]) => [k, String(v)]))) : a)
             ).join(' ');
 
             logged.push(msg);

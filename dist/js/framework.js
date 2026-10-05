@@ -489,12 +489,16 @@ framework.translateAll = async () => {
     try {
         const response = await query(prompt, true);
         if (response && response.ok) {
-            translations = await response.json();
+            try {
+                translations = await response.json();
+            } catch (e) {
+                console.error(`Failed to parse translation response as JSON:`, await response.text());
+            }
         } else {
-            add_error(`Translation query failed: HTTP ${response ? response.status : "no response"}`, true);
+            console.error(`Translation query failed: HTTP ${response.status} ${response.statusText}`);
         }
     } catch (e) {
-        add_error(`Translation query failed: ${e}`, e);
+        console.error(`Translation query failed:`, e);
     }
     // The model may wrap the result in a per-language object.
     if (translations && translations[targetLanguage] && typeof translations[targetLanguage] === 'object' && Object.keys(translations[targetLanguage]).length > 0) {

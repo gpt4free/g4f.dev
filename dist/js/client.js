@@ -1689,3 +1689,26 @@ export default {
     Kilo,
     OpenCode,
 };
+
+// Publish the classes on window so classic scripts (e.g. challenge-client.js)
+// can fall back to them when a dynamic import of this module fails (CSP,
+// blocked module fetch, offline).
+if (typeof window !== "undefined") {
+    window.G4FClient = window.G4FClient || {
+        Client,
+        Pollinations,
+        DeepInfra,
+        Puter,
+        HuggingFace,
+        Audio,
+        WebGPU,
+        Bonsai,
+        Bonsai2,
+        ChromeAI,
+        LLM7,
+        Kilo,
+        OpenCode,
+        withCorsProxy,
+        captureUserTierHeaders,
+    };
+}

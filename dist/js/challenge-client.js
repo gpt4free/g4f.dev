@@ -100,6 +100,22 @@
         return ["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location?.hostname);
     }
 
+    /** Load the client.js ES module: dynamic import first; when that fails
+     *  (CSP, blocked module fetch, offline), fall back to the classes
+     *  published on window — window.G4FClient (set by client.js itself) or
+     *  the globals copied from providers.js's default export by the page. */
+    async function loadClientModule() {
+        try {
+            return await import("./client.js");
+        } catch (e) {
+            console.warn("[G4FChallenge] dynamic import of client.js failed:", e);
+            const mod = window.G4FClient
+                || (window.Client && window.ChromeAI && window);
+            if (mod && mod.ChromeAI) return mod;
+            throw new Error("client.js unavailable (no window fallback)");
+        }
+    }
+
     /** Load the local chat client from client.js: ChromeAI (built-in
      *  Gemini Nano) first; if the Prompt API is unavailable (non-Chrome
      *  browsers), fall back to the 1-bit Bonsai model on WebGPU, then
@@ -109,8 +125,8 @@
         if (!_clientPromise) {
             _clientPromise = (async () => {
                 // challenge-client.js is a classic script — load the ES
-                // module dynamically.
-                const { ChromeAI, Bonsai, LLM7, Kilo, OpenCode } = await import("./client.js");
+                // module dynamically (or grab the classes from window).
+                const { ChromeAI, Bonsai, LLM7, Kilo, OpenCode } = await loadClientModule();
                 if (window.self === window.top) {
                     if (await ChromeAI.isSupported()) {
                         return new ChromeAI({ logCallback: logAiEvent });
@@ -144,7 +160,7 @@
         if (_networkClient) return _networkClient;
         if (!_networkClientPromise) {
             _networkClientPromise = (async () => {
-                const { LLM7, Kilo, OpenCode } = await import("./client.js");
+                const { LLM7, Kilo, OpenCode } = await loadClientModule();
                 const network = [LLM7];
                 if (isLocalhost()) network.push(Kilo, OpenCode);
                 const ClientClass = network[Math.floor(Math.random() * network.length)];
