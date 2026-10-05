@@ -27,6 +27,24 @@ function mapProviderDefaults(providers) {
     return providers;
 }
 
+async function isProviderSupported(name, config) {
+    if (!config || !config.provider) return true;
+    const key = String(config.provider).toLowerCase();
+    const cls = providerClassMap[key];
+    if (!cls || typeof cls.isSupported !== "function") return true;
+    return await cls.isSupported();
+}
+
+async function filterSupportedProviders(providers) {
+    const supported = {};
+    for (const [name, config] of Object.entries(providers || {})) {
+        if (await isProviderSupported(name, config)) {
+            supported[name] = config;
+        }
+    }
+    return supported;
+}
+
 async function loadProviders() {
     let data;
     if (typeof window !== "undefined" && window.fetch) {
@@ -39,8 +57,8 @@ async function loadProviders() {
         }
         return fetch(origin + "/dist/js/providers.json")
             .then(res => res.json())
-            .then(json => {
-                providers = json.providers || {};
+            .then(async json => {
+                providers = await filterSupportedProviders(json.providers || {});
                 defaultModels = json.defaultModels || {};
                 serverDefaultModels = json.serverDefaultModels || {};
                 providerLocalStorage = json.providerLocalStorage || {};
@@ -50,7 +68,7 @@ async function loadProviders() {
     } else {
         // Node: read providers.json
         data = JSON.parse(fs.readFileSync("./providers.json", "utf-8"));
-        providers = data.providers || {};
+        providers = await filterSupportedProviders(data.providers || {});
         defaultModels = data.defaultModels || {};
         serverDefaultModels = data.serverDefaultModels || {};
         providerLocalStorage = data.providerLocalStorage || {};
@@ -95,6 +113,13 @@ async function createClient(provider, options = {}) {
     }
 
     if (!providers[provider]) {
+        // Provider was filtered out (e.g. local provider without browser
+        // support) — still instantiate its client class so callers get a
+        // proper error instead of a bogus remote URL.
+        const fallbackClass = providerClassMap[provider];
+        if (fallbackClass) {
+            return new fallbackClass(options);
+        }
         if (provider.startsWith("https://") || provider.startsWith("http://")) {
             options.baseUrl = provider;
         } else {
