@@ -472,7 +472,7 @@ async function incrementIssuedCount(env, ip) {
 async function handleIssue(request, env) {
     const ip = getClientIP(request);
     const url = new URL(request.url);
-    const maxPerDay = Number(env.CHALLENGE_MAX_PER_DAY || 150) - 5;
+    const maxPerDay = Number(env.CHALLENGE_PER_IP_PER_DAY || 100) + 5;
     const ttlSec = Number(env.CHALLENGE_TTL_SEC || 300);
 
     const issued = await getIssuedCount(env, ip);
