@@ -486,9 +486,7 @@ async function handleIssue(request, env) {
     const kindParam = (url.searchParams.get("kind") || "any").toLowerCase();
     // "followups" is accepted as an alias for "followup".
     const explicitKind = ["followup", "followups", "translation", "translations"].includes(kindParam);
-    let kind = explicitKind
-        ? (kindParam === "followups" ? "followup" : kindParam)
-        : "translations";
+    let kind = explicitKind || "translations";
     const language = url.searchParams.get("lang") || "en";
 
     let payload = buildChallengePayload(kind, language);
