@@ -25,20 +25,48 @@
 
     const VERIFIER_KEY = "g4f_oauth_verifier";
     const STATE_KEY = "g4f_oauth_state";
+    /** true once handleCallback() completed in this window (popup self-close) */
+    let callbackHandled = false;
 
     // --- Framed-context helpers -------------------------------------------
     // When the chat runs inside an iframe (e.g. the browser-extension side
     // panel), assigning window.location.href would navigate the frame away
     // from the chat. Instead the auth URL is opened in a popup window; the
-    // popup shares localStorage/sessionStorage with the framed page (same
-    // origin), so the session written by the callback is immediately
-    // visible here once we refresh the UI.
+    // popup shares localStorage with the framed page (same origin), so the
+    // session written by the callback is immediately visible here once we
+    // refresh the UI. (sessionStorage is NOT shared - it is per browsing
+    // context - see the flow-storage helpers below.)
     function isFramed() {
         try {
             return window.self !== window.top;
         } catch (e) {
             return true; // cross-origin access to window.top throws => framed
         }
+    }
+
+    // PKCE verifier/state storage. sessionStorage is per browsing context:
+    // a value stored by the framed chat is NOT visible in the login popup
+    // (a separate window), even on the same origin - the callback page in
+    // the popup would fail with "OAuth state mismatch" and never store the
+    // session. When framed, mirror the values into localStorage (shared
+    // across same-origin windows) so the popup can complete the code
+    // exchange. Values are removed right after use.
+    function setFlowItem(key, value) {
+        try { sessionStorage.setItem(key, value); } catch (e) { /* ignore */ }
+        if (isFramed()) {
+            try { localStorage.setItem(key, value); } catch (e) { /* ignore */ }
+        }
+    }
+    function getFlowItem(key) {
+        try {
+            const value = sessionStorage.getItem(key);
+            if (value != null) return value;
+        } catch (e) { /* ignore */ }
+        try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+    function removeFlowItem(key) {
+        try { sessionStorage.removeItem(key); } catch (e) { /* ignore */ }
+        try { localStorage.removeItem(key); } catch (e) { /* ignore */ }
     }
 
     // Open an auth URL in a centered popup window. Returns a truthy value
@@ -82,12 +110,22 @@
     // Notify the opener (the framed chat that spawned this popup) that the
     // login finished, then close the popup. No-op outside popups.
     function closeAuthPopup() {
-        if (!window.opener || window.opener === window) return false;
-        try {
-            window.opener.postMessage({ type: "g4f-login:done" }, "*");
-        } catch (e) { /* ignore */ }
-        window.close();
-        return true;
+        if (window.opener && window.opener !== window) {
+            try {
+                window.opener.postMessage({ type: "g4f-login:done" }, "*");
+            } catch (e) { /* ignore */ }
+            window.close();
+            return true;
+        }
+        // Popups opened by the browser-extension side panel have no opener
+        // (chrome.windows.create). Still close ourselves when the OAuth
+        // callback was handled here; window.close() is best-effort - the
+        // side panel also closes the popup once the login state changed.
+        if (callbackHandled) {
+            window.close();
+            return true;
+        }
+        return false;
     }
 
     function randomString(length) {
@@ -114,8 +152,8 @@
         const verifier = randomString(64);
         const challenge = await generateCodeChallenge(verifier);
         const state = randomString(32);
-        sessionStorage.setItem(VERIFIER_KEY, verifier);
-        sessionStorage.setItem(STATE_KEY, JSON.stringify({
+        setFlowItem(VERIFIER_KEY, verifier);
+        setFlowItem(STATE_KEY, JSON.stringify({
             state: state,
             redirectUri: redirectUri,
             data: stateData || null,
@@ -143,7 +181,7 @@
             client_secret: CLIENT_SECRET,
             code: code,
             redirect_uri: redirectUri,
-            code_verifier: sessionStorage.getItem(VERIFIER_KEY) || "",
+            code_verifier: getFlowItem(VERIFIER_KEY) || "",
         });
         const res = await fetch(`${OAUTH_BASE}/members/oauth/token`, {
             method: "POST",
@@ -168,23 +206,24 @@
         const state = url.searchParams.get("state");
         let saved = null;
         try {
-            saved = JSON.parse(sessionStorage.getItem(STATE_KEY) || "null");
+            saved = JSON.parse(getFlowItem(STATE_KEY) || "null");
         } catch (e) { saved = null; }
-        sessionStorage.removeItem(STATE_KEY);
+        removeFlowItem(STATE_KEY);
         if (!saved || saved.state !== state) {
-            sessionStorage.removeItem(VERIFIER_KEY);
+            removeFlowItem(VERIFIER_KEY);
             throw new Error("OAuth state mismatch - please retry signing in");
         }
         let data;
         try {
             data = await exchangeCode(code, saved.redirectUri || redirectUri, saved.provider || null);
         } finally {
-            sessionStorage.removeItem(VERIFIER_KEY);
+            removeFlowItem(VERIFIER_KEY);
         }
         // clean the URL (drop code/state)
         url.searchParams.delete("code");
         url.searchParams.delete("state");
         window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+        callbackHandled = true;
         return {
             token: data.access_token,
             user: data.user || null,

@@ -995,6 +995,16 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                 window.dispatchEvent(new CustomEvent("g4f-login:changed"));
             }
         });
+
+        // The login popup shares localStorage with this framed page (same
+        // origin). As soon as it writes the session, tell the extension host
+        // so it can close the popup and refresh the login UI. (The popup
+        // itself cannot notify us: extension-opened windows have no opener.)
+        window.addEventListener("storage", (event) => {
+            if (event.key === "g4f_session" || event.key === "g4f_user" || event.key === "g4f_expires") {
+                try { window.parent.postMessage({ type: "g4f-ext:auth-done" }, "*"); } catch (e) { /* ignore */ }
+            }
+        });
     })();
     </script>
 

@@ -25,7 +25,7 @@ const CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Credentials": "true",
     "Access-Control-Allow-Methods": "GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-User-Id, X-API-Key, x-workspace-secret",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-User-Id, X-API-Key, x-workspace-secret, x-raw-blob",
     "Access-Control-Expose-Headers": "Content-Type, X-User-Id, Retry-After, X-User-Tier"
   };
   
@@ -3584,7 +3584,7 @@ const body = await request.json().catch(() => ({}));
   // Single source of truth for the g4f_session cookie. Every endpoint in
   // this worker sets (and clears) the exact same cookie attributes.
   const SESSION_COOKIE_NAME = "g4f_session";
-  const SESSION_COOKIE_DOMAIN = "g4f.space";
+  const SESSION_COOKIE_DOMAIN = "auth.g4f.space";
   const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
   function buildSessionCookie(sessionToken) {
@@ -4234,15 +4234,6 @@ const body = await request.json().catch(() => ({}));
 
   const MAX_CONVERSATIONS = 1000;
 
-  function base64ToUint8Array(base64) {
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
-  }
-
   async function deriveSecretKey(workspaceSecret) {
     const encoder = new TextEncoder();
     const keyMaterial = await crypto.subtle.digest(
@@ -4513,21 +4504,7 @@ const body = await request.json().catch(() => ({}));
       return jsonResponse({ error: validated.error }, validated.status, getCorsHeaders(request));
     }
     const workspaceSecret = validated.secret;
-    // Client-side (E2E) encryption: the browser already encrypted the
-    // conversation with the private workspace secret and sent a metadata
-    // envelope with a base64 ciphertext blob. Store the raw blob as-is so
-    // the plaintext never reaches the server.
-    const isE2E = body.encrypted === true && typeof body.blob === "string" && body.blob.length > 0;
-    let blob;
-    if (isE2E) {
-      try {
-        blob = base64ToUint8Array(body.blob);
-      } catch (e) {
-        return jsonResponse({ error: "Invalid blob encoding" }, 400, getCorsHeaders(request));
-      }
-    } else {
-      blob = await encryptSecretConversation(body, workspaceSecret);
-    }
+    const blob = await encryptSecretConversation(body, workspaceSecret);
     const key = secretConversationKey(user.id, body.id);
     await env.MEMBERS_BUCKET.put(key, blob, {
       httpMetadata: { contentType: "application/octet-stream" },
@@ -4538,9 +4515,8 @@ const body = await request.json().catch(() => ({}));
       updated: body.updated || Date.now(),
       added: body.added || Date.now(),
       items_count: Array.isArray(body.items) ? body.items.length : 0,
-      encrypted: isE2E || undefined,
     }, false, workspaceSecret);
-    return jsonResponse({ saved: true, id: body.id, encrypted: true, e2e: isE2E }, 200, getCorsHeaders(request));
+    return jsonResponse({ saved: true, id: body.id, encrypted: true }, 200, getCorsHeaders(request));
   }
 
   /**
@@ -4579,19 +4555,7 @@ const body = await request.json().catch(() => ({}));
           errors.push({ id: conversation && conversation.id, error: "missing id" });
           continue;
         }
-        // Client-side (E2E) encryption: store the raw ciphertext blob as-is
-        const isE2E = conversation.encrypted === true && typeof conversation.blob === "string" && conversation.blob.length > 0;
-        let blob;
-        if (isE2E) {
-          try {
-            blob = base64ToUint8Array(conversation.blob);
-          } catch (e) {
-            errors.push({ id: conversation.id, error: "invalid blob encoding" });
-            continue;
-          }
-        } else {
-          blob = await encryptSecretConversation(conversation, workspaceSecret);
-        }
+        const blob = await encryptSecretConversation(conversation, workspaceSecret);
         const key = secretConversationKey(user.id, conversation.id);
         await env.MEMBERS_BUCKET.put(key, blob, {
           httpMetadata: { contentType: "application/octet-stream" },
@@ -4602,7 +4566,6 @@ const body = await request.json().catch(() => ({}));
           updated: conversation.updated || Date.now(),
           added: conversation.added || Date.now(),
           items_count: Array.isArray(conversation.items) ? conversation.items.length : 0,
-          encrypted: isE2E || undefined,
         });
         saved++;
       } catch (e) {
@@ -4668,17 +4631,6 @@ const body = await request.json().catch(() => ({}));
       return jsonResponse({ error: "Conversation not found" }, 404, getCorsHeaders(request));
     }
     const buffer = await object.arrayBuffer();
-    // E2E mode: return the raw (client-encrypted) blob untouched so the
-    // browser decrypts it locally with the private workspace secret.
-    if (request.headers.get("x-raw-blob") === "true") {
-      return new Response(buffer, {
-        status: 200,
-        headers: {
-          ...getCorsHeaders(request),
-          "Content-Type": "application/octet-stream",
-        },
-      });
-    }
     const conversation = await decryptSecretConversation(buffer, workspaceSecret);
     if (!conversation) {
       // Blob was encrypted with an old/wrong key and is unreadable —
