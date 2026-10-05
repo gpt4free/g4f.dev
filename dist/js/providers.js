@@ -50,9 +50,7 @@ async function loadProviders() {
     if (typeof window !== "undefined" && window.fetch) {
         // Web: fetch providers.json
         let origin = "https://g4f.dev";
-        if (window.location.hostname === "gpt4free.github.io") {
-            origin = "";
-        } else if (["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname)) {
+        if (["localhost", "gpt4free.github.io", "0.0.0.0"].includes(window.location.hostname)) {
             origin = "";
         }
         return fetch(origin + "/dist/js/providers.json")
