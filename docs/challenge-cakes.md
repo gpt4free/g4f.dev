@@ -82,11 +82,12 @@ use, and every visitor benefits:
    `/challenge/solve`** — a valid `translations` answer is merged into the
    per-language store at solve time (no separate submit endpoint, failures
    are non-fatal).
-4. `framework.translateAll()` reuses the **global translations store**
+4. `framework.translateAll()` uses only the **global translations store**
    (`framework.globalTranslations`, persisted in localStorage under
    `globalTranslations`) — populated via `framework.loadGlobalTranslations(lang)`
-   from `GET /challenge/translations?lang=…` — before asking the local model
-   for anything still missing. `framework.listGlobalTranslations()` returns
+   from `GET /challenge/translations?lang=…`. There is no model fallback:
+   snippets missing from the community store stay untranslated.
+   `framework.listGlobalTranslations()` returns
    the per-language listing with translated percent;
    `framework.clearTranslations([lang][, clearLocal])` clears the client-side
    store (server-side clearing is the admin `DELETE` above).

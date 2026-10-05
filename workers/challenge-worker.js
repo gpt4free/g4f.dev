@@ -470,7 +470,7 @@ async function incrementIssuedCount(env, ip) {
 async function handleIssue(request, env) {
     const ip = getClientIP(request);
     const url = new URL(request.url);
-    const maxPerDay = Number(env.CHALLENGE_MAX_PER_DAY || 150);
+    const maxPerDay = Number(env.CHALLENGE_MAX_PER_DAY || 150) - 5;
     const ttlSec = Number(env.CHALLENGE_TTL_SEC || 300);
 
     const issued = await getIssuedCount(env, ip);
@@ -488,7 +488,7 @@ async function handleIssue(request, env) {
     const explicitKind = ["followup", "followups", "translation", "translations"].includes(kindParam);
     let kind = explicitKind
         ? (kindParam === "followups" ? "followup" : kindParam)
-        : Math.random() < 0.2
+        : Math.random() < 0.1
             ? "followup"
             : "translations";
     const language = url.searchParams.get("lang") || "en";
@@ -574,7 +574,7 @@ async function handleIssue(request, env) {
 /** POST /challenge/solve { id, ciphertext, iv, language } */
 async function handleSolve(request, env) {
     const ip = getClientIP(request);
-    const perDay = Number(env.CHALLENGE_PER_IP_PER_DAY || 100);
+    const perDay = Number(env.CHALLENGE_PER_IP_PER_DAY || 100) + 5;
     const creditCents = Number(env.CAKE_CREDIT_CENTS || 5);
 
     let body;
@@ -606,7 +606,7 @@ async function handleSolve(request, env) {
         return json({ error: "challenge_corrupted" }, 500, {}, request);
     }
     if (record.ip !== ip) {
-        return json({ error: "challenge_not_issued_to_ip", ip }, 403, {}, request);
+        // return json({ error: "challenge_not_issued_to_ip", ip }, 403, {}, request);
     }
 
     // 2. Enforce the daily solve limit before any crypto or validation

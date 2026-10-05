@@ -186,14 +186,6 @@ framework.translate = (text, escape = true) => {
 function hasWords(text) {
     return text.trim().match(/[a-zA-Z]+/gu)?.length > 0;
 }
-framework.translationKey = "translations" + document.location.pathname;
-framework.translations = (() => {
-    try {
-        return JSON.parse(localStorage.getItem(framework.translationKey) || "{}");
-    } catch (e) {
-        return {};
-    }
-})();
 
 // ---- Global translations store -------------------------------------------
 // Community translations from the challenge worker, kept per base language
@@ -238,6 +230,22 @@ framework.setSelectedLanguage = (language) => {
     } catch (e) { /* private mode — selection stays in-memory only */ }
 };
 
+// In-memory view of the community translations for the currently selected
+// language. Populated from the global store at startup and refreshed by
+// loadGlobalTranslations()/translateAll() — there are no per-page caches and
+// no model-generated translations anymore; the community store is the only
+// source.
+framework.translations = (() => {
+    try {
+        const selected = localStorage.getItem(SELECTED_LANGUAGE_KEY);
+        const base = (selected || framework.getLanguage() || "").split(/[-_]/)[0].toLowerCase();
+        const entry = framework.globalTranslations?.[base];
+        return entry?.translations ? {...entry.translations} : {};
+    } catch (e) {
+        return {};
+    }
+})();
+
 /** Fetch the community translation store for one base language and merge it
  *  into the global store. Returns the entry: {language, count, translations,
  *  total?, remaining?, percent?} — progress fields come from the worker when
@@ -265,6 +273,11 @@ framework.loadGlobalTranslations = async (language) => {
     const store = framework.globalTranslations || {};
     store[entry.language] = entry;
     storeGlobalTranslations(store);
+    // Refresh the in-memory view when this package is the active selection,
+    // so newly loaded community translations apply without a reload.
+    if (framework.getSelectedLanguage && framework.getSelectedLanguage() === entry.language) {
+        framework.translations = {...entry.translations};
+    }
     return entry;
 };
 
@@ -291,24 +304,20 @@ framework.clearTranslations = (language = null, clearLocal = false) => {
             delete framework.globalTranslations[base];
             cleared = true;
         }
+        if (framework.getSelectedLanguage && framework.getSelectedLanguage() === base) {
+            framework.translations = {};
+        }
     } else if (framework.globalTranslations && Object.keys(framework.globalTranslations).length) {
         framework.globalTranslations = {};
+        framework.translations = {};
         cleared = true;
     }
     if (clearLocal) {
         cleared = deleteTranslations() || cleared;
-        framework.translations = {};
     }
     storeGlobalTranslations(framework.globalTranslations);
     return cleared;
 };
-
-// Persist translations and update the in-memory copy, so translateElements()
-// can apply freshly fetched translations without a reload.
-function storeTranslations(translations) {
-    framework.translations = translations;
-    localStorage.setItem(framework.translationKey, JSON.stringify(translations));
-}
 
 framework.translateElements = function (elements = null) {
     if (!framework.translations) {
@@ -361,8 +370,8 @@ window.addEventListener('load', async () => {
         return;
     }
     try {
-        // translateAll() persists and applies whatever it could translate
-        // (community store and/or model) — no reload needed.
+        // translateAll() applies whatever the community store covers —
+        // no reload needed.
         await framework.translateAll();
     } catch (e) {
         add_error(e, true);
@@ -448,97 +457,48 @@ framework.translateAll = async () => {
         console.log("No new translations to process.");
         return false;
     }
-    // Collect every text rendered so far, keeping translations that are
-    // already known so a refetch never loses them.
-    const allTranslations = {};
-    newTranslations.forEach(text => {
-        allTranslations[text] = framework.translations[text] || "";
-    });
-    // Reuse community translations from the global store / challenge worker
-    // first — only snippets nobody has translated yet go to the model.
+    // Community translations are the only source: refresh the package for
+    // the target language from the challenge worker and apply it to every
+    // text rendered so far. No model queries, no per-page persistence.
+    let community = null;
     try {
-        const base = targetLanguage.split(/[-_]/)[0].toLowerCase();
-        let community = framework.globalTranslations?.[base]?.translations;
-        if (!community || Object.keys(community).length === 0) {
-            const entry = await framework.loadGlobalTranslations(targetLanguage);
-            community = entry.translations;
-        }
-        for (const [text, translated] of Object.entries(community || {})) {
-            if (allTranslations.hasOwnProperty(text) && translated) {
-                allTranslations[text] = translated;
-            }
-        }
+        const entry = await framework.loadGlobalTranslations(targetLanguage);
+        community = entry.translations;
     } catch (e) {
         add_error(`Community translation store unavailable: ${e}`, e);
+        const base = targetLanguage.split(/[-_]/)[0].toLowerCase();
+        community = framework.globalTranslations?.[base]?.translations;
     }
-    const missing = Object.fromEntries(Object.entries(allTranslations).filter(([, translated]) => !translated));
-    if (Object.keys(missing).length === 0) {
-        storeTranslations(allTranslations);
-        // Apply to the DOM here too — this path previously returned without
-        // rendering, leaving the first visit in the source language.
-        framework.translateElements();
-        return allTranslations;
+    if (!community || Object.keys(community).length === 0) {
+        return false;
     }
-    const jsonTranslations = "\n\n```json\n" + JSON.stringify(missing, null, 4) + "\n```";
-    const languageName = targetLanguage === "de" ? 'de-DE' : targetLanguage === "es" ? 'es-ES' : targetLanguage;
-    const jsonLanguage = "`" + languageName + "`";
-    const prompt = `Translate the following text snippets in a JSON object to ${jsonLanguage}: ${jsonTranslations} (iso-code)`;
-    // Ask the model for the missing snippets. A failure here must not
-    // discard the translations collected so far (community + stored).
-    let translations = null;
-    try {
-        const response = await query(prompt, true);
-        if (response && response.ok) {
-            try {
-                translations = await response.json();
-            } catch (e) {
-                console.error(`Failed to parse translation response as JSON:`, await response.text());
-            }
-        } else {
-            console.error(`Translation query failed: HTTP ${response.status} ${response.statusText}`);
+    const translations = {};
+    newTranslations.forEach(text => {
+        if (community[text]) {
+            translations[text] = community[text];
         }
-    } catch (e) {
-        console.error(`Translation query failed:`, e);
+    });
+    if (Object.keys(translations).length === 0) {
+        return false;
     }
-    // The model may wrap the result in a per-language object.
-    if (translations && translations[targetLanguage] && typeof translations[targetLanguage] === 'object' && Object.keys(translations[targetLanguage]).length > 0) {
-        translations = translations[targetLanguage];
-    }
-    if (translations && typeof translations === 'object') {
-        // Merge the model's answers into the full map instead of replacing it.
-        // Models often answer only part of a batch or rephrase keys — accept
-        // every entry whose key matches a requested snippet (whitespace
-        // normalized) and only report an error when nothing usable came back.
-        let matched = 0;
-        for (const [text, translated] of Object.entries(translations)) {
-            const key = String(text).replace(/\s+/g, ' ').trim();
-            if (key in allTranslations && translated) {
-                allTranslations[key] = translated;
-                matched += 1;
-            }
-        }
-        if (matched === 0) {
-            add_error("Invalid translations received: " + JSON.stringify(translations), true);
-        }
-    }
-    // Persist and apply whatever is covered — even when the model query
-    // failed, community/stored translations must still reach the UI.
-    if (Object.values(allTranslations).some(Boolean)) {
-        storeTranslations(allTranslations);
-        framework.translateElements();
-        return allTranslations;
-    }
-    return false;
+    framework.translations = translations;
+    framework.translateElements();
+    return translations;
 }
 
 function deleteTranslations() {
     let hasDeleted = false;
-    for (let i = 0; i < localStorage.length; i++) {
-        let key = localStorage.key(i);
-        if (key.startsWith("translations")) {
+    // Legacy per-page translation caches (no longer written) + in-memory copy.
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("translations")) {
             localStorage.removeItem(key);
             hasDeleted = true;
         }
+    }
+    if (framework.translations && Object.keys(framework.translations).length) {
+        framework.translations = {};
+        hasDeleted = true;
     }
     return hasDeleted;
 }

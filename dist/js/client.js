@@ -1577,7 +1577,7 @@ class Kilo extends Client {
             return this.fallbackBaseUrl || null;
         }
         const backendUrl = (typeof window !== "undefined" && window.framework?.backendUrl) || "";
-        return backendUrl ? `${backendUrl}/api/Kilo` : null;
+        return backendUrl ? `${backendUrl}/api/${this.baseUrl}` : null;
     }
 
     get models() {
@@ -1636,7 +1636,7 @@ class OpenCode extends Client {
             return this.fallbackBaseUrl || null;
         }
         const backendUrl = (typeof window !== "undefined" && window.framework?.backendUrl) || "";
-        return backendUrl ? `${backendUrl}/api/OpenCode` : null;
+        return backendUrl ? `${backendUrl}/api/${this.baseUrl}` : null;
     }
 
     get models() {

@@ -105,13 +105,13 @@
      *  published on window — window.G4FClient (set by client.js itself) or
      *  the globals copied from providers.js's default export by the page. */
     async function loadClientModule() {
+        const mod = window.G4FClient
+            || (window.Client && window.ChromeAI && window);
+        if (mod && mod.ChromeAI) return mod;
         try {
             return await import("./client.js");
         } catch (e) {
             console.warn("[G4FChallenge] dynamic import of client.js failed:", e);
-            const mod = window.G4FClient
-                || (window.Client && window.ChromeAI && window);
-            if (mod && mod.ChromeAI) return mod;
             throw new Error("client.js unavailable (no window fallback)");
         }
     }

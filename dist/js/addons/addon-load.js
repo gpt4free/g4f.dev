@@ -439,7 +439,7 @@ Example:
     ]
 }
 \`\`\``;
-    if (appStorage.getItem(framework.translationKey) && framework.getLanguage().startsWith("en") == false) {
+    if (framework.getSelectedLanguage && framework.getSelectedLanguage() && framework.getLanguage().startsWith("en") == false) {
         prompt += `\nRespond in ${framework.getLanguage()}.`;
     }
     try {
@@ -477,7 +477,7 @@ async function load_follow_up_questions(messages, new_response) {
   ]
 }
 \`\`\``;
-    if (appStorage.getItem(framework.translationKey) && framework.getLanguage().startsWith("en") == false) {
+    if (framework.getSelectedLanguage && framework.getSelectedLanguage() && framework.getLanguage().startsWith("en") == false) {
         prompt += `\n\nRespond in language ${framework.getLanguage()}.`;
     }
     const new_messages = [{role: "assistant", content: new_response}, {role: "user", content: prompt}];
