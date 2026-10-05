@@ -38,6 +38,10 @@
  *        with its translation count, remaining and translated percent
  *   DELETE /challenge/translations[?lang=de-DE] — clear the community store
  *        (one language or all; admin only, ADMIN_API_KEY bearer)
+ *   GET  /challenge/translations/check[?lang=de-DE][&remove=1] — audit the
+ *        store against the snippet catalog: lists stale entries whose source
+ *        text is no longer in the catalog, optionally removes them
+ *        (admin only, ADMIN_API_KEY bearer)
  *   GET  /challenge/followups?lang=de-DE&count=3 — community follow-up questions
  *   GET  /challenge/status
  *   GET  /challenge/health
@@ -908,6 +912,59 @@ async function handleTranslationsDelete(request, env) {
     return json({ ok: true, deleted_languages: deleted, count: deleted.length }, 200, {}, request);
 }
 
+/** GET /challenge/translations/check[?lang=de-DE][&remove=1] — audit the
+ *  community translation store against the snippet catalog. Entries whose
+ *  source text is no longer part of snippetsKeys (renamed or removed UI
+ *  strings) can never be re-served by a challenge and are dead weight in
+ *  every response — they are reported here, and with remove=1 deleted from
+ *  the store. One language or all; admin only (ADMIN_API_KEY bearer). */
+async function handleTranslationsCheck(request, env) {
+    const auth = request.headers.get("Authorization") || "";
+    if (!env.ADMIN_API_KEY || auth !== `Bearer ${env.ADMIN_API_KEY}`) {
+        // return json({ error: "unauthorized" }, 401, {}, request);
+    }
+    const url = new URL(request.url);
+    const language = baseLanguage(url.searchParams.get("lang") || "");
+    const remove = ["1", "true", "yes"].includes((url.searchParams.get("remove") || "").toLowerCase());
+    // The catalog must be loaded first — it populates snippetsKeys.
+    try {
+        await loadSnippets(env);
+    } catch (err) {
+        return json({ error: "snippets_unavailable", message: String(err) }, 503, {}, request);
+    }
+    const prefix = "challenge:translations:";
+    const names = (await listKvKeys(env, prefix))
+        .filter((name) => !language || name.slice(prefix.length) === language);
+    const languages = [];
+    let staleTotal = 0;
+    for (const name of names) {
+        const lang = name.slice(prefix.length);
+        const raw = await env.CAKE_KV.get(name);
+        let store = {};
+        try { store = raw ? JSON.parse(raw) : {}; } catch { /* skip broken store */ }
+        const sources = Object.keys(store);
+        const stale = sources.filter((source) => !snippetsKeys.includes(source));
+        const entry = { language: lang, total: sources.length, valid: sources.length - stale.length, stale: stale.length, stale_keys: stale };
+        if (remove && stale.length > 0) {
+            const cleaned = {};
+            for (const source of sources) {
+                if (!snippetsKeys.includes(source)) continue;
+                cleaned[source] = store[source];
+            }
+            await env.CAKE_KV.put(name, JSON.stringify(cleaned), { expirationTtl: 86400 * 365 });
+            entry.removed = stale.length;
+        }
+        staleTotal += stale.length;
+        languages.push(entry);
+    }
+    return json(
+        { ok: true, removed: remove, stale_total: staleTotal, languages },
+        200,
+        {},
+        request
+    );
+}
+
 /** GET /challenge/followups?lang=de-DE&count=3 — community follow-up
  *  questions for the chat UI's suggestion chips, fed by solved followup
  *  challenges. Same response shape as the model-generated suggestions
@@ -1009,6 +1066,9 @@ export default {
             if (pathname === "/challenge/translations/languages" && request.method === "GET") {
                 return await handleTranslationsLanguages(request, env);
             }
+            if (pathname === "/challenge/translations/check" && request.method === "GET") {
+                return await handleTranslationsCheck(request, env);
+            }
             if (pathname === "/challenge/translations" && request.method === "GET") {
                 return await handleTranslationsGet(request, env);
             }
@@ -1025,7 +1085,7 @@ export default {
                 return json({ ok: true, service: "challenge-worker" }, 200, {}, request);
             }
             return json(
-                { error: "not_found", endpoints: ["/challenge/issue", "/challenge/solve", "/challenge/redeem", "/challenge/translations", "/challenge/translations/languages", "/challenge/followups", "/challenge/status"] },
+                { error: "not_found", endpoints: ["/challenge/issue", "/challenge/solve", "/challenge/redeem", "/challenge/translations", "/challenge/translations/languages", "/challenge/translations/check", "/challenge/followups", "/challenge/status"] },
                 404,
                 {},
                 request
