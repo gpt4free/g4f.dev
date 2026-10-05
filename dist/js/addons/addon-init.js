@@ -1771,7 +1771,15 @@ function showCloudSyncLoggedIn(user) {
     const userEl = document.getElementById("cloudSyncUser");
     if (loginSection) loginSection.style.display = "none";
     if (syncSection) syncSection.style.display = "block";
-    if (userEl) userEl.textContent = user.name || user.email || "User";
+    if (userEl) userEl.textContent = "";
+    const displayName = user.name || user.email || "User";
+    const parentText = userEl.parentElement.innerText;
+    if (parentText.includes("{0}")) {
+        userEl.textContent = displayName;
+        userEl.parentElement.innerHTML = parentText.replace("{0}", userEl.outerHTML);
+    } else {
+        userEl.textContent = displayName;
+    }
 
     // Derive and store workspace secret for cross-device sync
     if (user.id) {
@@ -2329,7 +2337,6 @@ async function syncConversationsFromSecret() {
             let downloaded = 0;
             for (const item of items) {
                 if (item.items_count === 0) continue;
-                if (item.updated < 1789947763634) continue;
                 const convId = item.id || item.conversation_id;
                 if (!convId) continue;
                 const convResp = await fetchSecretStorage(`${target.baseUrl}/v1/secret/conversations/${encodeURIComponent(convId)}`, { headers: target.headers });
@@ -2573,7 +2580,9 @@ function startSecretSyncPolling() {
 
 // Initialize cloud sync on page load
 handleCloudSyncCallback();
-checkCloudSyncSession();
+window.addEventListener("load", () => {
+    checkCloudSyncSession();
+});
 // Start cross-device sync polling
 startSecretSyncPolling();
 // Start cross-device secret request polling (confirm requests from other devices)
