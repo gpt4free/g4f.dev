@@ -383,7 +383,7 @@ async function on_load() {
         chatPrompt.value = document.getElementById("systemPrompt")?.value || "";
     }
     let chatParams = new URLSearchParams(window.location.search);
-    if (chatParams.get("prompt")) {
+    if (chatParams.has("prompt")) {
         userInput.value = chatParams.get("prompt");
         userInput.focus();
         window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);

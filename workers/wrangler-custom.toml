@@ -60,6 +60,12 @@ API_KEY_SALT = ""  # Set via: wrangler secret put API_KEY_SALT
 #   { pattern = "g4f.dev/custom/*", zone_name = "g4f.dev" }
 # ]
 
+# Scheduled triggers: refresh the public servers index (validation + model
+# auto-update) via updatePublicServers() in the scheduled handler. DB
+# cleanups in the same handler only run on hourly (minute 0) invocations.
+[triggers]
+crons = ["*/15 * * * *"]  # Every 15 minutes
+
 # Development settings
 [dev]
 port = 8788

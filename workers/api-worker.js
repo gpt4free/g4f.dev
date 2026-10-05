@@ -730,8 +730,21 @@ var custom_worker_default = {
     }
   },
   async scheduled(event, env, ctx) {
-    // Delete usage logs older than 14 days
-    if (env.USAGE_DB) {
+    const runTime = new Date(event.scheduledTime);
+    const hourly = runTime.getUTCMinutes() === 0;
+    // Refresh the public servers index: validate stale entries, auto-update
+    // models and persist back to KV. Moved here from the /public request
+    // path so user traffic never pays for upstream validation.
+    if (env.MEMBERS_KV) {
+      try {
+        const updated = await updatePublicServers(env);
+        console.log(`Cron: refreshed ${updated} public servers`);
+      } catch (e) {
+        console.error("Failed to update public servers:", e);
+      }
+    }
+    // Delete usage logs older than 14 days (hourly runs only)
+    if (hourly && env.USAGE_DB) {
       try {
         const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
         const result = await env.USAGE_DB.prepare(
@@ -742,8 +755,8 @@ var custom_worker_default = {
         console.error("Failed to cleanup old usage logs:", e);
       }
     }
-    // Delete error logs older than 30 days
-    if (env.ERRORS_DB) {
+    // Delete error logs older than 30 days (hourly runs only)
+    if (hourly && env.ERRORS_DB) {
       try {
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
         const result = await env.ERRORS_DB.prepare(
@@ -1133,19 +1146,30 @@ async function getPublicServers(env, blocklist = true) {
   return publicServers;
 }
 async function handleListPublicServers(request, env, user, ctx, cacheKey) {
+  // Serve the index as-is. Servers are validated by the scheduled cron
+  // handler (updatePublicServers), never on user requests.
   const cachedResponse = await getCachedResponse(request, cacheKey);
   if (cachedResponse) {
-    if (parseInt(cachedResponse.headers.get("age")) > 300) {
-      ctx.waitUntil(handleUpdatePublicServers(request, env, user, ctx, cacheKey));
-    }
     return cachedResponse;
   }
-  return handleUpdatePublicServers(request, env, user, ctx, cacheKey);
+  const publicServers = await getPublicServers(env);
+  const safeServers = publicServers.map(({ api_keys, ...s }) => ({
+    ...s,
+    is_public: true,
+  }));
+  const response = jsonResponse({
+    servers: safeServers
+  });
+  ctx.waitUntil(setCachedResponse(request, response, CACHE_HEADERS.SHORT, cacheKey, ctx));
+  return response;
 }
-async function handleUpdatePublicServers(request, env, user, ctx, cacheKey) {
+async function updatePublicServers(env) {
+  // Refresh stale entries in the public servers index: validate upstream,
+  // auto-update models and persist back to KV. Called from the scheduled
+  // cron handler only.
   // Deep-copy entries: they are shared with the per-isolate memo and get
-  // mutated below (updated_at, allowed_models, test_result, api_keys delete),
-  // which would otherwise corrupt the cache and strip api_keys from KV.
+  // mutated below (updated_at, allowed_models, test_result), which would
+  // otherwise corrupt the cache.
   const publicServers = (await getPublicServers(env)).map((s) => structuredClone(s));
   let ct = 0;
   publicServers.sort((a, b) => {
@@ -1165,7 +1189,7 @@ async function handleUpdatePublicServers(request, env, user, ctx, cacheKey) {
       } catch(e) {console.error(e)}
       if (s.is_hidden || s.is_ollama) continue;
       try {
-        const fullServer = await getServerById(env, s.id, user);
+        const fullServer = await getServerById(env, s.id);
         s.is_hidden = HIDDEN_SERVERS.includes(s.id);
         const validationResult = await validateServer(env, fullServer.base_url, fullServer.api_keys);
         if (validationResult.error) {
@@ -1204,18 +1228,7 @@ async function handleUpdatePublicServers(request, env, user, ctx, cacheKey) {
     publicServersCache.time = Date.now();
     publicServersCache.value = publicServers;
   }
-  const safeServers = publicServers.map(({ api_keys, ...s }) => ({
-    ...s,
-    is_public: true,
-  }));
-  const response = jsonResponse({
-    servers: safeServers
-  });
-  // Cache the list even when servers were just refreshed (SHORT ttl) so a
-  // burst of requests doesn't re-validate up to 10 upstream servers each.
-  // handleListPublicServers still refreshes stale entries in the background.
-  ctx.waitUntil(setCachedResponse(request, response, ct > 0 ? CACHE_HEADERS.SHORT : CACHE_HEADERS.LONG, cacheKey, ctx));
-  return response;
+  return ct;
 }
 async function handleGetServerModels(request, env, serverId, user) {
   const server = await getServerById(env, serverId, user);
