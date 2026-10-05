@@ -485,7 +485,7 @@ async function handleIssue(request, env) {
 
     const kindParam = (url.searchParams.get("kind") || "any").toLowerCase();
     // "followups" is accepted as an alias for "followup".
-    const explicitKind = ["followup", "followups", "translation", "translations"].includes(kindParam);
+    const explicitKind = ["followup", "followups", "translation","translations"].includes(kindParam);
     let kind = explicitKind || "translations";
     const language = url.searchParams.get("lang") || "en";
 
@@ -512,14 +512,7 @@ async function handleIssue(request, env) {
             candidates.push([headline, untranslated]);
         }
         if (candidates.length === 0) {
-            // Nothing left to translate for this language. An explicit
-            // translations request reports it; a generic "any" request falls
-            // back to a followup challenge so the client still gets work.
-            if (explicitKind) {
-                return json({ error: "all_translated", language }, 200, {}, request);
-            }
-            kind = "followup";
-            payload = buildChallengePayload(kind, language);
+            return json({ error: "all_translated", language }, 200, {}, request);
         }
         if (payload.kind === "translations") {
             // Pick among the groups with the most untranslated texts (weighted,
