@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>WebGPU models.list() — vram_required_MB check</title>
+</head>
+<body>
+<h3>await (new G4FClient.WebGPU()).models.list()</h3>
+<pre id="out">loading web-llm from esm.run …</pre>
+<script type="module">
+import { WebGPU } from './dist/js/client.js';
+
+const out = document.getElementById('out');
+try {
+    const models = await (new WebGPU()).models.list();
+    const L = [];
+    const vram = m => m.vram_required_MB;
+    const deviceGB = navigator.deviceMemory || 0;
+    const availableMB = WebGPU.getAvailableMemoryMB();
+
+    L.push(`navigator.deviceMemory: ${deviceGB} GB -> max model vram_required_MB: ${availableMB === Infinity ? 'unknown (no filter)' : availableMB + ' MB'}`);
+    L.push(`filtered catalogue: ${models.length} models`);
+    const over = models.filter(m => typeof vram(m) === 'number' && vram(m) > availableMB);
+    L.push(`models above limit still listed: ${over.length}${over.length ? ' -> ' + over.map(m => m.id).join(', ') : ''}`);
+    const def = models.find(m => m.id === 'Llama-3.1-8B-Instruct-q4f32_1-MLC');
+    L.push(`default model still listed: ${!!def}${def ? ` (${vram(def)} MB)` : ''}`);
+    L.push('');
+    L.push('largest 5 listed models:');
+    for (const m of [...models].sort((a, b) => (vram(b) ?? 0) - (vram(a) ?? 0)).slice(0, 5)) {
+        L.push(`  ${m.id} = ${vram(m)} MB (${(vram(m) / 1024).toFixed(2)} GB)`);
+    }
+    L.push('');
+    L.push('sample labels:');
+    for (const m of [...models].sort((a, b) => (vram(b) ?? 0) - (vram(a) ?? 0)).slice(0, 5)) {
+        L.push(`  ${m.label}`);
+    }
+    const smallest = [...models].sort((a, b) => (vram(a) ?? 1e9) - (vram(b) ?? 1e9))[0];
+    if (smallest) L.push(`  ${smallest.label}`);
+    L.push('');
+    L.push('unfiltered comparison (filterByMemory: false):');
+    const all = await (new WebGPU({ filterByMemory: false })).models.list();
+    L.push(`  unfiltered: ${all.length} | filtered: ${models.length} | removed: ${all.length - models.length}`);
+
+    out.textContent = L.join('\n');
+} catch (e) {
+    out.textContent = 'ERROR: ' + (e && e.stack || e);
+}
+</script>
+</body>
+</html>

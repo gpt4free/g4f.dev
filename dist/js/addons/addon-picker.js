@@ -869,7 +869,7 @@ const apiExport = {};
     // Local client-side providers (webgpu/bonsai/bonsai2/chromeai) list their models client-side.
     const LOCAL_WEBGPU_PROVIDERS = {
         'webgpu': [
-            { id: 'Llama-3.1-8B-Instruct-q4f32_1-MLC', label: 'Llama-3.1-8B-Instruct-q4f32_1-MLC', type: 'chat', default: true },
+            { id: 'Llama-3.1-8B-Instruct-q4f32_1-MLC', label: 'Llama-3.1-8B-Instruct-q4f32_1-MLC · 6.0 GB', type: 'chat', default: true },
         ],
         'bonsai': [
             { id: '1.7b', label: 'Bonsai 1.7B (1-bit WebGPU)', type: 'chat', default: true },

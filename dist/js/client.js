@@ -777,6 +777,8 @@ class WebGPU extends Client {
         this.defaultModel = options.defaultModel || 'Llama-3.1-8B-Instruct-q4f32_1-MLC';
         this.logCallback = options.logCallback || console.log;
         this.progressCallback = options.progressCallback || null;
+        // Filter the model catalogue by the device's available memory (RAM/VRAM)
+        this.filterByMemory = options.filterByMemory !== false;
 
         // Singleton engine cache keyed by model id
         this._engines = {};
@@ -795,6 +797,35 @@ class WebGPU extends Client {
         } catch {
             return false;
         }
+    }
+
+    /**
+     * Estimate the memory available for local inference, in MB.
+     *
+     * Browsers don't expose VRAM size, so this mirrors the WebLLM demo
+     * heuristic based on navigator.deviceMemory (approximate RAM in GB,
+     * capped at 8 by spec): a model fits if
+     *   vram_required_MB * 1.2 < 0.95 * deviceMemory * 1024
+     * The returned value is the largest vram_required_MB that fits.
+     * Returns Infinity when memory cannot be determined (no filtering).
+     */
+    static getAvailableMemoryMB() {
+        const gb = (typeof navigator !== 'undefined' && navigator.deviceMemory) || 0;
+        if (!gb) return Infinity;
+        return Math.floor(gb * 1024 * 0.95 / 1.2);
+    }
+
+    /**
+     * Check whether a model fits into the device's available memory.
+     * @param {{vram_required_MB?: number}} model
+     * @returns {boolean|null} true/false, or null when memory is unknown
+     */
+    static fitsInMemory(model) {
+        const availableMB = WebGPU.getAvailableMemoryMB();
+        if (availableMB === Infinity) return null;
+        const required = model.vram_required_MB;
+        if (typeof required !== 'number') return null;
+        return required <= availableMB;
     }
 
     /**
@@ -857,12 +888,32 @@ class WebGPU extends Client {
             list: async () => {
                 const webllm = await this._loadWebLLM();
                 // prebuiltAppConfig contains the catalogue of available models
-                const models = (webllm.prebuiltAppConfig?.model_list || []).map(m => ({
-                    id: m.model_id || m.model,
-                    label: m.model_id || m.model,
-                    type: m.model_type == 1 ? 'embedding' : 'chat',
-                    ...m
-                }));
+                let models = (webllm.prebuiltAppConfig?.model_list || []).map(m => {
+                    const id = m.model_id || m.model;
+                    const required = m.vram_required_MB;
+                    const size = typeof required === 'number' && required > 0
+                        ? required >= 1024
+                            ? `${(required / 1024).toFixed(1)} GB`
+                            : `${Math.round(required)} MB`
+                        : null;
+                    return {
+                        id,
+                        label: size ? `${id} · ${size}` : id,
+                        type: m.model_type == 1 ? 'embedding' : 'chat',
+                        ...m
+                    };
+                });
+                // Drop models that exceed the device's available memory
+                if (this.filterByMemory) {
+                    const availableMB = WebGPU.getAvailableMemoryMB();
+                    if (availableMB !== Infinity) {
+                        const fits = models.filter(m =>
+                            typeof m.vram_required_MB !== 'number' || m.vram_required_MB <= availableMB
+                        );
+                        // never filter down to zero — keep the catalogue usable
+                        if (fits.length) models = fits;
+                    }
+                }
                 return models;
             }
         };

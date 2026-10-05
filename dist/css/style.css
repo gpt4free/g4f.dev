@@ -2120,6 +2120,7 @@ form textarea {
 
 .log {
     white-space: pre-wrap;
+    width: 100%;
 }
 
 .log.hidden {
