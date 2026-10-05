@@ -298,7 +298,6 @@
             const candidates = (data.languages || [])
                 .filter((l) => l.language && l.language !== userBase && !exclude.includes(l.language))
                 .filter((l) => l.remaining === undefined || l.remaining > 0);
-            candidates.sort((a, b) => (b.remaining ?? b.count ?? 0) - (a.remaining ?? a.count ?? 0));
             return candidates[0]?.language || null;
         } catch {
             return null;

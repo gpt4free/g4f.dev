@@ -298,6 +298,8 @@ async function loadSnippets(env) {
         snippetsKeys.push(headline);
         snippetsKeys.push(...texts);
     });
+    snippetsKeys = [...new Set(snippetsKeys)];
+    delete snippetsKeys["..."];
     return snippetsCache;
 }
 
