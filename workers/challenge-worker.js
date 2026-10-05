@@ -618,9 +618,6 @@ async function handleSolve(request, env) {
             if (parsed.day === dayKey()) solved = parsed;
         } catch { /* fresh counter */ }
     }
-    if (solved.count >= perDay) {
-        return json({ error: "daily_limit_reached", limit: perDay }, 429, { "Retry-After": "3600" }, request);
-    }
 
     // 3. Unseal the client's encrypted answer.
     const answer = await unsealPayload(env, ciphertext, iv);
@@ -660,6 +657,7 @@ async function handleSolve(request, env) {
         } catch { /* pool is best-effort */ }
     }
 
+
     // 7. Dedup: the exact same answer may only be credited once per day.
     //    Checked before burning/crediting so a duplicate wastes neither the
     //    challenge nor a daily solve slot — its translations were already
@@ -671,18 +669,23 @@ async function handleSolve(request, env) {
     }
     await env.CAKE_KV.put(dedupKey, "1", { expirationTtl: 86400 });
 
-    // 7. Mint the private-key JWT carrying the credit claim.
-    const { token, expires } = await signJwt(
-        env,
-        {
-            sub: `challenge:${ip}`,
-            kind: record.kind,
-            language: record.language,
-            credit_cents: creditCents,
-            challenge_id: id,
-        },
-        600
-    );
+
+    let token, expires;
+    if (perDay > solved.count) {
+        // 7. Mint the private-key JWT carrying the credit claim.
+        [token, expires] = await signJwt(
+            env,
+            {
+                sub: `challenge:${ip}`,
+                kind: record.kind,
+                language: record.language,
+                credit_cents: creditCents,
+                challenge_id: id,
+            },
+            600
+        );
+    }
+
 
     return json({
         ok: true,
