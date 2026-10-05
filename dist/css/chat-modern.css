@@ -1327,7 +1327,7 @@ body.white .chat-buttons #model-search {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 90px 20px 210px;
+    padding: 20px 20px 210px;
     pointer-events: none;
 }
 

@@ -897,7 +897,7 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
             };
             chatBody.addEventListener("scroll", updateScrollBtn, { passive: true });
             scrollBtn.addEventListener("click", () => {
-                chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" });
+                chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: document.body.classList.contains("no-animations") ? "auto" : "smooth" });
             });
             chatBody.addEventListener("resize", updateScrollBtn);
             window.addEventListener("resize", updateScrollBtn);
