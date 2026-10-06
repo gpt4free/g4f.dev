@@ -20,15 +20,46 @@ import worker from "../workers/challenge-worker.js";
 export const config = { runtime: "edge" };
 
 // ---- Cloudflare Cache API shim --------------------------------------------
-// The challenge worker doesn't use the Cache API, but the shim keeps the
-// environment shape identical to api/worker.js in case caching is added.
+// Vercel's edge runtime has no Cloudflare `caches.default` Cache API, so a
+// module-scope cache with TTL + LRU-ish eviction stands in for it. It keeps
+// the environment shape identical to api/worker.js and gives the worker a
+// real (per-isolate) cache instead of the previous no-op.
+//
+// Note: this shim is *not* what makes the route cacheable. The worker's own
+// per-isolate memory cache plus the `Cache-Control` headers it sets are —
+// Vercel's edge network honors those headers (s-maxage/max-age) for public
+// GETs, which is where cross-isolate reuse happens.
+const CACHE_SHIM_TTL = 3600 * 1000;
+const CACHE_SHIM_MAX_ENTRIES = 100;
+const cacheShim = new Map();
+
 try {
   if (typeof globalThis.caches === "undefined" || !globalThis.caches.default) {
     globalThis.caches = {
       ...(globalThis.caches || {}),
       default: {
-        async match() { return undefined; },
-        async put() {}
+        async match(request) {
+          const key = typeof request === "string" ? request : request.url;
+          const entry = cacheShim.get(key);
+          if (!entry) return undefined;
+          if (entry.expires <= Date.now()) {
+            cacheShim.delete(key);
+            return undefined;
+          }
+          // A cached Response body can only be read once — hand out a clone.
+          return entry.response.clone();
+        },
+        async put(request, response) {
+          const key = typeof request === "string" ? request : request.url;
+          while (cacheShim.size >= CACHE_SHIM_MAX_ENTRIES) {
+            cacheShim.delete(cacheShim.keys().next().value);
+          }
+          cacheShim.set(key, { response: response.clone(), expires: Date.now() + CACHE_SHIM_TTL });
+        },
+        async delete(request) {
+          const key = typeof request === "string" ? request : request.url;
+          return cacheShim.delete(key);
+        }
       }
     };
   }

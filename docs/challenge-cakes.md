@@ -37,12 +37,29 @@ questions, and both are served back to every visitor — see
 | GET    | `/challenge/issue?lang=<lang>&kind=followup\|translation\|translations\|any` | Returns an encrypted challenge. The plaintext prompt is **never** sent in cleartext. |
 | POST   | `/challenge/solve`    | Body: `{id, ciphertext, iv, language}` (answer sealed with AES-GCM). Returns `{token, credit_cents}`. |
 | POST   | `/challenge/redeem`   | Body: `{token}` (or `Authorization: Bearer <token>`). Proxy — verifies locally, then credits via the cake worker's `POST /cake/redeem` (`CAKE_WORKER_URL`). |
-| GET    | `/challenge/translations?lang=<lang>` | Serves the community translation store for the UI (`Cache-Control: max-age=300`), plus progress fields: `total` (catalog size), `remaining`, `percent` translated. |
-| GET    | `/challenge/translations/languages` | Lists every language in the store: `{languages: [{language, count, total, remaining, percent}], total_snippets}`, sorted by count descending (`Cache-Control: max-age=60`). |
+| GET    | `/challenge/translations?lang=<lang>` | Serves the community translation store for the UI (`Cache-Control: public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400`), plus progress fields: `total` (catalog size), `remaining`, `percent` translated. |
+| GET    | `/challenge/translations/languages` | Lists every language in the store: `{languages: [{language, count, total, remaining, percent}], total_snippets}`, sorted by count descending (same `Cache-Control` as above). |
 | DELETE | `/challenge/translations[?lang=<lang>]` | Clears the community store — one language, or all when `lang` is omitted. Admin only (`Authorization: Bearer <ADMIN_API_KEY>`). |
-| GET    | `/challenge/followups?lang=<lang>&count=<n>` | Serves random follow-up questions from the community pool (`Cache-Control: max-age=60`; 404 `{error: "no_followups"}` when empty). |
+| GET    | `/challenge/followups?lang=<lang>&count=<n>` | Serves random follow-up questions from the community pool (same `Cache-Control` as above; 404 `{error: "no_followups"}` when empty). |
 | GET    | `/challenge/status`   | Current IP's `solved_today`, `credit_cents`, limits. |
 | GET    | `/challenge/health`   | Liveness probe. |
+
+### Caching
+
+The three public GETs above are cached on two levels:
+
+- **Per-isolate memory cache** (1 hour TTL, invalidated in-process when the
+  translation store or the follow-up pool is written) — removes the
+  Upstash/Blob round-trips, and makes `/challenge/translations/languages`
+  read each language store only once per isolate instead of once per request.
+- **CDN cache** driven by the `Cache-Control` headers above: Vercel's edge
+  network honors `s-maxage`/`max-age` for public GETs, which is where
+  cross-isolate reuse happens. `stale-while-revalidate` serves a stale copy
+  while the cache refreshes.
+
+Everything else (`/challenge/issue`, `/challenge/solve`, `/challenge/redeem`,
+`/challenge/status`, admin endpoints) is sent with `Cache-Control: no-store`,
+since those responses are per-IP or mutations.
 
 Challenge kinds:
 

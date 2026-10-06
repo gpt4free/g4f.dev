@@ -507,6 +507,7 @@
             }
         }
     </style>
+    <script src="dist/js/framework.js" defer></script>
 </head>
 <body>
     <!-- Navigation -->
@@ -762,7 +763,7 @@
         // Fetch Providers for Sidebar
         async function loadProviders() {
             try {
-                const res = await fetch('/backend-api/v2/providers');
+                const res = await fetch(`${framework.backendUrl}/backend-api/v2/providers`);
                 if (!res.ok) throw new Error('Failed to fetch');
                 allProviders = await res.json();
                 countEl.textContent = `${allProviders.length} Total`;
@@ -811,7 +812,7 @@
         // Fetch Backend System Status
         async function checkBackendStatus() {
             try {
-                const res = await fetch('/backend-api/v2/status');
+                const res = await fetch(`${framework.backendUrl}/backend-api/v2/status`);
                 if (res.ok) {
                     const data = await res.json();
                     document.getElementById('backend-status-text').textContent = `v${data.version || '2.0'} Active`;
@@ -819,8 +820,15 @@
             } catch (e) {}
         }
 
-        loadProviders();
-        checkBackendStatus();
+
+        localStorage.removeItem("backendUrl");
+        // document.getElementById("connect_status")
+        framework.connectToBackend().then(() => {
+            loadProviders();
+            checkBackendStatus();
+        }).catch((err) => {
+            console.error('Failed to connect to backend', err);
+        });
     </script>
 </body>
 </html>

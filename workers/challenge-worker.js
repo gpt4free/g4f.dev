@@ -108,10 +108,18 @@ function corsHeaders(request) {
     };
 }
 
+/** JSON response with CORS headers. Responses are `no-store` by default so
+ *  per-IP data (issue/status) and mutations never land in a shared CDN cache;
+ *  the public GETs opt into caching with their own Cache-Control. */
 function json(body, status = 200, headers = {}, request) {
     return new Response(JSON.stringify(body), {
         status,
-        headers: { "Content-Type": "application/json", ...corsHeaders(request), ...headers },
+        headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+            ...corsHeaders(request),
+            ...headers,
+        },
     });
 }
 
@@ -255,7 +263,7 @@ async function verifyJwt(env, token) {
 
 /** Normalize a BCP-47 language tag to its base language ("de-DE" → "de"). */
 function baseLanguage(tag) {
-    return (tag || "en").split(/[-_]/)[0].toLowerCase();
+    return (tag || "en").split(/[-_]/)[0].toLowerCase().replace("fa", "en")
 }
 
 /** Load the UI snippet catalogs: JSON files grouped by section headline
@@ -442,6 +450,7 @@ async function addFollowups(env, language, topic, questions) {
         filtered.shift(); // drop the oldest entries
     }
     await env.CAKE_KV.put(storeKey, JSON.stringify(filtered), { expirationTtl: 86400 * 30 });
+    memoryCacheDelete(`followups:${lang}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -465,6 +474,88 @@ async function incrementIssuedCount(env, ip) {
         expirationTtl: 86400,
     });
     return count;
+}
+
+// ---------------------------------------------------------------------------
+// Response caching
+// ---------------------------------------------------------------------------
+
+/** Minimum cache lifetime — one hour, for the CDN, the browser and the
+ *  per-isolate memory caches alike. */
+const CACHE_MIN_TTL = 3600;
+
+/** Cache-Control presets for the public GETs. `s-maxage` targets the CDN
+ *  (Vercel's edge network honors it, Cloudflare's Cache API ignores it),
+ *  `max-age` the browser, and `stale-while-revalidate` lets a stale copy be
+ *  served while the isolate refreshes it in the background. */
+const CACHE_HEADERS = {
+    /** Community translation store — only changes when a challenge is solved. */
+    TRANSLATIONS: `public, max-age=${CACHE_MIN_TTL}, s-maxage=${CACHE_MIN_TTL}, stale-while-revalidate=${CACHE_MIN_TTL * 24}`,
+    /** Language index — one KV read per language, so the same TTL. */
+    LANGUAGES: `public, max-age=${CACHE_MIN_TTL}, s-maxage=${CACHE_MIN_TTL}, stale-while-revalidate=${CACHE_MIN_TTL * 24}`,
+    /** Follow-up pool — the response is a random pick from the pool. */
+    FOLLOWUPS: `public, max-age=${CACHE_MIN_TTL}, s-maxage=${CACHE_MIN_TTL}, stale-while-revalidate=${CACHE_MIN_TTL * 24}`,
+};
+
+/** Per-isolate TTL cache for the expensive public GETs. Isolates stay warm
+ *  across requests, so an in-memory copy of the parsed KV stores removes the
+ *  Upstash/Blob round-trips (and the per-language KV fan-out of
+ *  /challenge/translations/languages) from the hot path. Writers invalidate
+ *  the affected entries explicitly, so the TTL only bounds staleness across
+ *  isolates — it matches the CDN TTL above. */
+const MEMORY_CACHE_MAX_ENTRIES = 200;
+const MEMORY_CACHE_TTL = CACHE_MIN_TTL * 1000;
+const memoryCache = new Map();
+
+function memoryCacheGet(key) {
+    const entry = memoryCache.get(key);
+    if (!entry) return undefined;
+    if (entry.expires <= Date.now()) {
+        memoryCache.delete(key);
+        return undefined;
+    }
+    return entry.value;
+}
+
+function memoryCacheSet(key, value, ttlMs = MEMORY_CACHE_TTL) {
+    // Map preserves insertion order — evict the oldest entries first.
+    while (memoryCache.size >= MEMORY_CACHE_MAX_ENTRIES) {
+        memoryCache.delete(memoryCache.keys().next().value);
+    }
+    memoryCache.set(key, { value, expires: Date.now() + ttlMs });
+}
+
+/** Drop every cached entry whose key starts with the prefix. */
+function memoryCacheDelete(prefix) {
+    for (const key of memoryCache.keys()) {
+        if (key.startsWith(prefix)) memoryCache.delete(key);
+    }
+}
+
+/** Read a community translation store, memoized per isolate. */
+async function getTranslationStore(env, language) {
+    const key = `translations:${language}`;
+    const cached = memoryCacheGet(key);
+    if (cached !== undefined) return cached;
+    const raw = await env.CAKE_KV.get(`challenge:translations:${language}`);
+    let store = {};
+    try { store = raw ? JSON.parse(raw) : {}; } catch { /* fresh store */ }
+    memoryCacheSet(key, store);
+    return store;
+}
+
+/** Read the community follow-up pool for a language, memoized per isolate. */
+async function getFollowupsPool(env, language) {
+    const key = `followups:${language}`;
+    const cached = memoryCacheGet(key);
+    if (cached !== undefined) return cached;
+    const raw = await env.CAKE_KV.get(`challenge:followups:${language}`);
+    let pool = [];
+    try { pool = raw ? JSON.parse(raw) : []; } catch { pool = []; }
+    // An empty pool is not cached: the first solved follow-up challenge must
+    // become visible immediately instead of after the TTL.
+    if (pool.length > 0) memoryCacheSet(key, pool);
+    return pool;
 }
 
 // ---------------------------------------------------------------------------
@@ -506,11 +597,8 @@ async function handleIssue(request, env) {
         } catch (err) {
             return json({ error: "snippets_unavailable", message: String(err) }, 503, {}, request);
         }
-        const existingRaw = await env.CAKE_KV.get(`challenge:translations:${baseLanguage(language)}`);
-        let existing = {};
-        try { existing = existingRaw ? JSON.parse(existingRaw) : {}; } catch { /* fresh store */ }
-        const batch = Math.min(Math.max(Number(env.TRANSLATIONS_BATCH) || 8, 2), 50);
-        const candidates = [];
+        const existing = await getTranslationStore(env, baseLanguage(language));
+        const batch = Math.min(Math.max(Number(env.TRANSLATIONS_BATCH) || 8, 2), 50);        const candidates = [];
         for (const [headline, texts] of Object.entries(snippets)) {
             if (headline.startsWith("_") || !Array.isArray(texts)) continue;
             const untranslated = texts.filter((s) => !existing[s]);
@@ -805,6 +893,9 @@ async function handleTranslationsSubmit(language, translations, env) {
         store[source] = translated.trim();
     }
     await env.CAKE_KV.put(storeKey, JSON.stringify(store), { expirationTtl: 86400 * 365 });
+    // The store changed — drop the memoized copies so the next read (and the
+    // next /challenge/issue batch) sees the new translations immediately.
+    memoryCacheDelete("translations:");
 
     return { ok: true, language, added, total: Object.keys(store).length };
 }
@@ -833,7 +924,7 @@ async function handleTranslationsGet(request, env) {
     return json(
         result,
         200,
-        { "Cache-Control": "public, max-age=300" },
+        { "Cache-Control": CACHE_HEADERS.TRANSLATIONS },
         request
     );
 }
@@ -860,6 +951,10 @@ async function listKvKeys(env, prefix) {
  *  catalog is loadable, the remaining untranslated texts and the translated
  *  percent. Sorted by count, descending. */
 async function handleTranslationsLanguages(request, env) {
+    const cached = memoryCacheGet("languages");
+    if (cached !== undefined) {
+        return json(cached, 200, { "Cache-Control": CACHE_HEADERS.LANGUAGES }, request);
+    }
     const prefix = "challenge:translations:";
     const names = await listKvKeys(env, prefix);
     let total = null;
@@ -871,9 +966,9 @@ async function handleTranslationsLanguages(request, env) {
     for (const name of names) {
         const language = name.slice(prefix.length);
         if (!language) continue;
-        const raw = await env.CAKE_KV.get(name);
-        let count = 0;
-        try { count = Object.keys(JSON.parse(raw || "{}")).length; } catch { /* skip broken store */ }
+        // Memoized per language — the list endpoint reads every store.
+        const store = await getTranslationStore(env, language);
+        const count = Object.keys(store).length;
         const entry = { language, count };
         if (total !== null) {
             entry.total = total;
@@ -883,10 +978,12 @@ async function handleTranslationsLanguages(request, env) {
         languages.push(entry);
     }
     languages.sort((a, b) => b.count - a.count || (a.language < b.language ? -1 : 1));
+    const payload = { languages, count: languages.length, total_snippets: total };
+    memoryCacheSet("languages", payload);
     return json(
-        { languages, count: languages.length, total_snippets: total },
+        payload,
         200,
-        { "Cache-Control": "public, max-age=60" },
+        { "Cache-Control": CACHE_HEADERS.LANGUAGES },
         request
     );
 }
@@ -909,6 +1006,8 @@ async function handleTranslationsDelete(request, env) {
         await env.CAKE_KV.delete(name);
         deleted.push(name.slice(prefix.length));
     }
+    memoryCacheDelete("translations:");
+    memoryCacheDelete("languages");
     return json({ ok: true, deleted_languages: deleted, count: deleted.length }, 200, {}, request);
 }
 
@@ -957,6 +1056,10 @@ async function handleTranslationsCheck(request, env) {
         staleTotal += stale.length;
         languages.push(entry);
     }
+    if (remove) {
+        memoryCacheDelete("translations:");
+        memoryCacheDelete("languages");
+    }
     return json(
         { ok: true, removed: remove, stale_total: staleTotal, languages },
         200,
@@ -973,9 +1076,7 @@ async function handleFollowupsGet(request, env) {
     const url = new URL(request.url);
     const language = baseLanguage(url.searchParams.get("lang") || "en");
     const count = Math.min(Math.max(Number(url.searchParams.get("count")) || 3, 1), 8);
-    const raw = await env.CAKE_KV.get(`challenge:followups:${language}`);
-    let pool = [];
-    try { pool = raw ? JSON.parse(raw) : []; } catch { pool = []; }
+    const pool = await getFollowupsPool(env, language);
     if (pool.length === 0) {
         return json({ error: "no_followups", language }, 404, {}, request);
     }
@@ -989,7 +1090,7 @@ async function handleFollowupsGet(request, env) {
     return json(
         { ok: true, language, topic: entry.topic, q: shuffled.slice(0, count) },
         200,
-        { "Cache-Control": "public, max-age=60" },
+        { "Cache-Control": CACHE_HEADERS.FOLLOWUPS },
         request
     );
 }
