@@ -3964,22 +3964,36 @@ async function setCachedResponse(request, response, cacheControl, cacheKey = nul
   if (!cacheKey.startsWith("POST:") && (response.headers.get("Cache-Control") || "").includes("no-cache")) {
     return;
   }
-  if (response.headers.get("content-type").startsWith("application/json")) {
-    try {
-      const data = await response.clone().json();
-      if (data.choices && data.choices[0]) {
-        const content = data.choices[0].message.content;
-        if (!content || content == "User Safety: safe") {
-          return;
-        }
-      }
-    } catch(e) {console.error(e)}
-  }
   try {
     const cacheRequest = new Request(`https://cache.example/${cacheKey}`, {
       method: "GET"
     });
-    const responseToCache = response.clone();
+    let responseToCache;
+    if ((response.headers.get("content-type") || "").startsWith("application/json")) {
+      // A body can only be cloned once — the first clone() tees (and locks)
+      // the stream, so the old `await response.clone().json()` followed by a
+      // second `response.clone()` threw "This ReadableStream is currently
+      // locked to a reader" and disabled caching for every JSON response.
+      // Clone exactly once, read the copy as text (never throws on malformed
+      // JSON) and rebuild the cached response from that text instead of
+      // cloning the original a second time.
+      const cloned = response.clone();
+      const text = await cloned.text();
+      try {
+        const data = JSON.parse(text);
+        if (data.choices && data.choices[0]) {
+          const content = data.choices[0].message.content;
+          if (!content || content == "User Safety: safe") {
+            return;
+          }
+        }
+      } catch (e) {
+        // malformed JSON — nothing to filter, cache the body as-is
+      }
+      responseToCache = new Response(text, response);
+    } else {
+      responseToCache = response.clone();
+    }
     if (!responseToCache.headers.has("Cache-Control")) {
       responseToCache.headers.set("Cache-Control", cacheControl);
     }

@@ -59,7 +59,6 @@ const TIER_UPGRADE_HASHES = {
     // Example: hash -> tier mapping
     // "hash_value_1": "free",
     // "hash_value_2": "pro"
-    "77178292713874715d758cab859024f2da6090ed11534eb369e7a5803335dff8": "anonymous",
 };
 
 // HTML templates for the revoke-by-key endpoint

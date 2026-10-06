@@ -99,7 +99,7 @@ function corsHeaders(request) {
         ALLOWED_ORIGINS.has(origin) ||
         /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
     return {
-        "Access-Control-Allow-Origin": allowed ? origin : "null",
+        "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Credentials": "true",
         "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Forwarded-For, X-User",
