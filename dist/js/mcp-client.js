@@ -468,8 +468,11 @@ class MCPClient {
     }
 }
 
-// Export for use in other modules
+// Export for use in Node/CommonJS and Browser environments
+if (typeof window !== 'undefined') {
+    window.MCPClient = MCPClient;
+}
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = MCPClient;
+    module.exports.default = MCPClient;
 }
-export default MCPClient;

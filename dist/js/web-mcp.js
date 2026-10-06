@@ -162,5 +162,3 @@
     return WebMCP;
 });
 
-export default (typeof self !== 'undefined' && self.WebMCP) ? self.WebMCP : (typeof globalThis !== 'undefined' ? globalThis.WebMCP : undefined);
-
