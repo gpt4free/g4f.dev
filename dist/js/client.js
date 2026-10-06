@@ -1664,7 +1664,7 @@ class OpenCode extends Client {
         const corsProxy = options.corsProxy === undefined ? DEFAULT_CORS_PROXY : options.corsProxy;
         const baseUrl = options.baseUrl || "https://opencode.ai/zen/v1";
         super({
-            defaultModel: "big-pickle",
+            defaultModel: "space-bunny-free",
             quotaEndpoint: null,
             ...options,
             apiKey: options.apiKey || "public",
