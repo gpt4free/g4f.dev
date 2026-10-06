@@ -116,6 +116,7 @@ function normalizeKey(value) {
   if (!trimmed) return null;
   const match = /^Bearer\s+(.*)$/i.exec(trimmed);
   const key = (match ? match[1] : trimmed).trim();
+  if (key.startsWith("g4f_")) return null;
   return PLACEHOLDER_KEYS.has(key.toLowerCase()) ? null : key;
 }
 
