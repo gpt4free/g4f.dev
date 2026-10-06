@@ -911,9 +911,7 @@ async function handleTranslationsGet(request, env) {
     if (!language || language === "en") {
         return json({ error: "invalid_language" }, 400, {}, request);
     }
-    const raw = await env.CAKE_KV.get(`challenge:translations:${language}`);
-    let translations = {};
-    try { translations = raw ? JSON.parse(raw) : {}; } catch { /* fresh store */ }
+    const translations = await getTranslationStore(env, language);
     const result = { language, count: Object.keys(translations).length, translations };
     try {
         await loadSnippets(env);
@@ -928,7 +926,6 @@ async function handleTranslationsGet(request, env) {
         request
     );
 }
-
 /** List KV keys with a prefix via the KV list API. The Upstash shim
  *  implements list() with SCAN; stores without list support (e.g. the
  *  Vercel Blob shim) yield an empty list — callers degrade gracefully. */
