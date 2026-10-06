@@ -319,7 +319,7 @@
         for (let pick = 0; pick < 4; pick++) {
             const issueRes = await fetch(
                 `${CHALLENGE_ENDPOINT}/issue?lang=${encodeURIComponent(language)}&kind=any`,
-                { credentials: "include", headers: authHeaders() }
+                { headers: authHeaders() }
             );
             if (!issueRes.ok) {
                 const err = await issueRes.json().catch(() => ({}));
@@ -378,7 +378,6 @@
             try {
                 solveRes = await fetch(`${CHALLENGE_ENDPOINT}/solve`, {
                     method: "POST",
-                    credentials: "include",
                     headers: authHeaders({ "Content-Type": "application/json" }),
                     body: JSON.stringify({
                         id: challenge.id,
@@ -429,7 +428,6 @@
             try {
                 redeemRes = await fetch(`${CAKE_ENDPOINT}/redeem`, {
                     method: "POST",
-                    credentials: "include",
                     headers: authHeaders({ "Content-Type": "application/json" }),
                     body: JSON.stringify({ token: solveData.token }),
                 });
