@@ -254,7 +254,7 @@ function count_words_and_tokens(text, model, completion_tokens, prompt_tokens, e
     let addEstimatedCost = "";
     if (estimated_cost !== null) {
         addEstimatedCost = estimated_cost < 0.001 ? estimated_cost : estimated_cost.toFixed(3);
-        addEstimatedCost = `, ${addEstimatedCost.replace(/0+$/, "")}$`;
+        addEstimatedCost = `, ${String(addEstimatedCost).replace(/0+$/, "")}$`;
     }
     
     // Check if the message contains media (image/video)
