@@ -157,7 +157,7 @@ class Client {
             console.warn(`Request to ${url} failed (${err.message || err}), retrying via fallback: ${fallbackUrl}`);
             return this._fetch(fallbackUrl, options);
         }
-        if (!response.ok && fallbackUrl && [403, 404, 405, 500, 501, 502, 503, 504].includes(response.status)) {
+        if (!response.ok && fallbackUrl && [403, 404, 405, 429, 500, 501, 502, 503, 504].includes(response.status)) {
             console.warn(`Request to ${url} failed with status ${response.status}, retrying via fallback: ${fallbackUrl}`);
             return this._fetch(fallbackUrl, options);
         }
@@ -1625,19 +1625,14 @@ class Kilo extends Client {
         });
         this.id = options.id || "kilo";
         this.corsProxy = corsProxy;
+        this._baseUrl = baseUrl;
     }
-
-    /**
-     * Fallback: g4f backend proxying the same provider at {backendUrl}/api/Kilo.
-     * Resolved lazily so a backend connected after client creation is still used.
-     * Pass `fallbackBaseUrl: false` to disable the fallback.
-     */
-    _getFallbackBaseUrl() {
+    _fallbackUrl(url) {
         if (this.fallbackBaseUrl !== null) {
             return this.fallbackBaseUrl || null;
         }
         const backendUrl = (typeof window !== "undefined" && window.framework?.backendUrl) || "";
-        return backendUrl ? `${backendUrl}/api/${this.baseUrl}` : null;
+        return backendUrl ? `${backendUrl}/proxy/${this._baseUrl}/${url.substring(this.baseUrl.length).replace(/^\/+/, "")}` : null;
     }
 
     get models() {
@@ -1684,6 +1679,7 @@ class OpenCode extends Client {
         });
         this.id = options.id || "opencode";
         this.corsProxy = corsProxy;
+        this._baseUrl = baseUrl;
     }
 
     /**
@@ -1691,12 +1687,12 @@ class OpenCode extends Client {
      * Resolved lazily so a backend connected after client creation is still used.
      * Pass `fallbackBaseUrl: false` to disable the fallback.
      */
-    _getFallbackBaseUrl() {
+    _fallbackUrl(url) {
         if (this.fallbackBaseUrl !== null) {
             return this.fallbackBaseUrl || null;
         }
         const backendUrl = (typeof window !== "undefined" && window.framework?.backendUrl) || "";
-        return backendUrl ? `${backendUrl}/api/${this.baseUrl}` : null;
+        return backendUrl ? `${backendUrl}/proxy/${this._baseUrl}/${url.substring(this.baseUrl.length).replace(/^\/+/, "")}` : null;
     }
 
     get models() {

@@ -1125,6 +1125,8 @@ async function handleGenProxy(request, env) {
   headers.delete("host");
   if (!headers.has("Authorization") && env.POLLINATIONS_API_KEY) {
     headers.set("Authorization", `Bearer ${env.POLLINATIONS_API_KEY}`);
+  } else if (headers.get("Authorization") && headers.get("Authorization").startsWith("Bearer g4f_") && env.POLLINATIONS_API_KEY) {
+    headers.set("Authorization", `Bearer ${env.POLLINATIONS_API_KEY}`);
   }
 
   if (request.headers.get("Upgrade") === "websocket") {

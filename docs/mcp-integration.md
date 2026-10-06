@@ -220,18 +220,56 @@ The implementation uses the existing OpenAI-compatible tools API:
 
 When the AI wants to use a tool, it returns a `tool_calls` field in the response, which is then executed via the MCP server.
 
+## WebMCP Support (Web Model Context Protocol)
+
+WebMCP enables web applications and browser scripts to expose native client-side JavaScript tools directly to AI models via `window.webMCP` / `navigator.modelContext`.
+
+### Registering WebMCP Tools in the Browser
+
+You can register browser-native tools using the WebMCP JS API:
+
+```javascript
+window.webMCP.registerTool({
+    name: 'calculate_sum',
+    description: 'Calculates the sum of two numbers',
+    parameters: {
+        type: 'object',
+        properties: {
+            a: { type: 'number', description: 'First number' },
+            b: { type: 'number', description: 'Second number' }
+        },
+        required: ['a', 'b']
+    },
+    execute: async ({ a, b }) => {
+        return { sum: a + b };
+    }
+});
+```
+
+### Auto-Discovery
+
+Once registered, WebMCP tools are automatically detected by `MCPClient` under the `WebMCP (Browser)` provider tag and can be selected like any remote MCP server tool.
+
+### Backend WebMCP Endpoint
+
+The G4F server also exposes a WebMCP compatibility endpoint at:
+- `GET /backend-api/v2/webmcp/tools` (lists available backend tools)
+- `POST /backend-api/v2/webmcp/tools` (executes backend tools via JSON-RPC 2.0)
+
 ## Security Considerations
 
 - **CORS**: MCP servers must allow CORS requests from the chat UI
 - **Authentication**: Currently no authentication is implemented - add as needed
 - **Validation**: Tool inputs should be validated by the MCP server
-- **Sandboxing**: MCP servers should run in isolated environments
+- **Sandboxing**: MCP servers and WebMCP browser handlers should run in isolated environments
 
 ## Future Enhancements
 
+- [x] WebMCP browser-native tool registration (`window.webMCP` & `navigator.modelContext`)
 - [ ] Authentication/API keys for MCP servers
 - [ ] Tool parameter validation and UI
 - [ ] Tool usage history and statistics
 - [ ] Import/export MCP configurations
 - [ ] Server health monitoring
 - [ ] Tool result caching
+

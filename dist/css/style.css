@@ -2247,7 +2247,6 @@ form textarea {
 
 #userInput {
     height: 106px;
-    min-height: 106px;
     flex: 1;
     padding: 16px 36px 16px 42px;
     color: var(--colour-3);

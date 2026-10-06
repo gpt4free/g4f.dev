@@ -947,8 +947,6 @@ button.options_button:hover,
 
 #userInput {
     width: 100%;
-    height: auto;
-    min-height: 118px;
     padding: 16px 18px 56px;
     background: transparent;
     border: none;
@@ -1610,7 +1608,6 @@ form .label {
     }
 
     #userInput {
-        min-height: 108px;
         padding: 14px 14px 52px;
     }
 

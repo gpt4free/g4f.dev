@@ -27,10 +27,13 @@ async function on_api() {
     });
     let timeoutBlur = null;
     userInput.addEventListener("focus", async (evt) => {
-        userInput.style.height = userInputHeight?.value + "px";
+        userInput.style.minHeight = (userInputHeight?.value || 200) + "px";
     });
     userInput.addEventListener("blur", async (evt) => {
-        timeoutBlur = setTimeout(() => userInput.style.height = "", 200);
+        timeoutBlur = setTimeout(() => {
+            userInput.style.minHeight = "";
+            userInput.style.height = "";
+        }, 200);
     });
     codeButton?.addEventListener("click", async () => {
         clearTimeout(timeoutBlur);

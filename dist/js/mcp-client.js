@@ -206,7 +206,7 @@ class MCPClient {
     }
 
     /**
-     * Fetch tools from all enabled servers
+     * Fetch tools from all enabled servers including WebMCP browser tools
      * @returns {Promise<Map>} Map of server URL to tools
      */
     async fetchAllTools() {
@@ -220,11 +220,25 @@ class MCPClient {
             );
 
         await Promise.all(promises);
+
+        // Fetch WebMCP browser native tools if available
+        if (typeof window !== 'undefined') {
+            const webMcp = window.webMCP || (navigator && navigator.modelContext);
+            if (webMcp && typeof webMcp.listTools === 'function') {
+                try {
+                    const webTools = webMcp.listTools() || [];
+                    this.tools.set('webmcp://browser', webTools);
+                } catch (err) {
+                    console.warn('Failed to list WebMCP browser tools:', err);
+                }
+            }
+        }
+
         return this.tools;
     }
 
     /**
-     * Get all available tools from enabled servers
+     * Get all available tools from enabled servers and WebMCP
      * @returns {Array} List of all tools with server info
      */
     getAllTools() {
@@ -243,6 +257,28 @@ class MCPClient {
                     serverSseAcceptHeader: server.serverSseAcceptHeader,
                     toolId: `${server.id}:${tool.name}`
                 });
+            }
+        }
+
+        // Add WebMCP browser native tools
+        if (typeof window !== 'undefined') {
+            const webMcp = window.webMCP || (navigator && navigator.modelContext);
+            if (webMcp && typeof webMcp.listTools === 'function') {
+                try {
+                    const webMcpTools = webMcp.listTools() || [];
+                    for (const tool of webMcpTools) {
+                        allTools.push({
+                            ...tool,
+                            serverId: 'webmcp',
+                            serverName: 'WebMCP (Browser)',
+                            serverUrl: 'webmcp://browser',
+                            isWebMCP: true,
+                            toolId: `webmcp:${tool.name}`
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Error reading WebMCP tools:', e);
+                }
             }
         }
         
@@ -319,6 +355,34 @@ class MCPClient {
 
         if (!tool) {
             throw new Error(`Tool ${toolName} not found`);
+        }
+
+        // Handle WebMCP browser native tool execution
+        if (tool.isWebMCP || tool.serverUrl === 'webmcp://browser') {
+            try {
+                const webMcp = typeof window !== 'undefined' ? (window.webMCP || (navigator && navigator.modelContext)) : null;
+                if (!webMcp || typeof webMcp.callTool !== 'function') {
+                    throw new Error('WebMCP runtime not found in browser');
+                }
+                const execResult = await webMcp.callTool(toolName, args);
+                if (!execResult.success) {
+                    throw new Error(execResult.error || 'WebMCP execution failed');
+                }
+                return {
+                    tool_call_id: toolCall.id,
+                    role: 'tool',
+                    name: toolName,
+                    content: JSON.stringify(execResult.result)
+                };
+            } catch (error) {
+                console.error(`Error executing WebMCP tool ${toolName}:`, error);
+                return {
+                    tool_call_id: toolCall.id,
+                    role: 'tool',
+                    name: toolName,
+                    content: JSON.stringify({ error: error.message })
+                };
+            }
         }
 
         try {
@@ -408,3 +472,4 @@ class MCPClient {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = MCPClient;
 }
+export default MCPClient;

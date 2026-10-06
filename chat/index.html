@@ -45,6 +45,7 @@
     <link rel="apple-touch-icon" href="/dist/img/g4f.svg">
     <link rel="manifest" href="/dist/img/site.webmanifest">
 
+    <script src="/dist/js/web-mcp.js?v={{ v }}"></script>
     <script src="/dist/js/mcp-client.js?v={{ v }}"></script>
     <script src="/dist/js/oauth-client.js?v={{ v }}"></script>
     <script src="/dist/js/framework.js?v={{ v }}"></script>
@@ -281,8 +282,8 @@
                       <label for="automaticOrientation" class="toogle" title="Auto-orient generated media"></label>
                   </div>
                   <div class="field box">
-                      <label for="userInput-height" class="label" title="Set maximum height of input box">Input Max Height (px)</label>
-                      <input type="number" id="userInput-height" value="180" min="100" max="500" />
+                      <label for="userInput-height" class="label" title="Set minimum height of input box">Input Min Height (px)</label>
+                      <input type="number" id="userInput-height" value="200" min="100" max="500" />
                   </div>
                   <div class="field box">
                       <label for="recognition-language" class="label" title="Set preferred language for speech recognition">Speech Recognition Language</label>
