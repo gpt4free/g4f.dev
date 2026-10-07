@@ -922,7 +922,7 @@ async function handleChatCompletions(request, env) {
     const responseHeaders = {
       ...CORS_HEADERS,
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache"
+      "Cache-Control": "no-store"
     };
     return handleStreamingResponse(completionResponse, responseHeaders, model, conversation);
   }

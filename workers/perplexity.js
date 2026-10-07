@@ -75,7 +75,6 @@ class PerplexityWorker {
     const headers = {
       "accept": "text/event-stream",
       "accept-language": "en-US,en;q=0.9",
-      "cache-control": "no-cache",
       "content-type": "application/json",
       "origin": this.url,
       "referer": `${this.url}/?login-new=false&login-source=oneTapHome`,
@@ -103,8 +102,6 @@ class PerplexityWorker {
     try {
       const beaconHeaders = {
         "accept": "*/*",
-        "cache-control": "no-cache",
-        "pragma": "no-cache",
         "origin": "https://count.perplexity.ai",
         "referer": "https://count.perplexity.ai/bs",
         "user-agent": headers["user-agent"],
@@ -575,7 +572,7 @@ export default {
       return new Response(readable, {
         headers: {
           "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
+          "Cache-Control": "no-store",
           "Connection": "keep-alive",
           "Access-Control-Allow-Origin": "*",
         },

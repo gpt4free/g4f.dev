@@ -206,7 +206,7 @@ async function handleStreamingResponse(env, ctx, response, model, promptTokens) 
   return new Response(readable, {
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
+      "Cache-Control": "no-store",
       "Connection": "keep-alive",
       "Access-Control-Allow-Origin": "*",
     },

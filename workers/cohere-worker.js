@@ -312,7 +312,7 @@ async function handleChatCompletions(request, env, ctx) {
             // Transform Cohere SSE to OpenAI SSE format
             const transformedStream = transformCohereStream(response.body, model);
             newHeaders.set("Content-Type", "text/event-stream");
-            newHeaders.set("Cache-Control", "no-cache");
+            newHeaders.set("Cache-Control", "no-store");
             newHeaders.set("Connection", "keep-alive");
             
             return new Response(transformedStream, {

@@ -260,27 +260,141 @@
             return img;
         }
 
-        // Calculate quota status and color
-        function getQuotaStatus(quotaData) {
-            if (quotaData?.status == 401) {
-                return { status: 'low', color: '#eab308', label: 'Unauthorized', code: quotaData.status };
+        function formatNumber(value) {
+            return typeof value === 'number'
+                ? value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                : value;
+        }
+
+        // Interpret the many quota payload shapes the providers return.
+        // Returns null when the payload carries no quota information at all
+        // (e.g. a plain /models listing) — that means "reachable, no quota".
+        function parseQuota(quota) {
+            if (!quota || typeof quota !== 'object') return null;
+            const resetTime = quota.reset_time || quota.quota_reset || quota.limit_reset
+                || quota.data?.limit_reset || quota.quota_reset_time;
+
+            // OpenRouter /key style: { data: { limit, limit_remaining, usage } }
+            const d = quota.data;
+            if (d && typeof d === 'object' && !Array.isArray(d) && typeof d.limit === 'number') {
+                const total = d.limit;
+                const remaining = typeof d.limit_remaining === 'number'
+                    ? d.limit_remaining
+                    : (typeof d.usage === 'number' ? total - d.usage : total);
+                return { remaining, total, percentRemaining: total > 0 ? (remaining / total) * 100 : 100, resetTime };
             }
-            if (!quotaData || quotaData.error) {
-                return { status: 'error', color: '#ef4444', label: 'Error' };
+
+            // Pollinations Pollen balance
+            if (typeof quota.balance === 'number') {
+                const total = quota.accountBalance?.total ?? quota.balance;
+                return {
+                    remaining: quota.balance,
+                    total,
+                    percentRemaining: total > 0 ? (quota.balance / total) * 100 : 100,
+                    unit: 'Pollen',
+                    resetTime,
+                };
             }
 
-            // Flexible field name handling for different quota response formats
+            if (quota.credits && typeof quota.credits.remaining === 'number') {
+                const total = quota.credits.total || quota.credits.remaining;
+                return { remaining: quota.credits.remaining, total, percentRemaining: total > 0 ? (quota.credits.remaining / total) * 100 : 100, resetTime };
+            }
 
-            let remaining = quotaData?.remaining_quota || quotaData?.remaining || quotaData?.quota_left || 0;
-            if (quotaData?.balance !== undefined) remaining = quotaData.balance === 0 ? 1: quotaData.balance < 0 ? 0 : quotaData.balance;
-            if (quotaData && !remaining) remaining = 1;
-            if (remaining < 0) remaining = 0;
-            const total = quotaData?.total_quota || quotaData?.total || quotaData?.quota_limit || 1;
-            const percentRemaining = (remaining / total) * 100;
+            if (quota.allowanceInfo && typeof quota.allowanceInfo.remaining === 'number') {
+                const total = quota.allowanceInfo.monthUsageAllowance || quota.allowanceInfo.remaining;
+                return { remaining: quota.allowanceInfo.remaining, total, percentRemaining: total > 0 ? (quota.allowanceInfo.remaining / total) * 100 : 100, resetTime };
+            }
 
-            if (percentRemaining > 50) return { status: 'healthy', color: '#22c55e', label: 'Healthy', remaining, total };
-            if (percentRemaining > 10) return { status: 'low', color: '#eab308', label: 'Low Quota', remaining, total };
-            return { status: 'critical', color: '#ef4444', label: 'Critical', remaining, total };
+            // Gemini style: { buckets: [{ modelId, remainingFraction }] }
+            if (Array.isArray(quota.buckets) && quota.buckets.length) {
+                const fractions = quota.buckets.map(b => b?.remainingFraction).filter(f => typeof f === 'number');
+                if (fractions.length) {
+                    const percent = Math.max(0, Math.min(1, Math.min(...fractions))) * 100;
+                    return { remaining: Math.round(percent), total: 100, percentRemaining: percent, unit: '%', resetTime };
+                }
+            }
+
+            // Antigravity style: { models: { id: { quotaInfo: { remainingFraction } } } }
+            if (quota.models && typeof quota.models === 'object' && !Array.isArray(quota.models)) {
+                const fractions = Object.values(quota.models)
+                    .map(m => m?.quotaInfo?.remainingFraction)
+                    .filter(f => typeof f === 'number');
+                if (fractions.length) {
+                    const percent = Math.max(0, Math.min(1, Math.min(...fractions))) * 100;
+                    return { remaining: Math.round(percent), total: 100, percentRemaining: percent, unit: '%', resetTime };
+                }
+            }
+
+            // Copilot style: { quota_snapshots: { premium_interactions, chat } }
+            if (quota.quota_snapshots) {
+                const percents = [quota.quota_snapshots.premium_interactions, quota.quota_snapshots.chat]
+                    .map(s => s?.percent_remaining)
+                    .filter(p => typeof p === 'number');
+                if (percents.length) {
+                    const percent = Math.max(0, Math.min(...percents));
+                    return { remaining: Math.round(percent), total: 100, percentRemaining: percent, unit: '%', resetTime };
+                }
+            }
+
+            for (const usage of [quota.session_usage, quota.weekly_usage]) {
+                if (usage && typeof usage.used_percent === 'number') {
+                    const percent = Math.max(0, 100 - usage.used_percent);
+                    return { remaining: Math.round(percent), total: 100, percentRemaining: percent, unit: '%', resetTime };
+                }
+            }
+
+            // Generic numeric fields. Note: quota.total/quota.offset means
+            // "servers loaded", not a quota, so it is deliberately excluded.
+            const remaining = quota.remaining_quota ?? quota.remaining ?? quota.quota_left;
+            const total = quota.total_quota ?? quota.quota_limit;
+            if (typeof remaining === 'number' && typeof total === 'number' && total > 0) {
+                return { remaining, total, percentRemaining: (remaining / total) * 100, resetTime };
+            }
+            if (typeof remaining === 'number') {
+                return { remaining, total: remaining, percentRemaining: remaining > 0 ? 100 : 0, resetTime };
+            }
+            return null;
+        }
+
+        // Calculate quota status and color from a fetchProviderQuota() result
+        function getQuotaStatus(result) {
+            if (!result) {
+                return { status: 'error', color: '#ef4444', label: 'Unavailable' };
+            }
+            if (result.status === 401) {
+                return { status: 'low', color: '#eab308', label: 'Unauthorized', detail: 'Authorization required' };
+            }
+            if (result.success === false) {
+                return { status: 'error', color: '#ef4444', label: 'Error', detail: result.error };
+            }
+
+            const health = result.data ?? result;
+            if (health && health.ok === false) {
+                return {
+                    status: 'error',
+                    color: '#ef4444',
+                    label: health.status ? `Error ${health.status}` : 'Error',
+                    detail: health.error,
+                };
+            }
+
+            const parsed = parseQuota(health?.quota ?? health);
+            if (!parsed) {
+                return { status: 'healthy', color: '#22c55e', label: 'Available', detail: 'No quota reported' };
+            }
+
+            const percentRemaining = Math.max(0, Math.min(100, parsed.percentRemaining));
+            const base = {
+                remaining: parsed.remaining,
+                total: parsed.total,
+                percentRemaining,
+                unit: parsed.unit,
+                resetTime: parsed.resetTime,
+            };
+            if (percentRemaining > 50) return { ...base, status: 'healthy', color: '#22c55e', label: 'Healthy' };
+            if (percentRemaining > 10) return { ...base, status: 'low', color: '#eab308', label: 'Low Quota' };
+            return { ...base, status: 'critical', color: '#ef4444', label: 'Critical' };
         }
 
         // Format reset time (handles both Unix timestamps (seconds/milliseconds) and ISO date strings)
@@ -306,38 +420,55 @@
             return `Resets in ${hours}h ${minutes}m`;
         }
 
-        // Fetch quota for a single provider
+        // Resolve the stored API key for a provider, mirroring the addon's
+        // get_api_key_by_provider() so the status page sends the same key the
+        // chat page would use.
+        function getApiKey(provider) {
+            const name = provider.name || provider.key || '';
+            const read = (key) => { try { return window.localStorage.getItem(key); } catch { return null; } };
+            if (name.startsWith('custom:')) {
+                return read('g4f_session');
+            }
+            const stored = read(`${name}-api_key`);
+            if (stored) return stored;
+            if (name.startsWith('Puter')) {
+                return read('puter.auth.token') || read('g4f_session');
+            }
+            if (['GeminiPro', 'Ollama', 'Nvidia', 'OpenRouterFree', 'Pollinations', 'Groq'].includes(name)) {
+                return read('g4f_session');
+            }
+            return null;
+        }
+
+        // Fetch quota/health for a single provider. Never triggers a chat
+        // completion: the backend /health route only issues a GET.
         async function fetchProviderQuota(provider) {
-            if (provider === "default") {
-                return { success: true};
+            if (provider.key === 'default') {
+                return { success: false, error: 'No quota endpoint' };
             }
             try {
-                let baseUrl = '';
-                let quotaUrl = '';
-
-                // Construct provider base URL based on provider type
-                if (provider.key?.startsWith('custom:')) {
-                    // Custom provider: use custom URL if available, else fallback to G4F custom server endpoint
-                    baseUrl = provider.url || `https://g4f.space/custom/${provider.id}`;
-                } else if (provider.type === 'core') {
-                    // Core provider: use G4F backend URL
-                    baseUrl = framework.backendUrl;
-                    // Uncomment below if your core quota endpoint is at /backend-api/v2/quota?provider={name}
-                   quotaUrl = `${baseUrl}/backend-api/v2/quota/${provider.name}`;
+                let quotaUrl;
+                if (provider.type === 'core') {
+                    quotaUrl = `${framework.backendUrl}/backend-api/v2/health/${provider.name}`;
                 } else {
-                    // JS provider: use backup URL if available, else fallback to standard G4F API
-                    baseUrl = provider.backupUrl || `https://g4f.space/api/${provider.key}`;
+                    const baseUrl = provider.backupUrl || `https://g4f.space/api/${provider.key}`;
+                    quotaUrl = `${baseUrl}/health`;
                 }
 
-                // Fetch quota endpoint (adjust path here if your endpoint is different, e.g. /api/quota)
-                if (!quotaUrl) quotaUrl = `${baseUrl}/quota`;
-                const resp = await fetch(quotaUrl, {
-                    headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("g4f_session") || ""}` }
-                });
+                const apiKey = getApiKey(provider);
+                const headers = { 'Accept': 'application/json' };
+                if (apiKey) headers['x-api-key'] = apiKey;
+
+                const resp = await fetch(quotaUrl, { headers });
                 if (resp.status === 401) {
-                    return { success: true, status: 401, error: 'Authorization required' };
+                    return { success: false, status: 401, error: 'Authorization required' };
                 }
-                if (!resp.ok) return { success: false, status: resp.status, error: `HTTP ${resp.status}: ${resp.statusText}` };
+                if (resp.status === 404 || resp.status === 501) {
+                    return { success: false, status: resp.status, error: 'No health endpoint' };
+                }
+                if (!resp.ok) {
+                    return { success: false, status: resp.status, error: `HTTP ${resp.status}: ${resp.statusText}` };
+                }
                 const data = await resp.json();
                 return { success: true, data };
             } catch (err) {
@@ -349,20 +480,27 @@
         async function renderQuotaTable() {
             const table = document.getElementById('quota-table');
             const refreshBtn = document.getElementById('refresh-btn');
-            
+
             refreshBtn.disabled = true;
             refreshBtn.textContent = 'Refreshing...';
             table.innerHTML = '<div class="loading">Loading providers and quota data...</div>';
 
             try {
+                // Resolve the backend before querying core providers
+                if (!framework.backendUrl) {
+                    await framework.connectToBackend();
+                }
+
                 // Load all provider types (same as docs page)
                 const [jsProviders, customPublic, customPrivate, coreProviders] = await Promise.all([
                     loadProviders().then(l => Object.fromEntries(Object.entries(l).filter(([key, p]) => key !== "default"))),
-                    fetch('https://g4f.space/custom/api/servers/public').then(r => r.json()),
+                    fetch('https://g4f.space/custom/api/servers/public').then(r => r.json()).catch(() => ({})),
                     fetch('https://g4f.space/custom/api/servers', {
                         headers: { 'Authorization': `Bearer ${localStorage.getItem("g4f_session") || ""}` }
-                    }).then(r => r.json()),
-                    fetch(`${framework.backendUrl}/backend-api/v2/providers`).then(r => r.json())
+                    }).then(r => r.json()).catch(() => ({})),
+                    framework.backendUrl
+                        ? fetch(`${framework.backendUrl}/backend-api/v2/providers`).then(r => r.json()).catch(() => [])
+                        : Promise.resolve([])
                 ]);
 
                 // Combine all providers
@@ -376,14 +514,6 @@
                 // Clear table
                 table.innerHTML = '';
 
-                // Fetch quota for all providers in parallel
-                // const quotaResults = await Promise.all(
-                    // allProviders.map(async (p) => ({
-                        // provider: p,
-                        // quota: await fetchProviderQuota(p)
-                    // }))
-                //);
-
                 // Render each provider row
                 allProviders.forEach((p) => {
                     const row = document.createElement('div');
@@ -395,7 +525,7 @@
                     const logo = document.createElement('div');
                     logo.className = 'logo';
                     logo.appendChild(getImage(p.is_public ? p.label : p.key.replace('core:', '').replace('custom:', '')));
-                    
+
                     const meta = document.createElement('div');
                     let labelHtml = p.label && p.label !== p.name ? `<div style='color:#7dd3fc;font-size:11px'>${p.label}</div>` : '';
                     let serverIdHtml = p.id ? `<div style='font-size:11px;color:#fbbf24'><b>Server ID:</b> ${p.id}</div>` : '';
@@ -405,7 +535,7 @@
                         ${serverIdHtml}
                         <small>${iconsFor(p)}${badgesFor(p)}</small>
                     `;
-                    
+
                     prov.appendChild(logo);
                     prov.appendChild(meta);
                     row.appendChild(prov);
@@ -420,50 +550,55 @@
                     const quotaCol = document.createElement('div');
                     quotaCol.style.flex = '2';
                     quotaCol.style.minWidth = '200px';
-
-                    fetchProviderQuota(p).then(quota=>{
-                        const status = getQuotaStatus(quota);
-                        const used = status.remaining !== undefined ? status.total - status.remaining : 0;
-                        const percentUsed = status.total ? Math.round((used / status.total) * 100) : 0;
-                        const resetText = formatResetTime(quota?.reset_time || quota?.quota_reset);
-
-                        // Quota progress bar
-                        const quotaBar = document.createElement('div');
-                        quotaBar.className = 'quota-bar';
-                        const quotaFill = document.createElement('div');
-                        quotaFill.className = 'quota-fill';
-                        quotaFill.style.width = `${percentUsed}%`;
-                        quotaFill.style.backgroundColor = status.color;
-                        quotaBar.appendChild(quotaFill);
-                        quotaCol.appendChild(quotaBar);
-
-                        // Quota details text
-                        const quotaDetails = document.createElement('div');
-                        quotaDetails.className = 'quota-details';
-                        quotaDetails.innerHTML = `
-                            <span style="color: ${status.color}; font-weight: 500;">${status.label}</span>
-                            • Remaining: ${status.remaining?.toLocaleString() || 0} / ${status.total?.toLocaleString() || 0} (${100 - percentUsed}% left)
-                            ${resetText ? `• ${resetText}` : ''}
-                        `;
-                        quotaCol.appendChild(quotaDetails);
-                        // Status badge column
-                        const statusBadge = document.createElement('span');
-                        statusBadge.className = `status-badge status-${status.status}`;
-                        statusBadge.textContent = status.label;
-                        row.appendChild(statusBadge);
-                    }).catch(e=>{
-                        // Error state
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'quota-details';
-                        errorDiv.innerHTML = `<span style="color: #ef4444;">Quota data unavailable: ${e.message}</span>`;
-                        quotaCol.appendChild(errorDiv);
-                    });
-
+                    quotaCol.innerHTML = '<div class="quota-details">Checking…</div>';
                     row.appendChild(quotaCol);
 
-                    
+                    // Status badge column (appended before the async fill so the
+                    // grid column order stays stable)
+                    const statusBadge = document.createElement('span');
+                    statusBadge.className = 'status-badge';
+                    statusBadge.textContent = '…';
+                    row.appendChild(statusBadge);
 
                     table.appendChild(row);
+
+                    fetchProviderQuota(p).then(result => {
+                        const status = getQuotaStatus(result);
+                        statusBadge.className = `status-badge status-${status.status}`;
+                        statusBadge.textContent = status.label;
+
+                        quotaCol.innerHTML = '';
+
+                        if (status.percentRemaining !== undefined) {
+                            const percentUsed = Math.round(100 - status.percentRemaining);
+                            const quotaBar = document.createElement('div');
+                            quotaBar.className = 'quota-bar';
+                            const quotaFill = document.createElement('div');
+                            quotaFill.className = 'quota-fill';
+                            quotaFill.style.width = `${percentUsed}%`;
+                            quotaFill.style.backgroundColor = status.color;
+                            quotaBar.appendChild(quotaFill);
+                            quotaCol.appendChild(quotaBar);
+                        }
+
+                        const resetText = formatResetTime(status.resetTime);
+                        const unit = status.unit ? ` ${status.unit}` : '';
+                        const details = document.createElement('div');
+                        details.className = 'quota-details';
+                        let text = `<span style="color: ${status.color}; font-weight: 500;">${status.label}</span>`;
+                        if (status.remaining !== undefined) {
+                            text += ` • Remaining: ${formatNumber(status.remaining)} / ${formatNumber(status.total)}${unit} (${Math.round(status.percentRemaining)}% left)`;
+                        } else if (status.detail) {
+                            text += ` • ${status.detail}`;
+                        }
+                        if (resetText) text += ` • ${resetText}`;
+                        details.innerHTML = text;
+                        quotaCol.appendChild(details);
+                    }).catch(e => {
+                        statusBadge.className = 'status-badge status-error';
+                        statusBadge.textContent = 'Error';
+                        quotaCol.innerHTML = `<div class="quota-details"><span style="color: #ef4444;">Quota data unavailable: ${e.message}</span></div>`;
+                    });
                 });
 
                 // Update last refreshed time

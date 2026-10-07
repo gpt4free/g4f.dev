@@ -254,7 +254,7 @@ function handleOnyxStream(response, model, chat_session_id, parent_message_id) {
   return new Response(readable, {
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
+      "Cache-Control": "no-store",
       "Connection": "keep-alive"
     }
   });

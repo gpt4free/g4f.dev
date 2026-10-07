@@ -299,7 +299,7 @@ async function forwardToServer(serverUrl, model, bodyObj, pathname) {
     status: 200,
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
+      "Cache-Control": "no-store",
       "Transfer-Encoding": "chunked",
     },
   });

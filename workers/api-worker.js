@@ -161,8 +161,14 @@ let waitForProviders = (env)=>fetch("https://g4f.dev/dist/js/providers.json")
     }
     if (p.checkUrls) {
       for (const [provider, url] of Object.entries(p.checkUrls)) {
-        if (providers[provider] && providers[provider].baseUrl) {
-          URL_MAP[`${providers[provider].baseUrl}/quota`] = url;
+        const entry = p.providers?.[provider] || {};
+        // Register both the direct base URL and the g4f.space backup URL so
+        // /quota and /health resolve to a real quota endpoint instead of
+        // falling through to a chat completion.
+        for (const baseUrl of [entry.baseUrl, entry.backupUrl]) {
+          if (!baseUrl) continue;
+          URL_MAP[`${baseUrl}/quota`] = url;
+          URL_MAP[`${baseUrl}/health`] = url;
         }
       }
     }
@@ -180,7 +186,10 @@ var SERVER_TO_PROVIDER = {
   "srv_mrm4kpled882efdc423e": "huggingface",
   "srv_mp3lmkuad07322459f47": "airforce"
 }
-var BLOCKED_SERVERS = [];
+var BLOCKED_SERVERS = [
+  "srv_msfze3578f1a961f37b1",
+  "srv_msg6b1n69fc6b9b64156"
+];
 var HIDDEN_SERVERS = [];
 // organizations (from Cloudflare `asOrganization`) that should be blocked
 // when the request is anonymous (no user/session or API key provided).
@@ -340,6 +349,9 @@ async function safe(request, env, ctx) {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: getCorsHeaders(request) });
     }
+    if (["/models", "/api/auto/v1/models", "/api/default/models"].includes(pathname)) {
+      return Response.redirect("/v1/models", 302);
+    }
     if (["/", "/chat", "/chat/", "/chat/v2", "/playground", "/playground/"].includes(pathname) && request.method != "POST") {
       const newUrl = new URL(request.url);
       newUrl.hostname = "g4f.dev";
@@ -351,9 +363,9 @@ async function safe(request, env, ctx) {
       })] }, { headers: ACCESS_CONTROL_ALLOW_ORIGIN });
     }
     if (pathname === "/public") {
-      pathname = "/custom/api/servers/public";
+      return Response.redirect("/custom/api/servers/public", 302);
     } else if (pathname === "/usage") {
-      pathname = "/custom/api/servers/usage";
+      return Response.redirect("/custom/api/servers/usage", 302);
     } else if (pathname.startsWith("/srv_")) {
       pathname = "/custom" + pathname;
     }
@@ -401,7 +413,7 @@ async function safe(request, env, ctx) {
     try {
     let rateCheck;
     try {
-      if (!userProvidedKey && !pathname.endsWith("/models") && !pathname.endsWith("/quota") && !pathname.startsWith("/custom/api/") && !pathname.startsWith("/backend-api/") && !pathname.startsWith("/pa/"))
+      if (!userProvidedKey && !pathname.endsWith("/models") && !pathname.endsWith("/quota") && !pathname.endsWith("/health") && !pathname.startsWith("/custom/api/") && !pathname.startsWith("/backend-api/") && !pathname.startsWith("/pa/"))
         if (user) {
           rateCheck = await checkUserRateLimits(env, user, request);
           if (!rateCheck.allowed) {
@@ -1815,8 +1827,24 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   } else {
     targetUrl = `${server.base_url}${subPath}`;
   }
-  if (targetUrl in URL_MAP) {
-    targetUrl = URL_MAP[targetUrl];
+  const mappedUrl = URL_MAP[targetUrl];
+  if (mappedUrl) {
+    targetUrl = mappedUrl;
+  }
+  // A health check must never consume a completion: unmapped /quota and
+  // /health paths are proxied as-is and the upstream 404 is returned.
+  if ((subPath.endsWith("/quota") || subPath.endsWith("/health")) && !mappedUrl) {
+    return jsonResponse({
+      error: {
+        message: `No quota or health endpoint configured for ${server.label || server.id}`
+      }
+    }, 404, {
+      "X-Url": targetUrl,
+      "X-Server": server.id,
+      "X-Provider": server.label,
+      "X-User-Id": user && user.id,
+      ...getCorsHeaders(request)
+    });
   }
   if (server.base_url === "https://api.you.com/v1") {
     if (subPath != "/quota")
@@ -1869,19 +1897,9 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     }
     return newResponse;
   }
-  // Fallback: when URL is not in URL_MAP and ends with /quota,
-  // do a real /chat/completions request with the default model instead
-  
-  if (!(targetUrl in URL_MAP) && targetUrl.endsWith("/quota")) {
-    subPath = "/chat/completions";
-    if (server.base_url.includes("/chat/completions")) {
-      targetUrl = server.base_url;
-    } else if (server.base_url.includes("/v1/chat/completions")) {
-      targetUrl = server.base_url.split("/v1/")[0] + subPath;
-    } else {
-      targetUrl = `${server.base_url}${subPath}`;
-    }
-  }
+  // No /chat/completions fallback for /quota or /health: a health check must
+  // never consume a completion. Unmapped paths are proxied as-is and the
+  // upstream 404 is returned to the caller.
   if (targetUrl.startsWith("https://pass.g4f.space/") && !targetUrl.includes("/logs")) {
     proxyHeaders["g4f-api-key"] = env.PASS_API_KEY;
   }
@@ -2053,7 +2071,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       newResponse.headers.set("x-pollen-diff", String(pollenDiff));
     }
     if (request.method === "GET" && !userProvidedKey) {
-      ctx.waitUntil(setCachedResponse(request, newResponse.clone(), subPath.endsWith("/quota") ? CACHE_HEADERS.SHORT : CACHE_HEADERS.MEDIUM, cacheKey, ctx));
+      ctx.waitUntil(setCachedResponse(request, newResponse.clone(), (subPath.endsWith("/quota") || subPath.endsWith("/health")) ? CACHE_HEADERS.SHORT : CACHE_HEADERS.MEDIUM, cacheKey, ctx));
     }
     // Cache non-streaming POST chat/completions by body hash so repeated
     // test prompts (ping, hello, test) return cached results instantly.
@@ -2587,56 +2605,37 @@ async function isOnline(env, baseUrl, apiKeysStr, model) {
   if (baseUrl == "https://llmplayground.net/api") {
     return true;
   }
-  let data = {};
-  for (let i = 0; i <= 1; i++) {
-    let response;
-    try {
-      const apiKey = getRandomApiKey(apiKeysStr);
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
-      response = await fetch(`${baseUrl}/chat/completions`, {
-        method: "POST",
-        signal: controller.signal,
-        body: JSON.stringify({
-          model,
-          messages: [{"role": "user", "content": "hi"}],
-          stream: false
-        }),
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          ...apiKey ? {"Authorization": `Bearer ${apiKey}`} : {},
-          ...(baseUrl.startsWith("https://pass.g4f.space/") && !baseUrl.includes("/logs")) ? {"g4f-api-key": env.PASS_API_KEY} : {}
-        }
-      });
-      clearTimeout(timeout);
-    } catch (e) {
-      data = {error: e.message};
-      continue;
-    }
-    
-    try {
-      data = await response.json();
-    } catch (e) {
-      if (!response.ok) {
-        data = {error: `Status ${response.status}: ${response.statusText}`};
-        continue;
+  // Health check: GET only. Never POST /chat/completions — that would spend
+  // quota just to find out whether a server is reachable.
+  const apiKey = getRandomApiKey(apiKeysStr);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  let response;
+  try {
+    response = await fetch(`${baseUrl}/models`, {
+      method: "GET",
+      signal: controller.signal,
+      headers: {
+        "Accept": "application/json",
+        ...apiKey ? {"Authorization": `Bearer ${apiKey}`} : {},
+        ...(baseUrl.startsWith("https://pass.g4f.space/") && !baseUrl.includes("/logs")) ? {"g4f-api-key": env.PASS_API_KEY} : {}
       }
-      data = {error: e.message};
-      continue;
-    }
+    });
+    clearTimeout(timeout);
+  } catch (e) {
+    return {error: e.message};
+  }
+  let data;
+  try {
+    data = await response.json();
+  } catch (e) {
     if (!response.ok) {
-      data = {error: `Status ${response.status}: ${response.statusText}`, ...data};
-      continue;
+      return {error: `Status ${response.status}: ${response.statusText}`};
     }
-    if(data.choices && data.choices[0].message?.content) {
-      return data.choices[0].message.content;
-    }
-    if(data.choices && data.choices[0].message?.reasoning) {
-      return data.choices[0].message.reasoning;
-    }
-    data = {error: "No content", ...data};
-    continue;
+    return {error: e.message};
+  }
+  if (!response.ok) {
+    return {error: `Status ${response.status}: ${response.statusText}`, ...data};
   }
   return data;
 }
@@ -2766,7 +2765,7 @@ async function validateServerUncached(env, baseUrl, apiKeysStr, defaultModel=nul
           if (models.length > 0) {
             return {
               valid: true,
-              is_loading: response.headers.get("Cache-Control") == "no-cache",
+              is_loading: response.headers.get("Cache-Control") == "no-store",
               models: models,
               base_url: response.url.replace("/models", ""),
               test_url: testUrl
@@ -3881,7 +3880,6 @@ function jsonResponse(data, status = 200, headers = {}) {
 }
 function generateCacheKey(request, extra = null) {
   const url = new URL(request.url);
-  url.pathname = url.pathname.replace("/quota", "/chat/completions");
   // URLSearchParams has no enumerable own properties — Object.keys() always
   // returned [] here, so cache keys kept every query param (cache fragmentation).
   for (const key of [...url.searchParams.keys()]) {

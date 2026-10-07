@@ -1627,12 +1627,14 @@ class Kilo extends Client {
         this.corsProxy = corsProxy;
         this._baseUrl = baseUrl;
     }
+
     _fallbackUrl(url) {
         if (this.fallbackBaseUrl !== null) {
             return this.fallbackBaseUrl || null;
         }
         const backendUrl = (typeof window !== "undefined" && window.framework?.backendUrl) || "";
-        return backendUrl ? `${backendUrl}/proxy/${this._baseUrl}/${url.substring(this.baseUrl.length).replace(/^\/+/, "")}` : null;
+        const subPath = url.substring(this.baseUrl.length).replace(/^\/+/, "");
+        return backendUrl ? `${backendUrl}/proxy/${this._baseUrl}/${subPath}` : null;
     }
 
     get models() {
@@ -1692,7 +1694,8 @@ class OpenCode extends Client {
             return this.fallbackBaseUrl || null;
         }
         const backendUrl = (typeof window !== "undefined" && window.framework?.backendUrl) || "";
-        return backendUrl ? `${backendUrl}/proxy/${this._baseUrl}/${url.substring(this.baseUrl.length).replace(/^\/+/, "")}` : null;
+        const subPath = url.substring(this.baseUrl.length).replace(/^\/+/, "");
+        return backendUrl ? `${backendUrl}/proxy/${this._baseUrl}/${subPath}` : null;
     }
 
     get models() {
