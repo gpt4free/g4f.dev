@@ -1237,9 +1237,6 @@ async function handleChatCompletion(request, env, ctx) {
     }
   }
 
-  const useGen = !!apiKey;
-  const textApiUrl = useGen ? POLLINATIONS_GEN_TEXT_API : POLLINATIONS_TEXT_API;
-
   // Candidate models: the requested model (or best free models in auto
   // mode) plus up to 3 fallbacks for retries.
   const MAX_MODELS = 4;
@@ -1273,7 +1270,7 @@ async function handleChatCompletion(request, env, ctx) {
 
     let response;
     try {
-      response = await fetch(textApiUrl, {
+      response = await fetch(POLLINATIONS_GEN_TEXT_API, {
         method: "POST",
         headers: headers,
         body: JSON.stringify(requestBody)

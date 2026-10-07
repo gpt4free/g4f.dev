@@ -183,6 +183,10 @@
             background: rgba(239, 68, 68, 0.2);
             color: #ef4444;
         }
+        .status-unsupported {
+            background: rgba(148, 163, 184, 0.2);
+            color: #94a3b8;
+        }
         .loading {
             text-align: center;
             padding: 40px;
@@ -365,16 +369,28 @@
             if (result.status === 401) {
                 return { status: 'low', color: '#eab308', label: 'Unauthorized', detail: 'Authorization required' };
             }
+            if (result.status === 404 || result.status === 501) {
+                return { status: 'unsupported', color: '#94a3b8', label: 'Not supported', detail: 'No health endpoint' };
+            }
             if (result.success === false) {
                 return { status: 'error', color: '#ef4444', label: 'Error', detail: result.error };
             }
 
             const health = result.data ?? result;
             if (health && health.ok === false) {
+                if (health.status === 401) {
+                    return { status: 'low', color: '#eab308', label: 'Unauthorized', detail: 'Authorization required' };
+                }
+                if (health.status === 404 || health.status === 501) {
+                    return { status: 'unsupported', color: '#94a3b8', label: 'Not supported', detail: `No health endpoint (HTTP ${health.status})` };
+                }
+                if (!health.status) {
+                    return { status: 'error', color: '#ef4444', label: 'Unreachable', detail: health.error };
+                }
                 return {
                     status: 'error',
                     color: '#ef4444',
-                    label: health.status ? `Error ${health.status}` : 'Error',
+                    label: `Error ${health.status}`,
                     detail: health.error,
                 };
             }
@@ -440,40 +456,61 @@
             return null;
         }
 
-        // Fetch quota/health for a single provider. Never triggers a chat
-        // completion: the backend /health route only issues a GET.
+        // Query a single health endpoint and normalise the outcome. Every
+        // candidate URL is a GET; no chat completion is ever issued.
+        async function requestHealth(url, headers) {
+            const resp = await fetch(url, { headers });
+            if (resp.status === 401) {
+                return { success: false, status: 401, error: 'Authorization required' };
+            }
+            if (resp.status === 404 || resp.status === 501) {
+                return { success: false, status: resp.status, error: 'No health endpoint' };
+            }
+            if (!resp.ok) {
+                return { success: false, status: resp.status, error: `HTTP ${resp.status}: ${resp.statusText}` };
+            }
+            const data = await resp.json();
+            return { success: true, data };
+        }
+
+        // Fetch quota/health for a single provider. The backend route is tried
+        // first because it is not subject to CORS: the provider workers do not
+        // send Access-Control-Allow-Origin, so a direct browser fetch rejects
+        // with "Failed to fetch" even when the provider itself is reachable.
         async function fetchProviderQuota(provider) {
             if (provider.key === 'default') {
                 return { success: false, error: 'No quota endpoint' };
             }
-            try {
-                let quotaUrl;
-                if (provider.type === 'core') {
-                    quotaUrl = `${framework.backendUrl}/backend-api/v2/health/${provider.name}`;
-                } else {
-                    const baseUrl = provider.backupUrl || `https://g4f.space/api/${provider.key}`;
-                    quotaUrl = `${baseUrl}/health`;
-                }
 
-                const apiKey = getApiKey(provider);
-                const headers = { 'Accept': 'application/json' };
-                if (apiKey) headers['x-api-key'] = apiKey;
+            const apiKey = getApiKey(provider);
+            const headers = { 'Accept': 'application/json' };
+            if (apiKey) headers['x-api-key'] = apiKey;
 
-                const resp = await fetch(quotaUrl, { headers });
-                if (resp.status === 401) {
-                    return { success: false, status: 401, error: 'Authorization required' };
-                }
-                if (resp.status === 404 || resp.status === 501) {
-                    return { success: false, status: resp.status, error: 'No health endpoint' };
-                }
-                if (!resp.ok) {
-                    return { success: false, status: resp.status, error: `HTTP ${resp.status}: ${resp.statusText}` };
-                }
-                const data = await resp.json();
-                return { success: true, data };
-            } catch (err) {
-                return { success: false, error: err.message };
+            const urls = [];
+            if (framework.backendUrl) {
+                const name = provider.type === 'core' ? provider.name : provider.key;
+                urls.push(`${framework.backendUrl}/backend-api/v2/health/${name}`);
             }
+            if (provider.type !== 'core') {
+                const baseUrl = provider.backupUrl || `https://g4f.space/api/${provider.key}`;
+                urls.push(`${baseUrl}/health`);
+            }
+
+            let lastError = { success: false, status: 501, error: 'No health endpoint' };
+            for (const url of urls) {
+                try {
+                    const result = await requestHealth(url, headers);
+                    // 404/501 means "no health endpoint here" — worth trying the
+                    // next candidate before reporting it.
+                    if (result.success || (result.status !== 404 && result.status !== 501)) {
+                        return result;
+                    }
+                    lastError = result;
+                } catch (err) {
+                    lastError = { success: false, error: err.message };
+                }
+            }
+            return lastError;
         }
 
         // Main function to render quota table

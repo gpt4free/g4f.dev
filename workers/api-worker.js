@@ -2765,7 +2765,7 @@ async function validateServerUncached(env, baseUrl, apiKeysStr, defaultModel=nul
           if (models.length > 0) {
             return {
               valid: true,
-              is_loading: response.headers.get("Cache-Control") == "no-store",
+              is_loading: ["no-store", "no-cache"].includes(response.headers.get("Cache-Control")),
               models: models,
               base_url: response.url.replace("/models", ""),
               test_url: testUrl
@@ -3998,7 +3998,7 @@ async function setCachedResponse(request, response, cacheControl, cacheKey = nul
     responseToCache.headers.set("X-Cache", "HIT");
     // headers.set() returns undefined — the old check crashed on every write
     // and silently disabled the whole cache. Read the header instead.
-    if ((responseToCache.headers.get("Cache-Control") || "").includes("no-cache")) return;
+    if (["no-store", "no-cache"].includes(responseToCache.headers.get("Cache-Control"))) return;
     const cacheOperation = caches.default.put(cacheRequest, responseToCache);
     if (ctx) {
       ctx.waitUntil(cacheOperation);
