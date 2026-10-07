@@ -250,14 +250,47 @@ function modelNotFoundResponse(modelName) {
 }
 
 /**
- * Check that a model id is in the free registry (image.pollinations.ai/models).
- * Fails open when the free registry is unavailable, so a registry outage
- * never blocks traffic.
+ * True when a registry entry may be used without a caller-supplied API key:
+ * not an agent model, not flagged `paid_only`, and priced at zero pollen for
+ * the token type that matters for its category.
+ */
+function isFreeRegistryEntry(entry, kind) {
+  if (!entry || typeof entry !== "object" || !entry.name) return false;
+  if (entry.agent || entry.paid_only) return false;
+  const pricing = entry.pricing || {};
+  const cost = kind === "image"
+    ? Number(pricing.completionImageTokens) || 0
+    : (Number(pricing.promptTextTokens) || 0) + (Number(pricing.completionTextTokens) || 0);
+  return cost <= 0;
+}
+
+/**
+ * Check that a model id can be used without a caller-supplied API key.
+ *
+ * The legacy anonymous registry (image.pollinations.ai/models) only lists a
+ * few image models, so it is a positive signal only — it is not authoritative
+ * for text models. The gen registries are the source of truth: an entry is
+ * free when it is not an agent model, not flagged `paid_only` and priced at
+ * zero pollen.
+ *
+ * Fails open when no authoritative registry returned data, so a registry
+ * outage never blocks traffic.
  */
 async function isFreeModel(modelName) {
-  const registry = await getPricingRegistry("free");
-  if (!registry.length) return true;
-  return registryHasModel(registry, resolveModel(modelName).toLowerCase());
+  const resolved = resolveModel(modelName);
+
+  const legacy = await getPricingRegistry("free");
+  if (registryHasModel(legacy, resolved.toLowerCase())) return true;
+
+  let anyData = false;
+  for (const kind of ["text", "image"]) {
+    const registry = await getPricingRegistry(kind);
+    if (!registry.length) continue;
+    anyData = true;
+    const entry = findPricingEntry(registry, resolved);
+    if (entry && isFreeRegistryEntry(entry, kind)) return true;
+  }
+  return !anyData;
 }
 
 function freeModelOnlyResponse(modelName) {
@@ -1149,11 +1182,7 @@ async function getBestFreeTextModels(limit = 4) {
   const registry = await getPricingRegistry("text");
   const candidates = [];
   for (const entry of registry) {
-    if (!entry || typeof entry !== "object" || !entry.name) continue;
-    if (entry.agent || entry.paid_only) continue;
-    const pricing = entry.pricing || {};
-    const cost = (Number(pricing.promptTextTokens) || 0) + (Number(pricing.completionTextTokens) || 0);
-    if (cost > 0) continue;
+    if (!isFreeRegistryEntry(entry, "text")) continue;
     const health = entry.health || {};
     candidates.push({ name: entry.name, score: Number(health.success_rate) || 0 });
   }
@@ -1237,6 +1266,9 @@ async function handleChatCompletion(request, env, ctx) {
     }
   }
 
+  const useGen = !!apiKey;
+  const textApiUrl = useGen ? POLLINATIONS_GEN_TEXT_API : POLLINATIONS_TEXT_API;
+
   // Candidate models: the requested model (or best free models in auto
   // mode) plus up to 3 fallbacks for retries.
   const MAX_MODELS = 4;
@@ -1270,7 +1302,7 @@ async function handleChatCompletion(request, env, ctx) {
 
     let response;
     try {
-      response = await fetch(POLLINATIONS_GEN_TEXT_API, {
+      response = await fetch(textApiUrl, {
         method: "POST",
         headers: headers,
         body: JSON.stringify(requestBody)
