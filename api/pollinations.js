@@ -83,5 +83,21 @@ export default async function handler(request, event) {
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
     });
   }
-  return worker.fetch(adapted, env, ctx);
+  const response = await worker.fetch(adapted, env, ctx);
+  // Mirror Cache-Control into Vercel's CDN-scoped headers. Without these the
+  // edge network only honors `s-maxage` when it appears in the plain
+  // Cache-Control header, which some runtimes strip from function responses;
+  // the override headers guarantee edge caching applies.
+  const cacheControl = response.headers.get("Cache-Control");
+  if (cacheControl) {
+    const headers = new Headers(response.headers);
+    headers.set("CDN-Cache-Control", cacheControl);
+    headers.set("Vercel-CDN-Cache-Control", cacheControl);
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers
+    });
+  }
+  return response;
 }

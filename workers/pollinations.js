@@ -1100,11 +1100,23 @@ async function handleListModels(request, env, mode) {
 
   //models.sort((a, b) => b.added_date - a.added_date);
 
+  // Anonymous responses are identical for every visitor (free-only listing),
+  // so they are safe to cache at the CDN edge. Responses computed for a
+  // specific key (balance check, paid models) must never be shared. Note
+  // that Vercel bypasses its CDN cache for any request carrying an
+  // Authorization header regardless, so keyed clients always get fresh data.
+  const cacheControl = providerKey
+    ? "private, no-store"
+    : "public, max-age=0, s-maxage=300, stale-while-revalidate=600";
+
   return new Response(JSON.stringify({
     object: "list",
     data: models
   }), {
-    headers: { "Content-Type": "application/json" }
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": cacheControl
+    }
   });
 }
 
@@ -1113,7 +1125,22 @@ async function handleListModels(request, env, mode) {
  */
 async function handlePath(dir, path, request, env) {
 
-  return await fetch(`https://gen.pollinations.ai/${dir}/${path}`, request)
+  const response = await fetch(`https://gen.pollinations.ai/${dir}/${path}`, request)
+  // Pass the upstream response through with CDN cache headers attached so
+  // repeated GETs (e.g. /account/balance) can be served from the edge cache
+  // instead of re-running the function. Only successful responses are
+  // cached; errors stay uncacheable.
+  const headers = new Headers(response.headers);
+  if (response.ok) {
+    headers.set("Cache-Control", "public, max-age=0, s-maxage=60, stale-while-revalidate=300");
+  } else {
+    headers.set("Cache-Control", "no-store");
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
 }
 
 /**
@@ -1617,7 +1644,10 @@ export default {
             "/text/{prompt}"
           ]
         }), {
-          headers: { "Content-Type": "application/json" }
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=600"
+          }
         });
       } else {
         response = new Response(JSON.stringify({
@@ -1628,7 +1658,7 @@ export default {
           }
         }), {
           status: 404,
-          headers: { "Content-Type": "application/json" }
+          headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
         });
       }
     } catch (error) {

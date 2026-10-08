@@ -812,6 +812,24 @@ var USER_TIER_LIMITS = {
                     await env.MEMBERS_KV.put(RECENT_USERS_CACHE_KEY, JSON.stringify({ users }), {
                         expirationTtl: RECENT_USERS_CACHE_TTL
                     });
+                    // Keep the registration index aligned with the scan
+                    // (covers users created before the index existed)
+                    const index = await readRecentUserIndex(env) || [];
+                    const known = new Set(index.map(u => u && u.id));
+                    for (const u of users) {
+                        if (!known.has(u.id)) {
+                            index.push(u);
+                            known.add(u.id);
+                        }
+                    }
+                    index.sort((a, b) => {
+                        const ta = a && a.created_at ? new Date(a.created_at).getTime() : 0;
+                        const tb = b && b.created_at ? new Date(b.created_at).getTime() : 0;
+                        return tb - ta;
+                    });
+                    await env.MEMBERS_KV.put(RECENT_USERS_INDEX_KEY, JSON.stringify({ users: index.slice(0, RECENT_USERS_INDEX_MAX) }), {
+                        expirationTtl: 30 * 24 * 60 * 60
+                    });
                 } catch (e) {
                     console.error("Failed to refresh recent-users cache:", e);
                 }
@@ -2381,8 +2399,16 @@ ${buttonsHtml}
                 last_reset: now
             }
         };
-        // New member — drop the cached recent-users feed so the next
-        // request rebuilds it including this user
+        // New member — record it in the recent-users index (newest first)
+        // and drop the cached feed so the next request rebuilds it
+        await pushRecentUserIndex(env, {
+          id: user.id,
+          username: user.username,
+          provider: user.provider,
+          tier: user.tier,
+          created_at: user.created_at,
+          avatar: user.avatar || null
+        });
         await env.MEMBERS_KV.delete(RECENT_USERS_CACHE_KEY);
     } else if (!user.secret) {
         // Backfill secret for existing users who don't have one yet
@@ -2478,38 +2504,73 @@ ${buttonsHtml}
   // fetched up to hundreds of user objects from R2.
   const RECENT_USERS_CACHE_KEY = "recent_users_cache";
   const RECENT_USERS_CACHE_TTL = 60; // seconds
+  // Newest-first index of recently created users, maintained on registration
+  // so the feed never needs a full R2 scan to see new members.
+  const RECENT_USERS_INDEX_KEY = "recent_users_index";
+  const RECENT_USERS_INDEX_MAX = 100;
+
+  async function readRecentUserIndex(env) {
+    try {
+      const cached = await env.MEMBERS_KV.get(RECENT_USERS_INDEX_KEY, { type: "json" });
+      if (cached && Array.isArray(cached.users)) return cached.users;
+    } catch (e) { /* rebuild below */ }
+    return null;
+  }
+
+  async function pushRecentUserIndex(env, entry) {
+    const existing = (await readRecentUserIndex(env)) || [];
+    const merged = [
+      entry,
+      ...existing.filter(u => u && u.id !== entry.id)
+    ].slice(0, RECENT_USERS_INDEX_MAX);
+    // Keep newest-first even if registrations arrive out of order
+    merged.sort((a, b) => {
+      const ta = a && a.created_at ? new Date(a.created_at).getTime() : 0;
+      const tb = b && b.created_at ? new Date(b.created_at).getTime() : 0;
+      return tb - ta;
+    });
+    await env.MEMBERS_KV.put(RECENT_USERS_INDEX_KEY, JSON.stringify({ users: merged }), {
+      expirationTtl: 30 * 24 * 60 * 60
+    });
+  }
 
   async function refreshRecentUsersCache(env, limit) {
     const users = [];
-    let listResult = await env.MEMBERS_BUCKET.list({ prefix: "users/", limit: 200 });
-    while (listResult && Array.isArray(listResult.objects) && users.length < limit * 4) {
+    // R2 lists keys in ascending order and user ids are timestamp-prefixed
+    // ("u_<ms-base36><random>"), so the newest users sit at the END of the
+    // listing. Paginate to the end (keeping a rolling window of the last
+    // keys) and read newest-first — reading only the first page returned
+    // the oldest accounts, which froze the feed on stale users.
+    const keys = [];
+    let listResult = null;
+    let cursor;
+    let pages = 0;
+    do {
+      listResult = await env.MEMBERS_BUCKET.list({ prefix: "users/", limit: 200, cursor });
       for (const object of listResult.objects) {
         if (!object.key.endsWith('.json')) continue;
-        try {
-          const userObject = await env.MEMBERS_BUCKET.get(object.key);
-          if (!userObject) continue;
-          const user = await userObject.json();
-          users.push({
-            id: user.id,
-            username: user.username,
-            provider: user.provider,
-            tier: user.tier,
-            created_at: user.created_at,
-            avatar: user.avatar || null
-          });
-        } catch (e) {
-          // skip malformed entries
-        }
-        if (users.length >= limit * 4) break;
+        keys.push(object.key);
+        if (keys.length > limit * 4) keys.shift();
       }
-      if (listResult.truncated && users.length < limit * 4) {
-        listResult = await env.MEMBERS_BUCKET.list({
-          prefix: "users/",
-          limit: 200,
-          cursor: listResult.cursor
+      cursor = listResult.truncated ? listResult.cursor : undefined;
+      pages++;
+    } while (cursor && pages < 100);
+
+    for (let i = keys.length - 1; i >= 0 && users.length < limit * 4; i--) {
+      try {
+        const userObject = await env.MEMBERS_BUCKET.get(keys[i]);
+        if (!userObject) continue;
+        const user = await userObject.json();
+        users.push({
+          id: user.id,
+          username: user.username,
+          provider: user.provider,
+          tier: user.tier,
+          created_at: user.created_at,
+          avatar: user.avatar || null
         });
-      } else {
-        break;
+      } catch (e) {
+        // skip malformed entries
       }
     }
 
@@ -2539,6 +2600,20 @@ ${buttonsHtml}
         });
       }
     } catch (e) { /* fall through to rebuild */ }
+
+    // Prefer the registration-time index (newest first, maintained on
+    // every new signup); fall back to a full R2 scan when missing.
+    const indexed = await readRecentUserIndex(env);
+    if (indexed && indexed.length) {
+      const payload = { users: indexed.slice(0, limit) };
+      await env.MEMBERS_KV.put(RECENT_USERS_CACHE_KEY, JSON.stringify(payload), {
+        expirationTtl: RECENT_USERS_CACHE_TTL
+      });
+      return jsonResponse(payload, 200, {
+        "Cache-Control": "public, max-age=60",
+        ...getCorsHeaders(request)
+      });
+    }
 
     // Rebuild synchronously on cache miss, then cache for next time
     const users = await refreshRecentUsersCache(env, limit);
