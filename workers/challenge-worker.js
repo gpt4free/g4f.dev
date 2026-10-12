@@ -263,7 +263,7 @@ async function verifyJwt(env, token) {
 
 /** Normalize a BCP-47 language tag to its base language ("de-DE" → "de"). */
 function baseLanguage(tag) {
-    return (tag || "en").split(/[-_]/)[0].toLowerCase().replace("fa", "en")
+    return (tag || "en").split(/[-_]/)[0].toLowerCase()
 }
 
 /** Load the UI snippet catalogs: JSON files grouped by section headline
