@@ -458,7 +458,7 @@ async function get_quota(provider) {
     if (!provider || provider == "AnyProvider" || provider.startsWith("custom:") || provider.startsWith("pa:")) {
         return;
     }
-    const url = `${framework.backendUrl}/backend-api/v2/quota/${provider}`;
+    const url = `${framework.backendUrl}/backend-api/v2/health/${provider}`;
     const api_key = get_api_key_by_provider(provider, true);
     const response = await fetch(url, { method: 'GET', headers: api_key ? {"x-api-key": api_key} : {} });
     let data;
@@ -481,7 +481,7 @@ async function get_quota(provider) {
             input.placeholder = framework.translate("Invalid API key");
         }
     }
-    return response.ok ? data : undefined;
+    return response.ok ? data.quota : undefined;
 }
 async function refreshModels(provider) {
     // PA providers expose models via the pa providers list, not the models API

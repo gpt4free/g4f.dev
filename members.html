@@ -3081,7 +3081,7 @@
                     const secret = await deriveWorkspaceSecret();
                     if (secret) {
                         updateSecretSyncUI(secret);
-                        startSecretRequestPolling();
+                        //startSecretRequestPolling();
                         showToast('Workspace secret derived from your account.');
                     } else {
                         showToast('No user secret available. Please log out and log in again.', 'error');
