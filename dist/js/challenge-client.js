@@ -576,15 +576,15 @@
     if (!optedOut && (pathMatch || rootMatch || featureMatch)) {
         const boot = async () => {
             if (await isSupported()) {
-                start();
+                // start();
             } else {
                 console.info("[G4FChallenge] no local model (LanguageModel / Bonsai WebGPU) — cake baker handles credits");
             }
         };
         if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", () => setTimeout(boot, 3000));
+            // document.addEventListener("DOMContentLoaded", () => setTimeout(boot, 3000));
         } else {
-            setTimeout(boot, 3000);
+            // setTimeout(boot, 3000);
         }
     }
 })();
