@@ -148,7 +148,6 @@ var URL_MAP = {
   "https://puter.g4f-dev.workers.dev/quota": "https://api.puter.com/metering/usage",
   "https://router.huggingface.co/v1/quota": "https://huggingface.co/api/whoami-v2"
 }
-let providers = {};
 let waitForProviders = (env)=>fetch("https://g4f.dev/dist/js/providers.json")
   .then(r=>r.json()).then(async (p)=>{
     DEFAULT_MODELS = p.serverDefaultModels || {};
@@ -879,12 +878,6 @@ async function handleListServers(request, env, user) {
   if (user) {
     servers = user.custom_servers || [];
   }
-  if (user && user.tier == "admin") {
-    servers.forEach(s=>{
-      s.api_key_count=(s.api_keys || "").split("\n").filter((k) => k.trim()).length;
-    });
-    return jsonResponse({ servers: servers });
-  }
   const safeServers = servers.map((s) => ({
     id: s.id,
     label: s.label,
@@ -896,7 +889,10 @@ async function handleListServers(request, env, user) {
     updated_at: s.updated_at,
     usage: s.usage || { requests: 0, tokens: 0 }
   }));
-  return jsonResponse({ servers: safeServers }, 200, getCorsHeaders(request));
+  return jsonResponse({ servers: safeServers }, 200, {
+    "Cache-Control": "no-store",
+    ...getCorsHeaders(request)
+  });
 }
 async function handleCreateServer(request, env) {
   const user = await authenticateRequest(request, env);
@@ -1126,6 +1122,8 @@ async function handleGetServerUsage(request, env) {
     server_id: serverId,
     total_usage: server.usage || { requests: 0, tokens: 0 },
     history
+  }, 200, {
+    "Cache-Control": "no-store"
   });
 }
 // ---- Per-isolate memory caches ----

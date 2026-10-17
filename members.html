@@ -1777,7 +1777,7 @@
             // Derive and store workspace secret for cross-device sync
             ensureWorkspaceSecret().then((secret) => {
                 updateSecretSyncUI(secret);
-                if (secret) startSecretRequestPolling();
+                // if (secret) startSecretRequestPolling();
             });
         }
 
