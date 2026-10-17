@@ -579,28 +579,14 @@ body.liquid:not(.no-animations):not(.white) {
     color: var(--colour-1);
 }
 
-.message .count .fa-clipboard,
-.message .count .fa-volume-high,
-.message .count .fa-rotate,
-.message .count .fa-print,
-.message .count .fa-whatsapp {
+.message .count .options_button {
     z-index: 1000;
     cursor: pointer;
-}
-
-.message .count .fa-clipboard,
-.message .count .fa-whatsapp {
     color: var(--colour-3);
 }
 
-.message .count .fa-clipboard.clicked,
-.message .count .fa-print.clicked,
-.message .count .fa-rotate.clicked,
-.message .count .fa-volume-high.active,
-.message .count .fa-file-export.clicked,
-.message .continue_button.clicked,
-.message .regenerate_button.clicked,
-.message .options_button.clicked {
+.message .count .options_button .clicked,
+.message .count .options_button .active{
     color: var(--accent);
 }
 

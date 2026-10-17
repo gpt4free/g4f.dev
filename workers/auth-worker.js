@@ -4377,6 +4377,47 @@ const body = await request.json().catch(() => ({}));
     return String(id).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 128);
   }
 
+  function base64ToBytes(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+
+  /**
+   * Resolve the ciphertext blob to store for a conversation.
+   * End-to-end clients (cloud mode) encrypt in the browser and upload the
+   * finished ciphertext as a base64 `blob` field — it is stored verbatim so
+   * the server never sees the plaintext. Plaintext uploads (local mode and
+   * legacy clients) are encrypted server-side as before.
+   */
+  async function resolveConversationBlob(body, workspaceSecret) {
+    if (body && typeof body.blob === "string" && body.blob.length > 0) {
+      try {
+        const bytes = base64ToBytes(body.blob);
+        if (bytes.length > 0) return bytes;
+      } catch (e) {
+        // Malformed base64 — fall back to server-side encryption
+      }
+    }
+    return encryptSecretConversation(body, workspaceSecret);
+  }
+
+  /**
+   * Build an index entry from a conversation or from an upload envelope.
+   * Envelopes carry `items_count` because their `items` stay encrypted
+   * client-side and are never visible to the server.
+   */
+  function conversationIndexEntry(conversation) {
+    return {
+      id: conversation.id,
+      title: conversation.title || "",
+      updated: conversation.updated || Date.now(),
+      added: conversation.added || Date.now(),
+      items_count: conversation.items_count || (Array.isArray(conversation.items) ? conversation.items.length : 0),
+    };
+  }
+
   /**
    * Compute the workspace secret server-side from the user record.
    * Mirrors the client-side derivation: hex(SHA-256(`${user.id}:${user.secret}`)).
@@ -4578,18 +4619,12 @@ const body = await request.json().catch(() => ({}));
       return jsonResponse({ error: validated.error }, validated.status, getCorsHeaders(request));
     }
     const workspaceSecret = validated.secret;
-    const blob = await encryptSecretConversation(body, workspaceSecret);
+    const blob = await resolveConversationBlob(body, workspaceSecret);
     const key = secretConversationKey(user.id, body.id);
     await env.MEMBERS_BUCKET.put(key, blob, {
       httpMetadata: { contentType: "application/octet-stream" },
     });
-    await updateSecretConversationIndex(env, user.id, {
-      id: body.id,
-      title: body.title || "",
-      updated: body.updated || Date.now(),
-      added: body.added || Date.now(),
-      items_count: Array.isArray(body.items) ? body.items.length : 0,
-    }, false, workspaceSecret);
+    await updateSecretConversationIndex(env, user.id, conversationIndexEntry(body), false, workspaceSecret);
     return jsonResponse({ saved: true, id: body.id, encrypted: true }, 200, getCorsHeaders(request));
   }
 
@@ -4629,18 +4664,12 @@ const body = await request.json().catch(() => ({}));
           errors.push({ id: conversation && conversation.id, error: "missing id" });
           continue;
         }
-        const blob = await encryptSecretConversation(conversation, workspaceSecret);
+        const blob = await resolveConversationBlob(conversation, workspaceSecret);
         const key = secretConversationKey(user.id, conversation.id);
         await env.MEMBERS_BUCKET.put(key, blob, {
           httpMetadata: { contentType: "application/octet-stream" },
         });
-        indexEntries.push({
-          id: conversation.id,
-          title: conversation.title || "",
-          updated: conversation.updated || Date.now(),
-          added: conversation.added || Date.now(),
-          items_count: Array.isArray(conversation.items) ? conversation.items.length : 0,
-        });
+        indexEntries.push(conversationIndexEntry(conversation));
         saved++;
       } catch (e) {
         errors.push({ id: conversation && conversation.id, error: e.message });
@@ -4705,6 +4734,17 @@ const body = await request.json().catch(() => ({}));
       return jsonResponse({ error: "Conversation not found" }, 404, getCorsHeaders(request));
     }
     const buffer = await object.arrayBuffer();
+    // End-to-end clients ask for the raw ciphertext and decrypt locally,
+    // so the plaintext never reaches the server.
+    if (request.headers.get("x-raw-blob") === "true") {
+      return new Response(buffer, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/octet-stream",
+          ...getCorsHeaders(request),
+        },
+      });
+    }
     const conversation = await decryptSecretConversation(buffer, workspaceSecret);
     if (!conversation) {
       // Blob was encrypted with an old/wrong key and is unreadable —

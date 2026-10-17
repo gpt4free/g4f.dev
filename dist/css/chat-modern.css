@@ -700,37 +700,19 @@ input, select, textarea, button {
     opacity: 1;
 }
 
-.message .content .count span {
-    font-size: 11.5px;
-    color: var(--text-3);
-    padding: 0 3px;
-}
-
-.message .count .fa-clipboard,
-.message .count .fa-volume-high,
-.message .count .fa-rotate,
-.message .count .fa-print,
-.message .count .fa-whatsapp {
-    padding: 5px;
+.message .count .options_button {
     border-radius: 7px;
-    font-size: 12.5px;
     color: var(--text-3);
     transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.message .count .fa-clipboard:hover,
-.message .count .fa-volume-high:hover,
-.message .count .fa-rotate:hover,
-.message .count .fa-print:hover,
-.message .count .fa-whatsapp:hover {
+.message .count .options_button span:hover {
     background: var(--glass-strong);
     color: var(--text-1);
 }
 
-.message .count .fa-clipboard.clicked,
-.message .count .fa-print.clicked,
-.message .count .fa-rotate.clicked,
-.message .count .fa-volume-high.active {
+.message .count .options_button .clicked,
+.message .count .options_button .active {
     color: var(--accent);
 }
 

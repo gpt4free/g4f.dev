@@ -142,9 +142,9 @@ var DEFAULT_MODELS = {};
 var SERVER_MAP = {}
 var URL_MAP = {
   "https://gen.pollinations.ai/v1/quota": "https://gen.pollinations.ai/account/balance",
-  "https://pollinations.g4f-dev.workers.dev/quota": "https://gen.pollinations.ai/account/balance",
-  "https://pollinations.g4f-dev.workers.dev/free/quota": "https://gen.pollinations.ai/account/balance",
-  "https://pollinations.g4f-dev.workers.dev/community/quota": "https://gen.pollinations.ai/account/balance",
+  "https://pollinations.g4f-space.workers.dev/quota": "https://gen.pollinations.ai/account/balance",
+  "https://pollinations.g4f-space.workers.dev/free/quota": "https://gen.pollinations.ai/account/balance",
+  "https://pollinations.g4f-space.workers.dev/community/quota": "https://gen.pollinations.ai/account/balance",
   "https://puter.g4f-dev.workers.dev/quota": "https://api.puter.com/metering/usage",
   "https://router.huggingface.co/v1/quota": "https://huggingface.co/api/whoami-v2"
 }
