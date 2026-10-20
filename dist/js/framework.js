@@ -500,6 +500,13 @@ function deleteTranslations() {
         framework.translations = {};
         hasDeleted = true;
     }
+    if (localStorage.getItem(GLOBAL_TRANSLATIONS_KEY)) {
+        localStorage.removeItem(GLOBAL_TRANSLATIONS_KEY);
+        hasDeleted = true;
+    }
+    if (localStorage.getItem(SELECTED_LANGUAGE_KEY)) {
+        localStorage.setItem(SELECTED_LANGUAGE_KEY, navigator.language || "en-US");
+    }
     return hasDeleted;
 }
 framework.delete = async (bucketId) => {
