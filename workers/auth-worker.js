@@ -4409,12 +4409,15 @@ const body = await request.json().catch(() => ({}));
    * client-side and are never visible to the server.
    */
   function conversationIndexEntry(conversation) {
+    const itemsCount = conversation.items_count;
     return {
       id: conversation.id,
       title: conversation.title || "",
       updated: conversation.updated || Date.now(),
       added: conversation.added || Date.now(),
-      items_count: conversation.items_count || (Array.isArray(conversation.items) ? conversation.items.length : 0),
+      items_count: typeof itemsCount === "number"
+        ? itemsCount
+        : (Array.isArray(conversation.items) ? conversation.items.length : 0),
     };
   }
 

@@ -126,16 +126,7 @@
             _clientPromise = (async () => {
                 // challenge-client.js is a classic script — load the ES
                 // module dynamically (or grab the classes from window).
-                const { ChromeAI, Bonsai, LLM7, Kilo, OpenCode } = await loadClientModule();
-                if (window.self === window.top) {
-                    if (await ChromeAI.isSupported()) {
-                        return new ChromeAI({ logCallback: logAiEvent });
-                    }
-                    if (await Bonsai.isSupported()) {
-                        console.info("[G4FChallenge] LanguageModel unavailable — falling back to Bonsai 1-bit (WebGPU)");
-                        return new Bonsai({ logCallback: logAiEvent });
-                    }
-                }
+                const { LLM7, Kilo, OpenCode } = await loadClientModule();
                 const network = [LLM7];
                 if (isLocalhost()) network.push(Kilo, OpenCode);
                 const ClientClass = network[Math.floor(Math.random() * network.length)];
@@ -152,31 +143,6 @@
         return _client;
     }
 
-    /** Network-only client for donated rounds (languages other than the
-     *  user's own): deliberately skips the local models (ChromeAI and the
-     *  1-bit Bonsai WebGPU engine) so the visitor's device never grinds
-     *  community work — a network provider does the inference instead. */
-    async function getNetworkClient() {
-        if (_networkClient) return _networkClient;
-        if (!_networkClientPromise) {
-            _networkClientPromise = (async () => {
-                const { LLM7, Kilo, OpenCode } = await loadClientModule();
-                const network = [LLM7];
-                if (isLocalhost()) network.push(Kilo, OpenCode);
-                const ClientClass = network[Math.floor(Math.random() * network.length)];
-                console.info(`[G4FChallenge] donated language — network provider instead of WebGPU: ${ClientClass.name}`);
-                return new ClientClass({ logCallback: logAiEvent });
-            })().catch((e) => {
-                console.warn("[G4FChallenge] loading client.js failed:", e);
-                _networkClientPromise = null; // allow retry on the next round
-                return null;
-            });
-        }
-        const client = await _networkClientPromise;
-        if (client) _networkClient = client;
-        return _networkClient;
-    }
-
     /** Check whether any local model client is available. */
     async function isSupported() {
         try {
@@ -189,9 +155,9 @@
     /** Run a prompt through a client (OpenAI-style chat API). Donated
      *  rounds (languages other than the user's own) pass networkOnly to
      *  keep the local WebGPU model out of community work. */
-    async function runPrompt(prompt, networkOnly = false) {
-        const client = networkOnly ? await getNetworkClient() : await getClient();
-        if (!client) throw new Error(networkOnly ? "no network provider available" : "no local model available");
+    async function runPrompt(prompt) {
+        const client = await getClient();
+        if (!client) throw new Error("no local model available");
         try {
             const response = await client.chat.completions.create({
                 messages: [{ role: "user", content: prompt }],
@@ -200,13 +166,8 @@
         } catch (e) {
             // Drop the cached client so the next round re-selects —
             // possibly a different random network provider.
-            if (networkOnly) {
-                _networkClient = null;
-                _networkClientPromise = null;
-            } else {
-                _client = null;
-                _clientPromise = null;
-            }
+            _client = null;
+            _clientPromise = null;
             throw e;
         }
     }
@@ -576,15 +537,15 @@
     if (!optedOut && (pathMatch || rootMatch || featureMatch)) {
         const boot = async () => {
             if (await isSupported()) {
-                // start();
+                start();
             } else {
                 console.info("[G4FChallenge] no local model (LanguageModel / Bonsai WebGPU) — cake baker handles credits");
             }
         };
         if (document.readyState === "loading") {
-            // document.addEventListener("DOMContentLoaded", () => setTimeout(boot, 3000));
+            document.addEventListener("DOMContentLoaded", () => setTimeout(boot, 3000));
         } else {
-            // setTimeout(boot, 3000);
+            setTimeout(boot, 3000);
         }
     }
 })();

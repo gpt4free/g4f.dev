@@ -974,7 +974,19 @@ async function handleTranslationsLanguages(request, env) {
         }
         languages.push(entry);
     }
+    const languageKeys = languages.map(entry => entry.language);
+    const seedLanguages = [
+        "de", "es", "fr", "it", "pt", "nl", "pl", "ru", "uk", "tr",
+        "zh", "ja", "ko", "hi", "ar", "id", "vi", "th", "sv", "da",
+        "fi", "nb", "cs", "el", "he", "hu", "ro", "bg",
+    ];
+    const missingSeedLanguages = seedLanguages.filter(lang => !languageKeys.includes(lang));
     languages.sort((a, b) => b.count - a.count || (a.language < b.language ? -1 : 1));
+    if (missingSeedLanguages.length > 0) {
+        for (const lang of missingSeedLanguages) {
+            languages.push({ language: lang, count: 0, total, remaining: total, percent: 0 });
+        }
+    }
     const payload = { languages, count: languages.length, total_snippets: total };
     memoryCacheSet("languages", payload);
     return json(
