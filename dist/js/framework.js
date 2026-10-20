@@ -505,7 +505,8 @@ function deleteTranslations() {
         hasDeleted = true;
     }
     if (localStorage.getItem(SELECTED_LANGUAGE_KEY)) {
-        localStorage.setItem(SELECTED_LANGUAGE_KEY, navigator.language || "en-US");
+        localStorage.removeItem(SELECTED_LANGUAGE_KEY);
+        hasDeleted = true;
     }
     return hasDeleted;
 }
