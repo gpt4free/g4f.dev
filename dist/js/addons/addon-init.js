@@ -1331,7 +1331,8 @@ try {
 
 function initializeMCPUI() {
     if (mcpClient.servers.length === 0) {
-         mcpClient.addServer({ name: 'Default', url: framework.backendUrl ? framework.backendUrl + '/mcp' : 'https://mcp.g4f.space/mcp' });
+        let serverUrl = (window.location.origin !== "https://g4f.dev" && framework.backendUrl) ? framework.backendUrl + '/mcp' : 'https://mcp.g4f.space/mcp'
+         mcpClient.addServer({ name: 'Default', url: serverUrl });
     }
 
     // Render servers list
