@@ -313,7 +313,7 @@ framework.clearTranslations = (language = null, clearLocal = false) => {
         cleared = true;
     }
     if (clearLocal) {
-        cleared = deleteTranslations() || cleared;
+        cleared = framework.deleteTranslations() || cleared;
     }
     storeGlobalTranslations(framework.globalTranslations);
     return cleared;
@@ -486,7 +486,12 @@ framework.translateAll = async () => {
     return translations;
 }
 
-function deleteTranslations() {
+framework.deleteAllTranslations = () => {
+    framework.setSelectedLanguage();
+    return framework.deleteTranslations();
+}
+
+framework.deleteTranslations = () => {
     let hasDeleted = false;
     // Legacy per-page translation caches (no longer written) + in-memory copy.
     for (let i = localStorage.length - 1; i >= 0; i--) {
@@ -502,10 +507,6 @@ function deleteTranslations() {
     }
     if (localStorage.getItem(GLOBAL_TRANSLATIONS_KEY)) {
         localStorage.removeItem(GLOBAL_TRANSLATIONS_KEY);
-        hasDeleted = true;
-    }
-    if (localStorage.getItem(SELECTED_LANGUAGE_KEY)) {
-        localStorage.removeItem(SELECTED_LANGUAGE_KEY);
         hasDeleted = true;
     }
     return hasDeleted;
@@ -834,7 +835,8 @@ Object.assign(window, {
     add_error,
     getHeaders,
     escapeHtml,
-    deleteTranslations,
+    deleteTranslations: framework.deleteTranslations,
+    deleteAllTranslations: framework.deleteAllTranslations,
     storeGlobalTranslations,
     getSelectedLanguage: framework.getSelectedLanguage,
     setSelectedLanguage: framework.setSelectedLanguage,

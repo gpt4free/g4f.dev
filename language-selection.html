@@ -453,10 +453,7 @@
                     notifyParent("load", lang);
                 } else if (action === "unload") {
                     const cleared = framework.clearTranslations(lang);
-                    if (window.deleteTranslations) window.deleteTranslations();
-                    if (framework.getSelectedLanguage() === lang) {
-                        framework.setSelectedLanguage(null);
-                    }
+                    if (framework.deleteAllTranslations) framework.deleteAllTranslations();
                     if (cleared) notifyParent("unload", lang);
                     toast(cleared ? `Unloaded "${lang}"` : `"${lang}" was not loaded`, !cleared);
                 }
