@@ -374,7 +374,7 @@ import { markdown } from "https://esm.sh/@codemirror/lang-markdown@6.2.5?deps=@c
 function isMobile() { return window.matchMedia("(max-width: 780px)").matches; }
 
 // ---------- MCP client ----------
-const DEFAULT_MCP_URL = "https://mcp.g4f.space/mcp";
+const DEFAULT_MCP_URL = window.location.origin + "/mcp";
 let mcpUrl = localStorage.getItem("mcp_file_explorer_url") || DEFAULT_MCP_URL;
 let openDir = localStorage.getItem("mcp_file_explorer_open_dir") || "";
 let reqId = 0;
