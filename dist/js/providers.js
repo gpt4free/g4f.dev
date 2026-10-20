@@ -15,13 +15,16 @@ let providerClassMap = Object.fromEntries(
     Object.entries(client).map(([key, value]) => [key.toLowerCase(), value])
 );
 
-function mapProviderDefaults(providers) {
-    for (const provider of Object.values(providers)) {
+function mapProviderDefaults(providers, checkUrls = {}) {
+    for (const [name, provider] of Object.entries(providers)) {
         if (provider.id && hiddenServers.includes(provider.id)) {
             provider.is_hidden = true;
         }
         if (provider.id && serverDefaultModels[provider.id]) {
             provider.defaultModel = serverDefaultModels[provider.id];
+        }
+        if (checkUrls[name]) {
+            provider.quotaEndpoint = checkUrls[name];
         }
     }
     return providers;
@@ -61,7 +64,7 @@ async function loadProviders() {
                 serverDefaultModels = json.serverDefaultModels || {};
                 providerLocalStorage = json.providerLocalStorage || {};
                 hiddenServers = json.hiddenServers || [];
-                return mapProviderDefaults(providers);
+                return mapProviderDefaults(providers, json.checkUrls);
             });
     } else {
         // Node: read providers.json

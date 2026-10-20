@@ -1825,6 +1825,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   } else {
     targetUrl = `${server.base_url}${subPath}`;
   }
+  targetUrl = targetUrl.replace('https://polli.g4f.dev', 'https://pollinations.g4f-space.workers.dev')
   const mappedUrl = URL_MAP[targetUrl];
   if (mappedUrl) {
     targetUrl = mappedUrl;
@@ -1834,7 +1835,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   if ((subPath.endsWith("/quota") || subPath.endsWith("/health")) && !mappedUrl) {
     return jsonResponse({
       error: {
-        message: `No quota or health endpoint configured for ${server.label || server.id}`
+        message: `No quota or health endpoint configured for ${targetUrl}`
       }
     }, 404, {
       "X-Url": targetUrl,

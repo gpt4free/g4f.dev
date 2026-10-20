@@ -77,11 +77,7 @@ class Client {
         this.apiEndpoint = options.apiEndpoint || `${this.baseUrl}/chat/completions`;
         this.imageEndpoint = options.imageEndpoint || `${this.baseUrl}/images/generations`;
         this.modelsEndpoint = options.modelsEndpoint || `${this.baseUrl}/models`;
-        if (!("quotaEndpoint" in options)) {
-            this.quotaEndpoint = `${this.baseUrl}/quota`;
-        } else {
-            this.quotaEndpoint = options.quotaEndpoint;
-        }
+        this.quotaEndpoint = options.quotaEndpoint || null;
         this.defaultModel = options.defaultModel;
         this.useModelName = options.useModelName || false;
         this.apiKey = options.apiKey;
