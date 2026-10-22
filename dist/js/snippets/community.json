@@ -3,9 +3,17 @@
         "page": "community",
         "comment": "UI text snippets of the community forum (community.html) grouped by the headline/title of the section they appear in. The group name is sent as translation context alongside each snippet in the challenge worker's batch translation challenges (kind=translations). Groups starting with '_' are metadata. Mirrors dist/js/snippets/chat.context.json."
     },
+    "Navigation": [
+        "Home",
+        "Docs",
+        "Members",
+        "Discord",
+        "Get Started"
+    ],
     "Community Forum": [
+        "✦ Community",
         "Community Forum",
-        "Join our community:",
+        "Ask a question, share an idea or help someone out. Join our Discord:",
         "Logged in as {0}",
         "Login to post"
     ],
@@ -19,6 +27,8 @@
         "Authentication token was missing from response."
     ],
     "Posts": [
+        "✦ Posts",
+        "Latest Posts",
         "Loading posts...",
         "No posts yet.",
         "Unknown",
@@ -30,5 +40,16 @@
         "Failed to submit report.",
         "Failed to copy post content.",
         "Failed to load posts."
+    ],
+    "Footer": [
+        "Documentation",
+        "Chat",
+        "Members",
+        "Manifesto",
+        "GitHub",
+        "Community",
+        "Privacy Policy",
+        "Terms of Service",
+        "© 2026 GPT4Free Project. Open source and free forever. ✨"
     ]
 }

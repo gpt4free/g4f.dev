@@ -5,11 +5,9 @@
     },
     "Navigation": [
         "Home",
-        "Chat",
         "Docs",
         "GitHub",
         "Start Chat",
-        "Documentation",
         "User avatar"
     ],
     "Login": [
@@ -240,9 +238,14 @@
         "No history yet"
     ],
     "Footer": [
-        "© 2026 GPT4Free Project. All rights reserved.",
-        "GitHub",
         "Documentation",
-        "Sponsor"
+        "Chat",
+        "Members",
+        "Manifesto",
+        "GitHub",
+        "Community",
+        "Privacy Policy",
+        "Terms of Service",
+        "© 2026 GPT4Free Project. All rights reserved."
     ]
 }

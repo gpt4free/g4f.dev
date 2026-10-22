@@ -1,0 +1,56 @@
+{
+    "_meta": {
+        "page": "providers",
+        "comment": "UI text snippets of the providers catalog (/providers and /providers/<name>) grouped by the headline/title of the section they appear in. The group name is sent as translation context alongside each snippet in the challenge worker's batch translation challenges (kind=translations). Groups starting with '_' are metadata. Mirrors dist/js/snippets/chat.context.json."
+    },
+    "Navigation": [
+        "G4F Framework",
+        "Home",
+        "Chat",
+        "Providers",
+        "Stats",
+        "Language",
+        "Translate UI"
+    ],
+    "Page Header": [
+        "Available Providers",
+        "Browse the list of AI providers supported by G4F"
+    ],
+    "Provider Cards": [
+        "Models:",
+        "Auth:",
+        "Status:",
+        "Working",
+        "Required",
+        "No specific models",
+        "Details",
+        "Website"
+    ],
+    "Provider Detail": [
+        "Provider #{0} of {1}",
+        "Attributes",
+        "URL",
+        "Working",
+        "Needs Auth",
+        "Supports Stream",
+        "Supports Message History",
+        "Supports System Message",
+        "Yes",
+        "No",
+        "N/A",
+        "Logo / Screenshot",
+        "Load screenshot from",
+        "Models ({0})",
+        "Parameters",
+        "None",
+        "No specific models listed",
+        "All Providers"
+    ],
+    "States": [
+        "Loading providers..."
+    ],
+    "Footer": [
+        "© 2026 G4F Framework. All Rights Reserved. |",
+        "GitHub Repository"
+    ]
+}

@@ -9,6 +9,10 @@
     <link rel="shortcut icon" href="dist/img/g4f.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="dist/img/g4f.svg">
     <link rel="manifest" href="dist/img/site.webmanifest">
+    <meta name="theme-color" content="#101411" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/jsencrypt/bin/jsencrypt.min.js"></script>
     <style>
         :root {
@@ -1139,6 +1143,7 @@
         }
     </style>
     <link rel="stylesheet" href="dist/css/all.min.css">
+    <link rel="stylesheet" href="dist/css/index-theme.css">
     <script src="dist/js/framework.js" defer></script>
     <script src="dist/js/cake-baker.js?v={{ v }}" defer></script>
     <script src="dist/js/challenge-client.js?v={{ v }}" defer></script>
@@ -1152,17 +1157,20 @@
     </script>
 </head>
 <body class="translate">
-    <header class="navbar" role="banner">
-        <a href="/" class="logo">G4F</a>
+    <!-- Starfield background (index.html look) -->
+    <canvas id="starfield"></canvas>
+
+    <header class="navbar" role="banner" id="navbar">
+        <a href="/" class="logo">G4<span>F</span></a>
         <nav class="nav-links" role="navigation">
             <a href="/">Home</a>
-            <a href="/chat/" title="Start Chat">Chat</a>
             <a href="/docs/" title="Documentation">Docs</a>
             <a href="https://github.com/xtekky/gpt4free" target="_blank" rel="noopener noreferrer">GitHub</a>
             <div class="user-info" id="navUserInfo" style="display: none;">
                 <img class="user-avatar" id="navAvatar" src="" alt="User avatar">
                 <span id="navUsername"></span>
             </div>
+            <a href="/chat/" class="nav-cta">Start Chat</a>
         </nav>
     </header>
 
@@ -1178,7 +1186,7 @@
                     🔮
                     Sign in with G4F Account
                 </button>
-            </p>
+            </div>
         </section>
 
         <!-- Login Section (shown when not logged in) -->
@@ -1531,12 +1539,17 @@
     </main>
 
     <footer>
+        <div class="footer-links">
+            <a href="/docs/">Documentation</a>
+            <a href="/chat/">Chat</a>
+            <a href="/members.html">Members</a>
+            <a href="/manifesto">Manifesto</a>
+            <a href="https://github.com/xtekky/gpt4free" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a href="/community">Community</a>
+            <a href="/privacy.html">Privacy Policy</a>
+            <a href="/terms.html">Terms of Service</a>
+        </div>
         <p>&copy; 2026 GPT4Free Project. All rights reserved.</p>
-        <p>
-            <a href="https://github.com/xtekky/gpt4free">GitHub</a> · 
-            <a href="/docs/">Documentation</a> · 
-            <a href="https://github.com/sponsors/hlohaus">Sponsor</a>
-        </p>
     </footer>
 
     <!-- Toast Notification -->
@@ -3155,5 +3168,76 @@
 <template>Failed to revoke key: {0}</template>
 <template>You will be redirected to:</template>
 <template>You will be redirected back to the application.</template>
+
+    <script>
+        // Starfield background — same as index.html
+        (function () {
+            const canvas = document.getElementById('starfield');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let stars = [];
+            let w, h;
+
+            function resizeCanvas() {
+                w = canvas.width = window.innerWidth;
+                h = canvas.height = window.innerHeight;
+            }
+
+            function createStars() {
+                stars = [];
+                const count = Math.floor((w * h) / 2500);
+                for (let i = 0; i < count; i++) {
+                    stars.push({
+                        x: Math.random() * w,
+                        y: Math.random() * h,
+                        r: Math.random() * 1.6 + 0.3,
+                        speed: Math.random() * 0.3 + 0.05,
+                        opacity: Math.random() * 0.7 + 0.3,
+                        twinkleSpeed: Math.random() * 0.02 + 0.005,
+                        twinkleOffset: Math.random() * Math.PI * 2,
+                    });
+                }
+            }
+
+            function drawStars(time) {
+                ctx.clearRect(0, 0, w, h);
+                stars.forEach(s => {
+                    const twinkle = Math.sin(time * s.twinkleSpeed + s.twinkleOffset) * 0.3 + 0.7;
+                    const alpha = s.opacity * twinkle;
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(180,210,255,${alpha})`;
+                    ctx.fill();
+                    if (s.r > 1.0) {
+                        ctx.beginPath();
+                        ctx.arc(s.x, s.y, s.r * 3, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(196,240,108,${alpha * 0.12})`;
+                        ctx.fill();
+                    }
+                });
+            }
+
+            function animateStars(time) {
+                drawStars(time);
+                requestAnimationFrame(animateStars);
+            }
+
+            resizeCanvas();
+            createStars();
+            requestAnimationFrame(animateStars);
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                createStars();
+            });
+
+            // Navbar shrink on scroll
+            const navbar = document.getElementById('navbar');
+            if (navbar) {
+                window.addEventListener('scroll', () => {
+                    navbar.classList.toggle('scrolled', window.scrollY > 50);
+                });
+            }
+        })();
+    </script>
 </body>
 </html>

@@ -1028,7 +1028,7 @@ const apiExport = {};
                     && !appStorage.getItem(window.providerLocalStorage[name])) {
                     continue;
                 }
-                // CORS-proxy providers (Kilo, OpenCode) only on localhost
+                // CORS-proxy providers (Kilo) only on localhost
                 if (config.localhostOnly && !['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname)) continue;
                 seen.add(name);
                 const isHidden = !!config.is_hidden;

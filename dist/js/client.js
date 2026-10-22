@@ -1583,7 +1583,7 @@ class LLM7 extends Client {
 
 /**
  * Default CORS proxy prefix for providers whose APIs do not send CORS
- * headers (Kilo, OpenCode, ...). corsfix.com is free for localhost and
+ * headers (Kilo, ...). corsfix.com is free for localhost and
  * registered domains. Pass `corsProxy: false` to disable proxying or
  * `corsProxy: "https://my-proxy/?"` to use a custom prefix.
  */
@@ -1649,68 +1649,6 @@ class Kilo extends Client {
     }
 }
 
-/**
- * OpenCode Zen (opencode.ai) — OpenAI compatible API with free models.
- * Free models require the "public" access token plus OpenCode client
- * headers. The API does not send CORS headers, so requests are routed
- * through a CORS proxy by default. When the proxy or API is unreachable,
- * requests fall back to a g4f backend exposing the provider at
- * {backendUrl}/api/OpenCode.
- */
-class OpenCode extends Client {
-    constructor(options = {}) {
-        const corsProxy = options.corsProxy === undefined ? DEFAULT_CORS_PROXY : options.corsProxy;
-        const baseUrl = options.baseUrl || "https://opencode.ai/zen/v1";
-        super({
-            defaultModel: "space-bunny-free",
-            quotaEndpoint: null,
-            ...options,
-            apiKey: options.apiKey || "public",
-            baseUrl: withCorsProxy(baseUrl, corsProxy),
-            extraHeaders: {
-                "x-opencode-client": "cli",
-                "x-opencode-project": "global",
-                "x-opencode-session": randomClientId("ses"),
-                "x-opencode-request": randomClientId("msg"),
-                ...(options.extraHeaders || {})
-            },
-        });
-        this.id = options.id || "opencode";
-        this.corsProxy = corsProxy;
-        this._baseUrl = baseUrl;
-    }
-
-    /**
-     * Fallback: g4f backend proxying the same provider at {backendUrl}/api/OpenCode.
-     * Resolved lazily so a backend connected after client creation is still used.
-     * Pass `fallbackBaseUrl: false` to disable the fallback.
-     */
-    _fallbackUrl(url) {
-        if (this.fallbackBaseUrl !== null) {
-            return this.fallbackBaseUrl || null;
-        }
-        const backendUrl = (typeof window !== "undefined" && window.framework?.backendUrl) || "";
-        const subPath = url.substring(this.baseUrl.length).replace(/^\/+/, "");
-        return backendUrl ? `${backendUrl}/proxy/${this._baseUrl}/${subPath}` : null;
-    }
-
-    get models() {
-        return {
-            list: async () => {
-                const models = await super.models.list();
-                if (this.apiKey && this.apiKey !== "public") {
-                    return models;
-                }
-                // Anonymous requests are restricted to the free tier
-                return models.filter((model) =>
-                    model.id.startsWith("big-") ||
-                    model.id.endsWith("-free") || model.id.endsWith(":free")
-                );
-            }
-        };
-    }
-}
-
 export {
     Client,
     Pollinations,
@@ -1724,7 +1662,6 @@ export {
     ChromeAI,
     LLM7,
     Kilo,
-    OpenCode,
     withCorsProxy,
     captureUserTierHeaders,
 };
@@ -1742,7 +1679,6 @@ export default {
     ChromeAI,
     LLM7,
     Kilo,
-    OpenCode,
 };
 
 // Publish the classes on window so classic scripts (e.g. challenge-client.js)
@@ -1762,7 +1698,6 @@ if (typeof window !== "undefined") {
         ChromeAI,
         LLM7,
         Kilo,
-        OpenCode,
         withCorsProxy,
         captureUserTierHeaders,
     };

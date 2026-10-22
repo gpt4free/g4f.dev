@@ -5,7 +5,7 @@
  * nonces, the browser solves small AI tasks (follow-up questions,
  * translations) with a local model — client.js's ChromeAI (built-in
  * Gemini Nano / Prompt API), falling back to the 1-bit Bonsai model on
- * WebGPU, then to a random network provider (LLM7, plus Kilo/OpenCode
+ * WebGPU, then to a random network provider (LLM7, plus Kilo
  * on localhost) — and exchanges the encrypted result for a signed JWT
  * that is redeemed for cake credit — a much faster way to get the
  * first cakes.
@@ -25,7 +25,7 @@
  * answers "all_translated"), the loop moves on to the next language with
  * untranslated snippets — a donated round. Donated rounds deliberately
  * skip the local WebGPU model (Bonsai) and run on a network provider
- * (LLM7, plus Kilo/OpenCode on localhost) instead, so the visitor's GPU
+ * (LLM7, plus Kilo on localhost) instead, so the visitor's GPU
  * is never spent on community work.
  *
  * Auto-runs on chat/members pages when a local model is available; it
@@ -93,7 +93,7 @@
     let _networkClient = null;
     let _networkClientPromise = null;
 
-    /** Network fallback providers. Kilo and OpenCode need a CORS proxy
+    /** Network fallback providers. Kilo needs a CORS proxy
      *  that is only guaranteed to work (free) on localhost — elsewhere
      *  (e.g. g4f.dev production) LLM7 is the only network option. */
     function isLocalhost() {
@@ -119,16 +119,16 @@
     /** Load the local chat client from client.js: ChromeAI (built-in
      *  Gemini Nano) first; if the Prompt API is unavailable (non-Chrome
      *  browsers), fall back to the 1-bit Bonsai model on WebGPU, then
-     *  to a random network provider (LLM7, Kilo, OpenCode). */
+     *  to a random network provider (LLM7, Kilo). */
     async function getClient() {
         if (_client) return _client;
         if (!_clientPromise) {
             _clientPromise = (async () => {
                 // challenge-client.js is a classic script — load the ES
                 // module dynamically (or grab the classes from window).
-                const { LLM7, Kilo, OpenCode } = await loadClientModule();
+                const { LLM7, Kilo } = await loadClientModule();
                 const network = [LLM7];
-                if (isLocalhost()) network.push(Kilo, OpenCode);
+                if (isLocalhost()) network.push(Kilo);
                 const ClientClass = network[Math.floor(Math.random() * network.length)];
                 console.info(`[G4FChallenge] no local model — using network provider: ${ClientClass.name}`);
                 return new ClientClass({ logCallback: logAiEvent });

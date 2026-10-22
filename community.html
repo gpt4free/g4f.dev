@@ -4,108 +4,116 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>G4F - Community</title>
+    <meta name="description" content="GPT4Free Community Forum - ask questions, share ideas and connect with other GPT4Free users." />
     <link rel="icon" href="dist/img/g4f.svg" type="image/svg+xml">
-    <style>
-        :root {
-            --primary: #6e48aa;
-            --dark: #1a1a2e;
-            --light: #f8f9fa;
-            --discord: #5865F2;
-            --danger: #ff6b6b;
-        }
-        * {
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, var(--dark), #16213e);
-            color: var(--light);
-            margin: 0;
-            padding: 2rem;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .post-form {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 2rem;
-        }
-        textarea {
-            width: 100%;
-            min-height: 100px;
-            resize: vertical;
-            background: rgba(0, 0, 0, 0.2);
-            color: white;
-            border: 1px solid #444;
-            border-radius: 4px;
-            padding: 0.75rem;
-            margin-bottom: 0.75rem;
-            font: inherit;
-        }
-        button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 0.3rem 0.5rem;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-        .post {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            position: relative;
-        }
-        .post p {
-            margin: 0;
-            white-space: pre-wrap;
-            word-break: break-word;
-            padding-right: 5.5rem;
-        }
-        .copy-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: var(--discord);
-            font-size: 0.8rem;
-        }
-        .status {
-            margin: 0 0 1rem;
-        }
-        .error {
-            color: var(--danger);
-        }
-        .muted {
-            opacity: 0.8;
-        }
-        a {
-            color: var(--primary);
-            text-decoration: none;
-        }
-    </style>
+    <link rel="shortcut icon" href="dist/img/g4f.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="dist/img/g4f.svg">
+    <link rel="manifest" href="dist/img/site.webmanifest">
+    <meta name="theme-color" content="#101411" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="dist/css/index-theme.css">
+    <script src="dist/js/framework.js"></script>
     <script src="dist/js/router.js"></script>
 </head>
-<body>
-    <div class="container">
-        <h1>Community Forum</h1>
-        <p>Join our community: <a href="https://discord.gg/qXA4Wf4Fsm" target="_blank" style="color: var(--discord);">discord.gg/qXA4Wf4Fsm</a></p>
-        <div id="loginStatus" class="status"></div>
-        <div class="post-form" id="postForm" style="display: none;">
-            <textarea id="postContent" placeholder="Ask a question or post to the Community..."></textarea>
-            <button id="postButton" type="button">Post</button>
+<body class="translate">
+    <!-- Starfield background (index.html look) -->
+    <canvas id="starfield"></canvas>
+
+    <header class="navbar" id="navbar" role="banner">
+        <a href="/" class="logo">G4<span>F</span></a>
+        <nav class="nav-links" role="navigation">
+            <a href="/">Home</a>
+            <a href="/docs/">Docs</a>
+            <a href="/members.html">Members</a>
+            <a href="https://discord.gg/qXA4Wf4Fsm" target="_blank" rel="noopener noreferrer">Discord</a>
+            <a href="/chat/" class="nav-cta">Get Started</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="page-head">
+            <span class="kicker">✦ Community</span>
+            <h1>Community Forum</h1>
+            <p>Ask a question, share an idea or help someone out. Join our Discord: <a href="https://discord.gg/qXA4Wf4Fsm" target="_blank" rel="noopener noreferrer">discord.gg/qXA4Wf4Fsm</a></p>
+        </section>
+
+        <section class="section">
+            <div id="loginStatus" class="status"></div>
+
+            <div class="post-form" id="postForm" style="display: none;">
+                <textarea id="postContent" placeholder="Ask a question or post to the Community..."></textarea>
+                <button id="postButton" class="btn" type="button">Post</button>
+            </div>
+
+            <div class="section-header">
+                <span class="kicker">✦ Posts</span>
+                <h2>Latest Posts</h2>
+            </div>
+
+            <div id="posts" class="muted">Loading posts...</div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-links">
+            <a href="/docs/">Documentation</a>
+            <a href="/chat/">Chat</a>
+            <a href="/members.html">Members</a>
+            <a href="/manifesto">Manifesto</a>
+            <a href="https://github.com/xtekky/gpt4free" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a href="/community">Community</a>
+            <a href="/privacy.html">Privacy Policy</a>
+            <a href="/terms.html">Terms of Service</a>
         </div>
-        <div id="posts" class="muted">Loading posts...</div>
-    </div>
+        <p>© 2026 GPT4Free Project. Open source and free forever. ✨</p>
+    </footer>
 
     <script>
+        // ─── TRANSLATION HELPERS ─────────────
+        // framework.translate() falls back to the original text when no
+        // translation is available, so it is safe to call at any time.
+        function t(text) {
+            return (window.framework && framework.translate) ? framework.translate(text, false) : text;
+        }
+
+        function refreshTranslations() {
+            if (window.framework && framework.translateElements) {
+                framework.translateElements();
+            }
+        }
+
+        // Strings that are rendered dynamically. They are registered with the
+        // translation framework as soon as it is available, so they are part
+        // of the community translation package.
+        const DYNAMIC_STRINGS = [
+            'Loading posts...',
+            'No posts yet.',
+            'Unknown',
+            'Copy',
+            'Copied',
+            'Report',
+            'Please enter the reason for reporting this post:',
+            'Report submitted successfully.',
+            'Failed to submit report.',
+            'Failed to copy post content.',
+            'Failed to load posts.',
+            'Logged in as {0}',
+            'Login to post',
+            'Post',
+            'Posting...',
+            'Error posting: {0}',
+            'You are not authenticated. Please log in again.',
+            'Failed to fetch authentication token: {0}',
+            'Authentication token was missing from response.'
+        ];
+
+        function registerDynamicStrings() {
+            if (!window.framework || !framework.translate) return;
+            DYNAMIC_STRINGS.forEach(text => framework.translate(text, false));
+        }
+
         const { getUser, getCurrentUrl, handleRedirectCallback } = MembersAuth;
         const loginStatus = document.getElementById('loginStatus');
         const postForm = document.getElementById('postForm');
@@ -124,11 +132,12 @@
             }
 
             if (userData && userData.username) {
-                loginStatus.textContent = `Logged in as ${userData.username}`;
+                loginStatus.textContent = t('Logged in as {0}').replace('{0}', userData.username);
                 postForm.style.display = 'block';
             } else {
-                loginStatus.innerHTML = `<p><a href="members.html?redirect=${encodeURIComponent(getCurrentUrl())}" target="_blank">Login to post</a></p>`;
+                loginStatus.innerHTML = `<p><a href="members.html?redirect=${encodeURIComponent(getCurrentUrl())}" target="_blank">${t('Login to post')}</a></p>`;
             }
+            refreshTranslations();
         })();
 
         function escapeHtml(value) {
@@ -150,22 +159,22 @@
             html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
             // 2. Videos (Added support for webm/ogg/mov, and changed invalid 'alt' to 'title')
             html = html.replace(
-                /!\[([^\]]*)\]\(([^)]+\.(?:mp4|webm|ogg|mov))\)/gi, 
+                /!\[([^\]]*)\]\(([^)]+\.(?:mp4|webm|ogg|mov))\)/gi,
                 '<video src="$2" title="$1" autoplay muted controls style="max-width: 100%; max-height: 400px; margin: 10px 0;"></video>'
             );
             // 3. Images
             html = html.replace(
-                /!\[([^\]]*)\]\(([^)]+)\)/g, 
+                /!\[([^\]]*)\]\(([^)]+)\)/g,
                 '<img src="$2" alt="$1" style="max-width: 100%; max-height: 400px; margin: 10px 0;">'
             );
             // 4. Bold (Added boundary checks to prevent matching inside other symbols)
             html = html.replace(
-                /(?<=^|\s)\*\*(.+?)\*\*(?=[\s.,!?;:]|$)/g, 
+                /(?<=^|\s)\*\*(.+?)\*\*(?=[\s.,!?;:]|$)/g,
                 '<strong>$1</strong>'
             );
             // 5. Italic (Added boundary checks so it doesn't break **bold** or a*b*c)
             html = html.replace(
-                /(?<=^|\s)\*(?!\*)(.+?)\*(?=[\s.,!?;:]|$)/g, 
+                /(?<=^|\s)\*(?!\*)(.+?)\*(?=[\s.,!?;:]|$)/g,
                 '<em>$1</em>'
             );
             // 6. URLs (Added lookbehind to prevent breaking HTML attributes like src="url")
@@ -178,7 +187,7 @@
         }
 
         async function fetchPosts() {
-            postsContainer.textContent = 'Loading posts...';
+            postsContainer.textContent = t('Loading posts...');
 
             try {
                 const response = await fetch('https://discord.g4f.space/');
@@ -190,7 +199,7 @@
                 postsContainer.innerHTML = '';
 
                 if (!Array.isArray(messages) || messages.length === 0) {
-                    postsContainer.innerHTML = '<p class="muted">No posts yet.</p>';
+                    postsContainer.innerHTML = `<p class="muted">${t('No posts yet.')}</p>`;
                     return;
                 }
 
@@ -198,10 +207,9 @@
                     const post = document.createElement('div');
                     post.className = 'post';
 
-                    const author = escapeHtml(message.author || 'Unknown');
+                    const author = escapeHtml(message.author || t('Unknown'));
                     let content = message.content || '';
                     const match = message.content.match(/\#report:([^:\s]+):([^\s]+)$/);
-                    console.log('Report match:', match);
                     if (match) {
                         content = content.split(match[0])[0].trim(); // Remove report tag from content
                     }
@@ -210,15 +218,15 @@
                     post.innerHTML = `
                         <strong>${author}</strong>
                         <p>${content}</p>
-                        <button class="copy-btn" type="button">Copy</button>
-                        ${match ? `<button class="report-btn" type="button" style="position: absolute; bottom: 10px; right: 10px; background: var(--danger); font-size: 0.8rem;">Report</button>` : ''}
+                        <button class="copy-btn" type="button">${t('Copy')}</button>
+                        ${match ? `<button class="report-btn" type="button">${t('Report')}</button>` : ''}
                     `;
 
                     const reportBtn = post.querySelector('.report-btn');
                     reportBtn?.addEventListener('click', async () => {
-                        const reason = prompt("Please enter the reason for reporting this post:");
+                        const reason = prompt(t('Please enter the reason for reporting this post:'));
                         if (!reason) return;
-                        
+
                         try {
                             const response = await fetch('https://discord.g4f.space/report', {
                                 method: 'PUT',
@@ -226,13 +234,13 @@
                                 body: JSON.stringify({ provider: match[1], username: match[2], reason })
                             });
                             if (response.ok) {
-                                alert('Report submitted successfully.');
+                                alert(t('Report submitted successfully.'));
                             } else {
-                                alert('Failed to submit report.');
+                                alert(t('Failed to submit report.'));
                             }
                         } catch (err) {
                             console.error('Report error', err);
-                            alert('Failed to submit report.');
+                            alert(t('Failed to submit report.'));
                         }
                     });
 
@@ -240,13 +248,13 @@
                     copyBtn.addEventListener('click', async () => {
                         try {
                             await navigator.clipboard.writeText(message.content || '');
-                            copyBtn.textContent = 'Copied';
+                            copyBtn.textContent = t('Copied');
                             setTimeout(() => {
-                                copyBtn.textContent = 'Copy';
+                                copyBtn.textContent = t('Copy');
                             }, 1200);
                         } catch (err) {
                             console.error('Clipboard error', err);
-                            alert('Failed to copy post content.');
+                            alert(t('Failed to copy post content.'));
                         }
                     });
 
@@ -254,8 +262,9 @@
                 });
             } catch (error) {
                 console.error(error);
-                postsContainer.innerHTML = `<p class="error">${escapeHtml(error.message || 'Failed to load posts.')}</p>`;
+                postsContainer.innerHTML = `<p class="error">${escapeHtml(error.message || t('Failed to load posts.'))}</p>`;
             }
+            refreshTranslations();
         }
 
         async function addPost() {
@@ -265,12 +274,12 @@
             }
 
             postButton.disabled = true;
-            postButton.textContent = 'Posting...';
+            postButton.textContent = t('Posting...');
 
             try {
                 const session = localStorage.getItem('g4f_session');
                 if (!session) {
-                    throw new Error('You are not authenticated. Please log in again.');
+                    throw new Error(t('You are not authenticated. Please log in again.'));
                 }
 
                 const jwtResponse = await fetch('https://auth.g4f.space/members/api/jwt', {
@@ -278,12 +287,12 @@
                 });
 
                 if (!jwtResponse.ok) {
-                    throw new Error('Failed to fetch authentication token: ' + await jwtResponse.text());
+                    throw new Error(t('Failed to fetch authentication token: {0}').replace('{0}', await jwtResponse.text()));
                 }
 
                 const jwtData = await jwtResponse.json();
                 if (!jwtData || !jwtData.token) {
-                    throw new Error('Authentication token was missing from response.');
+                    throw new Error(t('Authentication token was missing from response.'));
                 }
 
                 const response = await fetch('https://discord.g4f.space/', {
@@ -306,10 +315,10 @@
                 await fetchPosts();
             } catch (error) {
                 console.error(error);
-                alert('Error posting: ' + (error.message || 'Unknown error'));
+                alert(t('Error posting: {0}').replace('{0}', error.message || 'Unknown error'));
             } finally {
                 postButton.disabled = false;
-                postButton.textContent = 'Post';
+                postButton.textContent = t('Post');
             }
         }
 
@@ -318,6 +327,84 @@
             if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
                 addPost();
             }
+        });
+
+        // ─── STARFIELD BACKGROUND ─────────
+        (function () {
+            const canvas = document.getElementById('starfield');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let stars = [];
+            let w, h;
+
+            function resizeCanvas() {
+                w = canvas.width = window.innerWidth;
+                h = canvas.height = window.innerHeight;
+            }
+
+            function createStars() {
+                stars = [];
+                const count = Math.floor((w * h) / 2500);
+                for (let i = 0; i < count; i++) {
+                    stars.push({
+                        x: Math.random() * w,
+                        y: Math.random() * h,
+                        r: Math.random() * 1.6 + 0.3,
+                        opacity: Math.random() * 0.7 + 0.3,
+                        twinkleSpeed: Math.random() * 0.02 + 0.005,
+                        twinkleOffset: Math.random() * Math.PI * 2,
+                    });
+                }
+            }
+
+            function drawStars(time) {
+                ctx.clearRect(0, 0, w, h);
+                stars.forEach(s => {
+                    const twinkle = Math.sin(time * s.twinkleSpeed + s.twinkleOffset) * 0.3 + 0.7;
+                    const alpha = s.opacity * twinkle;
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(180,210,255,${alpha})`;
+                    ctx.fill();
+                    if (s.r > 1.0) {
+                        ctx.beginPath();
+                        ctx.arc(s.x, s.y, s.r * 3, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(196,240,108,${alpha * 0.12})`;
+                        ctx.fill();
+                    }
+                });
+            }
+
+            function animateStars(time) {
+                drawStars(time);
+                requestAnimationFrame(animateStars);
+            }
+
+            resizeCanvas();
+            createStars();
+            requestAnimationFrame(animateStars);
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                createStars();
+            });
+
+            const navbar = document.getElementById('navbar');
+            if (navbar) {
+                window.addEventListener('scroll', () => {
+                    navbar.classList.toggle('scrolled', window.scrollY > 50);
+                });
+            }
+        })();
+
+        // Re-apply translations once the framework is ready and after the
+        // community translation package has been loaded.
+        window.addEventListener('load', () => {
+            registerDynamicStrings();
+            refreshTranslations();
+            setTimeout(() => {
+                registerDynamicStrings();
+                refreshTranslations();
+            }, 1500);
         });
 
         fetchPosts();

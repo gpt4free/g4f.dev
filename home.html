@@ -9,119 +9,13 @@
     <link rel="manifest" href="/dist/img/site.webmanifest">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/dist/css/theme.css">
     <style>
-        :root {
-            --bg-main: #0c0a12;
-            --bg-card: rgba(23, 19, 34, 0.75);
-            --bg-card-hover: rgba(35, 29, 52, 0.9);
-            --border-card: rgba(139, 61, 255, 0.18);
-            --border-hover: rgba(168, 85, 247, 0.5);
-            --text-primary: #f3e8ff;
-            --text-secondary: #a799c7;
-            --text-muted: #6b5e8a;
-            --accent: #8b3dff;
-            --accent-light: #a855f7;
-            --accent-glow: rgba(139, 61, 255, 0.4);
-            --success: #22c55e;
-            --warning: #eab308;
-            --sidebar-width: 340px;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            background-color: var(--bg-main);
-            background-image: 
-                radial-gradient(circle at 15% 15%, rgba(139, 61, 255, 0.15) 0%, transparent 40%),
-                radial-gradient(circle at 85% 85%, rgba(168, 85, 247, 0.12) 0%, transparent 40%),
-                radial-gradient(circle at 50% 50%, rgba(15, 12, 25, 1) 0%, rgba(12, 10, 18, 1) 100%);
-            color: var(--text-primary);
-            font-family: 'Inter', sans-serif;
-            min-height: 100vh;
-            overflow-x: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Top Navigation Bar */
-        .navbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.25rem 2.5rem;
-            background: rgba(12, 10, 18, 0.85);
-            backdrop-filter: blur(16px);
-            border-bottom: 1px solid var(--border-card);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            text-decoration: none;
-        }
-
-        .brand-logo {
-            width: 38px;
-            height: 38px;
-            background: linear-gradient(135deg, var(--accent), var(--accent-light));
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            color: #fff;
-            box-shadow: 0 0 16px var(--accent-glow);
-        }
-
-        .brand-text {
-            font-size: 1.5rem;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            background: linear-gradient(to right, #ffffff, #d8b4fe);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-
+        /* ---- Top bar actions ---- */
         .nav-actions {
             display: flex;
             align-items: center;
             gap: 16px;
-        }
-
-        .status-badge {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(34, 197, 94, 0.1);
-            border: 1px solid rgba(34, 197, 94, 0.3);
-            color: #4ade80;
-            font-size: 0.825rem;
-            font-weight: 600;
-            padding: 6px 14px;
-            border-radius: 20px;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: var(--success);
-            box-shadow: 0 0 10px var(--success);
-            animation: pulse-dot 2s infinite;
-        }
-
-        @keyframes pulse-dot {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.2); }
         }
 
         .btn-toggle-sidebar {
@@ -132,6 +26,7 @@
             border-radius: 8px;
             font-size: 0.875rem;
             font-weight: 600;
+            font-family: inherit;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -145,7 +40,7 @@
             box-shadow: 0 0 16px var(--accent-glow);
         }
 
-        /* Main Container */
+        /* ---- Main layout ---- */
         .main-layout {
             display: flex;
             flex: 1;
@@ -160,32 +55,18 @@
             width: 100%;
         }
 
-        /* Hero Section */
+        /* ---- Hero ---- */
         .hero {
             text-align: center;
             margin-bottom: 3.5rem;
         }
 
-        .hero-title {
-            font-size: 3rem;
-            font-weight: 900;
-            letter-spacing: -1px;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, #ffffff 0%, #e9d5ff 50%, #c084fc 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-
         .hero-subtitle {
-            font-size: 1.15rem;
-            color: var(--text-secondary);
             max-width: 650px;
             margin: 0 auto 2rem;
-            line-height: 1.6;
         }
 
-        /* Quick Search / Prompt Bar */
+        /* ---- Search box ---- */
         .search-box {
             max-width: 680px;
             margin: 0 auto 1.5rem;
@@ -199,6 +80,7 @@
             border: 2px solid var(--border-card);
             border-radius: 14px;
             color: #fff;
+            font-family: inherit;
             font-size: 1rem;
             outline: none;
             backdrop-filter: blur(12px);
@@ -221,6 +103,7 @@
             border: none;
             border-radius: 10px;
             color: #fff;
+            font-family: inherit;
             font-weight: 700;
             font-size: 0.95rem;
             cursor: pointer;
@@ -232,25 +115,12 @@
             box-shadow: 0 4px 14px var(--accent-glow);
         }
 
-        /* Tools Grid Section */
+        /* ---- Tools grid ---- */
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1.75rem;
-        }
-
-        .section-title {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .section-title i {
-            color: var(--accent-light);
         }
 
         .tools-grid {
@@ -260,11 +130,7 @@
             margin-bottom: 3.5rem;
         }
 
-        /* Tool Card Component */
         .tool-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-card);
-            border-radius: 16px;
             padding: 1.75rem;
             text-decoration: none;
             color: var(--text-primary);
@@ -273,8 +139,6 @@
             justify-content: space-between;
             position: relative;
             overflow: hidden;
-            backdrop-filter: blur(12px);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .tool-card::before {
@@ -287,13 +151,6 @@
             background: linear-gradient(to right, transparent, var(--accent-light), transparent);
             opacity: 0;
             transition: opacity 0.3s ease;
-        }
-
-        .tool-card:hover {
-            transform: translateY(-5px);
-            background: var(--bg-card-hover);
-            border-color: var(--border-hover);
-            box-shadow: 0 12px 32px rgba(139, 61, 255, 0.2);
         }
 
         .tool-card:hover::before {
@@ -368,10 +225,10 @@
             color: #fff;
         }
 
-        /* Sidebar Drawer */
+        /* ---- Sidebar drawer ---- */
         .sidebar {
-            width: var(--sidebar-width);
-            background: rgba(15, 12, 23, 0.95);
+            width: var(--sidebar-width, 340px);
+            background: var(--bg-elevated);
             backdrop-filter: blur(20px);
             border-left: 1px solid var(--border-card);
             display: flex;
@@ -416,6 +273,7 @@
             border: 1px solid var(--border-card);
             border-radius: 8px;
             color: #fff;
+            font-family: inherit;
             font-size: 0.85rem;
             outline: none;
         }
@@ -478,25 +336,6 @@
         .p-badge.auth { background: rgba(234, 179, 8, 0.2); color: #fde047; }
         .p-badge.image { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
 
-        /* Footer */
-        .footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-muted);
-            font-size: 0.875rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            margin-top: auto;
-        }
-
-        .footer a {
-            color: var(--text-secondary);
-            text-decoration: none;
-        }
-
-        .footer a:hover {
-            color: var(--accent-light);
-        }
-
         @media (max-width: 992px) {
             .tools-grid {
                 grid-template-columns: 1fr;
@@ -519,6 +358,12 @@
             <span class="brand-text">G4F Framework</span>
         </a>
         <div class="nav-actions">
+            <nav class="nav-links">
+                <a href="/">Home</a>
+                <a href="/chat/">Chat</a>
+                <a href="/providers/">Providers</a>
+                <a href="/stats/">Stats</a>
+            </nav>
             <div class="status-badge" id="backend-status-badge">
                 <span class="status-dot"></span>
                 <span id="backend-status-text">Backend Active</span>

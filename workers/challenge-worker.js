@@ -281,6 +281,7 @@ const SNIPPET_PAGES = [
     "manifesto",
     "community",
     "playground",
+    "providers",
     "stats",
     "language-selection",
 ];

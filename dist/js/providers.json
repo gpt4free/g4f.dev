@@ -20,7 +20,6 @@
         "relayrouter": {"id": "srv_mt1wbaxgf9c946af0c58", "backupUrl": "https://g4f.space/api/relayrouter", "tags": "🔗"},
         "llm7": {"label": "LLM7", "tags": "🐴", "provider": "LLM7"},
         "kilo": {"label": "Kilo Gateway", "tags": "🪁", "provider": "Kilo"},
-        "opencode": {"label": "OpenCode Zen", "tags": "🦄", "provider": "OpenCode"},
         "webgpu": {"label": "WebGPU (local)", "tags": "🖥️", "provider": "WebGPU"},
         "bonsai": {"label": "Bonsai (local)", "tags": "🌳", "provider": "Bonsai"},
         "bonsai2": {"label": "Bonsai 2 (local)", "tags": "🌲", "provider": "Bonsai2"},
@@ -32,8 +31,7 @@
         "webgpu": "Llama-3.1-8B-Instruct-q4f32_1-MLC",
         "bonsai2": "27b",
         "chromeai": "gemini-nano",
-        "kilo": "kilo-auto/free",
-        "opencode": "space-bunny-free"
+        "kilo": "kilo-auto/free"
     },
     "serverDefaultModels": {
         "srv_mp3lmkuad07322459f47": "unmoderated-gpt",

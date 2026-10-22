@@ -9,181 +9,41 @@
     <link rel="shortcut icon" href="/dist/img/g4f.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/dist/img/g4f.svg">
     <link rel="manifest" href="/dist/img/site.webmanifest">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/dist/css/theme.css">
     <style>
-        :root {
-            --primary: #6e48aa;
-            --secondary: #9d50bb;
-            --accent: #4776E6;
-            --dark: #1a1a2e;
-            --light: #f8f9fa;
-            --success: #28a745;
-            --warning: #ffc107;
-            --danger: #dc3545;
-            --card-bg: rgba(255,255,255,0.05);
-            --card-border: rgba(255,255,255,0.1);
-        }
-
-        * { box-sizing: border-box; }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            background: linear-gradient(135deg, var(--dark), #16213e);
-            color: var(--light);
-            min-height: 100vh;
-        }
-
-        .navbar {
-            background: rgba(26, 26, 46, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: fixed;
-            width: 100%;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
-        }
-
-        .logo {
-            font-size: 1.8rem;
-            font-weight: 700;
-            background: linear-gradient(to right, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            text-decoration: none;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            align-items: center;
-        }
-
-        .nav-links a {
-            color: var(--light);
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .nav-links a:hover { color: var(--secondary); }
-
-        .main-container {
-            padding: 6rem 2rem 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .page-header {
-            margin-bottom: 2rem;
-        }
-
-        .page-header h1 {
-            font-size: 2.2rem;
-            margin: 0 0 0.5rem;
-            background: linear-gradient(to right, var(--primary), var(--secondary), var(--accent));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-
-        .page-header p {
-            color: rgba(255,255,255,0.6);
-            margin: 0;
-            font-size: 1.05rem;
-        }
-
-        /* Date range selector */
-        .controls {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-        }
-
-        .controls label {
-            font-size: 0.9rem;
-            color: rgba(255,255,255,0.7);
-        }
-
-        .controls select, .controls input[type="date"] {
-            background: rgba(0,0,0,0.3);
-            border: 1px solid var(--card-border);
-            border-radius: 8px;
-            padding: 0.5rem 0.75rem;
-            color: var(--light);
-            font-size: 0.9rem;
-            cursor: pointer;
-        }
-
-        .controls select:focus, .controls input[type="date"]:focus {
-            outline: none;
-            border-color: var(--secondary);
-        }
-
-        .btn {
-            background: linear-gradient(to right, var(--primary), var(--secondary));
-            color: white;
-            border: none;
-            padding: 0.5rem 1.25rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 5px 20px rgba(110, 72, 170, 0.4);
-        }
-
-        .btn-secondary {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid var(--card-border);
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255,255,255,0.2);
-            box-shadow: none;
-        }
-
-        /* Stats cards */
+        /* ---- Stats grid ---- */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
+            gap: 1.25rem;
+            margin-bottom: 2.5rem;
         }
 
         .stat-card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
             padding: 1.5rem;
             text-align: center;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
         }
 
         .stat-card .icon {
-            font-size: 1.8rem;
-            margin-bottom: 0.5rem;
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 0.75rem;
+            border-radius: 12px;
+            background: rgba(139, 61, 255, 0.12);
+            border: 1px solid rgba(168, 85, 247, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: var(--accent-light);
         }
 
         .stat-value {
             font-size: 2rem;
-            font-weight: 700;
-            background: linear-gradient(to right, var(--primary), var(--secondary));
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff, #d8b4fe);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
@@ -191,23 +51,29 @@
 
         .stat-label {
             font-size: 0.85rem;
-            color: rgba(255,255,255,0.6);
-            margin-top: 0.25rem;
+            color: var(--text-secondary);
+            margin-top: 0.35rem;
         }
 
-        /* Charts */
+        /* ---- Charts ---- */
         .chart-card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
-            padding: 1.5rem;
+            padding: 1.75rem;
             margin-bottom: 2rem;
         }
 
-        .chart-card h2 {
+        .chart-card h2,
+        .table-card h2 {
             font-size: 1.2rem;
-            margin: 0 0 1rem;
-            color: var(--light);
+            font-weight: 800;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chart-card h2 i,
+        .table-card h2 i {
+            color: var(--accent-light);
         }
 
         .chart-container {
@@ -215,14 +81,13 @@
             width: 100%;
         }
 
-        /* Bar chart */
         .bar-chart {
             display: flex;
             align-items: flex-end;
             justify-content: space-around;
             height: 220px;
             padding: 0 0.5rem;
-            border-bottom: 1px solid var(--card-border);
+            border-bottom: 1px solid var(--border-card);
         }
 
         .bar-group {
@@ -238,9 +103,9 @@
 
         .bar {
             width: 70%;
-            background: linear-gradient(to top, var(--primary), var(--secondary));
+            background: linear-gradient(to top, var(--accent), var(--accent-light));
             border-radius: 6px 6px 0 0;
-            transition: height 0.6s ease;
+            transition: height 0.6s ease, filter 0.2s ease;
             min-height: 2px;
             position: relative;
             cursor: pointer;
@@ -255,8 +120,9 @@
             bottom: 100%;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.85);
-            color: var(--light);
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-card);
+            color: var(--text-primary);
             padding: 4px 8px;
             border-radius: 6px;
             font-size: 0.75rem;
@@ -272,22 +138,14 @@
         .bar-label {
             margin-top: 0.5rem;
             font-size: 0.75rem;
-            color: rgba(255,255,255,0.5);
+            color: var(--text-muted);
         }
 
-        /* Table */
+        /* ---- Table ---- */
         .table-card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
-            padding: 1.5rem;
+            padding: 1.75rem;
             margin-bottom: 2rem;
             overflow-x: auto;
-        }
-
-        .table-card h2 {
-            font-size: 1.2rem;
-            margin: 0 0 1rem;
         }
 
         table {
@@ -299,15 +157,15 @@
         thead th {
             text-align: left;
             padding: 0.75rem;
-            color: rgba(255,255,255,0.6);
+            color: var(--text-secondary);
             font-weight: 600;
-            border-bottom: 2px solid var(--card-border);
+            border-bottom: 1px solid var(--border-card);
             cursor: pointer;
             user-select: none;
             white-space: nowrap;
         }
 
-        thead th:hover { color: var(--secondary); }
+        thead th:hover { color: var(--accent-light); }
 
         thead th .sort-arrow {
             font-size: 0.7rem;
@@ -317,10 +175,11 @@
 
         tbody td {
             padding: 0.75rem;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
         }
 
-        tbody tr:hover { background: rgba(255,255,255,0.03); }
+        tbody tr:hover { background: rgba(139, 61, 255, 0.08); }
 
         .provider-badge, .model-badge {
             display: inline-block;
@@ -328,33 +187,34 @@
             border-radius: 12px;
             font-size: 0.8rem;
             font-weight: 500;
-            background: rgba(110, 72, 170, 0.2);
-            border: 1px solid rgba(110, 72, 170, 0.3);
+            background: rgba(139, 61, 255, 0.15);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            color: #d8b4fe;
         }
 
         .token-bar {
             display: inline-block;
             height: 6px;
             border-radius: 3px;
-            background: linear-gradient(to right, var(--primary), var(--secondary));
+            background: linear-gradient(to right, var(--accent), var(--accent-light));
             vertical-align: middle;
             margin-right: 0.5rem;
             min-width: 2px;
         }
 
-        /* Loading & empty states */
+        /* ---- Loading & empty states ---- */
         .loading, .empty-state {
             text-align: center;
             padding: 3rem;
-            color: rgba(255,255,255,0.5);
+            color: var(--text-muted);
         }
 
         .spinner {
             display: inline-block;
             width: 40px;
             height: 40px;
-            border: 3px solid rgba(255,255,255,0.1);
-            border-top-color: var(--secondary);
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--accent-light);
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
@@ -367,12 +227,7 @@
             color: var(--danger);
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
-            .navbar { padding: 0.75rem 1rem; }
-            .nav-links { gap: 1rem; }
-            .nav-links a { font-size: 0.85rem; }
-            .main-container { padding: 5rem 1rem 1rem; }
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
             .stat-value { font-size: 1.5rem; }
         }
@@ -381,11 +236,17 @@
 </head>
 <body class="translate">
     <header class="navbar" role="banner">
-        <a href="/" class="logo">G4F</a>
+        <a href="/" class="brand">
+            <div class="brand-logo">
+                <i class="fa-solid fa-bolt"></i>
+            </div>
+            <span class="brand-text">G4F Framework</span>
+        </a>
         <nav class="nav-links" role="navigation">
             <a href="/">Home</a>
             <a href="/chat/" title="Start Chat">Chat</a>
-            <a href="/stats/" title="Usage Statistics">Stats</a>
+            <a href="/providers/" title="AI Providers">Providers</a>
+            <a href="/stats/" title="Usage Statistics" class="active">Stats</a>
             <a href="/docs/" title="Documentation">Docs</a>
             <a href="https://github.com/xtekky/gpt4free" target="_blank" rel="noopener noreferrer">GitHub</a>
         </nav>
@@ -509,6 +370,10 @@
             </table>
         </div>
     </main>
+
+    <footer class="footer">
+        <p>&copy; 2026 G4F Framework. All Rights Reserved. | <a href="https://github.com/xtekky/gpt4free" target="_blank" rel="noopener noreferrer">GitHub Repository</a></p>
+    </footer>
 
     <script>
         (function() {
