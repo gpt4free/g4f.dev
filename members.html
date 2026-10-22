@@ -1628,8 +1628,19 @@
         }
 
         // Toast notification
+        // API errors may be strings, objects ({ error: { message } }), or
+        // undefined. Normalize them before translate()/replace() so a failed
+        // request never throws "replace is not a function".
+        function toMessageText(message) {
+            if (message && typeof message === 'object') {
+                message = message.message ?? message.error ?? message.details ?? JSON.stringify(message);
+            }
+            return message === undefined || message === null ? '' : String(message);
+        }
+
         function showToast(message, type = 'success') {
-            toast.textContent = framework ? framework.translate(message) : message;
+            const text = toMessageText(message);
+            toast.textContent = framework ? framework.translate(text) : text;
             toast.className = 'toast ' + type + ' show';
             setTimeout(() => {
                 toast.classList.remove('show');
@@ -1637,9 +1648,10 @@
         }
 
         function showToastFormat(message, type = 'success', ...args) {
-            message = framework ? framework.translate(message) : message;
+            const template = toMessageText(message);
+            message = framework ? framework.translate(template) : template;
             const formattedMessage = message.replace(/{(\d+)}/g, (match, number) => 
-                typeof args[number] != 'undefined' ? args[number] : match
+                typeof args[number] != 'undefined' ? toMessageText(args[number]) : match
             );
             toast.textContent = formattedMessage;
             toast.className = 'toast ' + type + ' show';
@@ -2830,7 +2842,7 @@
                 await loadServers();
                 
             } catch (error) {
-                showToastFormat('Failed to delete server: {0}', 'error', error.message);
+                showToastFormat('Failed to delete server: {0}', 'error', error?.message ?? error);
             }
         }
         
@@ -2846,7 +2858,7 @@
         
         function showValidation(message, type) {
             if (!serverValidation) return;
-            serverValidation.textContent = message;
+            serverValidation.textContent = toMessageText(message);
             serverValidation.className = 'validation-status ' + type;
             serverValidation.style.display = 'block';
         }

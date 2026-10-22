@@ -361,6 +361,10 @@ async function safe(request, env, ctx) {
         return { id: voice, audio: true };
       })] }, { headers: ACCESS_CONTROL_ALLOW_ORIGIN });
     }
+    if (pathname == "/map") {
+      waitForProviders ? await waitForProviders() : null;
+      return Response.json(URL_MAP, { headers: ACCESS_CONTROL_ALLOW_ORIGIN });
+    }
     if (pathname === "/public") {
       return Response.redirect("/custom/api/servers/public", 302);
     } else if (pathname === "/usage") {
@@ -1130,11 +1134,10 @@ async function handleGetServerUsage(request, env) {
   if (!serverId) {
     return jsonResponse({ error: "server_id is required" }, 400);
   }
-  const found = await findUserServer(env, user, serverId);
-  if (!found) {
+  const server = (user.custom_servers || []).find((s) => s.id === serverId);
+  if (!server) {
     return jsonResponse({ error: "Server not found" }, 404);
   }
-  const server = found.server;
   const history = [];
   const now = /* @__PURE__ */ new Date();
   const dateKeys = [];
@@ -1875,6 +1878,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   if ((subPath.endsWith("/quota") || subPath.endsWith("/health")) && !mappedUrl) {
     return jsonResponse({
       error: {
+        type: "not_found",
         message: `No quota or health endpoint configured for ${targetUrl}`
       }
     }, 404, {
@@ -3883,6 +3887,7 @@ var UNLOGGED_ERROR_TYPES = new Set([
   "authentication_required",
   "model_not_allowed",
   "model_not_found",
+  "not_found",
   // v1 endpoints reject user-provided keys with a static 403; this fires on
   // every misconfigured client request and previously flooded /api/errors.
   "authentication_error"

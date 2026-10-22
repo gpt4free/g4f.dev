@@ -1,0 +1,31 @@
+{
+  "id": "/chat/",
+  "name": "G4F Chat",
+  "short_name": "G4F Chat",
+  "description": "Private, customizable AI chat powered by GPT4Free.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "theme_color": "#0b0a10",
+  "background_color": "#0b0a10",
+  "icons": [
+    {
+      "src": "/dist/img/g4f-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/dist/img/g4f-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/dist/img/g4f-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -600,6 +600,10 @@ async function updateLiveProviderOptions(optgroup) {
     try {
         await window.cache?.liveProviders?.swr(window.loadProviders || (()=>[]), (providers) => {
             const isLocalhost = ["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname);
+            // SWR invokes this callback for cached data and again for fresh
+            // data. Replace the previous options instead of appending a
+            // duplicate copy of the live provider list.
+            optgroup.querySelectorAll("option").forEach((option) => option.remove());
             Object.entries(providers).forEach(([name, config]) => {
                 if (name === "custom") {
                     return; // Skip custom here, will be added separately
@@ -768,30 +772,37 @@ function get_media_size(text) {
 async function load_version() {
     let new_version = document.querySelector(".new_version");
     if (new_version) return;
+    // The version API returns plain versions (e.g. "8.8.3"); the chat UI shows
+    // them with a "v" prefix (e.g. "v8.8.3").
+    const withV = (version) => {
+        if (!version) return version || "";
+        const value = String(version);
+        return /^v/i.test(value) ? value : `v${value}`;
+    };
     api("version").then((versions)=>{
-        window.title = 'G4F - ' + versions["version"];
+        window.title = 'G4F - ' + withV(versions["version"]);
         if (document.title == "G4F Chat") {
             document.title = window.title;
         }
         let text = ""
         if (versions["latest_version"] && versions["version"] != versions["latest_version"]) {
             let release_url = 'https://github.com/xtekky/gpt4free/releases/latest';
-            let title = `${framework.translate('New version:')} ${versions["latest_version"]}`;
-            text = `<a href="${release_url}" target="_blank" title="${title}">${versions["version"]}</a> 🆕`;
+            let title = `${framework.translate('New version:')} ${withV(versions["latest_version"])}`;
+            text = `<a href="${release_url}" target="_blank" title="${title}">${withV(versions["version"])}</a> 🆕`;
             new_version = document.createElement("div");
             new_version.classList.add("new_version");
-            const link = `<a href="${release_url}" target="_blank" title="${title}">${versions["latest_version"]}</a>`;
+            const link = `<a href="${release_url}" target="_blank" title="${title}">${withV(versions["latest_version"])}</a>`;
             new_version.innerHTML = `G4F ${link}&nbsp;&nbsp;🆕`;
             new_version.addEventListener("click", ()=>new_version.parentElement.removeChild(new_version));
             document.body.appendChild(new_version);
         } else {
-            text = versions["version"];
+            text = withV(versions["version"]);
         }
         document.getElementById("version_text").innerHTML = text;
     }).catch((e)=>{
         console.error("Error loading version:", e);
         fetch("https://api.github.com/repos/xtekky/gpt4free/releases/latest").then((response)=>response.json()).then((data)=>{
-            document.getElementById("version_text").innerText = data.tag_name;
+            document.getElementById("version_text").innerText = withV(data.tag_name);
         });
     });
     setTimeout(load_version, 1000 * 60 * 60); // 1 hour
@@ -1319,6 +1330,16 @@ function insertBackticksInTextarea(el) {
 // MCP (Model Context Protocol) Integration
 // ============================================================
 
+const DEFAULT_MCP_REMOTE_URL = 'https://mcp.g4f.space/mcp';
+// URLs that older versions of this page used for the automatically created
+// "Default" server. They are persisted in localStorage, so they have to be
+// migrated even when the current page would never create them again.
+const LEGACY_DEFAULT_MCP_URLS = new Set([
+    'https://mcp.g4f.space',
+    'https://mcp.g4f.space/mcp',
+    'http://localhost:8765/mcp',
+]);
+
 const mcpClient = new MCPClient();
 try {
     initializeMCPUI();
@@ -1326,11 +1347,95 @@ try {
     add_error(e)
 }
 
-function initializeMCPUI() {
-    if (mcpClient.servers.length === 0) {
-        let serverUrl = (window.location.origin !== "https://g4f.dev" && framework.backendUrl) ? framework.backendUrl + '/mcp' : 'https://mcp.g4f.space/mcp'
-         mcpClient.addServer({ name: 'Default', url: serverUrl });
+function isMcpG4fHost() {
+    return window.location.hostname === 'g4f.dev'
+        || window.location.hostname.endsWith('.g4f.dev');
+}
+
+/**
+ * Resolve the MCP endpoint that belongs to the current backend.
+ *
+ * The domain g4f.dev keeps using the shared MCP service. Every other origin
+ * (a self-hosted G4F instance) serves MCP itself, so the local backend must be
+ * used even if backend detection has not finished yet. Using the remote
+ * service as a fallback here makes self-hosted installs silently lose their
+ * tools.
+ */
+function getDefaultMCPServerUrl() {
+    if (isMcpG4fHost()) {
+        return DEFAULT_MCP_REMOTE_URL;
     }
+    const baseUrl = framework.backendUrl || window.location.origin;
+    try {
+        return new URL('/mcp', baseUrl).toString();
+    } catch (error) {
+        return `${baseUrl.replace(/\/$/, '')}/mcp`;
+    }
+}
+
+/**
+ * Point the automatically created default server at the current backend.
+ * User-created servers are never modified, even when they are called
+ * "Default"; only servers created by this page (server.auto) or entries with
+ * a known legacy URL are candidates.
+ */
+function migrateDefaultMCPServer() {
+    const defaultServers = mcpClient.servers.filter(server => server.name === 'Default');
+    if (defaultServers.length !== 1) {
+        return false;
+    }
+
+    const server = defaultServers[0];
+    const defaultUrl = getDefaultMCPServerUrl();
+    if (server.url === defaultUrl) {
+        return false;
+    }
+    if (!server.auto && !LEGACY_DEFAULT_MCP_URLS.has(server.url)) {
+        return false;
+    }
+
+    const oldUrl = server.url;
+    server.url = defaultUrl;
+    server.auto = true;
+    mcpClient.tools.delete(oldUrl);
+    mcpClient.saveServers();
+    return true;
+}
+
+function ensureDefaultMCPServer() {
+    if (mcpClient.servers.length === 0) {
+        mcpClient.addServer({ name: 'Default', url: getDefaultMCPServerUrl(), auto: true });
+        return;
+    }
+    migrateDefaultMCPServer();
+}
+
+/**
+ * framework.connectToBackend() runs asynchronously while this addon loads, so
+ * framework.backendUrl can still be empty when the default MCP server is
+ * created. Once detection has finished, move the auto-created server to the
+ * detected backend (if it differs from the current origin).
+ */
+async function refreshDefaultMCPServerWhenBackendReady() {
+    if (isMcpG4fHost()) {
+        return;
+    }
+    if (!framework.backendUrl) {
+        const started = Date.now();
+        // connectToBackend() gives up after its own checks (10s per URL);
+        // this timeout only prevents waiting forever when no backend exists.
+        while (!framework.backendUrl && Date.now() - started < 15000) {
+            await new Promise(resolve => setTimeout(resolve, 250));
+        }
+    }
+    if (migrateDefaultMCPServer()) {
+        renderMCPServers();
+        await refreshMCPTools();
+    }
+}
+
+function initializeMCPUI() {
+    ensureDefaultMCPServer();
 
     // Render servers list
     renderMCPServers();
@@ -1340,6 +1445,11 @@ function initializeMCPUI() {
 
     // Initial refresh of tools
     refreshMCPTools();
+
+    // Re-check the default server once backend detection has finished.
+    refreshDefaultMCPServerWhenBackendReady().catch(error => {
+        console.debug('Failed to update default MCP server:', error);
+    });
     
     // Add server button
     document.getElementById('add-mcp-server-btn')?.addEventListener('click', showAddServerDialog);
@@ -1463,8 +1573,25 @@ async function refreshMCPTools() {
     }
     
     try {
+        const enabledServers = mcpClient.servers.filter(server => server.enabled);
         await mcpClient.fetchAllTools();
+
+        // A transient failure (backend still starting, request aborted) leaves
+        // the tool list empty. Retry once before rendering the empty state.
+        if (enabledServers.length > 0 && mcpClient.getAllTools().length === 0) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await mcpClient.fetchAllTools();
+        }
+
         renderMCPTools();
+
+        if (enabledServers.length > 0 && mcpClient.getAllTools().length === 0) {
+            const container = document.getElementById('mcp-tools-list');
+            if (container) {
+                const urls = enabledServers.map(server => escapeHtml(server.url)).join(', ');
+                container.innerHTML = `<div class="mcp-empty">No tools available. Could not load tools from ${urls}. Check that the server is running and allows requests from this page.</div>`;
+            }
+        }
     } catch (error) {
         alert('Error refreshing tools: ' + error.message);
     } finally {
@@ -1793,6 +1920,16 @@ function showCloudSyncLoggedIn(user) {
     if (infoBar && user.tier) {
         infoBar.setAttribute("data-tier", user.tier);
     }
+
+    // Login stores the session/API key in appStorage. Recreate the client so
+    // subsequent requests use the new key instead of the pre-login instance.
+    // Wait for the addons to finish loading: get_api_key_by_provider() is
+    // provided by a later addon chunk.
+    addonsLoaded
+        .then(() => initClient())
+        .catch((error) => {
+            console.error("Failed to reinitialize client after login:", error);
+        });
 }
 
 function isTokenExpired(expires) {

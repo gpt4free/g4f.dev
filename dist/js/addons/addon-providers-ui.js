@@ -44,10 +44,20 @@ const load_provider_option = (input, provider_name) => {
 };
 
 async function load_providers(providers, provider_options, providersListContainer, providersToggleContainer) {
-    providersToggleContainer = providersToggleContainer || settingsContent;
+    providersToggleContainer = providersToggleContainer
+        || document.getElementById("providers-toggle-container")
+        || settingsContent;
+    // The provider list can be rendered more than once (cached data followed
+    // by a background revalidation, or an OAuth refresh). Rendering is
+    // idempotent: replace our previous entries instead of appending
+    // duplicates to the settings panel.
+    if (providerSelect) {
+        providerSelect.querySelectorAll('optgroup[data-core="true"]').forEach((el) => el.remove());
+    }
     providers.sort((a, b) => a.label.localeCompare(b.label));
     const optGroupCore = document.createElement("optgroup");
     optGroupCore.label = "Core Providers";
+    optGroupCore.dataset.core = "true";
     providers.forEach((provider) => {
         if (provider.hf_space) {
             return;
@@ -75,22 +85,37 @@ async function load_providers(providers, provider_options, providersListContaine
     }
     clearPendingProviderOption();
     if (!document.body.classList.contains("screen-reader")) {
-        let providersContainer = document.createElement("div");
-        providersContainer.classList.add("field", "collapsible");
-        providersContainer.innerHTML = `
-            <div class="collapsible-header">
-                <span class="label">${framework.translate('Providers (Enable/Disable)')}</span>
-                <i class="fa-solid fa-chevron-down"></i>
-            </div>
-            <div class="collapsible-content hidden"></div>
-        `;
-        providersToggleContainer.appendChild(providersContainer);
+        // Reuse the existing container when this is a re-render, so provider
+        // entries added by other modules (e.g. custom servers) survive.
+        let providersContainer = providersToggleContainer.querySelector(".providers-toggle-list");
+        if (!providersContainer) {
+            providersContainer = document.createElement("div");
+            providersContainer.classList.add("field", "collapsible", "providers-toggle-list");
+            providersContainer.innerHTML = `
+                <div class="collapsible-header">
+                    <span class="label">${framework.translate('Providers (Enable/Disable)')}</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </div>
+                <div class="collapsible-content hidden"></div>
+            `;
+            providersToggleContainer.appendChild(providersContainer);
+
+            providersContainer.querySelector(".collapsible-header").addEventListener('click', (e) => {
+                providersContainer.querySelector(".collapsible-content").classList.toggle('hidden');
+                providersContainer.querySelector(".collapsible-header").classList.toggle('active');
+            });
+        }
+        const providersContent = providersContainer.querySelector(".collapsible-content");
+        // Only remove the entries owned by this function; custom server
+        // toggles rendered elsewhere are left untouched.
+        providersContent.querySelectorAll("[data-core-toggle]").forEach((el) => el.remove());
 
         providers.forEach((provider) => {
             if (!provider.parent || provider.name == "Puter") {
                 const name = provider.parent || provider.name;
                 let option = document.createElement("div");
                 option.classList.add("provider-item");
+                option.dataset.coreToggle = "true";
                 let api_key = appStorage.getItem(`${name}-api_key`);
                 option.innerHTML = `
                     <span class="label">${framework.translate("Enable")} ${provider.label}</span>
@@ -98,19 +123,15 @@ async function load_providers(providers, provider_options, providersListContaine
                     <label for="Provider${name}" class="toogle" title="Remove provider from dropdown"></label>
                 `;
                 option.querySelector("input").addEventListener("change", (event) => load_provider_option(event.target, name));
-                providersContainer.querySelector(".collapsible-content").appendChild(option);
+                providersContent.appendChild(option);
                 provider_options[name] = option;
             }
-        });
-
-        providersContainer.querySelector(".collapsible-header").addEventListener('click', (e) => {
-            providersContainer.querySelector(".collapsible-content").classList.toggle('hidden');
-            providersContainer.querySelector(".collapsible-header").classList.toggle('active');
         });
 
         // Add Live Providers toggle
         let liveProvidersToggle = document.createElement("div");
         liveProvidersToggle.classList.add("provider-item");
+        liveProvidersToggle.dataset.coreToggle = "true";
         const liveEnabled = appStorage.getItem("enableLiveProviders") !== "false";
         liveProvidersToggle.innerHTML = `
             <span class="label">Enable Live Providers</span>
@@ -124,11 +145,12 @@ async function load_providers(providers, provider_options, providersListContaine
                 optgroup.disabled = !event.target.checked;
             }
         });
-        providersContainer.querySelector(".collapsible-content").insertBefore(liveProvidersToggle, providersContainer.querySelector(".collapsible-content").firstChild);
+        providersContent.insertBefore(liveProvidersToggle, providersContent.firstChild);
 
         // Add Custom Providers toggle
         let customProvidersToggle = document.createElement("div");
         customProvidersToggle.classList.add("provider-item");
+        customProvidersToggle.dataset.coreToggle = "true";
         const customEnabled = appStorage.getItem("enableCustomProviders") !== "false";
         customProvidersToggle.innerHTML = `
             <span class="label">Enable Custom Providers</span>
@@ -142,19 +164,26 @@ async function load_providers(providers, provider_options, providersListContaine
                 optgroup.disabled = !event.target.checked;
             }
         });
-        providersContainer.querySelector(".collapsible-content").insertBefore(customProvidersToggle, providersContainer.querySelector(".collapsible-content").firstChild.nextSibling);
+        providersContent.insertBefore(customProvidersToggle, providersContent.firstChild.nextSibling);
     }
     load_provider_login_urls(providersListContainer, providers);
     await load_settings(provider_options);
 }
 function load_provider_login_urls(providersListContainer, providers = []) {
+    const content = providersListContainer?.querySelector(".collapsible-content");
+    if (!content) {
+        return;
+    }
+    // Re-rendering (SWR/OAuth refresh) must not append a second copy of the
+    // API key fields.
+    content.querySelectorAll(".provider-login-box").forEach((el) => el.remove());
     for (const provider of providers) {
         if (provider.parent || provider.name == "AnyProvider") {
             continue;
         }
         let childs = providers.filter((p) => p.parent == provider.name).map((p) => p.name);
         let providerBox = document.createElement("div");
-        providerBox.classList.add("field", "box");
+        providerBox.classList.add("field", "box", "provider-login-box");
         if (!provider.active_by_default || appStorage.getItem(`Provider${provider.name}`) === "false") {
             providerBox.classList.add("hidden");
         }
@@ -281,7 +310,7 @@ function load_provider_login_urls(providersListContainer, providers = []) {
                 }
             });
         }
-        providersListContainer.querySelector(".collapsible-content").appendChild(providerBox);
+        content.appendChild(providerBox);
     }
 }
 

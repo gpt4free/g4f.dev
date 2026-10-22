@@ -12,6 +12,28 @@
     <link rel="stylesheet" href="/dist/css/theme.css">
     <style>
         /* ---- Top bar actions ---- */
+        .nav-toggle {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            background: rgba(139, 61, 255, 0.15);
+            border: 1px solid var(--border-card);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 1.15rem;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .nav-toggle:hover {
+            background: var(--accent);
+            border-color: var(--accent-light);
+            box-shadow: 0 0 16px var(--accent-glow);
+        }
+
         .nav-actions {
             display: flex;
             align-items: center;
@@ -38,6 +60,42 @@
             background: var(--accent);
             border-color: var(--accent-light);
             box-shadow: 0 0 16px var(--accent-glow);
+        }
+
+        /* ---- Backend connection indicator ---- */
+        .connect-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            max-width: 320px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: rgba(139, 61, 255, 0.1);
+            border: 1px solid var(--border-card);
+            color: var(--text-secondary);
+            font-size: 0.825rem;
+            font-weight: 600;
+            font-family: inherit;
+            text-decoration: none;
+            transition: all 0.25s ease;
+        }
+
+        .connect-status:hover {
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+        }
+
+        .connect-status .connect-label {
+            color: var(--text-muted);
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .connect-status .connect-url {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--accent-light);
         }
 
         /* ---- Main layout ---- */
@@ -337,12 +395,92 @@
         .p-badge.image { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
 
         @media (max-width: 992px) {
+            .navbar {
+                flex-wrap: wrap;
+            }
+
+            .nav-toggle {
+                display: flex;
+            }
+
+            .nav-actions {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+                max-height: calc(100dvh - 73px);
+                overflow-y: auto;
+                padding: 1rem 1.25rem 1.25rem;
+                background: rgba(12, 10, 18, 0.98);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                border-bottom: 1px solid var(--border-card);
+                box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+            }
+
+            .nav-actions.open {
+                display: flex;
+            }
+
+            .nav-links {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0;
+            }
+
+            .nav-links a {
+                padding: 12px 8px;
+                border-radius: 8px;
+                font-size: 1rem;
+            }
+
+            .nav-links a:hover,
+            .nav-links a.active {
+                background: rgba(139, 61, 255, 0.15);
+            }
+
+            .connect-status {
+                max-width: none;
+                width: 100%;
+            }
+
+            .status-badge {
+                justify-content: center;
+            }
+
+            .btn-toggle-sidebar {
+                justify-content: center;
+                width: 100%;
+            }
+
             .tools-grid {
                 grid-template-columns: 1fr;
             }
             .sidebar {
                 width: 100%;
                 top: 73px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .brand-text {
+                font-size: 1.15rem;
+            }
+
+            .content-area {
+                padding: 2rem 1.1rem;
+            }
+
+            .search-input {
+                padding: 16px 120px 16px 18px;
+            }
+
+            .search-btn {
+                padding: 0 16px;
             }
         }
     </style>
@@ -357,13 +495,21 @@
             </div>
             <span class="brand-text">G4F Framework</span>
         </a>
-        <div class="nav-actions">
+        <button class="nav-toggle" id="nav-toggle-btn" type="button" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="nav-actions">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="nav-actions" id="nav-actions">
             <nav class="nav-links">
                 <a href="/">Home</a>
                 <a href="/chat/">Chat</a>
                 <a href="/providers/">Providers</a>
                 <a href="/stats/">Stats</a>
             </nav>
+            <a class="connect-status" id="connect_status" href="#" target="_blank" rel="noopener" title="Connected backend URL">
+                <i class="fa-solid fa-plug"></i>
+                <span class="connect-label">Connect to</span>
+                <span class="connect-url" id="connect-status-url">connecting…</span>
+            </a>
             <div class="status-badge" id="backend-status-badge">
                 <span class="status-dot"></span>
                 <span id="backend-status-text">Backend Active</span>
@@ -605,6 +751,34 @@
             sidebar.classList.toggle('collapsed');
         });
 
+        // Responsive navigation menu
+        const navToggleBtn = document.getElementById('nav-toggle-btn');
+        const navActions = document.getElementById('nav-actions');
+        const navToggleIcon = navToggleBtn.querySelector('i');
+
+        function setNavOpen(open) {
+            navActions.classList.toggle('open', open);
+            navToggleBtn.setAttribute('aria-expanded', String(open));
+            navToggleBtn.setAttribute('aria-label', open ? 'Close navigation menu' : 'Open navigation menu');
+            navToggleIcon.className = open ? 'fa-solid fa-xmark' : 'fa-solid fa-bars';
+        }
+
+        navToggleBtn.addEventListener('click', () => {
+            setNavOpen(!navActions.classList.contains('open'));
+        });
+
+        navActions.addEventListener('click', (event) => {
+            if (event.target.closest('a, button')) setNavOpen(false);
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') setNavOpen(false);
+        });
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 992) setNavOpen(false);
+        });
+
         // Fetch Providers for Sidebar
         async function loadProviders() {
             try {
@@ -666,13 +840,34 @@
         }
 
 
+        // Show the backend URL the page is currently connected to
+        const connectStatusEl = document.getElementById("connect_status");
+        const connectStatusUrlEl = document.getElementById("connect-status-url");
+
+        function renderConnectStatus() {
+            if (framework.backendUrl) {
+                connectStatusEl.href = framework.backendUrl;
+                connectStatusUrlEl.textContent = framework.backendUrl;
+                connectStatusEl.title = `Connect to ${framework.backendUrl}`;
+            } else {
+                connectStatusEl.removeAttribute("href");
+                connectStatusUrlEl.textContent = framework.translate("not connected", false);
+                connectStatusEl.title = framework.translate("No backend connected", false);
+            }
+        }
+
         localStorage.removeItem("backendUrl");
-        // document.getElementById("connect_status")
-        framework.connectToBackend().then(() => {
-            loadProviders();
-            checkBackendStatus();
-        }).catch((err) => {
-            console.error('Failed to connect to backend', err);
+        // framework.js is loaded with `defer`, so wait until it has executed
+        // before touching the `framework` global.
+        document.addEventListener("DOMContentLoaded", () => {
+            framework.connectToBackend().then(() => {
+                renderConnectStatus();
+                loadProviders();
+                checkBackendStatus();
+            }).catch((err) => {
+                renderConnectStatus();
+                console.error('Failed to connect to backend', err);
+            });
         });
     </script>
 </body>

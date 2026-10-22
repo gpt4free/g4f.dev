@@ -87,16 +87,25 @@ class MCPClient {
             throw new Error('Server with this URL already exists');
         }
 
-        this.servers.push({
+        const entry = {
             id: Date.now().toString(),
             name: server.name,
             url: server.url,
             enabled: true
-        });
+        };
+        if (server.auto) {
+            entry.auto = true;
+        }
+        if (server.serverSseAcceptHeader) {
+            entry.serverSseAcceptHeader = server.serverSseAcceptHeader;
+        }
+        this.servers.push(entry);
         this.saveServers();
         
         // Fetch tools from the new server
-        this.fetchTools(server.url);
+        this.fetchTools(server.url).catch(() => {
+            // The UI reports unreachable servers when its refresh completes.
+        });
     }
 
     /**

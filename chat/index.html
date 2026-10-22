@@ -5,6 +5,22 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+    <!--
+      Content Security Policy.
+      Delivered as a meta tag so it also applies on GitHub Pages, which cannot
+      send custom HTTP headers. Keep it in sync with the resources the chat
+      actually loads:
+        - cdn.jsdelivr.net / esm.run / js.puter.com: CDN scripts and ESM imports
+        - www.youtube.com: YouTube IFrame API and embeds
+        - fonts.googleapis.com / fonts.gstatic.com: Google Fonts
+        - connect-src https:/wss: arbitrary OpenAI-compatible provider APIs
+        - 'unsafe-inline' / 'unsafe-eval': inline bootstrap scripts and the
+          addon loader (new Function); removing them breaks the app
+      frame-ancestors/report-uri are omitted because browsers ignore them in
+      meta-delivered policies.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net https://esm.run https://js.puter.com https://www.youtube.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; img-src 'self' data: blob: https: http://localhost:* http://127.0.0.1:*; font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com; connect-src 'self' https: wss: blob: data: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*; media-src 'self' data: blob: https: http://localhost:* http://127.0.0.1:*; frame-src 'self' data: blob: https://www.youtube.com https://www.youtube-nocookie.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" />
+
     <title>G4F Chat - Conversational AI that Listens, Learns, and Challenges</title>
 
     <!-- Improved meta description with relevant keywords -->
@@ -42,8 +58,9 @@
 
     <link rel="icon" href="/dist/img/g4f.svg" type="image/svg+xml">
     <link rel="shortcut icon" href="/dist/img/g4f.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/dist/img/g4f.svg">
-    <link rel="manifest" href="/dist/img/site.webmanifest">
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/g4f-180x180.png">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <meta name="theme-color" content="#0b0a10">
 
     <script src="/dist/js/web-mcp.js?v={{ v }}"></script>
     <script src="/dist/js/mcp-client.js?v={{ v }}"></script>
@@ -59,6 +76,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jsencrypt/bin/jsencrypt.min.js" defer></script>
     <script src="/dist/js/sanitize-html.js" async></script>
     <script src="/dist/js/titlebar.js?v={{ v }}" defer></script>
+    <script src="/chat/pwa.js" defer></script>
     <script type="module">
         import container from "/dist/js/providers.js";
         for (const [key, value] of Object.entries(container)) {
