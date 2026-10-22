@@ -220,6 +220,7 @@
         "Answers are generated automatically and can be wrong, incomplete or biased — never rely on them without verification.",
         "This chat is powered by artificial intelligence.",
         "Your messages are forwarded to third-party AI providers and may be processed there. Please don't share personal or confidential information.",
+        "Conversations are stored locally on your device by default; cloud sync is strictly opt-in.",
         "Privacy",
         "Privacy Policy",
         "Terms",

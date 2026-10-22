@@ -7,7 +7,7 @@
     <meta name="description" content="Terms of Service of the GPT4Free project (g4f.dev). Rules of use, liability limitations and user obligations for the free AI chat interface.">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://g4f.dev/terms.html">
-    <link rel="icon" href="dist/img/g4f.svg" type="image/svg+xml">
+    <link rel="icon" href="/dist/img/g4f.svg" type="image/svg+xml">
     <style>
         :root {
             --primary: #c4f06c;
@@ -52,7 +52,7 @@
 
     <header>
         <h1>Terms of Service</h1>
-        <p class="meta">Last updated: October 3, 2026 | Version 1.1</p>
+        <p class="meta">Last updated: October 22, 2026 | Version 1.2</p>
     </header>
 
     <p class="lang-switch">
@@ -64,20 +64,23 @@
         <div class="legal-en">
             <strong>Short version:</strong> This is a free, non-commercial open-source tool provided "as is" by a
             privately hosted developer in Germany. Use it lawfully, don't abuse it, and don't rely on it for
-            anything critical. AI answers can be wrong — you are responsible for what you do with them. The
-            homepage and documentation may show ads from Google AdSense; usage logs and parts of prompts may be
-            stored for up to 14 days to detect abuse and multiple accounts, and account data of optional member
-            accounts is kept for at least 90 days (see <a href="privacy.html">Privacy Policy</a>).
+            anything critical. AI answers can be wrong — you are responsible for what you do with them. Conversations
+            are stored strictly on your local device by default; server or cloud storage is entirely opt-in and
+            client-side encrypted. The homepage and documentation may show ads from Google AdSense; usage logs and
+            parts of prompts may be stored for up to 14 days to detect abuse and multiple accounts, and account data
+            of optional member accounts is kept for at least 90 days (see <a href="/privacy.html">Privacy Policy</a>).
         </div>
         <div class="legal-de" lang="de">
             <strong>Kurzfassung:</strong> Dies ist ein kostenloses, nicht-kommerzielles Open-Source-Tool, das
             „wie besehen“ von einem privat gehosteten Entwickler in Deutschland bereitgestellt wird. Nutzen Sie
             es rechtmäßig, missbrauchen Sie es nicht und verlassen Sie sich nicht auf es für Kritisches.
-            KI-Antworten können falsch sein — Sie sind verantwortlich für das, was Sie damit tun. Auf der
+            KI-Antworten können falsch sein — Sie sind verantwortlich für das, was Sie damit tun. Unterhaltungen
+            werden standardmäßig ausschließlich lokal auf Ihrem Endgerät gespeichert; eine serverseitige Synchronisierung
+            erfolgt rein optional per Opt-in und im Cloud-Modus clientseitig verschlüsselt. Auf der
             Startseite und in der Dokumentation kann Werbung von Google AdSense erscheinen; Nutzungsprotokolle
             und Prompt-Teile können zur Erkennung von Missbrauch und Mehrfachkonten bis zu 14 Tage gespeichert
             werden, Kontodaten optionaler Mitgliedskonten mindestens 90 Tage (siehe
-            <a href="privacy.html">Datenschutzerklärung</a>).
+            <a href="/privacy.html">Datenschutzerklärung</a>).
         </div>
     </div>
 
@@ -89,8 +92,8 @@
             These Terms of Service ("Terms") govern the use of the website g4f.dev and its chat interface
             (<a href="/chat/">/chat/</a>, the "Service"). The Service is provided by the private operator of
             the GPT4Free project, a privately hosted developer located in Germany (the "Operator"), as a
-            non-commercial open-source project. Contact: <a href="https://g4f.dev/community" target="_blank" rel="noopener noreferrer">g4f.dev/community</a>;
-            legal information: see <a href="privacy.html">Privacy Policy</a>.
+            non-commercial open-source project. Contact: <a href="https://g4f.dev/community.html" target="_blank" rel="noopener noreferrer">g4f.dev/community</a>;
+            legal information: see <a href="/privacy.html">Privacy Policy</a>.
         </p>
 
         <h2>2. Nature of the Service — experimental AI proxy</h2>
@@ -104,7 +107,7 @@
         <h2>3. Acceptable use</h2>
         <p>You agree <strong>not</strong> to use the Service to:</p>
         <ul>
-            <li>violate applicable law, in particular German or European law (e.g. §§ 130, 131, 166, 184, 201, 202, 263 ff., 269 StGB; Art. 2 EU AI Act prohibitions);</li>
+            <li>violate applicable law, in particular German or European law (e.g. §§ 130, 131, 166, 184, 201, 202, 263 ff., 269 StGB; Art. 5 EU AI Act prohibitions — Regulation (EU) 2024/1689);</li>
             <li>generate or distribute content that is illegal, harmful, threatening, abusive, harassing, defamatory, hateful, or that sexualizes minors;</li>
             <li>generate malware, phishing content, or content for attacks on IT systems;</li>
             <li>impersonate others, spread disinformation, or violate third-party rights (copyright, trademark, personality rights, trade secrets);</li>
@@ -115,16 +118,31 @@
         <p>
             To enforce these rules, usage logs and excerpts of prompts and responses may be stored for up to
             14 days and account data of optional member accounts for at least 90 days (see
-            <a href="privacy.html">Privacy Policy</a>, section 2). The Operator may block access for
+            <a href="/privacy.html">Privacy Policy</a>, section 2). The Operator may block access for
             violations. Since the Service is free and non-commercial, there is no claim to continued access.
         </p>
 
-        <h2>4. User responsibility for prompts and outputs</h2>
+        <h2>4. User responsibility for prompts, outputs, and conversation storage</h2>
         <p>
             You are solely responsible for the prompts you submit and for how you use the generated outputs.
             You acknowledge that your prompts are forwarded to third-party providers whose data handling is
-            outside the Operator's control (see <a href="privacy.html">Privacy Policy</a>, section 4).
+            outside the Operator's control (see <a href="/privacy.html">Privacy Policy</a>, section 4).
             <strong>Do not submit confidential, personal or sensitive data.</strong>
+        </p>
+        <p>
+            <strong>Where conversations are stored:</strong> By default, all conversations, chat histories, and
+            local settings are stored exclusively on your local device (in browser local storage / IndexedDB).
+            The Operator does not host or store your conversations centrally by default.
+        </p>
+        <p>
+            <strong>Opt-in synchronization (Secret Storage):</strong> If you use an optional member account, you
+            may choose to enable cross-device conversation synchronization (Secret Storage / Cloud Sync). This
+            feature is strictly opt-in and disabled by default. When cloud synchronization is enabled, your
+            conversations are encrypted client-side using authenticated end-to-end encryption (AES-256-GCM) with
+            your personal secret key before leaving your device; the Operator has no technical ability to decrypt
+            or read your stored conversations. You are responsible for safeguarding your secret key. You may disable
+            synchronization, export your conversation data, or delete conversations from local and remote storage
+            at any time.
         </p>
 
         <h2>5. Third-party providers and advertising</h2>
@@ -138,7 +156,7 @@
             The homepage and documentation may display advertising served by Google AdSense. The ads are
             provided by Google as a third party; the Operator has no control over their content and is not
             liable for it. Details on the associated data processing can be found in the
-            <a href="privacy.html">Privacy Policy</a>, section 7. The chat itself remains free of advertising.
+            <a href="/privacy.html">Privacy Policy</a>, section 7. The chat itself remains free of advertising.
         </p>
 
         <h2>6. Limitation of liability</h2>
@@ -183,8 +201,8 @@
             Chat-Oberfläche (<a href="/chat/">/chat/</a>, der „Dienst“). Der Dienst wird vom privaten
             Betreiber des GPT4Free-Projekts, einem privat gehosteten Entwickler mit Sitz in Deutschland
             (der „Betreiber“), als nicht-kommerzielles Open-Source-Projekt bereitgestellt. Kontakt:
-            <a href="https://g4f.dev/community" target="_blank" rel="noopener noreferrer">g4f.dev/community</a>;
-            rechtliche Angaben: siehe <a href="privacy.html">Datenschutzerklärung</a>.
+            <a href="https://g4f.dev/community.html" target="_blank" rel="noopener noreferrer">g4f.dev/community</a>;
+            rechtliche Angaben: siehe <a href="/privacy.html">Datenschutzerklärung</a>.
         </p>
 
         <h2>2. Art des Dienstes — experimenteller KI-Proxy</h2>
@@ -198,7 +216,7 @@
         <h2>3. Zulässige Nutzung</h2>
         <p>Sie verpflichten sich, den Dienst <strong>nicht</strong> zu verwenden, um:</p>
         <ul>
-            <li>geltendes Recht zu verletzen, insbesondere deutsches bzw. europäisches Recht (z.&nbsp;B. §§ 130, 131, 166, 184, 201, 202, 263 ff., 269 StGB; Verbote nach Art. 2 EU AI Act);</li>
+            <li>geltendes Recht zu verletzen, insbesondere deutsches bzw. europäisches Recht (z.&nbsp;B. §§ 130, 131, 166, 184, 201, 202, 263 ff., 269 StGB; Verbote nach Art. 5 EU AI Act — KI-Verordnung (EU) 2024/1689);</li>
             <li>rechtswidrige, schädigende, bedrohliche, missbräuchliche, belästigende, verleumderische oder hasserfüllte Inhalte zu erzeugen oder zu verbreiten, insbesondere solche, die Minderjährige sexualisieren;</li>
             <li>Schadsoftware, Phishing-Inhalte oder Inhalte für Angriffe auf IT-Systeme zu erzeugen;</li>
             <li>sich als andere auszugeben, Desinformation zu verbreiten oder Rechte Dritter (Urheberrecht, Marken, Persönlichkeitsrechte, Geschäftsgeheimnisse) zu verletzen;</li>
@@ -209,18 +227,33 @@
         <p>
             Zur Durchsetzung dieser Regeln können Nutzungsprotokolle und Auszüge aus Prompts und Antworten bis
             zu 14 Tage sowie Kontodaten optionaler Mitgliedskonten mindestens 90 Tage gespeichert werden (siehe
-            <a href="privacy.html">Datenschutzerklärung</a>, Abschnitt 2). Der Betreiber darf bei Verstößen den
+            <a href="/privacy.html">Datenschutzerklärung</a>, Abschnitt 2). Der Betreiber darf bei Verstößen den
             Zugang sperren. Da der Dienst kostenlos und nicht-kommerziell ist, besteht kein Anspruch auf
             fortgesetzte Nutzung.
         </p>
 
-        <h2>4. Verantwortung für Prompts und Ergebnisse</h2>
+        <h2>4. Verantwortung für Prompts, Ergebnisse und Unterhaltungsspeicherung</h2>
         <p>
             Sie sind allein verantwortlich für die von Ihnen übermittelten Prompts und für die Verwendung der
             erzeugten Ergebnisse. Sie erkennen an, dass Ihre Prompts an externe Anbieter weitergeleitet
             werden, deren Datenverarbeitung außerhalb der Kontrolle des Betreibers liegt (siehe
-            <a href="privacy.html">Datenschutzerklärung</a>, Abschnitt 4).
+            <a href="/privacy.html">Datenschutzerklärung</a>, Abschnitt 4).
             <strong>Übermitteln Sie keine vertraulichen, personenbezogenen oder sensiblen Daten.</strong>
+        </p>
+        <p>
+            <strong>Speicherort von Unterhaltungen:</strong> Standardmäßig werden sämtliche Unterhaltungen,
+            Chatverläufe und lokalen Einstellungen ausschließlich auf Ihrem eigenen Endgerät (im Browser-Speicher /
+            IndexedDB) abgelegt. Der Betreiber speichert Ihre Unterhaltungen standardmäßig nicht zentral.
+        </p>
+        <p>
+            <strong>Opt-in-Synchronisierung (Secret Storage):</strong> Sofern Sie ein optionales Mitgliedskonto nutzen,
+            können Sie eine geräteübergreifende Synchronisierung Ihrer Unterhaltungen aktivieren (Secret Storage /
+            Cloud Sync). Diese Funktion ist rein freiwillig (Opt-in) und standardmäßig deaktiviert. Im Cloud-Modus
+            werden Ihre Unterhaltungen vor dem Verlassen Ihres Geräts clientseitig mit AES-256-GCM Ende-zu-Ende
+            verschlüsselt; der Betreiber hat keinerlei technische Möglichkeit, Ihre gespeicherten Unterhaltungen im
+            Klartext zu entschlüsseln oder einzusehen. Sie sind selbst für die sichere Aufbewahrung Ihres geheimen
+            Schlüssels verantwortlich. Sie können die Synchronisierung jederzeit deaktivieren, Ihre Unterhaltungen
+            lokal exportieren sowie Unterhaltungen aus dem lokalen Speicher und dem Remote-Speicher dauerhaft löschen.
         </p>
 
         <h2>5. Externe Anbieter und Werbung</h2>
@@ -234,7 +267,7 @@
             Auf der Startseite und in der Dokumentation kann Werbung über Google AdSense eingeblendet werden.
             Die Werbung wird von Google als Drittemittent bereitgestellt; der Betreiber hat keinen Einfluss auf
             deren Inhalt und haftet nicht dafür. Details zur damit verbundenen Datenverarbeitung finden Sie in
-            der <a href="privacy.html">Datenschutzerklärung</a>, Abschnitt 7. Der Chat selbst bleibt werbefrei.
+            der <a href="/privacy.html">Datenschutzerklärung</a>, Abschnitt 7. Der Chat selbst bleibt werbefrei.
         </p>
 
         <h2>6. Haftungsbegrenzung</h2>
@@ -270,8 +303,14 @@
     </div>
 
     <footer>
-        <a href="/">← Return to GPT4Free Home</a> ·
-        <a href="privacy.html">Privacy Policy</a>
+        <div class="legal-en">
+            <a href="/">← Return to GPT4Free Home</a> ·
+            <a href="/privacy.html">Privacy Policy</a>
+        </div>
+        <div class="legal-de" lang="de">
+            <a href="/">← Zurück zur Startseite</a> ·
+            <a href="/privacy.html">Datenschutzerklärung</a>
+        </div>
     </footer>
 
 </body>

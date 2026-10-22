@@ -214,7 +214,7 @@
     </style>
     <script src="dist/js/framework.js" defer></script>
 </head>
-<body>
+<body class="translate">
     <div class="wrap">
         <header>
             <h1>🌐 Language Selection</h1>
@@ -254,6 +254,23 @@
         "use strict";
 
         const TRANSLATIONS_URL = "https://beta.g4f.dev/challenge/translations";
+
+        // Translation helpers: `t()` resolves a single UI text through the
+        // community translation store, `tpl()` resolves a template with
+        // {0}, {1}, ... placeholders and fills them afterwards (the
+        // translation keeps the placeholders intact).
+        function t(text) {
+            try {
+                return (window.framework && framework.translate) ? framework.translate(text, false) : text;
+            } catch (e) {
+                return text;
+            }
+        }
+        function tpl(template, ...args) {
+            return t(template).replace(/{(\d+)}/g, (match, index) =>
+                typeof args[index] !== "undefined" ? args[index] : match
+            );
+        }
 
         // Popular target languages shown even when nothing is translated yet,
         // so every visitor can see where their language stands (0%).
@@ -337,8 +354,8 @@
                 const continueBtn = document.createElement("button");
                 continueBtn.id = "continue-btn";
                 continueBtn.className = "primary";
-                continueBtn.textContent = continueLabel();
-                continueBtn.title = "Continue without loading a language package";
+                continueBtn.textContent = t(continueLabel());
+                continueBtn.title = t("Continue without loading a language package");
                 continueBtn.addEventListener("click", notifyParentDismiss);
                 header.appendChild(continueBtn);
             };
@@ -355,7 +372,7 @@
 
         async function refresh() {
             const listEl = document.getElementById("lang-list");
-            listEl.innerHTML = '<div class="loading">Loading languages…</div>';
+            listEl.innerHTML = `<div class="loading">${escapeHtml(t("Loading languages…"))}</div>`;
             try {
                 listing = await framework.listGlobalTranslations();
             } catch (e) {
@@ -365,7 +382,7 @@
                 render();
                 const banner = document.createElement("div");
                 banner.className = "error";
-                banner.textContent = `Community store unreachable (${String(e.message || e)}) — showing available languages with 0%.`;
+                banner.textContent = tpl("Community store unreachable ({0}) — showing available languages with 0%.", String(e.message || e));
                 listEl.prepend(banner);
                 return;
             }
@@ -413,22 +430,26 @@
                         <div class="lang-name">
                             ${escapeHtml(langName(entry.language))}
                             <code>${escapeHtml(entry.language)}</code>
-                            ${isCurrent ? '<span class="badge">your language</span>' : ""}
-                            ${isSelected ? '<span class="badge local">selected</span>' : inStore ? '<span class="badge local">loaded</span>' : ""}
+                            ${isCurrent ? `<span class="badge">${escapeHtml(t("your language"))}</span>` : ""}
+                            ${isSelected ? `<span class="badge local">${escapeHtml(t("selected"))}</span>` : inStore ? `<span class="badge local">${escapeHtml(t("loaded"))}</span>` : ""}
                         </div>
                         <div class="bar"><div class="bar-fill${percent ? "" : " zero"}" style="width:${percent || 0}%"></div></div>
                         <div class="lang-meta">${
                             percent === null
-                                ? `${count} translations`
-                                : `${percent}% translated — ${count}${totalShown ? ` / ${totalShown}` : ""} texts, ${entry.remaining ?? "?"} remaining`
+                                ? tpl("{0} translations", count)
+                                : tpl("{0}% translated — {1}{2} texts, {3} remaining",
+                                        percent,
+                                        count,
+                                        totalShown ? ` / ${totalShown}` : "",
+                                        entry.remaining ?? "?")
                         }</div>
                     </div>
                     <div class="lang-actions">
                         ${entry.seed
-                            ? `<a class="small" style="color:var(--lime);font-size:12px;align-self:center" href="https://g4f.dev/chat/" title="Solve translation challenges in chat">Start translating →</a>`
+                            ? `<a class="small" style="color:var(--lime);font-size:12px;align-self:center" href="https://g4f.dev/chat/" title="${escapeHtml(t("Solve translation challenges in chat"))}">${escapeHtml(t("Start translating →"))}</a>`
                             : isSelected
-                                ? `<button class="small danger" data-action="unload" data-lang="${escapeHtml(entry.language)}">🗑️ Unload</button>`
-                                : `<button class="small primary" data-action="load" data-lang="${escapeHtml(entry.language)}">⬇️ Load</button>`}
+                                ? `<button class="small danger" data-action="unload" data-lang="${escapeHtml(entry.language)}">${escapeHtml(t("🗑️ Unload"))}</button>`
+                                : `<button class="small primary" data-action="load" data-lang="${escapeHtml(entry.language)}">${escapeHtml(t("⬇️ Load"))}</button>`}
                     </div>`;
                 listEl.appendChild(row);
             }
@@ -449,13 +470,13 @@
                     }
                     const entry = await framework.loadGlobalTranslations(lang);
                     framework.setSelectedLanguage(lang);
-                    toast(`Loaded ${entry.count} translations for "${lang}" — "${previous && previous !== lang ? previous : "nothing"}" unloaded`);
+                    toast(tpl("Loaded {0} translations for \"{1}\" — \"{2}\" unloaded", entry.count, lang, previous && previous !== lang ? previous : "nothing"));
                     notifyParent("load", lang);
                 } else if (action === "unload") {
                     const cleared = framework.clearTranslations(lang);
                     if (framework.deleteAllTranslations) framework.deleteAllTranslations();
                     if (cleared) notifyParent("unload", lang);
-                    toast(cleared ? `Unloaded "${lang}"` : `"${lang}" was not loaded`, !cleared);
+                    toast(cleared ? tpl("Unloaded \"{0}\"", lang) : tpl("\"{0}\" was not loaded", lang), !cleared);
                 }
                 render();
             } catch (e) {
@@ -479,12 +500,12 @@
                 }
                 const entry = await framework.loadGlobalTranslations(lang);
                 framework.setSelectedLanguage(baseLang(entry.language));
-                toast(`Loaded ${entry.count} translations for "${entry.language}"`);
+                toast(tpl("Loaded {0} translations for \"{1}\"", entry.count, entry.language));
                 notifyParent("load", baseLang(entry.language));
                 render();
             } catch (e) {
                 toast(String(e.message || e) === "invalid_language"
-                    ? "English is the source language — nothing to load"
+                    ? t("English is the source language — nothing to load")
                     : String(e.message || e), true);
             } finally {
                 btn.disabled = false;
@@ -501,7 +522,7 @@
                     framework.setSelectedLanguage(null);
                     notifyParent("unload", selected);
                 }
-                toast(cleared ? `Unloaded "${selected}" — reload pages to re-translate` : "No language selected", !cleared);
+                toast(cleared ? tpl("Unloaded \"{0}\" — reload pages to re-translate", selected) : t("No language selected"), !cleared);
                 render();
             } finally {
                 btn.disabled = false;
@@ -512,10 +533,10 @@
             const btn = event.currentTarget;
             const key = document.getElementById("admin-key").value.trim();
             if (!key) {
-                toast("Enter the admin key first", true);
+                toast(t("Enter the admin key first"), true);
                 return;
             }
-            if (!confirm("Clear the WHOLE community translation store on the server?")) return;
+            if (!confirm(t("Clear the WHOLE community translation store on the server?"))) return;
             btn.disabled = true;
             try {
                 const res = await fetch(TRANSLATIONS_URL, {
@@ -524,12 +545,12 @@
                 });
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) {
-                    toast(`Server clear failed: ${data.error || res.status}`, true);
+                    toast(tpl("Server clear failed: {0}", data.error || res.status), true);
                     return;
                 }
                 framework.clearTranslations();
                 framework.setSelectedLanguage(null);
-                toast(`Server store cleared (${data.count} language(s))`);
+                toast(tpl("Server store cleared ({0} language(s))", data.count));
                 await refresh();
             } catch (e) {
                 toast(String(e.message || e), true);

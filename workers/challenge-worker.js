@@ -270,8 +270,9 @@ function baseLanguage(tag) {
  *  ({ "<headline>": ["text", ...] }). The headline doubles as the
  *  translation context — "Send" means something else under "Message Input"
  *  than under "Legal & About". One catalog per page (chat, index, home,
- *  members, manifesto) is fetched and merged; groups starting with "_"
- *  are metadata and dropped. Cached in module scope (isolate lifetime). */
+ *  members, manifesto, stats, language-selection) is fetched and merged;
+ *  groups starting with "_" are metadata and dropped. Cached in module scope
+ *  (isolate lifetime). */
 const SNIPPET_PAGES = [
     "chat",
     "index",
@@ -280,6 +281,8 @@ const SNIPPET_PAGES = [
     "manifesto",
     "community",
     "playground",
+    "stats",
+    "language-selection",
 ];
 let snippetsCache = null;
 let snippetsKeys = null;

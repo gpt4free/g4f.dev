@@ -1,0 +1,57 @@
+{
+    "_meta": {
+        "page": "language-selection",
+        "comment": "UI text snippets of the language selection page (language-selection.html) grouped by the headline/title of the section they appear in. The group name is sent as translation context alongside each snippet in the challenge worker's batch translation challenges (kind=translations). Groups starting with '_' are metadata. Mirrors dist/js/snippets/chat.context.json."
+    },
+    "Header": [
+        "🌐 Language Selection",
+        "Refresh",
+        "Community UI translations — coverage per language, load packages into your local store or clear them.",
+        "Continue",
+        "Continue without loading a language package"
+    ],
+    "Statistics": [
+        "Languages started",
+        "UI snippets total",
+        "Your language"
+    ],
+    "Toolbar": [
+        "⬇️ Load my language",
+        "🗑️ Unload selected language",
+        "☁️ Clear server store",
+        "Only one language package stays loaded — loading another unloads the previous one.",
+        "Admin key (server clear)"
+    ],
+    "Language List": [
+        "Loading languages…",
+        "your language",
+        "selected",
+        "loaded",
+        "{0} translations",
+        "{0}% translated — {1}{2} texts, {3} remaining",
+        "⬇️ Load",
+        "🗑️ Unload",
+        "Start translating →",
+        "Solve translation challenges in chat"
+    ],
+    "Footer": [
+        "Translations are contributed by the community via",
+        "chat translation challenges",
+        "— solve challenges with your local model to earn cakes and fill your language. See the",
+        "docs"
+    ],
+    "Messages": [
+        "Enter the admin key first",
+        "Clear the WHOLE community translation store on the server?",
+        "No language selected",
+        "Loaded {0} translations for \"{1}\" — \"{2}\" unloaded",
+        "Loaded {0} translations for \"{1}\"",
+        "Unloaded \"{0}\"",
+        "\"{0}\" was not loaded",
+        "Unloaded \"{0}\" — reload pages to re-translate",
+        "Server store cleared ({0} language(s))",
+        "Server clear failed: {0}",
+        "English is the source language — nothing to load",
+        "Community store unreachable ({0}) — showing available languages with 0%."
+    ]
+}

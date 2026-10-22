@@ -509,7 +509,7 @@
     </style>
     <script src="dist/js/framework.js" defer></script>
 </head>
-<body>
+<body class="translate">
     <!-- Navigation -->
     <nav class="navbar">
         <a href="/" class="brand">
@@ -766,10 +766,10 @@
                 const res = await fetch(`${framework.backendUrl}/backend-api/v2/providers`);
                 if (!res.ok) throw new Error('Failed to fetch');
                 allProviders = await res.json();
-                countEl.textContent = `${allProviders.length} Total`;
+                countEl.textContent = `${allProviders.length} ${framework.translate("Total", false)}`;
                 renderSidebarProviders(allProviders);
             } catch (err) {
-                providersListEl.innerHTML = '<div style="text-align:center; padding: 2rem; color: #ef4444;">Failed to load providers</div>';
+                providersListEl.innerHTML = `<div style="text-align:center; padding: 2rem; color: #ef4444;">${framework.translate("Failed to load providers", false)}</div>`;
             }
         }
 
@@ -784,7 +784,7 @@
 
         function renderSidebarProviders(list) {
             if (!list.length) {
-                providersListEl.innerHTML = '<div style="text-align:center; padding: 1.5rem; color: var(--text-muted);">No providers match filter</div>';
+                providersListEl.innerHTML = `<div style="text-align:center; padding: 1.5rem; color: var(--text-muted);">${framework.translate("No providers match filter", false)}</div>`;
                 return;
             }
             providersListEl.innerHTML = list.map(p => {
@@ -815,7 +815,7 @@
                 const res = await fetch(`${framework.backendUrl}/backend-api/v2/status`);
                 if (res.ok) {
                     const data = await res.json();
-                    document.getElementById('backend-status-text').textContent = `v${data.version || '2.0'} Active`;
+                    document.getElementById('backend-status-text').textContent = `v${data.version || '2.0'} ${framework.translate("Active", false)}`;
                 }
             } catch (e) {}
         }

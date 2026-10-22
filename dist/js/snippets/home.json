@@ -3,30 +3,68 @@
         "page": "home",
         "comment": "UI text snippets of the framework start page (home.html) grouped by the headline/title of the section they appear in. The group name is sent as translation context alongside each snippet in the challenge worker's batch translation challenges (kind=translations). Groups starting with '_' are metadata. Mirrors dist/js/snippets/chat.context.json."
     },
-    "Providers Sidebar": [
-        "Providers",
-        "Toggle providers",
-        "⚡ Our Providers",
-        "Loading providers…",
-        "Failed to load providers",
-        "View All Providers →"
+    "Navigation": [
+        "G4F Framework",
+        "Backend Active",
+        "Active",
+        "Providers"
     ],
-    "Main": [
-        "G4F - Chat",
-        "Welcome to the G4F Web UI!",
-        "Your AI assistant is ready to assist you.",
-        "Connected to:"
+    "Hero": [
+        "G4F AI Tools & Dashboard",
+        "Access high-performance AI tools, web search, real-time backend logs, model status, and multi-provider endpoints.",
+        "Ask AI or enter prompt to jump straight into chat...",
+        "Launch"
     ],
-    "Buttons": [
+    "Backend Tools & Modules": [
+        "Backend Tools & Modules",
+        "Web Search",
+        "AI Web Browser",
+        "Search the live web with AI assistance, scrape pages, summarize news, and extract real-time web context.",
+        "Open Browser",
+        "Inspector",
+        "Backend Logs",
+        "Inspect real-time API logs, track prompt executions, audit incoming requests, and view system trace logs.",
+        "View Logs",
+        "Analytics",
+        "Usage & Statistics",
+        "Detailed request breakdown, token usage stats, top model performance metrics, and usage history charts.",
+        "View Stats",
+        "Health Monitor",
+        "System & Provider Status",
+        "Real-time availability monitoring, quota limits, working model endpoints, and service health check.",
+        "Check Status",
+        "Catalog",
+        "AI Providers Catalog",
+        "Explore 100+ supported free & auth-based AI provider integrations, supported vision models, and streaming capabilities.",
+        "Explore Providers",
+        "Chat Interface",
+        "G4F Chat Assistant",
+        "Full-featured conversational UI supporting multi-model switches, custom prompts, code highlighting, and session memory.",
         "Start Chat",
-        "Playground",
-        "Login",
-        "Logout",
-        "You are logged in",
-        "Logged in with Hugging Face"
+        "Generative",
+        "AI Image Studio",
+        "Generate images using Flux, Stable Diffusion, Pollinations, and DALL-E models with custom aspect ratios.",
+        "Create Images",
+        "Mini-Apps",
+        "Web Apps & Utilities",
+        "Collection of interactive web utilities including model testers, code previewers, games, and developer tools.",
+        "Open Apps Hub",
+        "REST API",
+        "OpenAI-Compatible API",
+        "Connect external applications like LangChain, AutoGen, and Continue using standard `/v1/chat/completions` endpoints.",
+        "View API Docs"
+    ],
+    "Providers Sidebar": [
+        "Providers Catalog",
+        "0 Active",
+        "Total",
+        "Loading providers...",
+        "Failed to load providers",
+        "No providers match filter",
+        "Filter providers..."
     ],
     "Footer": [
-        "© 2026 G4F. All Rights Reserved.",
-        "Powered by the G4F framework"
+        "© 2026 G4F Framework. All Rights Reserved. |",
+        "GitHub Repository"
     ]
 }

@@ -675,7 +675,7 @@
                     bar.style.height = pct + '%';
                     const tooltip = document.createElement('div');
                     tooltip.className = 'bar-tooltip';
-                    tooltip.textContent = `${date}: ${count} requests`;
+                    tooltip.textContent = `${date}: ${count} ${framework.translate('requests', false)}`;
                     bar.appendChild(tooltip);
                     const label = document.createElement('div');
                     label.className = 'bar-label';
@@ -689,7 +689,7 @@
             function renderTable(tbodyId, items, sortState, maxTokens) {
                 const tbody = document.getElementById(tbodyId);
                 if (!items.length) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No data available</td></tr>';
+                    tbody.innerHTML = `<tr><td colspan="6" class="empty-state">${framework.translate('No data available', false)}</td></tr>`;
                     return;
                 }
 
@@ -779,7 +779,7 @@
                     updateSortArrows('providerTable', providerSort);
                     updateSortArrows('modelTable', modelSort);
                 } catch (err) {
-                    chart.innerHTML = `<div class="error-state">Failed to load statistics: ${err.message}</div>`;
+                    chart.innerHTML = `<div class="error-state">${framework.translate('Failed to load statistics:', false)} ${err.message}</div>`;
                 }
             }
 

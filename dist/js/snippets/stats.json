@@ -1,0 +1,60 @@
+{
+    "_meta": {
+        "page": "stats",
+        "comment": "UI text snippets of the usage statistics page (stats.html) grouped by the headline/title of the section they appear in. The group name is sent as translation context alongside each snippet in the challenge worker's batch translation challenges (kind=translations). Groups starting with '_' are metadata. Mirrors dist/js/snippets/chat.context.json."
+    },
+    "Navigation": [
+        "Home",
+        "Chat",
+        "Stats",
+        "Docs",
+        "GitHub",
+        "Start Chat",
+        "Usage Statistics",
+        "Documentation"
+    ],
+    "Page Header": [
+        "Usage Statistics",
+        "Track requests, token usage, providers, and models over time."
+    ],
+    "Controls": [
+        "Range:",
+        "Today",
+        "Last 7 days",
+        "Last 30 days",
+        "Last 90 days",
+        "Refresh"
+    ],
+    "Summary": [
+        "Total Requests",
+        "Total Tokens",
+        "Prompt Tokens",
+        "Completion Tokens",
+        "Providers Used",
+        "Models Used",
+        "Cached Tokens",
+        "Saved by Prompt Optimisation",
+        "Est. Cost Saved"
+    ],
+    "Daily Activity": [
+        "Daily Activity",
+        "requests"
+    ],
+    "Provider Breakdown": [
+        "Provider Breakdown",
+        "Provider",
+        "Requests",
+        "Total Tokens",
+        "Prompt",
+        "Completion",
+        "Cached"
+    ],
+    "Model Breakdown": [
+        "Model Breakdown",
+        "Model"
+    ],
+    "States": [
+        "No data available",
+        "Failed to load statistics:"
+    ]
+}
