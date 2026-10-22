@@ -422,6 +422,25 @@ input, select, textarea, button {
     font-weight: 600;
     letter-spacing: -0.01em;
     color: var(--text-1);
+    cursor: text;
+    border-radius: 8px;
+    padding: 2px 8px;
+}
+
+.chat-top-panel .convo-title:hover {
+    background-color: var(--surface-3);
+}
+
+.chat-top-panel .convo-title-input {
+    width: 100%;
+    font: inherit;
+    color: inherit;
+    text-align: center;
+    background-color: var(--surface-3);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 2px 8px;
+    outline: none;
 }
 
 .chat-top-panel .mobile-sidebar-toggle,

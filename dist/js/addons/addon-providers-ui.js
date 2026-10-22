@@ -66,7 +66,14 @@ async function load_providers(providers, provider_options, providersListContaine
         optGroupCore.appendChild(option);
     });
     providerSelect.appendChild(optGroupCore);
-    providerSelect.selectedIndex = 0;
+    // Keep the saved provider selected instead of resetting to the first entry.
+    const savedProvider = appStorage.getItem("provider");
+    if (savedProvider && providerSelect.querySelector(`option[value="${savedProvider}"]`)) {
+        providerSelect.value = savedProvider;
+    } else if (!providerSelect.querySelector('option[data-pending="true"]')) {
+        providerSelect.selectedIndex = 0;
+    }
+    clearPendingProviderOption();
     if (!document.body.classList.contains("screen-reader")) {
         let providersContainer = document.createElement("div");
         providersContainer.classList.add("field", "collapsible");

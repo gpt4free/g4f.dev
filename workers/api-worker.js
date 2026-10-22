@@ -873,12 +873,8 @@ async function saveUser(env, user) {
   }
   userMemoryCache.set(user.id, { time: Date.now(), value: user });
 }
-async function handleListServers(request, env, user) {
-  let servers = [];
-  if (user) {
-    servers = user.custom_servers || [];
-  }
-  const safeServers = servers.map((s) => ({
+function toSafeServer(s) {
+  return {
     id: s.id,
     label: s.label,
     base_url: s.base_url,
@@ -888,7 +884,27 @@ async function handleListServers(request, env, user) {
     created_at: s.created_at,
     updated_at: s.updated_at,
     usage: s.usage || { requests: 0, tokens: 0 }
-  }));
+  };
+}
+async function handleListServers(request, env, user) {
+  let servers = [];
+  if (user) {
+    servers = user.custom_servers || [];
+  }
+  const safeServers = servers.map(toSafeServer);
+  // A server can be published to the public index without being present in
+  // user.custom_servers (e.g. published from another account, or the private
+  // record was lost). Surface the user's own public servers here as well so
+  // they stay manageable from the members dashboard.
+  if (user) {
+    const knownIds = new Set(safeServers.map((s) => s.id));
+    const publicServers = await getPublicServers(env);
+    for (const s of publicServers) {
+      if (s.owner_id !== user.id || knownIds.has(s.id)) continue;
+      knownIds.add(s.id);
+      safeServers.push(toSafeServer(s));
+    }
+  }
   return jsonResponse({ servers: safeServers }, 200, {
     "Cache-Control": "no-store",
     ...getCorsHeaders(request)
@@ -977,6 +993,22 @@ async function handleCreateServer(request, env) {
     server: safeServer
   });
 }
+// Resolve a server the user is allowed to manage: either their own private
+// record or a public index entry they own (which handleListServers also
+// surfaces in the members dashboard).
+async function findUserServer(env, user, serverId) {
+  const index = (user.custom_servers || []).findIndex((s) => s.id === serverId);
+  if (index !== -1) {
+    return { server: user.custom_servers[index], index };
+  }
+  const publicServers = await getPublicServers(env);
+  const entry = publicServers.find((s) => s.id === serverId && s.owner_id === user.id);
+  if (!entry) {
+    return null;
+  }
+  // clone: the index entry is shared with the per-isolate memo
+  return { server: structuredClone(entry), index: -1 };
+}
 async function handleUpdateServer(request, env) {
   const user = await authenticateRequest(request, env);
   if (!user) {
@@ -989,11 +1021,16 @@ async function handleUpdateServer(request, env) {
   if (!body.server_id) {
     return jsonResponse({ error: "server_id is required" }, 400);
   }
-  const serverIndex = (user.custom_servers || []).findIndex((s) => s.id === body.server_id);
-  if (serverIndex === -1) {
+  const found = await findUserServer(env, user, body.server_id);
+  if (!found) {
     return jsonResponse({ error: "Server not found" }, 404);
   }
-  const server = user.custom_servers[serverIndex];
+  const server = found.server;
+  if (found.index === -1) {
+    // public-only server: adopt it into the private list so it stays editable
+    user.custom_servers = user.custom_servers || [];
+    user.custom_servers.push(server);
+  }
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const allowedFields = ["label", "base_url", "api_keys", "allowed_models", "auto_update_models", "is_public", "expires"];
   for (const field of allowedFields) {
@@ -1055,13 +1092,16 @@ async function handleDeleteServer(request, env) {
   if (!body.server_id) {
     return jsonResponse({ error: "server_id is required" }, 400);
   }
-  const serverIndex = (user.custom_servers || []).findIndex((s) => s.id === body.server_id);
-  if (serverIndex === -1) {
+  const found = await findUserServer(env, user, body.server_id);
+  if (!found) {
     return jsonResponse({ error: "Server not found" }, 404);
   }
-  const server = user.custom_servers[serverIndex];
+  const server = found.server;
   if (server.is_public) {
     await updatePublicServerIndex(env, server, user.id, "remove");
+  }
+  if (found.index !== -1) {
+    user.custom_servers.splice(found.index, 1);
   }
   if (env.MEMBERS_BUCKET) {
     await env.MEMBERS_BUCKET.put(
@@ -1075,7 +1115,6 @@ async function handleDeleteServer(request, env) {
       { httpMetadata: { contentType: "application/json" } }
     );
   }
-  user.custom_servers.splice(serverIndex, 1);
   user.updated_at = (/* @__PURE__ */ new Date()).toISOString();
   await saveUser(env, user);
   return jsonResponse({ message: "Server deleted successfully" });
@@ -1091,10 +1130,11 @@ async function handleGetServerUsage(request, env) {
   if (!serverId) {
     return jsonResponse({ error: "server_id is required" }, 400);
   }
-  const server = (user.custom_servers || []).find((s) => s.id === serverId);
-  if (!server) {
+  const found = await findUserServer(env, user, serverId);
+  if (!found) {
     return jsonResponse({ error: "Server not found" }, 404);
   }
+  const server = found.server;
   const history = [];
   const now = /* @__PURE__ */ new Date();
   const dateKeys = [];

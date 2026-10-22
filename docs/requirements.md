@@ -26,6 +26,10 @@ Install required packages for uploading / generating images:
 ```
 pip install -U g4f[image]
 ```
+Install required package for sending traces to Langfuse:
+```
+pip install -U g4f[tracing]
+```
 Install required package for proxy support with aiohttp:
 ```
 pip install -U aiohttp_socks

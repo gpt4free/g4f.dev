@@ -75,6 +75,9 @@ async function on_api() {
         providersListContainer.querySelector(".collapsible-header").classList.toggle('active');
     });
     if (providerSelect) {
+        // Show the saved provider/model right away, before the provider and
+        // model lists finish loading.
+        seedSavedSelection();
         // Add Live Providers optgroup
         const optgroup = document.createElement("optgroup");
         optgroup.id = "live-providers-optgroup";
@@ -143,7 +146,13 @@ async function on_api() {
         ]);
 
         await loadPaProviders();
-        await loadProviderModels(appStorage.getItem("provider"));
+        selectSavedProvider();
+        await loadProviderModels(providerSelect.value);
+        // The provider list is fully loaded now: if the saved provider still
+        // only exists as a placeholder, it no longer exists at all.
+        if (dropUnresolvedProviderOption()) {
+            await loadProviderModels();
+        }
 
         set_favorite_providers();
     } else {

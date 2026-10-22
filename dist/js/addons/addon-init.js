@@ -614,9 +614,6 @@ async function updateLiveProviderOptions(optgroup) {
                 if (config.is_hidden || config.is_offline) {
                     option.disabled = true;
                 }
-                if (name === "default") {
-                    option.selected = true;
-                }
                 option.value = name;
                 option.dataset.live = "true";
                 option.text = (config.label || name) + (config.tags ? ` ${config.tags} 🟢` : " 🟢");
@@ -1533,6 +1530,7 @@ async function loadPaProviderSelect(optgroup) {
             optgroup.appendChild(opt);
         });
         providerSelect.value = appStorage.getItem("provider");
+        clearPendingProviderOption();
     } catch (e) {
         console.debug('Failed to load PA providers into select:', e);
     }

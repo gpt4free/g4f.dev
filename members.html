@@ -2557,7 +2557,7 @@
                 servers = await customApiRequest('/servers');
                 
                 if (servers.error) {
-                    serversList.innerHTML = `<p style="color: var(--danger); text-align: center;">${result.error}</p>`;
+                    serversList.innerHTML = `<p style="color: var(--danger); text-align: center;">${escapeHtml(servers.error)}</p>`;
                     return;
                 }
                 

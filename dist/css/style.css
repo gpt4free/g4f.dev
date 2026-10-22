@@ -2316,6 +2316,24 @@ form textarea {
     font-weight: bold;
     text-align: center;
     flex: 1;
+    cursor: text;
+    border-radius: 6px;
+}
+
+.chat-top-panel .convo-title:hover {
+    background-color: var(--button-hover);
+}
+
+.chat-top-panel .convo-title-input {
+    width: 100%;
+    font: inherit;
+    color: inherit;
+    text-align: center;
+    background-color: var(--blur-bg);
+    border: 1px solid var(--blur-border);
+    border-radius: 6px;
+    padding: 2px 6px;
+    outline: none;
 }
 
 .chat-top-panel .mobile-sidebar-toggle {

@@ -79,6 +79,9 @@ async function set_conversation_title(conversation_id, title) {
         return;
     }
     conversation.new_title = title;
+    if (!conversation.title) {
+        conversation.title = title;
+    }
     delete conversation.share;
     const new_id = sanitize(title, " ");
     const new_conv = await get_conversation(new_id);
@@ -87,10 +90,91 @@ async function set_conversation_title(conversation_id, title) {
         title_ids_storage[conversation_id] = new_id;
         conversation.backup = conversation.backup || conversation.id;
         conversation.id = new_id;
+        if (window.conversation_id == conversation_id) {
+            window.conversation_id = new_id;
+        }
         add_url_to_history(`#${new_id}`);
     }
     await save_conversation(conversation);
 }
+
+const edit_conversation_title = async () => {
+    const chatHeader = document.querySelector(".chat-top-panel .convo-title");
+    if (!chatHeader || chatHeader.querySelector("input")) {
+        return;
+    }
+    const conversation_id = window.conversation_id;
+    if (!conversation_id) {
+        return;
+    }
+    let conversation = await get_conversation(conversation_id);
+    if (!conversation) {
+        await add_conversation(conversation_id);
+        conversation = await get_conversation(conversation_id);
+    }
+    if (!conversation) {
+        return;
+    }
+    const original_title = conversation.new_title || conversation.title || "";
+    const original_html = chatHeader.innerHTML;
+    const input_el = document.createElement("input");
+    input_el.type = "text";
+    input_el.value = original_title;
+    input_el.className = "convo-title-input";
+    input_el.setAttribute("aria-label", framework.translate("Conversation title"));
+    chatHeader.innerText = "";
+    chatHeader.appendChild(input_el);
+    input_el.focus();
+    input_el.select();
+
+    let finished = false;
+    const finish = async (save) => {
+        if (finished) {
+            return;
+        }
+        finished = true;
+        const title = input_el.value.trim();
+        if (!save || !title || title === original_title) {
+            chatHeader.innerHTML = original_html;
+            return;
+        }
+        chatHeader.innerText = title;
+        await set_conversation_title(conversation_id, title);
+        await load_conversations();
+    };
+    input_el.addEventListener("keydown", (e) => {
+        e.stopPropagation();
+        if (e.key === "Enter") {
+            e.preventDefault();
+            finish(true);
+        } else if (e.key === "Escape") {
+            e.preventDefault();
+            finish(false);
+        }
+    });
+    input_el.addEventListener("click", (e) => e.stopPropagation());
+    input_el.addEventListener("blur", () => finish(true));
+};
+
+(window.domReady || Promise.resolve()).then(() => {
+    const chatHeader = document.querySelector(".chat-top-panel .convo-title");
+    if (!chatHeader) {
+        return;
+    }
+    chatHeader.setAttribute("role", "button");
+    chatHeader.setAttribute("tabindex", "0");
+    chatHeader.title = framework.translate("Click to rename conversation");
+    chatHeader.addEventListener("click", () => edit_conversation_title());
+    chatHeader.addEventListener("keydown", (e) => {
+        if (e.target !== chatHeader) {
+            return;
+        }
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            edit_conversation_title();
+        }
+    });
+});
 
 const show_option = async (conversation_id) => {
     const conv = document.getElementById(`conv-${conversation_id}`);

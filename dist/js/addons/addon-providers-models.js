@@ -297,7 +297,7 @@ function set_favorite_providers() {
     }
     Object.keys(favorites).slice(-MAX_FAVORITE_PROVIDERS).forEach((key) => {
         const value_option = providerSelect.querySelector(`option[value="${key}"]`)
-        if (value_option) {
+        if (value_option && value_option.dataset.pending !== "true") {
             const option = value_option.cloneNode(true);
             optgroup.appendChild(option);
         }
@@ -399,6 +399,103 @@ function filterModels(models, shouldFilter) {
     return filterArray(models);
 }
 
+// Look up an option by value without relying on CSS escaping.
+function findModelOption(value) {
+    return Array.from(modelSelect?.options || []).find((opt) => opt.value === value);
+}
+
+// Set once every provider source has been rendered, so the saved provider
+// placeholder is not re-added after it was resolved or dropped.
+let providersFullyLoaded = false;
+
+// Show the saved provider/model in the dropdowns while the lists are still
+// loading, so the selection isn't replaced by a generic placeholder.
+function seedSavedSelection() {
+    const savedProvider = appStorage.getItem("provider");
+    if (!providersFullyLoaded && providerSelect && savedProvider && !providerSelect.querySelector(`option[value="${savedProvider}"]`)) {
+        const option = document.createElement("option");
+        option.value = savedProvider;
+        option.text = savedProvider;
+        option.dataset.pending = "true";
+        option.selected = true;
+        providerSelect.appendChild(option);
+    }
+    renderLoadingModelOptions();
+}
+
+// Fill the model dropdown while its list is loading: the saved model when
+// there is one, otherwise the default/auto entry.
+function renderLoadingModelOptions() {
+    if (!modelSelect) return;
+    const savedModel = appStorage.getItem("model");
+    modelSelect.innerHTML = savedModel
+        ? `<option value="${escapeHtml(savedModel)}" selected>${escapeHtml(savedModel)}</option>`
+        : `<option value="" selected>${framework.translate("Model: Default")}</option>`;
+}
+
+// Drop the placeholder provider option once the real one is available.
+function clearPendingProviderOption() {
+    if (!providerSelect) return;
+    const pendingOptions = Array.from(providerSelect.querySelectorAll('option[data-pending="true"]'));
+    if (pendingOptions.length === 0) return;
+    const value = pendingOptions[0].value;
+    const wasSelected = providerSelect.value === value;
+    const real = Array.from(providerSelect.options).find((opt) => opt.value === value && opt.dataset.pending !== "true");
+    if (!real) return;
+    if (wasSelected) providerSelect.value = value;
+    pendingOptions.forEach((opt) => opt.remove());
+}
+
+// Drop the placeholder provider option after all provider sources loaded, so
+// a provider that no longer exists doesn't linger in the dropdown.
+function dropUnresolvedProviderOption() {
+    providersFullyLoaded = true;
+    if (!providerSelect) return false;
+    const pendingOptions = Array.from(providerSelect.querySelectorAll('option[data-pending="true"]'));
+    if (pendingOptions.length === 0) return false;
+    const wasSelected = providerSelect.value === pendingOptions[0].value;
+    pendingOptions.forEach((opt) => opt.remove());
+    if (wasSelected) providerSelect.selectedIndex = 0;
+    return wasSelected;
+}
+
+// Select the saved provider once every provider source has been rendered.
+// Falls back to the first entry (auto) when nothing is saved.
+function selectSavedProvider() {
+    if (!providerSelect) return;
+    const savedProvider = appStorage.getItem("provider");
+    if (savedProvider) {
+        const option = Array.from(providerSelect.options).find((opt) => opt.value === savedProvider && !opt.disabled && opt.dataset.pending !== "true");
+        if (option) {
+            providerSelect.value = savedProvider;
+            return;
+        }
+    }
+    const selected = providerSelect.options[providerSelect.selectedIndex];
+    if (selected && !selected.disabled && selected.dataset.pending !== "true") return;
+    const fallback = Array.from(providerSelect.options).find((opt) => !opt.disabled && opt.dataset.pending !== "true");
+    if (fallback) providerSelect.value = fallback.value;
+}
+
+// Restore the saved model once the list is rendered. Without a saved model the
+// default-flagged selection is kept, falling back to the first selectable
+// model (auto).
+function restoreSelectedModel() {
+    if (!modelSelect) return;
+    const saved = appStorage.getItem("model");
+    if (saved) {
+        const option = findModelOption(saved);
+        if (option && !option.disabled) {
+            modelSelect.value = saved;
+            return;
+        }
+    }
+    const selected = modelSelect.options[modelSelect.selectedIndex];
+    if (selected && selected.value && !selected.disabled) return;
+    const fallback = Array.from(modelSelect.options).find((opt) => opt.value && !opt.disabled);
+    if (fallback) modelSelect.value = fallback.value;
+}
+
 function setProviderModels(models, provider, quota=null) {
     const hideOneProvider = appStorage.getItem("hideOneProviderModels") === "true";
 
@@ -452,6 +549,7 @@ function setProviderModels(models, provider, quota=null) {
             const defaultModel = models.map(m => m.models?.find(m => m.default) || m).find(m => m.default)?.id;
             setFavoriteModels(provider, defaultModel);
         }
+        restoreSelectedModel();
     }
 }
 async function get_quota(provider) {
@@ -536,7 +634,7 @@ async function refreshModels(provider) {
     });
 }
 async function loadClientModels() {
-    modelSelect.innerHTML = `<option value="" disabled selected>${framework.translate("Loading...")}</option>`;
+    renderLoadingModelOptions();
     const cacheProvider = providerSelect?.value || "default";
     // Stale-while-revalidate: render cached models immediately (even when
     // expired), then re-fetch in the background and re-render when the
@@ -574,6 +672,7 @@ async function loadClientModels() {
         if (models.length > 2) {
             setFavoriteModels(providerSelect?.value, window.client?.defaultModel || models[0].id);
         }
+        restoreSelectedModel();
     };
     await window.cache?.models?.swr(
         cacheProvider,
@@ -611,7 +710,9 @@ async function loadProviderModels(provider=null) {
     if (isLoading && providerSelect) {
         providerSelect.value = provider;
     }
-    modelSelect.innerHTML = '';
+    clearPendingProviderOption();
+    // Keep showing the saved model while the new list is being fetched.
+    seedSavedSelection();
     modelSelect.name = `model[${provider}]`;
     modelSelect.classList.remove("hidden");
     if (await initClient()) {
@@ -825,6 +926,10 @@ export default {
     refreshModels,
     loadClientModels,
     loadProviderModels,
+    seedSavedSelection,
+    clearPendingProviderOption,
+    dropUnresolvedProviderOption,
+    selectSavedProvider,
     save_storage,
     get_recognition_language,
     stopRecognition
