@@ -2679,6 +2679,8 @@ async function pullNewSecretConversations() {
                 } else if (convResp.status === 403) {
                     await delete_conversation(convId);
                     await deleteSecretConversation(convId);
+                } else if (convResp.status === 404) {
+                    await deleteSecretConversation(convId);
                 }
             }
         }
