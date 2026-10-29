@@ -1,11 +1,11 @@
-## G4F - Interference API Usage Guide
+## G4F - Inference API Usage Guide
 
 ## Table of Contents
    - [Introduction](#introduction)
-   - [Running the Interference API](#running-the-interference-api)
+   - [Running the Inference API](#running-the-interference-api)
    - [From PyPI Package](#from-pypi-package)
    - [From Repository](#from-repository)
-   - [Using the Interference API](#using-the-interference-api)
+   - [Using the Inference API](#using-the-interference-api)
    - [Basic Usage](#basic-usage)
    - [Using the OpenAI Library](#using-the-openai-library)
    - [With Requests Library](#with-requests-library)
@@ -14,15 +14,15 @@
    - [Conclusion](#conclusion)
 
 ## Introduction
-The G4F Interference API is a powerful tool that allows you to serve other OpenAI integrations using G4F (Gpt4free). It acts as a proxy, translating requests intended for the OpenAI API into requests compatible with G4F providers. This guide will walk you through the process of setting up, running, and using the Interference API effectively.
+The G4F Inference API is a powerful tool that allows you to serve other OpenAI integrations using G4F (Gpt4free). It acts as a proxy, translating requests intended for the OpenAI API into requests compatible with G4F providers. This guide will walk you through the process of setting up, running, and using the Inference API effectively.
   
 
-## Running the Interference API
-**You can run the Interference API in two ways:** using the PyPI package or from the repository.
+## Running the Inference API
+**You can run the Inference API in two ways:** using the PyPI package or from the repository.
   
 
 ### From PyPI Package
-**To run the Interference API directly from the G4F PyPI package, use the following Python code:**
+**To run the Inference API directly from the G4F PyPI package, use the following Python code:**
 
 ```python
 from g4f.api import run_api
@@ -32,7 +32,7 @@ run_api()
 
   
 ### From Repository
-**If you prefer to run the Interference API from the cloned repository, you have two options:**
+**If you prefer to run the Inference API from the cloned repository, you have two options:**
 
 1. **Using the command line:**
 ```bash
@@ -59,10 +59,10 @@ python -m g4f.cli api --cookies-dir /path/to/har_and_cookies
 
 You can also see a full list of CLI options by running `g4f api --help`.
 
-## Using the Interference API
+## Using the Inference API
 
 ### Basic Usage
-**You can interact with the Interference API using curl commands for both text and image generation:**
+**You can interact with the Inference API using curl commands for both text and image generation:**
 
 **For text generation:**
 ```bash
@@ -106,7 +106,7 @@ curl -X POST "http://localhost:1337/v1/images/generate" \
 
 ### Using the OpenAI Library
 
-**To utilize the Interference API with the OpenAI Python library, you can specify the `base_url` to point to your endpoint:**
+**To utilize the Inference API with the OpenAI Python library, you can specify the `base_url` to point to your endpoint:**
 
 ```python
 from openai import OpenAI
@@ -145,7 +145,7 @@ else:
 
 ### With Requests Library
 
-**You can also send requests directly to the Interference API using the `requests` library:**
+**You can also send requests directly to the Inference API using the `requests` library:**
 ```python
 import requests
 
@@ -170,10 +170,10 @@ for choice in json_response:
 
 **Provider Selection**: [How to Specify a Provider?](selecting_a_provider)
 
-Selecting the right provider is a key step in configuring the G4F Interference API to suit your needs. Refer to the guide linked above for detailed instructions on choosing and specifying a provider.
+Selecting the right provider is a key step in configuring the G4F Inference API to suit your needs. Refer to the guide linked above for detailed instructions on choosing and specifying a provider.
 
 ## Key Points
-   - The Interference API translates OpenAI API requests into G4F provider requests.
+   - The Inference API translates OpenAI API requests into G4F provider requests.
    - It can be run from either the PyPI package or the cloned repository.
    - The API supports usage with the OpenAI Python library by changing the `base_url`.
    - Direct requests can be sent to the API endpoints using libraries like `requests`.
@@ -181,7 +181,7 @@ Selecting the right provider is a key step in configuring the G4F Interference A
 
   
 ## Conclusion
-The G4F Interference API provides a seamless way to integrate G4F with existing OpenAI-based applications and tools. By following this guide, you should now be able to set up, run, and use the Interference API effectively. Whether you're using it for text generation, image creation, or as a drop-in replacement for OpenAI in your projects, the Interference API offers flexibility and power for your AI-driven applications.
+The G4F Inference API provides a seamless way to integrate G4F with existing OpenAI-based applications and tools. By following this guide, you should now be able to set up, run, and use the Inference API effectively. Whether you're using it for text generation, image creation, or as a drop-in replacement for OpenAI in your projects, the Inference API offers flexibility and power for your AI-driven applications.
 
 ---
 

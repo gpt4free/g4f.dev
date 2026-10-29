@@ -3,24 +3,24 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>G4F - Interference API Usage Guide</title>
+    <title>G4F - Inference API Usage Guide</title>
 
-    <meta name="description" content="GPT4Free documentation for G4F - Interference API Usage Guide. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
-    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, G4F - Interference API Usage Guide" />
+    <meta name="description" content="GPT4Free documentation for G4F - Inference API Usage Guide. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
+    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, G4F - Inference API Usage Guide" />
     <meta name="author" content="GPT4Free Team" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="article" />
-    <meta property="og:title" content="G4F - Interference API Usage Guide | GPT4Free Documentation" />
-    <meta property="og:description" content="GPT4Free documentation for G4F - Interference API Usage Guide. Free AI endpoints, examples, and comprehensive guides." />
+    <meta property="og:title" content="G4F - Inference API Usage Guide | GPT4Free Documentation" />
+    <meta property="og:description" content="GPT4Free documentation for G4F - Inference API Usage Guide. Free AI endpoints, examples, and comprehensive guides." />
     <meta property="og:url" content="https://g4f.dev/docs/interference-api.html" />
     <meta property="og:site_name" content="GPT4Free Documentation" />
     <meta property="og:image" content="https://g4f.dev/dist/img/g4f.svg" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="G4F - Interference API Usage Guide | GPT4Free Documentation" />
-    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for G4F - Interference API Usage Guide." />
+    <meta name="twitter:title" content="G4F - Inference API Usage Guide | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for G4F - Inference API Usage Guide." />
     <meta name="twitter:image" content="https://g4f.dev/dist/img/g4f.svg" />
 
     <!-- Canonical -->
@@ -374,8 +374,8 @@
     {
       "@context": "https://schema.org",
       "@type": "TechArticle",
-      "headline": "G4F - Interference API Usage Guide",
-      "description": "GPT4Free documentation for G4F - Interference API Usage Guide. Complete guides, examples, and API reference for free AI endpoints.",
+      "headline": "G4F - Inference API Usage Guide",
+      "description": "GPT4Free documentation for G4F - Inference API Usage Guide. Complete guides, examples, and API reference for free AI endpoints.",
       "author": {
         "@type": "Organization",
         "@id": "https://g4f.dev/#organization",
@@ -421,14 +421,14 @@
         </nav>
 
         <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
-<h2>G4F - Interference API Usage Guide</h2>
+<h2>G4F - Inference API Usage Guide</h2>
 <h2>Table of Contents</h2>
 <ul>
 <li><a href="#introduction">Introduction</a></li>
-<li><a href="#running-the-interference-api">Running the Interference API</a></li>
+<li><a href="#running-the-interference-api">Running the Inference API</a></li>
 <li><a href="#from-pypi-package">From PyPI Package</a></li>
 <li><a href="#from-repository">From Repository</a></li>
-<li><a href="#using-the-interference-api">Using the Interference API</a></li>
+<li><a href="#using-the-interference-api">Using the Inference API</a></li>
 <li><a href="#basic-usage">Basic Usage</a></li>
 <li><a href="#using-the-openai-library">Using the OpenAI Library</a></li>
 <li><a href="#with-requests-library">With Requests Library</a></li>
@@ -437,16 +437,16 @@
 <li><a href="#conclusion">Conclusion</a></li>
 </ul>
 <h2>Introduction</h2>
-<p>The G4F Interference API is a powerful tool that allows you to serve other OpenAI integrations using G4F (Gpt4free). It acts as a proxy, translating requests intended for the OpenAI API into requests compatible with G4F providers. This guide will walk you through the process of setting up, running, and using the Interference API effectively.</p>
-<h2>Running the Interference API</h2>
-<p><strong>You can run the Interference API in two ways:</strong> using the PyPI package or from the repository.</p>
+<p>The G4F Inference API is a powerful tool that allows you to serve other OpenAI integrations using G4F (Gpt4free). It acts as a proxy, translating requests intended for the OpenAI API into requests compatible with G4F providers. This guide will walk you through the process of setting up, running, and using the Inference API effectively.</p>
+<h2>Running the Inference API</h2>
+<p><strong>You can run the Inference API in two ways:</strong> using the PyPI package or from the repository.</p>
 <h3>From PyPI Package</h3>
-<p><strong>To run the Interference API directly from the G4F PyPI package, use the following Python code:</strong></p>
+<p><strong>To run the Inference API directly from the G4F PyPI package, use the following Python code:</strong></p>
 <div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">g4f</span>.<span class="pl-s1">api</span> <span class="pl-k">import</span> <span class="pl-s1">run_api</span>
 
 <span class="pl-en">run_api</span>()</pre></div>
 <h3>From Repository</h3>
-<p><strong>If you prefer to run the Interference API from the cloned repository, you have two options:</strong></p>
+<p><strong>If you prefer to run the Inference API from the cloned repository, you have two options:</strong></p>
 <ol>
 <li><strong>Using the command line:</strong></li>
 </ol>
@@ -461,9 +461,9 @@
 
 <p><strong>(Advanced) Custom cookies directory:</strong></p>
 <div class="highlight highlight-source-shell"><pre class="notranslate">python -m g4f.cli api --cookies-dir /path/to/har_and_cookies</pre></div>
-<h2>Using the Interference API</h2>
+<h2>Using the Inference API</h2>
 <h3>Basic Usage</h3>
-<p><strong>You can interact with the Interference API using curl commands for both text and image generation:</strong></p>
+<p><strong>You can interact with the Inference API using curl commands for both text and image generation:</strong></p>
 <p><strong>For text generation:</strong></p>
 <div class="highlight highlight-source-shell"><pre class="notranslate">curl -X POST <span class="pl-s"><span class="pl-pds">"</span>http://localhost:1337/v1/chat/completions<span class="pl-pds">"</span></span> \
      -H <span class="pl-s"><span class="pl-pds">"</span>Content-Type: application/json<span class="pl-pds">"</span></span> \
@@ -499,7 +499,7 @@
 <span class="pl-s">         }<span class="pl-pds">'</span></span></pre></div>
 <hr>
 <h3>Using the OpenAI Library</h3>
-<p><strong>To utilize the Interference API with the OpenAI Python library, you can specify the <code class="notranslate">base_url</code> to point to your endpoint:</strong></p>
+<p><strong>To utilize the Inference API with the OpenAI Python library, you can specify the <code class="notranslate">base_url</code> to point to your endpoint:</strong></p>
 <div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">from</span> <span class="pl-s1">openai</span> <span class="pl-k">import</span> <span class="pl-v">OpenAI</span>
 
 <span class="pl-c"># Initialize the OpenAI client</span>
@@ -532,7 +532,7 @@
 </ul>
 <hr>
 <h3>With Requests Library</h3>
-<p><strong>You can also send requests directly to the Interference API using the <code class="notranslate">requests</code> library:</strong></p>
+<p><strong>You can also send requests directly to the Inference API using the <code class="notranslate">requests</code> library:</strong></p>
 <div class="highlight highlight-source-python"><pre class="notranslate"><span class="pl-k">import</span> <span class="pl-s1">requests</span>
 
 <span class="pl-s1">url</span> <span class="pl-c1">=</span> <span class="pl-s">"http://localhost:1337/v1/chat/completions"</span>
@@ -551,17 +551,17 @@
     <span class="pl-en">print</span>(<span class="pl-s1">choice</span>.<span class="pl-c1">get</span>(<span class="pl-s">'message'</span>, {}).<span class="pl-c1">get</span>(<span class="pl-s">'content'</span>, <span class="pl-s">''</span>))</pre></div>
 <h2>Selecting a Provider</h2>
 <p><strong>Provider Selection</strong>: <a href="selecting_a_provider">How to Specify a Provider?</a></p>
-<p>Selecting the right provider is a key step in configuring the G4F Interference API to suit your needs. Refer to the guide linked above for detailed instructions on choosing and specifying a provider.</p>
+<p>Selecting the right provider is a key step in configuring the G4F Inference API to suit your needs. Refer to the guide linked above for detailed instructions on choosing and specifying a provider.</p>
 <h2>Key Points</h2>
 <ul>
-<li>The Interference API translates OpenAI API requests into G4F provider requests.</li>
+<li>The Inference API translates OpenAI API requests into G4F provider requests.</li>
 <li>It can be run from either the PyPI package or the cloned repository.</li>
 <li>The API supports usage with the OpenAI Python library by changing the <code class="notranslate">base_url</code>.</li>
 <li>Direct requests can be sent to the API endpoints using libraries like <code class="notranslate">requests</code>.</li>
 <li>Both text and image generation are supported.</li>
 </ul>
 <h2>Conclusion</h2>
-<p>The G4F Interference API provides a seamless way to integrate G4F with existing OpenAI-based applications and tools. By following this guide, you should now be able to set up, run, and use the Interference API effectively. Whether you're using it for text generation, image creation, or as a drop-in replacement for OpenAI in your projects, the Interference API offers flexibility and power for your AI-driven applications.</p>
+<p>The G4F Inference API provides a seamless way to integrate G4F with existing OpenAI-based applications and tools. By following this guide, you should now be able to set up, run, and use the Inference API effectively. Whether you're using it for text generation, image creation, or as a drop-in replacement for OpenAI in your projects, the Inference API offers flexibility and power for your AI-driven applications.</p>
 <hr>
 <p><a href="/docs/">Return to Documentation</a></p>
 </main>

@@ -1041,8 +1041,11 @@ async function handleUpdateServer(request, env) {
     if (body[field] !== void 0) {
       if (field === "base_url") {
         try {
-          new URL(body.base_url);
-          server.base_url = body.base_url.replace(/\/$/, "");
+          const newUrl = new URL(body.base_url);
+          const queryUrls = newUrl.searchParams.get("url").split(",");
+          newUrl.searchParams.delete("url");
+          server.base_url = String(newUrl).replace(/\/$/, "");
+          server.all_urls = [server.base_url, ...queryUrls];
         } catch (e) {
           return jsonResponse({ error: "Invalid base_url format" }, 400);
         }
@@ -1120,6 +1123,7 @@ async function handleDeleteServer(request, env) {
     );
   }
   user.updated_at = (/* @__PURE__ */ new Date()).toISOString();
+  user.custom_servers.splice(serverIndex, 1);
   await saveUser(env, user);
   return jsonResponse({ message: "Server deleted successfully" });
 }
@@ -1861,6 +1865,9 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     proxyHeaders["Authorization"] = `Bearer ${apiKey}`;
   }
   let targetUrl;
+  if (server.all_urls) {
+    server.base_url = server.all_urls[Math.floor(Math.random() * server.all_urls.length)];
+  }
   if (server.base_url.includes(subPath)) {
     targetUrl = server.base_url;
   } else if (server.base_url.includes("/v1/chat/completions")) {
