@@ -118,8 +118,15 @@ const host = {
                 let result = await window.mcpClient.executeToolCalls(toolCalls);
                 result = result.map(result => {
                     try {
-                        const data = JSON.parse(result.content);
-                        return (data.matches || []);
+                        const content = Array.isArray(result.content) ? result.content : [{text: result.content}];
+                        const matches = []
+                        for (const c of content) {
+                            if (c.text) {
+                                const data = JSON.parse(c.text);
+                                matches.push(...(data.matches || []));
+                            }
+                        }
+                        return matches;
                     } catch (e) {
                         console.warn('[addons] failed to parse workspace addon listing:', e);
                         return [];

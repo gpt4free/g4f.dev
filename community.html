@@ -152,7 +152,7 @@
             });
         }
 
-        function renderMarkdown(text) {
+        function render(text) {
             if (!text) return '';
             let html = escapeHtml(text);
             // 1. Inline code (Must be first to prevent parsing markdown inside code blocks)
@@ -213,7 +213,7 @@
                     if (match) {
                         content = content.split(match[0])[0].trim(); // Remove report tag from content
                     }
-                    content = renderMarkdown(content);
+                    content = render(content);
 
                     post.innerHTML = `
                         <strong>${author}</strong>
