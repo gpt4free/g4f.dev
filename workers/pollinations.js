@@ -1820,7 +1820,17 @@ function stripMountPrefix(pathname) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const path = stripMountPrefix(url.pathname);
+    let path = stripMountPrefix(url.pathname);
+    // The public Pollinations server record uses the /free base URL. Treat its
+    // bare root as the worker health endpoint instead of proxying /free/ back
+    // into the same host (which caused a Worker self-request loop / HTTP 522).
+    if (path === "/free" || path === "/free/" || path === "/community" || path === "/community/") {
+      path = "/";
+    } else if (path === "/free/health" || path === "/community/health") {
+      path = "/health";
+    } else if (path.startsWith("/free/v1/") || path.startsWith("/community/v1/")) {
+      path = path.replace(/^\/(?:free|community)/, "");
+    }
 
     // Handle CORS preflight
     if (request.method === "OPTIONS") {

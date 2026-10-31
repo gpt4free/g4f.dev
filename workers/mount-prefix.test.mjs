@@ -29,7 +29,15 @@ const workers = [
 ];
 
 for (const [name, worker, servicePattern] of workers) {
-  for (const url of [`https://g4f.space/api/${name}`, `https://${name}.g4f.space/`]) {
+  const urls = [`https://g4f.space/api/${name}`, `https://${name}.g4f.space/`];
+  if (name === "pollinations") {
+    urls.push(
+      "https://pollinations.g4f.space/free/",
+      "https://pollinations.g4f.space/community/",
+      "https://g4f.space/api/pollinations/free/"
+    );
+  }
+  for (const url of urls) {
     for (const [label, entry] of [["worker", worker], ["router", router]]) {
       const response = await entry.fetch(new Request(url), {}, ctx);
       assert.equal(response.status, 200, `${label}: ${url} should return 200`);
