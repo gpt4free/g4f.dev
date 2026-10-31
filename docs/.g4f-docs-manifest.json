@@ -1,0 +1,51 @@
+{
+  "files": {
+    "aarch64-compatibility.md": {
+      "html": "aarch64-compatibility.html",
+      "html_sha256": "04649d7173f43a7c5dffe733a1b8bdea1f4a2b7bdbd901bb3448e8b7c4e15cd4",
+      "markdown_sha256": "8b43d40bb4b2b38ebc7c6aca59d934519bd7384f0b9aa5fa3837c4a016a51bb7"
+    },
+    "api-route.md": {
+      "html": "api-route.html",
+      "html_sha256": "6d599ac4ff7c03f8b2c47403886637a9fc99a5c56a1b43d1daabbaec5de96f64",
+      "markdown_sha256": "9463febd90bea0bb148762d49c71602bcd54f635eca171335e91f3c300a573f4"
+    },
+    "arm64-build-plan.md": {
+      "html": "arm64-build-plan.html",
+      "html_sha256": "5c4a33a47abee4343de73bf25129e06b1440cdbbc51f649f7789a70c45504bb8",
+      "markdown_sha256": "519ebb94466c0765a130409d8f6887481c590de238c112bea0f86fe3aec7aeb3"
+    },
+    "build-workflow.md": {
+      "html": "build-workflow.html",
+      "html_sha256": "7c09ce7c586d512cb0c191f4f77519347d4ea5bbb396c6560b0b86f0d4ff4119",
+      "markdown_sha256": "fc92604120a159159516922ce8cb00b917880da43d4966be138aa9754eb6c028"
+    },
+    "config-yaml-routing.md": {
+      "html": "config-yaml-routing.html",
+      "html_sha256": "20d4429e98b0ef7ee7475ba7eac487b9d81386ff76a9928a155c051b5367eaf9",
+      "markdown_sha256": "12430f0cefb9f07f2e6a0b3f7d275617ef32d583f28cd1cab08ab05856c9857a"
+    },
+    "dev-pipeline.md": {
+      "html": "dev-pipeline.html",
+      "html_sha256": "e2107105f6abe89aa9b93415afaae4e214c77ecb452a2b3cdd23f1131840177c",
+      "markdown_sha256": "732c04fe8e2d64956a85e469936c72bed7d589e63cdde2c8baaf7c98164d12c1"
+    },
+    "qwen-sessions.md": {
+      "html": "qwen-sessions.html",
+      "html_sha256": "33b2e48c48abbbbfd8247c262653b635bc82378c7136aa0c1ff27453cf097897",
+      "markdown_sha256": "5710a7378d53aa26cdd4976f022111bbabf579707a78310237d9d0303011ff20"
+    },
+    "reasoning-standardization.md": {
+      "html": "reasoning-standardization.html",
+      "html_sha256": "99116f13c7ac73ba5455b14e5c10cffb5daab5e0e1eba14a2af17b40535c3926",
+      "markdown_sha256": "d15f452a0c3a59e7107966c5f32c4234fd1e49abadf0f4c9484181bed77a9395"
+    },
+    "sandbox-desktop.md": {
+      "html": "sandbox-desktop.html",
+      "html_sha256": "8b3a05549d1a5709cd95ebc3618e80952f81eeacf7e0bdcb8b1d372ba48f651e",
+      "markdown_sha256": "998a6424d01568bb2a5266950d8331cf2d70692039c33a2738248729171ec751"
+    }
+  },
+  "schema": 1,
+  "source": "/app/gpt4free/docs"
+}

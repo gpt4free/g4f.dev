@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Qwen Chat sessions | GPT4Free Documentation</title>
+
+    <meta name="description" content="GPT4Free documentation for Qwen Chat sessions. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
+    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, Qwen Chat sessions" />
+    <meta name="author" content="GPT4Free Team" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Qwen Chat sessions | GPT4Free Documentation" />
+    <meta property="og:description" content="GPT4Free documentation for Qwen Chat sessions. Free AI endpoints, examples, and comprehensive guides." />
+    <meta property="og:url" content="https://g4f.dev/docs/qwen-sessions.html" />
+    <meta property="og:site_name" content="GPT4Free Documentation" />
+    <meta property="og:image" content="https://g4f.dev/dist/img/g4f.svg" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Qwen Chat sessions | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for Qwen Chat sessions." />
+    <meta name="twitter:image" content="https://g4f.dev/dist/img/g4f.svg" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://g4f.dev/docs/qwen-sessions.html" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/g4f.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/g4f-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/g4f-16x16.png" />
+    <link rel="manifest" href="/dist/img/site.webmanifest" />
+
+    <!-- GitHub Primer CSS & styles -->
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
+
+    
+    <style>
+        :root {
+            --accent: #8b3dff;
+            --background: #16101b;
+            --text-primary: #ddd;
+            --text-secondary: #9b7dff;
+            --card-bg: #1e152e;
+            --border-color: #333;
+            --hover-color: #a67eff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--background);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            max-width: 100%;
+            margin: 0;
+            padding: 2rem;
+            gap: 3rem;
+            min-height: calc(100vh - 4rem);
+        }
+
+        /* Enhanced main content styling */
+        main {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            overflow-wrap: break-word;
+            position: relative;
+        }
+
+        /* Typography improvements */
+        .markdown-body h1 {
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 0.5rem;
+        }
+
+        .markdown-body h2 {
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body h3 {
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body p {
+            margin-bottom: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        /* Enhanced link styling */
+        .markdown-body a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .markdown-body a:hover,
+        .markdown-body a:focus {
+            color: var(--hover-color);
+            outline: none;
+            text-decoration: underline;
+            text-shadow: 0 0 8px rgba(139, 61, 255, 0.3);
+        }
+
+        /* Enhanced code block styling */
+        .markdown-body pre {
+            border-radius: 12px;
+            padding: 1.5rem !important;
+            font-size: 0.95rem !important;
+            overflow-x: auto;
+            max-height: 500px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.4);
+            color: #fff;
+            border: 1px solid #3d2a5c;
+            position: relative;
+        }
+
+
+        .markdown-body code {
+            font-family: 'SF Mono', 'Cascadia Code', 'Roboto Mono', Consolas, Liberation Mono, Menlo, monospace;
+            background: rgba(139, 61, 255, 0.1);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            color: #e6ccff;
+            font-size: 0.9em;
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+            color: var(--fgColor-default, var(--color-fg-default))
+        }
+
+        /* Table styling */
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 2rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .markdown-body table th,
+        .markdown-body table td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        .markdown-body table th {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .markdown-body table tr:nth-child(even) {
+            background: rgba(139, 61, 255, 0.05);
+        }
+
+        .markdown-body table tr {
+            background-color: transparent;
+        }
+
+        /* List styling */
+        .markdown-body ul, 
+        .markdown-body ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        .markdown-body li {
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        /* Blockquote styling */
+        .markdown-body blockquote {
+            border-left: 4px solid var(--accent);
+            background: rgba(139, 61, 255, 0.1);
+            margin: 2rem 0;
+            padding: 1rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* HR styling */
+        .markdown-body hr {
+            border: none;
+            border-top: 2px solid var(--accent);
+            margin: 3rem 0;
+            opacity: 0.6;
+        }
+
+        /* Sticky table of contents */
+        nav#toc {
+            flex: 0 0 280px;
+            position: sticky;
+            top: 2rem;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid rgba(139, 61, 255, 0.2);
+        }
+
+        nav#toc h2 {
+            font-size: 1.4rem;
+            margin: 0 0 1.5rem 0;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        nav#toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        nav#toc li {
+            margin-bottom: 0.8rem;
+        }
+
+        nav#toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: block;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        nav#toc a:hover, 
+        nav#toc a:focus {
+            background: rgba(139, 61, 255, 0.1);
+            color: var(--hover-color);
+            text-decoration: none;
+            transform: translateX(4px);
+        }
+
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 2rem;
+            }
+
+            nav#toc {
+                position: relative;
+                max-height: none;
+                order: -1;
+                flex: none;
+            }
+
+            .markdown-body h1 {
+                font-size: 2.2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            main {
+                padding: 1.5rem;
+            }
+
+            .markdown-body h1 {
+                font-size: 1.8rem;
+            }
+
+            .markdown-body pre {
+                padding: 1rem !important;
+                font-size: 0.85rem !important;
+            }
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Focus indicators */
+        *:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* Print styles */
+        @media print {
+            .container {
+                display: block;
+            }
+            
+            nav#toc {
+                display: none;
+            }
+            
+            main {
+                box-shadow: none;
+                background: white;
+                color: black;
+            }
+        }
+
+        /* Loading animation for syntax highlighting */
+        .highlight-loading {
+            position: relative;
+            opacity: 0.7;
+        }
+
+        .highlight-loading::after {
+            content: 'Loading syntax highlighting...';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Translate Button Style */
+        #translate-toggle {
+            display: block;
+            background: var(--accent);
+            color: #fff;
+            text-align: center;
+            padding: 0.5rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            border: none;
+        }
+        #google_translate_element {
+            margin-bottom: 1rem;
+        }
+    </style>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "Qwen Chat sessions",
+      "description": "GPT4Free documentation for Qwen Chat sessions. Complete guides, examples, and API reference for free AI endpoints.",
+      "author": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization",
+        "name": "GPT4Free",
+        "url": "https://g4f.dev",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://g4f.dev/dist/img/g4f.svg"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://g4f.dev/docs/qwen-sessions.html"
+      },
+      "datePublished": "2024-01-01T00:00:00Z",
+      "dateModified": "2024-01-01T00:00:00Z",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "keywords": "GPT4Free, AI documentation, free AI API, code generation",
+      "articleSection": "Documentation"
+    }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="toc" aria-label="Table of contents" role="navigation">
+            <!-- Translation Button -->
+            <button id="translate-toggle">🌐 Translate Page</button>
+            <div id="google_translate_element" style="display:none;"></div>
+            <h2>Contents</h2>
+            <ul id="toc-list">
+                <!-- Table of contents will be generated here -->
+            </ul>
+            <hr style="margin: 1.5rem 0; opacity: 0.3;">
+            <ul>
+                <li><a href="/docs/" aria-label="Return to documentation home">📚 Documentation Hub</a></li>
+                <li><a href="/" aria-label="Return to main site">🏠 G4F Home</a></li>
+            </ul>
+        </nav>
+
+        <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
+            <h1>Qwen Chat sessions</h1>
+<p>Qwen Chat access tokens last about 15 minutes. <code>QwenAuth</code> refreshes them when
+less than three minutes remain, using the account's <code>refresh_token</code> cookie at
+<code>https://auth.qwen.ai/api/v2/auths/refresh</code>. This is separate from Qwen Code OAuth.</p>
+<h2>Automatic browser and HAR lookup</h2>
+<p>Automatic credential lookup first reuses the cached session or newest Qwen HAR.
+When none exists, it captures the browser session through g4f's configured CDP
+transport and saves <code>chat.qwen.ai-cdp.har</code> in the configured cookies directory.
+Later messages and process restarts reuse that HAR instead of reopening the
+browser. <code>use_browser=True</code> explicitly forces a new capture.</p>
+<p>Browser capture waits for a visible chat composer, then reads the SDK fingerprint
+and cookie records. It does not submit a seed message or subscribe to network
+events. Account login is recovered from the <code>refresh_token</code> cookie, including
+HttpOnly cookies; capture does not read access tokens from local storage. A HAR
+without account credentials is treated as a guest session.</p>
+<p>Automatic lookup defaults to <code>persist_auth=True</code>, saving browser captures and
+refreshed credentials. Set <code>persist_auth=False</code> for memory-only capture.
+Explicit credentials and <code>auth_session</code> remain memory-only unless persistence
+is requested. The HAR contains session credentials and must be kept private.
+Without a HAR or available CDP transport, the legacy automatic path can fall back
+to generated guest cookies. An unready browser raises <code>MissingAuthError</code>.</p>
+<p>HAR imports keep the newest credential-bearing request's token and cookies
+together. Fingerprint headers can come from an earlier completion request.
+Cookie expiry supports browser epoch seconds and HAR ISO timestamps. Loading a
+HAR alone does not renew credentials or reset the server's guest quota.</p>
+<h2>Explicit credentials</h2>
+<p>A refresh cookie alone is supported; an access token is obtained before the first
+request. An access token without a refresh credential expires and requires login.
+Use credentials from the same account:</p>
+<pre><code class="language-python">import os
+from g4f.Provider.Qwen import Qwen, QwenAuth
+
+auth = QwenAuth(
+    token=os.environ.get(&quot;QWEN_ACCESS_TOKEN&quot;),
+    refresh_token=os.environ[&quot;QWEN_REFRESH_TOKEN&quot;],
+)
+
+async def ask(prompt):
+    async for chunk in Qwen.create_async_generator(
+        model=&quot;qwen3.7-plus&quot;,
+        messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: prompt}],
+        auth_session=auth,
+    ):
+        yield chunk</code></pre>
+<p><code>cookies</code> accepts a dictionary or browser/HAR records with domain, path and
+expiry. <code>QwenAuth(cookies=cookies)</code> automatically reads <code>refresh_token</code> from
+those cookies. <code>auth.refresh_token</code> returns the current usable refresh cookie,
+including replacements from <code>Set-Cookie</code>, or <code>None</code> when absent, expired or out
+of scope. <code>headers</code> accepts the provider's supported browser fingerprint headers.</p>
+<p>Reuse <code>auth_session</code> to retain rotating credentials across calls and separate
+<code>asyncio.run()</code> invocations. Do not combine it with <code>token</code>, <code>api_key</code>,
+<code>refresh_token</code>, <code>cookies</code>, or <code>use_browser</code>. Explicit credentials are never mixed
+with an unrelated HAR account. <code>auth.get_cookies()</code> exports current records;
+<code>auth.clear()</code> ends the session.</p>
+<h2>Fingerprint and request behavior</h2>
+<p><code>_read_browser_fingerprint</code> waits up to 30 seconds for initialized Baxia, then
+reads <code>baxiaCommon.getUA(completion_url)</code> and <code>baxiaCommon.version</code>. It returns
+<code>bx-ua</code> and optional <code>bx-v</code>, rejecting empty values and <code>default</code> placeholders.
+It neither reads <code>bx-umidtoken</code> nor waits for the UID module. When no saved
+<code>bx-umidtoken</code> header exists, request preparation uses the existing midtoken
+service path. Neither token has a measured fixed lifetime.</p>
+<p>The website SDK was inspected on 2026-10-04:</p>
+<ul><li><p><a href="https://assets.alicdn.com/g/qwenweb/qwen-chat-fe/0.3.12/js/main.js">Qwen application 0.3.12</a></p></li><li><p><a href="https://g.alicdn.com/sd/baxia/2.5.37/baxiaCommon.js">Baxia 2.5.37</a></p></li><li><p><a href="https://g.alicdn.com/AWSC/AWSC/awsc.js">AWSC</a></p></li><li><p><a href="https://g.alicdn.com/AWSC/fireyejs/1.234.37/fireyejs.js">Fireye 1.234.37</a></p></li></ul>
+<p>Baxia hooks Fetch/XHR and obtains <code>bx-ua</code> through the POST Fireye module. Its
+obfuscated implementation has not been reproduced as a portable Python generator.</p>
+<ul><li><p>Concurrent requests for one account share a single refresh, including requests
+across event loops. Cancelling a waiter does not cancel the shared refresh.</p></li><li><p>A definite auth rejection is retried once after refresh, before any stream
+output. Refresh-cookie replacements and deletions are read before JSON errors.
+JSON endpoints reject malformed JSON and non-object responses.</p></li><li><p>Known guest chat-limit errors retry once with a new request midtoken and chat;
+guest cookies and the shared image cache are preserved. A guest <code>quota_limit</code>
+response also retries once, retaining its conversation. These retries do not
+guarantee a renewed server quota. A second failure or error after output stops.</p></li><li><p>Other rate limits and browser-validation challenges are raised directly.
+Baxia's HTTP-200 <code>ret</code> challenge response raises <code>CloudflareError</code> without
+including the session-bearing challenge URL.</p></li><li><p>Expired or rejected account refresh credentials raise <code>MissingAuthError</code>; that
+account is not silently converted to a guest.</p></li><li><p>Image uploads retain the existing shared cache keyed by image content hash.
+Bearer tokens and cookies are attached only to HTTPS Qwen chat/auth requests,
+not upload-storage or fingerprint-service hosts. Credential-bearing requests
+disable redirects by default.</p></li><li><p>Stream parsing handles text, reasoning, image/tool results, citations, usage
+and finish events. A completed thinking or tool phase does not end the response.</p></li><li><p><code>get_models(auth_session=auth)</code> uses the available token without forcing a
+refresh. <code>get_quota</code> accepts generation's session options and uses chat creation.</p></li></ul>
+<p>For image editing, pass <code>chat_type=&quot;image_edit&quot;</code> and <code>media</code>.
+<code>thinking_mode=&quot;Auto&quot;</code> enables planning and tool use; <code>qwen_image_model</code> can
+select a supported image model. Earlier live text tests verified browser SDK
+extraction and direct requests without seed messages. They do not establish that
+image editing succeeds after a guest quota rejection. The final session and retry
+contracts are covered by local tests; server acceptance still depends on the
+session and available quota.</p>
+        </main>
+    </div>
+
+    
+    <script>
+        // Toggle Translation Widget
+        document.getElementById("translate-toggle").addEventListener("click", function() {
+            const el = document.getElementById("google_translate_element");
+            el.style.display = (el.style.display === "none") ? "block" : "none";
+        });
+
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'en',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+            }, 'google_translate_element');
+        }
+    </script>
+    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+    <script>
+        // Enhanced syntax highlighting with error handling
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // Generate table of contents
+                generateTableOfContents();
+            } catch (error) {
+                console.error('Error generating table of contents:', error);
+            }
+        });
+
+        function generateTableOfContents() {
+            const headings = document.querySelectorAll('main h2, main h3');
+            const tocList = document.getElementById('toc-list');
+            
+            if (!tocList || headings.length === 0) return;
+            
+            tocList.innerHTML = '';
+            
+            headings.forEach(function(heading, index) {
+                const id = heading.id || `heading-${index}`;
+                if (!heading.id) {
+                    heading.id = id;
+                }
+                
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `#${id}`;
+                a.textContent = heading.textContent;
+                a.setAttribute('aria-label', `Jump to ${heading.textContent}`);
+                
+                if (heading.tagName === 'H3') {
+                    li.style.marginLeft = '1rem';
+                    li.style.fontSize = '0.9em';
+                }
+                
+                li.appendChild(a);
+                tocList.appendChild(li);
+            });
+        }
+
+        // Smooth scrolling for anchor links
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
+                e.preventDefault();
+                const target = document.querySelector(e.target.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }
+        });
+
+        // Add copy button to code blocks
+        document.querySelectorAll('pre code, .highlight pre').forEach(function(block) {
+            const button = document.createElement('button');
+            button.textContent = 'Copy';
+            button.className = 'copy-button';
+            button.style.cssText = `
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background: rgba(139, 61, 255, 0.8);
+                color: white;
+                border: none;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.8rem;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            const pre = block.parentElement;
+            pre.style.position = 'relative';
+            pre.appendChild(button);
+            
+            pre.addEventListener('mouseenter', function() {
+                button.style.opacity = '1';
+            });
+            
+            pre.addEventListener('mouseleave', function() {
+                button.style.opacity = '0';
+            });
+            
+            button.addEventListener('click', function() {
+                navigator.clipboard.writeText(block.textContent).then(function() {
+                    button.textContent = 'Copied!';
+                    setTimeout(function() {
+                        button.textContent = 'Copy';
+                    }, 2000);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
