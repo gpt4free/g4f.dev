@@ -22,6 +22,7 @@ The separate configs below are still used for split deployments.
 | API / OpenAI-compatible API | `api-worker.js` | `wrangler-custom.toml` | `g4f.space/*`, `api.g4f.space/*` | — |
 | Puter | `puter-worker.js` | `wrangler-puter.toml` | `g4f.space/api/puter/*` | `puter.g4f.space/*` |
 | Pollinations | `pollinations.js` | `wrangler-pollinations.toml` | `g4f.space/api/pollinations/*` | `pollinations.g4f.space/*` |
+| Pollinations community tier | `pollinations.js` | `wrangler-pollinations.toml` | `g4f.space/api/community/*` | `community.g4f.space/*` |
 | Ollama | `ollama.js` | `wrangler-ollama.toml` | `g4f.space/api/ollama/*` | `ollama.g4f.space/*` |
 
 Every public request goes through the API worker first. It authenticates the
@@ -44,10 +45,12 @@ All of these are OpenAI-compatible (`GET /models`, `POST /chat/completions`):
 https://g4f.space/v1                     API worker (auth/model routing)
 https://g4f.space/api/puter              API worker -> Puter module
 https://g4f.space/api/pollinations       API worker -> Pollinations module
+https://g4f.space/api/community          API worker -> Pollinations community tier
 https://g4f.space/api/ollama             API worker -> Ollama module
 
 https://puter.g4f.space                  API worker -> Puter module
 https://pollinations.g4f.space           API worker -> Pollinations module
+https://community.g4f.space              API worker -> Pollinations community tier
 https://ollama.g4f.space                 API worker -> Ollama module
 ```
 
@@ -55,6 +58,7 @@ https://ollama.g4f.space                 API worker -> Ollama module
 curl https://g4f.space/api/ollama/models
 curl https://g4f.space/api/puter/models
 curl https://g4f.space/api/pollinations/models
+curl https://g4f.space/api/community/models
 
 curl https://g4f.space/api/ollama/chat/completions \
   -H 'content-type: application/json' \
@@ -234,6 +238,10 @@ curl -i https://pollinations.g4f.space/
 ```
 
 `/` must return the health JSON, not an HTML 522 page.
+
+`gen.pollinations.ai` edge timeouts also fall back to the legacy
+`text.pollinations.ai` endpoint, so community/free chat keeps working when the
+authenticated gen endpoint is unreachable.
 
 ### `A route with this pattern already exists`
 

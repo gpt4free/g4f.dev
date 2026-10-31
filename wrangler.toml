@@ -31,6 +31,7 @@ routes = [
   { pattern = "api.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
   { pattern = "puter.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
   { pattern = "pollinations.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
+  { pattern = "community.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
   { pattern = "ollama.g4f.space", custom_domain = true, enabled = true, previews_enabled = false }
 ]
 

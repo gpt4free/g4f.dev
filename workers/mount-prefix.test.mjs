@@ -50,6 +50,16 @@ for (const [name, worker, servicePattern] of workers) {
 
 console.log("Worker mount-prefix and router smoke test passed (puter, pollinations, ollama).");
 
+// Community is a Pollinations tier, not a separate provider module.
+for (const url of ["https://g4f.space/api/community", "https://community.g4f.space/"]) {
+  const response = await router.fetch(new Request(url), {}, ctx);
+  assert.equal(response.status, 200, `community: ${url} should return 200`);
+  const body = await response.json();
+  assert.equal(body.status, "ok", `community: ${url} should report ok`);
+  assert.match(body.service, /pollinations/i, `community: ${url} should identify Pollinations`);
+}
+console.log("Community tier smoke test passed (api/community and community.g4f.space).");
+
 // A second pass through the router is a provider self-fetch loop. It must
 // return a clear 508 JSON error instead of timing out as Cloudflare 522.
 const loop = await router.fetch(

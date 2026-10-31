@@ -2669,6 +2669,10 @@ async function getServerByLabel(env, label, user = null) {
   if (label === "puter") {
     return { id: "puter", base_url: env.PUTER_WORKER_URL || `https://puter.g4f.space`, allowed_models: [], provider_worker: "puter"};
   }
+  if (label === "community") {
+    const pollinationsBase = (env.POLLINATIONS_WORKER_URL || "https://pollinations.g4f.space").replace(/\/+$/, "");
+    return { id: "community", base_url: `${pollinationsBase}/community`, allowed_models: [], provider_worker: "pollinations"};
+  }
   if (label.startsWith("pa:")) {
     return { id: "core", base_url: `https://pass.g4f.space/api/${label}`, allowed_models: []};
   }

@@ -8,10 +8,12 @@
 //   https://g4f.space/v1                     -> API worker
 //   https://g4f.space/api/puter/*            -> API worker -> Puter
 //   https://g4f.space/api/pollinations/*     -> API worker -> Pollinations
+//   https://g4f.space/api/community/*        -> API worker -> Pollinations (community tier)
 //   https://g4f.space/api/ollama/*           -> API worker -> Ollama
 //
 //   https://puter.g4f.space/*                -> API worker -> Puter
 //   https://pollinations.g4f.space/*         -> API worker -> Pollinations
+//   https://community.g4f.space/*            -> API worker -> Pollinations (community tier)
 //   https://ollama.g4f.space/*               -> API worker -> Ollama
 //
 // Every public request goes through the API worker first, so its auth, API-key
@@ -37,6 +39,7 @@ const PROVIDER_WORKERS = {
 const PROVIDERS = [
   { name: "puter", hosts: new Set(["puter.g4f.space"]), prefix: "/api/puter" },
   { name: "pollinations", hosts: new Set(["pollinations.g4f.space"]), prefix: "/api/pollinations" },
+  { name: "community", hosts: new Set(["community.g4f.space"]), prefix: "/api/community" },
   { name: "ollama", hosts: new Set(["ollama.g4f.space"]), prefix: "/api/ollama" }
 ];
 

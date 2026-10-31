@@ -20,8 +20,11 @@ compatibility_date = "2025-05-30"
 # subdomain is a custom domain, matching the deployed g4f.space setup.
 routes = [
   { pattern = "g4f.space/api/pollinations/*", zone_name = "g4f.space" },
+  { pattern = "g4f.space/api/community/*", zone_name = "g4f.space" },
   { pattern = "api.g4f.space/api/pollinations/*", zone_name = "g4f.space" },
-  { pattern = "pollinations.g4f.space", custom_domain = true, enabled = true, previews_enabled = false }
+  { pattern = "api.g4f.space/api/community/*", zone_name = "g4f.space" },
+  { pattern = "pollinations.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
+  { pattern = "community.g4f.space", custom_domain = true, enabled = true, previews_enabled = false }
 ]
 
 [vars]

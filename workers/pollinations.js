@@ -94,6 +94,13 @@ const POLLINATIONS_ACCOUNT_BALANCE = "https://gen.pollinations.ai/account/balanc
 const POLLINATIONS_GEN_TEXT_API = "https://gen.pollinations.ai/v1/chat/completions";
 const POLLINATIONS_GEN_API = "https://gen.pollinations.ai";
 
+// Cloudflare edge errors mean the request never reached Pollinations. When the
+// authenticated gen endpoint hits one of these, retry through the legacy
+// text.pollinations.ai endpoint so community/free traffic keeps working.
+function isCloudflareEdgeStatus(status) {
+  return [521, 522, 523, 524].includes(status);
+}
+
 // Pollinations sometimes reports key problems (budget exhausted, key
 // disabled, ...) as a normal 200 chat completion whose assistant content is
 // a message telling the user to edit the key. Detect those payloads so they
@@ -1461,7 +1468,7 @@ function isValidChatResponse(data) {
  * (upstream error, empty content or "User Safety: safe" stub) are retried
  * with up to 3 other models before the last response is returned.
  */
-async function handleChatCompletion(request, env, ctx) {
+async function handleChatCompletion(request, env, ctx, mode = null) {
   const body = await request.json();
 
   // Extract API key if provided
@@ -1541,8 +1548,37 @@ async function handleChatCompletion(request, env, ctx) {
         body: JSON.stringify(requestBody)
       });
     } catch (e) {
-      lastResponse = null;
-      continue;
+      if (textApiUrl === POLLINATIONS_GEN_TEXT_API) {
+        try {
+          response = await fetch(POLLINATIONS_TEXT_API, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody)
+          });
+        } catch (retryError) {
+          lastResponse = null;
+          continue;
+        }
+      } else {
+        lastResponse = null;
+        continue;
+      }
+    }
+
+    // gen.pollinations.ai can time out at the Cloudflare edge (521/522/523/
+    // 524). Retry the same request against the legacy text endpoint instead of
+    // returning the edge error for every candidate.
+    if (!response.ok && textApiUrl === POLLINATIONS_GEN_TEXT_API && isCloudflareEdgeStatus(response.status)) {
+      try {
+        response = await fetch(POLLINATIONS_TEXT_API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody)
+        });
+      } catch (e) {
+        lastResponse = response;
+        continue;
+      }
     }
 
     if (!response.ok) {
@@ -1821,14 +1857,19 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     let path = stripMountPrefix(url.pathname);
-    // The public Pollinations server record uses the /free base URL. Treat its
-    // bare root as the worker health endpoint instead of proxying /free/ back
-    // into the same host (which caused a Worker self-request loop / HTTP 522).
+    let mode = null;
+    // /free and /community are Pollinations model tiers. Strip the prefix and
+    // keep the tier as a mode so /community/chat/completions works the same as
+    // /community/models. The bare roots map to health; without this they proxied
+    // back into the same host and caused a Worker self-request loop / HTTP 522.
     if (path === "/free" || path === "/free/" || path === "/community" || path === "/community/") {
+      mode = path.startsWith("/community") ? "community" : "free";
       path = "/";
     } else if (path === "/free/health" || path === "/community/health") {
+      mode = path.startsWith("/community") ? "community" : "free";
       path = "/health";
-    } else if (path.startsWith("/free/v1/") || path.startsWith("/community/v1/")) {
+    } else if (path.startsWith("/free/") || path.startsWith("/community/")) {
+      mode = path.startsWith("/community/") ? "community" : "free";
       path = path.replace(/^\/(?:free|community)/, "");
     }
 
@@ -1856,11 +1897,11 @@ export default {
       } else if (path.startsWith("/account/") && request.method === "GET") {
         response = await handlePath("account", path.substring("/account/".length), request, env);
       } else if (path.endsWith("/models") && request.method === "GET") {
-        response = await handleListModels(request, env, path.substring(1).split("/")[0]);
+        response = await handleListModels(request, env, mode || path.substring(1).split("/")[0]);
       } else if (path.endsWith("/quota") && request.method === "GET") {
         response = await handleQuota(request, env);
       } else if (path.endsWith("/chat/completions") && request.method === "POST") {
-        response = await handleChatCompletion(request, env, ctx);
+        response = await handleChatCompletion(request, env, ctx, mode);
       } else if (path.endsWith("/images/generations") && request.method === "POST") {
         response = await handleImageGeneration(request, env, ctx);
       } else if (path.startsWith("/v1/")) {
