@@ -2460,14 +2460,18 @@
             }
         }
 
+        function isDiscordUpgradeEligible(user) {
+            return !!user && (user.tier === 'new' || user.tier === 'anonymous');
+        }
+
         function renderDiscordUpgradeBanner(user, status) {
             if (!discordUpgradeBanner) return;
             discordMembership = status || null;
 
-            const eligibleTier = user && (user.tier === 'new' || user.tier === 'anonymous');
-            if (!status || !eligibleTier) {
-                //discordUpgradeBanner.hidden = true;
-                //return;
+            const eligibleTier = isDiscordUpgradeEligible(user);
+            if (!status || !eligibleTier || status.can_upgrade === false) {
+                discordUpgradeBanner.hidden = true;
+                return;
             }
 
             const connected = !!status.connected;
@@ -2477,7 +2481,7 @@
             discordUpgradeBanner.hidden = false;
             discordStepDone('connect', connected && !reconnect);
             discordStepDone('join', joined);
-            discordStepDone('upgrade', status.tier !== 'new');
+            discordStepDone('upgrade', status.tier !== 'new' && status.tier !== 'anonymous');
 
             if (reconnect) {
                 discordUpgradeText.textContent = 'Reconnect Discord so we can verify your support server membership, then upgrade to the Free tier.';
@@ -2495,15 +2499,18 @@
                 ? '<i class="fab fa-discord"></i> Reconnect Discord'
                 : '<i class="fab fa-discord"></i> Connect Discord';
             discordConnectBtn.style.display = connected && !reconnect ? 'none' : '';
-            if (discordJoinBtn) discordJoinBtn.href = status.invite || DISCORD_INVITE_URL;
+            if (discordJoinBtn) {
+                discordJoinBtn.href = status.invite || DISCORD_INVITE_URL;
+                discordJoinBtn.style.display = joined ? 'none' : '';
+            }
             discordVerifyBtn.disabled = !connected || reconnect || discordBannerLoading;
         }
 
         async function refreshDiscordUpgradeBanner(user) {
             if (!discordUpgradeBanner) return;
-            if (!user || (user.tier !== 'new' && user.tier !== 'anonymous')) {
-                //discordUpgradeBanner.hidden = true;
-                //return;
+            if (!isDiscordUpgradeEligible(user)) {
+                discordUpgradeBanner.hidden = true;
+                return;
             }
 
             try {

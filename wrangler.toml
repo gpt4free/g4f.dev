@@ -70,9 +70,12 @@ API_KEY_SALT = ""  # Set via: npx wrangler secret put API_KEY_SALT
 PUTER_WORKER_URL = "https://puter.g4f.space"
 POLLINATIONS_WORKER_URL = "https://pollinations.g4f.space"
 OLLAMA_WORKER_URL = "https://ollama.g4f.space"
+# Account key kept at the minimum pollen budget by the scheduled trigger.
+POLLINATIONS_KEY_ID = "udAgkmDyDv1RhpHWrF2Az9insQWi0Q3X"
+POLLINATIONS_MIN_POLLEN_BUDGET = "0.00001"
 
 # Refresh the public servers index every 15 minutes; hourly runs also prune
-# the D1 tables.
+# the D1 tables. The same trigger pins the Pollinations key budget.
 [triggers]
 crons = ["*/15 * * * *"]
 

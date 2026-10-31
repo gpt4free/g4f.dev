@@ -586,8 +586,10 @@ async function handleIssue(request, env) {
 
     const kindParam = (url.searchParams.get("kind") || "any").toLowerCase();
     // "followups" is accepted as an alias for "followup".
-    const explicitKind = ["followup", "followups", "translation","translations"].includes(kindParam);
-    let kind = explicitKind || "translations";
+    const explicitKind = ["followup", "followups", "translation", "translations"].includes(kindParam);
+    let kind = explicitKind
+        ? (kindParam === "followups" ? "followup" : kindParam)
+        : "translations";
     const language = url.searchParams.get("lang") || "en";
 
     let payload = buildChallengePayload(kind, language);
@@ -620,7 +622,11 @@ async function handleIssue(request, env) {
             candidates.sort((a, b) => b[1].length - a[1].length);
             const top = candidates.slice(0, Math.min(3, candidates.length));
             const [headline, untranslated] = top[Math.floor(Math.random() * top.length)];
-            const pending = [headline, ...untranslated.slice(0, batch), "..."];
+            // Dedupe: a headline can also appear as a snippet elsewhere in
+            // the catalog, and duplicate items would collapse into one
+            // translation entry when the answer is stored.
+            const pending = [...new Set([headline, ...untranslated.slice(0, batch)])];
+            pending.push("...");
             payload.items = pending;
             payload.prompt =
                 `Translate these UI texts to language \`${language}\` (iso-code). ` +

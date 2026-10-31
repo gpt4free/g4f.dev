@@ -3,6 +3,7 @@
 const worker = (await import("../../workers/pollinations.js")).default;
 
 const realFetch = globalThis.fetch;
+let lastUpstreamRequest = null;
 const upstreamModels = JSON.stringify({
   data: [
     { name: "openai", pricing: { promptTextTokens: 0.000001, completionTextTokens: 0.000002 } },
@@ -13,8 +14,9 @@ const imageModels = JSON.stringify([
   { name: "flux", pricing: { completionImageTokens: 0.001 } }
 ]);
 
-globalThis.fetch = async (url) => {
+globalThis.fetch = async (url, init) => {
   const u = String(url);
+  lastUpstreamRequest = { url: u, init };
   if (u.includes("gen.pollinations.ai/text/models")) return new Response(upstreamModels, { status: 200 });
   if (u.includes("gen.pollinations.ai/image/models")) return new Response(imageModels, { status: 200 });
   if (u.includes("image.pollinations.ai/models")) return new Response(JSON.stringify(["flux", "openai"]), { status: 200 });
@@ -67,6 +69,33 @@ r = await worker.fetch(new Request("https://polli.g4f.dev/v1/images/generations"
 }), env, {});
 console.log("unknown image model:", r.status, JSON.stringify(await r.json()));
 if (r.status !== 404) throw new Error("expected 404 for unknown image model");
+
+// 6) Scheduled trigger patches the account key to the configured minimum.
+await worker.scheduled({ scheduledTime: Date.now() }, {
+  ...env,
+  POLLINATIONS_KEY_ID: "key123",
+  POLLINATIONS_MIN_POLLEN_BUDGET: "0.00002",
+  POLLINATIONS_SESSION_TOKEN: "sess_test"
+}, {});
+if (!lastUpstreamRequest || !lastUpstreamRequest.url.endsWith("/account/keys/key123")) {
+  throw new Error("expected scheduled trigger to PATCH the account key");
+}
+if (lastUpstreamRequest.init?.method !== "PATCH") {
+  throw new Error("expected scheduled trigger to use PATCH");
+}
+if (lastUpstreamRequest.init?.headers?.authorization !== "Bearer sess_test") {
+  throw new Error("expected scheduled trigger to use the session token");
+}
+const cronBody = JSON.parse(lastUpstreamRequest.init.body);
+console.log("scheduled key patch:", lastUpstreamRequest.url, JSON.stringify(cronBody));
+if (cronBody.pollenBudget !== 0.00002) {
+  throw new Error("expected scheduled trigger to write the configured budget");
+}
+
+// 7) Without credentials the trigger skips instead of throwing.
+lastUpstreamRequest = null;
+await worker.scheduled({ scheduledTime: Date.now() }, { ...env }, {});
+if (lastUpstreamRequest) throw new Error("expected no request without cron credentials");
 
 globalThis.fetch = realFetch;
 console.log("ALL SMOKE TESTS PASSED");

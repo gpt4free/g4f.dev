@@ -111,6 +111,186 @@ function isValidRedirect(url) {
         return false;
     }
 }
+// ---- CORS proxy (/proxy/<target-url>) -------------------------------------
+// Browser clients fall back to this route for providers that do not send CORS
+// headers (see the Kilo client in dist/js/client.js). The worker fetches the
+// target server-side and returns its response with permissive CORS headers.
+// Only public http(s) targets are allowed, request/response hop-by-hop and
+// identity headers are stripped, and bodies are limited to JSON of 10 MiB.
+var PROXY_MAX_BODY_SIZE = 10 * 1024 * 1024;
+var PROXY_ALLOWED_METHODS = new Set(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]);
+var PROXY_JSON_CONTENT_TYPES = new Set(["application/json", "application/problem+json"]);
+var PROXY_DROP_REQUEST_HEADERS = new Set([
+  "connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
+  "te", "trailer", "transfer-encoding", "upgrade", "host", "content-length",
+  "accept-encoding", "cookie", "origin", "referer",
+  "x-workspace-secret", "g4f-api-key", "x-secret",
+  "x-user", "x-user-id", "x-user-tier", "x-user-provider",
+  "forwarded", "x-forwarded-for", "x-forwarded-host", "x-forwarded-proto",
+  "x-real-ip",
+  "pragma", "cache-control", "accept-language",
+  "sec-fetch-site", "sec-ch-ua", "sec-ch-ua-platform", "sec-ch-ua-mobile",
+  "sec-fetch-mode", "sec-fetch-dest"
+]);
+var PROXY_DROP_RESPONSE_HEADERS = new Set([
+  "connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
+  "te", "trailer", "transfer-encoding", "upgrade", "content-length",
+  "content-encoding", "set-cookie",
+  "access-control-allow-origin", "access-control-allow-methods",
+  "access-control-allow-headers", "access-control-expose-headers",
+  "access-control-allow-credentials"
+]);
+function isProxyPath(pathname) {
+  return pathname === "/proxy" || pathname.startsWith("/proxy/");
+}
+function normalizeProxyHostname(hostname) {
+  return String(hostname || "").toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
+}
+function isPrivateProxyAddress(hostname) {
+  const host = normalizeProxyHostname(hostname);
+  if (!host) return true;
+  if (host === "localhost" || host.endsWith(".localhost") ||
+      host.endsWith(".local") || host.endsWith(".internal") ||
+      host === "metadata" || host === "metadata.google.internal" ||
+      host === "instance-data") {
+    return true;
+  }
+  if (host.includes(":")) {
+    // IPv6 literals: loopback, unspecified, link-local, site-local, multicast
+    // and unique-local. Anything starting with "::" is IPv4-compatible or
+    // IPv4-mapped (URL canonicalises it to hex), and 64:ff9b:: is NAT64 —
+    // block both rather than trying to decode every IPv4 embedding.
+    if (host.startsWith("::") || host.startsWith("64:ff9b::")) return true;
+    if (/^f[cd][0-9a-f]{2}:/.test(host) ||
+        /^fe[89abcdef][0-9a-f]:/.test(host) ||
+        /^ff[0-9a-f]{2}:/.test(host)) return true;
+    return false;
+  }
+  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (!ipv4) return false;
+  const [a, b] = [Number(ipv4[1]), Number(ipv4[2])];
+  if (ipv4.slice(1).some((part) => Number(part) > 255)) return true;
+  return a === 0 || a === 10 || a === 127 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 198 && (b === 18 || b === 19)) ||
+    a >= 224;
+}
+function isBlockedProxyTarget(targetUrl, requestHostname) {
+  const host = normalizeProxyHostname(targetUrl.hostname);
+  if (isPrivateProxyAddress(host)) return true;
+  // Blocking the worker's own hostname prevents /proxy self-recursion.
+  return host === normalizeProxyHostname(requestHostname);
+}
+function getProxyTarget(url, pathname) {
+  const passthrough = new URLSearchParams(url.searchParams);
+  let target = passthrough.get("url");
+  passthrough.delete("url");
+  if (!target) {
+    target = pathname.slice("/proxy".length);
+    if (target.startsWith("/")) target = target.slice(1);
+    // Some callers percent-encode the whole URL instead of only the path.
+    if (/^https?%3a/i.test(target)) {
+      try { target = decodeURIComponent(target); } catch (e) { /* keep raw */ }
+    }
+  } else if (/^https?%3a/i.test(target)) {
+    try { target = decodeURIComponent(target); } catch (e) { /* keep raw */ }
+  }
+  if (!target) return null;
+  let targetUrl;
+  try {
+    targetUrl = new URL(target);
+  } catch (e) {
+    return null;
+  }
+  if (targetUrl.protocol !== "http:" && targetUrl.protocol !== "https:") return null;
+  if (targetUrl.username || targetUrl.password) return null;
+  for (const [key, value] of passthrough) {
+    targetUrl.searchParams.append(key, value);
+  }
+  return targetUrl;
+}
+function proxyErrorResponse(request, status, message) {
+  return jsonResponse({
+    error: { message, type: "proxy_error" }
+  }, status, getCorsHeaders(request));
+}
+async function handleCorsProxy(request, env, ctx, pathname, rateCheck) {
+  const url = new URL(request.url);
+  const targetUrl = getProxyTarget(url, pathname);
+  if (!targetUrl) {
+    return proxyErrorResponse(request, 400, "Invalid proxy target. Use /proxy/<https://url> or /proxy?url=<https://url>.");
+  }
+  if (isBlockedProxyTarget(targetUrl, url.hostname)) {
+    return proxyErrorResponse(request, 400, "Invalid or disallowed proxy target.");
+  }
+  if (!PROXY_ALLOWED_METHODS.has(request.method)) {
+    return proxyErrorResponse(request, 405, "Method not allowed.");
+  }
+  const method = request.method;
+  let body;
+  if (method !== "GET" && method !== "HEAD") {
+    const contentType = (request.headers.get("content-type") || "").split(";", 1)[0].trim().toLowerCase();
+    if (!PROXY_JSON_CONTENT_TYPES.has(contentType)) {
+      return proxyErrorResponse(request, 415, "Only JSON requests are supported.");
+    }
+    const declaredLength = Number(request.headers.get("content-length") || 0);
+    if (declaredLength > PROXY_MAX_BODY_SIZE) {
+      return proxyErrorResponse(request, 413, "Request body too large.");
+    }
+    body = await request.arrayBuffer();
+    if (body.byteLength > PROXY_MAX_BODY_SIZE) {
+      return proxyErrorResponse(request, 413, "Request body too large.");
+    }
+  }
+  const headers = new Headers();
+  for (const [key, value] of request.headers) {
+    const lower = key.toLowerCase();
+    if (PROXY_DROP_REQUEST_HEADERS.has(lower) || lower.startsWith("cf-")) continue;
+    headers.set(key, value);
+  }
+  const init = { method, headers, redirect: "manual" };
+  if (body && body.byteLength && method !== "GET" && method !== "HEAD") {
+    init.body = body;
+  }
+  let response;
+  try {
+    response = await fetch(targetUrl.toString(), init);
+  } catch (error) {
+    ctx.waitUntil(persistErrorToDb(env, error, {
+      source: "proxy",
+      status: 502,
+      pathname,
+      method,
+      ip: getClientIP(request),
+      userAgent: request.headers.get("user-agent"),
+      requestId: request.headers.get("cf-ray") || null
+    }));
+    const failed = proxyErrorResponse(request, 502, "Proxy request failed.");
+    updateResponsefromRateCheck(failed, rateCheck);
+    return failed;
+  }
+  const responseHeaders = new Headers();
+  for (const [key, value] of response.headers) {
+    if (!PROXY_DROP_RESPONSE_HEADERS.has(key.toLowerCase())) {
+      responseHeaders.append(key, value);
+    }
+  }
+  responseHeaders.set("Access-Control-Allow-Origin", "*");
+  responseHeaders.set("Access-Control-Allow-Methods", CORS_HEADERS["Access-Control-Allow-Methods"]);
+  responseHeaders.set("Access-Control-Allow-Headers", CORS_HEADERS["Access-Control-Allow-Headers"]);
+  responseHeaders.set("Access-Control-Expose-Headers", CORS_HEADERS["Access-Control-Expose-Headers"]);
+  const proxied = new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: responseHeaders
+  });
+  proxied.headers.set("X-Url", targetUrl.pathname);
+  updateResponsefromRateCheck(proxied, rateCheck);
+  return proxied;
+}
 function inferProviderWorkerName(server) {
   if (!server) return null;
   if (server.provider_worker) return server.provider_worker;
@@ -462,7 +642,12 @@ async function safe(request, env, ctx) {
     try {
     let rateCheck;
     try {
-      if (!userProvidedKey && !pathname.endsWith("/models") && !pathname.endsWith("/quota") && !pathname.endsWith("/health") && !pathname.startsWith("/custom/api/") && !pathname.startsWith("/backend-api/") && !pathname.startsWith("/pa/"))
+      // The proxy route always applies user limits, even when the target path
+      // ends in /models, /quota or /health or the caller supplies their own
+      // upstream API key. Otherwise /proxy could be used to bypass the quota.
+      const proxyRoute = isProxyPath(pathname);
+      const rateLimitExempt = !proxyRoute && (pathname.endsWith("/models") || pathname.endsWith("/quota") || pathname.endsWith("/health") || pathname.startsWith("/custom/api/") || pathname.startsWith("/backend-api/") || pathname.startsWith("/pa/"));
+      if ((proxyRoute || !userProvidedKey) && !rateLimitExempt)
         if (user) {
           rateCheck = await checkUserRateLimits(env, user, request);
           if (!rateCheck.allowed) {
@@ -512,7 +697,7 @@ async function safe(request, env, ctx) {
       }
       const cacheKey = generateCacheKey(request)
       //if (request.headers.get("cache-control") !== "no-cache")
-      if ((!userProvidedKey || pathname.endsWith("/models")) && request.method === "GET") {
+      if ((!userProvidedKey || pathname.endsWith("/models")) && request.method === "GET" && !isProxyPath(pathname)) {
         const cachedResponse = await getCachedResponse(request, cacheKey);
         if (cachedResponse) {
           const newResponse = new Response(cachedResponse.body, cachedResponse);
@@ -530,7 +715,7 @@ async function safe(request, env, ctx) {
       // responses by body hash so repeated test prompts (ping, hello, test)
       // return the same cached result without hitting the upstream server.
       if ( // !(request.headers.get("cache-control") || "").includes("no-cache") &&
-        !userProvidedKey && request.method === "POST"
+        !userProvidedKey && request.method === "POST" && !isProxyPath(pathname)
           && (pathname === "/v1/chat/completions" || pathname === "/chat/completions"
               || pathname.match(/\/chat\/completions$/))) {
         let body = null;
@@ -547,6 +732,9 @@ async function safe(request, env, ctx) {
       }
       if (user) {
         ctx.waitUntil(updateUserRateLimit(env, user.id, ctx));
+      }
+      if (isProxyPath(pathname)) {
+        return handleCorsProxy(request, env, ctx, pathname, rateCheck);
       }
       if (waitForProviders && await waitForProviders(env)) waitForProviders = null;
       const serverLabel = url.hostname.split(".")[0];
@@ -867,16 +1055,30 @@ async function authenticateRequest(request, env) {
       }
     }
   }
+  const resolveSession = async (token) => {
+    if (!token || token.startsWith("g4f_") || !env.MEMBERS_KV) return null;
+    const sessionData = await env.MEMBERS_KV.get(`session:${token}`);
+    if (!sessionData) return null;
+    const session = JSON.parse(sessionData);
+    if (new Date(session.expires_at) > /* @__PURE__ */ new Date()) {
+      return await getUser(env, session.user_id);
+    }
+    return null;
+  };
   // g4f_ API keys were already resolved to a user above — skip the doomed
   // session KV lookup (saves one KV read per authenticated API-key request)
-  if (sessionToken && !sessionToken.startsWith("g4f_") && env.MEMBERS_KV) {
-    const sessionData = await env.MEMBERS_KV.get(`session:${sessionToken}`);
-    if (sessionData) {
-      const session = JSON.parse(sessionData);
-      if (new Date(session.expires_at) > /* @__PURE__ */ new Date()) {
-        return await getUser(env, session.user_id);
-      }
-    }
+  if (sessionToken) {
+    const user = await resolveSession(sessionToken);
+    if (user) return user;
+  }
+  // A caller can send their own upstream key in Authorization (notably through
+  // /proxy). That must not hide a valid g4f session cookie, otherwise the
+  // request would silently skip the user's rate limits.
+  const cookie = request.headers.get("Cookie");
+  const cookieToken = cookie ? cookie.match(/g4f_session=([^;]+)/)?.[1] : null;
+  if (cookieToken && cookieToken !== sessionToken) {
+    const user = await resolveSession(cookieToken);
+    if (user) return user;
   }
   return null;
 }
@@ -4034,7 +4236,10 @@ var UNLOGGED_ERROR_TYPES = new Set([
   "not_found",
   // v1 endpoints reject user-provided keys with a static 403; this fires on
   // every misconfigured client request and previously flooded /api/errors.
-  "authentication_error"
+  "authentication_error",
+  // Malformed / blocked /proxy targets are caller errors and would otherwise
+  // let anyone flood the error log with requests.
+  "proxy_error"
 ]);
 function jsonResponse(data, status = 200, headers = {}) {
   if (status >= 400 && status != 402 && currentRequestContext && !currentRequestContext.skipErrorLog) {

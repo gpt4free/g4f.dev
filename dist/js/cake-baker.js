@@ -1745,6 +1745,10 @@ fn sha256_batch(@builtin(global_invocation_id) gid: vec3<u32>) {
         state.submitted = 0;
         state.accepted = 0;
         state.credits = 0;
+        // Spawn the worker pool immediately so status() reflects the
+        // configured size as soon as baking starts, even before the first
+        // batch of UUIDs arrives.
+        ensureWorkers();
         // initial fetch then bake
         fetchBatch().then(() => bakeNext());
         // lock refresh interval

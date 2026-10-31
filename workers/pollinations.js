@@ -90,6 +90,14 @@ const POLLINATIONS_MODELS_API = "https://gen.pollinations.ai/text/models";
 const POLLINATIONS_IMAGE_MODELS_API = "https://gen.pollinations.ai/image/models";
 const POLLINATIONS_FREE_MODELS_API = "https://image.pollinations.ai/models";
 const POLLINATIONS_ACCOUNT_BALANCE = "https://gen.pollinations.ai/account/balance"
+const POLLINATIONS_ACCOUNT_KEYS = "https://gen.pollinations.ai/account/keys";
+
+// The scheduled trigger keeps the shared account key at the minimum pollen
+// budget so a leaked/overused default key cannot drain the account. The key
+// id and budget can be overridden per deployment; the id below is the key the
+// worker is normally deployed with.
+const DEFAULT_POLLINATIONS_KEY_ID = "udAgkmDyDv1RhpHWrF2Az9insQWi0Q3X";
+const DEFAULT_MIN_POLLEN_BUDGET = 0.00001;
 
 const POLLINATIONS_GEN_TEXT_API = "https://gen.pollinations.ai/v1/chat/completions";
 const POLLINATIONS_GEN_API = "https://gen.pollinations.ai";
@@ -1863,6 +1871,59 @@ function stripMountPrefix(pathname) {
   return pathname;
 }
 
+function getMinPollenBudget(env) {
+  const parsed = Number(env?.POLLINATIONS_MIN_POLLEN_BUDGET);
+  return Number.isFinite(parsed) && parsed >= 0
+    ? parsed
+    : DEFAULT_MIN_POLLEN_BUDGET;
+}
+
+/**
+ * Set the shared Pollinations key's pollen budget to its minimum value.
+ *
+ * Pollinations key management uses the account session API:
+ *   PATCH https://gen.pollinations.ai/account/keys/<key-id>
+ *   Authorization: Bearer <session or secret key>
+ *   {"pollenBudget": 0.00001}
+ *
+ * A secret `sk_` key has full account access, so the cron prefers the
+ * worker's `POLLINATIONS_API_KEY` and falls back to a dedicated
+ * `POLLINATIONS_SESSION_TOKEN` secret (browser sessions expire quickly).
+ * Without either credential the update is skipped instead of failing the
+ * whole scheduled invocation.
+ */
+async function updatePollinationsKeyBudget(env) {
+  const keyId = env?.POLLINATIONS_KEY_ID || DEFAULT_POLLINATIONS_KEY_ID;
+  const token = env?.POLLINATIONS_API_KEY || env?.POLLINATIONS_SESSION_TOKEN;
+  const pollenBudget = getMinPollenBudget(env);
+
+  if (!token) {
+    console.warn("Cron: no POLLINATIONS_API_KEY or POLLINATIONS_SESSION_TOKEN set; skipping key budget update");
+    return { skipped: true, reason: "missing_credentials", keyId };
+  }
+
+  const response = await fetch(`${POLLINATIONS_ACCOUNT_KEYS}/${encodeURIComponent(keyId)}`, {
+    method: "PATCH",
+    headers: {
+      accept: "*/*",
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+      origin: "https://enter.pollinations.ai",
+      referer: "https://enter.pollinations.ai/",
+      "user-agent": "g4f.space-pollinations-worker-cron"
+    },
+    body: JSON.stringify({ pollenBudget })
+  });
+
+  const body = await response.text();
+  if (!response.ok) {
+    throw new Error(`Pollinations key budget update failed (${response.status}): ${body.slice(0, 300)}`);
+  }
+
+  console.log(`Cron: set Pollinations key ${keyId} pollenBudget to ${pollenBudget}`);
+  return { ok: true, keyId, pollenBudget };
+}
+
 /**
  * Main request handler
  */
@@ -1978,6 +2039,18 @@ export default {
       statusText: corsResponse.statusText,
       headers
     });
+  },
+
+  async scheduled(event, env, ctx) {
+    const task = updatePollinationsKeyBudget(env).catch((error) => {
+      console.error("Cron: Pollinations key budget update failed:", error);
+      return { ok: false, error: error.message };
+    });
+    if (ctx && typeof ctx.waitUntil === "function") {
+      ctx.waitUntil(task);
+      return;
+    }
+    await task;
   }
 };
 

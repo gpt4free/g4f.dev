@@ -7,10 +7,13 @@
 #   https://g4f.space/api/pollinations/*     (same host as the API worker)
 #   https://pollinations.g4f.space/*         (dedicated subdomain)
 #
-# Optional secret:
+# Optional secrets:
 #   wrangler secret put POLLINATIONS_API_KEY --config wrangler-pollinations.toml
+#   wrangler secret put POLLINATIONS_SESSION_TOKEN --config wrangler-pollinations.toml
 # A key unlocks the premium gen.pollinations.ai endpoints; anonymous requests
-# still work with the free tier.
+# still work with the free tier. The scheduled trigger below also uses the key
+# (or POLLINATIONS_SESSION_TOKEN when set) to keep the account key's pollen
+# budget at its minimum.
 
 name = "pollinations"
 main = "pollinations.js"
@@ -30,6 +33,15 @@ routes = [
 [vars]
 # Per-IP request cap per 60s window. Set to "0" to disable.
 RATE_LIMIT_PER_MINUTE = "30"
+# Account key whose pollen budget is pinned by the scheduled trigger.
+POLLINATIONS_KEY_ID = "udAgkmDyDv1RhpHWrF2Az9insQWi0Q3X"
+# Minimum budget written by the cron (override with a positive number).
+POLLINATIONS_MIN_POLLEN_BUDGET = "0.00001"
+
+# Keep the account key at the minimum pollen budget. Runs every 15 minutes,
+# matching the API worker's refresh cadence.
+[triggers]
+crons = ["*/15 * * * *"]
 
 [dev]
 port = 8794

@@ -158,8 +158,13 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
+    const tasks = [];
     if (typeof apiWorker.scheduled === "function") {
-      return apiWorker.scheduled(event, apiEnv(env), ctx);
+      tasks.push(apiWorker.scheduled(event, apiEnv(env), ctx));
     }
+    if (typeof pollinationsWorker.scheduled === "function") {
+      tasks.push(pollinationsWorker.scheduled(event, apiEnv(env), ctx));
+    }
+    await Promise.allSettled(tasks);
   }
 };

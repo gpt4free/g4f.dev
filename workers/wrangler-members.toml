@@ -17,15 +17,18 @@ bucket_name = "g4f-members"  # Replace with actual bucket name
 
 # Environment variables (secrets should be set via wrangler secret put)
 [vars]
+# Official G4F support server (https://discord.gg/qXA4Wf4Fsm). Pinning the
+# guild ID avoids a runtime invite lookup when verifying membership.
+DISCORD_GUILD_ID = "1307026861037064243"
+DISCORD_GUILD_NAME = "g4f support"
 
 # OAuth credentials (set as secrets)
 # wrangler secret put GITHUB_CLIENT_ID
 # wrangler secret put GITHUB_CLIENT_SECRET
 # wrangler secret put DISCORD_CLIENT_ID
 # wrangler secret put DISCORD_CLIENT_SECRET
-# Optional: pin the support guild instead of resolving the invite at runtime
-# DISCORD_GUILD_ID = "123456789012345678"
-# DISCORD_GUILD_NAME = "G4F Support"
+# The support guild is pinned in [vars] above; remove those values to resolve
+# the guild ID from the public invite at runtime instead.
 # wrangler secret put HUGGINGFACE_CLIENT_ID
 # wrangler secret put HUGGINGFACE_CLIENT_SECRET
 # wrangler secret put GITHUB_TOKEN
