@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Automatic development pipeline | GPT4Free Documentation</title>
+
+    <meta name="description" content="GPT4Free documentation for Automatic development pipeline. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
+    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, Automatic development pipeline" />
+    <meta name="author" content="GPT4Free Team" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Automatic development pipeline | GPT4Free Documentation" />
+    <meta property="og:description" content="GPT4Free documentation for Automatic development pipeline. Free AI endpoints, examples, and comprehensive guides." />
+    <meta property="og:url" content="https://g4f.dev/docs/dev-pipeline.html" />
+    <meta property="og:site_name" content="GPT4Free Documentation" />
+    <meta property="og:image" content="https://g4f.dev/dist/img/g4f.svg" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Automatic development pipeline | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for Automatic development pipeline." />
+    <meta name="twitter:image" content="https://g4f.dev/dist/img/g4f.svg" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://g4f.dev/docs/dev-pipeline.html" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/g4f.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/g4f-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/g4f-16x16.png" />
+    <link rel="manifest" href="/dist/img/site.webmanifest" />
+
+    <!-- GitHub Primer CSS & styles -->
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
+
+    
+    <style>
+        :root {
+            --accent: #8b3dff;
+            --background: #16101b;
+            --text-primary: #ddd;
+            --text-secondary: #9b7dff;
+            --card-bg: #1e152e;
+            --border-color: #333;
+            --hover-color: #a67eff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--background);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            max-width: 100%;
+            margin: 0;
+            padding: 2rem;
+            gap: 3rem;
+            min-height: calc(100vh - 4rem);
+        }
+
+        /* Enhanced main content styling */
+        main {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            overflow-wrap: break-word;
+            position: relative;
+        }
+
+        /* Typography improvements */
+        .markdown-body h1 {
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 0.5rem;
+        }
+
+        .markdown-body h2 {
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body h3 {
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body p {
+            margin-bottom: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        /* Enhanced link styling */
+        .markdown-body a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .markdown-body a:hover,
+        .markdown-body a:focus {
+            color: var(--hover-color);
+            outline: none;
+            text-decoration: underline;
+            text-shadow: 0 0 8px rgba(139, 61, 255, 0.3);
+        }
+
+        /* Enhanced code block styling */
+        .markdown-body pre {
+            border-radius: 12px;
+            padding: 1.5rem !important;
+            font-size: 0.95rem !important;
+            overflow-x: auto;
+            max-height: 500px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.4);
+            color: #fff;
+            border: 1px solid #3d2a5c;
+            position: relative;
+        }
+
+
+        .markdown-body code {
+            font-family: 'SF Mono', 'Cascadia Code', 'Roboto Mono', Consolas, Liberation Mono, Menlo, monospace;
+            background: rgba(139, 61, 255, 0.1);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            color: #e6ccff;
+            font-size: 0.9em;
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+            color: var(--fgColor-default, var(--color-fg-default))
+        }
+
+        /* Table styling */
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 2rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .markdown-body table th,
+        .markdown-body table td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        .markdown-body table th {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .markdown-body table tr:nth-child(even) {
+            background: rgba(139, 61, 255, 0.05);
+        }
+
+        .markdown-body table tr {
+            background-color: transparent;
+        }
+
+        /* List styling */
+        .markdown-body ul, 
+        .markdown-body ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        .markdown-body li {
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        /* Blockquote styling */
+        .markdown-body blockquote {
+            border-left: 4px solid var(--accent);
+            background: rgba(139, 61, 255, 0.1);
+            margin: 2rem 0;
+            padding: 1rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* HR styling */
+        .markdown-body hr {
+            border: none;
+            border-top: 2px solid var(--accent);
+            margin: 3rem 0;
+            opacity: 0.6;
+        }
+
+        /* Sticky table of contents */
+        nav#toc {
+            flex: 0 0 280px;
+            position: sticky;
+            top: 2rem;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid rgba(139, 61, 255, 0.2);
+        }
+
+        nav#toc h2 {
+            font-size: 1.4rem;
+            margin: 0 0 1.5rem 0;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        nav#toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        nav#toc li {
+            margin-bottom: 0.8rem;
+        }
+
+        nav#toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: block;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        nav#toc a:hover, 
+        nav#toc a:focus {
+            background: rgba(139, 61, 255, 0.1);
+            color: var(--hover-color);
+            text-decoration: none;
+            transform: translateX(4px);
+        }
+
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 2rem;
+            }
+
+            nav#toc {
+                position: relative;
+                max-height: none;
+                order: -1;
+                flex: none;
+            }
+
+            .markdown-body h1 {
+                font-size: 2.2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            main {
+                padding: 1.5rem;
+            }
+
+            .markdown-body h1 {
+                font-size: 1.8rem;
+            }
+
+            .markdown-body pre {
+                padding: 1rem !important;
+                font-size: 0.85rem !important;
+            }
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Focus indicators */
+        *:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* Print styles */
+        @media print {
+            .container {
+                display: block;
+            }
+            
+            nav#toc {
+                display: none;
+            }
+            
+            main {
+                box-shadow: none;
+                background: white;
+                color: black;
+            }
+        }
+
+        /* Loading animation for syntax highlighting */
+        .highlight-loading {
+            position: relative;
+            opacity: 0.7;
+        }
+
+        .highlight-loading::after {
+            content: 'Loading syntax highlighting...';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Translate Button Style */
+        #translate-toggle {
+            display: block;
+            background: var(--accent);
+            color: #fff;
+            text-align: center;
+            padding: 0.5rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            border: none;
+        }
+        #google_translate_element {
+            margin-bottom: 1rem;
+        }
+    </style>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "Automatic development pipeline",
+      "description": "GPT4Free documentation for Automatic development pipeline. Complete guides, examples, and API reference for free AI endpoints.",
+      "author": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization",
+        "name": "GPT4Free",
+        "url": "https://g4f.dev",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://g4f.dev/dist/img/g4f.svg"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://g4f.dev/docs/dev-pipeline.html"
+      },
+      "datePublished": "2024-01-01T00:00:00Z",
+      "dateModified": "2024-01-01T00:00:00Z",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "keywords": "GPT4Free, AI documentation, free AI API, code generation",
+      "articleSection": "Documentation"
+    }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="toc" aria-label="Table of contents" role="navigation">
+            <!-- Translation Button -->
+            <button id="translate-toggle">🌐 Translate Page</button>
+            <div id="google_translate_element" style="display:none;"></div>
+            <h2>Contents</h2>
+            <ul id="toc-list">
+                <!-- Table of contents will be generated here -->
+            </ul>
+            <hr style="margin: 1.5rem 0; opacity: 0.3;">
+            <ul>
+                <li><a href="/docs/" aria-label="Return to documentation home">📚 Documentation Hub</a></li>
+                <li><a href="/" aria-label="Return to main site">🏠 G4F Home</a></li>
+            </ul>
+        </nav>
+
+        <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
+            <h1>Automatic development pipeline</h1>
+<p><code>bin/dev-pipeline</code> is a small, dependency-free orchestrator that turns the task
+board in each project's <code>AGENTS.md</code> into an autonomous development loop:</p>
+<ol><li><p>read tasks and status from <code>AGENTS.md</code>;</p></li><li><p>discover free models from the local <a href="https://github.com/trefeon/pi-freeflow">pi-freeflow</a> proxy;</p></li><li><p>probe each candidate with a real chat completion and keep only working models;</p></li><li><p>pick the highest-priority pending task;</p></li><li><p>ask the selected model (through Pi or OMP) to implement it;</p></li><li><p>run the project checks, optionally ask the same model to repair failures;</p></li><li><p>write the result, model health, and run log back to <code>AGENTS.md</code>.</p></li></ol>
+<p>Only free models are used by default. The pipeline never falls back to a paid
+provider on its own: if the freeflow proxy is unreachable or no probed free
+model answers, the run stops and records the failure. An operator can opt in to
+provider-qualified <code>fallback_models</code> (for example a model served by Pollinations)
+when the agent is already configured for that provider; those models are tried
+after the freeflow candidates.</p>
+<h2>Files</h2>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AGENTS.md</code></td>
+<td>Agent instructions plus the canonical pipeline state, task board, and run log</td>
+</tr>
+<tr>
+<td><code>dev-pipeline.json</code></td>
+<td>Projects, checks, model preferences, timeouts, and safety switches</td>
+</tr>
+<tr>
+<td><code>bin/dev-pipeline</code></td>
+<td>CLI entry point</td>
+</tr>
+<tr>
+<td><code>tools/dev_pipeline/</code></td>
+<td>Implementation (standard library only)</td>
+</tr>
+<tr>
+<td><code>tools/dev_pipeline/freeflow.py</code></td>
+<td>Model discovery, health probing, ranking, cache</td>
+</tr>
+<tr>
+<td><code>tools/dev_pipeline/status.py</code></td>
+<td><code>AGENTS.md</code> parsing, rendering, and atomic writes</td>
+</tr>
+<tr>
+<td><code>tools/dev_pipeline/orchestrator.py</code></td>
+<td>Task selection, prompt building, run loop</td>
+</tr>
+<tr>
+<td><code>tools/dev_pipeline/runner.py</code></td>
+<td>Pi/OMP invocation, checks, git commit helper</td>
+</tr>
+<tr>
+<td><code>tools/dev_pipeline/tests/</code></td>
+<td>Unit tests for the state store and model ranking</td>
+</tr>
+<tr>
+<td><code>.dev-pipeline/</code></td>
+<td>Local run lock and model-health cache (git-ignored)</td>
+</tr>
+</tbody>
+</table>
+<h2>Prerequisites</h2>
+<ul><li><p>Python 3.8+ (the repository's normal runtime).</p></li><li><p>Pi or OMP on <code>PATH</code>, with the <code>pi-freeflow</code> extension installed.</p></li><li><p>The freeflow proxy running on <code>127.0.0.1:28180</code> (or a compatible base URL).</p></li></ul>
+<pre><code class="language-bash"># Install Pi + freeflow (the sandbox image does this already)
+curl -fsSL https://pi.dev/install.sh | sh
+pi install npm:pi-freeflow
+
+# Start the shared proxy
+sandbox-cli start-freeflow-api</code></pre>
+<p>The proxy writes its bearer token to <code>~/.pi/agent/token</code>. The pipeline checks,
+in order:</p>
+<ol><li><p><code>FREEFLOW_TOKEN</code>, <code>FREEFLOW_API_KEY</code>, or <code>G4F_FREEFLOW_TOKEN</code>;</p></li><li><p><code>&lt;project&gt;/.pi/agent/token</code>;</p></li><li><p><code>&lt;repository&gt;/.pi/agent/token</code>;</p></li><li><p><code>~/.pi/agent/token</code>;</p></li><li><p>no token (in case a local relay allows it).</p></li></ol>
+<p>Set <code>FREEFLOW_BASE_URL</code> (or <code>base_url</code> in <code>dev-pipeline.json</code>) to point at a
+different proxy.</p>
+<h2>Enabling g4f.dev</h2>
+<p>The gpt4free checkout is configured as <code>gpt4free</code>; the website checkout is
+configured as <code>g4f.dev</code> at <code>../g4f.dev</code>. Missing projects are skipped, so the
+pipeline works with only one checkout.</p>
+<pre><code class="language-bash">git clone --depth 1 https://github.com/gpt4free/g4f.dev.git ../g4f.dev
+bin/dev-pipeline init --project g4f.dev</code></pre>
+<p><code>init</code> creates an <code>AGENTS.md</code> in that checkout with a bootstrap task and the
+same machine-readable state block. Add website-specific checks to
+<code>dev-pipeline.json</code> when you know the command, for example:</p>
+<pre><code class="language-json">{
+  &quot;projects&quot;: {
+    &quot;g4f.dev&quot;: {
+      &quot;path&quot;: &quot;../g4f.dev&quot;,
+      &quot;checks&quot;: [[&quot;node&quot;, &quot;scripts/check-js.mjs&quot;]]
+    }
+  }
+}</code></pre>
+<p>For git checkouts the pipeline always adds <code>git diff --check</code> to the checks so
+whitespace errors are caught even when no test command is configured.</p>
+<h2>Commands</h2>
+<pre><code class="language-bash"># Inspect tasks and recorded model health
+bin/dev-pipeline status
+bin/dev-pipeline status --json
+bin/dev-pipeline status --refresh-models
+
+# Probe freeflow models and persist the health snapshot
+bin/dev-pipeline models --refresh
+bin/dev-pipeline models --refresh --limit 5 --no-save
+
+# Show what would run without editing files or invoking an agent
+bin/dev-pipeline run --dry-run
+bin/dev-pipeline run --dry-run --task G4F-003
+
+# Run one task (default), or several
+bin/dev-pipeline run --max-tasks 1
+bin/dev-pipeline run --max-tasks 3 --retry-blocked
+
+# Try an extra fallback model after the freeflow candidates fail
+bin/dev-pipeline run --fallback-model pollinations/deepseek/deepseek-v4.1-flash-1017
+
+# Skip freeflow discovery and run with fallbacks only (requires a fallback)
+bin/dev-pipeline run --fallback-only \
+  --fallback-model pollinations/deepseek/deepseek-v4.1-flash-1017
+
+# Run forever, one task every 15 minutes
+bin/dev-pipeline run --loop --max-tasks 1000 --interval 900
+
+# Queue TODO/FIXME comments as P3 tasks, then run
+bin/dev-pipeline plan --limit 10
+bin/dev-pipeline run --auto-plan
+
+# Task management
+bin/dev-pipeline add-task --title &quot;Fix streaming retry&quot; --project gpt4free \
+  --priority P2 --acceptance &quot;Streaming retries once on 429 and tests pass&quot;
+
+# Health check: projects, agent, freeflow, working models
+bin/dev-pipeline doctor
+
+# Create/update a PR from the current working tree
+bin/dev-pipeline pr
+bin/dev-pipeline pr --project g4f.dev
+
+# Push the current branch without creating or updating a PR
+bin/dev-pipeline push
+bin/dev-pipeline push --remote fork</code></pre>
+<p><code>push</code> pushes the current branch to a git remote without committing anything or
+requiring <code>gh</code>. It prefers the branch's tracked remote, then <code>origin</code>, and falls
+back to the other configured remotes when one is not writable. Use
+<code>--remote &lt;name&gt;</code> to force a specific remote.</p>
+<p><code>pr</code> creates <code>pipeline/pr-&lt;timestamp&gt;</code>, commits the working tree, pushes it to
+a GitHub remote, then creates or updates the PR with <code>gh</code>. By default it
+operates on the pipeline root checkout; use <code>--project &lt;name&gt;</code> to open the PR
+from another configured checkout such as <code>g4f.dev</code>. When the current branch is
+already a <code>pipeline/pr-*</code> branch, it commits and pushes that branch in place, so
+the existing PR is updated instead of a second PR being opened (a clean branch
+is allowed in that case). It tries <code>origin</code> first and falls back to another
+configured GitHub remote (typically a fork) when <code>origin</code> is read-only;
+cross-repo PRs use <code>owner:branch</code> as the head, and an existing branch keeps
+pushing to its tracked remote first. Use <code>--remote &lt;name&gt;</code> to force a specific
+remote. Install <code>gh</code> and run <code>gh auth login</code>, or set <code>GH_TOKEN</code>/<code>GITHUB_TOKEN</code>
+(for example in CI). The command validates the repository, remote, <code>gh</code>
+availability, and authentication before it changes any branch, so a missing
+tool never leaves a half-made commit.</p>
+<p>During <code>run</code>, the agent is invoked in Pi's JSON event mode. The pipeline prints
+each tool call as it happens and a heartbeat every 30 seconds, so a long agent
+run shows progress instead of appearing idle:</p>
+<pre><code>Running /home/pn/.local/bin/pi with cohere/north-mini-code:free ... (streaming progress, timeout 1800s)
+  -&gt; bash: pwd
+  &lt;- bash (ok, 0.1s)</code></pre>
+<p>Pressing Ctrl-C requeues the current task as <code>pending</code> instead of leaving it
+<code>in-progress</code>.</p>
+<p>Global options (<code>--root</code>, <code>--config</code>) must come before the subcommand:</p>
+<pre><code class="language-bash">bin/dev-pipeline --config /path/to/dev-pipeline.json status</code></pre>
+<h2>Status format in AGENTS.md</h2>
+<p><code>AGENTS.md</code> contains two generated blocks:</p>
+<pre><code class="language-markdown">&lt;!-- DEV-PIPELINE:STATE:BEGIN --&gt;
+```json
+{
+  &quot;schema&quot;: 1,
+  &quot;project&quot;: &quot;gpt4free&quot;,
+  &quot;tasks&quot;: [
+    {
+      &quot;id&quot;: &quot;G4F-003&quot;,
+      &quot;project&quot;: &quot;gpt4free&quot;,
+      &quot;priority&quot;: &quot;P3&quot;,
+      &quot;status&quot;: &quot;pending&quot;,
+      &quot;title&quot;: &quot;...&quot;,
+      &quot;acceptance&quot;: &quot;...&quot;,
+      &quot;attempts&quot;: 0,
+      &quot;last_model&quot;: null,
+      &quot;notes&quot;: &quot;&quot;
+    }
+  ],
+  &quot;models&quot;: { &quot;working&quot;: [], &quot;failed&quot;: [] },
+  &quot;runs&quot;: []
+}
+```
+&lt;!-- DEV-PIPELINE:STATE:END --&gt;
+
+&lt;!-- DEV-PIPELINE:BOARD:BEGIN --&gt;
+### Task board
+| ID | Project | Priority | Status | Task | Acceptance | Updated |
+...
+### Free model health
+| Model | Status | Latency | Detail |
+...
+### Recent runs
+| When | Task | Project | Model | Result | Detail |
+...
+&lt;!-- DEV-PIPELINE:BOARD:END --&gt;</code></pre>
+<p>The JSON block is canonical. The board and recent-runs tables are regenerated
+from it every time the pipeline writes the file, so they are safe to read but
+not safe to edit. Human edits to the JSON block are picked up on the next run;
+prefer <code>add-task</code> and <code>plan</code> for changes.</p>
+<p>Task statuses:</p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pending</code></td>
+<td>ready to run</td>
+</tr>
+<tr>
+<td><code>in-progress</code></td>
+<td>currently owned by a run; stale entries are recovered after two hours</td>
+</tr>
+<tr>
+<td><code>done</code></td>
+<td>agent exit 0 and all checks passed</td>
+</tr>
+<tr>
+<td><code>blocked</code></td>
+<td>baseline/verification failed, or no free model worked</td>
+</tr>
+</tbody>
+</table>
+<p>Blocked tasks are not retried by default. Use <code>--retry-blocked</code> after fixing the
+environment or reviewing the diff.</p>
+<h2>Free-model policy</h2>
+<p>All 32 models exposed by pi-freeflow are free. The pipeline still verifies each
+one because free lanes are rate-limited and occasionally return empty streams:</p>
+<ol><li><p><code>GET /v1/models</code> lists the catalog.</p></li><li><p>Candidates are ranked by <code>preferred_models</code> (substring matching accepts both
+short aliases and full ids, e.g. <code>qwen3.5-397b</code> matches
+<code>ovh-free/Qwen3.5-397B-A17B</code>).</p></li><li><p>Each candidate is probed with a small non-streaming chat completion.</p></li><li><p>A model is usable only if the response has choices and non-empty content or
+reasoning. Empty 200 responses are failures.</p></li><li><p>Entries in <code>disabled_models</code> are removed before probing, even when the
+proxy still lists them; short aliases and full ids both match. Health is
+cached in <code>.dev-pipeline/models.json</code> for <code>model_cache_ttl</code> seconds
+(default 300). <code>--refresh-models</code> bypasses the cache.</p></li><li><p>On an agent failure the next working model is tried, up to
+<code>max_model_attempts</code>.</p></li><li><p>If every freeflow attempt fails, optional <code>fallback_models</code> are tried next.
+Entries are provider-qualified ids understood by the agent, such as
+<code>pollinations/deepseek/deepseek-v4.1-flash-1017</code>. Configure the agent
+provider first, for example:</p>
+<pre><code class="language-bash">polli harness pi on --model deepseek/deepseek-v4.1-flash-1017 --no-mcp</code></pre>
+<p>Pollinations models can be paid. Fallbacks are opt-in and empty by default,
+so the free-only guarantee holds unless an operator adds them.</p>
+<p><code>run --fallback-model &lt;id&gt;</code> adds a fallback for one invocation (repeatable);
+these are tried before the configured <code>fallback_models</code>. `run
+--fallback-only` skips freeflow discovery entirely and uses only fallback
+models, which is useful when the proxy is down or rate-limited.</p></li></ol>
+<p>Probing stops as soon as <code>min_models</code> working models are found, to conserve free
+quotas. The default preferred order starts with OpenCode Zen and Kilo coding
+models, then OVHcloud models as keyless fallbacks.</p>
+<h2>Configuration reference</h2>
+<p><code>dev-pipeline.json</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>projects</code></td>
+<td>gpt4free + g4f.dev</td>
+<td>map of project name to <code>path</code>, <code>agents_file</code>, <code>checks</code>, <code>enabled</code></td>
+</tr>
+<tr>
+<td><code>preferred_models</code></td>
+<td>coding-first list</td>
+<td>ranking hints for free models</td>
+</tr>
+<tr>
+<td><code>disabled_models</code></td>
+<td>empty</td>
+<td>models or aliases never probed or used (substring matching)</td>
+</tr>
+<tr>
+<td><code>fallback_models</code></td>
+<td><code>[]</code></td>
+<td>optional provider-qualified models tried after freeflow failures</td>
+</tr>
+<tr>
+<td><code>base_url</code></td>
+<td><code>http://127.0.0.1:28180/v1</code></td>
+<td>freeflow-compatible endpoint</td>
+</tr>
+<tr>
+<td><code>probe_limit</code></td>
+<td><code>10</code></td>
+<td>maximum candidates probed per refresh</td>
+</tr>
+<tr>
+<td><code>min_models</code></td>
+<td><code>2</code></td>
+<td>stop probing after this many working models</td>
+</tr>
+<tr>
+<td><code>model_cache_ttl</code></td>
+<td><code>300</code></td>
+<td>seconds before cached health is stale</td>
+</tr>
+<tr>
+<td><code>max_model_attempts</code></td>
+<td><code>3</code></td>
+<td>fallback models per task</td>
+</tr>
+<tr>
+<td><code>repair_attempts</code></td>
+<td><code>1</code></td>
+<td>repair prompts after check failures</td>
+</tr>
+<tr>
+<td><code>agent</code></td>
+<td><code>pi</code></td>
+<td>agent executable (<code>pi</code> or <code>omp</code>)</td>
+</tr>
+<tr>
+<td><code>thinking</code></td>
+<td><code>high</code></td>
+<td>Pi thinking level</td>
+</tr>
+<tr>
+<td><code>task_timeout</code></td>
+<td><code>1800</code></td>
+<td>seconds per agent invocation</td>
+</tr>
+<tr>
+<td><code>check_timeout</code></td>
+<td><code>300</code></td>
+<td>seconds per check command</td>
+</tr>
+<tr>
+<td><code>commit</code></td>
+<td><code>false</code></td>
+<td>git commit successful tasks</td>
+</tr>
+<tr>
+<td><code>push</code></td>
+<td><code>false</code></td>
+<td>git push after a successful commit</td>
+</tr>
+<tr>
+<td><code>enabled_projects</code></td>
+<td>all</td>
+<td>optional allowlist</td>
+</tr>
+</tbody>
+</table>
+<p>Checks are argv lists, not shell strings, so quoting is predictable:</p>
+<pre><code class="language-json">&quot;checks&quot;: [
+  [&quot;python3&quot;, &quot;-m&quot;, &quot;compileall&quot;, &quot;-q&quot;, &quot;g4f&quot;],
+  [&quot;python3&quot;, &quot;-m&quot;, &quot;unittest&quot;, &quot;tools.dev_pipeline.tests.test_status&quot;]
+]</code></pre>
+<h2>Scheduling</h2>
+<h3>systemd user timer</h3>
+<p><code>~/.config/systemd/user/dev-pipeline.service</code>:</p>
+<pre><code class="language-ini">[Unit]
+Description=gpt4free automatic development pipeline
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/gpt4free
+ExecStart=%h/gpt4free/bin/dev-pipeline run --max-tasks 1 --auto-plan
+TimeoutStartSec=3h</code></pre>
+<p><code>~/.config/systemd/user/dev-pipeline.timer</code>:</p>
+<pre><code class="language-ini">[Unit]
+Description=Run the gpt4free dev pipeline every 30 minutes
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target</code></pre>
+<pre><code class="language-bash">systemctl --user daemon-reload
+systemctl --user enable --now dev-pipeline.timer
+journalctl --user -u dev-pipeline -f</code></pre>
+<h3>cron</h3>
+<pre><code class="language-cron">*/30 * * * * cd /path/to/gpt4free &amp;&amp; ./bin/dev-pipeline run --max-tasks 1 --auto-plan &gt;&gt; ~/.dev-pipeline.log 2&gt;&amp;1</code></pre>
+<p>The run lock prevents overlapping invocations.</p>
+<h2>Safety notes</h2>
+<ul><li><p><code>--dry-run</code> does not edit <code>AGENTS.md</code>, does not run checks, and does not invoke
+the agent. It does probe/list models unless a fresh cache exists, or unless
+<code>--fallback-only</code> is set.</p></li><li><p>Baseline checks run before the model is invoked. A broken checkout is marked
+<code>blocked</code> instead of burning model attempts on an unrelated failure.</p></li><li><p>Commits are opt-in (<code>--commit</code>); pushes require both <code>--commit</code> and <code>--push</code>.</p></li><li><p>The agent prompt forbids commits, pushes, paid services, and edits to the
+pipeline state blocks.</p></li><li><p>A failed run leaves the working tree intact and records the failure for human
+review. There is no automatic revert.</p></li><li><p>Free quotas are shared. Keep <code>probe_limit</code> low and avoid tight loop intervals.</p></li></ul>
+<h2>Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pi-freeflow is not reachable</code></td>
+<td>Run <code>sandbox-cli start-freeflow-api</code>; check <code>~/.pi/agent/pi-freeflow.log</code></td>
+</tr>
+<tr>
+<td><code>all probed freeflow models failed</code></td>
+<td>Run <code>bin/dev-pipeline models --refresh</code>; free lanes may be rate-limited, retry later</td>
+</tr>
+<tr>
+<td><code>no agent executable found</code></td>
+<td>Install Pi/OMP and <code>pi install npm:pi-freeflow</code></td>
+</tr>
+<tr>
+<td><code>project g4f.dev path does not exist</code></td>
+<td>Clone g4f.dev or remove/disable it in <code>dev-pipeline.json</code></td>
+</tr>
+<tr>
+<td><code>baseline checks failed</code></td>
+<td>Fix the checkout, or run the check command directly and inspect the output</td>
+</tr>
+<tr>
+<td><code>another dev-pipeline run holds ...</code></td>
+<td>Wait for the other run, or remove a stale <code>.dev-pipeline/run.lock</code> after confirming no process is active</td>
+</tr>
+<tr>
+<td>Task stuck <code>in-progress</code></td>
+<td>It is recovered after two hours, or edit the status to <code>pending</code> and run again</td>
+</tr>
+</tbody>
+</table>
+<h2>Tests</h2>
+<pre><code class="language-bash">PYTHONPATH=. python3 -m unittest tools.dev_pipeline.tests.test_status -v</code></pre>
+<p>The pipeline's own <code>gpt4free</code> check list includes this test, so every
+autonomous task also verifies that the status store still round-trips.</p>
+        </main>
+    </div>
+
+    
+    <script>
+        // Toggle Translation Widget
+        document.getElementById("translate-toggle").addEventListener("click", function() {
+            const el = document.getElementById("google_translate_element");
+            el.style.display = (el.style.display === "none") ? "block" : "none";
+        });
+
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'en',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+            }, 'google_translate_element');
+        }
+    </script>
+    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+    <script>
+        // Enhanced syntax highlighting with error handling
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // Generate table of contents
+                generateTableOfContents();
+            } catch (error) {
+                console.error('Error generating table of contents:', error);
+            }
+        });
+
+        function generateTableOfContents() {
+            const headings = document.querySelectorAll('main h2, main h3');
+            const tocList = document.getElementById('toc-list');
+            
+            if (!tocList || headings.length === 0) return;
+            
+            tocList.innerHTML = '';
+            
+            headings.forEach(function(heading, index) {
+                const id = heading.id || `heading-${index}`;
+                if (!heading.id) {
+                    heading.id = id;
+                }
+                
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `#${id}`;
+                a.textContent = heading.textContent;
+                a.setAttribute('aria-label', `Jump to ${heading.textContent}`);
+                
+                if (heading.tagName === 'H3') {
+                    li.style.marginLeft = '1rem';
+                    li.style.fontSize = '0.9em';
+                }
+                
+                li.appendChild(a);
+                tocList.appendChild(li);
+            });
+        }
+
+        // Smooth scrolling for anchor links
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
+                e.preventDefault();
+                const target = document.querySelector(e.target.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }
+        });
+
+        // Add copy button to code blocks
+        document.querySelectorAll('pre code, .highlight pre').forEach(function(block) {
+            const button = document.createElement('button');
+            button.textContent = 'Copy';
+            button.className = 'copy-button';
+            button.style.cssText = `
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background: rgba(139, 61, 255, 0.8);
+                color: white;
+                border: none;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.8rem;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            const pre = block.parentElement;
+            pre.style.position = 'relative';
+            pre.appendChild(button);
+            
+            pre.addEventListener('mouseenter', function() {
+                button.style.opacity = '1';
+            });
+            
+            pre.addEventListener('mouseleave', function() {
+                button.style.opacity = '0';
+            });
+            
+            button.addEventListener('click', function() {
+                navigator.clipboard.writeText(block.textContent).then(function() {
+                    button.textContent = 'Copied!';
+                    setTimeout(function() {
+                        button.textContent = 'Copy';
+                    }, 2000);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

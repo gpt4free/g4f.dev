@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sandbox desktop | GPT4Free Documentation</title>
+
+    <meta name="description" content="GPT4Free documentation for Sandbox desktop. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
+    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, Sandbox desktop" />
+    <meta name="author" content="GPT4Free Team" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Sandbox desktop | GPT4Free Documentation" />
+    <meta property="og:description" content="GPT4Free documentation for Sandbox desktop. Free AI endpoints, examples, and comprehensive guides." />
+    <meta property="og:url" content="https://g4f.dev/docs/sandbox-desktop.html" />
+    <meta property="og:site_name" content="GPT4Free Documentation" />
+    <meta property="og:image" content="https://g4f.dev/dist/img/g4f.svg" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Sandbox desktop | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for Sandbox desktop." />
+    <meta name="twitter:image" content="https://g4f.dev/dist/img/g4f.svg" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://g4f.dev/docs/sandbox-desktop.html" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/g4f.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/g4f-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/g4f-16x16.png" />
+    <link rel="manifest" href="/dist/img/site.webmanifest" />
+
+    <!-- GitHub Primer CSS & styles -->
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
+
+    
+    <style>
+        :root {
+            --accent: #8b3dff;
+            --background: #16101b;
+            --text-primary: #ddd;
+            --text-secondary: #9b7dff;
+            --card-bg: #1e152e;
+            --border-color: #333;
+            --hover-color: #a67eff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--background);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            max-width: 100%;
+            margin: 0;
+            padding: 2rem;
+            gap: 3rem;
+            min-height: calc(100vh - 4rem);
+        }
+
+        /* Enhanced main content styling */
+        main {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            overflow-wrap: break-word;
+            position: relative;
+        }
+
+        /* Typography improvements */
+        .markdown-body h1 {
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 0.5rem;
+        }
+
+        .markdown-body h2 {
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body h3 {
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body p {
+            margin-bottom: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        /* Enhanced link styling */
+        .markdown-body a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .markdown-body a:hover,
+        .markdown-body a:focus {
+            color: var(--hover-color);
+            outline: none;
+            text-decoration: underline;
+            text-shadow: 0 0 8px rgba(139, 61, 255, 0.3);
+        }
+
+        /* Enhanced code block styling */
+        .markdown-body pre {
+            border-radius: 12px;
+            padding: 1.5rem !important;
+            font-size: 0.95rem !important;
+            overflow-x: auto;
+            max-height: 500px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.4);
+            color: #fff;
+            border: 1px solid #3d2a5c;
+            position: relative;
+        }
+
+
+        .markdown-body code {
+            font-family: 'SF Mono', 'Cascadia Code', 'Roboto Mono', Consolas, Liberation Mono, Menlo, monospace;
+            background: rgba(139, 61, 255, 0.1);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            color: #e6ccff;
+            font-size: 0.9em;
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+            color: var(--fgColor-default, var(--color-fg-default))
+        }
+
+        /* Table styling */
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 2rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .markdown-body table th,
+        .markdown-body table td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        .markdown-body table th {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .markdown-body table tr:nth-child(even) {
+            background: rgba(139, 61, 255, 0.05);
+        }
+
+        .markdown-body table tr {
+            background-color: transparent;
+        }
+
+        /* List styling */
+        .markdown-body ul, 
+        .markdown-body ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        .markdown-body li {
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        /* Blockquote styling */
+        .markdown-body blockquote {
+            border-left: 4px solid var(--accent);
+            background: rgba(139, 61, 255, 0.1);
+            margin: 2rem 0;
+            padding: 1rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* HR styling */
+        .markdown-body hr {
+            border: none;
+            border-top: 2px solid var(--accent);
+            margin: 3rem 0;
+            opacity: 0.6;
+        }
+
+        /* Sticky table of contents */
+        nav#toc {
+            flex: 0 0 280px;
+            position: sticky;
+            top: 2rem;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid rgba(139, 61, 255, 0.2);
+        }
+
+        nav#toc h2 {
+            font-size: 1.4rem;
+            margin: 0 0 1.5rem 0;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        nav#toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        nav#toc li {
+            margin-bottom: 0.8rem;
+        }
+
+        nav#toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: block;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        nav#toc a:hover, 
+        nav#toc a:focus {
+            background: rgba(139, 61, 255, 0.1);
+            color: var(--hover-color);
+            text-decoration: none;
+            transform: translateX(4px);
+        }
+
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 2rem;
+            }
+
+            nav#toc {
+                position: relative;
+                max-height: none;
+                order: -1;
+                flex: none;
+            }
+
+            .markdown-body h1 {
+                font-size: 2.2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            main {
+                padding: 1.5rem;
+            }
+
+            .markdown-body h1 {
+                font-size: 1.8rem;
+            }
+
+            .markdown-body pre {
+                padding: 1rem !important;
+                font-size: 0.85rem !important;
+            }
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Focus indicators */
+        *:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* Print styles */
+        @media print {
+            .container {
+                display: block;
+            }
+            
+            nav#toc {
+                display: none;
+            }
+            
+            main {
+                box-shadow: none;
+                background: white;
+                color: black;
+            }
+        }
+
+        /* Loading animation for syntax highlighting */
+        .highlight-loading {
+            position: relative;
+            opacity: 0.7;
+        }
+
+        .highlight-loading::after {
+            content: 'Loading syntax highlighting...';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Translate Button Style */
+        #translate-toggle {
+            display: block;
+            background: var(--accent);
+            color: #fff;
+            text-align: center;
+            padding: 0.5rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            border: none;
+        }
+        #google_translate_element {
+            margin-bottom: 1rem;
+        }
+    </style>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "Sandbox desktop",
+      "description": "GPT4Free documentation for Sandbox desktop. Complete guides, examples, and API reference for free AI endpoints.",
+      "author": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization",
+        "name": "GPT4Free",
+        "url": "https://g4f.dev",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://g4f.dev/dist/img/g4f.svg"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://g4f.dev/docs/sandbox-desktop.html"
+      },
+      "datePublished": "2024-01-01T00:00:00Z",
+      "dateModified": "2024-01-01T00:00:00Z",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "keywords": "GPT4Free, AI documentation, free AI API, code generation",
+      "articleSection": "Documentation"
+    }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="toc" aria-label="Table of contents" role="navigation">
+            <!-- Translation Button -->
+            <button id="translate-toggle">🌐 Translate Page</button>
+            <div id="google_translate_element" style="display:none;"></div>
+            <h2>Contents</h2>
+            <ul id="toc-list">
+                <!-- Table of contents will be generated here -->
+            </ul>
+            <hr style="margin: 1.5rem 0; opacity: 0.3;">
+            <ul>
+                <li><a href="/docs/" aria-label="Return to documentation home">📚 Documentation Hub</a></li>
+                <li><a href="/" aria-label="Return to main site">🏠 G4F Home</a></li>
+            </ul>
+        </nav>
+
+        <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
+            <h1>Sandbox desktop</h1>
+<p>The sandbox desktop is a full Xfce session (TigerVNC + noVNC) with the g4f API
+and a one-click <strong>Install &amp; Open</strong> menu for coding agents, browsers, gateways,
+local runtimes and assistants. Everything runs in one container and the API,
+the web desktop and the routed apps share a single published port.</p>
+<p>For the complete tool list and per-entry details, see
+<a href="../docker/sandbox-menu/README.html"> 0 </a>. This page
+covers the operational features: the start script, the app volume, user ids,
+clipboard and scaling, password protection, domain routing, the tray, the
+<code>sandbox-cli</code> commands and the Polli sandbox install.</p>
+<h2>Quick start</h2>
+<pre><code class="language-bash"># Build if needed, then run in the background
+bin/start-sandbox-desktop.sh -d
+
+# NoVNC desktop: http://127.0.0.1:8080/desktop/
+# g4f API:       http://127.0.0.1:8080/
+# Direct VNC:    127.0.0.1:5900</code></pre>
+<p>The script stores no state of its own. <code>docker compose</code> is used when available;
+pass <code>--no-compose</code> to use a direct <code>docker run</code> instead.</p>
+<h2><code>start-sandbox-desktop.sh</code></h2>
+<pre><code class="language-text">Usage: start-sandbox-desktop.sh [OPTIONS] [COMMAND]
+
+Commands:
+  up, start       Start the sandbox desktop container (default)
+  stop, down      Stop the sandbox desktop container
+  restart         Restart the sandbox desktop container
+  status          Show the status of the sandbox container
+  shell, exec     Open a bash shell inside the running container
+  logs            View the container logs (-f to follow)
+  build           Build or rebuild the sandbox desktop image</code></pre>
+<p>Useful options:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-d</code>, <code>--detach</code></td>
+<td>Run the container in the background</td>
+</tr>
+<tr>
+<td><code>-b</code>, <code>--build</code></td>
+<td>Build/rebuild the image before starting</td>
+</tr>
+<tr>
+<td><code>--pull</code></td>
+<td>Pull the prebuilt image instead of building</td>
+</tr>
+<tr>
+<td><code>-p</code>, <code>--port PORT</code></td>
+<td>API + noVNC port (default <code>8080</code>)</td>
+</tr>
+<tr>
+<td><code>--bind ADDR</code></td>
+<td>Host address to publish on (default <code>127.0.0.1</code>)</td>
+</tr>
+<tr>
+<td><code>--vnc-port PORT</code></td>
+<td>Direct VNC port (default <code>5900</code>)</td>
+</tr>
+<tr>
+<td><code>--user-id UID</code></td>
+<td>uid/gid of the sandbox user (default <code>1000</code>)</td>
+</tr>
+<tr>
+<td><code>--app-dir DIR</code></td>
+<td>Host directory mounted at <code>/app/gpt4free</code></td>
+</tr>
+<tr>
+<td><code>--api-key KEY</code></td>
+<td>Require KEY as the browser/API password</td>
+</tr>
+<tr>
+<td><code>--domain-suffix SUFFIX</code></td>
+<td>Suffix for <code>&lt;app&gt;.&lt;suffix&gt;</code> routing (default <code>g4f.local</code>)</td>
+</tr>
+<tr>
+<td><code>--no-domain-router</code></td>
+<td>Disable hostname routing</td>
+</tr>
+<tr>
+<td><code>--local-g4f</code></td>
+<td>Install this checkout as an editable g4f (default: PyPI)</td>
+</tr>
+<tr>
+<td><code>--no-desktop</code></td>
+<td>Run the API only (<code>SANDBOX_DESKTOP=0</code>)</td>
+</tr>
+<tr>
+<td><code>--allow-local-network</code></td>
+<td>Let the sandbox reach private/link-local networks</td>
+</tr>
+<tr>
+<td><code>--image IMAGE</code>, <code>--name NAME</code></td>
+<td>Override the image or container name</td>
+</tr>
+</tbody>
+</table>
+<p>The same settings are read from the environment when the options are not used:
+<code>G4F_APP_DIR</code>, <code>G4F_USER_ID</code>, <code>G4F_API_KEY</code>, <code>G4F_DOMAIN_SUFFIX</code>,
+<code>G4F_DOMAIN_ROUTER</code>, <code>SANDBOX_BIND_ADDR</code>, <code>SANDBOX_BLOCK_LOCAL_NETWORK</code> and
+<code>SANDBOX_FIREWALL_STRICT</code>.</p>
+<h2>App volume</h2>
+<p>The g4f app tree is bind-mounted at <code>/app/gpt4free</code>, the path the image's
+editable g4f install points at. The API serves that code and the agents edit
+the same files.</p>
+<pre><code class="language-bash"># Default: the checkout the script lives in
+bin/start-sandbox-desktop.sh -d
+
+# A different checkout or working copy
+bin/start-sandbox-desktop.sh -d --app-dir /srv/gpt4free
+
+# Equivalent environment override
+G4F_APP_DIR=/srv/gpt4free bin/start-sandbox-desktop.sh -d</code></pre>
+<p>Mount at <code>/app/gpt4free</code>, never <code>/app</code>: the image keeps its embedded Python and
+the g4f runtime under <code>/app/g4f</code>, and mounting over <code>/app</code> hides them. The
+compose file uses <code>${G4F_APP_DIR:-..}</code> for the same mount.</p>
+<h2>Image user id</h2>
+<p>The container runs as the unprivileged <code>pn</code> user with uid/gid <strong>1000</strong> by
+default. Matching the host user keeps bind-mounted files (<code>/app/gpt4free</code>,
+<code>sandbox-home</code>) owned by your account instead of root or an unrelated uid.</p>
+<pre><code class="language-bash"># Build (or rebuild) the image for the current host user
+bin/start-sandbox-desktop.sh build --user-id &quot;$(id -u)&quot;
+
+# Run with the matching id
+bin/start-sandbox-desktop.sh up --user-id &quot;$(id -u)&quot;</code></pre>
+<p>The start script inspects the image's <code>G4F_USER_ID</code> environment and rebuilds
+when it differs from the requested id. Pulled prebuilt images always use
+uid 1000, so <code>--pull</code> with a different id prints a warning.</p>
+<h2>Clipboard and scaling (noVNC)</h2>
+<p>The web desktop is the stock noVNC client, served by the g4f API at
+<code>/desktop/</code>, with g4f branding applied at image build.</p>
+<p><strong>Clipboard.</strong> <code>bin/novnc-brand.sh</code> patches <code>app/ui.js</code> to bridge the browser
+clipboard and the VM clipboard:</p>
+<ul><li><p>Pasting with <code>Ctrl+V</code> (or the context menu) inside the noVNC window sends the
+text to the VM.</p></li><li><p>Text copied inside the VM is mirrored into the browser clipboard.</p></li><li><p>The noVNC clipboard panel (the clipboard button in the control bar) remains
+available, and is the fallback when the browser blocks the Async Clipboard
+API. Browsers only grant that API on secure origins: <code>http://127.0.0.1</code> and
+<code>https://</code> work, a plain <code>http://</code> LAN address does not.</p></li></ul>
+<p><strong>Scaling.</strong> The client defaults to <code>resize=off</code>: the desktop keeps the
+geometry Xvnc was started with, so opening the same session from a phone,
+laptop or tablet does not remotely resize the session and disturb other
+viewers. Any viewer can still choose <code>off</code>, <code>scale</code> or <code>remote</code> in noVNC's
+settings panel for their own session. To use a different default, edit the
+<code>defaults.json</code> written by <code>novnc-brand.sh</code> or pass <code>resize=&lt;mode&gt;</code> in the
+<code>vnc.html</code> URL. The direct VNC port (<code>5900</code>) is unaffected.</p>
+<h2>Password protection (<code>G4F_API_KEY</code>)</h2>
+<p>Set <code>G4F_API_KEY</code> to protect the API, the noVNC desktop and every routed app
+with HTTP Basic authentication:</p>
+<pre><code class="language-bash">bin/start-sandbox-desktop.sh -d --api-key &#x27;choose-a-strong-key&#x27;
+
+# or
+G4F_API_KEY=&#x27;choose-a-strong-key&#x27; bin/start-sandbox-desktop.sh -d</code></pre>
+<p>When the browser asks for credentials, <strong>the username can be anything</strong>; the
+password is the value of <code>G4F_API_KEY</code>. The key is also accepted through the
+<code>g4f-api-key</code> header and the <code>Authorization: Bearer</code>/Basic headers used by the
+API clients.</p>
+<p>Inside the container, the same setting can be saved from the desktop:
+<strong>Sandbox Settings</strong> → <code>sandbox-cli settings --api-key</code> (this writes
+<code>~/.config/g4f-sandbox/env</code>, used by both the tray-started API and the menu
+launchers). <code>sandbox-cli settings --generate-key</code> prints a random key, and
+<code>sandbox-cli settings --api-key &quot;&quot;</code> clears it. The tray watches the file and
+restarts the server when the key changes.</p>
+<blockquote>
+<p>The key travels over the published port. Bind to <code>127.0.0.1</code> (the default)
+or put the container behind TLS if the port is reachable from other hosts.</p>
+</blockquote>
+<h2>Domain suffix and routing</h2>
+<p>Apps in the menu are reachable by hostname through the same API port:</p>
+<table>
+<thead>
+<tr>
+<th>Hostname</th>
+<th>Destination</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>g4f.g4f.local</code></td>
+<td>g4f API / GUI</td>
+</tr>
+<tr>
+<td><code>&lt;port&gt;.g4f.local</code></td>
+<td>the app listening on that local port, e.g. <code>20128.g4f.local</code></td>
+</tr>
+<tr>
+<td><code>desktop.g4f.local</code></td>
+<td>the noVNC desktop</td>
+</tr>
+<tr>
+<td><code>omniroute.g4f.local</code>, <code>litellm.g4f.local</code>, <code>ollama.g4f.local</code>, …</td>
+<td>the matching local app</td>
+</tr>
+</tbody>
+</table>
+<p><code>bin/sandbox-entrypoint.sh</code> seeds <code>/etc/hosts</code> inside the container from
+<code>g4f/api/domain_router.py</code>, so no extra <code>extra_hosts</code> are needed. On the host,
+add the names to <code>/etc/hosts</code> or use the output of <code>sandbox-cli hosts</code>:</p>
+<pre><code class="language-text">127.0.0.1 g4f.g4f.local desktop.g4f.local 8080.g4f.local</code></pre>
+<p><strong>Change the suffix</strong> when <code>g4f.local</code> collides with something else:</p>
+<pre><code class="language-bash">bin/start-sandbox-desktop.sh -d --domain-suffix sandbox.test
+# or
+G4F_DOMAIN_SUFFIX=sandbox.test bin/start-sandbox-desktop.sh -d</code></pre>
+<p><strong>Disable routing</strong> entirely when you only use the published port:</p>
+<pre><code class="language-bash">bin/start-sandbox-desktop.sh -d --no-domain-router   # G4F_DOMAIN_ROUTER=0</code></pre>
+<p>The router only forwards the known hostnames to their fixed local ports, so it
+cannot be used as an open proxy. Environment overrides are
+<code>G4F_DOMAIN_SUFFIX</code> and <code>G4F_DOMAIN_ROUTER</code> (both are also passed through the
+compose file).</p>
+<h2>Tray</h2>
+<p>The container's main process is <code>sandbox-tray</code>. It starts the g4f API as a
+child and places the <strong>g4f logo in the panel's notification area (top right)</strong>
+with <code>yad</code>. Right-click the logo for:</p>
+<ul><li><p>Open in Browser</p></li><li><p>Start/Stop Server</p></li><li><p><strong>Restart Server</strong></p></li><li><p>Update g4f Package</p></li><li><p>Change g4f Package Version…</p></li><li><p>Sandbox Settings…</p></li><li><p>Show Logs</p></li><li><p>Quit</p></li></ul>
+<p>The tray watches the sandbox settings file, so a key, model, provider or proxy
+change restarts the server automatically. Without a display, without <code>yad</code>, or
+when the tray cannot start, it falls back to running the API directly.</p>
+<h2><code>sandbox-cli</code></h2>
+<p><code>sandbox-cli</code> is the installer behind the menu entries and also the terminal
+interface for the sandbox:</p>
+<pre><code class="language-text">sandbox-cli &lt;tool&gt;          install &lt;tool&gt; if missing, then run it here
+sandbox-cli install &lt;tool&gt;  install only
+sandbox-cli list            list the known tools
+sandbox-cli settings        model, API key, HOME, provider and proxy
+sandbox-cli reset           clear the saved settings
+sandbox-cli package         show, update or pin the g4f package
+sandbox-cli urls            print the public URLs served by the API
+sandbox-cli hosts           print the /etc/hosts entries for the app domains
+sandbox-cli polli-sandbox   create/connect/manage hosted Polli sandboxes</code></pre>
+<p>Tools install on first click (vendor installer, npm package,
+<code>pip install --user</code>, or Chrome's <code>.deb</code>), so the image stays small. The
+settings commands accept flags for scripting, for example
+<code>sandbox-cli settings --api-key &#x27;key&#x27; --model gpt-4o</code>,
+<code>sandbox-cli settings --show</code> and <code>sandbox-cli settings --json</code>.</p>
+<h2>Polli sandbox install</h2>
+<p>A Polli sandbox is a headless Debian VM (E2B) reached as <code>&lt;id&gt;.polli</code> over
+ssh. The menu can install itself there:</p>
+<pre><code class="language-bash"># Menu only (terminal use)
+sandbox-cli polli-sandbox install-menu &lt;id&gt;
+
+# Menu + Xfce + TigerVNC + g4f-go + noVNC
+sandbox-cli polli-sandbox install-menu &lt;id&gt; --desktop</code></pre>
+<p><code>install-menu</code> copies the menu assets (the CLI, <code>.desktop</code> entries, desktop
+directories, Xfce menu patch and icons) into the sandbox. With <code>--desktop</code> it
+also copies <code>g4f-go</code> and <code>/usr/share/novnc</code>, installs the Xfce/TigerVNC
+packages there, patches the Applications menu, starts the desktop on
+<code>127.0.0.1:5900</code>, and starts <code>g4f-go api</code> on <code>127.0.0.1:8080</code> with
+<code>G4F_VNC_PORT=5900</code>, <code>G4F_NOVNC_DIR=/usr/share/novnc</code> and
+<code>G4F_DOMAIN_ROUTER=0</code> (the sandbox has no app hostnames in <code>/etc/hosts</code>).</p>
+<p>The bootstrap prints the tunnels to open from your machine:</p>
+<pre><code class="language-bash">ssh -L 8080:127.0.0.1:8080 &lt;id&gt;.polli   # http://127.0.0.1:8080/desktop/
+ssh -L 5900:127.0.0.1:5900 &lt;id&gt;.polli   # direct VNC client</code></pre>
+<p>The first <code>g4f-go api</code> start downloads its CPython + g4f runtime into the
+sandbox user's home; watch <code>/tmp/g4f-sandbox-api.log</code> inside the sandbox if
+the page is not up yet. The applications menu carries the g4f categories
+(Media &gt; Polli, Coding Agents, …).</p>
+<h2>Applications menu</h2>
+<p>The image patches <code>/etc/xdg/menus/xfce-applications.menu</code> with
+<code>bin/patch-xfce-menu.py</code>, which:</p>
+<ul><li><p>inserts the g4f categories (g4f, Browsers, Coding Agents, Editors, Files,
+Gateways, Chat UIs, Assistants, …) as their own top-level menus;</p></li><li><p>removes the stock <strong>Internet</strong> (XML name <code>Network</code>) and <strong>Development</strong>
+menus, which the sandbox entries replace.</p></li></ul>
+<p>The patch is idempotent: re-running it does not duplicate menus. The sandbox
+entries use <code>X-G4F-*</code> categories, so they never fall into Internet or
+Development.</p>
+<h2>Notes</h2>
+<ul><li><p>The image starts an egress firewall. It needs <code>--cap-add NET_ADMIN</code>; without
+it the container still starts with a warning. Set
+<code>SANDBOX_FIREWALL_STRICT=1</code> to make a firewall failure fatal. The filter
+blocks private/link-local/reserved networks, file-sharing protocols and
+crypto-mining ports while allowing public internet access and replies to
+host-initiated connections.</p></li><li><p>Keep <code>~/.config</code> and <code>~/.local</code> bind-mounted (see the README example) to
+preserve agent logins, caches and sandbox settings across container
+restarts. Do not mount over <code>/home/pn</code> itself: the embedded runtime lives in
+<code>/home/pn/.g4f</code>.</p></li><li><p>Logs: <code>bin/start-sandbox-desktop.sh logs -f</code>, or inside the container
+<code>/tmp/g4f-sandbox-*.log</code> for the desktop processes and the API.</p></li></ul>
+        </main>
+    </div>
+
+    
+    <script>
+        // Toggle Translation Widget
+        document.getElementById("translate-toggle").addEventListener("click", function() {
+            const el = document.getElementById("google_translate_element");
+            el.style.display = (el.style.display === "none") ? "block" : "none";
+        });
+
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'en',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+            }, 'google_translate_element');
+        }
+    </script>
+    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+    <script>
+        // Enhanced syntax highlighting with error handling
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // Generate table of contents
+                generateTableOfContents();
+            } catch (error) {
+                console.error('Error generating table of contents:', error);
+            }
+        });
+
+        function generateTableOfContents() {
+            const headings = document.querySelectorAll('main h2, main h3');
+            const tocList = document.getElementById('toc-list');
+            
+            if (!tocList || headings.length === 0) return;
+            
+            tocList.innerHTML = '';
+            
+            headings.forEach(function(heading, index) {
+                const id = heading.id || `heading-${index}`;
+                if (!heading.id) {
+                    heading.id = id;
+                }
+                
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `#${id}`;
+                a.textContent = heading.textContent;
+                a.setAttribute('aria-label', `Jump to ${heading.textContent}`);
+                
+                if (heading.tagName === 'H3') {
+                    li.style.marginLeft = '1rem';
+                    li.style.fontSize = '0.9em';
+                }
+                
+                li.appendChild(a);
+                tocList.appendChild(li);
+            });
+        }
+
+        // Smooth scrolling for anchor links
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
+                e.preventDefault();
+                const target = document.querySelector(e.target.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }
+        });
+
+        // Add copy button to code blocks
+        document.querySelectorAll('pre code, .highlight pre').forEach(function(block) {
+            const button = document.createElement('button');
+            button.textContent = 'Copy';
+            button.className = 'copy-button';
+            button.style.cssText = `
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background: rgba(139, 61, 255, 0.8);
+                color: white;
+                border: none;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.8rem;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            const pre = block.parentElement;
+            pre.style.position = 'relative';
+            pre.appendChild(button);
+            
+            pre.addEventListener('mouseenter', function() {
+                button.style.opacity = '1';
+            });
+            
+            pre.addEventListener('mouseleave', function() {
+                button.style.opacity = '0';
+            });
+            
+            button.addEventListener('click', function() {
+                navigator.clipboard.writeText(block.textContent).then(function() {
+                    button.textContent = 'Copied!';
+                    setTimeout(function() {
+                        button.textContent = 'Copy';
+                    }, 2000);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

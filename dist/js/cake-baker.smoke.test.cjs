@@ -34,6 +34,7 @@ class FakeWorker {
 function makeEl(tag) {
     return {
         tag, children: [], listeners: {}, attrs: {},
+        dataset: {},
         textContent: "", innerText: "", innerHTML: "", value: "0",
         classList: { toggle() {}, },
         querySelector() { return null; },

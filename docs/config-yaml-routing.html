@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Custom Model Routing with config.yaml | GPT4Free Documentation</title>
+
+    <meta name="description" content="GPT4Free documentation for Custom Model Routing with config.yaml. Complete guides, examples, and API reference for free AI endpoints, code generation, and AI model integration." />
+    <meta name="keywords" content="GPT4Free, G4F, AI documentation, free AI API, OpenAI alternative, JavaScript AI client, Python AI library, AI integration, code generation, Custom Model Routing with config.yaml" />
+    <meta name="author" content="GPT4Free Team" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Custom Model Routing with config.yaml | GPT4Free Documentation" />
+    <meta property="og:description" content="GPT4Free documentation for Custom Model Routing with config.yaml. Free AI endpoints, examples, and comprehensive guides." />
+    <meta property="og:url" content="https://g4f.dev/docs/config-yaml-routing.html" />
+    <meta property="og:site_name" content="GPT4Free Documentation" />
+    <meta property="og:image" content="https://g4f.dev/dist/img/g4f.svg" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Custom Model Routing with config.yaml | GPT4Free Documentation" />
+    <meta name="twitter:description" content="Free AI endpoints and comprehensive documentation for Custom Model Routing with config.yaml." />
+    <meta name="twitter:image" content="https://g4f.dev/dist/img/g4f.svg" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://g4f.dev/docs/config-yaml-routing.html" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/g4f.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/dist/img/g4f-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/dist/img/g4f-16x16.png" />
+    <link rel="manifest" href="/dist/img/site.webmanifest" />
+
+    <!-- GitHub Primer CSS & styles -->
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/light-74231a1f3bbb.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/dark-8a995f0bacd4.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-primitives-225433424a87.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/primer-b8b91660c29d.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/global-205098e9fedd.css" />
+    <link crossorigin="anonymous" media="all" rel="stylesheet" href="https://github.githubassets.com/assets/code-177d21388df8.css" />
+
+    
+    <style>
+        :root {
+            --accent: #8b3dff;
+            --background: #16101b;
+            --text-primary: #ddd;
+            --text-secondary: #9b7dff;
+            --card-bg: #1e152e;
+            --border-color: #333;
+            --hover-color: #a67eff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--background);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            max-width: 100%;
+            margin: 0;
+            padding: 2rem;
+            gap: 3rem;
+            min-height: calc(100vh - 4rem);
+        }
+
+        /* Enhanced main content styling */
+        main {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            overflow-wrap: break-word;
+            position: relative;
+        }
+
+        /* Typography improvements */
+        .markdown-body h1 {
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 0.5rem;
+        }
+
+        .markdown-body h2 {
+            margin-top: 3rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body h3 {
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body p {
+            margin-bottom: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        /* Enhanced link styling */
+        .markdown-body a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .markdown-body a:hover,
+        .markdown-body a:focus {
+            color: var(--hover-color);
+            outline: none;
+            text-decoration: underline;
+            text-shadow: 0 0 8px rgba(139, 61, 255, 0.3);
+        }
+
+        /* Enhanced code block styling */
+        .markdown-body pre {
+            border-radius: 12px;
+            padding: 1.5rem !important;
+            font-size: 0.95rem !important;
+            overflow-x: auto;
+            max-height: 500px;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.4);
+            color: #fff;
+            border: 1px solid #3d2a5c;
+            position: relative;
+        }
+
+
+        .markdown-body code {
+            font-family: 'SF Mono', 'Cascadia Code', 'Roboto Mono', Consolas, Liberation Mono, Menlo, monospace;
+            background: rgba(139, 61, 255, 0.1);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            color: #e6ccff;
+            font-size: 0.9em;
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+            color: var(--fgColor-default, var(--color-fg-default))
+        }
+
+        /* Table styling */
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 2rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .markdown-body table th,
+        .markdown-body table td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        .markdown-body table th {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .markdown-body table tr:nth-child(even) {
+            background: rgba(139, 61, 255, 0.05);
+        }
+
+        .markdown-body table tr {
+            background-color: transparent;
+        }
+
+        /* List styling */
+        .markdown-body ul, 
+        .markdown-body ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        .markdown-body li {
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        /* Blockquote styling */
+        .markdown-body blockquote {
+            border-left: 4px solid var(--accent);
+            background: rgba(139, 61, 255, 0.1);
+            margin: 2rem 0;
+            padding: 1rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* HR styling */
+        .markdown-body hr {
+            border: none;
+            border-top: 2px solid var(--accent);
+            margin: 3rem 0;
+            opacity: 0.6;
+        }
+
+        /* Sticky table of contents */
+        nav#toc {
+            flex: 0 0 280px;
+            position: sticky;
+            top: 2rem;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid rgba(139, 61, 255, 0.2);
+        }
+
+        nav#toc h2 {
+            font-size: 1.4rem;
+            margin: 0 0 1.5rem 0;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        nav#toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        nav#toc li {
+            margin-bottom: 0.8rem;
+        }
+
+        nav#toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: block;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        nav#toc a:hover, 
+        nav#toc a:focus {
+            background: rgba(139, 61, 255, 0.1);
+            color: var(--hover-color);
+            text-decoration: none;
+            transform: translateX(4px);
+        }
+
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 2rem;
+            }
+
+            nav#toc {
+                position: relative;
+                max-height: none;
+                order: -1;
+                flex: none;
+            }
+
+            .markdown-body h1 {
+                font-size: 2.2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            main {
+                padding: 1.5rem;
+            }
+
+            .markdown-body h1 {
+                font-size: 1.8rem;
+            }
+
+            .markdown-body pre {
+                padding: 1rem !important;
+                font-size: 0.85rem !important;
+            }
+        }
+
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Focus indicators */
+        *:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* Print styles */
+        @media print {
+            .container {
+                display: block;
+            }
+            
+            nav#toc {
+                display: none;
+            }
+            
+            main {
+                box-shadow: none;
+                background: white;
+                color: black;
+            }
+        }
+
+        /* Loading animation for syntax highlighting */
+        .highlight-loading {
+            position: relative;
+            opacity: 0.7;
+        }
+
+        .highlight-loading::after {
+            content: 'Loading syntax highlighting...';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Translate Button Style */
+        #translate-toggle {
+            display: block;
+            background: var(--accent);
+            color: #fff;
+            text-align: center;
+            padding: 0.5rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            border: none;
+        }
+        #google_translate_element {
+            margin-bottom: 1rem;
+        }
+    </style>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "Custom Model Routing with config.yaml",
+      "description": "GPT4Free documentation for Custom Model Routing with config.yaml. Complete guides, examples, and API reference for free AI endpoints.",
+      "author": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization",
+        "name": "GPT4Free",
+        "url": "https://g4f.dev",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://g4f.dev/dist/img/g4f.svg"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://g4f.dev/#organization"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://g4f.dev/docs/config-yaml-routing.html"
+      },
+      "datePublished": "2024-01-01T00:00:00Z",
+      "dateModified": "2024-01-01T00:00:00Z",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "keywords": "GPT4Free, AI documentation, free AI API, code generation",
+      "articleSection": "Documentation"
+    }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="toc" aria-label="Table of contents" role="navigation">
+            <!-- Translation Button -->
+            <button id="translate-toggle">🌐 Translate Page</button>
+            <div id="google_translate_element" style="display:none;"></div>
+            <h2>Contents</h2>
+            <ul id="toc-list">
+                <!-- Table of contents will be generated here -->
+            </ul>
+            <hr style="margin: 1.5rem 0; opacity: 0.3;">
+            <ul>
+                <li><a href="/docs/" aria-label="Return to documentation home">📚 Documentation Hub</a></li>
+                <li><a href="/" aria-label="Return to main site">🏠 G4F Home</a></li>
+            </ul>
+        </nav>
+
+        <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
+            <h1>Custom Model Routing with <code>config.yaml</code></h1>
+<p>g4f supports a <code>config.yaml</code> file that lets you define <strong>custom model routes</strong> – named
+models that are transparently forwarded to one or more real providers based on
+availability, quota balance, and recent error counts.</p>
+<p>This is similar to the <a href="https://docs.litellm.ai/">LiteLLM</a> routing configuration.</p>
+<hr>
+<h2>Quick start</h2>
+<ol><li><p>Place a <code>config.yaml</code> file in the same directory as your <code>.har</code> / <code>.json</code>
+cookie files (the "cookies dir").</p>
+<ul><li><p>Default location: <code>~/.config/g4f/cookies/config.yaml</code></p></li><li><p>Alternative: <code>./har_and_cookies/config.yaml</code></p></li></ul></li><li><p>Define your routes (see format below).</p></li><li><p>g4f loads the file automatically when it reads the cookie directory
+(e.g. on API server start-up, or when <code>read_cookie_files()</code> is called).</p></li><li><p>Request the custom model name from any client:</p></li></ol>
+<pre><code class="language-python">from g4f.client import Client
+
+client = Client()
+response = client.chat.completions.create(
+    model=&quot;my-gpt4&quot;,   # defined in config.yaml
+    messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Hello!&quot;}],
+)
+print(response.choices[0].message.content)</code></pre>
+<hr>
+<h2>File format</h2>
+<pre><code class="language-yaml">models:
+  - name: &quot;&lt;model-name&gt;&quot;          # the name clients use
+    providers:
+      - provider: &quot;&lt;ProviderName&gt;&quot;  # g4f provider class name
+        model: &quot;&lt;provider-model&gt;&quot;   # model name passed to that provider
+        condition: &quot;&lt;expression&gt;&quot;   # optional – see below
+      - provider: &quot;...&quot;             # fallback provider (no condition = always eligible)
+        model: &quot;...&quot;</code></pre>
+<h3>Keys</h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>✅</td>
+<td>The model name used by clients.</td>
+</tr>
+<tr>
+<td><code>providers</code></td>
+<td>✅</td>
+<td>Ordered list of provider candidates.</td>
+</tr>
+<tr>
+<td><code>provider</code></td>
+<td>✅</td>
+<td>Provider class name (e.g. <code>&quot;OpenaiAccount&quot;</code>, <code>&quot;PollinationsAI&quot;</code>).</td>
+</tr>
+<tr>
+<td><code>model</code></td>
+<td></td>
+<td>Model name forwarded to the provider. Defaults to the route <code>name</code>.</td>
+</tr>
+<tr>
+<td><code>condition</code></td>
+<td></td>
+<td>Boolean expression controlling when this provider is eligible.</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Condition expressions</h2>
+<p>The <code>condition</code> field is a boolean expression evaluated before each request.
+It can reference the following variables:</p>
+<h3><code>quota</code> – full provider quota dict</h3>
+<p>Each provider that implements <code>get_quota()</code> returns a <strong>provider-specific</strong> dict.
+The result is cached in memory (5 min TTL) and invalidated on 429 responses.</p>
+<p>Access any field with <strong>dot-notation</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th><code>get_quota()</code> format</th>
+<th>Example condition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PollinationsAI</code></td>
+<td><code>{&quot;balance&quot;: float}</code></td>
+<td><code>quota.balance &gt; 0</code></td>
+</tr>
+<tr>
+<td><code>Yupp</code></td>
+<td><code>{&quot;credits&quot;: {&quot;remaining&quot;: int, &quot;total&quot;: int}}</code></td>
+<td><code>quota.credits.remaining &gt; 100</code></td>
+</tr>
+<tr>
+<td><code>PuterJS</code></td>
+<td>raw metering JSON from the API</td>
+<td><code>quota.total_requests &lt; 1000</code></td>
+</tr>
+<tr>
+<td><code>GeminiCLI</code></td>
+<td><code>{&quot;buckets&quot;: [...]}</code></td>
+<td><code>error_count &lt; 3</code></td>
+</tr>
+<tr>
+<td><code>GithubCopilot</code></td>
+<td>usage details dict</td>
+<td><code>error_count &lt; 5</code></td>
+</tr>
+</tbody>
+</table>
+<p>Missing keys resolve to <code>0.0</code> (no error raised).</p>
+<h3><code>balance</code> – shorthand alias</h3>
+<p><code>balance</code> is a convenience shorthand for <code>quota.balance</code>.  It is preserved for
+backward compatibility and is most useful with <strong>PollinationsAI</strong> which returns
+<code>{&quot;balance&quot;: float}</code>.  For other providers, prefer the explicit <code>quota.*</code> form.</p>
+<h3><code>error_count</code></h3>
+<p>Number of errors recorded for this provider in the last <strong>1 hour</strong>.  Errors
+older than 1 hour are automatically pruned.</p>
+<h3>Operators</h3>
+<table>
+<thead>
+<tr>
+<th>Operator</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&gt;</code> <code>&lt;</code> <code>&gt;=</code> <code>&lt;=</code></td>
+<td>Numeric comparison</td>
+</tr>
+<tr>
+<td><code>==</code> <code>!=</code></td>
+<td>Equality / inequality</td>
+</tr>
+<tr>
+<td><code>and</code> <code>or</code> <code>not</code></td>
+<td>Logical connectives</td>
+</tr>
+<tr>
+<td><code>(</code> <code>)</code></td>
+<td>Grouping</td>
+</tr>
+</tbody>
+</table>
+<h3>Examples</h3>
+<pre><code class="language-yaml"># PollinationsAI – uses quota.balance shorthand
+condition: &quot;balance &gt; 0&quot;
+condition: &quot;balance &gt; 0 or error_count &lt; 3&quot;
+
+# Yupp – provider-specific nested field
+condition: &quot;quota.credits.remaining &gt; 0&quot;
+condition: &quot;quota.credits.remaining &gt; 0 or error_count &lt; 3&quot;
+
+# Any provider – error-count-only conditions work universally
+condition: &quot;error_count &lt; 3&quot;
+condition: &quot;error_count == 0&quot;</code></pre>
+<p>When the condition is <strong>absent</strong> or evaluates to <code>True</code>, the provider is
+eligible.  When it evaluates to <code>False</code> the provider is skipped and g4f
+tries the next one in the list.</p>
+<hr>
+<h2>Quota caching</h2>
+<p>Quota values are fetched via the provider's <code>get_quota()</code> method and cached in
+memory for <strong>5 minutes</strong> (configurable via <code>QuotaCache.ttl</code>).</p>
+<p>When a provider returns an HTTP <strong>429 (Too Many Requests)</strong> error the cache
+entry for that provider is <strong>immediately invalidated</strong>, so the next routing
+decision fetches a fresh quota value before deciding.</p>
+<hr>
+<h2>Error counting</h2>
+<p>Every time a provider raises an exception the error counter for that provider
+is incremented.  Errors older than <strong>1 hour</strong> are automatically pruned.</p>
+<p>Reference <code>error_count</code> in a condition to avoid retrying providers that have
+been failing repeatedly.</p>
+<hr>
+<h2>Full example</h2>
+<pre><code class="language-yaml"># ~/.config/g4f/cookies/config.yaml
+
+models:
+  # PollinationsAI: use quota.balance shorthand
+  - name: &quot;my-gpt4&quot;
+    providers:
+      - provider: &quot;OpenaiAccount&quot;
+        model: &quot;gpt-4o&quot;
+        condition: &quot;balance &gt; 0 or error_count &lt; 3&quot;
+      - provider: &quot;PollinationsAI&quot;
+        model: &quot;openai-large&quot;
+
+  # Yupp: provider-specific nested quota field
+  - name: &quot;yupp-chat&quot;
+    providers:
+      - provider: &quot;Yupp&quot;
+        model: &quot;gpt-4o&quot;
+        condition: &quot;quota.credits.remaining &gt; 0 or error_count &lt; 3&quot;
+      - provider: &quot;PollinationsAI&quot;
+        model: &quot;openai-large&quot;
+
+  # Universal: error-count-only condition works for any provider
+  - name: &quot;llama-fast&quot;
+    providers:
+      - provider: &quot;Groq&quot;
+        model: &quot;llama-3.3-70b&quot;
+        condition: &quot;error_count &lt; 3&quot;
+      - provider: &quot;DeepInfra&quot;
+        model: &quot;meta-llama/Llama-3.3-70B-Instruct&quot;</code></pre>
+<hr>
+<h2>Python API</h2>
+<p>The routing machinery is exposed in <code>g4f.providers.config_provider</code>:</p>
+<pre><code class="language-python">from g4f.providers.config_provider import (
+    RouterConfig,        # load / query routes
+    QuotaCache,          # inspect / invalidate quota cache
+    ErrorCounter,        # inspect / reset error counters
+    evaluate_condition,  # evaluate a condition string directly
+)
+
+# Reload routes from a custom path
+RouterConfig.load(&quot;/path/to/config.yaml&quot;)
+
+# Check if a route exists
+route = RouterConfig.get(&quot;my-gpt4&quot;)  # returns ModelRouteConfig or None
+
+# Manually invalidate quota cache (e.g. after detecting 429)
+QuotaCache.invalidate(&quot;OpenaiAccount&quot;)
+
+# Check error count
+count = ErrorCounter.get_count(&quot;OpenaiAccount&quot;)
+
+# Evaluate a condition string with a full provider-specific quota dict
+# (PollinationsAI)
+ok = evaluate_condition(&quot;balance &gt; 0 or error_count &lt; 3&quot;, {&quot;balance&quot;: 0.0}, 2)
+# True
+
+# Yupp-style nested quota
+ok = evaluate_condition(
+    &quot;quota.credits.remaining &gt; 0&quot;,
+    {&quot;credits&quot;: {&quot;remaining&quot;: 500, &quot;total&quot;: 5000}},
+    0,
+)
+# True</code></pre>
+<hr>
+<h2>Requirements</h2>
+<p>PyYAML must be installed:</p>
+<pre><code class="language-bash">pip install pyyaml</code></pre>
+<p>It is included in the full <code>requirements.txt</code>.  If PyYAML is absent g4f logs
+a warning and skips config.yaml loading.</p>
+        </main>
+    </div>
+
+    
+    <script>
+        // Toggle Translation Widget
+        document.getElementById("translate-toggle").addEventListener("click", function() {
+            const el = document.getElementById("google_translate_element");
+            el.style.display = (el.style.display === "none") ? "block" : "none";
+        });
+
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'en',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+            }, 'google_translate_element');
+        }
+    </script>
+    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+    <script>
+        // Enhanced syntax highlighting with error handling
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // Generate table of contents
+                generateTableOfContents();
+            } catch (error) {
+                console.error('Error generating table of contents:', error);
+            }
+        });
+
+        function generateTableOfContents() {
+            const headings = document.querySelectorAll('main h2, main h3');
+            const tocList = document.getElementById('toc-list');
+            
+            if (!tocList || headings.length === 0) return;
+            
+            tocList.innerHTML = '';
+            
+            headings.forEach(function(heading, index) {
+                const id = heading.id || `heading-${index}`;
+                if (!heading.id) {
+                    heading.id = id;
+                }
+                
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `#${id}`;
+                a.textContent = heading.textContent;
+                a.setAttribute('aria-label', `Jump to ${heading.textContent}`);
+                
+                if (heading.tagName === 'H3') {
+                    li.style.marginLeft = '1rem';
+                    li.style.fontSize = '0.9em';
+                }
+                
+                li.appendChild(a);
+                tocList.appendChild(li);
+            });
+        }
+
+        // Smooth scrolling for anchor links
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' && e.target.getAttribute('href').startsWith('#')) {
+                e.preventDefault();
+                const target = document.querySelector(e.target.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }
+        });
+
+        // Add copy button to code blocks
+        document.querySelectorAll('pre code, .highlight pre').forEach(function(block) {
+            const button = document.createElement('button');
+            button.textContent = 'Copy';
+            button.className = 'copy-button';
+            button.style.cssText = `
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background: rgba(139, 61, 255, 0.8);
+                color: white;
+                border: none;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.8rem;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            const pre = block.parentElement;
+            pre.style.position = 'relative';
+            pre.appendChild(button);
+            
+            pre.addEventListener('mouseenter', function() {
+                button.style.opacity = '1';
+            });
+            
+            pre.addEventListener('mouseleave', function() {
+                button.style.opacity = '0';
+            });
+            
+            button.addEventListener('click', function() {
+                navigator.clipboard.writeText(block.textContent).then(function() {
+                    button.textContent = 'Copied!';
+                    setTimeout(function() {
+                        button.textContent = 'Copy';
+                    }, 2000);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
