@@ -400,6 +400,79 @@ function logEvent(kind, name, detail) {
   }
 }
 
+function contentBlocksToText(blocks) {
+  return (blocks || []).map((block) => {
+    if (block === null || block === undefined) return "";
+    if (typeof block === "string") return block;
+    if (typeof block !== "object") return String(block);
+    if (block.type === "text") {
+      return typeof block.text === "string" ? block.text : JSON.stringify(block.text ?? "");
+    }
+    if (block.type === "resource") {
+      const resource = block.resource || {};
+      return typeof resource.text === "string" ? resource.text : JSON.stringify(resource);
+    }
+    if (block.type === "image") {
+      return `[image${block.mimeType ? `: ${block.mimeType}` : ""}]`;
+    }
+    return JSON.stringify(block);
+  }).filter((text) => text !== "").join("\n");
+}
+
+function normalizeToolResult(name, result) {
+  if (!result || typeof result !== "object") return result ?? {};
+
+  // g4f MCP servers expose the original tool payload as structuredContent.
+  if (result.structuredContent && typeof result.structuredContent === "object") {
+    return result.structuredContent;
+  }
+
+  if (Array.isArray(result.content)) {
+    const text = contentBlocksToText(result.content);
+    if (name === "file_read") {
+      // Some servers serialize file metadata as JSON instead of returning the
+      // raw file text. Only unwrap an explicit content field in that case.
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed && typeof parsed === "object" && typeof parsed.content === "string") {
+          return parsed;
+        }
+      } catch {}
+      return { content: text };
+    }
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch {}
+    return { content: text };
+  }
+
+  return result;
+}
+
+function toolErrorMessage(result) {
+  if (result && result.structuredContent && typeof result.structuredContent === "object") {
+    const error = result.structuredContent.error;
+    if (error) return typeof error === "string" ? error : JSON.stringify(error);
+  }
+  if (result && Array.isArray(result.content)) {
+    const text = contentBlocksToText(result.content);
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && parsed.error) {
+        return typeof parsed.error === "string" ? parsed.error : JSON.stringify(parsed.error);
+      }
+    } catch {}
+    if (text) return text;
+  }
+  if (result && result.error) {
+    return typeof result.error === "string" ? result.error : JSON.stringify(result.error);
+  }
+  return "MCP tool failed";
+}
+
 async function mcpCall(name, args) {
   const id = ++reqId;
   const body = { jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: args || {} } };
@@ -416,14 +489,15 @@ async function mcpCall(name, args) {
       throw new Error(data.error.message || "MCP error");
     }
     const result = data.result || {};
-    if (result.error) {
+    if (result.isError || result.error) {
+      const message = toolErrorMessage(result);
       statusDot.className = "status-dot err";
-      logEvent("err", name, escapeHtml(result.error));
-      throw new Error(result.error);
+      logEvent("err", name, escapeHtml(message));
+      throw new Error(message);
     }
     statusDot.className = "status-dot ok";
     logEvent("ok", name, escapeHtml(JSON.stringify(args)).slice(0, 200));
-    return result;
+    return normalizeToolResult(name, result);
   } catch (e) {
     statusDot.className = "status-dot err";
     if (!(e instanceof Error) || !e.message) {

@@ -1042,12 +1042,12 @@ async function handleUpdateServer(request, env) {
       if (field === "base_url") {
         try {
           const newUrl = new URL(body.base_url);
-          const queryUrls = newUrl.searchParams.get("url").split(",");
+          const queryUrls = newUrl.searchParams.get("url");
           newUrl.searchParams.delete("url");
           server.base_url = String(newUrl).replace(/\/$/, "");
-          server.all_urls = [server.base_url, ...queryUrls];
+          if (queryUrls) server.all_urls = [server.base_url, ...queryUrls.split(',')];
         } catch (e) {
-          return jsonResponse({ error: "Invalid base_url format" }, 400);
+          return jsonResponse({ error: `Invalid base_url format: ${e.message}` }, 400);
         }
       } else if (field != "api_keys" || body[field]) {
         server[field] = body[field];
