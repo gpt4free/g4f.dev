@@ -478,11 +478,22 @@ function handleOptions() {
 }
 
 /**
+ * Strip the /api/puter mount prefix used when this worker is served from
+ * g4f.space instead of its dedicated puter.g4f.space subdomain.
+ */
+function stripMountPrefix(pathname) {
+  const prefix = "/api/puter";
+  if (pathname === prefix) return "/";
+  if (pathname.startsWith(prefix + "/")) return pathname.slice(prefix.length);
+  return pathname;
+}
+
+/**
  * Main request handler
  */
 async function handleRequest(request, env, ctx) {
   const url = new URL(request.url);
-  const pathname = url.pathname;
+  const pathname = stripMountPrefix(url.pathname);
   
   // Handle CORS preflight
   if (request.method === 'OPTIONS') {

@@ -1,0 +1,3 @@
+# The workers in this directory are code-only. Never upload the Worker
+# sources, tests, README, or the parent site as static assets.
+*

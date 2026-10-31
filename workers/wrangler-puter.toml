@@ -1,0 +1,27 @@
+# Wrangler configuration for the G4F Puter worker on g4f.space.
+# See https://developers.cloudflare.com/workers/wrangler/configuration/
+#
+# OpenAI-compatible proxy for Puter.js. Callers supply their Puter token as
+# `Authorization: Bearer <token>`; this worker does not keep a shared key.
+#
+# Served both ways:
+#   https://g4f.space/api/puter/*     (same host as the API worker)
+#   https://puter.g4f.space/*         (dedicated subdomain)
+
+name = "puter"
+main = "puter-worker.js"
+compatibility_date = "2025-05-30"
+
+# Routes. The more specific /api/puter/* pattern wins over the API worker's
+# g4f.space/* route. Create the subdomain DNS record as proxied first.
+routes = [
+  { pattern = "g4f.space/api/puter/*", zone_name = "g4f.space" },
+  { pattern = "api.g4f.space/api/puter/*", zone_name = "g4f.space" },
+  { pattern = "puter.g4f.space/*", zone_name = "g4f.space" }
+]
+
+# No secrets are required. Users pass their own Puter token per request.
+[vars]
+
+[dev]
+port = 8793

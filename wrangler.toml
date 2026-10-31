@@ -1,0 +1,82 @@
+# Root Wrangler configuration for g4f.space.
+#
+# This is the config used by:
+#
+#   npx wrangler deploy
+#
+# from the repository root. It deploys ONE Worker (`api`) whose router entry
+# point dispatches to the API, Puter, Pollinations, and Ollama worker modules.
+# That avoids Wrangler's automatic static-site detection, which treated the
+# repository root as an assets directory and failed with:
+#
+#   ✘ [ERROR] Asset too large.
+#
+# There is intentionally no [assets] section here. The static site is deployed
+# to GitHub Pages; the Workers are code-only.
+#
+# For split deployments (one Worker per provider), use the configs in
+# `workers/wrangler-*.toml` with `--config`, but do not attach the routes below
+# to two different Workers at the same time.
+
+name = "api"
+main = "workers/g4f-space-router.js"
+compatibility_date = "2025-05-30"
+
+# Cloudflare picks the most specific route, but because the router handles all
+# of these in a single Worker, the order does not matter. Provider workers can
+# be split out later by moving the matching patterns to their own configs.
+routes = [
+  { pattern = "g4f.space/*", zone_name = "g4f.space" },
+  { pattern = "www.g4f.space/*", zone_name = "g4f.space" },
+  { pattern = "api.g4f.space/*", zone_name = "g4f.space" },
+  { pattern = "puter.g4f.space/*", zone_name = "g4f.space" },
+  { pattern = "pollinations.g4f.space/*", zone_name = "g4f.space" },
+  { pattern = "ollama.g4f.space/*", zone_name = "g4f.space" }
+]
+
+# KV Namespace (shared with the auth/members worker for auth and server index)
+[[kv_namespaces]]
+binding = "MEMBERS_KV"
+id = "87b74eadf8124782a9b10dda75a872b6"
+
+# KV Namespace shared with the cake worker. Optional: uncomment after creating
+# it with `npx wrangler kv namespace create CAKE_KV` and replacing the id. The
+# API worker degrades gracefully when CAKE_KV is absent.
+# [[kv_namespaces]]
+# binding = "CAKE_KV"
+# id = "<CAKE_KV_NAMESPACE_ID>"
+
+# D1 database for error tracking (error_logs table).
+[[d1_databases]]
+binding = "ERRORS_DB"
+database_name = "errors_db"
+database_id = "5028af48-43c0-4520-a094-b51b08f8ffae"
+
+# R2 bucket for server data storage (shared with the members worker).
+[[r2_buckets]]
+binding = "MEMBERS_BUCKET"
+bucket_name = "g4f-members"
+
+# D1 database for usage logs (usage_logs table).
+[[d1_databases]]
+binding = "USAGE_DB"
+database_id = "d48cfe96-5452-4995-aa2d-58c0ec60045f"
+
+[vars]
+API_KEY_SALT = ""  # Set via: npx wrangler secret put API_KEY_SALT
+# Canonical provider worker endpoints used for aggregated /v1 routing. They
+# resolve back to this Worker's router on the provider subdomains.
+PUTER_WORKER_URL = "https://puter.g4f.space"
+POLLINATIONS_WORKER_URL = "https://pollinations.g4f.space"
+OLLAMA_WORKER_URL = "https://ollama.g4f.space"
+
+# Refresh the public servers index every 15 minutes; hourly runs also prune
+# the D1 tables.
+[triggers]
+crons = ["*/15 * * * *"]
+
+[dev]
+port = 8788
+
+[observability]
+enabled = true

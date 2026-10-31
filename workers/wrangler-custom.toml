@@ -1,9 +1,29 @@
-# Wrangler configuration for G4F Custom Server Router Worker
+# Wrangler configuration for the G4F API worker on g4f.space.
 # See https://developers.cloudflare.com/workers/wrangler/configuration/
+#
+# This is the main OpenAI-compatible API worker (`/v1/*`, `/api/*`,
+# `/custom/*`, auth, usage tracking). The provider workers (puter,
+# pollinations, ollama) are deployed separately with their own configs and
+# take precedence for their more specific routes:
+#
+#   wrangler-puter.toml         g4f.space/api/puter/*       puter.g4f.space/*
+#   wrangler-pollinations.toml  g4f.space/api/pollinations/* pollinations.g4f.space/*
+#   wrangler-ollama.toml        g4f.space/api/ollama/*      ollama.g4f.space/*
+#
+# Deploy the provider workers before this one (or remove stale routes from the
+# old `api` worker first) so the route patterns do not overlap.
 
 name = "api"
-main = "custom-worker.js"
-compatibility_date = "2024-01-01"
+main = "api-worker.js"
+compatibility_date = "2025-05-30"
+
+# Routes. Cloudflare picks the most specific pattern, so the provider workers
+# keep their /api/<provider>/* paths while everything else lands here.
+routes = [
+  { pattern = "g4f.space/*", zone_name = "g4f.space" },
+  { pattern = "www.g4f.space/*", zone_name = "g4f.space" },
+  { pattern = "api.g4f.space/*", zone_name = "g4f.space" }
+]
 
 # KV Namespace (shared with members worker for auth and server index)
 [[kv_namespaces]]
@@ -11,10 +31,13 @@ binding = "MEMBERS_KV"
 id = "87b74eadf8124782a9b10dda75a872b6"
 
 # KV Namespace (shared with cake worker — read baked credits to grant
-# anonymous users extra usage proportional to their proof-of-work cakes)
-[[kv_namespaces]]
-binding = "CAKE_KV"
-id = "REPLACE_WITH_CAKE_KV_NAMESPACE_ID"
+# anonymous users extra usage proportional to their proof-of-work cakes).
+# Optional: uncomment after creating it with
+#   npx wrangler kv namespace create CAKE_KV
+# The API worker degrades gracefully when CAKE_KV is absent.
+# [[kv_namespaces]]
+# binding = "CAKE_KV"
+# id = "<CAKE_KV_NAMESPACE_ID>"
 
 # D1 Database for error tracking (error_logs table). Schema:
 #   CREATE TABLE error_logs (
@@ -47,6 +70,7 @@ database_id = "5028af48-43c0-4520-a094-b51b08f8ffae"
 binding = "MEMBERS_BUCKET"
 bucket_name = "g4f-members"
 
+# D1 Database for usage logs (usage_logs table)
 [[d1_databases]]
 binding = "USAGE_DB"
 database_id = "d48cfe96-5452-4995-aa2d-58c0ec60045f"
@@ -54,11 +78,12 @@ database_id = "d48cfe96-5452-4995-aa2d-58c0ec60045f"
 # Environment variables (secrets should be set via wrangler secret put)
 [vars]
 API_KEY_SALT = ""  # Set via: wrangler secret put API_KEY_SALT
-
-# Routes - configure these to match your domain
-# routes = [
-#   { pattern = "g4f.dev/custom/*", zone_name = "g4f.dev" }
-# ]
+# Canonical provider worker endpoints used for aggregated /v1 routing.
+# Override these only if you deploy the provider workers under different
+# hostnames. They must not point back at this worker to avoid recursion.
+PUTER_WORKER_URL = "https://puter.g4f.space"
+POLLINATIONS_WORKER_URL = "https://pollinations.g4f.space"
+OLLAMA_WORKER_URL = "https://ollama.g4f.space"
 
 # Scheduled triggers: refresh the public servers index (validation + model
 # auto-update) via updatePublicServers() in the scheduled handler. DB
@@ -69,7 +94,3 @@ crons = ["*/15 * * * *"]  # Every 15 minutes
 # Development settings
 [dev]
 port = 8788
-
-# Production environment overrides
-[env.production]
-# Add production-specific settings here

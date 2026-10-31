@@ -94,6 +94,18 @@ const POLLINATIONS_ACCOUNT_BALANCE = "https://gen.pollinations.ai/account/balanc
 const POLLINATIONS_GEN_TEXT_API = "https://gen.pollinations.ai/v1/chat/completions";
 const POLLINATIONS_GEN_API = "https://gen.pollinations.ai";
 
+// Pollinations sometimes reports key problems (budget exhausted, key
+// disabled, ...) as a normal 200 chat completion whose assistant content is
+// a message telling the user to edit the key. Detect those payloads so they
+// can be surfaced as proper errors instead of handing the message to the
+// caller as if a model had written it.
+const POLLINATIONS_KEY_ERROR_RE =
+  /(?:enter\.)?pollinations\.[a-z.]+\/edit-key\b|raise the key budget/i;
+// Upper bound for buffering an ambiguous streaming prefix while deciding
+// whether it is a key-error message. Regular streams are released as soon
+// as their first content delta proves to be normal output.
+const KEY_ERROR_STREAM_SCAN_LIMIT = 4096;
+
 const MODEL_ALIASES = {
   "openai": "openai",
   "deepseek": "deepseek",
@@ -1177,9 +1189,10 @@ async function handleQuota(request, env) {
  * used. WebSocket upgrade requests (`/v1/realtime`) are also passed through
  * untouched so realtime sessions work end-to-end.
  */
-async function handleGenProxy(request, env) {
+async function handleGenProxy(request, env, pathname = null) {
   const url = new URL(request.url);
-  const upstreamUrl = POLLINATIONS_GEN_API + url.pathname + url.search;
+  const upstreamPath = pathname || url.pathname;
+  const upstreamUrl = POLLINATIONS_GEN_API + upstreamPath + url.search;
 
   const headers = new Headers(request.headers);
   headers.delete("host");
@@ -1228,6 +1241,199 @@ async function getAutoModelCandidates(apiKey, limit = 4) {
     if (models.length) return models;
   }
   return ["openai-fast", ""];
+}
+
+/**
+ * True when a text payload is one of Pollinations' "edit your key" notices.
+ * These are delivered with HTTP 200 and an assistant message pointing at
+ * `enter.pollinations.ai/edit-key` (for example when the key budget is
+ * exhausted), so they must not be treated as a model answer.
+ */
+function isPollinationsKeyErrorText(text) {
+  return typeof text === "string" && POLLINATIONS_KEY_ERROR_RE.test(text);
+}
+
+/**
+ * Collect assistant content from a non-streaming chat completion payload.
+ */
+function getChatCompletionContent(data) {
+  if (!data || !Array.isArray(data.choices)) return "";
+  return data.choices
+    .map((choice) => choice && choice.message && choice.message.content)
+    .filter((content) => typeof content === "string")
+    .join("\n");
+}
+
+/**
+ * Return the key-error message contained in a chat completion payload, or
+ * `null` when the payload looks like a normal model response.
+ */
+function findPollinationsKeyError(data) {
+  if (!data || typeof data !== "object") return null;
+  const content = getChatCompletionContent(data);
+  if (isPollinationsKeyErrorText(content)) return content;
+  if (data.error) {
+    const message =
+      typeof data.error === "string" ? data.error : data.error.message;
+    if (isPollinationsKeyErrorText(message)) return message;
+  }
+  return null;
+}
+
+function pollinationsKeyErrorResponse(message) {
+  return new Response(JSON.stringify({
+    error: {
+      message: message || "The Pollinations API key cannot be used for this request. Please update the key and try again.",
+      type: "insufficient_quota",
+      code: "insufficient_quota"
+    }
+  }), {
+    status: 402,
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store"
+    }
+  });
+}
+
+/**
+ * True when *text* still might become a key-error notice. Used while
+ * streaming so an error message split over multiple SSE chunks is buffered
+ * until the marker appears, while ordinary output is released immediately.
+ */
+function couldBePollinationsKeyErrorPrefix(text) {
+  if (typeof text !== "string") return false;
+  if (isPollinationsKeyErrorText(text)) return true;
+  const value = text.trimStart().toLowerCase();
+  const prefixes = [
+    "the api key",
+    "api key",
+    "invalid api key",
+    "this api key",
+    "your api key",
+    "pollinations",
+    "key"
+  ];
+  return prefixes.some(
+    (prefix) => prefix.startsWith(value) || value.startsWith(prefix)
+  );
+}
+
+/**
+ * Inspect an SSE chat completion stream for a key-error notice before the
+ * response is handed to the client. Only the first assistant content is
+ * examined (plus any suspicious prefix split across chunks); normal streams
+ * are replayed through the returned Response without losing data.
+ *
+ * Returns `{ keyError }` when the upstream sent an edit-key notice, or
+ * `{ response }` with a replayable stream otherwise.
+ */
+async function guardStreamAgainstKeyErrors(response) {
+  if (!response || !response.body) return { response };
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const chunks = [];
+  let scanned = "";
+
+  const replay = () => {
+    const body = new ReadableStream({
+      start(controller) {
+        for (const chunk of chunks) controller.enqueue(chunk);
+      },
+      async pull(controller) {
+        try {
+          const { done, value } = await reader.read();
+          if (done) {
+            controller.close();
+          } else {
+            controller.enqueue(value);
+          }
+        } catch (err) {
+          controller.error(err);
+        }
+      },
+      cancel(reason) {
+        try { reader.cancel(reason); } catch {}
+      }
+    });
+    return new Response(body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers
+    });
+  };
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) return { response: replay() };
+
+      chunks.push(value);
+      scanned += decoder.decode(value, { stream: true });
+
+      let content = "";
+      let sawContent = false;
+      let sawFinish = false;
+      for (const line of scanned.split(/\r?\n/)) {
+        if (!line.startsWith("data:")) continue;
+        const payload = line.slice(5).trim();
+        if (!payload) continue;
+        if (payload === "[DONE]") {
+          sawFinish = true;
+          continue;
+        }
+        let parsed;
+        try {
+          parsed = JSON.parse(payload);
+        } catch {
+          continue;
+        }
+        if (!parsed || typeof parsed !== "object") continue;
+        if (parsed.error) {
+          const message =
+            typeof parsed.error === "string" ? parsed.error : parsed.error.message;
+          if (isPollinationsKeyErrorText(message)) return { keyError: message };
+        }
+        const choices = Array.isArray(parsed.choices) ? parsed.choices : [];
+        for (const choice of choices) {
+          if (choice && choice.finish_reason) sawFinish = true;
+          const deltaContent = choice && choice.delta && choice.delta.content;
+          if (typeof deltaContent === "string" && deltaContent.length) {
+            content += deltaContent;
+            sawContent = true;
+          }
+          const messageContent = choice && choice.message && choice.message.content;
+          if (typeof messageContent === "string" && messageContent.length) {
+            content += messageContent;
+            sawContent = true;
+          }
+        }
+      }
+
+      if (isPollinationsKeyErrorText(content)) {
+        try { await reader.cancel(); } catch {}
+        return { keyError: content };
+      }
+
+      if (sawFinish) return { response: replay() };
+      if (
+        sawContent &&
+        (!couldBePollinationsKeyErrorPrefix(content) ||
+          content.length >= KEY_ERROR_STREAM_SCAN_LIMIT)
+      ) {
+        return { response: replay() };
+      }
+      if (scanned.length >= KEY_ERROR_STREAM_SCAN_LIMIT) {
+        return { response: replay() };
+      }
+    }
+  } catch (err) {
+    console.log("guardStreamAgainstKeyErrors: read failed:", err.message);
+    // Replay whatever was read so a transient read error does not hide the
+    // upstream stream from the client.
+    return { response: replay() };
+  }
 }
 
 /**
@@ -1354,14 +1560,18 @@ async function handleChatCompletion(request, env, ctx) {
     // Pollinations attaches `x-usage-*` headers to the final response. For
     // streaming responses (`stream: true`) the headers are sent on the SSE
     // "trailer" – we need to copy them into a new Response before the body
-    // stream is consumed by the client. Streaming bodies cannot be checked
-    // for content, so they are passed through on the first attempt.
+    // stream is consumed by the client. Key errors also arrive as HTTP 200
+    // SSE, so inspect the first content delta before releasing the stream.
     const contentType = response.headers.get("content-type") || "";
     if (streaming || contentType.includes("text/event-stream")) {
-      if (!providerKey) {
-          return response;
+      const guarded = await guardStreamAgainstKeyErrors(response);
+      if (guarded.keyError) {
+        return pollinationsKeyErrorResponse(guarded.keyError);
       }
-      return await attachPollenCost(response, candidate);
+      if (!providerKey) {
+        return guarded.response;
+      }
+      return await attachPollenCost(guarded.response, candidate);
     }
 
     let data;
@@ -1370,6 +1580,15 @@ async function handleChatCompletion(request, env, ctx) {
     } catch (e) {
       lastResponse = response;
       continue;
+    }
+
+    // A key problem (e.g. exhausted budget) is reported as a normal 200
+    // completion by upstream. It will not improve with another model, so
+    // surface it as an error immediately instead of retrying or returning
+    // the notice as assistant content.
+    const keyError = findPollinationsKeyError(data);
+    if (keyError) {
+      return pollinationsKeyErrorResponse(keyError);
     }
 
     if (isValidChatResponse(data)) {
@@ -1585,12 +1804,23 @@ function addCorsHeaders(response) {
 }
 
 /**
+ * Strip the /api/pollinations mount prefix used when this worker is served
+ * from g4f.space instead of its dedicated pollinations.g4f.space subdomain.
+ */
+function stripMountPrefix(pathname) {
+  const prefix = "/api/pollinations";
+  if (pathname === prefix) return "/";
+  if (pathname.startsWith(prefix + "/")) return pathname.slice(prefix.length);
+  return pathname;
+}
+
+/**
  * Main request handler
  */
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const path = url.pathname;
+    const path = stripMountPrefix(url.pathname);
 
     // Handle CORS preflight
     if (request.method === "OPTIONS") {
@@ -1624,7 +1854,7 @@ export default {
       } else if (path.endsWith("/images/generations") && request.method === "POST") {
         response = await handleImageGeneration(request, env, ctx);
       } else if (path.startsWith("/v1/")) {
-        response = await handleGenProxy(request, env);
+        response = await handleGenProxy(request, env, path);
       } else if (path === "/" || path === "/health") {
         response = new Response(JSON.stringify({
           status: "ok",

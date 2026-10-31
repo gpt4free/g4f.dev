@@ -1,0 +1,14 @@
+# Cloudflare Workers static assets ignore list for the g4f.dev repository.
+#
+# g4f.dev is published as a static site by GitHub Pages, not as a Workers
+# assets bundle. The Workers in workers/ are code-only API endpoints. If a
+# Cloudflare build or a manual `wrangler deploy --assets .` treats this
+# repository as an assets directory, the VCS pack (>100 MiB) and the ffmpeg
+# WASM builds (>25 MiB each) otherwise fail with:
+#
+#   ✘ [ERROR] Asset too large.
+#
+# Ignore everything so Worker deployments upload only the Worker script.
+# Remove the leading `*` and narrow this list if you ever intentionally want
+# to serve repository files as Workers static assets.
+*

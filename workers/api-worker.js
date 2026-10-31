@@ -99,6 +99,21 @@ function isValidRedirect(url) {
         return false;
     }
 }
+function getProviderWorker(env, server) {
+  const name = server && server.provider_worker;
+  return name && env.PROVIDER_WORKERS ? env.PROVIDER_WORKERS[name] : null;
+}
+// Build the request handed to a bundled provider module. Provider workers may
+// rate-limit or geo-tag by client IP, so carry the Cloudflare request headers
+// over even though this call never leaves the isolate.
+function makeProviderRequest(targetUrl, init, request) {
+  const headers = new Headers(init.headers);
+  for (const key of ["cf-connecting-ip", "cf-ipcountry", "cf-ray", "x-forwarded-for"]) {
+    const value = request.headers.get(key);
+    if (value) headers.set(key, value);
+  }
+  return new Request(targetUrl, { ...init, headers });
+}
 function getCorsHeaders(request) {
     if (!isValidRedirect(request.headers.get("Origin"))) {
         return CORS_HEADERS;
@@ -145,7 +160,13 @@ var URL_MAP = {
   "https://pollinations.g4f-space.workers.dev/quota": "https://gen.pollinations.ai/account/balance",
   "https://pollinations.g4f-space.workers.dev/free/quota": "https://gen.pollinations.ai/account/balance",
   "https://pollinations.g4f-space.workers.dev/community/quota": "https://gen.pollinations.ai/account/balance",
+  "https://pollinations.g4f.space/quota": "https://gen.pollinations.ai/account/balance",
+  "https://pollinations.g4f.space/free/quota": "https://gen.pollinations.ai/account/balance",
+  "https://pollinations.g4f.space/community/quota": "https://gen.pollinations.ai/account/balance",
+  "https://g4f.space/api/pollinations/quota": "https://gen.pollinations.ai/account/balance",
   "https://puter.g4f-dev.workers.dev/quota": "https://api.puter.com/metering/usage",
+  "https://puter.g4f.space/quota": "https://api.puter.com/metering/usage",
+  "https://g4f.space/api/puter/quota": "https://api.puter.com/metering/usage",
   "https://router.huggingface.co/v1/quota": "https://huggingface.co/api/whoami-v2"
 }
 let waitForProviders = (env)=>fetch("https://g4f.dev/dist/js/providers.json")
@@ -408,7 +429,8 @@ async function safe(request, env, ctx) {
       return handleApiErrors(request, env, user);
     }
     if ((userProvidedKey || (user && user.pollinations?.api_key)) && pathname == "/api/pollinations/models") {
-      return fetch("https://pollinations.g4f-dev.workers.dev/models", {headers: {"Authorization": `Bearer ${userProvidedKey || user.pollinations?.api_key}`}});
+      const pollinationsBase = env.POLLINATIONS_WORKER_URL || "https://pollinations.g4f.space";
+      return fetch(`${pollinationsBase}/models`, {headers: {"Authorization": `Bearer ${userProvidedKey || user.pollinations?.api_key}`}});
     }
     if ((userProvidedKey || (user && user.pollinations?.api_key)) && pathname == "/api/pollinations/quota") {
       return fetch("https://gen.pollinations.ai/account/balance", {headers: {"Authorization": `Bearer ${userProvidedKey || user.pollinations?.api_key}`}});
@@ -1351,10 +1373,13 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey,
     let response;
     let data = {data: []};
     if (targetUrl && !targetUrl.includes("/chat/completions")) {
-      response = await fetch(targetUrl, {
-        method: request.method,
-        headers
-      });
+      const providerWorker = getProviderWorker(env, server);
+      response = providerWorker && targetUrl.startsWith(server.base_url)
+        ? await providerWorker.fetch(makeProviderRequest(targetUrl, { method: request.method, headers }, request), env, ctx)
+        : await fetch(targetUrl, {
+            method: request.method,
+            headers
+          });
       if (!response.ok) {
         throw Error(`Error ${response.status}: ${await response.text()}`);
       }
@@ -1875,7 +1900,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   } else {
     targetUrl = `${server.base_url}${subPath}`;
   }
-  targetUrl = targetUrl.replace('https://polli.g4f.dev', 'https://pollinations.g4f-space.workers.dev')
+  targetUrl = targetUrl.replace('https://polli.g4f.dev', env.POLLINATIONS_WORKER_URL || 'https://pollinations.g4f.space')
   const mappedUrl = URL_MAP[targetUrl];
   if (mappedUrl) {
     targetUrl = mappedUrl;
@@ -1999,7 +2024,10 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     if (isPassG4f) await acquirePassSlot();
     let response;
     try {
-      response = await fetch(targetUrl, fetchOptions);
+      const providerWorker = getProviderWorker(env, server);
+      response = providerWorker && targetUrl.startsWith(server.base_url)
+        ? await providerWorker.fetch(makeProviderRequest(targetUrl, fetchOptions, request), env, ctx)
+        : await fetch(targetUrl, fetchOptions);
     } finally {
       if (isPassG4f) releasePassSlot();
     }
@@ -2574,7 +2602,7 @@ async function getServerByLabel(env, label, user = null) {
     return { id: "huggingface", base_url: `https://router.huggingface.co/v1`, allowed_models: []};
   }
   if (label === "puter") {
-    return { id: "puter", base_url: `https://puter.g4f-dev.workers.dev`, allowed_models: []};
+    return { id: "puter", base_url: env.PUTER_WORKER_URL || `https://puter.g4f.space`, allowed_models: [], provider_worker: "puter"};
   }
   if (label.startsWith("pa:")) {
     return { id: "core", base_url: `https://pass.g4f.space/api/${label}`, allowed_models: []};
@@ -2592,13 +2620,40 @@ async function getServerByLabel(env, label, user = null) {
     }
   }
   if (SERVER_MAP[label]) {
-    return await getServerById(env, SERVER_MAP[label], user);
+    const server = await getServerById(env, SERVER_MAP[label], user);
+    if (server && ["puter", "pollinations", "ollama"].includes(label)) {
+      server.provider_worker = label;
+    }
+    if (server) {
+      return server;
+    }
+    // The KV-backed public server index may be empty (fresh deployment or
+    // local dev). Fall back to the bundled provider worker so /api/<provider>
+    // still works without a KV record.
+    if (env.PROVIDER_WORKERS && ["puter", "pollinations", "ollama"].includes(label)) {
+      const baseUrls = {
+        puter: env.PUTER_WORKER_URL,
+        pollinations: env.POLLINATIONS_WORKER_URL,
+        ollama: env.OLLAMA_WORKER_URL
+      };
+      return {
+        id: label,
+        base_url: baseUrls[label] || `https://${label}.g4f.space`,
+        allowed_models: [],
+        provider_worker: label
+      };
+    }
+    return server;
   }
   const publicServers = await getPublicServers(env);
   if (publicServers) {
     const serverIndex = publicServers.find((s) => s.label.includes(label));
     if (serverIndex) {
-      return await getServerById(env, serverIndex.id, user);
+      const server = await getServerById(env, serverIndex.id, user);
+      if (server && ["puter", "pollinations", "ollama"].includes(label)) {
+        server.provider_worker = label;
+      }
+      return server;
     } else {
       return { id: "core", base_url: `https://pass.g4f.space/api/${label}`, allowed_models: []};
     }

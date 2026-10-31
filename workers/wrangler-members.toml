@@ -2,7 +2,7 @@
 # See https://developers.cloudflare.com/workers/wrangler/configuration/
 
 name = "auth"
-main = "members-worker.js"
+main = "auth-worker.js"
 compatibility_date = "2024-01-01"
 
 # KV Namespace for caching user sessions and API key lookups

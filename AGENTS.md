@@ -32,6 +32,8 @@ The automatic pipeline lives in the `gpt4free` checkout. Configure it there in
 | `*.html` | Public pages: home, chat, browser, agent, community, playground |
 | `docs/` | Markdown and generated HTML documentation |
 | `dist/js/` | Browser JavaScript client and worker bundles |
+| `workers/` | Cloudflare Workers for g4f.space (router plus API, Puter, Pollinations, Ollama modules) |
+| `wrangler.toml` | Root router Worker deployed with `npx wrangler deploy` |
 | `api/` | Static API metadata and hosted endpoint helpers |
 | `apps/` | Companion web apps and demos |
 | `scripts/check-js.mjs` | JavaScript syntax check used by CI |

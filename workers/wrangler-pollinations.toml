@@ -1,0 +1,32 @@
+# Wrangler configuration for the G4F Pollinations worker on g4f.space.
+# See https://developers.cloudflare.com/workers/wrangler/configuration/
+#
+# OpenAI-compatible proxy for text.pollinations.ai / gen.pollinations.ai.
+#
+# Served both ways:
+#   https://g4f.space/api/pollinations/*     (same host as the API worker)
+#   https://pollinations.g4f.space/*         (dedicated subdomain)
+#
+# Optional secret:
+#   wrangler secret put POLLINATIONS_API_KEY --config wrangler-pollinations.toml
+# A key unlocks the premium gen.pollinations.ai endpoints; anonymous requests
+# still work with the free tier.
+
+name = "pollinations"
+main = "pollinations.js"
+compatibility_date = "2025-05-30"
+
+# Routes. The more specific /api/pollinations/* pattern wins over the API
+# worker's g4f.space/* route.
+routes = [
+  { pattern = "g4f.space/api/pollinations/*", zone_name = "g4f.space" },
+  { pattern = "api.g4f.space/api/pollinations/*", zone_name = "g4f.space" },
+  { pattern = "pollinations.g4f.space/*", zone_name = "g4f.space" }
+]
+
+[vars]
+# Per-IP request cap per 60s window. Set to "0" to disable.
+RATE_LIMIT_PER_MINUTE = "30"
+
+[dev]
+port = 8794

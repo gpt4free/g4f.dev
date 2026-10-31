@@ -24,7 +24,9 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "check:js": "node scripts/check-js.mjs"
+    "check:js": "node scripts/check-js.mjs",
+    "deploy": "wrangler deploy",
+    "deploy:split": "bash workers/deploy-g4f-space.sh"
   },
   "repository": {
     "type": "git",

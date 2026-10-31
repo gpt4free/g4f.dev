@@ -450,12 +450,23 @@ function addCorsHeaders(response) {
 }
 
 /**
+ * Strip the /api/ollama mount prefix used when this worker is served from
+ * g4f.space instead of its dedicated ollama.g4f.space subdomain.
+ */
+function stripMountPrefix(pathname) {
+  const prefix = "/api/ollama";
+  if (pathname === prefix) return "/";
+  if (pathname.startsWith(prefix + "/")) return pathname.slice(prefix.length);
+  return pathname;
+}
+
+/**
  * Main request handler
  */
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const path = url.pathname;
+    const path = stripMountPrefix(url.pathname);
 
     // Handle CORS preflight
     if (request.method === "OPTIONS") {

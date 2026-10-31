@@ -1,0 +1,30 @@
+# Wrangler configuration for the G4F Ollama worker on g4f.space.
+# See https://developers.cloudflare.com/workers/wrangler/configuration/
+#
+# OpenAI-compatible proxy for ollama.com. Callers may pass their own Ollama
+# key as `Authorization: Bearer <key>`; OLLAMA_API_KEY is the anonymous
+# fallback.
+#
+# Served both ways:
+#   https://g4f.space/api/ollama/*     (same host as the API worker)
+#   https://ollama.g4f.space/*         (dedicated subdomain)
+
+name = "ollama"
+main = "ollama.js"
+compatibility_date = "2025-05-30"
+
+# Routes. The more specific /api/ollama/* pattern wins over the API worker's
+# g4f.space/* route.
+routes = [
+  { pattern = "g4f.space/api/ollama/*", zone_name = "g4f.space" },
+  { pattern = "api.g4f.space/api/ollama/*", zone_name = "g4f.space" },
+  { pattern = "ollama.g4f.space/*", zone_name = "g4f.space" }
+]
+
+# Secret (recommended):
+#   wrangler secret put OLLAMA_API_KEY --config wrangler-ollama.toml
+# Without a key only the model listing works for anonymous callers.
+[vars]
+
+[dev]
+port = 8795

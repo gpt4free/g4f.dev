@@ -136,6 +136,31 @@ upstreamResponses = [{ status: 200, body: 'data: {"choices":[{"delta":{"content"
 res = await worker.fetch(chatReq('auto', { stream: true }), env, {});
 check('auto: streaming response passed through without retry', res.status === 200 && upstreamBodies.length === 1);
 
+// 9b. non-streaming edit-key notice is returned as a quota error, not content
+const KEY_ERROR = 'The API key used for this request has reached its budget. Please [raise the key budget](<https://enter.pollinations.ai/edit-key?id=abc&ref=agent_key_budget>), then try again.';
+upstreamBodies = [];
+upstreamResponses = [{ status: 200, body: okBody(KEY_ERROR) }];
+res = await worker.fetch(chatReq('auto'), env, {});
+data = await res.json();
+check('non-streaming edit-key notice -> 402 without retry',
+  res.status === 402 && data.error?.code === 'insufficient_quota' && upstreamBodies.length === 1);
+
+// 9c. streaming edit-key notice (split across SSE chunks) -> 402
+upstreamBodies = [];
+upstreamResponses = [{
+  status: 200,
+  body:
+    'data: {"choices":[{"delta":{"role":"assistant","content":""}}]}\n\n' +
+    'data: {"choices":[{"delta":{"content":"The API key used for this request has reached its budget. Please [raise the key budget](<https://enter.pollinations.ai/"}}]}\n\n' +
+    'data: {"choices":[{"delta":{"content":"edit-key?id=abc>), then try again."}}]}\n\n' +
+    'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n' +
+    'data: [DONE]\n\n'
+}];
+res = await worker.fetch(chatReq('auto', { stream: true }), env, {});
+data = await res.json();
+check('streaming edit-key notice -> 402 without retry',
+  res.status === 402 && data.error?.code === 'insufficient_quota' && upstreamBodies.length === 1);
+
 // 10. paid model still blocked with default key (unchanged behavior)
 res = await worker.fetch(chatReq('paid-model'), env, {});
 check('paid model still blocked with default key', res.status === 404);
