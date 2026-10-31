@@ -1805,6 +1805,77 @@ ul {
     font-size: 12px;
 }
 
+/* Discord community onboarding banner (chat sidebar) */
+.discord-upgrade-banner {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(88, 101, 242, 0.55);
+    background:
+        radial-gradient(circle at top right, rgba(88, 101, 242, 0.28), transparent 60%),
+        rgba(88, 101, 242, 0.1);
+    font-size: 11px;
+}
+
+.discord-upgrade-banner.hidden {
+    display: none;
+}
+
+.discord-upgrade-banner-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: var(--colour-3);
+}
+
+.discord-upgrade-banner-header i {
+    color: #5865f2;
+    font-size: 14px;
+}
+
+.discord-upgrade-banner p {
+    margin: 0;
+    color: var(--colour-3);
+    opacity: 0.85;
+    line-height: 1.35;
+}
+
+.discord-upgrade-banner-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.discord-upgrade-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px;
+    border-radius: 6px;
+    border: 1px solid rgba(88, 101, 242, 0.45);
+    background: rgba(88, 101, 242, 0.18);
+    color: var(--colour-3);
+    font-size: 11px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.discord-upgrade-link:hover {
+    background: #5865f2;
+    border-color: #5865f2;
+    color: #fff;
+}
+
+.discord-upgrade-link[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .oauth-btn {
     display: inline-flex;
     align-items: center;

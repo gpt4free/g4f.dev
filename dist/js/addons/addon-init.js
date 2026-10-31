@@ -1824,6 +1824,115 @@ async function handleToolCalls(toolCalls, messages, model, provider, message_id,
 
 // Cloud Sync Functions
 const CLOUD_SYNC_API = "https://auth.g4f.space/members/api";
+const DISCORD_INVITE_URL = "https://discord.gg/qXA4Wf4Fsm";
+
+async function membersApiFetch(endpoint, options = {}) {
+    const token = appStorage.getItem("g4f_session");
+    const headers = { ...(options.headers || {}) };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    return fetch(`${CLOUD_SYNC_API}${endpoint}`, {
+        ...options,
+        headers,
+        credentials: "include"
+    });
+}
+
+/**
+ * Show a compact "unlock Free tier" banner in the chat sidebar for members
+ * on the new/anonymous tier. Verifying checks both the Discord connection and
+ * the G4F support server membership before the worker upgrades the account.
+ */
+async function updateDiscordUpgradeBanner(user) {
+    const banner = document.getElementById("discord-upgrade-banner");
+    if (!banner) return;
+
+    const eligible = user && (user.tier === "new" || user.tier === "anonymous");
+    if (!eligible) {
+        banner.classList.add("hidden");
+        return;
+    }
+
+    let status;
+    try {
+        const response = await membersApiFetch("/discord/status");
+        if (!response.ok) {
+            banner.classList.add("hidden");
+            return;
+        }
+        status = await response.json();
+    } catch (error) {
+        console.error("Failed to load Discord membership status:", error);
+        banner.classList.add("hidden");
+        return;
+    }
+    if (!status || status.error) {
+        banner.classList.add("hidden");
+        return;
+    }
+
+    const text = document.getElementById("discord-upgrade-text");
+    const connectLink = document.getElementById("discord-connect-link");
+    const joinLink = document.getElementById("discord-join-link");
+    const verifyBtn = document.getElementById("discord-verify-btn");
+
+    banner.classList.remove("hidden");
+    if (text) {
+        if (status.needs_reconnect) {
+            text.textContent = "Reconnect Discord so we can verify your support server membership.";
+        } else if (!status.connected) {
+            text.textContent = "Connect Discord and join the G4F support server to upgrade instantly.";
+        } else if (!status.joined) {
+            text.textContent = "Join the G4F support server, then verify to unlock the Free tier.";
+        } else {
+            text.textContent = "Support server membership confirmed. Verify to unlock the Free tier.";
+        }
+    }
+
+    if (connectLink) {
+        const redirect = encodeURIComponent(window.location.origin + window.location.pathname);
+        connectLink.href = `https://auth.g4f.space/members/auth/discord?link=1&redirect=${redirect}`;
+        connectLink.innerHTML = status.connected && !status.needs_reconnect
+            ? '<i class="fab fa-discord" aria-hidden="true"></i> Reconnect'
+            : '<i class="fab fa-discord" aria-hidden="true"></i> Connect';
+        connectLink.style.display = status.connected && !status.needs_reconnect ? "none" : "";
+    }
+
+    if (joinLink) {
+        joinLink.href = status.invite || DISCORD_INVITE_URL;
+        joinLink.style.display = status.joined ? "none" : "";
+    }
+
+    if (verifyBtn) {
+        verifyBtn.disabled = !status.connected || !!status.needs_reconnect;
+        verifyBtn.onclick = async () => {
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Verifying';
+            try {
+                const response = await membersApiFetch("/discord/verify", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: "{}"
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || result.error) {
+                    console.warn("Discord verification failed:", result.error || response.status);
+                    if (text) text.textContent = result.error || "Discord verification failed. Please try again.";
+                    return;
+                }
+                if (result.user) {
+                    appStorage.setItem("g4f_user", JSON.stringify(result.user));
+                    showCloudSyncLoggedIn(result.user);
+                }
+            } catch (error) {
+                console.error("Discord verification failed:", error);
+                if (text) text.textContent = "Discord verification failed. Please try again.";
+            } finally {
+                verifyBtn.innerHTML = '<i class="fa-solid fa-check" aria-hidden="true"></i> Verify';
+                verifyBtn.disabled = false;
+            }
+        };
+    }
+}
 
 async function checkCloudSyncSession() {
     const token = appStorage.getItem("g4f_session");
@@ -1880,6 +1989,8 @@ function showCloudSyncLogin() {
     if (sidebarLogoutBtn) sidebarLogoutBtn.classList.add("hidden");
     if (tierText) tierText.textContent = "Guest";
     if (tierLimitsRow) tierLimitsRow.classList.add("hidden");
+    const discordBanner = document.getElementById("discord-upgrade-banner");
+    if (discordBanner) discordBanner.classList.add("hidden");
 }
 
 function showCloudSyncLoggedIn(user) {
@@ -1920,6 +2031,8 @@ function showCloudSyncLoggedIn(user) {
     if (infoBar && user.tier) {
         infoBar.setAttribute("data-tier", user.tier);
     }
+
+    void updateDiscordUpgradeBanner(user);
 
     // Login stores the session/API key in appStorage. Recreate the client so
     // subsequent requests use the new key instead of the pre-login instance.

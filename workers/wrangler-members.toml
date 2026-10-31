@@ -23,6 +23,9 @@ bucket_name = "g4f-members"  # Replace with actual bucket name
 # wrangler secret put GITHUB_CLIENT_SECRET
 # wrangler secret put DISCORD_CLIENT_ID
 # wrangler secret put DISCORD_CLIENT_SECRET
+# Optional: pin the support guild instead of resolving the invite at runtime
+# DISCORD_GUILD_ID = "123456789012345678"
+# DISCORD_GUILD_NAME = "G4F Support"
 # wrangler secret put HUGGINGFACE_CLIENT_ID
 # wrangler secret put HUGGINGFACE_CLIENT_SECRET
 # wrangler secret put GITHUB_TOKEN

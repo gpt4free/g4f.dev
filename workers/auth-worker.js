@@ -9,6 +9,8 @@
  * - GITHUB_CLIENT_SECRET: GitHub OAuth App Client Secret
  * - DISCORD_CLIENT_ID: Discord OAuth App Client ID
  * - DISCORD_CLIENT_SECRET: Discord OAuth App Client Secret
+ * - DISCORD_GUILD_ID: (optional) Support guild ID for instant free-tier upgrades
+ * - DISCORD_GUILD_NAME: (optional) Display name for the support guild
  * - HUGGINGFACE_CLIENT_ID: HuggingFace OAuth Client ID
  * - HUGGINGFACE_CLIENT_SECRET: HuggingFace OAuth Client Secret
  * - AIRFORCE_CLIENT_ID: Airforce OAuth Client ID
@@ -52,6 +54,16 @@ const ADMIN_USERS = {
 const EXTRA_CONTRIBUTERS = ["Screenmax1234", "kirill670", "georgedorn", "yakovexplorer", "tak-gamingYT", "sasaiber", "redac1ed", "AskingAcake", "tringtoblinbus", "Yatin-Code", "meow18838"];
 
 const ALLOWED_REDIRECT_HOSTNAMES = ["localhost", "127.0.0.1", "llmplayground.net", "g4f.dev", "gpt4free.github.io"];
+
+// Discord community onboarding. Users who connect Discord and join the
+// support server are upgraded from "new" to "free" immediately instead of
+// waiting for the 24 hour account-age threshold.
+const DISCORD_SUPPORT_INVITE = "https://discord.gg/qXA4Wf4Fsm";
+const DISCORD_INVITE_CODE = "qXA4Wf4Fsm";
+const DISCORD_API_BASE = "https://discord.com/api/v10";
+const DISCORD_SUPPORT_GUILD_CACHE_KEY = "discord_support_guild";
+const DISCORD_SUPPORT_GUILD_TTL = 7 * 24 * 60 * 60;
+const DISCORD_OAUTH_SCOPES = "identify email guilds";
 
 // Hash-to-tier upgrade mappings for anonymous users
 // Maps hash values to tier upgrades
@@ -258,6 +270,12 @@ function getSafeUser(user) {
     const safeUser = { ...user };
     delete safeUser.api_keys;
     delete safeUser.custom_servers;
+    // Linked provider tokens stay server-side; the client only needs the
+    // public identity fields to render the provider badges.
+    if (safeUser.discord && typeof safeUser.discord === "object") {
+        const { access_token, refresh_token, token_expires_at, ...publicDiscord } = safeUser.discord;
+        safeUser.discord = publicDiscord;
+    }
     return safeUser;
 }
 
@@ -402,6 +420,12 @@ async function calculateUserTier(userData, contributors, sponsors) {
     // Check sponsor status (GitHub only)
     if (userData.provider === "github" && sponsors.includes(userData.username)) {
         return "sponsor";
+    }
+
+    // Members who connected Discord and joined the support server get the
+    // free tier immediately (no 24 hour waiting period).
+    if (userData.discord_joined === true) {
+        return "free";
     }
     
     // Check account age (> 24 hours = free tier)
@@ -594,6 +618,14 @@ var USER_TIER_LIMITS = {
             }
             if (pathname === "/members/api/user/unlink") {
                 return handleUnlinkProvider(request, env);
+            }
+
+            // Discord community onboarding / instant free-tier upgrade
+            if (pathname === "/members/api/discord/status") {
+                return handleDiscordStatus(request, env);
+            }
+            if (pathname === "/members/api/discord/verify") {
+                return handleDiscordVerify(request, env);
             }
   
             // Anonymous tier upgrade endpoint
@@ -1010,18 +1042,30 @@ var USER_TIER_LIMITS = {
 
   async function handleDiscordAuth(request, env, url) {
     const state = generateState();
-    const scope = "identify email";
     const redirect = url.searchParams.get("redirect") || null;
     const conversation = url.searchParams.get("conversation") || null;
+    const wantsLink = url.searchParams.get("link") === "1" || url.searchParams.get("link") === "true";
+
+    // Discord can be used to sign in or to connect the community account to an
+    // existing G4F account. Linking requires an active session so we know
+    // which member should receive the Discord identity.
+    let linkUserId = null;
+    if (wantsLink) {
+        const currentUser = await authenticateRequest(request, env);
+        if (!currentUser) {
+            return redirectWithError("Sign in to your G4F account before connecting Discord");
+        }
+        linkUserId = currentUser.id;
+    }
 
     const authUrl = new URL("https://discord.com/api/oauth2/authorize");
     authUrl.searchParams.set("client_id", env.DISCORD_CLIENT_ID);
     authUrl.searchParams.set("redirect_uri", `${url.origin}/members/auth/discord/callback`);
     authUrl.searchParams.set("response_type", "code");
-    authUrl.searchParams.set("scope", scope);
+    authUrl.searchParams.set("scope", DISCORD_OAUTH_SCOPES);
     authUrl.searchParams.set("state", state);
   
-    const stateData = JSON.stringify({ provider: "discord", redirect, conversation });
+    const stateData = JSON.stringify({ provider: "discord", redirect, conversation, linkUserId });
     await env.MEMBERS_KV.put(`oauth_state:${state}`, stateData, { expirationTtl: 600 });
   
     return Response.redirect(authUrl.toString(), 302);
@@ -1075,17 +1119,45 @@ var USER_TIER_LIMITS = {
         }
     });
     const discordUser = await userResponse.json();
-  
-    const user = await createOrUpdateUser(env, {
-        provider: "discord",
+
+    const discordProfile = {
+        id: discordUser.id,
         username: discordUser.username,
         name: discordUser.global_name || discordUser.username,
-        email: discordUser.email,
-        avatar: discordUser.avatar 
+        email: discordUser.email || null,
+        avatar: discordUser.avatar
             ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
             : null,
-        access_token: tokenData.access_token
-    });
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token || null,
+        token_expires_at: Date.now() + Math.max(60, tokenData.expires_in || 7 * 24 * 60 * 60) * 1000,
+        scope: tokenData.scope || DISCORD_OAUTH_SCOPES
+    };
+
+    // Linking an existing account keeps the current G4F identity and session,
+    // so a GitHub/HuggingFace user can add Discord without creating a second
+    // account.
+    let user;
+    if (stateData.linkUserId) {
+        const linked = await linkDiscordToUser(env, stateData.linkUserId, discordProfile);
+        if (linked.error) {
+            return redirectWithError(linked.error);
+        }
+        user = linked.user;
+    } else {
+        user = await createOrUpdateUser(env, {
+            provider: "discord",
+            username: discordUser.username,
+            name: discordUser.global_name || discordUser.username,
+            email: discordUser.email,
+            avatar: discordProfile.avatar,
+            access_token: tokenData.access_token,
+            refresh_token: tokenData.refresh_token || null,
+            token_expires_at: discordProfile.token_expires_at,
+            discord_id: discordUser.id,
+            discord_scope: discordProfile.scope
+        });
+    }
   
     const { sessionToken, expires } = await createSession(env, user.id);
   
@@ -2344,6 +2416,374 @@ ${buttonsHtml}
           .replace(/>/g, "&gt;")
           .replace(/"/g, "&quot;")
           .replace(/'/g, "&#39;");
+  }
+
+  // ============================================
+  // Discord community onboarding
+  // ============================================
+
+  /**
+   * Resolve the G4F support guild. A configured DISCORD_GUILD_ID wins;
+   * otherwise the public invite is resolved through Discord's API and cached
+   * in KV so verification does not hit Discord on every request.
+   */
+  async function getDiscordSupportGuild(env) {
+    if (env.DISCORD_GUILD_ID) {
+      return {
+        id: String(env.DISCORD_GUILD_ID),
+        name: env.DISCORD_GUILD_NAME || "G4F Support",
+        invite: DISCORD_SUPPORT_INVITE
+      };
+    }
+
+    try {
+      const cached = await env.MEMBERS_KV.get(DISCORD_SUPPORT_GUILD_CACHE_KEY, { type: "json" });
+      if (cached && cached.id) return { ...cached, invite: DISCORD_SUPPORT_INVITE };
+    } catch (e) { /* resolve below */ }
+
+    try {
+      const response = await fetch(`${DISCORD_API_BASE}/invites/${DISCORD_INVITE_CODE}?with_counts=true`);
+      if (response.ok) {
+        const invite = await response.json();
+        if (invite.guild && invite.guild.id) {
+          const guild = {
+            id: String(invite.guild.id),
+            name: invite.guild.name || "G4F Support",
+            invite: DISCORD_SUPPORT_INVITE
+          };
+          try {
+            await env.MEMBERS_KV.put(
+              DISCORD_SUPPORT_GUILD_CACHE_KEY,
+              JSON.stringify(guild),
+              { expirationTtl: DISCORD_SUPPORT_GUILD_TTL }
+            );
+          } catch (e) { /* cache is best-effort */ }
+          return guild;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to resolve Discord support guild:", e);
+    }
+
+    return { id: null, name: "G4F Support", invite: DISCORD_SUPPORT_INVITE };
+  }
+
+  /**
+   * Return the Discord identity/tokens for a member. Discord is either the
+   * main login provider (top-level fields) or a linked identity (`user.discord`).
+   */
+  function getDiscordLink(user) {
+    if (!user) return null;
+    const mainIsDiscord = user.provider === "discord";
+    const linked = user.discord && typeof user.discord === "object" ? user.discord : null;
+    // Prefer the main provider record when Discord is the login provider;
+    // a stale linked object must not shadow freshly refreshed tokens.
+    const source = mainIsDiscord ? user : linked;
+    if (!source) return null;
+
+    const accessToken = source.access_token || (mainIsDiscord ? user.access_token : null);
+    const refreshToken = source.refresh_token || (mainIsDiscord ? user.refresh_token : null);
+    const expiresAt = source.token_expires_at || source.discord_token_expires_at ||
+      (mainIsDiscord ? user.token_expires_at || user.discord_token_expires_at : null);
+
+    const discordId = linked
+      ? (linked.id || linked.discord_id || null)
+      : (mainIsDiscord ? (user.discord_id || null) : null);
+
+    if (!discordId && !source.username && !accessToken) return null;
+    return {
+      id: discordId,
+      username: source.username || (mainIsDiscord ? user.username : null) || null,
+      name: source.name || (mainIsDiscord ? user.name : null) || null,
+      avatar: source.avatar || (mainIsDiscord ? user.avatar : null) || null,
+      access_token: accessToken || null,
+      refresh_token: refreshToken || null,
+      token_expires_at: expiresAt || null,
+      scope: source.scope || (mainIsDiscord ? user.discord_scope : null) || null,
+      main: mainIsDiscord && !linked
+    };
+  }
+
+  /**
+   * Persist refreshed Discord tokens on the user record. Discord is the main
+   * provider or a linked identity, so keep the two storage shapes in sync.
+   */
+  function applyDiscordTokens(user, tokens) {
+    if (!user || !tokens || !tokens.access_token) return;
+    if (user.provider === "discord") {
+      user.access_token = tokens.access_token;
+      user.refresh_token = tokens.refresh_token || user.refresh_token || null;
+      user.token_expires_at = tokens.token_expires_at || user.token_expires_at || null;
+      if (tokens.scope) user.discord_scope = tokens.scope;
+    } else {
+      user.discord = {
+        ...(user.discord || {}),
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token || (user.discord && user.discord.refresh_token) || null,
+        token_expires_at: tokens.token_expires_at || (user.discord && user.discord.token_expires_at) || null,
+        scope: tokens.scope || (user.discord && user.discord.scope) || null
+      };
+    }
+  }
+
+  async function refreshDiscordToken(env, link) {
+    if (!link || !link.refresh_token) return null;
+    try {
+      const response = await fetch("https://discord.com/api/oauth2/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: env.DISCORD_CLIENT_ID,
+          client_secret: env.DISCORD_CLIENT_SECRET,
+          grant_type: "refresh_token",
+          refresh_token: link.refresh_token
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.access_token) return null;
+      return {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token || link.refresh_token,
+        token_expires_at: Date.now() + Math.max(60, data.expires_in || 7 * 24 * 60 * 60) * 1000,
+        scope: data.scope || link.scope || null
+      };
+    } catch (e) {
+      console.error("Discord token refresh failed:", e);
+      return null;
+    }
+  }
+
+  /**
+   * Check whether a member has connected Discord and joined the support guild.
+   * Uses the `guilds` OAuth scope so no bot token is required.
+   */
+  async function checkDiscordMembership(env, user) {
+    const link = getDiscordLink(user);
+    const invite = DISCORD_SUPPORT_INVITE;
+    if (!link || !link.access_token) {
+      return {
+        connected: false,
+        joined: false,
+        needs_reconnect: false,
+        invite,
+        tier: user.tier,
+        discord: null,
+        reason: "not_connected"
+      };
+    }
+
+    const discordPublic = {
+      id: link.id,
+      username: link.username,
+      name: link.name,
+      avatar: link.avatar
+    };
+    let accessToken = link.access_token;
+    let tokenRefreshed = false;
+
+    // Refresh proactively when the token is close to expiry.
+    if (link.token_expires_at && Date.now() > Number(link.token_expires_at) - 60 * 1000) {
+      const refreshed = await refreshDiscordToken(env, link);
+      if (refreshed) {
+        accessToken = refreshed.access_token;
+        applyDiscordTokens(user, refreshed);
+        tokenRefreshed = true;
+      }
+    }
+
+    const fetchGuilds = () => fetch(`${DISCORD_API_BASE}/users/@me/guilds`, {
+      headers: { "Authorization": `Bearer ${accessToken}` }
+    });
+
+    let response = await fetchGuilds();
+    if (response.status === 401) {
+      const refreshed = await refreshDiscordToken(env, { ...link, access_token: accessToken });
+      if (refreshed) {
+        accessToken = refreshed.access_token;
+        applyDiscordTokens(user, refreshed);
+        tokenRefreshed = true;
+        response = await fetchGuilds();
+      }
+    }
+
+    if (tokenRefreshed) {
+      user.updated_at = new Date().toISOString();
+      await saveUser(env, user);
+    }
+
+    if (!response.ok) {
+      return {
+        connected: true,
+        joined: false,
+        needs_reconnect: response.status === 401 || response.status === 403,
+        invite,
+        tier: user.tier,
+        discord: discordPublic,
+        reason: response.status === 403 ? "missing_guilds_scope" : "discord_error"
+      };
+    }
+
+    let guilds = [];
+    try {
+      guilds = await response.json();
+    } catch (e) {
+      guilds = [];
+    }
+
+    const supportGuild = await getDiscordSupportGuild(env);
+    const joined = supportGuild.id
+      ? Array.isArray(guilds) && guilds.some((guild) => guild && String(guild.id) === String(supportGuild.id))
+      : false;
+
+    return {
+      connected: true,
+      joined,
+      needs_reconnect: false,
+      invite,
+      guild: supportGuild,
+      tier: user.tier,
+      discord: discordPublic,
+      reason: joined ? "joined" : "not_joined"
+    };
+  }
+
+  /**
+   * Attach a Discord identity to an existing member (used by ?link=1 OAuth).
+   */
+  async function linkDiscordToUser(env, userId, profile) {
+    const user = await getUser(env, userId);
+    if (!user) return { error: "G4F account not found" };
+    if (!profile || !profile.username) return { error: "Discord profile is incomplete" };
+
+    const lookupKey = `user_lookup:discord:${profile.username}`;
+    const existingId = await env.MEMBERS_KV.get(lookupKey);
+    if (existingId && existingId !== user.id) {
+      return { error: "This Discord account is already linked to another G4F account" };
+    }
+
+    const now = new Date().toISOString();
+    if (user.provider === "discord") {
+      user.username = profile.username || user.username;
+      user.name = profile.name || user.name;
+      user.email = profile.email || user.email;
+      user.avatar = profile.avatar || user.avatar;
+      user.access_token = profile.access_token;
+      user.refresh_token = profile.refresh_token || null;
+      user.token_expires_at = profile.token_expires_at || null;
+      user.discord_id = profile.id || user.discord_id || null;
+      user.discord_scope = profile.scope || DISCORD_OAUTH_SCOPES;
+    } else {
+      user.discord = {
+        id: profile.id || null,
+        username: profile.username,
+        name: profile.name || profile.username,
+        email: profile.email || null,
+        avatar: profile.avatar || null,
+        access_token: profile.access_token,
+        refresh_token: profile.refresh_token || null,
+        token_expires_at: profile.token_expires_at || null,
+        scope: profile.scope || DISCORD_OAUTH_SCOPES,
+        linked_at: now
+      };
+    }
+    user.updated_at = now;
+
+    await env.MEMBERS_KV.put(lookupKey, user.id);
+    await saveUser(env, user);
+    return { user };
+  }
+
+  async function updateApiKeyCacheTier(env, user, tier) {
+    for (const keyData of user.api_keys || []) {
+      const keyInfo = await env.MEMBERS_KV.get(`api_key:${keyData.key_hash}`);
+      if (!keyInfo) continue;
+      try {
+        const parsed = JSON.parse(keyInfo);
+        parsed.tier = tier;
+        await env.MEMBERS_KV.put(`api_key:${keyData.key_hash}`, JSON.stringify(parsed));
+      } catch (e) { /* ignore malformed cache entries */ }
+    }
+  }
+
+  /**
+   * GET /members/api/discord/status
+   * Reports whether Discord is connected and the support guild was joined.
+   */
+  async function handleDiscordStatus(request, env) {
+    const user = await authenticateRequest(request, env);
+    if (!user) {
+      return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
+    }
+
+    const membership = await checkDiscordMembership(env, user);
+    return jsonResponse({
+      ...membership,
+      invite: DISCORD_SUPPORT_INVITE,
+      can_upgrade: user.tier === "new" || user.tier === "anonymous"
+    }, 200, getCorsHeaders(request));
+  }
+
+  /**
+   * POST /members/api/discord/verify
+   * Re-checks Discord + guild membership and upgrades "new"/"anonymous" to
+   * the free tier immediately when the support server was joined.
+   */
+  async function handleDiscordVerify(request, env) {
+    const user = await authenticateRequest(request, env);
+    if (!user) {
+      return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
+    }
+    if (request.method !== "POST") {
+      return jsonResponse({ error: "Method not allowed" }, 405, getCorsHeaders(request));
+    }
+
+    const membership = await checkDiscordMembership(env, user);
+    if (!membership.connected) {
+      return jsonResponse({
+        error: "Connect Discord first",
+        ...membership,
+        invite: DISCORD_SUPPORT_INVITE
+      }, 400, getCorsHeaders(request));
+    }
+    if (membership.needs_reconnect) {
+      return jsonResponse({
+        error: "Discord needs to be reconnected with guild access",
+        ...membership,
+        invite: DISCORD_SUPPORT_INVITE
+      }, 409, getCorsHeaders(request));
+    }
+    if (!membership.joined) {
+      return jsonResponse({
+        error: "Join the G4F support server first",
+        ...membership,
+        invite: DISCORD_SUPPORT_INVITE
+      }, 403, getCorsHeaders(request));
+    }
+
+    const previousTier = user.tier;
+    let upgraded = false;
+    if (previousTier === "new" || previousTier === "anonymous") {
+      user.tier = "free";
+      upgraded = true;
+      await updateApiKeyCacheTier(env, user, "free");
+    }
+
+    user.discord_joined = true;
+    user.discord_joined_at = new Date().toISOString();
+    user.discord_guild_id = membership.guild && membership.guild.id ? String(membership.guild.id) : null;
+    user.updated_at = user.discord_joined_at;
+    await saveUser(env, user);
+
+    return jsonResponse({
+      verified: true,
+      joined: true,
+      upgraded,
+      previous_tier: previousTier,
+      tier: user.tier,
+      guild: membership.guild,
+      invite: DISCORD_SUPPORT_INVITE,
+      user: getSafeUser(user)
+    }, 200, getCorsHeaders(request));
   }
 
   // ============================================
@@ -4409,15 +4849,12 @@ const body = await request.json().catch(() => ({}));
    * client-side and are never visible to the server.
    */
   function conversationIndexEntry(conversation) {
-    const itemsCount = conversation.items_count;
     return {
       id: conversation.id,
       title: conversation.title || "",
       updated: conversation.updated || Date.now(),
       added: conversation.added || Date.now(),
-      items_count: typeof itemsCount === "number"
-        ? itemsCount
-        : (Array.isArray(conversation.items) ? conversation.items.length : 0),
+      items_count: conversation.items_count || (Array.isArray(conversation.items) ? conversation.items.length : 0),
     };
   }
 

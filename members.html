@@ -222,6 +222,126 @@
         .logout-btn:hover {
             background: rgba(255,255,255,0.2);
         }
+
+        /* Discord community upgrade banner */
+        .discord-upgrade-banner {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(88, 101, 242, 0.55);
+            background:
+                radial-gradient(circle at top right, rgba(88, 101, 242, 0.3), transparent 45%),
+                rgba(88, 101, 242, 0.08);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        }
+
+        .discord-upgrade-banner[hidden] {
+            display: none;
+        }
+
+        .discord-banner-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: #5865f2;
+            color: #fff;
+            font-size: 1.6rem;
+        }
+
+        .discord-banner-content {
+            flex: 1 1 320px;
+            min-width: 0;
+        }
+
+        .discord-banner-content h2 {
+            margin: 0 0 0.35rem;
+            font-size: 1.15rem;
+            color: var(--light);
+        }
+
+        .discord-banner-content p {
+            margin: 0 0 0.75rem;
+            color: rgba(255, 255, 255, 0.68);
+            font-size: 0.92rem;
+        }
+
+        .discord-steps {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .discord-step {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.78rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .discord-step.done {
+            color: #7ee787;
+            border-color: rgba(126, 231, 135, 0.45);
+            background: rgba(126, 231, 135, 0.1);
+        }
+
+        .discord-step i {
+            font-size: 0.8rem;
+        }
+
+        .discord-banner-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex: 0 0 auto;
+            min-width: 190px;
+        }
+
+        .discord-banner-actions .btn,
+        .discord-banner-actions .btn-discord {
+            width: 100%;
+            justify-content: center;
+            text-align: center;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .btn-discord {
+            background: #5865f2;
+            color: #fff;
+            border: none;
+        }
+
+        .btn-discord:hover {
+            background: #4752c4;
+        }
+
+        .btn-discord[disabled] {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 720px) {
+            .discord-upgrade-banner {
+                flex-wrap: wrap;
+            }
+            .discord-banner-actions {
+                width: 100%;
+                flex-direction: row;
+                min-width: 0;
+            }
+        }
         
         /* Dashboard Grid */
         .dashboard-grid {
@@ -1217,6 +1337,32 @@
                     <i class="fas fa-sign-out-alt"></i> Sign Out
                 </button>
             </div>
+
+            <div class="discord-upgrade-banner" id="discordUpgradeBanner" hidden>
+                <div class="discord-banner-icon"><i class="fab fa-discord" aria-hidden="true"></i></div>
+                <div class="discord-banner-content">
+                    <h2>Unlock the Free tier instantly</h2>
+                    <p id="discordUpgradeText">
+                        Connect Discord and join the G4F support server — we'll verify your membership and upgrade your account right away.
+                    </p>
+                    <div class="discord-steps" id="discordUpgradeSteps">
+                        <span class="discord-step" data-step="connect"><i class="fas fa-circle" aria-hidden="true"></i> Connect Discord</span>
+                        <span class="discord-step" data-step="join"><i class="fas fa-circle" aria-hidden="true"></i> Join support server</span>
+                        <span class="discord-step" data-step="upgrade"><i class="fas fa-circle" aria-hidden="true"></i> Upgrade to Free</span>
+                    </div>
+                </div>
+                <div class="discord-banner-actions">
+                    <a class="btn-discord btn" id="discordConnectBtn" href="#" rel="noopener">
+                        <i class="fab fa-discord"></i> Connect Discord
+                    </a>
+                    <a class="btn btn-secondary" id="discordJoinBtn" href="https://discord.gg/qXA4Wf4Fsm" target="_blank" rel="noopener noreferrer">
+                        <i class="fas fa-arrow-up-right-from-square"></i> Join Support Server
+                    </a>
+                    <button class="btn" id="discordVerifyBtn" type="button">
+                        <i class="fas fa-check"></i> Verify &amp; Upgrade
+                    </button>
+                </div>
+            </div>
             
             <div class="dashboard-grid">
                 <!-- Usage Stats Card -->
@@ -1585,6 +1731,15 @@
         const cancelDeleteAccountBtn = document.getElementById('cancelDeleteAccountBtn');
         const scheduledDeletionNotice = document.getElementById('scheduledDeletionNotice');
         const deletionCountdownText = document.getElementById('deletionCountdownText');
+        const discordUpgradeBanner = document.getElementById('discordUpgradeBanner');
+        const discordUpgradeText = document.getElementById('discordUpgradeText');
+        const discordUpgradeSteps = document.getElementById('discordUpgradeSteps');
+        const discordConnectBtn = document.getElementById('discordConnectBtn');
+        const discordJoinBtn = document.getElementById('discordJoinBtn');
+        const discordVerifyBtn = document.getElementById('discordVerifyBtn');
+        const DISCORD_INVITE_URL = 'https://discord.gg/qXA4Wf4Fsm';
+        let discordMembership = null;
+        let discordBannerLoading = false;
         
         // Check for redirect parameter (external login request)
         const urlParams = new URLSearchParams(window.location.search);
@@ -1772,6 +1927,9 @@
 
             // Update danger zone (scheduled deletion state)
             updateDangerZone(user);
+
+            // Show the Discord community onboarding banner for new members
+            void refreshDiscordUpgradeBanner(user);
             
             // Load existing API key if any
             const existingKey = localStorage.getItem('g4f_api_key');
@@ -2287,6 +2445,117 @@
                 cancelDeleteAccountBtn.innerHTML = '<i class="fas fa-undo"></i> Cancel Deletion';
             }
         });
+
+        // ============================================
+        // Discord community upgrade banner
+        // ============================================
+
+        function discordStepDone(step, done) {
+            const el = discordUpgradeSteps?.querySelector(`[data-step="${step}"]`);
+            if (!el) return;
+            el.classList.toggle('done', !!done);
+            const icon = el.querySelector('i');
+            if (icon) {
+                icon.className = done ? 'fas fa-check-circle' : 'fas fa-circle';
+            }
+        }
+
+        function renderDiscordUpgradeBanner(user, status) {
+            if (!discordUpgradeBanner) return;
+            discordMembership = status || null;
+
+            const eligibleTier = user && (user.tier === 'new' || user.tier === 'anonymous');
+            if (!status || !eligibleTier) {
+                //discordUpgradeBanner.hidden = true;
+                //return;
+            }
+
+            const connected = !!status.connected;
+            const joined = !!status.joined;
+            const reconnect = !!status.needs_reconnect;
+
+            discordUpgradeBanner.hidden = false;
+            discordStepDone('connect', connected && !reconnect);
+            discordStepDone('join', joined);
+            discordStepDone('upgrade', status.tier !== 'new');
+
+            if (reconnect) {
+                discordUpgradeText.textContent = 'Reconnect Discord so we can verify your support server membership, then upgrade to the Free tier.';
+            } else if (!connected) {
+                discordUpgradeText.textContent = 'Connect Discord and join the G4F support server — we will verify your membership and upgrade your account right away.';
+            } else if (!joined) {
+                discordUpgradeText.textContent = 'Almost there! Join the G4F support server, then click Verify to unlock the Free tier.';
+            } else {
+                discordUpgradeText.textContent = 'Support server membership confirmed. Verify now to upgrade your account to the Free tier.';
+            }
+
+            const redirect = encodeURIComponent(window.location.origin + '/members.html');
+            discordConnectBtn.href = `${API_BASE}/members/auth/discord?link=1&redirect=${redirect}`;
+            discordConnectBtn.innerHTML = reconnect || connected
+                ? '<i class="fab fa-discord"></i> Reconnect Discord'
+                : '<i class="fab fa-discord"></i> Connect Discord';
+            discordConnectBtn.style.display = connected && !reconnect ? 'none' : '';
+            if (discordJoinBtn) discordJoinBtn.href = status.invite || DISCORD_INVITE_URL;
+            discordVerifyBtn.disabled = !connected || reconnect || discordBannerLoading;
+        }
+
+        async function refreshDiscordUpgradeBanner(user) {
+            if (!discordUpgradeBanner) return;
+            if (!user || (user.tier !== 'new' && user.tier !== 'anonymous')) {
+                //discordUpgradeBanner.hidden = true;
+                //return;
+            }
+
+            try {
+                const status = await apiRequest('/discord/status');
+                if (!status || status.error) {
+                    discordUpgradeBanner.hidden = true;
+                    return;
+                }
+                renderDiscordUpgradeBanner(user, status);
+            } catch (error) {
+                console.error('Failed to load Discord membership status:', error);
+                discordUpgradeBanner.hidden = true;
+            }
+        }
+
+        if (discordVerifyBtn) {
+            discordVerifyBtn.addEventListener('click', async () => {
+                const cached = JSON.parse(localStorage.getItem('g4f_user') || '{}');
+                discordBannerLoading = true;
+                discordVerifyBtn.disabled = true;
+                discordVerifyBtn.innerHTML = '<span class="loading"></span> Verifying...';
+                try {
+                    const result = await apiRequest('/discord/verify', {
+                        method: 'POST',
+                        body: JSON.stringify({})
+                    });
+
+                    if (result.error) {
+                        renderDiscordUpgradeBanner(cached, result);
+                        showToast(result.error, 'error');
+                        return;
+                    }
+
+                    if (result.user) {
+                        localStorage.setItem('g4f_user', JSON.stringify(result.user));
+                        showToast(result.upgraded
+                            ? 'Discord verified — your account was upgraded to the Free tier!'
+                            : 'Discord membership verified!');
+                        await showDashboard(result.user);
+                    }
+                } catch (error) {
+                    console.error('Discord verification failed:', error);
+                    showToastFormat('Verification failed: {0}', 'error', error.message);
+                } finally {
+                    discordBannerLoading = false;
+                    discordVerifyBtn.innerHTML = '<i class="fas fa-check"></i> Verify &amp; Upgrade';
+                    if (discordMembership) {
+                        discordVerifyBtn.disabled = !discordMembership.connected || discordMembership.needs_reconnect;
+                    }
+                }
+            });
+        }
 
         // ============================================
         // Unlink Provider
