@@ -111,8 +111,20 @@ function isValidRedirect(url) {
         return false;
     }
 }
+function inferProviderWorkerName(server) {
+  if (!server) return null;
+  if (server.provider_worker) return server.provider_worker;
+  const baseUrl = String(server.base_url || "");
+  if (baseUrl.includes("pollinations.g4f.space") ||
+      baseUrl.includes("g4f.space/api/pollinations") ||
+      baseUrl.includes("g4f.space/api/community") ||
+      /^https?:\/\/(?:[^/]+\.)?pollinations\.ai(?:\/|$)/i.test(baseUrl)) {
+    return "pollinations";
+  }
+  return null;
+}
 function getProviderWorker(env, server) {
-  const name = server && server.provider_worker;
+  const name = inferProviderWorkerName(server);
   return name && env.PROVIDER_WORKERS ? env.PROVIDER_WORKERS[name] : null;
 }
 // Build the request handed to a bundled provider module. Provider workers may
@@ -1379,14 +1391,15 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey,
   }
   try {
     let targetUrl = `${server.base_url}/models`;
-    if (targetUrl in URL_MAP) {
+    const mappedModelUrl = targetUrl in URL_MAP;
+    if (mappedModelUrl) {
       targetUrl = URL_MAP[targetUrl];
     }
     let response;
     let data = {data: []};
     if (targetUrl && !targetUrl.includes("/chat/completions")) {
       const providerWorker = getProviderWorker(env, server);
-      response = providerWorker && targetUrl.startsWith(server.base_url)
+      response = providerWorker && !mappedModelUrl
         ? await providerWorker.fetch(makeProviderRequest(targetUrl, { method: request.method, headers }, request), env, ctx)
         : await fetch(targetUrl, {
             method: request.method,
@@ -2059,7 +2072,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     let response;
     try {
       const providerWorker = getProviderWorker(env, server);
-      response = providerWorker && targetUrl.startsWith(server.base_url)
+      response = providerWorker && !mappedUrl
         ? await providerWorker.fetch(makeProviderRequest(targetUrl, fetchOptions, request), env, ctx)
         : await fetch(targetUrl, fetchOptions);
     } catch (error) {

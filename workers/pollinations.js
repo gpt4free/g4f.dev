@@ -1645,6 +1645,19 @@ async function handleChatCompletion(request, env, ctx, mode = null) {
   }
 
   if (lastResponse) {
+    if (isCloudflareEdgeStatus(lastResponse.status)) {
+      return new Response(JSON.stringify({
+        error: {
+          message: `Pollinations upstream did not respond (Cloudflare ${lastResponse.status}). The legacy text.pollinations.ai fallback also failed; please retry.`,
+          type: "upstream_unreachable",
+          upstream_status: lastResponse.status,
+          retry_after: 10
+        }
+      }), {
+        status: 504,
+        headers: { "Content-Type": "application/json", "Retry-After": "10" }
+      });
+    }
     return lastResponse;
   }
   return new Response(JSON.stringify({
