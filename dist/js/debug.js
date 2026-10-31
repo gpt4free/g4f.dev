@@ -703,7 +703,7 @@ const ErrorTracker = window.ErrorTracker || (() => {
             const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
             try {
                 const response = await _origFetch.apply(this, args);
-                if (!response.ok) {
+                if (!response.ok && response.status >= 400) {
                     _capture('network', 'warn', [`HTTP ${response.status} ${response.statusText}: ${url}`], {
                         status: response.status,
                         statusText: response.statusText,

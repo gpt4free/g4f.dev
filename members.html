@@ -2884,6 +2884,18 @@
             return div.innerHTML;
         }
 
+        // Normalize API key expiry values (ISO string or Unix seconds/ms).
+        function parseExpiryMs(value) {
+            if (value === null || value === undefined || value === '') return null;
+            const numeric = typeof value === 'number' || /^\d+$/.test(String(value));
+            if (numeric) {
+                const timestamp = Number(value);
+                return timestamp < 1e12 ? timestamp * 1000 : timestamp;
+            }
+            const parsed = Date.parse(value);
+            return Number.isNaN(parsed) ? null : parsed;
+        }
+
         // ============================================
         // API Keys Management
         // ============================================
@@ -3002,7 +3014,32 @@
 
                 const keys = result.keys || result.api_keys || [];
 
-                if (keys.length === 0) {
+                // Expired keys are useless — remove them from the account
+                // whenever the members page loads the key list.
+                const isExpiredKey = (key) => {
+                    const expiresMs = parseExpiryMs(key.expires_at);
+                    return expiresMs !== null && Date.now() > expiresMs;
+                };
+                const expiredKeys = keys.filter(isExpiredKey);
+                const activeKeys = keys.filter((key) => !isExpiredKey(key));
+
+                if (expiredKeys.length > 0) {
+                    await Promise.all(expiredKeys.map(async (key) => {
+                        try {
+                            const revokeResult = await apiRequest('/keys/revoke', {
+                                method: 'POST',
+                                body: JSON.stringify({ key_id: key.id })
+                            });
+                            if (revokeResult.error) {
+                                console.warn('Failed to delete expired API key:', revokeResult.error);
+                            }
+                        } catch (err) {
+                            console.warn('Failed to delete expired API key:', err);
+                        }
+                    }));
+                }
+
+                if (activeKeys.length === 0) {
                     listEl.innerHTML = `
                         <div class="empty-keys">
                             <i class="fas fa-key"></i>
@@ -3012,9 +3049,9 @@
                     return;
                 }
 
-                listEl.innerHTML = keys.map(k => renderApiKeyItem(k)).join('');
+                listEl.innerHTML = activeKeys.map(k => renderApiKeyItem(k)).join('');
 
-                keys.forEach(k => {
+                activeKeys.forEach(k => {
                     const copyBtn   = document.getElementById(`ak-copy-${k.id}`);
                     const deleteBtn = document.getElementById(`ak-delete-${k.id}`);
 
@@ -3034,11 +3071,12 @@
         }
 
         function renderApiKeyItem(key) {
-            const isExpired = key.expires_at && Date.now() > new Date(key.expires_at).getTime();
+            const expiresMs = parseExpiryMs(key.expires_at);
+            const isExpired = expiresMs !== null && Date.now() > expiresMs;
             const prefix    = key.prefix || (key.api_key ? key.api_key.substring(0, 10) : null);
             const masked    = prefix ? `${prefix}${'•'.repeat(18)}` : '••••••••••••••••••••••••••••';
             const created   = key.created_at ? new Date(key.created_at).toLocaleDateString() : '-';
-            const expires   = key.expires_at ? new Date(key.expires_at).toLocaleDateString() : 'Never';
+            const expires   = expiresMs !== null ? new Date(expiresMs).toLocaleDateString() : 'Never';
 
             return `
                 <div class="api-key-item" data-key-id="${escapeHtml(String(key.id))}">
