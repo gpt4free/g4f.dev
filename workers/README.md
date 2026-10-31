@@ -88,20 +88,15 @@ The JS client in `dist/js/` uses these paths through
    binding commented out if you do not deploy the cake worker; the API worker
    handles a missing binding gracefully.
 
-3. **Create proxied DNS records** in the `g4f.space` zone (or use
-   `wrangler` custom domains):
+3. **Custom domains / DNS**: the root `wrangler.toml` attaches `g4f.space`,
+   `www`, `api`, `puter`, `pollinations`, and `ollama` as **custom domains**,
+   matching the existing g4f.space deployment. Wrangler creates the proxied
+   DNS records and certificates for those hostnames.
 
-   ```text
-   g4f.space            A/AAAA or CNAME   proxied
-   www.g4f.space        CNAME -> g4f.space proxied
-   api.g4f.space        A/AAAA or CNAME   proxied
-   puter.g4f.space      A/AAAA or CNAME   proxied
-   pollinations.g4f.space A/AAAA or CNAME proxied
-   ollama.g4f.space     A/AAAA or CNAME   proxied
-   ```
-
-   A route only takes effect when the hostname resolves through Cloudflare in
-   the same zone.
+   If a hostname already has a conflicting proxied DNS record, either remove
+   that record or use a path route with `zone_name = "g4f.space"` instead.
+   Routes only take effect when the hostname resolves through Cloudflare in the
+   same zone.
 
 4. **Set the secrets** for the workers that need them:
 

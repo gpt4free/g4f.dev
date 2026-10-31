@@ -17,12 +17,12 @@ name = "api"
 main = "api-worker.js"
 compatibility_date = "2025-05-30"
 
-# Routes. Cloudflare picks the most specific pattern, so the provider workers
-# keep their /api/<provider>/* paths while everything else lands here.
+# Routes. The main host is attached as a custom domain, matching the deployed
+# g4f.space setup. Provider paths stay on their own Workers in split mode.
 routes = [
-  { pattern = "g4f.space/*", zone_name = "g4f.space" },
-  { pattern = "www.g4f.space/*", zone_name = "g4f.space" },
-  { pattern = "api.g4f.space/*", zone_name = "g4f.space" }
+  { pattern = "g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
+  { pattern = "www.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
+  { pattern = "api.g4f.space", custom_domain = true, enabled = true, previews_enabled = false }
 ]
 
 # KV Namespace (shared with members worker for auth and server index)

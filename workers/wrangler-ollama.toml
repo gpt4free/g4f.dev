@@ -13,12 +13,12 @@ name = "ollama"
 main = "ollama.js"
 compatibility_date = "2025-05-30"
 
-# Routes. The more specific /api/ollama/* pattern wins over the API worker's
-# g4f.space/* route.
+# Routes. The /api/ollama/* paths stay on the API worker; the provider
+# subdomain is a custom domain, matching the deployed g4f.space setup.
 routes = [
   { pattern = "g4f.space/api/ollama/*", zone_name = "g4f.space" },
   { pattern = "api.g4f.space/api/ollama/*", zone_name = "g4f.space" },
-  { pattern = "ollama.g4f.space/*", zone_name = "g4f.space" }
+  { pattern = "ollama.g4f.space", custom_domain = true, enabled = true, previews_enabled = false }
 ]
 
 # Secret (recommended):

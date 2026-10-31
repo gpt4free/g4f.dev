@@ -22,16 +22,16 @@ name = "api"
 main = "workers/g4f-space-router.js"
 compatibility_date = "2025-05-30"
 
-# Cloudflare picks the most specific route, but because the router handles all
-# of these in a single Worker, the order does not matter. Provider workers can
-# be split out later by moving the matching patterns to their own configs.
+# The deployed g4f.space Workers use custom domains, so keep the same shape
+# here. Using `pattern = "host/*", zone_name = ...` instead would make the
+# deploy review try to replace those custom domains with plain routes.
 routes = [
-  { pattern = "g4f.space/*", zone_name = "g4f.space" },
-  { pattern = "www.g4f.space/*", zone_name = "g4f.space" },
-  { pattern = "api.g4f.space/*", zone_name = "g4f.space" },
-  { pattern = "puter.g4f.space/*", zone_name = "g4f.space" },
-  { pattern = "pollinations.g4f.space/*", zone_name = "g4f.space" },
-  { pattern = "ollama.g4f.space/*", zone_name = "g4f.space" }
+  { pattern = "g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
+  { pattern = "www.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
+  { pattern = "api.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
+  { pattern = "puter.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
+  { pattern = "pollinations.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
+  { pattern = "ollama.g4f.space", custom_domain = true, enabled = true, previews_enabled = false }
 ]
 
 # KV Namespace (shared with the auth/members worker for auth and server index)
