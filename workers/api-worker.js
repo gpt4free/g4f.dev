@@ -72,6 +72,18 @@ var USER_TIER_LIMITS = {
     burstMultiplier: 2
   }
 };
+// Cloudflare edge errors that mean the connection never reached the origin.
+// returning these as a short JSON response is much more useful to clients than
+// passing through the HTML "error code: 52x" page.
+var CLOUDFLARE_EDGE_ERRORS = {
+  521: "origin is unreachable",
+  522: "connection timed out",
+  523: "origin is unreachable",
+  524: "a timeout occurred"
+};
+function isCloudflareEdgeError(status) {
+  return Object.prototype.hasOwnProperty.call(CLOUDFLARE_EDGE_ERRORS, status);
+}
 var CACHE_HEADERS = {
   FOREVER: "public, max-age=31536000, immutable",
   // 1 year
@@ -1380,6 +1392,22 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey,
             method: request.method,
             headers
           });
+      if (isCloudflareEdgeError(response.status)) {
+        return jsonResponse({
+          error: {
+            message: `Provider "${server.label || server.id}" did not respond (Cloudflare ${response.status}: ${CLOUDFLARE_EDGE_ERRORS[response.status]}). Please retry.`,
+            type: "upstream_unreachable",
+            provider: server.label || server.id,
+            upstream_status: response.status,
+            retry_after: 10
+          }
+        }, response.status === 522 || response.status === 524 ? 504 : 502, {
+          "Retry-After": "10",
+          "X-Server": server.id,
+          "X-Provider": server.label || server.id,
+          ...getCorsHeaders(request)
+        });
+      }
       if (!response.ok) {
         throw Error(`Error ${response.status}: ${await response.text()}`);
       }
@@ -1889,6 +1917,12 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   if (apiKey) {
     proxyHeaders["Authorization"] = `Bearer ${apiKey}`;
   }
+  // Preserve the router hop counter so a provider path that points back into
+  // this Worker is rejected as a routing loop instead of timing out (522).
+  const workerHop = request.headers.get("x-g4f-worker-hop");
+  if (workerHop) {
+    proxyHeaders["x-g4f-worker-hop"] = workerHop;
+  }
   let targetUrl;
   if (server.all_urls) {
     server.base_url = server.all_urls[Math.floor(Math.random() * server.all_urls.length)];
@@ -2028,8 +2062,39 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       response = providerWorker && targetUrl.startsWith(server.base_url)
         ? await providerWorker.fetch(makeProviderRequest(targetUrl, fetchOptions, request), env, ctx)
         : await fetch(targetUrl, fetchOptions);
+    } catch (error) {
+      return jsonResponse({
+        error: {
+          message: `Provider "${server.label || server.id}" is unreachable: ${error.message || error}`,
+          type: "upstream_unreachable",
+          provider: server.label || server.id,
+          retry_after: 10
+        }
+      }, 502, {
+        "Retry-After": "10",
+        "X-Server": server.id,
+        "X-Provider": server.label || server.id,
+        ...getCorsHeaders(request)
+      });
     } finally {
       if (isPassG4f) releasePassSlot();
+    }
+    if (isCloudflareEdgeError(response.status)) {
+      return jsonResponse({
+        error: {
+          message: `Provider "${server.label || server.id}" did not respond (Cloudflare ${response.status}: ${CLOUDFLARE_EDGE_ERRORS[response.status]}). Please retry.`,
+          type: "upstream_unreachable",
+          provider: server.label || server.id,
+          upstream_status: response.status,
+          retry_after: 10
+        }
+      }, response.status === 522 || response.status === 524 ? 504 : 502, {
+        "Retry-After": "10",
+        "X-Server": server.id,
+        "X-Provider": server.label || server.id,
+        "X-Url": user && user.tier == "admin" ? targetUrl : (new URL(targetUrl).pathname),
+        ...getCorsHeaders(request)
+      });
     }
     const contentType = (response.headers.get("content-type") || "").split(";")[0];
     if (!contentType || !["text/event-stream", "application/json", "text/plain", "application/problem+json", "audio/vnd.wav", "audio/mpeg"].includes(contentType)) {

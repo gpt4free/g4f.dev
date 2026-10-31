@@ -214,6 +214,32 @@ npx wrangler deploy
 
 Do not run `wrangler deploy --assets .` from the repository root.
 
+### `error code: 522` / `522` from a provider
+
+522 means Cloudflare could not complete the connection to the origin. In this
+setup it usually means a provider URL pointed back into the same Worker, so
+the request looped and timed out. The current code prevents that:
+
+- the router passes provider modules to the API worker via
+  `env.PROVIDER_WORKERS`
+- the API worker calls those modules in-process
+- a second pass through the router returns `508 {"type":"routing_loop"}`
+- provider `521`/`522`/`523`/`524` responses become a JSON
+  `502`/`504` with `type: "upstream_unreachable"`, `provider`, and
+  `retry_after` instead of the HTML Cloudflare page
+- the JS client maps these statuses to a readable message and includes
+  `521`-`524` in its fallback retry list
+
+If 522 still appears, the deployed Worker is older than the source. Redeploy
+and confirm:
+
+```bash
+npx wrangler deploy
+curl -i https://pollinations.g4f.space/
+```
+
+`/` must return the health JSON, not an HTML 522 page.
+
 ### `A route with this pattern already exists`
 
 A route can point at only one Worker. Remove the old route from the previous

@@ -42,6 +42,27 @@ const PROVIDERS = [
 
 const MAIN_HOSTS = new Set(["g4f.space", "www.g4f.space", "api.g4f.space"]);
 
+const LOOP_HEADER = "x-g4f-worker-hop";
+
+// A provider can only be entered once from the router. If the request comes
+// back through the router a second time, the API worker is fetching the
+// provider's public hostname instead of calling its bundled module; reject it
+// with a clear 508 instead of letting Cloudflare time out with 522.
+function loopResponse() {
+  return Response.json({
+    error: {
+      message: "Provider routing loop detected. The API worker must call the bundled provider module, not its public subdomain.",
+      type: "routing_loop"
+    }
+  }, {
+    status: 508,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "no-store"
+    }
+  });
+}
+
 // Give the API worker direct access to the provider modules. Spreading keeps
 // the normal Cloudflare bindings (KV, D1, R2, vars) intact.
 function apiEnv(env) {
@@ -59,11 +80,19 @@ function rewriteSubdomain(request, provider) {
   // Run the request through the API worker's main-host path, not its
   // <provider>.g4f.space subdomain branch, so auth and rate limits apply.
   url.hostname = "g4f.space";
-  return new Request(url, request);
+  const hop = Number.parseInt(request.headers.get(LOOP_HEADER) || "0", 10);
+  const rewritten = new Request(url, request);
+  const headers = new Headers(rewritten.headers);
+  headers.set(LOOP_HEADER, String(hop + 1));
+  return new Request(rewritten, { headers });
 }
 
 export default {
   async fetch(request, env, ctx) {
+    const hop = Number.parseInt(request.headers.get(LOOP_HEADER) || "0", 10);
+    if (hop >= 1) {
+      return loopResponse();
+    }
     const url = new URL(request.url);
     const host = url.hostname.toLowerCase();
     const provider = PROVIDERS.find((entry) => entry.hosts.has(host));

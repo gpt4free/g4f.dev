@@ -49,3 +49,15 @@ for (const [name, worker, servicePattern] of workers) {
 }
 
 console.log("Worker mount-prefix and router smoke test passed (puter, pollinations, ollama).");
+
+// A second pass through the router is a provider self-fetch loop. It must
+// return a clear 508 JSON error instead of timing out as Cloudflare 522.
+const loop = await router.fetch(
+  new Request("https://g4f.space/", { headers: { "x-g4f-worker-hop": "1" } }),
+  {},
+  ctx
+);
+assert.equal(loop.status, 508, "router loop guard should return 508");
+const loopBody = await loop.json();
+assert.equal(loopBody.error.type, "routing_loop");
+console.log("Router loop guard smoke test passed (508 instead of 522).");

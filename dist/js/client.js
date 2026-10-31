@@ -18,6 +18,13 @@ function extractRetryDelay(message) {
     return null;
 }
 
+const CLOUDFLARE_ERROR_MESSAGES = {
+    521: "origin is unreachable",
+    522: "connection timed out",
+    523: "origin is unreachable",
+    524: "a timeout occurred"
+};
+
 async function getErrorMessage(response) {
     try {
         let data = await response.clone().json();
@@ -28,7 +35,18 @@ async function getErrorMessage(response) {
             return data.error.message
         }
     } catch { }
-    return await response.clone().text();
+    const text = await response.clone().text();
+    if (CLOUDFLARE_ERROR_MESSAGES[response.status]) {
+        return `Upstream request failed (Cloudflare ${response.status}: ${CLOUDFLARE_ERROR_MESSAGES[response.status]})`;
+    }
+    // Cloudflare can return an HTML page with the status only in the body.
+    const cloudflareCode = text.match(/error code:\s*(\d{3})/i);
+    if (cloudflareCode) {
+        const code = Number(cloudflareCode[1]);
+        const reason = CLOUDFLARE_ERROR_MESSAGES[code];
+        return `Upstream request failed (Cloudflare ${code}${reason ? `: ${reason}` : ""})`;
+    }
+    return text;
 }
 
 function captureUserTierHeaders(headers, usage) {
@@ -153,7 +171,7 @@ class Client {
             console.warn(`Request to ${url} failed (${err.message || err}), retrying via fallback: ${fallbackUrl}`);
             return this._fetch(fallbackUrl, options);
         }
-        if (!response.ok && fallbackUrl && [403, 404, 405, 429, 500, 501, 502, 503, 504].includes(response.status)) {
+        if (!response.ok && fallbackUrl && [403, 404, 405, 429, 500, 501, 502, 503, 504, 521, 522, 523, 524].includes(response.status)) {
             console.warn(`Request to ${url} failed with status ${response.status}, retrying via fallback: ${fallbackUrl}`);
             return this._fetch(fallbackUrl, options);
         }
