@@ -30,6 +30,8 @@ import puterWorker from "./puter-worker.js";
 import pollinationsWorker from "./pollinations.js";
 import ollamaWorker from "./ollama.js";
 
+const WORKER_VERSION = "2026-10-31-community-2";
+
 const PROVIDER_WORKERS = {
   puter: puterWorker,
   pollinations: pollinationsWorker,
@@ -47,10 +49,10 @@ const MAIN_HOSTS = new Set(["g4f.space", "www.g4f.space", "api.g4f.space"]);
 
 const LOOP_HEADER = "x-g4f-worker-hop";
 
-// A provider can only be entered once from the router. If the request comes
-// back through the router a second time, the API worker is fetching the
-// provider's public hostname instead of calling its bundled module; reject it
-// with a clear 508 instead of letting Cloudflare time out with 522.
+// Allow up to two internal passes, then reject. A provider normally needs at
+// most one pass through the router; repeated passes mean the API worker is
+// fetching a provider's public hostname instead of calling its bundled module.
+// Returning a clear 508 is better than letting Cloudflare time out with 522.
 function loopResponse() {
   return Response.json({
     error: {
@@ -64,6 +66,31 @@ function loopResponse() {
       "Cache-Control": "no-store"
     }
   });
+}
+
+// Last-resort loop breaker: the original request already passed through the
+// API worker (auth/rate limits), so call the provider module directly instead
+// of returning an error.
+function providerForUrl(url) {
+  const host = url.hostname.toLowerCase();
+  const byHost = PROVIDERS.find((entry) => entry.hosts.has(host));
+  if (byHost) return byHost;
+  return PROVIDERS.find((entry) => url.pathname === entry.prefix || url.pathname.startsWith(entry.prefix + "/")) || null;
+}
+
+function directProviderRequest(request, provider) {
+  const url = new URL(request.url);
+  let path = url.pathname;
+  const index = path.indexOf(provider.prefix);
+  if (index !== -1) {
+    path = path.slice(index + provider.prefix.length) || "/";
+  }
+  if (provider.name === "community" && !path.startsWith("/community/")) {
+    path = "/community" + (path === "/" ? "/" : path);
+  }
+  url.pathname = path;
+  url.hostname = `${provider.name}.g4f.space`;
+  return new Request(url, request);
 }
 
 // Give the API worker direct access to the provider modules. Spreading keeps
@@ -90,19 +117,44 @@ function rewriteSubdomain(request, provider) {
   return new Request(rewritten, { headers });
 }
 
+function versionResponse(env) {
+  return Response.json({
+    worker: "g4f.space-router",
+    version: WORKER_VERSION,
+    providerWorkers: Object.keys(env.PROVIDER_WORKERS || PROVIDER_WORKERS),
+    hosts: ["g4f.space", "www.g4f.space", "api.g4f.space", "puter.g4f.space", "pollinations.g4f.space", "community.g4f.space", "ollama.g4f.space"]
+  }, {
+    headers: { "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" }
+  });
+}
+
+function withVersion(response) {
+  const wrapped = new Response(response.body, response);
+  wrapped.headers.set("X-G4F-Worker", `router/${WORKER_VERSION}`);
+  return wrapped;
+}
+
 export default {
   async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    if (url.pathname === "/api/version" || url.pathname === "/version") {
+      return versionResponse(apiEnv(env));
+    }
     const hop = Number.parseInt(request.headers.get(LOOP_HEADER) || "0", 10);
-    if (hop >= 1) {
+    if (hop >= 3) {
+      const provider = providerForUrl(url);
+      const worker = provider && (PROVIDER_WORKERS[provider.name] || (provider.name === "community" ? pollinationsWorker : null));
+      if (worker) {
+        return withVersion(await worker.fetch(directProviderRequest(request, provider), apiEnv(env), ctx));
+      }
       return loopResponse();
     }
-    const url = new URL(request.url);
     const host = url.hostname.toLowerCase();
     const provider = PROVIDERS.find((entry) => entry.hosts.has(host));
     if (provider && !MAIN_HOSTS.has(host)) {
-      return apiWorker.fetch(rewriteSubdomain(request, provider), apiEnv(env), ctx);
+      return withVersion(await apiWorker.fetch(rewriteSubdomain(request, provider), apiEnv(env), ctx));
     }
-    return apiWorker.fetch(request, apiEnv(env), ctx);
+    return withVersion(await apiWorker.fetch(request, apiEnv(env), ctx));
   },
 
   async scheduled(event, env, ctx) {

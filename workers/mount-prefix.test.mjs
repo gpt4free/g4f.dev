@@ -60,10 +60,18 @@ for (const url of ["https://g4f.space/api/community", "https://community.g4f.spa
 }
 console.log("Community tier smoke test passed (api/community and community.g4f.space).");
 
+// Version endpoint lets operators verify which Worker build is live.
+const version = await router.fetch(new Request("https://g4f.space/api/version"), {}, ctx);
+assert.equal(version.status, 200);
+const versionBody = await version.json();
+assert.equal(versionBody.worker, "g4f.space-router");
+assert.ok(versionBody.version);
+console.log(`Router version smoke test passed (${versionBody.version}).`);
+
 // A second pass through the router is a provider self-fetch loop. It must
 // return a clear 508 JSON error instead of timing out as Cloudflare 522.
 const loop = await router.fetch(
-  new Request("https://g4f.space/", { headers: { "x-g4f-worker-hop": "1" } }),
+  new Request("https://g4f.space/", { headers: { "x-g4f-worker-hop": "3" } }),
   {},
   ctx
 );
@@ -71,3 +79,15 @@ assert.equal(loop.status, 508, "router loop guard should return 508");
 const loopBody = await loop.json();
 assert.equal(loopBody.error.type, "routing_loop");
 console.log("Router loop guard smoke test passed (508 instead of 522).");
+
+// At the loop limit, provider requests still fall back to their module rather
+// than surfacing 508 to the caller.
+const recovered = await router.fetch(
+  new Request("https://pollinations.g4f.space/", { headers: { "x-g4f-worker-hop": "3" } }),
+  {},
+  ctx
+);
+assert.equal(recovered.status, 200, "provider loop fallback should serve health");
+const recoveredBody = await recovered.json();
+assert.equal(recoveredBody.status, "ok");
+console.log("Router provider loop fallback smoke test passed.");
