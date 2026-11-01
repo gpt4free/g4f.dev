@@ -24,7 +24,7 @@
 // ---------------------------------------------------------------------------
 
 const G4F_HOST = "https://g4f.dev";
-const G4F_WILDCARD = ".g4f.dev";
+const G4F_WILDCARD = ".g4f.space";
 const G4F_HOST_PASS = "https://g4f.space";
 const DB_NAME = 'chat-db';
 const STORE_NAME = 'conversations';
@@ -1031,10 +1031,10 @@ function chunkArray(array, chunkSize) {
     );
 }
 
-if (window.location.origin === G4F_HOST || window.location.origin.endsWith(G4F_WILDCARD)) {
+if (isG4fHost) {
     if (window.self === window.top) {
         if (!document.body.classList.contains("noads")) {
-            includeAdsense().catch(e => add_error(`Adsense load failed: ${e}`, e));
+            includeAdsense().catch(e => add_error(`Adsense load failed:`, e));
         }
     }
 }
