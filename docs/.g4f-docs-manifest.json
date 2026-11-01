@@ -17,8 +17,8 @@
     },
     "build-workflow.md": {
       "html": "build-workflow.html",
-      "html_sha256": "7c09ce7c586d512cb0c191f4f77519347d4ea5bbb396c6560b0b86f0d4ff4119",
-      "markdown_sha256": "fc92604120a159159516922ce8cb00b917880da43d4966be138aa9754eb6c028"
+      "html_sha256": "b9a16def4fcbf7dc6f206ef2c06578b6d50823f854a888936b5e250a71368cc2",
+      "markdown_sha256": "3ca40d60297fd9f6d4456ab022d9e413de59a4fa76474bc1a39618f7083af0cd"
     },
     "config-yaml-routing.md": {
       "html": "config-yaml-routing.html",
@@ -29,6 +29,11 @@
       "html": "dev-pipeline.html",
       "html_sha256": "e2107105f6abe89aa9b93415afaae4e214c77ecb452a2b3cdd23f1131840177c",
       "markdown_sha256": "732c04fe8e2d64956a85e469936c72bed7d589e63cdde2c8baaf7c98164d12c1"
+    },
+    "gui-locales.md": {
+      "html": "gui-locales.html",
+      "html_sha256": "ebda23d078b6c93e1ba33aa581ed6e6c744bf80838b0a03041c90b9fb24c3dbc",
+      "markdown_sha256": "6c55804ac61da208eabe2480002a16b3599cb0d6bc87353838c2eeab884ec04e"
     },
     "qwen-sessions.md": {
       "html": "qwen-sessions.html",
@@ -42,8 +47,8 @@
     },
     "sandbox-desktop.md": {
       "html": "sandbox-desktop.html",
-      "html_sha256": "8b3a05549d1a5709cd95ebc3618e80952f81eeacf7e0bdcb8b1d372ba48f651e",
-      "markdown_sha256": "998a6424d01568bb2a5266950d8331cf2d70692039c33a2738248729171ec751"
+      "html_sha256": "49b7c2533888f51d0033fd1805cf61d69be3664ac7aa3dfde5910625372039f2",
+      "markdown_sha256": "4e45f86cba22821dfd55d2a4720cc7e12e14dcc99a5faf697cdcde58aece36c3"
     }
   },
   "schema": 1,

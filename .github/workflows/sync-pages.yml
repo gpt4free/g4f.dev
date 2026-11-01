@@ -51,6 +51,14 @@ jobs:
           # authenticate the mirror push as github-actions[bot] (403).
           persist-credentials: false
 
+      - name: Checkout documentation source
+        run: |
+          # docs/ is the source of truth in gpt4free/gpt4free. Clone just the
+          # Markdown sources and the standard-library publisher.
+          git clone --depth 1 --filter=blob:none --sparse \
+            https://github.com/gpt4free/gpt4free.git /tmp/gpt4free-docs
+          git -C /tmp/gpt4free-docs sparse-checkout set docs tools
+
       - name: Push all changes to the mirror
         env:
           MIRROR_REPO: ${{ github.event.inputs.repo || 'hlohaus/hlohaus.github.io' }}
@@ -77,6 +85,12 @@ jobs:
           git checkout -B sync mirror/main
           find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name '.github' ! -name 'CNAME' -exec rm -rf {} +
           git checkout "${GITHUB_SHA}" -- . ':(exclude).github'
+
+          # Refresh the published docs from gpt4free before committing.
+          python3 /tmp/gpt4free-docs/tools/docs_publish.py \
+            --source /tmp/gpt4free-docs/docs \
+            --target docs \
+            --clean
           git add -A
           if git diff --cached --quiet; then
             echo "Mirror already up to date."

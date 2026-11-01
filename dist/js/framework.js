@@ -130,8 +130,10 @@ framework.backendUrl = localStorage.getItem('backendUrl') || '';
 framework.logUrl = localStorage.getItem('log_routing') === 'true' ? `${framework.backendUrl}/api` : '';
 framework.getRoutedUrl = (url) => framework.logUrl ? `${framework.logUrl}/${url}` : url;
 // Central language resolution: the language package selected on the language
-// selection page wins, navigator.language is the fallback. Everything that
-// needs "the user's language" should go through this helper.
+// selection page wins, navigator.language is the fallback for explicit
+// translate actions. Automatic translation never guesses the language; it
+// detects a candidate with framework.detectLanguage() and asks first through
+// framework.maybePromptTranslation().
 framework.getLanguage = () => {
     const selected = framework.getSelectedLanguage ? framework.getSelectedLanguage() : null;
     return selected || navigator.language || "en-US";
@@ -237,9 +239,13 @@ framework.setSelectedLanguage = (language) => {
 // source.
 framework.translations = (() => {
     try {
-        const selected = localStorage.getItem(SELECTED_LANGUAGE_KEY);
-        const base = (selected || framework.getLanguage() || "").split(/[-_]/)[0].toLowerCase();
-        const entry = framework.globalTranslations?.[base];
+        // Only an explicit selection may preload a package. Falling back to
+        // navigator.language here used to translate the page silently; the
+        // detected language is now offered through a confirmation prompt
+        // instead (see maybePromptTranslation()).
+        const selected = framework.getSelectedLanguage ? framework.getSelectedLanguage() : null;
+        const base = (selected || "").split(/[-_]/)[0].toLowerCase();
+        const entry = base ? framework.globalTranslations?.[base] : null;
         return entry?.translations ? {...entry.translations} : {};
     } catch (e) {
         return {};
@@ -350,6 +356,215 @@ framework.translateElements = function (elements = null) {
         }
     });
 }
+// ---- Language detection & consent prompt --------------------------------
+// Translations are never applied just because the browser reports a
+// language. detectLanguage() suggests a target (browser locales first, then
+// the IP country served by /country-ip) and maybePromptTranslation() asks the
+// visitor before any community package is loaded.
+const DISMISSED_PROMPT_KEY = "translationPromptDismissed";
+const COUNTRY_LANGUAGES = {
+    ES: "es", MX: "es", AR: "es", CO: "es", CL: "es", PE: "es", VE: "es",
+    UY: "es", PY: "es", BO: "es", EC: "es", CR: "es", PA: "es", DO: "es",
+    GT: "es", HN: "es", SV: "es", NI: "es", CU: "es", PR: "es",
+    FR: "fr", BE: "fr", CH: "fr", CA: "fr", LU: "fr", MC: "fr", SN: "fr",
+    CI: "fr", CM: "fr", HT: "fr",
+    DE: "de", AT: "de", LI: "de",
+    IT: "it", PT: "pt", BR: "pt", NL: "nl", PL: "pl", RU: "ru", UA: "uk",
+    TR: "tr", CN: "zh", TW: "zh", HK: "zh", JP: "ja", KR: "ko", IN: "hi",
+    SA: "ar", AE: "ar", EG: "ar", IL: "he", ID: "id", VN: "vi", TH: "th",
+    SE: "sv", DK: "da", FI: "fi", NO: "nb", CZ: "cs", GR: "el", HU: "hu",
+    RO: "ro", BG: "bg",
+};
+
+function baseLanguage(tag) {
+    return String(tag || "").split(/[-_]/)[0].toLowerCase();
+}
+
+function dismissedPromptLanguages() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(DISMISSED_PROMPT_KEY) || "{}");
+        return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (e) {
+        return {};
+    }
+}
+
+function dismissTranslationPrompt(language) {
+    try {
+        const dismissed = dismissedPromptLanguages();
+        dismissed[language] = true;
+        localStorage.setItem(DISMISSED_PROMPT_KEY, JSON.stringify(dismissed));
+    } catch (e) { /* private mode — the prompt may reappear */ }
+}
+
+function languageDisplayName(language) {
+    try {
+        const names = new Intl.DisplayNames([navigator.language || "en"], {type: "language"});
+        return names.of(language) || language;
+    } catch (e) {
+        return language;
+    }
+}
+
+/** Detect a likely translation target: browser languages win over the IP
+ *  country. Returns {language, source, country?} or null. Every failure is
+ *  non-fatal so static hosting and private mode keep working. */
+framework.detectLanguage = async () => {
+    const candidates = Array.isArray(navigator.languages) && navigator.languages.length
+        ? navigator.languages
+        : [navigator.language];
+    for (const tag of candidates) {
+        const base = baseLanguage(tag);
+        if (base && base !== "en") {
+            return {language: base, source: "browser"};
+        }
+    }
+    let country = typeof window.g4fCountry === "string" ? window.g4fCountry.toUpperCase() : "";
+    if (!country) {
+        country = (document.documentElement.getAttribute("data-g4f-country") || "").toUpperCase();
+    }
+    if (!country) {
+        try {
+            const response = await fetch("/country-ip", {
+                cache: "no-store",
+                signal: AbortSignal.timeout(2500),
+            });
+            if (response.ok) {
+                const data = await response.json();
+                country = String(data.country || "").toUpperCase();
+            }
+        } catch (e) { /* static hosting has no geo endpoint */ }
+    }
+    const language = country ? COUNTRY_LANGUAGES[country] : null;
+    if (language && language !== "en") {
+        return {language, source: "country", country};
+    }
+    return null;
+};
+
+/** Ask before switching the UI language. Returns true when the prompt was
+ *  shown (it removes itself on Translate / Not now). */
+framework.askForTranslation = (language, options = {}) => {
+    if (!language || language === "en" || !document.body) {
+        return false;
+    }
+    if (document.getElementById("g4f-translate-prompt")) {
+        return false;
+    }
+    const name = languageDisplayName(language);
+    const prompt = document.createElement("div");
+    prompt.id = "g4f-translate-prompt";
+    prompt.className = "notranslate";
+    prompt.setAttribute("role", "dialog");
+    prompt.setAttribute("aria-live", "polite");
+    prompt.style.cssText = [
+        "position:fixed", "left:50%", "bottom:24px", "transform:translateX(-50%)",
+        "z-index:2147483647", "max-width:min(92vw,420px)", "display:flex",
+        "flex-direction:column", "gap:10px", "padding:14px 16px",
+        "border:1px solid rgba(163,230,53,.45)", "border-radius:14px",
+        "background:#0b100a", "color:#eef5e4", "font:14px/1.4 system-ui,sans-serif",
+        "box-shadow:0 12px 40px rgba(0,0,0,.55)", "box-sizing:border-box",
+    ].join(";");
+
+    const message = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = `Translate this page to ${name}?`;
+    const reason = document.createElement("div");
+    reason.style.cssText = "color:#9fb08c;font-size:12px;margin-top:4px";
+    reason.textContent = options.source === "country"
+        ? "Detected from your approximate location."
+        : "Detected from your browser language.";
+    message.append(title, reason);
+
+    const actions = document.createElement("div");
+    actions.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end";
+    const button = (label, primary) => {
+        const el = document.createElement("button");
+        el.type = "button";
+        el.textContent = label;
+        el.style.cssText = [
+            "cursor:pointer", "border-radius:9px", "padding:7px 12px",
+            "font:inherit", "font-size:13px",
+            primary
+                ? "border:1px solid #a3e635;background:#a3e635;color:#0b100a;font-weight:600"
+                : "border:1px solid rgba(163,230,53,.3);background:transparent;color:#eef5e4",
+        ].join(";");
+        return el;
+    };
+    const accept = button(`Translate to ${name}`, true);
+    const decline = button("Not now", false);
+    const choose = button("Choose language", false);
+    actions.append(choose, decline, accept);
+    prompt.append(message, actions);
+
+    decline.addEventListener("click", () => {
+        dismissTranslationPrompt(language);
+        prompt.remove();
+    });
+    choose.addEventListener("click", () => {
+        dismissTranslationPrompt(language);
+        prompt.remove();
+        if (typeof window.open_language_selection === "function") {
+            window.open_language_selection();
+        } else {
+            window.location.href = "/language-selection.html";
+        }
+    });
+    accept.addEventListener("click", async () => {
+        accept.disabled = decline.disabled = choose.disabled = true;
+        title.textContent = "Loading translations…";
+        try {
+            const entry = await framework.loadGlobalTranslations(language);
+            if (!entry || !entry.count) {
+                title.textContent = `No ${name} translations are available yet.`;
+                reason.textContent = "You can keep using English or pick another language.";
+                accept.remove();
+                decline.textContent = "Close";
+                decline.disabled = choose.disabled = false;
+                return;
+            }
+            framework.setSelectedLanguage(language);
+            framework.translations = {...entry.translations};
+            framework.translateElements();
+            if (typeof framework.translateAll === "function") {
+                await framework.translateAll().catch(() => {});
+            }
+            prompt.remove();
+        } catch (e) {
+            title.textContent = "Translations could not be loaded.";
+            reason.textContent = String(e.message || e);
+            accept.disabled = decline.disabled = choose.disabled = false;
+        }
+    });
+
+    document.body.appendChild(prompt);
+    return true;
+};
+
+/** Called on load for pages that opted into translation (body.translate).
+ *  An explicit selection is applied directly; otherwise the detected
+ *  language is offered and only applied after the visitor accepts. */
+framework.maybePromptTranslation = async () => {
+    if (!document.body || !document.body.classList.contains("translate")) {
+        return null;
+    }
+    if (framework.getSelectedLanguage && framework.getSelectedLanguage()) {
+        return null;
+    }
+    if (/\/language-selection\.html?$/.test(location.pathname)) {
+        return null;
+    }
+    if (document.getElementById("g4f-translate-prompt")) {
+        return null;
+    }
+    const detected = await framework.detectLanguage();
+    if (!detected || dismissedPromptLanguages()[detected.language]) {
+        return null;
+    }
+    framework.askForTranslation(detected.language, detected);
+    return detected.language;
+};
+
 try {
     const lastConnect = parseInt(localStorage.getItem('lastConnectToBackend') || '0', 10);
     const oneHour = 60 * 60 * 1000;
@@ -362,17 +577,18 @@ try {
 }
 window.addEventListener('load', async () => {
     framework.translateElements();
-    const missing = newTranslations.filter(text => !framework.translations[text]);
-    if (missing.length === 0) {
-        return;
-    }
-    if (!document.body.classList.contains("translate") && !framework.getSelectedLanguage()) {
+    if (framework.getSelectedLanguage && framework.getSelectedLanguage()) {
+        // An explicit selection (URL locale or language selection page) may
+        // be applied immediately.
+        try {
+            await framework.translateAll();
+        } catch (e) {
+            add_error(e, true);
+        }
         return;
     }
     try {
-        // translateAll() applies whatever the community store covers —
-        // no reload needed.
-        await framework.translateAll();
+        await framework.maybePromptTranslation();
     } catch (e) {
         add_error(e, true);
     }

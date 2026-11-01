@@ -142,6 +142,7 @@
         .lang:hover { border-color: rgba(163, 230, 53, 0.45); box-shadow: 0 0 18px rgba(163, 230, 53, 0.08); }
         .lang.current { border-color: var(--lime); box-shadow: 0 0 18px var(--lime-glow); }
         .lang.selected { border-color: var(--lime-bright); box-shadow: 0 0 22px var(--lime-glow); background: rgba(163, 230, 53, 0.09); }
+        .lang.detected { border-color: #38bdf8; box-shadow: 0 0 18px rgba(56, 189, 248, 0.18); }
         .flag { font-size: 26px; text-align: center; }
         .lang-main { min-width: 0; }
         .lang-name { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -158,6 +159,7 @@
             border: 1px solid rgba(163, 230, 53, 0.3);
         }
         .badge.local { background: rgba(56, 189, 248, 0.12); color: #7dd3fc; border-color: rgba(56, 189, 248, 0.3); }
+        .badge.detected { background: rgba(56, 189, 248, 0.18); color: #bae6fd; border-color: rgba(56, 189, 248, 0.45); }
         .bar {
             height: 8px;
             background: rgba(0, 0, 0, 0.4);
@@ -212,7 +214,7 @@
             .lang-actions { grid-column: 1 / -1; justify-content: flex-start; }
         }
     </style>
-    <script src="dist/js/framework.js" defer></script>
+    <script src="/dist/js/framework.js" defer></script>
 </head>
 <body class="translate">
     <div class="wrap">
@@ -308,11 +310,88 @@
             return div.innerHTML;
         }
 
-        // When framed (e.g. opened from /chat/ in the full-size iframe), tell
-        // the parent that a language package changed, so it can reload and
-        // rebuild its language instance from the newly loaded package.
-        function notifyParent(action, language) {
+        const LOCALE_LANGUAGES = ["en", "es", "fr", "de"];
+
+        let localeRoutesPromise = null;
+
+        // Does the site expose locale-prefixed routes? Localized pages carry
+        // hreflang alternates; the GUI also answers /meta with a locale route
+        // map. Static g4f.dev pages do neither.
+        function parentHasLocaleRoutes() {
+            if (localeRoutesPromise) return localeRoutesPromise;
+            localeRoutesPromise = (async () => {
+                try {
+                    const links = window.parent.document.querySelectorAll(
+                        'link[rel="alternate"][hreflang]'
+                    );
+                    if (Array.from(links).some((link) => LOCALE_LANGUAGES.includes(
+                        String(link.getAttribute("hreflang") || "").toLowerCase()
+                    ))) {
+                        return true;
+                    }
+                } catch (e) { /* cross-origin parent */ }
+                try {
+                    const response = await fetch("/meta", {
+                        cache: "no-store",
+                        signal: AbortSignal.timeout(1500),
+                    });
+                    if (!response.ok) return false;
+                    const data = await response.json();
+                    return Boolean(data && data.locale && data.routes);
+                } catch (e) {
+                    return false;
+                }
+            })();
+            return localeRoutesPromise;
+        }
+
+        // Build the parent's URL for the selected language. Existing locale
+        // prefixes are replaced; an unprefixed parent only gets a prefix when
+        // its site actually serves localized routes.
+        async function parentLocaleUrl(language) {
+            const base = String(language || "").split(/[-_]/)[0].toLowerCase();
+            const isLocale = LOCALE_LANGUAGES.includes(base);
+            let parentLocation;
+            try {
+                parentLocation = window.parent.location;
+                const currentPath = parentLocation.pathname || "/";
+                const match = currentPath.match(/^\/([a-z]{2})(?=\/|$)/i);
+                const hadLocale = Boolean(match && LOCALE_LANGUAGES.includes(match[1].toLowerCase()));
+                let path = hadLocale ? (currentPath.slice(match[0].length) || "/") : currentPath;
+                if (!isLocale) {
+                    // No locale route for this language: drop a stale prefix
+                    // so the URL does not claim a different UI language.
+                    return hadLocale
+                        ? path + (parentLocation.search || "") + (parentLocation.hash || "")
+                        : null;
+                }
+                if (!hadLocale && base !== "en" && !(await parentHasLocaleRoutes())) {
+                    return null;
+                }
+                if (base !== "en") {
+                    path = "/" + base + (path.startsWith("/") ? path : "/" + path);
+                }
+                if (!path.startsWith("/")) path = "/" + path;
+                return path + (parentLocation.search || "") + (parentLocation.hash || "");
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // When framed (e.g. opened from /chat/ in the full-size iframe), send
+        // the parent to the newly selected language URL. Parents without
+        // locale routes fall back to the postMessage + reload flow.
+        async function notifyParent(action, language) {
             if (window.self === window.top) return;
+            if (action === "load") {
+                const url = await parentLocaleUrl(language);
+                if (url) {
+                    try {
+                        window.parent.location.href = url;
+                        return;
+                    } catch (e) { /* cross-origin parent — use postMessage */ }
+                }
+            }
             try {
                 window.parent.postMessage({ type: "g4f-language:changed", action, language: language || null }, "*");
             } catch (e) { /* ignore */ }
@@ -369,10 +448,30 @@
         }
 
         let listing = { languages: [], total_snippets: null };
+        // Language suggested by navigator.languages or the IP country. It is
+        // only a recommendation — the visitor still picks/confirms a package.
+        let detectedLanguage = null;
+        let detectionPromise = null;
+        function detectOnce() {
+            if (!detectionPromise) {
+                detectionPromise = (async () => {
+                    if (!framework.detectLanguage) return null;
+                    try {
+                        const detected = await framework.detectLanguage();
+                        detectedLanguage = detected && detected.language;
+                        return detected;
+                    } catch (e) {
+                        return null;
+                    }
+                })();
+            }
+            return detectionPromise;
+        }
 
         async function refresh() {
             const listEl = document.getElementById("lang-list");
             listEl.innerHTML = `<div class="loading">${escapeHtml(t("Loading languages…"))}</div>`;
+            await detectOnce();
             try {
                 listing = await framework.listGlobalTranslations();
             } catch (e) {
@@ -395,6 +494,7 @@
             const store = framework.globalTranslations || {};
             const current = baseLang(framework.getLanguage());
             const selected = framework.getSelectedLanguage ? framework.getSelectedLanguage() : null;
+            const detected = detectedLanguage ? baseLang(detectedLanguage) : null;
 
             // Merge the server listing with the seed languages (0% entries).
             const byLang = new Map(listing.languages.map((l) => [l.language, l]));
@@ -403,13 +503,16 @@
                     byLang.set(code, { language: code, count: 0, total, remaining: total, percent: 0, seed: true });
                 }
             }
-            const languages = [...byLang.values()].sort((a, b) =>
-                (b.count || 0) - (a.count || 0) || a.language.localeCompare(b.language));
+            const languages = [...byLang.values()].sort((a, b) => {
+                if (a.language === detected) return -1;
+                if (b.language === detected) return 1;
+                return (b.count || 0) - (a.count || 0) || a.language.localeCompare(b.language);
+            });
 
             document.getElementById("stat-langs").textContent =
                 listing.languages.length ? `${listing.languages.length}` : "0";
             document.getElementById("stat-total").textContent = total !== null && total !== undefined ? total : "–";
-            const mine = listing.languages.find((l) => l.language === current);
+            const mine = listing.languages.find((l) => l.language === (detected || current));
             document.getElementById("stat-mine").textContent =
                 mine && typeof mine.percent === "number" ? `${mine.percent}%` : (mine ? `${mine.count}` : "0%");
 
@@ -417,13 +520,14 @@
             for (const entry of languages) {
                 const isCurrent = entry.language === current;
                 const isSelected = entry.language === selected && Boolean(store[entry.language]);
+                const isDetected = entry.language === detected;
                 const inStore = Boolean(store[entry.language]);
                 const percent = typeof entry.percent === "number" ? entry.percent : null;
                 const count = entry.count || 0;
                 const totalShown = entry.total !== undefined ? entry.total : total;
 
                 const row = document.createElement("div");
-                row.className = "lang" + (isCurrent ? " current" : "") + (isSelected ? " selected" : "");
+                row.className = "lang" + (isCurrent ? " current" : "") + (isSelected ? " selected" : "") + (isDetected ? " detected" : "");
                 row.innerHTML = `
                     <div class="flag">${flagEmoji(entry.language)}</div>
                     <div class="lang-main">
@@ -431,6 +535,7 @@
                             ${escapeHtml(langName(entry.language))}
                             <code>${escapeHtml(entry.language)}</code>
                             ${isCurrent ? `<span class="badge">${escapeHtml(t("your language"))}</span>` : ""}
+                            ${isDetected ? `<span class="badge detected">${escapeHtml(t("detected"))}</span>` : ""}
                             ${isSelected ? `<span class="badge local">${escapeHtml(t("selected"))}</span>` : inStore ? `<span class="badge local">${escapeHtml(t("loaded"))}</span>` : ""}
                         </div>
                         <div class="bar"><div class="bar-fill${percent ? "" : " zero"}" style="width:${percent || 0}%"></div></div>
@@ -492,7 +597,8 @@
             const btn = event.currentTarget;
             btn.disabled = true;
             try {
-                const lang = framework.getLanguage();
+                await detectOnce();
+                const lang = detectedLanguage || framework.getLanguage();
                 const base = baseLang(lang);
                 const previous = framework.getSelectedLanguage ? framework.getSelectedLanguage() : null;
                 if (previous && previous !== base) {
