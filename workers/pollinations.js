@@ -629,6 +629,14 @@ function calculatePollenCost(pricing, usage) {
   return matchedAny ? cost : null;
 }
 
+// Keep price headers free of trailing zero-noise such as 0.000000100 or
+// 0.000000000. Clients parse these as numbers, so trimming the string is
+// purely cosmetic but keeps logs and UI labels readable.
+function formatPollenCost(cost) {
+  if (!Number.isFinite(cost) || cost <= 0) return "0";
+  return String(Number(cost.toFixed(9)));
+}
+
 /**
  * Attach pollen cost headers to an outgoing Response by reading the upstream
  * `x-usage-*` headers (or, for streaming responses without those headers,
@@ -680,7 +688,7 @@ async function attachPollenCostToHeaders(response, modelName) {
   newHeaders.set("x-pollen-model", resolvedModel);
   newHeaders.set("x-pollen-pricing-available", "true");
   if (cost !== null && Number.isFinite(cost)) {
-    newHeaders.set("x-pollen-cost", cost.toFixed(9));
+    newHeaders.set("x-pollen-cost", formatPollenCost(cost));
   }
   return new Response(response.body, {
     status: response.status,
@@ -980,7 +988,7 @@ function wrapStreamResponse(originalResponse, body, costFields, resolvedModel, p
     );
     if (resolvedModel) newHeaders.set("x-pollen-model", resolvedModel);
     if (costFields.pollen_cost !== null && Number.isFinite(costFields.pollen_cost)) {
-      newHeaders.set("x-pollen-cost", costFields.pollen_cost.toFixed(9));
+      newHeaders.set("x-pollen-cost", formatPollenCost(costFields.pollen_cost));
     }
   } else if (pricingAvailable !== undefined) {
     newHeaders.set(
@@ -1776,7 +1784,7 @@ async function handleImageGeneration(request, env, ctx) {
         newResponse.headers.set("x-pollen-model", body.model || "");
         newResponse.headers.set("x-pollen-pricing-available", "true");
         if (cost !== null && Number.isFinite(cost)) {
-          newResponse.headers.set("x-pollen-cost", cost.toFixed(9));
+          newResponse.headers.set("x-pollen-cost", formatPollenCost(cost));
         }
       } else {
         newResponse.headers.set("x-pollen-currency", "pollen");

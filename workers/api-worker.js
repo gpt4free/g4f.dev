@@ -100,7 +100,7 @@ var CORS_HEADERS = {
   "Access-Control-Allow-Credentials": "true",
   "Access-Control-Allow-Methods": "GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key, x-user, x-user-id, x-workspace-secret, x-ignored, x-secret, x-recognition-language, if-none-match",
-  "Access-Control-Expose-Headers": "Content-Type, X-User-Id, X-User-Tier, X-Provider, X-Model, X-Server, X-Url, X-Usage-Total-Tokens, X-Stream, X-Ratelimit-Model-Factor, X-Ratelimit-Remaining-Requests, X-Ratelimit-Remaining-Tokens, X-Ratelimit-Limit-Requests, X-Ratelimit-Limit-Tokens, X-Usage-Prompt-Tokens, X-Pollen-Cost"
+  "Access-Control-Expose-Headers": "Content-Type, X-User-Id, X-User-Tier, X-Provider, X-Model, X-Server, X-Url, X-Usage-Total-Tokens, X-Stream, X-Ratelimit-Model-Factor, X-Ratelimit-Remaining-Requests, X-Ratelimit-Remaining-Tokens, X-Ratelimit-Limit-Requests, X-Ratelimit-Limit-Tokens, X-Usage-Prompt-Tokens, X-Pollen-Cost, X-Cake-Cost, X-Cake-Cost-Cents"
 };
 const ALLOWED_REDIRECT_HOSTNAMES = ["localhost", "127.0.0.1", "g4f.dev", "gpt4free.github.io"];
 function isValidRedirect(url) {
@@ -291,14 +291,41 @@ async function handleCorsProxy(request, env, ctx, pathname, rateCheck) {
   updateResponsefromRateCheck(proxied, rateCheck);
   return proxied;
 }
+// Hosts that serve the bundled Pollinations provider worker. Requests for
+// these servers are answered by `workers/pollinations.js` in this isolate
+// instead of being fetched over the network (and possibly looping back into
+// this same Worker).
+const POLLINATIONS_HOSTS = new Set([
+  "pollinations.g4f.space",
+  "community.g4f.space",
+  "pollinations.g4f-dev.workers.dev",
+  "pollinations.g4f-space.workers.dev",
+  "polli.g4f.dev"
+]);
+// g4f.space path mounts handled by the Pollinations worker.
+const POLLINATIONS_PATH_MOUNTS = ["/api/pollinations", "/api/community"];
+function isPollinationsBaseUrl(baseUrl) {
+  let url;
+  try {
+    url = new URL(baseUrl);
+  } catch (e) {
+    return false;
+  }
+  const host = url.hostname.toLowerCase();
+  if (POLLINATIONS_HOSTS.has(host)) return true;
+  // gen.pollinations.ai and any other pollinations.ai subdomain.
+  if (host === "pollinations.ai" || host.endsWith(".pollinations.ai")) return true;
+  if (host === "g4f.space" || host === "www.g4f.space" || host === "api.g4f.space") {
+    return POLLINATIONS_PATH_MOUNTS.some((mount) =>
+      url.pathname === mount || url.pathname.startsWith(mount + "/")
+    );
+  }
+  return false;
+}
 function inferProviderWorkerName(server) {
   if (!server) return null;
   if (server.provider_worker) return server.provider_worker;
-  const baseUrl = String(server.base_url || "");
-  if (baseUrl.includes("pollinations.g4f.space") ||
-      baseUrl.includes("g4f.space/api/pollinations") ||
-      baseUrl.includes("g4f.space/api/community") ||
-      /^https?:\/\/(?:[^/]+\.)?pollinations\.ai(?:\/|$)/i.test(baseUrl)) {
+  if (isPollinationsBaseUrl(String(server.base_url || ""))) {
     return "pollinations";
   }
   return null;
@@ -364,7 +391,17 @@ var URL_MAP = {
   "https://pollinations.g4f-space.workers.dev/quota": "https://gen.pollinations.ai/account/balance",
   "https://pollinations.g4f-space.workers.dev/free/quota": "https://gen.pollinations.ai/account/balance",
   "https://pollinations.g4f-space.workers.dev/community/quota": "https://gen.pollinations.ai/account/balance",
+  "https://pollinations.g4f-space.workers.dev/v1/quota": "https://gen.pollinations.ai/account/balance",
+  "https://pollinations.g4f-dev.workers.dev/quota": "https://gen.pollinations.ai/account/balance",
+  "https://pollinations.g4f-dev.workers.dev/free/quota": "https://gen.pollinations.ai/account/balance",
+  "https://pollinations.g4f-dev.workers.dev/community/quota": "https://gen.pollinations.ai/account/balance",
+  "https://pollinations.g4f-dev.workers.dev/v1/quota": "https://gen.pollinations.ai/account/balance",
+  "https://polli.g4f.dev/quota": "https://gen.pollinations.ai/account/balance",
+  "https://polli.g4f.dev/free/quota": "https://gen.pollinations.ai/account/balance",
+  "https://polli.g4f.dev/community/quota": "https://gen.pollinations.ai/account/balance",
+  "https://polli.g4f.dev/v1/quota": "https://gen.pollinations.ai/account/balance",
   "https://pollinations.g4f.space/quota": "https://gen.pollinations.ai/account/balance",
+  "https://pollinations.g4f.space/v1/quota": "https://gen.pollinations.ai/account/balance",
   "https://pollinations.g4f.space/free/quota": "https://gen.pollinations.ai/account/balance",
   "https://pollinations.g4f.space/community/quota": "https://gen.pollinations.ai/account/balance",
   "https://g4f.space/api/pollinations/quota": "https://gen.pollinations.ai/account/balance",
@@ -574,7 +611,9 @@ async function safe(request, env, ctx) {
       return new Response(null, { headers: getCorsHeaders(request) });
     }
     if (["/models", "/api/auto/v1/models", "/api/default/models"].includes(pathname)) {
-      return Response.redirect("/v1/models", 302);
+      // Response.redirect() requires an absolute URL; a relative path throws
+      // "Unable to parse URL" in workerd and turned this redirect into a 500.
+      return Response.redirect(new URL("/v1/models", url).toString(), 302);
     }
     if (["/", "/chat", "/chat/", "/chat/v2", "/playground", "/playground/"].includes(pathname) && request.method != "POST") {
       const newUrl = new URL(request.url);
@@ -591,9 +630,9 @@ async function safe(request, env, ctx) {
       return Response.json(URL_MAP, { headers: ACCESS_CONTROL_ALLOW_ORIGIN });
     }
     if (pathname === "/public") {
-      return Response.redirect("/custom/api/servers/public", 302);
+      return Response.redirect(new URL("/custom/api/servers/public", url).toString(), 302);
     } else if (pathname === "/usage") {
-      return Response.redirect("/custom/api/servers/usage", 302);
+      return Response.redirect(new URL("/custom/api/servers/usage", url).toString(), 302);
     } else if (pathname.startsWith("/srv_")) {
       pathname = "/custom" + pathname;
     }
@@ -631,6 +670,9 @@ async function safe(request, env, ctx) {
     if (pathname === "/api/errors" && request.method === "GET") {
       // handled after authentication so the auth gate below applies
       return handleApiErrors(request, env, user);
+    }
+    if (pathname === "/api/stats" && request.method === "GET") {
+      return handleApiStats(request, env, user, ctx);
     }
     if ((userProvidedKey || (user && user.pollinations?.api_key)) && pathname == "/api/pollinations/models") {
       const pollinationsBase = env.POLLINATIONS_WORKER_URL || "https://pollinations.g4f.space";
@@ -825,7 +867,7 @@ async function safe(request, env, ctx) {
           server = await getServerByLabel(env, label, user);
         }
         if (!server) {
-          return proxyToPassG4f(request, env, pathname, url.search, user, cacheKey, ctx);
+          return await proxyToPassG4f(request, env, pathname, url.search, user, cacheKey, ctx);
         }
         return handleModels(request, env, ctx, server.id, user, server, cacheKey);
       }
@@ -938,11 +980,11 @@ async function safe(request, env, ctx) {
         const subPath = "/" + parts.slice(3).join("/");
         const server = await getServerByLabel(env, label, user);
         if (!server) {
-          return proxyToPassG4f(request, env, pathname, url.search, user, cacheKey, ctx);
+          return await proxyToPassG4f(request, env, pathname, url.search, user, cacheKey, ctx);
         }
         return handleProxyToServer(request, env, ctx, server, subPath, cacheKey, user, pathname, userProvidedKey, rateCheck, null, serverLabel == "log");
       }
-      return proxyToPassG4f(request, env, pathname, url.search, user, cacheKey, ctx);
+      return await proxyToPassG4f(request, env, pathname, url.search, user, cacheKey, ctx);
     } catch (error) {
       console.error("Custom worker error:", error);
       ctx.waitUntil(persistErrorToDb(env, error, {
@@ -1664,6 +1706,9 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   if (!server) {
     return jsonResponse({ error: "Server not found" }, 404);
   }
+  // Attach the resolved server/model to the request so error responses
+  // logged by jsonResponse can be aggregated per server and model.
+  request._g4fServer = `custom:${server.id}`;
   let requestModel = null;
   let savedBytes = 0;
   let logs = {};
@@ -2115,6 +2160,9 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     }
   }
 
+  if (requestModel) {
+    request._g4fModel = requestModel;
+  }
   const apiKey = userProvidedKey || server.api_key || getRandomApiKey(server.api_keys);
   const ip = request.headers.get('cf-connecting-ip') || '';
   const country = request.headers.get('cf-ipcountry') || 'XX';
@@ -2310,6 +2358,23 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
         "X-Url": user && user.tier == "admin" ? targetUrl : (new URL(targetUrl).pathname),
         ...getCorsHeaders(request)
       });
+    }
+    // Upstream failures returned verbatim are not run through jsonResponse,
+    // so record them here for /api/stats. Only completion calls are tracked;
+    // quota/health/model probes stay out of the success-rate denominator.
+    if (!response.ok && chatUrls.includes(subPath)) {
+      ctx.waitUntil(persistErrorToDb(env, new Error(`Upstream ${response.status}`), {
+        source: "upstream",
+        status: response.status,
+        pathname,
+        method: request.method,
+        ip: clientIP,
+        userAgent: request.headers.get("user-agent"),
+        requestId: request.headers.get("cf-ray") || null,
+        server: request._g4fServer || null,
+        model: request._g4fModel || null,
+        context: { upstream_status: response.status }
+      }));
     }
     const contentType = (response.headers.get("content-type") || "").split(";")[0];
     if (!contentType || !["text/event-stream", "application/json", "text/plain", "application/problem+json", "audio/vnd.wav", "audio/mpeg"].includes(contentType)) {
@@ -2566,6 +2631,13 @@ async function persistErrorToDb(env, error, context = {}) {
   if (!env.ERRORS_DB) return;
   try {
     const ts = (/* @__PURE__ */ new Date()).toISOString();
+    // Keep server/model machine-readable inside the existing `context` JSON
+    // column so /api/stats can group errors without a schema migration.
+    const meta = context.context && typeof context.context === "object"
+      ? { ...context.context }
+      : {};
+    if (context.server) meta.server = context.server;
+    if (context.model) meta.model = context.model;
     await env.ERRORS_DB.prepare(
       `INSERT INTO error_logs (timestamp, source, status, message, stack, pathname, method, ip, user_id, user_tier, user_agent, request_id, context)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -2582,7 +2654,7 @@ async function persistErrorToDb(env, error, context = {}) {
       context.userTier || null,
       context.userAgent ? String(context.userAgent).substring(0, 500) : null,
       context.requestId || null,
-      context.context ? JSON.stringify(context.context).substring(0, 2000) : null
+      Object.keys(meta).length ? JSON.stringify(meta).substring(0, 2000) : null
     ).run();
   } catch (e) {
     console.error("Failed to persist error:", e);
@@ -2632,6 +2704,165 @@ async function handleApiErrors(request, env, user) {
     console.error("Failed to query error logs:", e);
     return jsonResponse({ error: "Failed to query error logs: " + e.message }, 500);
   }
+}
+// GET /api/stats — aggregate request/error counts and success rates per
+// server and per model from the existing D1 tables (USAGE_DB + ERRORS_DB).
+//
+// Query params:
+//   hours (1-336, default 24) — lookback window
+//   since (ISO 8601)          — explicit lower bound, overrides hours
+//
+// Resource usage: both tables are aggregated with GROUP BY in D1 instead of
+// streaming raw rows into the Worker, and the JSON result is cached at the
+// edge for API_STATS_CACHE_TTL seconds, so dashboards can poll cheaply.
+//
+// Errors are tagged with their server/model in the `context` JSON column by
+// persistErrorToDb (see jsonResponse/handleProxyToServer). Older rows that
+// lack those fields fall back to the pathname / "unknown".
+var API_STATS_CACHE_TTL = 60;
+var STATS_MAX_HOURS = 14 * 24;
+function statsSuccessRate(requests, errors) {
+  const attempts = requests + errors;
+  return attempts > 0 ? Math.round((requests / attempts) * 1e4) / 1e4 : 0;
+}
+function ensureStatsRow(map, key) {
+  let row = map.get(key);
+  if (!row) {
+    row = { requests: 0, errors: 0, tokens: 0 };
+    map.set(key, row);
+  }
+  return row;
+}
+async function handleApiStats(request, env, user, ctx) {
+  if (!user) {
+    // authentication_required is in UNLOGGED_ERROR_TYPES: anonymous probes
+    // must not inflate the error statistics they are trying to read.
+    return jsonResponse({ error: { message: "Unauthorized", type: "authentication_required" } }, 401);
+  }
+  if (!env.USAGE_DB && !env.ERRORS_DB) {
+    return jsonResponse({ error: "Statistics not configured (USAGE_DB/ERRORS_DB bindings missing)" }, 503);
+  }
+  const url = new URL(request.url);
+  const explicitSince = url.searchParams.get("since");
+  const hours = Math.min(Math.max(parseInt(url.searchParams.get("hours") || "24", 10) || 24, 1), STATS_MAX_HOURS);
+  const since = explicitSince || new Date(Date.now() - hours * 60 * 60 * 1e3).toISOString();
+
+  // The default window moves with the clock; keying the cache by hours keeps
+  // it hot for the whole TTL while the returned `since` is at most one TTL old.
+  const cacheKey = `STATS:${explicitSince || hours}`;
+  const cachedResponse = await getCachedResponse(request, cacheKey);
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+
+  let usageRows = [];
+  let errorRows = [];
+  let usageFailed = false;
+  let errorsFailed = false;
+
+  const usageQuery = env.USAGE_DB
+    ? env.USAGE_DB.prepare(
+      `SELECT provider AS server, model,
+              COUNT(*) AS requests,
+              COALESCE(SUM(tokens_total), 0) AS tokens
+       FROM usage_logs
+       WHERE timestamp > ?
+       GROUP BY provider, model`
+    ).bind(since).all().catch((e) => {
+      usageFailed = true;
+      console.error("Failed to aggregate usage stats:", e);
+      return null;
+    })
+    : Promise.resolve(null);
+
+  // json_valid() guards older rows whose context is not JSON.
+  const errorsQuery = env.ERRORS_DB
+    ? env.ERRORS_DB.prepare(
+      `SELECT
+         COALESCE(
+           NULLIF(CASE WHEN json_valid(context) THEN json_extract(context, '$.server') END, ''),
+           NULLIF(CASE WHEN json_valid(context) THEN json_extract(context, '$.provider') END, ''),
+           NULLIF(pathname, ''),
+           'unknown'
+         ) AS server,
+         COALESCE(
+           NULLIF(CASE WHEN json_valid(context) THEN json_extract(context, '$.model') END, ''),
+           'unknown'
+         ) AS model,
+         COUNT(*) AS errors
+       FROM error_logs
+       WHERE timestamp > ?
+       GROUP BY server, model`
+    ).bind(since).all().catch((e) => {
+      errorsFailed = true;
+      console.error("Failed to aggregate error stats:", e);
+      return null;
+    })
+    : Promise.resolve(null);
+
+  const [usageResult, errorResult] = await Promise.all([usageQuery, errorsQuery]);
+
+  if (usageFailed && errorsFailed) {
+    return jsonResponse({ error: "Failed to calculate statistics" }, 500);
+  }
+  usageRows = (usageResult && usageResult.results) || [];
+  errorRows = (errorResult && errorResult.results) || [];
+
+  const servers = new Map();
+  const models = new Map();
+  const totals = { requests: 0, errors: 0, tokens: 0 };
+
+  for (const row of usageRows) {
+    const serverKey = row.server || "unknown";
+    const modelKey = row.model || "unknown";
+    const requests = Number(row.requests) || 0;
+    const tokens = Number(row.tokens) || 0;
+    ensureStatsRow(servers, serverKey).requests += requests;
+    ensureStatsRow(servers, serverKey).tokens += tokens;
+    ensureStatsRow(models, modelKey).requests += requests;
+    ensureStatsRow(models, modelKey).tokens += tokens;
+    totals.requests += requests;
+    totals.tokens += tokens;
+  }
+  for (const row of errorRows) {
+    const serverKey = row.server || "unknown";
+    const modelKey = row.model || "unknown";
+    const errors = Number(row.errors) || 0;
+    ensureStatsRow(servers, serverKey).errors += errors;
+    ensureStatsRow(models, modelKey).errors += errors;
+    totals.errors += errors;
+  }
+
+  const toList = (map, keyName) => Array.from(map, ([key, value]) => ({
+    [keyName]: key,
+    requests: value.requests,
+    errors: value.errors,
+    error_count: value.errors,
+    tokens: value.tokens,
+    success_rate: statsSuccessRate(value.requests, value.errors)
+  })).sort((a, b) => (b.requests + b.errors) - (a.requests + a.errors));
+
+  const payload = {
+    since,
+    hours,
+    totals: {
+      requests: totals.requests,
+      errors: totals.errors,
+      error_count: totals.errors,
+      tokens: totals.tokens,
+      success_rate: statsSuccessRate(totals.requests, totals.errors)
+    },
+    servers: toList(servers, "server"),
+    models: toList(models, "model"),
+    partial: usageFailed || errorsFailed
+  };
+  const response = jsonResponse(payload, 200, {
+    "Cache-Control": `public, max-age=${API_STATS_CACHE_TTL}`
+  });
+  if (ctx) {
+    ctx.waitUntil(setCachedResponse(request, response.clone(), `public, max-age=${API_STATS_CACHE_TTL}`, cacheKey, ctx));
+  }
+  return response;
 }
 // ---- R2 usage write coalescing (Class A cost control) ----
 // R2 bills Class A operations (puts) at ~12x the rate of Class B (gets).
@@ -3350,12 +3581,28 @@ async function getRandomPublicServer(env, user = null) {
   // return null instead of throwing so callers can fall back gracefully
   return await getServerById(env, serverId, user);
 }
+function trimPriceNumber(value) {
+  // Normalise numeric prices without trailing zero-noise. `toFixed` can
+  // produce values such as 0.000000100 (and 0.000000000 for free requests);
+  // the Number round-trip strips those trailing zero runs so clients display
+  // "0.0000001" / "0" instead of long zero suffixes.
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return "0";
+  return String(Number(n.toFixed(9)));
+}
 function updateResponsefromRateCheck(newResponse, rateCheck) {
   if (!rateCheck) {
     return;
   }
   if (rateCheck.promptTokens) {
     newResponse.headers.set("X-Usage-Prompt-Tokens", rateCheck.promptTokens);
+  }
+  // Anonymous requests are paid for with baked cake credits. Surface the
+  // consumed amount so clients can show it next to the token count.
+  const cakeCents = trimPriceNumber(rateCheck.centsToCharge);
+  if (cakeCents !== "0") {
+    newResponse.headers.set("X-Cake-Cost-Cents", cakeCents);
+    newResponse.headers.set("X-Cake-Cost", trimPriceNumber(Number(cakeCents) / 100));
   }
   if (rateCheck.maxRequests) {
     newResponse.headers.set("X-Ratelimit-Remaining-Requests", String(rateCheck.maxRequests));
@@ -4070,7 +4317,9 @@ function jsonResponse(data, status = 200, headers = {}) {
         method: request.method,
         ip: getClientIP(request),
         userAgent: request.headers.get("user-agent"),
-        requestId: request.headers.get("cf-ray") || null
+        requestId: request.headers.get("cf-ray") || null,
+        server: request._g4fServer || null,
+        model: request._g4fModel || null
       }));
     }
   }
@@ -4267,6 +4516,66 @@ async function setCachedModelError(request, ctx, pathname, model, response, serv
     }
   } catch (e) { }
 }
+// Headers that must not be copied from the incoming request onto the
+// pass.g4f.space subrequest:
+// - host/connection/keep-alive/transfer-encoding/... are hop-by-hop headers.
+//   Forwarding `host: g4f.space` makes the subrequest target this Worker
+//   again on some runtimes instead of pass.g4f.space (an instant 1101 /
+//   routing loop instead of a proxied response).
+// - cf-* and x-forwarded-* describe the client edge connection; Cloudflare
+//   adds its own values for the subrequest.
+// - accept-encoding would make the runtime return the still-encoded body,
+//   which then gets re-streamed with stale encoding/length headers.
+// - user identity headers are set below and must not be spoofable by clients.
+var PASS_PROXY_DROP_REQUEST_HEADERS = new Set([
+  "host", "connection", "keep-alive", "proxy-connection",
+  "proxy-authenticate", "proxy-authorization", "te", "trailer",
+  "transfer-encoding", "upgrade", "content-length", "accept-encoding",
+  "x-real-ip", "x-forwarded-for", "x-forwarded-host", "x-forwarded-proto",
+  "x-user", "x-user-id", "x-user-tier", "x-user-provider",
+  "g4f-api-key", "x-workspace-secret", "x-secret"
+]);
+// Content headers are recalculated when the Worker re-streams the body.
+var PASS_PROXY_DROP_RESPONSE_HEADERS = new Set([
+  "content-encoding", "content-length", "transfer-encoding",
+  "connection", "keep-alive", "proxy-connection"
+]);
+function buildPassProxyHeaders(request, user, pathname, env) {
+  const headers = new Headers();
+  for (const [name, value] of request.headers) {
+    const key = name.toLowerCase();
+    if (PASS_PROXY_DROP_REQUEST_HEADERS.has(key) || key.startsWith("cf-")) continue;
+    headers.set(name, value);
+  }
+  const ip = request.headers.get('cf-connecting-ip') || '';
+  const country = request.headers.get('cf-ipcountry') || 'XX';
+  const ipSnippet = ip.substring(0, 4).replace(/[.:]/g, '');
+  const xUser = `${country}:${(user?.username || user?.id) || ipSnippet}`;
+  headers.set("x-user", xUser);
+  if (user) {
+    headers.set("x-user-provider", user.provider);
+    headers.set("x-user-tier", user.tier);
+  }
+  if (!pathname.includes("/logs")) {
+    // Secrets can be pasted with a trailing newline; Headers.set() rejects
+    // any control character, which used to abort the whole proxy call.
+    const passApiKey = typeof env.PASS_API_KEY === "string"
+      ? env.PASS_API_KEY.trim()
+      : "";
+    if (passApiKey) headers.set("g4f-api-key", passApiKey);
+  }
+  return headers;
+}
+function sanitizePassProxyResponse(response) {
+  // Keep the upstream status/headers, then drop the connection- and
+  // encoding-specific ones that no longer describe the re-streamed body.
+  // Building from `response` (instead of a copied Headers object) preserves
+  // multi-value headers such as Set-Cookie.
+  const newResponse = new Response(response.body, response);
+  for (const name of PASS_PROXY_DROP_RESPONSE_HEADERS) newResponse.headers.delete(name);
+  newResponse.headers.set("Access-Control-Allow-Origin", "*");
+  return newResponse;
+}
 async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ctx) {
   // block anonymous requests originating from certain cloud providers
   // (Cloudflare sets `request.cf.asOrganization` for the source ASN/org).
@@ -4280,21 +4589,22 @@ async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ct
       }
     }, 403);
   }
-  const headers = new Headers(request.headers);
-
-  const ip = request.headers.get('cf-connecting-ip') || '';
-  const country = request.headers.get('cf-ipcountry') || 'XX';
-  const ipSnippet = ip.substring(0, 4).replace(/[.:]/g, '');
-  const xUser = `${country}:${(user?.username || user?.id) ||ipSnippet}`;
-  headers.set("x-user", xUser);
-  if (user) {
-    headers.set("x-user-provider", user.provider);
-    headers.set("x-user-tier", user.tier);
-  }
-  if (!pathname.includes("/logs")) {
-    headers.set("g4f-api-key", env.PASS_API_KEY);
-  }
+  const headers = buildPassProxyHeaders(request, user, pathname, env);
   const targetUrl = `https://pass.g4f.space${pathname}${search || ""}`;
+  // If this Worker itself is mounted on pass.g4f.space (for example a split
+  // deployment whose core server is also pass.g4f.space), proxying here would
+  // call ourselves. Cloudflare reports that as an opaque 1101/522; return a
+  // clear error instead.
+  try {
+    if (new URL(request.url).hostname.toLowerCase() === "pass.g4f.space") {
+      return jsonResponse({
+        error: {
+          message: "pass.g4f.space is proxying to itself. Deploy the pass backend on a different hostname or run this Worker on the API host only.",
+          type: "routing_loop"
+        }
+      }, 508);
+    }
+  } catch (e) { /* request.url is always absolute in Workers */ }
   const fetchOptions = {
     method: request.method,
     headers
@@ -4306,11 +4616,18 @@ async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ct
   let response;
   try {
     response = await fetch(targetUrl, fetchOptions);
+  } catch (error) {
+    console.error("Pass proxy fetch error:", targetUrl, error);
+    return jsonResponse({
+      error: {
+        message: "Pass proxy error: " + (error?.message || error),
+        type: "proxy_error"
+      }
+    }, 502);
   } finally {
     releasePassSlot();
   }
-  const newResponse = new Response(response.body, response);
-  newResponse.headers.set("Access-Control-Allow-Origin", "*");
+  const newResponse = sanitizePassProxyResponse(response);
   if (request.method === "GET" && response.ok) {
     ctx.waitUntil(setCachedResponse(request, newResponse.clone(), CACHE_HEADERS.SHORT, cacheKey, ctx));
   }
