@@ -1,8 +1,8 @@
-## GPT4Free Documentation 
+## g4f.dev Documentation
 
 <img width="1536" height="1024" alt="1000066426" src="https://github.com/user-attachments/assets/55c52184-1998-403b-aae1-afe02fb2e3e8" />
 
-Welcome to the official docs for **GPT4Free** – free and convenient AI endpoints you can use directly in your apps, scripts, and even right in your browser.
+Welcome to the official **g4f.dev** docs for **GPT4Free** – free and convenient AI endpoints you can use directly in your apps, scripts, and even right in your browser.
 Here you’ll find a clear overview, quick examples, and entry points to deeper docs for every major feature.
 
 ---
@@ -11,9 +11,18 @@ Here you’ll find a clear overview, quick examples, and entry points to deeper 
 
 For full install guides—choose your method:
 
+- [Downloads: g4f-go and Android APK](https://g4f.dev/#downloads)
 - [Git Install](git.md)
 - [Docker](docker.md)
 - [Requirements](requirements.md)
+
+### Downloads
+
+- **Desktop (Windows, macOS, Linux):** Download the [g4f-go launcher](https://g4f.dev/#downloads). It is a small self-contained binary that installs CPython and g4f on first run, so no system Python is required.
+- **Android:** Download the [G4F Android APK](https://g4f.dev/#downloads) for the native app, or use the g4f-go Termux build on ARM64 devices.
+- **All builds:** Browse every published asset on the [GitHub releases page](https://github.com/xtekky/gpt4free/releases).
+
+The homepage detects your operating system and links to the matching build automatically.
 
 For rapid starts, you can use either **Python** or **JavaScript** (web).
 
@@ -159,4 +168,4 @@ Examples
 
 GPT4Free and g4f.dev are continuously improving. Have fun building, and let the bots do the heavy lifting for you!
 
-[← Back to GPT4Free GitHub](https://github.com/xtekky/gpt4free)
+[← Back to g4f.dev](https://g4f.dev/)

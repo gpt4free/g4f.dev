@@ -1046,6 +1046,170 @@
             margin-top: auto;
         }
 
+        /* ─── DOWNLOADS ──────────── */
+        .download-panel {
+            max-width: 1200px;
+            margin: 0 auto 1.5rem;
+        }
+
+        .download-recommended {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 1.75rem 2rem;
+            background: linear-gradient(160deg, rgba(0, 240, 255, 0.06), rgba(123, 47, 255, 0.05));
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+        }
+
+        .download-rec-icon {
+            width: 64px;
+            height: 64px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.12), rgba(123, 47, 255, 0.12));
+            border: 1px solid rgba(0, 240, 255, 0.2);
+        }
+
+        .download-rec-copy {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .download-kicker {
+            display: block;
+            margin-bottom: 0.35rem;
+            color: var(--primary);
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .download-recommended h3 {
+            margin-bottom: 0.35rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.25rem;
+        }
+
+        .download-recommended p {
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+
+        .download-meta {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.9rem 0.25rem 0;
+            color: var(--text-faint);
+            font-size: 0.85rem;
+        }
+
+        .download-meta a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .download-meta a:hover {
+            text-decoration: underline;
+        }
+
+        .download-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .download-card {
+            display: flex;
+            flex-direction: column;
+            gap: 0.7rem;
+            padding: 1.75rem;
+            background: linear-gradient(160deg, rgba(0, 240, 255, 0.03), rgba(123, 47, 255, 0.03));
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            transition: all var(--transition);
+        }
+
+        .download-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--glass-border-hover);
+            box-shadow: 0 25px 60px rgba(0, 240, 255, 0.08);
+        }
+
+        .download-os-icon {
+            font-size: 2rem;
+            line-height: 1;
+        }
+
+        .download-card h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+        }
+
+        .download-card p {
+            color: var(--text-dim);
+            line-height: 1.6;
+            flex: 1;
+        }
+
+        .download-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            margin-top: 0.4rem;
+        }
+
+        .download-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            padding: 0.7rem 1rem;
+            border-radius: 999px;
+            border: 1px solid var(--glass-border-hover);
+            color: var(--text);
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all var(--transition);
+        }
+
+        .download-link:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .download-link.primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-color: transparent;
+            color: #fff;
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.2);
+        }
+
+        .download-link.primary:hover {
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 0 40px rgba(0, 240, 255, 0.4);
+        }
+
+        .download-link small {
+            font-weight: 400;
+            opacity: 0.8;
+        }
+
+        .download-recommended .download-link {
+            flex-shrink: 0;
+        }
+
         /* ─── CTA ──────────────── */
         .cta-section {
             padding: 8rem 2rem;
@@ -1264,6 +1428,13 @@
             .feature-card {
                 padding: 2rem 1.6rem;
             }
+            .download-recommended {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .download-recommended .download-link {
+                width: 100%;
+            }
             .cta-box {
                 padding: 3rem 1.8rem;
             }
@@ -1403,7 +1574,22 @@
         footer { padding: 28px 20px 42px; background: var(--dark); border-top: 1px solid var(--glass-border); backdrop-filter: none; }
         .footer-links a { color: var(--text-dim); font: 13px ui-monospace, SFMono-Regular, Consolas, monospace; }
         .footer-links a:hover { color: var(--primary); text-shadow: none; }
-        @media (max-width: 768px) { nav, nav.scrolled { padding: 18px 14px; } .hero { min-height: auto; padding: 150px 20px 70px; } .stats { padding: 0 20px 60px; } .stat { min-width: 50%; margin: 0 0 24px; padding-right: 16px; } .features-grid, .accessibility-cards { grid-template-columns: 1fr; } }
+        .download-panel, .download-grid { max-width: none; }
+        .download-recommended, .download-card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 0; box-shadow: none; }
+        .download-recommended { padding: 24px; }
+        .download-card:hover { transform: none; border-color: var(--primary); box-shadow: none; }
+        .download-rec-icon { width: 46px; height: 46px; border: 0; border-radius: 0; background: var(--primary); color: var(--dark); font-size: 22px; }
+        .download-kicker { color: var(--secondary); font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; }
+        .download-recommended h3, .download-card h3 { color: var(--text); font: 400 21px/1.2 Georgia, serif; letter-spacing: 0; }
+        .download-recommended p, .download-card p { color: var(--text-dim); line-height: 1.55; }
+        .download-os-icon { font-size: 23px; }
+        .download-link { border-radius: 0; color: var(--primary); border: 1px solid var(--primary); font: 700 12px ui-monospace, SFMono-Regular, Consolas, monospace; }
+        .download-link:hover { color: var(--dark); background: var(--primary); }
+        .download-link.primary { color: var(--dark); background: var(--primary); border-color: var(--primary); box-shadow: none; }
+        .download-link.primary:hover { color: var(--dark); background: #d8f791; box-shadow: none; transform: none; }
+        .download-meta { color: var(--text-faint); font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; }
+        .download-meta a { color: var(--primary); }
+        @media (max-width: 768px) { nav, nav.scrolled { padding: 18px 14px; } .hero { min-height: auto; padding: 150px 20px 70px; } .stats { padding: 0 20px 60px; } .stat { min-width: 50%; margin: 0 0 24px; padding-right: 16px; } .features-grid, .accessibility-cards, .download-grid { grid-template-columns: 1fr; } }
     </style>
 
     <script async src="dist/js/framework.js" defer></script>
@@ -1463,6 +1649,7 @@
         <div class="nav-links" id="navLinks">
             <a href="#features">Features</a>
             <a href="#models">Models</a>
+            <a href="#downloads">Download</a>
             <a href="#accessibility">Accessibility</a>
             <a href="#demo">Demo</a>
             <a href="/playground/">Playground</a>
@@ -1588,6 +1775,75 @@
                 <div class="model-badge reveal reveal-delay-3"><span class="dot"></span> Grok</div>
                 <div class="model-badge reveal reveal-delay-1"><span class="dot"></span> Mistral</div>
             </div>
+        </div>
+    </section>
+
+    <!-- Downloads Section -->
+    <section class="section" id="downloads">
+        <div class="section-header reveal">
+            <span class="section-tag">✦ Downloads</span>
+            <h2>Run G4F Anywhere</h2>
+            <p>Get the self-contained g4f-go launcher for desktop or the native G4F app for Android. We pick the right build for your device automatically.</p>
+            <div class="glow-divider"></div>
+        </div>
+
+        <div class="download-panel reveal">
+            <div class="download-recommended" id="downloadRecommended">
+                <div class="download-rec-icon" id="downloadRecIcon" aria-hidden="true">⬇️</div>
+                <div class="download-rec-copy">
+                    <span class="download-kicker" id="downloadRecKicker">Recommended for your device</span>
+                    <h3 id="downloadRecTitle">Finding the right G4F download…</h3>
+                    <p id="downloadRecDesc">Detecting your operating system and architecture.</p>
+                </div>
+                <a class="download-link primary" id="downloadRecButton" href="https://github.com/xtekky/gpt4free/releases/latest" target="_blank" rel="noopener">
+                    All releases ↗
+                </a>
+            </div>
+            <div class="download-meta">
+                <span id="downloadRelease">Latest release from GitHub</span>
+                <a href="https://github.com/xtekky/gpt4free/releases" target="_blank" rel="noopener">Browse every build ↗</a>
+            </div>
+        </div>
+
+        <div class="download-grid">
+            <article class="download-card reveal reveal-delay-1">
+                <div class="download-os-icon" aria-hidden="true">🪟</div>
+                <h3>Windows</h3>
+                <p>The g4f-go launcher downloads its own CPython runtime on first run. No system Python required.</p>
+                <div class="download-links">
+                    <a class="download-link primary" data-download="g4f-go-windows-amd64" href="https://github.com/xtekky/gpt4free/releases/latest" target="_blank" rel="noopener">g4f-go <small>· Windows x64</small></a>
+                </div>
+            </article>
+
+            <article class="download-card reveal reveal-delay-2">
+                <div class="download-os-icon" aria-hidden="true">🍎</div>
+                <h3>macOS</h3>
+                <p>Choose the build for your Mac. The launcher sets up g4f and its runtime automatically.</p>
+                <div class="download-links">
+                    <a class="download-link primary" data-download="g4f-go-darwin-arm64" href="https://github.com/xtekky/gpt4free/releases/latest" target="_blank" rel="noopener">g4f-go <small>· Apple Silicon</small></a>
+                    <a class="download-link" data-download="g4f-go-darwin-amd64" href="https://github.com/xtekky/gpt4free/releases/latest" target="_blank" rel="noopener">g4f-go <small>· Intel</small></a>
+                </div>
+            </article>
+
+            <article class="download-card reveal reveal-delay-3">
+                <div class="download-os-icon" aria-hidden="true">🐧</div>
+                <h3>Linux</h3>
+                <p>Portable launcher for x64 and ARM64 Linux systems, including ARM servers and single-board computers.</p>
+                <div class="download-links">
+                    <a class="download-link primary" data-download="g4f-go-linux-amd64" href="https://github.com/xtekky/gpt4free/releases/latest" target="_blank" rel="noopener">g4f-go <small>· Linux x64</small></a>
+                    <a class="download-link" data-download="g4f-go-linux-arm64" href="https://github.com/xtekky/gpt4free/releases/latest" target="_blank" rel="noopener">g4f-go <small>· Linux ARM64</small></a>
+                </div>
+            </article>
+
+            <article class="download-card reveal reveal-delay-4">
+                <div class="download-os-icon" aria-hidden="true">🤖</div>
+                <h3>Android</h3>
+                <p>Install the native G4F app, or run the g4f-go launcher inside Termux on ARM64 devices.</p>
+                <div class="download-links">
+                    <a class="download-link primary" data-download="android-apk" href="https://github.com/xtekky/gpt4free/releases/latest" target="_blank" rel="noopener">G4F app <small>· APK</small></a>
+                    <a class="download-link" data-download="g4f-go-android-arm64" href="https://github.com/xtekky/gpt4free/releases/latest" target="_blank" rel="noopener">g4f-go <small>· Termux ARM64</small></a>
+                </div>
+            </article>
         </div>
     </section>
 
@@ -1819,6 +2075,159 @@
             }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
 
             reveals.forEach(el => observer.observe(el));
+
+            // ─── DOWNLOADS ─────────────────
+            const RELEASES_PAGE = 'https://github.com/xtekky/gpt4free/releases/latest';
+            const RELEASE_API = 'https://api.github.com/repos/xtekky/gpt4free/releases/latest';
+            const downloadReleaseEl = document.getElementById('downloadRelease');
+            const recIconEl = document.getElementById('downloadRecIcon');
+            const recKickerEl = document.getElementById('downloadRecKicker');
+            const recTitleEl = document.getElementById('downloadRecTitle');
+            const recDescEl = document.getElementById('downloadRecDesc');
+            const recButtonEl = document.getElementById('downloadRecButton');
+            let latestRelease = null;
+
+            const downloadCopy = {
+                windows: {
+                    icon: '🪟',
+                    kicker: 'Recommended for Windows',
+                    title: 'g4f-go for Windows (x64)',
+                    desc: 'A small launcher that downloads CPython and installs g4f on first run. No system Python required.',
+                    button: 'Download for Windows'
+                },
+                macos: {
+                    icon: '🍎',
+                    kicker: 'Recommended for macOS',
+                    title: 'g4f-go for macOS',
+                    desc: 'Download the launcher and it will set up CPython and g4f automatically. Intel builds are listed below.',
+                    button: 'Download for macOS'
+                },
+                linux: {
+                    icon: '🐧',
+                    kicker: 'Recommended for Linux',
+                    title: 'g4f-go for Linux',
+                    desc: 'A portable launcher for your Linux desktop, server, or single-board computer. No system Python required.',
+                    button: 'Download for Linux'
+                },
+                android: {
+                    icon: '🤖',
+                    kicker: 'Recommended for Android',
+                    title: 'G4F app for Android',
+                    desc: 'Install the native APK to run the g4f server and chat UI on your phone. The Termux launcher is available below.',
+                    button: 'Download Android APK'
+                },
+                ios: {
+                    icon: '🌐',
+                    kicker: 'No install needed on iOS',
+                    title: 'Use G4F in your browser',
+                    desc: 'The G4F web app works in Safari. Open it now, or browse the desktop and Android builds below.',
+                    button: 'Open G4F Chat'
+                },
+                unknown: {
+                    icon: '⬇️',
+                    kicker: 'Choose your download',
+                    title: 'Find the right G4F build',
+                    desc: 'Pick g4f-go for desktop or the native app for Android. Every release is hosted on GitHub.',
+                    button: 'Browse downloads'
+                }
+            };
+
+            function detectMacAppleSilicon(ua, uaData) {
+                const arch = (uaData.architecture || '').toLowerCase();
+                if (arch.includes('arm')) return true;
+                if (arch.includes('x86')) return false;
+                try {
+                    const gl = document.createElement('canvas').getContext('webgl');
+                    const ext = gl && gl.getExtension('WEBGL_debug_renderer_info');
+                    const renderer = ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : '';
+                    if (/intel|amd|radeon/i.test(renderer)) return false;
+                } catch (e) {
+                    // WebGL can be unavailable; fall back to the common Apple Silicon default.
+                }
+                return true;
+            }
+
+            function detectDownloadTarget() {
+                const ua = navigator.userAgent || '';
+                const uaData = navigator.userAgentData || {};
+                const platform = (uaData.platform || navigator.platform || '').toLowerCase();
+                const arch = `${uaData.architecture || ''} ${uaData.bitness || ''}`.toLowerCase();
+                const isArm = /arm|aarch/.test(arch) || /aarch64|arm64/.test(ua);
+                const isAppleTouch = platform.includes('mac') && navigator.maxTouchPoints > 1;
+
+                if (/android/i.test(ua)) return { os: 'android', key: 'android-apk' };
+                if (/iphone|ipad|ipod/i.test(ua) || isAppleTouch) return { os: 'ios' };
+                if (platform.includes('win') || /windows/i.test(ua)) return { os: 'windows', key: 'g4f-go-windows-amd64' };
+                if (platform.includes('mac') || /mac os x/i.test(ua)) {
+                    return { os: 'macos', key: detectMacAppleSilicon(ua, uaData) ? 'g4f-go-darwin-arm64' : 'g4f-go-darwin-amd64' };
+                }
+                if (platform.includes('linux') || /linux/i.test(ua)) {
+                    return { os: 'linux', key: isArm ? 'g4f-go-linux-arm64' : 'g4f-go-linux-amd64' };
+                }
+                return { os: 'unknown' };
+            }
+
+            function findDownloadAsset(key, assets) {
+                if (!assets || !assets.length) return null;
+                if (key === 'android-apk') {
+                    return assets.find(asset => /^g4f-.*\.apk$/i.test(asset.name)) || null;
+                }
+                const suffix = key.replace(/^g4f-go-/, '-') + '.zip';
+                return assets.find(asset => asset.name.toLowerCase().endsWith(suffix)) || null;
+            }
+
+            function applyDownloadLinks(assets) {
+                document.querySelectorAll('[data-download]').forEach(link => {
+                    const asset = findDownloadAsset(link.dataset.download, assets);
+                    if (asset) {
+                        link.href = asset.browser_download_url;
+                        link.title = `${asset.name} (${Math.round(asset.size / 1024 / 1024)} MB)`;
+                    } else {
+                        link.href = RELEASES_PAGE;
+                    }
+                });
+            }
+
+            function renderRecommendedDownload() {
+                const target = detectDownloadTarget();
+                const copy = downloadCopy[target.os] || downloadCopy.unknown;
+                const asset = latestRelease && target.key
+                    ? findDownloadAsset(target.key, latestRelease.assets)
+                    : null;
+
+                recIconEl.textContent = copy.icon;
+                recKickerEl.textContent = copy.kicker;
+                recTitleEl.textContent = copy.title;
+                recDescEl.textContent = copy.desc;
+                recButtonEl.textContent = copy.button + (target.os === 'ios' ? '' : ' ↗');
+
+                if (target.os === 'ios') {
+                    recButtonEl.href = '/chat/';
+                    recButtonEl.removeAttribute('target');
+                    recButtonEl.removeAttribute('rel');
+                } else {
+                    recButtonEl.href = asset ? asset.browser_download_url : RELEASES_PAGE;
+                    recButtonEl.target = '_blank';
+                    recButtonEl.rel = 'noopener';
+                }
+
+                if (latestRelease) {
+                    downloadReleaseEl.textContent = `Latest release ${latestRelease.tag_name} · g4f-go + Android app`;
+                }
+            }
+
+            applyDownloadLinks();
+            renderRecommendedDownload();
+
+            fetch(RELEASE_API, { headers: { Accept: 'application/vnd.github+json' } })
+                .then(response => response.ok ? response.json() : null)
+                .then(release => {
+                    if (!release) return;
+                    latestRelease = release;
+                    applyDownloadLinks(release.assets || []);
+                    renderRecommendedDownload();
+                })
+                .catch(() => {});
 
             // ─── CHAT DEMO ─────────────────
             const chatInput = document.getElementById('chatInput');
