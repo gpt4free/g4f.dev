@@ -780,8 +780,8 @@ async function safe(request, env, ctx) {
         currentRequestContext.skipErrorLog = true;
         return jsonResponse({ error: "Server map error: " + pathname + error.message || "Internal server error" }, 500);
       }
-      if (pathname.startsWith("/ai/")) {
-        return handleCustomAiRoute(request, pathname, cacheKey, rateCheck, env, ctx);
+      if (pathname.startsWith("/ai/audio/")) {
+        return handleAiAudioRoute(request, pathname, cacheKey, rateCheck, user, env, ctx);
       }
       if (pathname === "/custom/api/servers") {
         return handleListServers(request, env, user);
@@ -2492,8 +2492,8 @@ async function createUsageTrackingStream(response, env, ctx, server, serverId, c
     }
   }
   const pollenCost = parseFloat(usage.pollen_cost);
-  // rateCheck is optional (null in handleCustomAiRoute calls) — the old
-  // unconditional access threw a TypeError inside the background tracking
+  // rateCheck is optional (null in routes that do not run user rate limits) —
+  // the old unconditional access threw inside the background tracking
   if (pollenCost > 0 && rateCheck?.centsToCharge && !user) {
     const pollenDiff = ((pollenCost * 10) - (rateCheck.centsToCharge / 100)) * 100;
     if (pollenDiff > 0) {
@@ -3202,341 +3202,153 @@ async function hashString(str) {
   const hashArray = new Uint8Array(hashBuffer);
   return Array.from(hashArray, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
-async function handleCustomAiRoute(request, pathname, cacheKey, rateCheck, env, ctx) {
-  const user = await authenticateRequest(request, env);
-  const url = new URL(request.url);
-  let query = pathname.substring(4);
-  let splited = query.split("/", 2);
-  let serverLabel = splited[0];
-  let prompt = splited[1] || "";
-  let server;
-  if (false && serverLabel == "audio" && prompt && request.method === "GET") {
-    let queryUrl = `https://gen.pollinations.ai/audio/${encodeURIComponent(prompt)}?model=whisper`;
-    if (url.searchParams.get("voice")) {
-      queryUrl += `&voice=${encodeURIComponent(url.searchParams.get("voice"))}`
-    }
-    const response = await fetch(queryUrl, {headers: {"Authorization": `Bearer ${env.AUDIO_API_KEY}`}});
-    const newResponse = new Response(response.body, response);
-    for (const [key, value] of Object.entries(CORS_HEADERS)) {
-      newResponse.headers.set(key, value);
-    }
-    newResponse.headers.set("X-Provider", serverLabel);
-    // if (queryBody.model) newResponse.headers.set("X-Model", queryBody.model);
-    // newResponse.headers.set("X-Server", server.id);
-    newResponse.headers.set("X-Url", queryUrl);
-    newResponse.headers.set("X-Cache", "YES");
-    ctx.waitUntil(setCachedResponse(request, newResponse.clone(), CACHE_HEADERS.LONG, cacheKey, ctx));
-    if (rateCheck) {
-      updateResponsefromRateCheck(newResponse, rateCheck);
-    }
-    return newResponse;
-  }
-  if (!serverLabel || serverLabel === "auto") {
-    server = await getRandomPublicServer(env, user);
-    if (!server) {
-      return jsonResponse({ error: "No available servers" }, 503);
-    }
-  } else {
-    server = await getServerByLabel(env, serverLabel, user);
-    if (!server) {
-      return jsonResponse({ error: `Server '${serverLabel}' not found` }, 404);
-    }
-  }
-  const apiKey = getRandomApiKey(server.api_keys);
-  const authHeader = request.headers.get("authorization");
-  let userProvidedKey = null;
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    const tokens = authHeader.substring(7).split(/\s+/);
-    userProvidedKey = tokens.find((t) => t && !t.startsWith("g4f_") && !t.startsWith("gfs_"));
-  }
-  const queryUrl = server.base_url.includes("/chat/completions") ? server.base_url : server.base_url + "/chat/completions";
-  prompt = decodeURIComponent((prompt || "").trim());
-  let queryBody;
-  if (request.method === "POST") {
-    queryBody = await request.json();
-  } else {
-    if (prompt == "ok") {
-      prompt = "Respond with exactly the single word: ok";
-    }
-    let instructions = url.searchParams.get("instructions");
-    if (!instructions) {
-      if (serverLabel === "audio") {
-        let language = url.searchParams.get("language") || "en";
-        language = language === 'de' ? 'de-DE' : language;
-        query = `Repeat the content between the delimiters exactly as written. Output only that content, with no extra words before or after. Language: ${language}
+// /ai/audio/{text} - text-to-speech powered by Pollinations.
+//
+// The route is intentionally narrow: the old generic /ai/{provider}/{prompt}
+// gateway is gone, and only audio synthesis remains. Pollinations' public
+// audio endpoint works anonymously, so callers do not need a g4f session or a
+// Pollinations key. A caller-supplied Pollinations key (pk_/sk_) is forwarded
+// so paid accounts can use their own quota.
+const AI_AUDIO_PREFIX = "/ai/audio/";
+const POLLINATIONS_AUDIO_API = "https://gen.pollinations.ai/audio/";
+const AI_AUDIO_DEFAULT_MODEL = "elevenlabs";
+const AI_AUDIO_MAX_TEXT_LENGTH = 4096;
+const AI_AUDIO_PASS_PARAMS = [
+  "voice",
+  "response_format",
+  "format",
+  "speed",
+  "duration",
+  "seed",
+  "style",
+  "instruct",
+  "instrumental"
+];
 
-<<<
-${prompt}
->>>`;
-        queryBody = { messages: [{ role: "user", content: query }] };
-      } else {
-        instructions = `Today is: ${new Date(Date.now()).toLocaleString().split(",")[0]}, User language: ${request.headers.get("accept-language") || "en"}`;
-        queryBody = { messages: [{ role: "system", content: instructions }, { role:  "user", content: prompt }] };
+function normalizeAudioApiKey(value) {
+  if (!value) return null;
+  const key = String(value).trim();
+  if (!key) return null;
+  return key.startsWith("Bearer ") ? key.slice("Bearer ".length).trim() : key;
+}
+
+function getPollinationsAudioKey(request, env) {
+  const authHeader = request.headers.get("authorization") || "";
+  if (authHeader.startsWith("Bearer ")) {
+    const token = authHeader
+      .slice("Bearer ".length)
+      .split(/\s+/)
+      .find((value) => value.startsWith("pk_") || value.startsWith("sk_"));
+    if (token) return token;
+  }
+  // Fall back to the worker's shared audio key for anonymous/free callers.
+  return normalizeAudioApiKey(env.AUDIO_API_KEY);
+}
+
+async function handleAiAudioRoute(request, pathname, cacheKey, rateCheck, user, env, ctx) {
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return jsonResponse({
+      error: {
+        message: "Method not allowed. Use GET /ai/audio/{text}.",
+        type: "invalid_request_error"
       }
-    }
+    }, 405, { Allow: "GET, HEAD" });
   }
-  queryBody.model = queryBody.model || url.searchParams.get("model") || getDefaultModel(server)
-  if (url.searchParams.get("json") === "true") {
-    queryBody.response_format = { "type": "json_object" };
+
+  const url = new URL(request.url);
+  let text;
+  try {
+    text = decodeURIComponent(pathname.slice(AI_AUDIO_PREFIX.length)).trim();
+  } catch (e) {
+    return jsonResponse({
+      error: {
+        message: "Invalid audio text encoding.",
+        type: "invalid_request_error"
+      }
+    }, 400);
   }
-  if (serverLabel === "audio") {
-    queryBody.audio = {
-      "voice": url.searchParams.get("voice") || "alloy",
-      "format": "mp3"
-    };
-    if (!queryBody.modalities) {
-      queryBody.modalities = ["text", "audio"];
-    }
+  if (!text) {
+    return jsonResponse({
+      error: {
+        message: "Missing text to synthesize. Use /ai/audio/{text}.",
+        type: "invalid_request_error"
+      }
+    }, 400);
   }
-  // Anonymous callers are gated by cake credits here as well — /ai/ routes
-  // never reach handleProxyToServer, so without this check GET /ai/ requests
-  // would bypass the credit gate entirely. Checked before the allowed-models
-  // validation so blocked/expired credits fail fast with 402.
+  if (text.length > AI_AUDIO_MAX_TEXT_LENGTH) {
+    return jsonResponse({
+      error: {
+        message: `Text is too long. The maximum is ${AI_AUDIO_MAX_TEXT_LENGTH} characters.`,
+        type: "invalid_request_error"
+      }
+    }, 400);
+  }
+
+  const params = new URLSearchParams();
+  params.set("model", url.searchParams.get("model") || AI_AUDIO_DEFAULT_MODEL);
+  for (const name of AI_AUDIO_PASS_PARAMS) {
+    const value = url.searchParams.get(name);
+    if (value) params.set(name, value);
+  }
+  const apiKey = getPollinationsAudioKey(request, env);
+  if (apiKey) params.set("key", apiKey);
+
+  // Anonymous callers pay with baked cake credits, and signed-in callers hit
+  // their tier limits in safe(). Audio never reaches handleProxyToServer, so
+  // the gate has to run here or the route bypasses quota entirely.
   if (!user) {
-    const gateResult = await applyAnonymousCreditGate(env, ctx, request, user, queryBody, rateCheck);
+    const gateBody = {
+      model: params.get("model"),
+      messages: [{ role: "user", content: text }]
+    };
+    const gateResult = await applyAnonymousCreditGate(env, ctx, request, null, gateBody, rateCheck);
     if (gateResult instanceof Response) return gateResult;
     if (gateResult) rateCheck = gateResult;
   }
-  if (server.allowed_models && server.allowed_models.length > 0 && queryBody.model && serverLabel != "audio") {
-    if (!server.allowed_models.includes(queryBody.model) && queryBody.model != DEFAULT_MODELS[server.id]) {
-      // Remap deprecated/renamed models to a close match or the server
-      // default instead of rejecting (see handleProxyToServer).
-      const defaultModel = getDefaultModel(server);
-      const remappedModel = findAllowedModel(server.allowed_models, queryBody.model)
-        || (defaultModel && server.allowed_models.includes(defaultModel) ? defaultModel : null);
-      if (remappedModel) {
-        queryBody.model = remappedModel;
-      } else {
-        return jsonResponse({
-          error: {
-            message: `Model '${queryBody.model}' not allowed. Available models: ${server.allowed_models.join(", ")}`,
-            type: "model_not_allowed"
-          }
-        }, 400);
-      }
-    }
-  }
-  const proxyHeaders = {
-    "Content-Type": "application/json",
-    ...EXTRA_HEADERS
-  };
-  if (userProvidedKey) {
-    proxyHeaders["Authorization"] = userProvidedKey.includes("Bearer") ? userProvidedKey : `Bearer ${userProvidedKey}`;
-  } else if (apiKey) {
-    proxyHeaders["Authorization"] = apiKey.includes("Bearer") ? apiKey : `Bearer ${apiKey}`;
-  }
-  if (server.base_url.startsWith("https://pass.g4f.space/") && !server.base_url.includes("/logs")) {
-    proxyHeaders["g4f-api-key"] = env.PASS_API_KEY;
-  }
-  // Enable streaming by default for text responses (not audio)
-  const enableStreaming = serverLabel !== "audio" && !queryBody.stream && url.searchParams.get("stream") !== "false";
-  if (enableStreaming) {
-    queryBody.stream = true;
-  }
+
+  const target = `${POLLINATIONS_AUDIO_API}${encodeURIComponent(text)}?${params.toString()}`;
+  let response;
   try {
-    const isPassG4f = queryUrl.startsWith("https://pass.g4f.space/");
-    if (isPassG4f) await acquirePassSlot();
-    let response;
-    try {
-      response = await fetch(queryUrl, {
-        method: "POST",
-        body: JSON.stringify(queryBody),
-        headers: proxyHeaders
-      });
-    } finally {
-      if (isPassG4f) releasePassSlot();
-    }
-    if (!response.ok || queryBody.stream) {
-      const contentType = (response.headers.get("content-type") || "").split(";")[0];
-      if (queryBody.stream || contentType.includes("text/event-stream")) {
-        const clientIP2 = getClientIP(request);
-        const requestModel2 = queryBody.model;
-        const firstMessage2 = getFirstMessage(queryBody.messages);
-        ctx.waitUntil(createUsageTrackingStream(
-          response,
-          env,
-          ctx,
-          server,
-          server.id,
-          clientIP2,
-          requestModel2,
-          firstMessage2,
-          user,
-          pathname,
-          userProvidedKey
-        ));
-        // If streaming was enabled by default, transform SSE to plain text stream
-        if (enableStreaming && response.ok && contentType.includes("text/event-stream")) {
-          const textStream = new ReadableStream({
-            async start(controller) {
-              const reader = response.body.getReader();
-              const decoder = new TextDecoder();
-              let buffer = "";
-              let last_data;
-              let last_content;
-              try {
-                while (true) {
-                  const { done, value } = await reader.read();
-                  if (done) break;
-                  buffer += decoder.decode(value, { stream: true });
-                  const lines = buffer.split("\n");
-                  buffer = lines.pop() || "";
-                  for (const line of lines) {
-                    if (line.startsWith("data: ")) {
-                      const data = line.slice(6).trim();
-                      if (data === "[DONE]") continue;
-                      try {
-                        last_data = data;
-                        const parsed = JSON.parse(data);
-                        const content = parsed.choices?.[0]?.delta?.content;
-                        if (content) {
-                          last_content = content;
-                          controller.enqueue(new TextEncoder().encode(content));
-                        }
-                      } catch (e) {
-                        // Skip invalid JSON
-                      }
-                    }
-                  }
-                }
-              } catch (e) {
-                controller.error(e);
-              } finally {
-                if (!last_content && last_data) {
-                  controller.enqueue(new TextEncoder().encode(`${data}`));
-                }
-                controller.close();
-              }
-            }
-          });
-          const newResponse2 = new Response(textStream, {
-            headers: { "Content-Type": "text/plain; charset=UTF-8", ...getCorsHeaders(request) }
-          });
-          newResponse2.headers.set("X-Provider", server.label);
-          if (queryBody.model) newResponse2.headers.set("X-Model", queryBody.model);
-          newResponse2.headers.set("X-Server", server.id);
-          newResponse2.headers.set("X-Url", (new URL(queryUrl).pathname));
-          newResponse2.headers.set("X-Stream", "true");
-          if (request.method === "GET" && prompt) {
-            newResponse2.headers.set("X-Cache", "YES");
-            ctx.waitUntil(setCachedResponse(request, newResponse2.clone(), CACHE_HEADERS.LONG, cacheKey, ctx));
-          }
-          if (rateCheck) {
-            newResponse2.headers.set("X-Ratelimit-Model-Factor", String(getModelFactor(queryBody.model)));
-            updateResponsefromRateCheck(newResponse2, rateCheck);
-          }
-          return newResponse2;
-        }
-      }
-      const newResponse2 = new Response(response.body, response);
-      for (const [key, value] of Object.entries(getCorsHeaders(request))) {
-        newResponse2.headers.set(key, value);
-      }
-      newResponse2.headers.set("X-Provider", server.label);
-      if (queryBody.model) newResponse2.headers.set("X-Model", queryBody.model);
-      newResponse2.headers.set("X-Server", server.id);
-      newResponse2.headers.set("X-Url", (new URL(queryUrl).pathname));
-      if (request.method === "GET" && prompt) {
-        newResponse2.headers.set("X-Cache", "YES");
-        ctx.waitUntil(setCachedResponse(request, newResponse2.clone(), CACHE_HEADERS.LONG, cacheKey, ctx));
-      }
-      if (rateCheck) {
-        newResponse2.headers.set("X-Ratelimit-Model-Factor", String(getModelFactor(queryBody.model)));
-        updateResponsefromRateCheck(newResponse2, rateCheck);
-      }
-      return newResponse2;
-    }
-    let data = await response.json();
-    const usage = data.usage || {};
-    if (data.choices && data.choices[0].message.audio) {
-      data = data.choices[0].message.audio.data;
-      const newResponse2 = new Response(base64toBlob(data), {
-        headers: { "Content-Type": "audio/mpeg", ...getCorsHeaders(request) }
-      });
-      ctx.waitUntil(setCachedResponse(request, newResponse2, CACHE_HEADERS.FOREVER, cacheKey, ctx));
-      return newResponse2;
-    }
-    if (data.choices) {
-      data = data.choices[0].message.content;
-    } else if (data.message?.content) {
-      data = data.message.content;
-    } else if (data.output) {
-      data = data.output[data.output.length - 1]?.content[0].text;
-    } else {
-      data = JSON.stringify(data);
-    }
-    if (data && url.searchParams.get("json") === "true") {
-      data = filterMarkdown(data, "json", data);
-    }
-    if (data === "Model unavailable." || !data) {
-      return jsonResponse({ error: { message: data || "Empty response" } }, 500);
-    }
-    const newResponse = new Response(data, {
-      headers: { "Content-Type": "text/plain; charset=UTF-8", ...getCorsHeaders(request) }
+    response = await fetch(target, {
+      method: "GET",
+      headers: { "Accept": "audio/*" }
     });
-    newResponse.headers.set("X-Provider", server.label);
-    if (queryBody.model) newResponse.headers.set("X-Model", queryBody.model);
-    newResponse.headers.set("X-Server", server.id);
-    newResponse.headers.set("X-Url", (new URL(queryUrl).pathname));
-    if (request.method === "GET") {
-      newResponse.headers.set("X-Cache", "YES");
-      ctx.waitUntil(setCachedResponse(request, newResponse, CACHE_HEADERS.LONG, cacheKey, ctx));
-    }
-    const clientIP = getClientIP(request);
-    const geoLocation = request.cf?.asOrganization || request.cf?.country || null;
-    const userAgent = request.headers.get("user-agent") || null;
-    const requestModel = data.model || queryBody.model;
-    const firstMessage = prompt || getFirstMessage(queryBody.messages);
-    const totalUsage = usage.total_tokens || (usage.prompt_tokens + usage.completion_tokens) || 0;
-    ctx.waitUntil(persistUsageToDb(env, clientIP, `custom:${server.id}`, queryBody.model, totalUsage, usage.prompt_tokens, usage.completion_tokens, pathname, firstMessage, user, geoLocation, userAgent, userProvidedKey));
-    if (response.ok) {
-      ctx.waitUntil(updateServerUsage(env, server, totalUsage, queryBody.model));
-    }
-    if (user) {
-      ctx.waitUntil(updateUserDailyUsage(env, user.id, totalUsage, `custom:${server.id}`, queryBody.model));
-    }
-    if (!userProvidedKey && response.headers.get("X-Cache") !== "HIT" && !server.api_key) {
-      const totalTokens = getModelTokens(queryBody.model, totalUsage);
-      if (totalTokens) {
-        newResponse.headers.set("X-Usage-Total-Tokens", String(totalTokens));
-      }
-      if (user) {
-        ctx.waitUntil(updateUserTokenUsage(env, user.id, totalTokens, ctx));
-      }
-    }
-    if (rateCheck) {
-      newResponse.headers.set("X-Ratelimit-Model-Factor", String(getModelFactor(requestModel)));
-      updateResponsefromRateCheck(newResponse, rateCheck);
-    }
-    return newResponse;
   } catch (e) {
     return jsonResponse({
-      error: `Failed to connect to server: ${e.message}`
+      error: {
+        message: `Failed to reach Pollinations audio: ${e.message}`,
+        type: "provider_error"
+      }
     }, 502);
   }
+
+  const audioResponse = new Response(request.method === "HEAD" ? null : response.body, response);
+  for (const [key, value] of Object.entries(getCorsHeaders(request))) {
+    audioResponse.headers.set(key, value);
+  }
+  audioResponse.headers.set("X-Provider", "pollinations");
+  audioResponse.headers.set("X-Model", params.get("model"));
+  audioResponse.headers.set("X-Url", new URL(target).pathname);
+
+  if (response.ok) {
+    audioResponse.headers.set("Cache-Control", CACHE_HEADERS.FOREVER);
+    if (request.method === "GET") {
+      ctx.waitUntil(setCachedResponse(request, audioResponse.clone(), CACHE_HEADERS.FOREVER, cacheKey, ctx));
+    }
+  } else {
+    audioResponse.headers.set("Cache-Control", "no-store");
+  }
+  if (rateCheck) {
+    updateResponsefromRateCheck(audioResponse, rateCheck);
+  }
+  return audioResponse;
 }
+
 async function getRandomPublicServer(env, user = null) {
   if (!AUTO_PROVIDERS.length) return null;
   const serverId = AUTO_PROVIDERS[Math.floor(Math.random() * AUTO_PROVIDERS.length)];
   // return null instead of throwing so callers can fall back gracefully
   return await getServerById(env, serverId, user);
-}
-function base64toBlob(base64Data) {
-  const byteCharacters = atob(base64Data);
-  const byteNumbers = new Array(byteCharacters.length);
-  for (let i = 0; i < byteCharacters.length; i++) {
-    byteNumbers[i] = byteCharacters.charCodeAt(i);
-  }
-  const byteArray = new Uint8Array(byteNumbers);
-  return byteArray;
-}
-function filterMarkdown(text, type, fallback) {
-  const codeBlockRegex = /```(?:json|javascript|js)?\s*([\s\S]*?)```/gi;
-  const matches = [...text.matchAll(codeBlockRegex)];
-  if (matches.length > 0) {
-    return matches[0][1].trim();
-  }
-  return fallback;
 }
 function updateResponsefromRateCheck(newResponse, rateCheck) {
   if (!rateCheck) {
@@ -4275,8 +4087,20 @@ function generateCacheKey(request, extra = null) {
   const url = new URL(request.url);
   // URLSearchParams has no enumerable own properties — Object.keys() always
   // returned [] here, so cache keys kept every query param (cache fragmentation).
+  // Audio synthesis is a deterministic transformation of the text, model,
+  // voice and seed, so keep those params for /ai/audio/ requests. API keys are
+  // never part of a cache key.
+  const keepSynthesisParams = url.pathname.startsWith("/ai/audio/");
   for (const key of [...url.searchParams.keys()]) {
-    if (key === "seed" || key === "url" || key === "model") {
+    if (key === "key") {
+      url.searchParams.delete(key);
+      continue;
+    }
+    if (key === "url") {
+      continue;
+    }
+    if (key === "seed" || key === "model") {
+      if (!keepSynthesisParams) url.searchParams.delete(key);
       continue;
     }
     url.searchParams.delete(key);

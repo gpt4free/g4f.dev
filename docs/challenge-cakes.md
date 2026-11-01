@@ -42,7 +42,14 @@ questions, and both are served back to every visitor — see
 | DELETE | `/challenge/translations[?lang=<lang>]` | Clears the community store — one language, or all when `lang` is omitted. Admin only (`Authorization: Bearer <ADMIN_API_KEY>`). |
 | GET    | `/challenge/followups?lang=<lang>&count=<n>` | Serves random follow-up questions from the community pool (same `Cache-Control` as above; 404 `{error: "no_followups"}` when empty). |
 | GET    | `/challenge/status`   | Current IP's `solved_today`, `credit_cents`, limits. |
-| GET    | `/challenge/health`   | Liveness probe. |
+| GET    | `/challenge/health`   | Liveness probe. Returns 503 with `{ok: false, kv_ok: false}` when the challenge KV (Upstash) is unreachable. |
+
+When `CAKE_KV` is offline, `/challenge/issue`, `/challenge/solve`, and
+`/challenge/redeem` are paused with `503 {error: "kv_unavailable"}` — handing
+out challenges that cannot be stored or credited only wastes client work. The
+client sees this 503, stops the challenge loop, and leaves the PoW cake baker
+running. Translation reads keep working through the Blob mirror described
+below.
 
 ### Caching
 
@@ -147,6 +154,7 @@ re-solving the same topic refreshes its entry):
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `CAKE_KV` | — | KV namespace (shared with the cake worker). On Vercel: Upstash REST credentials. |
+| `BLOB_READ_WRITE_TOKEN` | — | Optional Vercel Blob token. Community translations are mirrored to Blob and read from there when Upstash is offline. Without Upstash, Blob becomes the primary KV. |
 | `CHALLENGE_SECRET` | — | AES sealing key material (required). |
 | `CHALLENGE_JWT_SECRET` | — | HS256 signing secret (required). |
 | `CAKE_CREDIT_CENTS` | `5` | Credit per solved challenge (0.05¢). |
@@ -158,7 +166,7 @@ re-solving the same topic refreshes its entry):
 | `TRANSLATIONS_BATCH` | `8` | Snippets per translations challenge. |
 | `ADMIN_API_KEY` | — | Optional, for admin endpoints. |
 
-## KV keys (all in `CAKE_KV`)
+## KV keys (all in `CAKE_KV`; translations also mirrored to Blob)
 
 | Key | TTL | Purpose |
 |-----|-----|---------|
@@ -184,6 +192,9 @@ re-solving the same topic refreshes its entry):
 
 Set `CHALLENGE_SECRET` and `CHALLENGE_JWT_SECRET` in the Vercel project env
 vars, plus the Upstash REST vars used for `CAKE_KV` (same as the other workers).
+If `BLOB_READ_WRITE_TOKEN` is also set, `challenge:translations:<lang>` entries
+are double-written to Upstash and Blob; Blob acts as the read fallback while
+Upstash is unavailable.
 
 **Cloudflare** (optional): deploy `workers/challenge-worker.js` with a wrangler
 config binding `CAKE_KV`, mirroring `wrangler-cake.toml`.

@@ -123,6 +123,20 @@
             margin-bottom: 2rem;
             font-size: 1.1rem;
         }
+
+        .connection-error {
+            padding: 1rem 1.5rem;
+            border: 1px solid var(--danger);
+            border-radius: 8px;
+            background: rgba(220, 53, 69, 0.15);
+            color: var(--light);
+            margin-bottom: 1.5rem;
+            overflow-wrap: anywhere;
+        }
+
+        .connection-error[hidden] {
+            display: none;
+        }
         
         .login-buttons {
             display: flex;
@@ -1295,6 +1309,7 @@
     </header>
 
     <main class="main-container">
+        <div class="connection-error" id="connectionError" role="alert" hidden></div>
         <!-- Redirect Login Section (shown when redirect parameter is present) -->
         <section class="login-section" id="redirectLoginSection" style="display: none;">
             <h1>Login Required</h1>
@@ -1747,6 +1762,14 @@
         const externalConversation = urlParams.get('conversation');
         const externalQuery = `redirect=${encodeURIComponent(externalRedirect)}` + (externalConversation ? `&conversation=${encodeURIComponent(externalConversation)}` : '');
         const selectedProvider = urlParams.get('provider');
+
+        // OAuth providers redirect here with ?error=... when connecting fails.
+        // Keep the message visible instead of losing it after a toast timeout.
+        function showConnectionError(message) {
+            const errorBanner = document.getElementById('connectionError');
+            errorBanner.textContent = `Connection failed: ${message}`;
+            errorBanner.hidden = false;
+        }
 
         // Validate that a redirect URL belongs to a trusted domain
         function isValidRedirectUrl(url) {
@@ -2240,15 +2263,23 @@
 
         // Handle OAuth callback
         async function handleOAuthCallback() {
-            const urlParams = new URLSearchParams(window.location.search);
+            const callbackUrl = new URL(window.location.href);
+            const urlParams = callbackUrl.searchParams;
             const session = urlParams.get('session');
             const userParam = urlParams.get('user');
             const code = urlParams.get('code');
             const state = urlParams.get('state');
             const error = urlParams.get('error');
 
+            if (error) {
+                showConnectionError(error);
+                urlParams.delete('error');
+                window.history.replaceState({}, document.title, callbackUrl.pathname + callbackUrl.search + callbackUrl.hash);
+                return;
+            }
+
             // Handle central G4F OAuth code (self-hosted OAuth server)
-            if ((code && state) || (error && window.G4FOAuth)) {
+            if (code && state && window.G4FOAuth) {
                 try {
                     const result = await window.G4FOAuth.handleCallback(G4F_OAUTH_REDIRECT);
                     if (result) {
@@ -2281,12 +2312,6 @@
                     showToastFormat('Authentication failed: {0}', 'error', e.message);
                     return;
                 }
-            }
-
-            if (error) {
-                showToastFormat('Authentication failed: {0}', 'error', error);
-                window.history.replaceState({}, document.title, window.location.pathname);
-                return;
             }
 
             // Handle worker OAuth callback (session from redirect)

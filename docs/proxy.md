@@ -21,7 +21,7 @@ This is a Cloudflare Worker script functioning as a proxy server for various AI 
 ### 1. API Endpoint Handling
 The server handles various routes:
 - `/api/[provider]/` - API calls for specific providers
-- `/ai/[query]` - Simplified AI query interface
+- `/ai/audio/[text]` - Text-to-speech powered by Pollinations (`model`, `voice`, `response_format` query parameters). Anonymous callers are gated by baked cake credits; text is limited to 4096 characters.
 - `/media/`, `/files/`, `/search/` - Media and file handling
 - `/dist/` - Static content
 - `/backend-api/` - Backend API routes
@@ -85,7 +85,7 @@ Caching mechanism for repeated requests.
 ## Special Features
 - **Auto-Model Selection**: Random provider selection
 - **JSON response formatting**: Automatic JSON formatting
-- **Audio support**: Text-to-Speech integration
+- **Audio support**: Text-to-speech via Pollinations at `/ai/audio/[text]`
 - **Image Generation**: Pollinations.ai integration
 - **Documentation Generation**: Dynamic docs creation
 

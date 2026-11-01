@@ -74,6 +74,7 @@ class UpstashKv {
   constructor(url, token) {
     this.url = url.replace(/\/$/, "");
     this.token = token;
+    this.lastError = null;
   }
   async command(args) {
     const res = await fetch(this.url, {
@@ -87,12 +88,26 @@ class UpstashKv {
     if (!res.ok) {
       throw new Error(`Upstash ${res.status}: ${await res.text()}`);
     }
+    this.lastError = null;
     return (await res.json()).result;
+  }
+  /** Lightweight reachability probe used by /challenge/health and before
+   *  issuing challenges. */
+  async health() {
+    try {
+      await this.command(["PING"]);
+      return { ok: true };
+    } catch (e) {
+      this.lastError = String(e);
+      console.error("KV health check failed:", e);
+      return { ok: false, error: this.lastError };
+    }
   }
   async get(key) {
     try {
       return await this.command(["GET", key]);
     } catch (e) {
+      this.lastError = String(e);
       console.error("KV get failed:", e);
       return null;
     }
@@ -105,6 +120,7 @@ class UpstashKv {
     try {
       await this.command(args);
     } catch (e) {
+      this.lastError = String(e);
       console.error("KV put failed:", e);
     }
   }
@@ -112,6 +128,7 @@ class UpstashKv {
     try {
       await this.command(["DEL", key]);
     } catch (e) {
+      this.lastError = String(e);
       console.error("KV delete failed:", e);
     }
   }
@@ -130,6 +147,7 @@ class UpstashKv {
         ...(cursor !== "0" ? { cursor } : {}),
       };
     } catch (e) {
+      this.lastError = String(e);
       console.error("KV list failed:", e);
       return { keys: [], list_complete: true };
     }
@@ -203,6 +221,45 @@ class BlobKv {
       console.error("Blob KV delete failed:", e);
     }
   }
+  /** List blob paths (used by the translation fallback). Vercel Blob pages
+   *  with an opaque cursor, mirroring the Cloudflare KV list shape. */
+  async list(options = {}) {
+    const prefix = options.prefix || "";
+    const limit = Math.min(Math.max(Number(options.limit) || 1000, 1), 1000);
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (prefix) params.set("prefix", prefix);
+    if (options.cursor) params.set("cursor", options.cursor);
+    try {
+      const res = await fetch(`${this.base}?${params.toString()}`, {
+        headers: { "Authorization": `Bearer ${this.token}` }
+      });
+      if (!res.ok) throw new Error(`Blob ${res.status}: ${await res.text()}`);
+      const data = await res.json();
+      return {
+        keys: (data.blobs || []).map((blob) => ({
+          // Blob pathnames may carry the percent-encoding used for the URL.
+          name: decodeURIComponent(String(blob.pathname || "").replace(/^\/+/, "")),
+        })),
+        list_complete: !data.hasMore,
+        ...(data.cursor ? { cursor: data.cursor } : {}),
+      };
+    } catch (e) {
+      console.error("Blob KV list failed:", e);
+      return { keys: [], list_complete: true };
+    }
+  }
+  async health() {
+    try {
+      const res = await fetch(`${this.base}?limit=1`, {
+        headers: { "Authorization": `Bearer ${this.token}` }
+      });
+      if (!res.ok) throw new Error(`Blob ${res.status}: ${await res.text()}`);
+      return { ok: true };
+    } catch (e) {
+      console.error("Blob KV health check failed:", e);
+      return { ok: false, error: String(e) };
+    }
+  }
 }
 
 function buildEnv() {
@@ -222,8 +279,10 @@ function buildEnv() {
   // CAKE_KV_KV_REST_API_READ_ONLY_TOKEN). We detect any *_KV_REST_API_URL
   // and use its matching token, preferring read-write over read-only.
   // Plain UPSTASH_REDIS_REST_URL/TOKEN and unprefixed KV_REST_API_* are
-  // also accepted. Vercel Blob (BLOB_READ_WRITE_TOKEN) is the last resort;
-  // its ledger is store-local and NOT shared with the Cloudflare cake worker.
+  // also accepted. Vercel Blob (BLOB_READ_WRITE_TOKEN) is used for the
+  // translation mirror even when Upstash is the primary KV, and becomes the
+  // primary only when no Upstash pair is configured. A Blob-only ledger is
+  // store-local and NOT shared with the Cloudflare cake worker.
   const upstashCandidates = [];
   for (const [name, value] of Object.entries(process.env)) {
     const match = name.match(/^(.*)_KV_REST_API_URL$/);
@@ -250,13 +309,23 @@ function buildEnv() {
   // Prefer read-write bindings, then the store literally named for this use.
   upstashCandidates.sort((a, b) => (b.readWrite - a.readWrite) || (b.source < a.source ? -1 : 1));
   const upstash = upstashCandidates[0];
+  const blob = process.env.BLOB_READ_WRITE_TOKEN
+    ? new BlobKv(process.env.BLOB_READ_WRITE_TOKEN)
+    : null;
   if (upstash && upstash.token) {
     env.CAKE_KV = new UpstashKv(upstash.url, upstash.token);
     // Non-secret diagnostic for /challenge/health: which variable pair backed
     // the binding (values are never exposed).
     env.CHALLENGE_KV_SOURCE = upstash.source;
-  } else if (process.env.BLOB_READ_WRITE_TOKEN) {
-    env.CAKE_KV = new BlobKv(process.env.BLOB_READ_WRITE_TOKEN);
+    // Keep a Blob copy of the community translations. Challenge state stays
+    // in Upstash only: if it is offline, issue/solve/redeem are paused, but
+    // the UI can still read translations from this mirror.
+    if (blob) {
+      env.CHALLENGE_TRANSLATIONS_KV = blob;
+      env.CHALLENGE_TRANSLATIONS_SOURCE = "blob";
+    }
+  } else if (blob) {
+    env.CAKE_KV = blob;
     env.CHALLENGE_KV_SOURCE = "blob";
   }
   return env;

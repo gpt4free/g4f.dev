@@ -442,7 +442,7 @@
 <p>The server handles various routes:</p>
 <ul>
 <li><code class="notranslate">/api/[provider]/</code> - API calls for specific providers</li>
-<li><code class="notranslate">/ai/[query]</code> - Simplified AI query interface</li>
+<li><code class="notranslate">/ai/audio/[text]</code> - Text-to-speech powered by Pollinations (<code class="notranslate">model</code>, <code class="notranslate">voice</code>, <code class="notranslate">response_format</code> query parameters). Anonymous callers are gated by baked cake credits; text is limited to 4096 characters.</li>
 <li><code class="notranslate">/media/</code>, <code class="notranslate">/files/</code>, <code class="notranslate">/search/</code> - Media and file handling</li>
 <li><code class="notranslate">/dist/</code> - Static content</li>
 <li><code class="notranslate">/backend-api/</code> - Backend API routes</li>
@@ -504,7 +504,7 @@
 <ul>
 <li><strong>Auto-Model Selection</strong>: Random provider selection</li>
 <li><strong>JSON response formatting</strong>: Automatic JSON formatting</li>
-<li><strong>Audio support</strong>: Text-to-Speech integration</li>
+<li><strong>Audio support</strong>: Text-to-speech via Pollinations at <code class="notranslate">/ai/audio/[text]</code></li>
 <li><strong>Image Generation</strong>: Pollinations.ai integration</li>
 <li><strong>Documentation Generation</strong>: Dynamic docs creation</li>
 </ul>

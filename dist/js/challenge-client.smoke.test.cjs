@@ -403,6 +403,60 @@ function check(name, cond) {
     const afterClear = await res.json();
     check("cleared language store is empty", afterClear.count === 0 && Object.keys(afterClear.translations).length === 0);
 
+    // ---- KV outage detection + Blob translation mirror --------------------
+    console.log("\nchallenge-worker KV outage / Blob fallback smoke test");
+    const downKv = {
+        async get() { throw new Error("Upstash 503: unavailable"); },
+        async put() { throw new Error("Upstash 503: unavailable"); },
+        async delete() { throw new Error("Upstash 503: unavailable"); },
+        async list() { throw new Error("Upstash 503: unavailable"); },
+    };
+    const offlineEnv = { ...env, CAKE_KV: downKv, CHALLENGE_TRANSLATIONS_KV: undefined };
+    res = await worker.fetch(makeRequest("https://g4f.dev/challenge/health"), offlineEnv, {});
+    check("health reports offline KV", res.status === 503);
+    const offlineHealth = await res.json();
+    check("health marks kv_ok false", offlineHealth.ok === false && offlineHealth.kv_ok === false);
+    res = await worker.fetch(makeRequest("https://g4f.dev/challenge/issue?lang=de-DE&kind=followup"), offlineEnv, {});
+    check("issue paused when KV offline", res.status === 503);
+    check("issue returns kv_unavailable", (await res.json()).error === "kv_unavailable");
+    res = await worker.fetch(makeRequest("https://g4f.dev/challenge/solve", "POST", {}), offlineEnv, {});
+    check("solve paused when KV offline", res.status === 503);
+
+    // The translation mirror stays readable while Upstash is down.
+    const mirrorReadKv = makeKv();
+    await mirrorReadKv.put("challenge:translations:xx", JSON.stringify({ "Hallo": "Hello" }));
+    const mirrorReadEnv = { ...env, CAKE_KV: downKv, CHALLENGE_TRANSLATIONS_KV: mirrorReadKv };
+    res = await worker.fetch(makeRequest("https://g4f.dev/challenge/translations?lang=xx"), mirrorReadEnv, {});
+    check("translations fall back to Blob", res.status === 200);
+    const mirrorServed = await res.json();
+    check("Blob fallback translations served", mirrorServed.translations.Hallo === "Hello");
+
+    // Solved translations are written to both the primary KV and the mirror.
+    const writePrimary = makeKv();
+    const writeMirror = makeKv();
+    const writeEnv = { ...env, CAKE_KV: writePrimary, CHALLENGE_TRANSLATIONS_KV: writeMirror };
+    res = await worker.fetch(makeRequest("https://g4f.dev/challenge/issue?lang=pt-BR&kind=translations"), writeEnv, {});
+    const mirrorChallenge = await res.json();
+    const mirrorPayload = await vm.runInContext(
+        `${fromBase64UrlMatch[0]}\n${toBase64UrlMatch[0]}\n(async () => {\n${unsealMatch[0]}\n` +
+        `  return unsealPayload(${JSON.stringify(env.CHALLENGE_SECRET)}, ${JSON.stringify(mirrorChallenge.ciphertext)}, ${JSON.stringify(mirrorChallenge.iv)});\n})()`,
+        clientSandbox
+    );
+    const mirrorAnswer = { translations: {} };
+    mirrorPayload.items.forEach((text) => { mirrorAnswer.translations[text] = "PT: " + text; });
+    const mirrorSealed = await sealFn(mirrorAnswer);
+    res = await worker.fetch(
+        makeRequest("https://g4f.dev/challenge/solve", "POST", {
+            id: mirrorChallenge.id, ciphertext: mirrorSealed.ciphertext, iv: mirrorSealed.iv, language: "pt-BR",
+        }),
+        writeEnv, {}
+    );
+    check("mirror challenge solved", res.status === 200);
+    check("translations written to primary KV", writePrimary.store.has("challenge:translations:pt"));
+    check("translations written to Blob mirror", writeMirror.store.has("challenge:translations:pt"));
+    const mirrorStored = JSON.parse(writeMirror.store.get("challenge:translations:pt") || "{}");
+    check("Blob mirror contains solved translations", mirrorStored[mirrorPayload.items[0]] === "PT: " + mirrorPayload.items[0]);
+
     console.log(`\n${passed} passed, ${failed} failed`);
     process.exit(failed ? 1 : 0);
 })().catch((err) => {

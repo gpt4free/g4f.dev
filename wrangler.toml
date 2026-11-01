@@ -32,7 +32,12 @@ routes = [
   { pattern = "puter.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
   { pattern = "pollinations.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
   { pattern = "community.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
-  { pattern = "ollama.g4f.space", custom_domain = true, enabled = true, previews_enabled = false }
+  { pattern = "ollama.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
+  { pattern = "openrouter.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
+  { pattern = "groq.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
+  { pattern = "nvidia.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
+  { pattern = "huggingface.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
+  { pattern = "gemini.g4f.space", custom_domain = true, enabled = true, previews_enabled = false }
 ]
 
 # KV Namespace (shared with the auth/members worker for auth and server index)

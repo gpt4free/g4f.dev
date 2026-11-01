@@ -63,6 +63,9 @@
  *
  * Environment variables:
  *   CAKE_KV               — KV namespace binding (shared with cake-worker)
+ *   CHALLENGE_TRANSLATIONS_KV — optional translation mirror (Vercel: Blob).
+ *                           Translation writes go to both stores; reads fall
+ *                           back to the mirror when CAKE_KV is offline.
  *   CHALLENGE_SECRET      — AES-GCM key material (base64 or passphrase) for
  *                           sealing/unsealing challenges
  *   CHALLENGE_JWT_SECRET  — HMAC-SHA256 secret for signing the credit JWTs
@@ -461,6 +464,40 @@ async function addFollowups(env, language, topic, questions) {
 // KV helpers
 // ---------------------------------------------------------------------------
 
+/** Optional secondary KV used only for the community translation store.
+ *  The Vercel adapter points this at Blob storage so translations stay
+ *  readable even while the primary Upstash KV is down. */
+function translationFallbackKv(env) {
+    const fallback = env.CHALLENGE_TRANSLATIONS_KV;
+    if (!fallback || fallback === env.CAKE_KV) return null;
+    return fallback;
+}
+
+/** Probe the primary KV. Upstash exposes health() (a PING); Cloudflare KV
+ *  gets a read of a dedicated key. Returns { ok, configured, error? }. */
+async function checkKvHealth(env) {
+    if (!env.CAKE_KV || typeof env.CAKE_KV.get !== "function") {
+        return { ok: false, configured: false, error: "kv_unavailable" };
+    }
+    try {
+        if (typeof env.CAKE_KV.health === "function") {
+            const result = await env.CAKE_KV.health();
+            if (result && typeof result === "object") {
+                return { ...result, ok: result.ok !== false, configured: true };
+            }
+            return { ok: result !== false, configured: true };
+        }
+        await env.CAKE_KV.get("challenge:health");
+        return { ok: true, configured: true };
+    } catch (err) {
+        return {
+            ok: false,
+            configured: true,
+            error: String(err && err.message ? err.message : err),
+        };
+    }
+}
+
 async function getIssuedCount(env, ip) {
     const raw = await env.CAKE_KV.get(`challenge:rate:${ip}`);
     if (!raw) return 0;
@@ -536,12 +573,30 @@ function memoryCacheDelete(prefix) {
     }
 }
 
+/** Read the raw translation store from the primary KV, falling back to the
+ *  translation mirror (Blob) when the primary is missing or offline. */
+async function readTranslationRaw(env, language) {
+    const storeKey = `challenge:translations:${language}`;
+    let raw = null;
+    try {
+        raw = await env.CAKE_KV.get(storeKey);
+    } catch { /* primary is offline — try the mirror below */ }
+    if (raw !== null && raw !== undefined) return raw;
+    const fallback = translationFallbackKv(env);
+    if (fallback) {
+        try {
+            raw = await fallback.get(storeKey);
+        } catch { /* mirror unavailable too */ }
+    }
+    return raw;
+}
+
 /** Read a community translation store, memoized per isolate. */
 async function getTranslationStore(env, language) {
     const key = `translations:${language}`;
     const cached = memoryCacheGet(key);
     if (cached !== undefined) return cached;
-    const raw = await env.CAKE_KV.get(`challenge:translations:${language}`);
+    const raw = await readTranslationRaw(env, language);
     let store = {};
     try { store = raw ? JSON.parse(raw) : {}; } catch { /* fresh store */ }
     memoryCacheSet(key, store);
@@ -894,7 +949,7 @@ async function handleTranslationsSubmit(language, translations, env) {
 
     // Merge into the per-language community store.
     const storeKey = `challenge:translations:${language}`;
-    const raw = await env.CAKE_KV.get(storeKey);
+    const raw = await readTranslationRaw(env, language);
     let store = {};
     try { store = raw ? JSON.parse(raw) : {}; } catch { /* fresh store */ }
     let added = 0;
@@ -902,7 +957,11 @@ async function handleTranslationsSubmit(language, translations, env) {
         if (!store[source]) added += 1;
         store[source] = translated.trim();
     }
-    await env.CAKE_KV.put(storeKey, JSON.stringify(store), { expirationTtl: 86400 * 365 });
+    const serialized = JSON.stringify(store);
+    const targets = [env.CAKE_KV, translationFallbackKv(env)].filter(Boolean);
+    await Promise.allSettled(
+        targets.map((kv) => kv.put(storeKey, serialized, { expirationTtl: 86400 * 365 }))
+    );
     // The store changed — drop the memoized copies so the next read (and the
     // next /challenge/issue batch) sees the new translations immediately.
     memoryCacheDelete("translations:");
@@ -939,17 +998,31 @@ async function handleTranslationsGet(request, env) {
 /** List KV keys with a prefix via the KV list API. The Upstash shim
  *  implements list() with SCAN; stores without list support (e.g. the
  *  Vercel Blob shim) yield an empty list — callers degrade gracefully. */
-async function listKvKeys(env, prefix) {
-    if (!env.CAKE_KV || typeof env.CAKE_KV.list !== "function") return [];
+async function listKvKeys(env, prefix, kv = env.CAKE_KV) {
+    if (!kv || typeof kv.list !== "function") return [];
     const names = [];
     let cursor;
     try {
         do {
-            const page = await env.CAKE_KV.list(cursor ? { prefix, cursor } : { prefix });
+            const page = await kv.list(cursor ? { prefix, cursor } : { prefix });
             for (const key of page.keys || []) names.push(key.name);
             cursor = page.list_complete ? undefined : page.cursor;
         } while (cursor);
     } catch { /* listing is best-effort */ }
+    return names;
+}
+
+/** List translation-store keys from the primary KV plus the Blob mirror,
+ *  de-duplicated. Lets the admin/index endpoints keep working when the
+ *  primary is offline but the mirror is reachable. */
+async function listTranslationKeys(env, prefix) {
+    const names = await listKvKeys(env, prefix);
+    const fallback = translationFallbackKv(env);
+    if (fallback) {
+        for (const name of await listKvKeys(env, prefix, fallback)) {
+            if (!names.includes(name)) names.push(name);
+        }
+    }
     return names;
 }
 
@@ -963,7 +1036,7 @@ async function handleTranslationsLanguages(request, env) {
         return json(cached, 200, { "Cache-Control": CACHE_HEADERS.LANGUAGES }, request);
     }
     const prefix = "challenge:translations:";
-    const names = await listKvKeys(env, prefix);
+    const names = await listTranslationKeys(env, prefix);
     let total = null;
     try {
         await loadSnippets(env);
@@ -1018,11 +1091,12 @@ async function handleTranslationsDelete(request, env) {
     const url = new URL(request.url);
     const language = baseLanguage(url.searchParams.get("lang") || "");
     const prefix = "challenge:translations:";
-    const names = await listKvKeys(env, prefix);
+    const names = await listTranslationKeys(env, prefix);
     const deleted = [];
+    const targets = [env.CAKE_KV, translationFallbackKv(env)].filter(Boolean);
     for (const name of names) {
         if (language && name.slice(prefix.length) !== language) continue;
-        await env.CAKE_KV.delete(name);
+        await Promise.allSettled(targets.map((kv) => kv.delete(name)));
         deleted.push(name.slice(prefix.length));
     }
     memoryCacheDelete("translations:");
@@ -1051,13 +1125,13 @@ async function handleTranslationsCheck(request, env) {
         return json({ error: "snippets_unavailable", message: String(err) }, 503, {}, request);
     }
     const prefix = "challenge:translations:";
-    const names = (await listKvKeys(env, prefix))
+    const names = (await listTranslationKeys(env, prefix))
         .filter((name) => !language || name.slice(prefix.length) === language);
     const languages = [];
     let staleTotal = 0;
     for (const name of names) {
         const lang = name.slice(prefix.length);
-        const raw = await env.CAKE_KV.get(name);
+        const raw = await readTranslationRaw(env, lang);
         let store = {};
         try { store = raw ? JSON.parse(raw) : {}; } catch { /* skip broken store */ }
         const sources = Object.keys(store);
@@ -1069,7 +1143,11 @@ async function handleTranslationsCheck(request, env) {
                 if (!snippetsKeys.includes(source)) continue;
                 cleaned[source] = store[source];
             }
-            await env.CAKE_KV.put(name, JSON.stringify(cleaned), { expirationTtl: 86400 * 365 });
+            const serialized = JSON.stringify(cleaned);
+            const targets = [env.CAKE_KV, translationFallbackKv(env)].filter(Boolean);
+            await Promise.allSettled(
+                targets.map((kv) => kv.put(name, serialized, { expirationTtl: 86400 * 365 }))
+            );
             entry.removed = stale.length;
         }
         staleTotal += stale.length;
@@ -1153,12 +1231,27 @@ export default {
         }
 
         if (pathname === "/challenge/health") {
+            const kv = await checkKvHealth(env);
+            const fallback = translationFallbackKv(env);
+            let fallbackOk = false;
+            if (fallback) {
+                try {
+                    fallbackOk = typeof fallback.health === "function"
+                        ? (await fallback.health()).ok !== false
+                        : true;
+                } catch { fallbackOk = false; }
+            }
             return json({
-                ok: true,
+                ok: kv.ok,
                 service: "challenge-worker",
-                kv: Boolean(env.CAKE_KV),
+                kv: kv.configured,
+                kv_ok: kv.ok,
                 kv_source: env.CHALLENGE_KV_SOURCE || null,
-            }, 200, {}, request);
+                translations_fallback: Boolean(fallback),
+                translations_fallback_source: env.CHALLENGE_TRANSLATIONS_SOURCE || null,
+                translations_fallback_ok: fallbackOk,
+                ...(kv.error ? { error: "kv_unavailable", message: "Challenge storage is offline; challenges are paused." } : {}),
+            }, kv.ok ? 200 : 503, {}, request);
         }
 
         // Degrade gracefully when the KV binding is missing (e.g. the Upstash
@@ -1171,6 +1264,25 @@ export default {
                 {},
                 request
             );
+        }
+
+        // Upstash (or any KV backend) can be configured yet unreachable. A
+        // challenge issued while writes silently fail can never be solved, so
+        // pause the challenge lifecycle instead of handing out dead tasks.
+        // Translation reads still work through the Blob mirror below.
+        if (pathname === "/challenge/issue" || pathname === "/challenge/solve" || pathname === "/challenge/redeem") {
+            const kv = await checkKvHealth(env);
+            if (!kv.ok) {
+                return json(
+                    {
+                        error: "kv_unavailable",
+                        message: "Challenge storage is offline; challenges are paused.",
+                    },
+                    503,
+                    { "Retry-After": "60" },
+                    request
+                );
+            }
         }
 
         try {

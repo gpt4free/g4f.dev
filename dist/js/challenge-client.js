@@ -230,6 +230,29 @@
         return headers;
     }
 
+    /** Ask the worker whether its challenge storage is reachable. Returns
+     *  null when the health probe itself failed (network error), so callers
+     *  can fall back to the normal round/retry behaviour. */
+    async function checkChallengeHealth() {
+        try {
+            const res = await fetch(`${CHALLENGE_ENDPOINT}/health`, { cache: "no-store" });
+            const data = await res.json().catch(() => ({}));
+            return {
+                ok: res.ok && data.ok !== false && data.kv_ok !== false,
+                data,
+            };
+        } catch {
+            return null;
+        }
+    }
+
+    /** True when the worker reports its KV backend (Upstash) as offline. */
+    function isStorageOffline(status, data) {
+        if (Number(status) !== 503) return false;
+        const error = data && data.error;
+        return error === "kv_unavailable" || error === "challenges_unavailable";
+    }
+
     /** Extract the first JSON object from a model response (handles code fences). */
     function parseJsonLoose(text) {
         if (!text) return null;
@@ -284,7 +307,10 @@
             );
             if (!issueRes.ok) {
                 const err = await issueRes.json().catch(() => ({}));
-                throw Object.assign(new Error(err.error || `issue failed: ${issueRes.status}`), { status: issueRes.status });
+                throw Object.assign(
+                    new Error(err.error || `issue failed: ${issueRes.status}`),
+                    { status: issueRes.status, challengesPaused: isStorageOffline(issueRes.status, err) }
+                );
             }
             challenge = await issueRes.json();
             if (challenge.error !== "all_translated") break;
@@ -373,7 +399,10 @@
                 console.info("[G4FChallenge] answer already credited today; translations were kept");
                 return null;
             }
-            throw Object.assign(new Error(solveData.error || `solve failed: ${solveRes.status}`), { status: solveRes.status });
+            throw Object.assign(
+                new Error(solveData.error || `solve failed: ${solveRes.status}`),
+                { status: solveRes.status, challengesPaused: isStorageOffline(solveRes.status, solveData) }
+            );
         }
 
         if (!solveData.token) {
@@ -410,7 +439,10 @@
             break; // 4xx or retries exhausted — definitive
         }
         if (!redeemRes.ok || !redeemData.ok) {
-            throw Object.assign(new Error(redeemData.error || `redeem failed: ${redeemRes.status}`), { status: redeemRes.status });
+            throw Object.assign(
+                new Error(redeemData.error || `redeem failed: ${redeemRes.status}`),
+                { status: redeemRes.status, challengesPaused: isStorageOffline(redeemRes.status, redeemData) }
+            );
         }
 
         state.solved += 1;
@@ -455,6 +487,14 @@
             if (err.allTranslated) {
                 // Every language (own + donated) is fully translated.
                 console.info("[G4FChallenge] every language fully translated; stopping");
+                stop();
+                return;
+            }
+            if (err.challengesPaused) {
+                // Upstash (or the configured KV) is offline. Don't burn
+                // rounds or local-model time on challenges that cannot be
+                // stored or redeemed; wait for the operator / next reload.
+                console.info("[G4FChallenge] challenge storage offline; stopping challenges");
                 stop();
                 return;
             }
@@ -536,11 +576,16 @@
 
     if (!optedOut && (pathMatch || rootMatch || featureMatch)) {
         const boot = async () => {
-            if (await isSupported()) {
-                start();
-            } else {
+            if (!(await isSupported())) {
                 console.info("[G4FChallenge] no local model (LanguageModel / Bonsai WebGPU) — cake baker handles credits");
+                return;
             }
+            const health = await checkChallengeHealth();
+            if (health && !health.ok) {
+                console.info("[G4FChallenge] challenge storage offline; challenges paused");
+                return;
+            }
+            start();
         };
         if (document.readyState === "loading") {
             document.addEventListener("DOMContentLoaded", () => setTimeout(boot, 3000));

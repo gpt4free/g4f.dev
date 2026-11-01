@@ -83,7 +83,7 @@ async function set_conversation_title(conversation_id, title) {
         conversation.title = title;
     }
     delete conversation.share;
-    const new_id = sanitize(title, " ");
+    const new_id = sanitize(title, " ").replaceAll(" ", "_");
     const new_conv = await get_conversation(new_id);
     if (new_id && !new_conv) {
         await delete_conversation(conversation_id);
