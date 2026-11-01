@@ -39,10 +39,10 @@ jobs:
         run: git clone --depth 1 https://github.com/gpt4free/playground.git
       - name: Checkout documentation source
         run: |
-          # docs/ is the source of truth in gpt4free/gpt4free. Clone just the
+          # docs/ is the source of truth in xtekky/gpt4free. Clone just the
           # Markdown sources and the standard-library publisher.
           git clone --depth 1 --filter=blob:none --sparse \
-            https://github.com/gpt4free/gpt4free.git /tmp/gpt4free-docs
+            https://github.com/xtekky/gpt4free.git /tmp/gpt4free-docs
           git -C /tmp/gpt4free-docs sparse-checkout set docs tools
       - name: Refresh published docs
         run: |

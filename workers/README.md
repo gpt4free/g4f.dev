@@ -7,9 +7,9 @@ same time, either as path prefixes on the main host or on dedicated
 subdomains.
 
 The default deployment is a single Worker (`api`) with
-`workers/g4f-space-router.js` as its entry point. It imports all four modules
-and dispatches requests by host and path, so deploying from the repository root
-covers everything:
+`workers/g4f-space-router.js` as its entry point. It imports the API, auth,
+Puter, Pollinations, and Ollama modules and dispatches requests by host and
+path, so deploying from the repository root covers everything:
 
 ```bash
 npx wrangler deploy
@@ -20,12 +20,13 @@ The separate configs below are still used for split deployments.
 | Module | Source | Split config | Same-host route | Subdomain route |
 | --- | --- | --- | --- | --- |
 | API / OpenAI-compatible API | `api-worker.js` | `wrangler-custom.toml` | `g4f.space/*`, `api.g4f.space/*` | — |
+| Auth / members / secret store | `auth-worker.js` | `wrangler-members.toml` | `g4f.space/members/*`, `g4f.space/v1/secret/*` | `auth.g4f.space/*` |
 | Puter | `puter-worker.js` | `wrangler-puter.toml` | `g4f.space/api/puter/*` | `puter.g4f.space/*` |
 | Pollinations | `pollinations.js` | `wrangler-pollinations.toml` | `g4f.space/api/pollinations/*` | `pollinations.g4f.space/*` |
 | Pollinations community tier | `pollinations.js` | `wrangler-pollinations.toml` | `g4f.space/api/community/*` | `community.g4f.space/*` |
 | Ollama | `ollama.js` | `wrangler-ollama.toml` | `g4f.space/api/ollama/*` | `ollama.g4f.space/*` |
 
-Every public request goes through the API worker first. It authenticates the
+Every public API request goes through the API worker first. It authenticates the
 caller, applies API keys, rate limits, the anonymous credit gate, and usage
 tracking, and only then invokes the matching provider module. The router hands
 the provider modules to the API worker through `env.PROVIDER_WORKERS`, so
@@ -47,11 +48,14 @@ https://g4f.space/api/puter              API worker -> Puter module
 https://g4f.space/api/pollinations       API worker -> Pollinations module
 https://g4f.space/api/community          API worker -> Pollinations community tier
 https://g4f.space/api/ollama             API worker -> Ollama module
+https://g4f.space/members                Auth / members worker
+https://g4f.space/v1/secret              Auth / members worker
 
 https://puter.g4f.space                  API worker -> Puter module
 https://pollinations.g4f.space           API worker -> Pollinations module
 https://community.g4f.space              API worker -> Pollinations community tier
 https://ollama.g4f.space                 API worker -> Ollama module
+https://auth.g4f.space                   Auth / members worker
 ```
 
 ```bash
@@ -112,9 +116,9 @@ The JS client in `dist/js/` uses these paths through
    handles a missing binding gracefully.
 
 3. **Custom domains / DNS**: the root `wrangler.toml` attaches `g4f.space`,
-   `www`, `api`, `puter`, `pollinations`, and `ollama` as **custom domains**,
-   matching the existing g4f.space deployment. Wrangler creates the proxied
-   DNS records and certificates for those hostnames.
+   `www`, `api`, `auth`, `puter`, `pollinations`, and `ollama` as **custom
+   domains**, matching the existing g4f.space deployment. Wrangler creates the
+   proxied DNS records and certificates for those hostnames.
 
    If a hostname already has a conflicting proxied DNS record, either remove
    that record or use a path route with `zone_name = "g4f.space"` instead.
@@ -144,10 +148,10 @@ The JS client in `dist/js/` uses these paths through
    ```
 
    The root `wrangler.toml` points at `workers/g4f-space-router.js`, which
-   imports the API, Puter, Pollinations, and Ollama modules and dispatches by
-   host and path. One command deploys all four roles, and the configuration
-   has no `[assets]` section, so Wrangler no longer tries to upload the site
-   (which caused `Asset too large`).
+   imports the API, auth/members, Puter, Pollinations, and Ollama modules and
+   dispatches by host and path. One command deploys all roles, and the
+   configuration has no `[assets]` section, so Wrangler no longer tries to
+   upload the site (which caused `Asset too large`).
 
    Preview the bundle without uploading:
 
@@ -161,9 +165,9 @@ The JS client in `dist/js/` uses these paths through
 
 ## Split deployment
 
-The root `wrangler.toml` deploys one Worker that serves all four roles. If you
-need independent Workers (different limits, logs, or rollout cadence), deploy
-the configs in this directory instead:
+The root `wrangler.toml` deploys one Worker that serves all roles. If you need
+independent Workers (different limits, logs, or rollout cadence), deploy the
+configs in this directory instead:
 
 ```bash
 ./workers/deploy-g4f-space.sh --list
@@ -172,6 +176,8 @@ the configs in this directory instead:
 ./workers/deploy-g4f-space.sh pollinations
 ./workers/deploy-g4f-space.sh ollama
 ./workers/deploy-g4f-space.sh api
+# auth/members has its own config:
+wrangler deploy --config workers/wrangler-members.toml
 ```
 
 In split mode the provider routes (`g4f.space/api/puter/*`,

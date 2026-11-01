@@ -796,6 +796,13 @@ var USER_TIER_LIMITS = {
                             continue;
                         }
 
+                        // Repair missing lookup indexes (accounts created before
+                        // the index existed, or profiles without a username).
+                        const lookupChanged = await ensureUserLookupIndexes(env, user);
+                        if (lookupChanged) {
+                            await saveUser(env, user);
+                        }
+
                         const newTier = await calculateUserTier(user, contributors, sponsors);
 
                         if (user.tier !== newTier) {
@@ -1004,6 +1011,7 @@ var USER_TIER_LIMITS = {
     // Create or update user
     const user = await createOrUpdateUser(env, {
         provider: "github",
+        provider_id: githubUser.id,
         username: githubUser.login,
         name: githubUser.name || githubUser.login,
         email: primaryEmail,
@@ -1147,6 +1155,7 @@ var USER_TIER_LIMITS = {
     } else {
         user = await createOrUpdateUser(env, {
             provider: "discord",
+            provider_id: discordUser.id,
             username: discordUser.username,
             name: discordUser.global_name || discordUser.username,
             email: discordUser.email,
@@ -2656,10 +2665,15 @@ ${buttonsHtml}
     if (!profile || !profile.username) return { error: "Discord profile is incomplete" };
 
     const lookupKey = `user_lookup:discord:${profile.username}`;
-    const existingId = await env.MEMBERS_KV.get(lookupKey);
+    const idLookupKey = profile.id ? `user_lookup_id:discord:${profile.id}` : null;
+    const existingByUsername = await env.MEMBERS_KV.get(lookupKey);
+    const existingById = idLookupKey ? await env.MEMBERS_KV.get(idLookupKey) : null;
+    const existingId = existingByUsername || existingById;
     if (existingId && existingId !== user.id) {
       return { error: "This Discord account is already linked to another G4F account" };
     }
+
+    const previousUsername = user.provider === "discord" ? user.username : null;
 
     const now = new Date().toISOString();
     if (user.provider === "discord") {
@@ -2688,7 +2702,18 @@ ${buttonsHtml}
     }
     user.updated_at = now;
 
+    if (previousUsername && previousUsername !== profile.username) {
+      const oldKey = `user_lookup:discord:${previousUsername}`;
+      const oldValue = await env.MEMBERS_KV.get(oldKey);
+      if (oldValue === user.id) {
+        await env.MEMBERS_KV.delete(oldKey);
+      }
+    }
+
     await env.MEMBERS_KV.put(lookupKey, user.id);
+    if (profile.id) {
+        await env.MEMBERS_KV.put(`user_lookup_id:discord:${profile.id}`, user.id);
+    }
     await saveUser(env, user);
     return { user };
   }
@@ -2789,33 +2814,195 @@ ${buttonsHtml}
   // ============================================
   // User Management
   // ============================================
-  
+
+  function normalizeLookupValue(value) {
+    if (value === undefined || value === null) return "";
+    return String(value).trim();
+  }
+
+  /**
+   * Resolve the provider's stable account id from the login payload.
+   * Usernames can change (GitHub/Discord renames), so the id is the safer
+   * lookup key. Providers use different field names for the same concept.
+   */
+  function getUserProviderId(userData) {
+    if (!userData) return "";
+    const explicit = normalizeLookupValue(userData.provider_id ?? userData.providerId);
+    if (explicit) return explicit;
+
+    const byProvider = {
+      discord: [userData.discord_id, userData.discord && userData.discord.id],
+      github: [userData.github_id, userData.github && userData.github.id],
+      huggingface: [userData.huggingface_id, userData.huggingface && userData.huggingface.id],
+      airforce: [userData.airforce_id, userData.airforce && userData.airforce.id],
+      pollinations: [
+        userData.pollinations_id,
+        userData.pollinations && userData.pollinations.id,
+        userData.pollinations && userData.pollinations.sub
+      ]
+    };
+    const candidates = byProvider[userData.provider] || [];
+    for (const candidate of candidates) {
+      const value = normalizeLookupValue(candidate);
+      if (value) return value;
+    }
+    return "";
+  }
+
+  /**
+   * A stable username for providers that do not return one. Derived from the
+   * provider id (or email) so the same identity keeps finding its account.
+   */
+  function buildFallbackUsername(userData, provider, providerId) {
+    const basis = providerId ||
+      normalizeLookupValue(userData && userData.email) ||
+      normalizeLookupValue(userData && userData.name);
+    const safeBasis = (basis || generateUserId().slice(2))
+      .replace(/\s+/g, "-")
+      .replace(/[^\w.@+-]/g, "-")
+      .slice(0, 64);
+    return `${provider || "user"}-${safeBasis}`;
+  }
+
+  function userLookupKeys(provider, username, providerId) {
+    const keys = [];
+    if (provider && username) {
+      keys.push(`user_lookup:${provider}:${username}`);
+    }
+    if (provider && providerId) {
+      keys.push(`user_lookup_id:${provider}:${providerId}`);
+    }
+    return keys;
+  }
+
+  /**
+   * Repair lookup indexes for a stored user. Runs during the scheduled scan
+   * so accounts created before the index existed become reachable again.
+   * Only writes missing keys and never overwrites another user's index.
+   */
+  async function ensureUserLookupIndexes(env, user) {
+    if (!user || !user.id) return false;
+    const provider = normalizeLookupValue(user.provider);
+    const providerId = getUserProviderId(user);
+    let changed = false;
+
+    let username = normalizeLookupValue(user.username);
+    if (!username && provider) {
+      username = buildFallbackUsername(user, provider, providerId);
+      user.username = username;
+      changed = true;
+    }
+
+    for (const key of userLookupKeys(provider, username, providerId)) {
+      const existing = await env.MEMBERS_KV.get(key);
+      if (!existing) {
+        await env.MEMBERS_KV.put(key, user.id);
+      } else if (existing !== user.id) {
+        console.warn(`Lookup index collision for ${key}: keeping ${existing}`);
+      }
+    }
+    return changed;
+  }
+
+  /**
+   * Find a legacy user whose lookup index was never written (for example a
+   * provider profile without a username). Only used as a last resort, so the
+   * scoped R2 scan does not run for normal logins.
+   */
+  async function findUserByProviderIdentity(env, provider, providerId, email) {
+    if (!provider || (!providerId && !email)) return null;
+    const targetId = normalizeLookupValue(providerId);
+    const targetEmail = normalizeLookupValue(email).toLowerCase();
+    let listResult = await env.MEMBERS_BUCKET.list({ prefix: "users/", limit: 100 });
+
+    while (listResult && Array.isArray(listResult.objects)) {
+      for (const object of listResult.objects) {
+        if (!object.key.endsWith(".json")) continue;
+        const userObject = await env.MEMBERS_BUCKET.get(object.key);
+        if (!userObject) continue;
+        let candidate;
+        try {
+          candidate = await userObject.json();
+        } catch {
+          continue;
+        }
+        if (!candidate || candidate.provider !== provider) continue;
+
+        const candidateId = getUserProviderId(candidate);
+        if (targetId && candidateId && candidateId === targetId) return candidate;
+        if (targetEmail && normalizeLookupValue(candidate.email).toLowerCase() === targetEmail) {
+          return candidate;
+        }
+      }
+
+      if (!listResult.truncated || !listResult.cursor) break;
+      listResult = await env.MEMBERS_BUCKET.list({
+        prefix: "users/",
+        limit: 100,
+        cursor: listResult.cursor
+      });
+    }
+    return null;
+  }
+
   async function createOrUpdateUser(env, userData) {
-    // A missing username would collide accounts in the lookup index under
-    // "undefined" (e.g. Airforce profiles without a username). Existing
-    // users keep their stored username; new users get a unique fallback.
-    const hasUsername = !!(userData.username && String(userData.username).trim());
-    const lookupKey = hasUsername
-        ? `user_lookup:${userData.provider}:${userData.username}`
-        : null;
-    let userId = lookupKey ? await env.MEMBERS_KV.get(lookupKey) : null;
+    // A missing username used to skip the lookup entirely (and then store
+    // "undefined" as the index), so every login created a new account.
+    // Always derive a lookup username and prefer the stable provider id.
+    const provider = normalizeLookupValue(userData.provider);
+    const suppliedUsername = normalizeLookupValue(userData.username);
+    const providerId = getUserProviderId(userData);
+    const lookupUsername = suppliedUsername ||
+      buildFallbackUsername(userData, provider, providerId);
+
+    let userId = null;
+    for (const key of userLookupKeys(provider, lookupUsername, providerId)) {
+      const existingId = await env.MEMBERS_KV.get(key);
+      if (existingId) {
+        userId = existingId;
+        break;
+      }
+    }
 
     const now = new Date().toISOString();
     let user;
+    let previousUsername = "";
 
     if (userId) {
         // Update existing user
         user = await getUser(env, userId);
         if (user) {
-            const storedUsername = user.username;
-            user = { ...user, ...userData }
-            if (!hasUsername && storedUsername) {
+            const storedUsername = normalizeLookupValue(user.username);
+            previousUsername = storedUsername;
+            user = { ...user, ...userData };
+            if (!suppliedUsername && storedUsername) {
                 // Provider supplied no username — keep the stored one
                 user.username = storedUsername;
+            } else if (!normalizeLookupValue(user.username)) {
+                user.username = lookupUsername;
+            }
+            if (!user.provider_id && providerId) {
+                user.provider_id = providerId;
             }
             user.updated_at = now;
             user.last_login = now;
             // Tier is updated by scheduled handler, not on login
+        }
+    }
+
+    if (!user && !suppliedUsername) {
+        // Legacy records without a lookup index: recover by provider id/email
+        // instead of silently creating a duplicate account.
+        user = await findUserByProviderIdentity(env, provider, providerId, userData.email);
+        if (user) {
+            userId = user.id;
+            user = { ...user, ...userData };
+            user.username = normalizeLookupValue(user.username) || lookupUsername;
+            if (!user.provider_id && providerId) {
+                user.provider_id = providerId;
+            }
+            user.updated_at = now;
+            user.last_login = now;
         }
     }
 
@@ -2825,6 +3012,7 @@ ${buttonsHtml}
         user = {
             id: userId,
             ...userData,
+            username: suppliedUsername || lookupUsername,
             tier: "new",  // Tier is updated by scheduled handler
             secret: generateUserSecret(),  // Per-user secret for cross-device workspace sharing
             api_keys: [],
@@ -2839,6 +3027,9 @@ ${buttonsHtml}
                 last_reset: now
             }
         };
+        if (providerId) {
+            user.provider_id = providerId;
+        }
         // New member — record it in the recent-users index (newest first)
         // and drop the cached feed so the next request rebuilds it
         await pushRecentUserIndex(env, {
@@ -2856,9 +3047,25 @@ ${buttonsHtml}
         user.updated_at = now;
     }
 
-    // Store lookup index for this user (username is guaranteed non-empty
-    // by the fallbacks above)
-    await env.MEMBERS_KV.put(`user_lookup:${user.provider}:${user.username}`, user.id);
+    // Store the username and stable-id lookup indexes for this user.
+    const finalUsername = normalizeLookupValue(user.username) || lookupUsername;
+    const finalProviderId = getUserProviderId(user) || providerId;
+    const finalKeys = userLookupKeys(user.provider, finalUsername, finalProviderId);
+    for (const key of finalKeys) {
+        await env.MEMBERS_KV.put(key, user.id);
+    }
+
+    // Drop a stale username alias after a provider-side rename so it cannot
+    // point a future account with the old username at this user.
+    if (previousUsername && previousUsername !== finalUsername) {
+        const oldKey = `user_lookup:${user.provider}:${previousUsername}`;
+        if (!finalKeys.includes(oldKey)) {
+            const oldValue = await env.MEMBERS_KV.get(oldKey);
+            if (oldValue === user.id) {
+                await env.MEMBERS_KV.delete(oldKey);
+            }
+        }
+    }
 
     // Save user to R2 + refresh KV/memo caches (single write, was duplicated
     // on the secret-backfill path)
@@ -3199,13 +3406,23 @@ ${buttonsHtml}
     // Delete user data
     await env.MEMBERS_BUCKET.delete(`users/${user.id}.json`);
     await env.MEMBERS_KV.delete(`user:${user.id}`);
-    await env.MEMBERS_KV.delete(`user_lookup:${user.provider}:${user.username}`);
+
+    // Delete lookup indexes (username and stable provider id)
+    for (const key of userLookupKeys(user.provider, user.username, getUserProviderId(user))) {
+        await env.MEMBERS_KV.delete(key);
+    }
   
     // Delete lookups for any linked providers
     const linkedProviders = ["github", "discord", "huggingface", "airforce", "pollinations"];
     for (const provider of linkedProviders) {
-        if (user[provider] && user[provider].username) {
-            await env.MEMBERS_KV.delete(`user_lookup:${provider}:${user[provider].username}`);
+        if (user[provider]) {
+            const linked = user[provider];
+            for (const key of userLookupKeys(provider, linked.username, getUserProviderId({
+                ...linked,
+                provider
+            }))) {
+                await env.MEMBERS_KV.delete(key);
+            }
         }
     }
   
@@ -3262,10 +3479,17 @@ ${buttonsHtml}
         return jsonResponse({ error: `Provider ${provider} is not linked to your account` }, 400, getCorsHeaders(request));
     }
   
-    // Remove the provider link and its lookup index
+    // Remove the provider link and its lookup indexes
     const linkedData = user[provider];
-    if (linkedData && linkedData.username) {
-        await env.MEMBERS_KV.delete(`user_lookup:${provider}:${linkedData.username}`);
+    if (linkedData) {
+        const linkedIdentity = { ...linkedData, provider };
+        for (const key of userLookupKeys(
+            provider,
+            linkedData.username,
+            getUserProviderId(linkedIdentity)
+        )) {
+            await env.MEMBERS_KV.delete(key);
+        }
     }
     delete user[provider];
     user.updated_at = new Date().toISOString();
@@ -5230,3 +5454,11 @@ const body = await request.json().catch(() => ({}));
     }
     return jsonResponse({ deleted: true, id: conversationId }, 200, getCorsHeaders(request));
   }
+
+  // Exported for the worker smoke tests. Not used at runtime.
+  export const __test = {
+    createOrUpdateUser,
+    ensureUserLookupIndexes,
+    findUserByProviderIdentity,
+    getUserProviderId
+  };

@@ -1,36 +1,42 @@
 // g4f.space router Worker.
 //
 // This is the entry point used by `npx wrangler deploy` from the repository
-// root. It keeps the API worker, Puter worker, Pollinations worker and Ollama
-// worker in one Cloudflare Worker deployment so that a single command can
-// serve all of them:
+// root. It keeps the API worker, auth/members worker, Puter worker,
+// Pollinations worker and Ollama worker in one Cloudflare Worker deployment so
+// that a single command can serve all of them:
 //
 //   https://g4f.space/v1                     -> API worker
 //   https://g4f.space/api/puter/*            -> API worker -> Puter
 //   https://g4f.space/api/pollinations/*     -> API worker -> Pollinations
 //   https://g4f.space/api/community/*        -> API worker -> Pollinations (community tier)
 //   https://g4f.space/api/ollama/*           -> API worker -> Ollama
+//   https://g4f.space/members/*              -> auth/members worker
+//   https://g4f.space/v1/secret/*            -> auth/members worker
 //
 //   https://puter.g4f.space/*                -> API worker -> Puter
 //   https://pollinations.g4f.space/*         -> API worker -> Pollinations
 //   https://community.g4f.space/*            -> API worker -> Pollinations (community tier)
 //   https://ollama.g4f.space/*               -> API worker -> Ollama
+//   https://auth.g4f.space/*                 -> auth/members worker
 //
-// Every public request goes through the API worker first, so its auth, API-key
-// handling, rate limits, credit gate and usage tracking are applied before a
-// provider is called. The API worker invokes the provider modules directly via
-// the PROVIDER_WORKERS registry below (no network hop, no recursion).
+// Every public API request goes through the API worker first, so its auth,
+// API-key handling, rate limits, credit gate and usage tracking are applied
+// before a provider is called. The API worker invokes the provider modules
+// directly via the PROVIDER_WORKERS registry below (no network hop, no
+// recursion). The auth worker is called directly for member and encrypted
+// secret-store routes, which the API worker does not implement.
 //
 // Deploying this Worker does not upload the static site, which is what
 // previously triggered the "Asset too large" error from Wrangler's automatic
 // static-site detection.
 
 import apiWorker from "./api-worker.js";
+import authWorker from "./auth-worker.js";
 import puterWorker from "./puter-worker.js";
 import pollinationsWorker from "./pollinations.js";
 import ollamaWorker from "./ollama.js";
 
-const WORKER_VERSION = "2026-10-31-community-2";
+const WORKER_VERSION = "2026-11-01-auth-1";
 
 const PROVIDER_WORKERS = {
   puter: puterWorker,
@@ -46,6 +52,31 @@ const PROVIDERS = [
 ];
 
 const MAIN_HOSTS = new Set(["g4f.space", "www.g4f.space", "api.g4f.space"]);
+const AUTH_HOSTS = new Set(["auth.g4f.space"]);
+
+// The auth/members worker owns member management and the encrypted secret
+// conversation store. Dispatch these before the API worker so member routes
+// are not answered with the API's 404/API handling.
+function isAuthRequest(url) {
+  const path = url.pathname;
+  return AUTH_HOSTS.has(url.hostname.toLowerCase()) ||
+    path === "/members" ||
+    path.startsWith("/members/") ||
+    path === "/revoke" ||
+    path === "/v1/secret" ||
+    path.startsWith("/v1/secret/");
+}
+
+// Run auth requests on the canonical auth host so OAuth callbacks and cookies
+// use the same origin even when reached through g4f.space.
+function authRequest(request) {
+  const url = new URL(request.url);
+  if (!AUTH_HOSTS.has(url.hostname.toLowerCase())) {
+    url.hostname = "auth.g4f.space";
+    return new Request(url, request);
+  }
+  return request;
+}
 
 const LOOP_HEADER = "x-g4f-worker-hop";
 
@@ -122,7 +153,8 @@ function versionResponse(env) {
     worker: "g4f.space-router",
     version: WORKER_VERSION,
     providerWorkers: Object.keys(env.PROVIDER_WORKERS || PROVIDER_WORKERS),
-    hosts: ["g4f.space", "www.g4f.space", "api.g4f.space", "puter.g4f.space", "pollinations.g4f.space", "community.g4f.space", "ollama.g4f.space"]
+    workers: ["api", "auth", "puter", "pollinations", "ollama"],
+    hosts: ["g4f.space", "www.g4f.space", "api.g4f.space", "auth.g4f.space", "puter.g4f.space", "pollinations.g4f.space", "community.g4f.space", "ollama.g4f.space"]
   }, {
     headers: { "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" }
   });
@@ -150,6 +182,9 @@ export default {
       return loopResponse();
     }
     const host = url.hostname.toLowerCase();
+    if (isAuthRequest(url)) {
+      return withVersion(await authWorker.fetch(authRequest(request), env, ctx));
+    }
     const provider = PROVIDERS.find((entry) => entry.hosts.has(host));
     if (provider && !MAIN_HOSTS.has(host)) {
       return withVersion(await apiWorker.fetch(rewriteSubdomain(request, provider), apiEnv(env), ctx));
@@ -161,6 +196,9 @@ export default {
     const tasks = [];
     if (typeof apiWorker.scheduled === "function") {
       tasks.push(apiWorker.scheduled(event, apiEnv(env), ctx));
+    }
+    if (typeof authWorker.scheduled === "function") {
+      tasks.push(authWorker.scheduled(event, env, ctx));
     }
     if (typeof pollinationsWorker.scheduled === "function") {
       tasks.push(pollinationsWorker.scheduled(event, apiEnv(env), ctx));

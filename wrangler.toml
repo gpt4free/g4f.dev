@@ -5,7 +5,8 @@
 #   npx wrangler deploy
 #
 # from the repository root. It deploys ONE Worker (`api`) whose router entry
-# point dispatches to the API, Puter, Pollinations, and Ollama worker modules.
+# point dispatches to the API, auth/members, Puter, Pollinations, and Ollama
+# worker modules.
 # That avoids Wrangler's automatic static-site detection, which treated the
 # repository root as an assets directory and failed with:
 #
@@ -29,6 +30,7 @@ routes = [
   { pattern = "g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
   { pattern = "www.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
   { pattern = "api.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
+  { pattern = "auth.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
   { pattern = "puter.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
   { pattern = "pollinations.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
   { pattern = "community.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
