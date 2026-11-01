@@ -808,6 +808,8 @@ const renderMarkdown = (content) => {
             )
         }
         rendered = markdown.render(rendered)
+        .replace(/<table(\s[^>]*)?>/g, '<div class="markdown-table-scroll"><table$1>')
+        .replace(/<\/table>/g, '</table></div>')
         .replaceAll("<a href=", '<a target="_blank" href=')
         .replaceAll('<code>', '<code class="language-plaintext">')
         .replaceAll('<iframe src="', '<iframe frameborder="0" height="224" width="400" src="')
@@ -1033,8 +1035,15 @@ function chunkArray(array, chunkSize) {
 
 if (isG4fHost) {
     if (window.self === window.top) {
-        if (!document.body.classList.contains("noads")) {
-            includeAdsense().catch(e => add_error(`Adsense load failed:`, e));
+        const onLoaded = () => {
+            if (!document.body.classList.contains("noads")) {
+                includeAdsense().catch(e => add_error(`Adsense load failed:`, e));
+            }
+        }
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", onLoaded);
+        } else {
+            setTimeout(onLoaded, 10);
         }
     }
 }

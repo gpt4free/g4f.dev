@@ -893,11 +893,26 @@ button.options_button:hover,
 .message .content_inner table {
     display: block;
     overflow-x: auto;
+    min-width: 100%;
+    width: max-content;
     border-collapse: collapse;
     border: 1px solid var(--border-soft);
     border-radius: 10px;
     font-size: 13.5px;
     margin-bottom: 1em;
+}
+
+/* Markdown tables are wrapped by renderMarkdown() so wide tables scroll on
+   their own without forcing the whole message column to overflow. */
+.markdown-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 1em;
+}
+
+.markdown-table-scroll > table {
+    margin-bottom: 0;
 }
 
 .message .content_inner th,

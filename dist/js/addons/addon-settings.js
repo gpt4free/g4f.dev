@@ -246,6 +246,27 @@ function get_media_size(text) {
     return null;
 }
 
+function formatPriceValue(value) {
+    if (value === null || value === undefined || value === "") {
+        return "";
+    }
+    let text = String(value).trim();
+    // Provider price strings occasionally carry a multiplier-style suffix
+    // such as "x0000001"/"x0000000". It is metadata, not part of the price.
+    text = text.replace(/[x×]\s*0{5,}\d+\b/gi, "").trim();
+    const n = Number(text);
+    if (!Number.isFinite(n) || n <= 0) {
+        return "";
+    }
+    // Prices at or below 1e-6 would only add zero-noise to the token count
+    // (for example 0.0000001 or 0.0000000).
+    if (n < 0.000001) {
+        return "";
+    }
+    let formatted = n < 0.001 ? n.toFixed(7) : n.toFixed(3);
+    return formatted.replace(/0+$/, "").replace(/\.$/, "");
+}
+
 function count_words_and_tokens(text, model, completion_tokens, prompt_tokens, estimated_cost=null) {
     if (Array.isArray(text) || !text) {
         return "";
@@ -253,8 +274,10 @@ function count_words_and_tokens(text, model, completion_tokens, prompt_tokens, e
 
     let addEstimatedCost = "";
     if (estimated_cost !== null) {
-        addEstimatedCost = estimated_cost < 0.001 ? estimated_cost : estimated_cost.toFixed(3);
-        addEstimatedCost = `, ${String(addEstimatedCost).replace(/0+$/, "")}$`;
+        const price = formatPriceValue(estimated_cost);
+        if (price) {
+            addEstimatedCost = `, ${price}$`;
+        }
     }
     
     // Check if the message contains media (image/video)

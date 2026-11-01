@@ -505,7 +505,23 @@ body.liquid:not(.no-animations):not(.white) {
 
 /* Spacing after tables (same as paragraphs) */
 .message .content_inner table {
+    display: block;
+    overflow-x: auto;
+    min-width: 100%;
+    width: max-content;
     margin-bottom: 1em;
+}
+
+/* Wide markdown tables scroll inside their own wrapper. */
+.markdown-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 1em;
+}
+
+.markdown-table-scroll > table {
+    margin-bottom: 0;
 }
 
 /* Normalize heading spacing inside message content */

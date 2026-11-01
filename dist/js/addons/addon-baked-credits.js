@@ -34,9 +34,14 @@ function formatCakeCredits(cents, bakedToday) {
  *  >= $0.01 → two decimals, below → four decimals (e.g. $0.0019). */
 function formatCakeDollars(cents) {
     const dollars = (cents || 0) / 100;
-    return dollars > 0 && dollars < 0.01
-        ? `$${dollars.toFixed(4)}`
-        : `$${dollars.toFixed(2)}`;
+    if (!(dollars > 0)) return "$0.00";
+    // Never print long zero runs such as $0.0000 / $0.0000000 for tiny
+    // balances; a bound is shorter and clearer.
+    if (dollars < 0.0001) return "<$0.0001";
+    const formatted = dollars < 0.01
+        ? dollars.toFixed(4)
+        : dollars.toFixed(2);
+    return `$${formatted.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "")}`;
 }
 
 function updateCakeCredits(cents, bakedToday) {

@@ -49,6 +49,21 @@ async function getErrorMessage(response) {
     return text;
 }
 
+function applyCakeCostHeaders(headers, usage) {
+    if (!headers) return usage || {};
+    const cents = parseFloat(headers.get('x-cake-cost-cents') || '0');
+    const dollars = parseFloat(headers.get('x-cake-cost') || '0');
+    const value = Number.isFinite(dollars) && dollars > 0
+        ? dollars
+        : (Number.isFinite(cents) && cents > 0 ? cents / 100 : 0);
+    if (value > 0) {
+        usage = usage || {};
+        usage.cake_cost = value;
+        usage.cake_cost_cents = value * 100;
+    }
+    return usage;
+}
+
 function captureUserTierHeaders(headers, usage) {
     if (!headers) return;
     const limitRequests = headers.get('x-ratelimit-limit-requests');
@@ -336,6 +351,8 @@ class Client {
         if (response.headers.get('x-server')) {
             data.server = response.headers.get('x-server');
         }
+        // Consumed cake credits are reported separately from upstream usage.
+        applyCakeCostHeaders(response.headers, data.usage || (data.usage = {}));
         // Capture user tier info from headers
         captureUserTierHeaders(response.headers, data.usage);
         this.logCallback && this.logCallback({response: data, type: 'chat'});
@@ -368,6 +385,13 @@ class Client {
           } else {
             // Capture user tier info from headers
             captureUserTierHeaders(response.headers, usage);
+            // Some providers omit the final usage chunk. Surface the cake
+            // credit consumed for this request so the chat can still show a
+            // price next to the token count.
+            const cakeUsage = applyCakeCostHeaders(response.headers, { ...usage });
+            if (!usage.cake_cost && cakeUsage.cake_cost) {
+                yield { usage: cakeUsage };
+            }
             break;
           }
           for (const part of parts) {
@@ -376,7 +400,7 @@ class Client {
               if (part.startsWith('data: ')) {
                 const data = JSON.parse(part.slice(6));
                 if (data.usage) {
-                    usage = data.usage;
+                    usage = applyCakeCostHeaders(response.headers, data.usage);
                 }
                 if (data.choices === undefined) {
                     if (data.response) {
@@ -400,7 +424,7 @@ class Client {
               } else if (response.headers.get('Content-Type').startsWith('application/json')) {
                 const data = JSON.parse(part);
                 if (data.usage) {
-                    usage = data.usage;
+                    usage = applyCakeCostHeaders(response.headers, data.usage);
                 }
                 if (data.choices && data.choices[0]?.message) {
                     data.choices[0].delta = data.choices[0].message;
@@ -504,6 +528,7 @@ class Client {
                 data.usage = data.usage || {};
                 data.usage.pollen_cost = parseFloat(response.headers.get('x-pollen-cost'));
             }
+            applyCakeCostHeaders(response.headers, data.usage || (data.usage = {}));
             this.logCallback && this.logCallback({response: data, type: 'image'});
             if (data?.error?.message) {
                 throw new Error(`Image generation failed: ${data.error.message}`);

@@ -327,6 +327,22 @@ const apiExport = {};
     font-size: 11px;
     flex-shrink: 0;
 }
+.picker-provider .picker-provider-toggle {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--colour-3, #e8d8ff);
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 6px;
+    line-height: 1;
+    flex-shrink: 0;
+    font-size: 14px;
+}
+.picker-provider .picker-provider-toggle:hover {
+    background: var(--button-hover, rgba(255, 255, 255, 0.1));
+    color: var(--accent, #8b3dff);
+}
 .picker-models-list {
     display: flex;
     flex-direction: column;
@@ -684,10 +700,88 @@ const apiExport = {};
         // Check by value attribute (custom servers use value="custom:{id}", pa uses "pa:{id}")
         const cbByValue = document.querySelector(`input.provider[type="checkbox"][value="${providerName}"]`);
         if (cbByValue) return !cbByValue.checked;
+        // Live providers (and any provider without a settings checkbox) keep
+        // their enabled state in appStorage under Provider{name}.
+        if (typeof appStorage !== 'undefined') {
+            const stored = appStorage.getItem(`Provider${providerName}`);
+            if (stored === 'false') return true;
+            if (stored === 'true') return false;
+        }
         // Also check the <option> in the provider <select> — disabled attr means disabled
         const opt = document.querySelector(`#provider option[value="${providerName}"]`);
         if (opt && opt.disabled) return true;
         return false;
+    }
+
+    // Toggle a provider directly from the picker. This mirrors the
+    // settings checkbox handlers so the dropdown updates immediately.
+    function findProviderCheckbox(providerName) {
+        for (const id of [`Provider${providerName}`, `ProviderLive${providerName}`]) {
+            const cb = document.getElementById(id);
+            if (cb && cb.type === 'checkbox') return cb;
+        }
+        return document.querySelector(`input.provider[type="checkbox"][value="${providerName}"]`);
+    }
+
+    function setProviderEnabled(provider, enabled) {
+        const name = provider.name;
+        const checkbox = findProviderCheckbox(name);
+        if (checkbox) {
+            checkbox.checked = enabled;
+            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+        } else if (typeof appStorage !== 'undefined') {
+            const key = name.startsWith('custom:')
+                ? `enableCustomServer_${name.slice('custom:'.length)}`
+                : `Provider${name}`;
+            appStorage.setItem(key, enabled ? 'true' : 'false');
+        }
+        // Update the matching dropdown option(s) even when no settings
+        // checkbox exists (live providers, PA providers).
+        document.querySelectorAll('#provider option').forEach((opt) => {
+            const matches = opt.value === name
+                || opt.dataset.parent === name
+                || (name.startsWith('custom:') && opt.dataset.serverId === name.slice('custom:'.length));
+            if (matches) opt.disabled = !enabled;
+        });
+        provider.isDisabled = !enabled;
+    }
+
+    async function loadModelsForProvider(provider) {
+        if (provider.models.length > 0) return;
+        try {
+            if (provider.type === 'core') {
+                provider.models = normalizeModels(await fetchCoreProviderModels(provider.name), provider.name);
+            } else if (provider.type === 'live' || provider.type === 'custom') {
+                provider.models = normalizeModels(
+                    await fetchLiveProviderModels(provider.baseUrl || provider.backupUrl || provider.name),
+                    provider.name
+                );
+            }
+        } catch (e) {
+            console.warn('Picker: failed to load models for', provider.name, e);
+        }
+    }
+
+    async function toggleProvider(provider) {
+        const enabled = !!provider.isDisabled;
+        setProviderEnabled(provider, enabled);
+        if (enabled) {
+            await loadModelsForProvider(provider);
+            const all = state.providers.find(p => p.name === '__all__');
+            if (all && provider.models.length) {
+                const seen = new Set(all.models.map(m => `${m.provider}:${m.id}`));
+                for (const model of provider.models) {
+                    const key = `${model.provider}:${model.id}`;
+                    if (!seen.has(key)) all.models.push(model);
+                }
+            }
+        } else if (state.activeProvider === provider.name) {
+            state.activeProvider = '__all__';
+        }
+        renderProviders();
+        renderTags();
+        renderModels();
+        notify(`${provider.label}: ${enabled ? 'enabled' : 'disabled'}`, 'success');
     }
 
     // Fetch with timeout and retry.
@@ -981,10 +1075,13 @@ const apiExport = {};
                         if (!name || name === 'default' || seen.has(name)) continue;
                         seen.add(name);
                         const isDisabled = isProviderDisabled(name);
-                        if (isDisabled && !state.showHidden) continue;
+                        const isHidden = !!provider.hf_space;
+                        if (isHidden && !state.showHidden) continue;
                         // Build prefix emoji from provider attributes
                         const marker = coreProviderMarker(provider);
-                        let models = await fetchCoreProviderModels(name);
+                        let models = isDisabled && !state.showHidden
+                            ? []
+                            : await fetchCoreProviderModels(name);
                         models = normalizeModels(models, name);
                         state.providers.push({
                             name,
@@ -1033,9 +1130,11 @@ const apiExport = {};
                 seen.add(name);
                 const isHidden = !!config.is_hidden;
                 const isDisabled = isProviderDisabled(name);
-                if (isDisabled) continue;
+                if (isHidden && !state.showHidden) continue;
                 // Live providers fetch models on-demand via api('models', providerName)
-                let models = await fetchLiveProviderModels(config.backupUrl || config.baseUrl || name);
+                let models = isDisabled && !state.showHidden
+                    ? []
+                    : await fetchLiveProviderModels(config.backupUrl || config.baseUrl || name);
                 models = normalizeModels(models, name);
                 state.providers.push({
                     name,
@@ -1135,10 +1234,12 @@ const apiExport = {};
                 }
                 const isHidden = !!server.is_hidden;
                 const isDisabled = !isEnabled;
-                if (isDisabled && !state.showHidden) continue;
-                let models = await fetchLiveProviderModels(srvName);
+                if (isHidden && !state.showHidden) continue;
+                let models = isDisabled
+                    ? []
+                    : await fetchLiveProviderModels(srvName);
                 models = normalizeModels(models, srvName);
-                if (models.length === 0) continue;
+                if (models.length === 0 && !isDisabled) continue;
                 const label = server.label || server.id;
                 state.providers.push({
                     name: srvName,
@@ -1247,12 +1348,12 @@ const apiExport = {};
         const r = refs();
         if (!r.providersList) return;
         r.providersList.innerHTML = '';
-        // Filter out hidden/disabled providers unless showHidden is on.
+        // Hidden providers stay out of the list unless requested. Disabled
+        // providers remain visible so they can be re-enabled in one click.
         // "__all__" is always shown.
         const visible = state.providers.filter(p => {
             if (p.name === '__all__') return true;
-            if (p.isHidden || p.isDisabled) return state.showHidden;
-            return true;
+            return !p.isHidden || state.showHidden;
         });
         const sorted = [...visible].sort((a, b) => {
             if (a.name === '__all__') return -1;
@@ -1264,7 +1365,7 @@ const apiExport = {};
             empty.className = 'picker-empty';
             empty.textContent = state.showHidden
                 ? 'No providers loaded.'
-                : 'No visible providers. Enable "Show hidden" to see disabled/hidden ones.';
+                : 'No visible providers. Enable "Show hidden" to see hidden ones.';
             r.providersList.appendChild(empty);
             return;
         }
@@ -1278,18 +1379,27 @@ const apiExport = {};
             const dimBadge = (p.isHidden || p.isDisabled)
                 ? `<span class="picker-provider-dim-badge" title="${p.isHidden ? 'Hidden' : 'Disabled'}">${p.isHidden ? '⚫' : '⛔'}</span>`
                 : '';
+            const toggleTitle = p.isDisabled ? 'Enable provider' : 'Disable provider';
+            const toggleHtml = p.name === '__all__'
+                ? ''
+                : `<button class="picker-provider-toggle" type="button" title="${toggleTitle}" aria-label="${toggleTitle}" aria-pressed="${!p.isDisabled}"><i class="fa-solid ${p.isDisabled ? 'fa-toggle-off' : 'fa-toggle-on'}" aria-hidden="true"></i></button>`;
             div.innerHTML = `
                 ${markerHtml}
                 <span class="picker-provider-label">${escapeHtml(p.label)}</span>
                 ${p.tags ? `<span class="picker-provider-tags">${escapeHtml(p.tags)}</span>` : ''}
                 ${dimBadge}
                 ${count ? `<span class="picker-provider-count">${count}</span>` : ''}
+                ${toggleHtml}
             `;
             div.addEventListener('click', () => {
                 state.activeProvider = p.name;
                 renderProviders();
                 renderTags();
                 renderModels();
+            });
+            div.querySelector('.picker-provider-toggle')?.addEventListener('click', (event) => {
+                event.stopPropagation();
+                toggleProvider(p);
             });
             r.providersList.appendChild(div);
         }

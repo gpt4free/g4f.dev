@@ -71,12 +71,19 @@ function _num(v) {
     return Number.isFinite(n) ? n : 0;
 }
 
+function _trimPrice(value) {
+    return String(value).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+}
+
 function _formatCost(perMillion) {
     if (perMillion <= 0) return null;
-    if (perMillion < 0.01) return `$${perMillion.toFixed(4)}/M`;
-    if (perMillion < 1)    return `$${perMillion.toFixed(3)}/M`;
-    if (perMillion < 100)  return `$${perMillion.toFixed(2)}/M`;
-    return `$${perMillion.toFixed(1)}/M`;
+    // Avoid printing long zero runs (0.0000001 / 0.0000000). Sub-$0.0001
+    // prices are clearer as a "<" bound than as a mostly-zero number.
+    if (perMillion < 0.0001) return "<$0.0001/M";
+    if (perMillion < 0.01) return `$${_trimPrice(perMillion.toFixed(4))}/M`;
+    if (perMillion < 1)    return `$${_trimPrice(perMillion.toFixed(3))}/M`;
+    if (perMillion < 100)  return `$${_trimPrice(perMillion.toFixed(2))}/M`;
+    return `$${_trimPrice(perMillion.toFixed(1))}/M`;
 }
 
 // Blended per-1M-token cost for a typical 500-in / 500-out chat request
@@ -88,7 +95,12 @@ function _chatResult(inputPerToken, outputPerToken) {
 }
 
 function _imgResult(usdPerImage) {
-    const label = usdPerImage < 1 ? `$${usdPerImage.toFixed(4)}/img` : `$${usdPerImage.toFixed(2)}/img`;
+    if (!(usdPerImage > 0)) return null;
+    const label = usdPerImage < 0.0001
+        ? "<$0.0001/img"
+        : usdPerImage < 1
+            ? `$${_trimPrice(usdPerImage.toFixed(4))}/img`
+            : `$${_trimPrice(usdPerImage.toFixed(2))}/img`;
     return { per_million: usdPerImage, label };
 }
 
@@ -104,7 +116,7 @@ function _imageCost(p, flatRate) {
 function _videoCost(p) {
     const v = _num(p.completionVideoSeconds);
     if (v <= 0) return null;
-    const label = v < 1 ? `$${v.toFixed(3)}/s` : `$${v.toFixed(2)}/s`;
+    const label = v < 0.0001 ? "<$0.0001/s" : v < 1 ? `$${_trimPrice(v.toFixed(3))}/s` : `$${_trimPrice(v.toFixed(2))}/s`;
     return { per_million: v, label };
 }
 
@@ -113,7 +125,7 @@ function _audioCost(p) {
     const legacy = _num(p.completionAudioSeconds);
     const perSec = a > 0 ? a : legacy;
     if (perSec <= 0) return null;
-    const label = perSec < 1 ? `$${perSec.toFixed(4)}/s` : `$${perSec.toFixed(2)}/s`;
+    const label = perSec < 0.0001 ? "<$0.0001/s" : perSec < 1 ? `$${_trimPrice(perSec.toFixed(4))}/s` : `$${_trimPrice(perSec.toFixed(2))}/s`;
     return { per_million: perSec, label };
 }
 
@@ -136,7 +148,7 @@ function estimateModelCost(pricing, type, options = {}) {
     }
     if ("cents_per_input_chars" in p) {
         const usd = _num(p.cents_per_input_chars) / 100;
-        if (usd > 0) return { per_million: usd, label: `$${(usd * 1000).toFixed(4)}/1K chars` };
+        if (usd > 0) return { per_million: usd, label: `$${_trimPrice((usd * 1000).toFixed(4))}/1K chars` };
     }
 
     // --- Type-prioritised media pricing ---
@@ -205,7 +217,11 @@ function estimateModelCost(pricing, type, options = {}) {
     const requestCost = _num(p.request);
     if (requestCost > 0) {
         const unit = p.request_unit === "second" ? "s" : p.request_unit === "minute" ? "min" : "req";
-        const label = requestCost < 1 ? `$${requestCost.toFixed(4)}/${unit}` : `$${requestCost.toFixed(2)}/${unit}`;
+        const label = requestCost < 0.0001
+            ? `<$0.0001/${unit}`
+            : requestCost < 1
+                ? `$${_trimPrice(requestCost.toFixed(4))}/${unit}`
+                : `$${_trimPrice(requestCost.toFixed(2))}/${unit}`;
         return { per_million: requestCost, label };
     }
 
