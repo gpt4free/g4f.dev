@@ -50,6 +50,8 @@ jobs:
             --source /tmp/gpt4free-docs/docs \
             --target docs \
             --clean
+      - name: Build locale routes
+        run: node scripts/build-locales.mjs
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact

@@ -32,8 +32,8 @@
     },
     "gui-locales.md": {
       "html": "gui-locales.html",
-      "html_sha256": "ebda23d078b6c93e1ba33aa581ed6e6c744bf80838b0a03041c90b9fb24c3dbc",
-      "markdown_sha256": "6c55804ac61da208eabe2480002a16b3599cb0d6bc87353838c2eeab884ec04e"
+      "html_sha256": "97604676c81f69402ce9704c9d25629ce4fe2ca7638d246ab834eab5bba8ed88",
+      "markdown_sha256": "bdd7c1d145045823652c86b133de40bfaf6ad8274a9a6a345384ddeacaa71e22"
     },
     "qwen-sessions.md": {
       "html": "qwen-sessions.html",

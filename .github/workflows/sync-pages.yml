@@ -91,7 +91,20 @@ jobs:
             --source /tmp/gpt4free-docs/docs \
             --target docs \
             --clean
+
+          # The Pages mirror deploys this content with its own workflow, so
+          # generate the locale-prefixed routes here as well and commit them.
+          node scripts/build-locales.mjs
+
           git add -A
+          # Locale routes are gitignored in the source repo but must be part of
+          # the mirror commit for the mirror's deploy to publish them. Every
+          # generated route lives in a two-letter top-level directory.
+          for dir in [a-z][a-z]; do
+            if [ -d "$dir" ]; then
+              git add -f -- "$dir"
+            fi
+          done
           if git diff --cached --quiet; then
             echo "Mirror already up to date."
             exit 0

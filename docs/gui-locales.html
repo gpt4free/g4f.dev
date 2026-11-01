@@ -455,6 +455,26 @@ flow.</p></li></ul>
 Chat and playground content is mostly dynamic and relies on the runtime global
 translations. Static translations live in <code>g4f/gui/server/locale.py</code>; add a page
 to <code>PAGES</code> and <code>COPY</code> only when its visible copy can be translated.</p>
+<h2>Static GitHub Pages mirror</h2>
+<p>The public site at &lt;https://g4f.dev&gt; is statically hosted on GitHub Pages, so it
+cannot run the Flask middleware. <code>g4f.dev/scripts/build-locales.mjs</code> generates
+prefixed copies of every HTML page for each language in the community
+translation catalog (38 at the time of writing: <code>ar</code>, <code>bg</code>, <code>cs</code>, <code>da</code>, <code>de</code>,
+<code>el</code>, <code>es</code>, <code>et</code>, <code>fa</code>, <code>fi</code>, <code>fr</code>, <code>he</code>, <code>hi</code>, <code>hr</code>, <code>hu</code>, <code>id</code>, <code>it</code>, <code>ja</code>,
+<code>kk</code>, <code>ko</code>, <code>nb</code>, <code>nl</code>, <code>pl</code>, <code>pt</code>, <code>ro</code>, <code>ru</code>, <code>sk</code>, <code>sl</code>, <code>sq</code>, <code>sr</code>, <code>sv</code>,
+<code>th</code>, <code>tr</code>, <code>uk</code>, <code>ur</code>, <code>uz</code>, <code>vi</code>, <code>zh</code>). This is broader than the GUI, which
+serves only <code>en</code>, <code>es</code>, <code>fr</code>, and <code>de</code>. Examples are <code>/fr/chat/</code>,
+<code>/ja/chat/</code>, and <code>/pt/docs/</code>.</p>
+<p>Each copy gets the locale <code>lang</code> attribute (<code>dir=&quot;rtl&quot;</code> for Arabic, Persian,
+Hebrew, and Urdu), a <code>&lt;base&gt;</code> pointing at the original page directory (so
+relative assets and manifests keep working without duplicating them), canonical
+and <code>hreflang</code> alternates for every generated language, and the same runtime
+translation bootstrap used by the GUI. Unprefixed URLs stay canonical for
+English, and <code>/en/...</code> is not generated; selecting English from a locale page
+returns to the unprefixed path.</p>
+<p>The GitHub Pages workflows run the generator before uploading the artifact, and
+the mirror sync commits the generated routes (they are gitignored in the source
+repository) so the mirror's own deploy publishes them.</p>
 <p><code>GET /headers</code> returns request headers as JSON with common authentication and
 secret header names redacted. <code>GET /country-ip</code> returns
 <code>{&quot;ip&quot;: ..., &quot;country&quot;: ...}</code>. IP is the web server's <code>remote_addr</code>, not a

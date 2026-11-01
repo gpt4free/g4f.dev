@@ -37,6 +37,7 @@ The automatic pipeline lives in the `gpt4free` checkout. Configure it there in
 | `api/` | Static API metadata and hosted endpoint helpers |
 | `apps/` | Companion web apps and demos |
 | `scripts/check-js.mjs` | JavaScript syntax check used by CI |
+| `scripts/build-locales.mjs` | Generates static locale routes (all community translation languages) for GitHub Pages |
 | `.github/workflows/static.yml` | GitHub Pages build/deploy workflow |
 
 ## Commands
