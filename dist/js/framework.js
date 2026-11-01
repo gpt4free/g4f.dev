@@ -1033,7 +1033,7 @@ function chunkArray(array, chunkSize) {
 
 if (window.location.origin === G4F_HOST || window.location.origin.endsWith(G4F_WILDCARD)) {
     if (window.self === window.top) {
-        if (!document.body.classList.contains("noadds")) {
+        if (!document.body.classList.contains("noads")) {
             includeAdsense().catch(e => add_error(`Adsense load failed: ${e}`, e));
         }
     }
