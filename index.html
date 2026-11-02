@@ -2087,6 +2087,12 @@
             const recButtonEl = document.getElementById('downloadRecButton');
             let latestRelease = null;
 
+            function translateDownload(text) {
+                return window.framework && typeof window.framework.translate === 'function'
+                    ? window.framework.translate(text, false)
+                    : text;
+            }
+
             const downloadCopy = {
                 windows: {
                     icon: '🪟',
@@ -2196,10 +2202,10 @@
                     : null;
 
                 recIconEl.textContent = copy.icon;
-                recKickerEl.textContent = copy.kicker;
-                recTitleEl.textContent = copy.title;
-                recDescEl.textContent = copy.desc;
-                recButtonEl.textContent = copy.button + (target.os === 'ios' ? '' : ' ↗');
+                recKickerEl.textContent = translateDownload(copy.kicker);
+                recTitleEl.textContent = translateDownload(copy.title);
+                recDescEl.textContent = translateDownload(copy.desc);
+                recButtonEl.textContent = translateDownload(copy.button) + (target.os === 'ios' ? '' : ' ↗');
 
                 if (target.os === 'ios') {
                     recButtonEl.href = '/chat/';
@@ -2212,7 +2218,8 @@
                 }
 
                 if (latestRelease) {
-                    downloadReleaseEl.textContent = `Latest release ${latestRelease.tag_name} · g4f-go + Android app`;
+                    downloadReleaseEl.textContent = translateDownload('Latest release {0} · g4f-go + Android app')
+                        .replace('{0}', latestRelease.tag_name);
                 }
             }
 

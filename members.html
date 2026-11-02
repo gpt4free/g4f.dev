@@ -1322,8 +1322,7 @@
             
             <div class="login-buttons">
                 <button class="oauth-btn g4f" id="redirectLoginG4f">
-                    🔮
-                    Sign in with G4F Account
+                    🔮 Sign in with G4F Account
                 </button>
             </div>
         </section>
@@ -1335,8 +1334,7 @@
             
             <div class="login-buttons">
                 <button class="oauth-btn g4f" id="loginG4f">
-                    🔮
-                    Sign in with G4F Account
+                    🔮 Sign in with G4F Account
                 </button>
             </div>
             
@@ -2333,7 +2331,11 @@
             if (error) {
                 showConnectionError(error);
                 urlParams.delete('error');
-                window.history.replaceState({}, document.title, callbackUrl.pathname + callbackUrl.search + callbackUrl.hash);
+                // Absolute origin: auth.g4f.space injects a g4f.dev <base>.
+                window.history.replaceState(
+                    {}, document.title,
+                    callbackUrl.origin + callbackUrl.pathname + callbackUrl.search + callbackUrl.hash
+                );
                 return;
             }
 
@@ -2404,7 +2406,11 @@
                         }
                     }
                     showToastFormat('Successfully signed in with {0}!', 'success', user.provider);
-                    window.history.replaceState({}, document.title, window.location.pathname);
+                    // Keep the current origin; auth.g4f.space has a g4f.dev <base>.
+                    window.history.replaceState(
+                        {}, document.title,
+                        window.location.origin + window.location.pathname
+                    );
                     showDashboard(user);
                     return;
                 } catch (e) {

@@ -219,10 +219,16 @@
         } finally {
             removeFlowItem(VERIFIER_KEY);
         }
-        // clean the URL (drop code/state)
+        // clean the URL (drop code/state). Use an absolute current-origin URL:
+        // auth.g4f.space serves this page with <base href="https://g4f.dev/">,
+        // so a path-relative URL would resolve to another origin and
+        // replaceState() would throw a SecurityError.
         url.searchParams.delete("code");
         url.searchParams.delete("state");
-        window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+        window.history.replaceState(
+            {}, document.title,
+            url.origin + url.pathname + url.search + url.hash
+        );
         callbackHandled = true;
         return {
             token: data.access_token,

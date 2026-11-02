@@ -34,7 +34,7 @@ jobs:
       - name: Check JS syntax
         run: node scripts/check-js.mjs
       - name: Run JS smoke tests
-        run: node dist/js/cake-baker.smoke.test.cjs && node dist/js/challenge-client.smoke.test.cjs && node --test dist/js/framework.smoke.test.cjs && node --test scripts/build-locales.test.mjs
+        run: node dist/js/cake-baker.smoke.test.cjs && node dist/js/challenge-client.smoke.test.cjs && node --test dist/js/framework.smoke.test.cjs && node --test dist/js/oauth-client.smoke.test.cjs && node --test scripts/build-locales.test.mjs
       - name: Clone Repository
         run: git clone --depth 1 https://github.com/gpt4free/playground.git
       - name: Checkout documentation source
