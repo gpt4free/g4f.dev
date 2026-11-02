@@ -423,7 +423,7 @@
         <main role="main" class="markdown-body entry-content" itemprop="text" itemscope itemtype="https://schema.org/TechArticle">
             <h1>Sandbox desktop</h1>
 <p>The sandbox desktop is a full Xfce session (TigerVNC + noVNC) with the g4f API
-and a one-click <strong>Install &amp; Open</strong> menu for coding agents, browsers, gateways,
+and a one-click menu for coding agents, browsers, gateways,
 local runtimes and assistants. Everything runs in one container and the API,
 the web desktop and the routed apps share a single published port.</p>
 <p>For the complete tool list and per-entry details, see
@@ -440,30 +440,33 @@ bin/start-sandbox-desktop.sh -d
 # Direct VNC:    127.0.0.1:5900</code></pre>
 <p>The script stores no state of its own. <code>docker compose</code> is used when available;
 pass <code>--no-compose</code> to use a direct <code>docker run</code> instead.</p>
-<h2>Standalone launcher (no checkout required)</h2>
-<p><a href="../sandbox-launcher/README.html"> 0 </a> builds a small standalone
-executable (<code>g4f-sandbox</code>) for Windows, Linux and macOS on amd64 and arm64. It
-requires only Docker or Podman and does not embed the image, so the download is
-a few MB and the image is pulled on demand.</p>
-<pre><code class="language-bash">g4f-sandbox                    # small API-only sandbox (latest-slim)
-g4f-sandbox --desktop          # full Xfce/VNC desktop, pulled on first use
-g4f-sandbox --desktop install chrome
-g4f-sandbox status
-g4f-sandbox down</code></pre>
+<h2>Sandbox launcher (<code>g4f-go sandbox</code>)</h2>
+<p>The <code>g4f-go</code> release binary includes the sandbox launcher. Download <code>g4f-go</code>
+for Windows, Linux, macOS or Termux (amd64/arm64); the <code>sandbox</code> subcommand
+requires only Docker, Podman or, on Termux/Android, udocker. It does not embed
+the image, so the download is a few MB and the image is pulled on demand.</p>
+<pre><code class="language-bash">g4f-go sandbox                    # small API-only sandbox (latest-slim)
+g4f-go sandbox --desktop          # full Xfce/VNC desktop, pulled on first use
+g4f-go sandbox --desktop install chrome
+g4f-go sandbox-cli list           # shorthand for `g4f-go sandbox --desktop cli`
+g4f-go sandbox status
+g4f-go sandbox down</code></pre>
 <ul><li><p><strong>API-only is the default.</strong> It uses the multi-arch <code>latest-slim</code> image and
 maps the API to <code>http://127.0.0.1:8080/</code>.</p></li><li><p><strong>The desktop image is opt-in.</strong> <code>--desktop</code> pulls
 <code>latest-sandbox-desktop</code> (linux/amd64 or linux/arm64, selected by Docker) and
 serves the desktop at <code>/desktop/</code>, with direct VNC on <code>5900</code>.</p></li><li><p><strong>Tools install on demand.</strong> The image ships the menu and <code>sandbox-cli</code>, not
-the individual tools. <code>g4f-sandbox --desktop install &lt;tool&gt;</code> installs one
-when it is first needed; <code>g4f-sandbox --desktop cli list</code> lists them.</p></li><li><p><strong>State is persistent</strong> under <code>~/.g4f-sandbox</code> (<code>--data-dir</code> to change it):
+the individual tools. <code>g4f-go sandbox --desktop install &lt;tool&gt;</code> installs one
+when it is first needed; <code>g4f-go sandbox --desktop cli list</code> lists them.</p></li><li><p><strong>State is persistent</strong> under <code>~/.g4f-sandbox</code> (<code>--data-dir</code> to change it):
 cookies and media in API mode, <code>.config</code>/<code>.local</code> in desktop mode.</p></li><li><p><code>--app-dir DIR</code> mounts a checkout at <code>/app/gpt4free</code>; <code>--port</code>,
 <code>--vnc-port</code>, <code>--bind</code>, <code>--api-key</code>, <code>--pull</code>, <code>--no-pull</code>, <code>--engine</code>,
-<code>--recreate</code> and <code>--no-open</code> mirror the start script where they overlap.</p></li><li><p><strong>Termux/Android</strong> is detected automatically. The launcher runs the API
-natively with Termux's Python (no Docker), installs <code>g4f[slim]</code> on first run,
-and manages the process with <code>up</code>, <code>down</code>, <code>status</code> and <code>logs</code>. The desktop
-mode still requires Docker/Podman.</p></li></ul>
-<p><code>g4f-go</code> embeds the same launcher (<code>g4f-go sandbox ...</code>) and adds
-<code>g4f-go sandbox-cli</code> for running <code>sandbox-cli</code> inside the desktop container.</p>
+<code>--recreate</code> and <code>--no-open</code> mirror the start script where they overlap.</p></li><li><p><strong>Termux/Android</strong> is detected automatically. <code>g4f-go sandbox</code> uses
+<a href="https://github.com/indigo-dc/udocker">udocker</a>, the user-space container
+runner, so the same slim and desktop images run without root or a Docker
+daemon. udocker is installed with pip and set up with <code>udocker install</code> on
+first use. The older native Termux Python backend remains available with
+<code>--backend termux</code> (API only). <code>G4F_SANDBOX_UDOCKER_DIR</code> moves the udocker
+root (default <code>~/.udocker</code>) and <code>G4F_SANDBOX_UDOCKER_EXECMODE</code> selects the
+execution mode (<code>P1</code>, <code>P2</code>, <code>F1</code>-<code>F4</code>, <code>R1</code>-<code>R3</code>, <code>S1</code>).</p></li></ul>
 <h3>Hosted Polli sandbox</h3>
 <p><code>g4f-go polli-sandbox --desktop</code> installs the Pollinations CLI locally, creates
 a hosted Polli (E2B) sandbox, and installs <code>g4f-go</code>, <code>sandbox-cli</code>, Xfce,
@@ -725,6 +728,9 @@ sandbox-cli list            list the known tools
 sandbox-cli settings        model, API key, HOME, provider and proxy
 sandbox-cli reset           clear the saved settings
 sandbox-cli package         show, update or pin the g4f package
+sandbox-cli update          update the g4f-go launcher itself
+sandbox-cli upgrade         update the g4f package in the runtime
+sandbox-cli uninstall       remove g4f-go and its managed data
 sandbox-cli urls            print the public URLs served by the API
 sandbox-cli hosts           print the /etc/hosts entries for the app domains
 sandbox-cli harness         pick a coding agent and a model from the g4f API
@@ -734,6 +740,12 @@ sandbox-cli polli-sandbox   create/connect/manage hosted Polli sandboxes</code><
 settings commands accept flags for scripting, for example
 <code>sandbox-cli settings --api-key &#x27;key&#x27; --model gpt-4o</code>,
 <code>sandbox-cli settings --show</code> and <code>sandbox-cli settings --json</code>.</p>
+<p>The launcher and its Python runtime are owned by <code>g4f-go</code>, so the management
+commands forward to it: <code>sandbox-cli update</code> updates the <code>g4f-go</code> binary
+(<code>--check</code> reports without installing, <code>--version &lt;tag&gt;</code> picks a release),
+<code>sandbox-cli upgrade</code> updates the g4f package in the runtime, and
+<code>sandbox-cli uninstall</code> removes the launcher and its managed runtime, browser
+and caches (<code>--keep-binary</code>, <code>--keep-data</code> and <code>--dry-run</code> are passed through).</p>
 <h2>Polli sandbox install</h2>
 <p>A Polli sandbox is a headless Debian VM (E2B) reached as <code>&lt;id&gt;.polli</code> over
 ssh. The menu can install itself there:</p>

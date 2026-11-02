@@ -466,12 +466,30 @@ translation catalog (38 at the time of writing: <code>ar</code>, <code>bg</code>
 serves only <code>en</code>, <code>es</code>, <code>fr</code>, and <code>de</code>. Examples are <code>/fr/chat/</code>,
 <code>/ja/chat/</code>, and <code>/pt/docs/</code>.</p>
 <p>Each copy gets the locale <code>lang</code> attribute (<code>dir=&quot;rtl&quot;</code> for Arabic, Persian,
-Hebrew, and Urdu), a <code>&lt;base&gt;</code> pointing at the original page directory (so
-relative assets and manifests keep working without duplicating them), canonical
-and <code>hreflang</code> alternates for every generated language, and the same runtime
-translation bootstrap used by the GUI. Unprefixed URLs stay canonical for
-English, and <code>/en/...</code> is not generated; selecting English from a locale page
-returns to the unprefixed path.</p>
+Hebrew, and Urdu), root-absolute locale-prefixed links (relative assets and
+manifests are rewritten at build time instead of relying on a <code>&lt;base&gt;</code>),
+canonical and <code>hreflang</code> alternates for every generated language, and the same
+runtime translation bootstrap used by the GUI. Before writing each page, the
+generator fetches the community translation package for that language and
+translates static text nodes plus visible attributes (<code>alt</code>, <code>title</code>,
+<code>placeholder</code>, <code>aria-label</code>, SEO <code>content</code>, and button values) at build time.
+That includes the document <code>&lt;title&gt;</code> and the SEO metadata (<code>description</code>,
+<code>keywords</code>, <code>og:title</code>, <code>og:description</code>, <code>twitter:title</code>, and
+<code>twitter:description</code>). The build also writes every English metadata string to
+<code>dist/js/snippets/meta.json</code>, so the community catalog can translate metadata
+the same way it translates UI copy. <code>og:url</code> and <code>og:locale</code> are rewritten to
+the current locale page instead of the English source URL. The runtime
+bootstrap then covers dynamic copy for all 38 API languages, not just the four
+languages the Flask GUI serves. Unprefixed URLs stay canonical for English, and
+<code>/en/...</code> is not generated; selecting English from a locale page returns to the
+unprefixed path.</p>
+<p>The build reads <code>https://beta.g4f.dev/challenge/translations?lang=&lt;lang&gt;</code> by
+default. Set <code>G4F_TRANSLATIONS_URL</code>, <code>--translations-url</code>, or
+<code>--translations-file</code> to use another source, or pass <code>--no-translations</code> for an
+offline build. A language whose package cannot be fetched is still generated
+and keeps the runtime bootstrap, so a temporary API outage never breaks the
+deployment. The language selection page lists every API language and links to
+the matching generated locale route.</p>
 <p>The GitHub Pages workflows run the generator before uploading the artifact, and
 the mirror sync commits the generated routes (they are gitignored in the source
 repository) so the mirror's own deploy publishes them.</p>

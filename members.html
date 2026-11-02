@@ -292,6 +292,10 @@
             gap: 0.5rem;
         }
 
+        .discord-steps[hidden] {
+            display: none;
+        }
+
         .discord-step {
             display: inline-flex;
             align-items: center;
@@ -1341,6 +1345,34 @@
             </p>
         </section>
 
+        <!-- Discord community banner (shown to logged-out visitors and members
+             who have not joined the support server yet) -->
+        <div class="discord-upgrade-banner" id="discordUpgradeBanner" hidden>
+            <div class="discord-banner-icon"><i class="fab fa-discord" aria-hidden="true"></i></div>
+            <div class="discord-banner-content">
+                <h2 id="discordUpgradeTitle">Unlock the Free tier instantly</h2>
+                <p id="discordUpgradeText">
+                    Connect Discord and join the G4F support server — we will verify your membership and upgrade your account right away.
+                </p>
+                <div class="discord-steps" id="discordUpgradeSteps">
+                    <span class="discord-step" data-step="connect"><i class="fas fa-circle" aria-hidden="true"></i> Connect Discord</span>
+                    <span class="discord-step" data-step="join"><i class="fas fa-circle" aria-hidden="true"></i> Join support server</span>
+                    <span class="discord-step" data-step="upgrade"><i class="fas fa-circle" aria-hidden="true"></i> Upgrade to Free</span>
+                </div>
+            </div>
+            <div class="discord-banner-actions">
+                <a class="btn-discord btn" id="discordConnectBtn" href="#" rel="noopener">
+                    <i class="fab fa-discord"></i> Connect Discord
+                </a>
+                <a class="btn btn-secondary" id="discordJoinBtn" href="https://discord.gg/qXA4Wf4Fsm" target="_blank" rel="noopener noreferrer">
+                    <i class="fas fa-arrow-up-right-from-square"></i> Join Support Server
+                </a>
+                <button class="btn" id="discordVerifyBtn" type="button">
+                    <i class="fas fa-check"></i> Verify &amp; Upgrade
+                </button>
+            </div>
+        </div>
+
         <!-- Dashboard Section (shown when logged in) -->
         <section class="dashboard" id="dashboard">
             <div class="welcome-header">
@@ -1353,32 +1385,6 @@
                 </button>
             </div>
 
-            <div class="discord-upgrade-banner" id="discordUpgradeBanner" hidden>
-                <div class="discord-banner-icon"><i class="fab fa-discord" aria-hidden="true"></i></div>
-                <div class="discord-banner-content">
-                    <h2>Unlock the Free tier instantly</h2>
-                    <p id="discordUpgradeText">
-                        Connect Discord and join the G4F support server — we'll verify your membership and upgrade your account right away.
-                    </p>
-                    <div class="discord-steps" id="discordUpgradeSteps">
-                        <span class="discord-step" data-step="connect"><i class="fas fa-circle" aria-hidden="true"></i> Connect Discord</span>
-                        <span class="discord-step" data-step="join"><i class="fas fa-circle" aria-hidden="true"></i> Join support server</span>
-                        <span class="discord-step" data-step="upgrade"><i class="fas fa-circle" aria-hidden="true"></i> Upgrade to Free</span>
-                    </div>
-                </div>
-                <div class="discord-banner-actions">
-                    <a class="btn-discord btn" id="discordConnectBtn" href="#" rel="noopener">
-                        <i class="fab fa-discord"></i> Connect Discord
-                    </a>
-                    <a class="btn btn-secondary" id="discordJoinBtn" href="https://discord.gg/qXA4Wf4Fsm" target="_blank" rel="noopener noreferrer">
-                        <i class="fas fa-arrow-up-right-from-square"></i> Join Support Server
-                    </a>
-                    <button class="btn" id="discordVerifyBtn" type="button">
-                        <i class="fas fa-check"></i> Verify &amp; Upgrade
-                    </button>
-                </div>
-            </div>
-            
             <div class="dashboard-grid">
                 <!-- Usage Stats Card -->
                 <div class="card">
@@ -1750,6 +1756,7 @@
         const scheduledDeletionNotice = document.getElementById('scheduledDeletionNotice');
         const deletionCountdownText = document.getElementById('deletionCountdownText');
         const discordUpgradeBanner = document.getElementById('discordUpgradeBanner');
+        const discordUpgradeTitle = document.getElementById('discordUpgradeTitle');
         const discordUpgradeText = document.getElementById('discordUpgradeText');
         const discordUpgradeSteps = document.getElementById('discordUpgradeSteps');
         const discordConnectBtn = document.getElementById('discordConnectBtn');
@@ -1935,6 +1942,9 @@
             redirectLoginSection.style.display = 'none';
             dashboard.classList.remove('active');
             navUserInfo.style.display = 'none';
+            // Visitors who have not signed in yet should still see the
+            // community banner and can join the Discord server right away.
+            void renderDiscordJoinBanner();
         }
 
         // Show dashboard
@@ -2547,12 +2557,49 @@
             return user.tier === 'new' || user.tier === 'anonymous' || !hasDiscordConnection(user);
         }
 
+        function canUpgradeDiscordTier(status) {
+            return !!status && (status.tier === 'new' || status.tier === 'anonymous');
+        }
+
+        function setDiscordVerifyLabel() {
+            if (!discordVerifyBtn) return;
+            const label = canUpgradeDiscordTier(discordMembership)
+                ? 'Verify & Upgrade'
+                : 'Verify Membership';
+            discordVerifyBtn.innerHTML = `<i class="fas fa-check"></i> ${framework.translate(label)}`;
+        }
+
+        // Visitors who are not signed in yet still see the community banner.
+        function renderDiscordJoinBanner() {
+            if (!discordUpgradeBanner) return;
+            discordMembership = null;
+            discordUpgradeBanner.hidden = false;
+            if (discordUpgradeTitle) {
+                discordUpgradeTitle.textContent = framework.translate('Join the G4F community');
+            }
+            discordUpgradeText.textContent = framework.translate('Join the G4F support server for help, tips and discussions. Sign in afterwards to verify your membership and unlock the Free tier.');
+            if (discordUpgradeSteps) {
+                discordUpgradeSteps.hidden = true;
+            }
+            discordConnectBtn.style.display = 'none';
+            discordVerifyBtn.style.display = 'none';
+            discordVerifyBtn.disabled = true;
+            if (discordJoinBtn) {
+                discordJoinBtn.href = DISCORD_INVITE_URL;
+                discordJoinBtn.style.display = '';
+            }
+        }
+
         function renderDiscordUpgradeBanner(user, status) {
             if (!discordUpgradeBanner) return;
             discordMembership = status || null;
 
+            // Keep the banner visible until the member has actually joined the
+            // support server, even when their tier is already above "new".
             const eligibleTier = isDiscordUpgradeEligible(user);
-            if (!status || !eligibleTier || status.can_upgrade === false) {
+            const shouldShow = !!status &&
+                (status.joined === false || (eligibleTier && status.can_upgrade !== false));
+            if (!shouldShow) {
                 discordUpgradeBanner.hidden = true;
                 return;
             }
@@ -2560,20 +2607,37 @@
             const connected = !!status.connected;
             const joined = !!status.joined;
             const reconnect = !!status.needs_reconnect;
+            const needsUpgrade = canUpgradeDiscordTier(status);
 
             discordUpgradeBanner.hidden = false;
+            if (discordUpgradeTitle) {
+                discordUpgradeTitle.textContent = framework.translate(needsUpgrade
+                    ? 'Unlock the Free tier instantly'
+                    : 'Join the G4F community');
+            }
+            if (discordUpgradeSteps) {
+                discordUpgradeSteps.hidden = false;
+            }
             discordStepDone('connect', connected && !reconnect);
             discordStepDone('join', joined);
-            discordStepDone('upgrade', status.tier !== 'new' && status.tier !== 'anonymous');
+            discordStepDone('upgrade', !needsUpgrade);
 
             if (reconnect) {
-                discordUpgradeText.textContent = framework.translate('Reconnect Discord so we can verify your support server membership, then upgrade to the Free tier.');
+                discordUpgradeText.textContent = framework.translate(needsUpgrade
+                    ? 'Reconnect Discord so we can verify your support server membership, then upgrade to the Free tier.'
+                    : 'Reconnect Discord so we can confirm your support server membership.');
             } else if (!connected) {
-                discordUpgradeText.textContent = framework.translate('Connect Discord and join the G4F support server — we will verify your membership and upgrade your account right away.');
+                discordUpgradeText.textContent = framework.translate(needsUpgrade
+                    ? 'Connect Discord and join the G4F support server — we will verify your membership and upgrade your account right away.'
+                    : 'Connect Discord to link your community profile, then join the G4F support server.');
             } else if (!joined) {
-                discordUpgradeText.textContent = framework.translate('Almost there! Join the G4F support server, then click Verify to unlock the Free tier.');
+                discordUpgradeText.textContent = framework.translate(needsUpgrade
+                    ? 'Almost there! Join the G4F support server, then wait for verification or click Verify to unlock the Free tier.'
+                    : 'One more step! Join the G4F support server, then wait for verification or click Verify.');
             } else {
-                discordUpgradeText.textContent = framework.translate('Support server membership confirmed. Verify now to upgrade your account to the Free tier.');
+                discordUpgradeText.textContent = framework.translate(needsUpgrade
+                    ? 'Support server membership confirmed. Verify now to upgrade your account to the Free tier.'
+                    : 'Support server membership confirmed.');
             }
 
             const redirect = encodeURIComponent(window.location.origin + '/members.html');
@@ -2586,18 +2650,23 @@
                 discordJoinBtn.href = status.invite || DISCORD_INVITE_URL;
                 discordJoinBtn.style.display = joined ? 'none' : '';
             }
+            discordVerifyBtn.style.display = '';
             discordVerifyBtn.disabled = !connected || reconnect || discordBannerLoading;
+            if (!discordBannerLoading) {
+                setDiscordVerifyLabel();
+            }
         }
 
         async function refreshDiscordUpgradeBanner(user) {
             if (!discordUpgradeBanner) return;
-            if (!isDiscordUpgradeEligible(user)) {
-                discordUpgradeBanner.hidden = true;
-                return;
-            }
 
             try {
                 const status = await apiRequest('/discord/status');
+                if (!localStorage.getItem('g4f_user')) {
+                    // The member signed out while the request was in flight.
+                    renderDiscordJoinBanner();
+                    return;
+                }
                 if (!status || status.error) {
                     discordUpgradeBanner.hidden = true;
                     return;
@@ -2639,7 +2708,7 @@
                     showToastFormat('Verification failed: {0}', 'error', error.message);
                 } finally {
                     discordBannerLoading = false;
-                    discordVerifyBtn.innerHTML = '<i class="fas fa-check"></i> ' + framework.translate('Verify & Upgrade');
+                    setDiscordVerifyLabel();
                     if (discordMembership) {
                         discordVerifyBtn.disabled = !discordMembership.connected || discordMembership.needs_reconnect;
                     }

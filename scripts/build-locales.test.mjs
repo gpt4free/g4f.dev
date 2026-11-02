@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
   ALL_LOCALES,
   LOCALES,
+  collectMetaSnippets,
   escapeAttribute,
   localize,
   normalizeText,
@@ -55,6 +57,37 @@ test("translateHtml translates visible attributes", () => {
   assert.match(result, /content="Entdecke kostenlose KI-Werkzeuge."/);
 });
 
+test("translateHtml translates title and every SEO meta tag", () => {
+  const html = [
+    "<title>Explore free AI tools.</title>",
+    '<meta name="description" content="Explore free AI tools.">',
+    '<meta property="og:title" content="Explore free AI tools.">',
+    '<meta property="og:description" content="Explore free AI tools.">',
+    '<meta name="twitter:title" content="Explore free AI tools.">',
+    '<meta name="twitter:description" content="Explore free AI tools.">',
+    '<meta name="keywords" content="Explore free AI tools.">',
+  ].join("");
+  const result = translateHtml(html, translations);
+  assert.equal((result.match(/Entdecke kostenlose KI-Werkzeuge\./g) || []).length, 7);
+  assert.doesNotMatch(result, /Explore free AI tools\./);
+});
+
+test("collectMetaSnippets feeds the community catalog from title and meta", () => {
+  const html = [
+    "<title>Explore free AI tools. &amp; more</title>",
+    '<meta name="description" content="Explore free&nbsp;AI tools. &amp; more">',
+    '<meta property="og:title" content="Explore free AI tools. &amp; more">',
+    '<meta name="twitter:description" content="Explore free AI tools. &amp; more">',
+    '<meta name="keywords" content="free AI, open source">',
+    '<meta property="og:url" content="https://g4f.dev/">',
+    '<meta name="viewport" content="width=device-width">',
+  ].join("");
+  assert.deepEqual(collectMetaSnippets(html), [
+    "Explore free AI tools. & more",
+    "free AI, open source",
+  ]);
+});
+
 test("translateHtml leaves scripts, styles and comments alone", () => {
   const html = [
     "<script>const Home = 'Home';</script>",
@@ -89,6 +122,22 @@ test("localize injects all locale alternates and the runtime bootstrap", () => {
   }
   assert.match(result, /const supported = \[[\s\S]*"zh"[\s\S]*\]/);
   assert.match(result, /data-g4f-locale-runtime="1"/);
+});
+
+test("localize gives the page a locale-specific og:url and og:locale", () => {
+  const result = localize(
+    '<!doctype html><html lang="en"><head>'
+      + '<meta property="og:url" content="https://g4f.dev/chat/">'
+      + '<meta property="og:locale" content="en_US">'
+      + "</head><body></body></html>",
+    "chat/index.html",
+    "de",
+    translations,
+  );
+  assert.match(result, /<meta property="og:url" content="https:\/\/g4f\.dev\/de\/chat\/">/);
+  assert.match(result, /<meta property="og:locale" content="de">/);
+  assert.equal((result.match(/og:url/g) || []).length, 1);
+  assert.equal((result.match(/og:locale/g) || []).length, 1);
 });
 
 test("localize keeps fragment links on the localized page", () => {
@@ -126,6 +175,16 @@ test("rewriteRelativeUrls ignores script and style content", () => {
   const result = rewriteRelativeUrls(html, "docs/guide.html");
   assert.match(result, /const a = '<a href="x">'/);
   assert.match(result, /<a href="\/docs\/x">x<\/a>/);
+});
+
+test("the generated metadata catalog covers the landing pages", () => {
+  const catalog = JSON.parse(
+    readFileSync(new URL("../dist/js/snippets/meta.json", import.meta.url), "utf8"),
+  );
+  assert.ok(Array.isArray(catalog.Metadata));
+  assert.ok(catalog.Metadata.includes("GPT4Free - Next Gen AI Access"));
+  assert.ok(catalog.Metadata.some((text) => text.startsWith("G4F Chat - Conversational")));
+  assert.ok(catalog.Metadata.some((text) => text.startsWith("GPT4Free offers free, fast")));
 });
 
 test("all API locales are unique and include the wider catalog", () => {

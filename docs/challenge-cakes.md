@@ -86,7 +86,8 @@ Challenge kinds:
 Each page ships a snippet catalog grouped by section headline
 (`dist/js/snippets/<page>.json` — `chat`, `index`, `home`,
 `members`, `manifesto`, `community`, `playground`, `stats`,
-`language-selection`). The worker fetches and merges all catalogs:
+`language-selection`, and the generated `meta`). The worker fetches and merges
+all catalogs:
 
 ```json
 {
@@ -169,7 +170,7 @@ re-solving the same topic refreshes its entry):
 | `CHALLENGE_MAX_PER_DAY` | `150` | Global issue limit. |
 | `CHALLENGE_TTL_SEC` | `300` | Challenge validity after issue. |
 | `CAKE_WORKER_URL` | `https://g4f.space/cake` | Cake worker base URL the redeem proxy forwards to. |
-| `SNIPPETS_URL` | `/dist/js/snippets/chat.context.json` | Overrides all snippet catalogs with a single URL (cached 1h). By default the worker loads every per-page catalog (`chat`, `index`, `home`, `members`, `manifesto`, `community`, `playground`, `stats`, `language-selection`) and merges them. |
+| `SNIPPETS_URL` | `/dist/js/snippets/chat.context.json` | Overrides all snippet catalogs with a single URL (cached 1h). By default the worker loads every per-page catalog (`chat`, `index`, `home`, `members`, `manifesto`, `community`, `playground`, `stats`, `language-selection`, `meta`) and merges them. |
 | `TRANSLATIONS_BATCH` | `8` | Snippets per translations challenge. |
 | `ADMIN_API_KEY` | — | Optional, for admin endpoints. |
 

@@ -745,7 +745,11 @@ framework.translateAll = async () => {
     if (Object.keys(translations).length === 0) {
         return false;
     }
-    framework.translations = translations;
+    // Keep the complete community package, not just the strings collected so
+    // far. UI that is rendered after translateAll() (for example the members
+    // dashboard, activity lists or Discord status text) calls
+    // framework.translate() later and would otherwise fall back to English.
+    framework.translations = {...community, ...translations};
     framework.translateElements();
     return translations;
 }

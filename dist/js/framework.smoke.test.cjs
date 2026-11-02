@@ -125,6 +125,26 @@ test("unloading a selected language works without a stored package", () => {
     assert.equal(context.framework.getSelectedLanguage(), null);
 });
 
+test("translateAll keeps the full community package for late dynamic text", async () => {
+    const context = loadFramework({store: {selectedTranslationLanguage: "de"}});
+    context.fetch = async () => ({
+        ok: true,
+        json: async () => ({
+            language: "de",
+            count: 2,
+            translations: {
+                "Static line": "Statische Zeile",
+                "Late Discord text": "Später Discord-Text",
+            },
+        }),
+    });
+    context.framework.translate("Static line", false);
+    await context.framework.translateAll();
+    // Text rendered after translateAll() (Discord banner, dashboard status)
+    // must still resolve against the complete package.
+    assert.equal(context.framework.translate("Late Discord text", false), "Später Discord-Text");
+});
+
 function fakeElement(text, {marked = false, attrs = {}, children = []} = {}) {
     const element = {
         nodeType: 1,

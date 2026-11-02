@@ -63,10 +63,15 @@ Hebrew, and Urdu), root-absolute locale-prefixed links (relative assets and
 manifests are rewritten at build time instead of relying on a `<base>`),
 canonical and `hreflang` alternates for every generated language, and the same
 runtime translation bootstrap used by the GUI. Before writing each page, the
-generator
-fetches the community translation package for that language and translates
-static text nodes plus visible attributes (`alt`, `title`, `placeholder`,
-`aria-label`, SEO `content`, and button values) at build time. The runtime
+generator fetches the community translation package for that language and
+translates static text nodes plus visible attributes (`alt`, `title`,
+`placeholder`, `aria-label`, SEO `content`, and button values) at build time.
+That includes the document `<title>` and the SEO metadata (`description`,
+`keywords`, `og:title`, `og:description`, `twitter:title`, and
+`twitter:description`). The build also writes every English metadata string to
+`dist/js/snippets/meta.json`, so the community catalog can translate metadata
+the same way it translates UI copy. `og:url` and `og:locale` are rewritten to
+the current locale page instead of the English source URL. The runtime
 bootstrap then covers dynamic copy for all 38 API languages, not just the four
 languages the Flask GUI serves. Unprefixed URLs stay canonical for English, and
 `/en/...` is not generated; selecting English from a locale page returns to the
