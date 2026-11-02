@@ -15,11 +15,13 @@ route map as JSON, and `/sitemap.xml` lists the localized landing pages.
 Locale HTML is post-processed after routing:
 
 - `<html lang>` is set to the requested locale.
-- A `<base href="/<locale>/">` tag is inserted.
 - Every `href`, `src`, `action`, and `poster` that points inside the site is
-  rewritten to a relative URL, resolved against the original page path. This
-  keeps links and assets inside the locale prefix, including already-relative
-  URLs such as `./manifest.webmanifest` or `js/store.js`.
+  rewritten to a root-absolute URL with the locale prefix, resolved against the
+  original page path. This keeps links and assets inside the locale prefix,
+  including already-relative URLs such as `./manifest.webmanifest` or
+  `js/store.js`. No `<base>` element is injected: fragment-only links
+  (`#login`) and `history.pushState("#settings")` must keep resolving against
+  the current page, otherwise `/de/chat/` gets sent to `/de/`.
 - Static copy is translated server-side with the same whitespace rules as
   `framework.translate()`: text is collapsed and trimmed for lookup, and the
   original leading/trailing whitespace is preserved. Upstream SEO tags are
@@ -57,10 +59,11 @@ serves only `en`, `es`, `fr`, and `de`. Examples are `/fr/chat/`,
 `/ja/chat/`, and `/pt/docs/`.
 
 Each copy gets the locale `lang` attribute (`dir="rtl"` for Arabic, Persian,
-Hebrew, and Urdu), a `<base>` pointing at the original page directory (so
-relative assets and manifests keep working without duplicating them), canonical
-and `hreflang` alternates for every generated language, and the same runtime
-translation bootstrap used by the GUI. Before writing each page, the generator
+Hebrew, and Urdu), root-absolute locale-prefixed links (relative assets and
+manifests are rewritten at build time instead of relying on a `<base>`),
+canonical and `hreflang` alternates for every generated language, and the same
+runtime translation bootstrap used by the GUI. Before writing each page, the
+generator
 fetches the community translation package for that language and translates
 static text nodes plus visible attributes (`alt`, `title`, `placeholder`,
 `aria-label`, SEO `content`, and button values) at build time. The runtime

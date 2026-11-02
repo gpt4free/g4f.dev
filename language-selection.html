@@ -389,19 +389,35 @@
             }
         }
 
+        // The chat page uses this key to decide whether the first-load
+        // language overlay may open automatically. Persist it here before a
+        // redirect, because navigating the parent destroys this page before
+        // the postMessage handler in the parent can run.
+        const LANGUAGE_PROMPT_KEY = "languageSelectionPrompted";
+        function markPromptDismissed() {
+            try { localStorage.setItem(LANGUAGE_PROMPT_KEY, "true"); } catch (e) { /* private mode */ }
+        }
+
         // When framed (e.g. opened from /chat/ in the full-size iframe), send
         // the parent to the newly selected language URL. Parents without
         // locale routes fall back to the postMessage + reload flow.
         async function notifyParent(action, language) {
+            markPromptDismissed();
             if (window.self === window.top) return;
-            if (action === "load") {
-                const url = await parentLocaleUrl(language);
-                if (url) {
-                    try {
-                        window.parent.location.href = url;
-                        return;
-                    } catch (e) { /* cross-origin parent — use postMessage */ }
-                }
+            // Loading a language goes to its locale route; unloading must go
+            // back to the unprefixed route, otherwise the locale page would
+            // re-select the language on every reload and unload would appear
+            // to do nothing.
+            const url = action === "load"
+                ? await parentLocaleUrl(language)
+                : action === "unload"
+                    ? await parentLocaleUrl(null)
+                    : null;
+            if (url) {
+                try {
+                    window.parent.location.href = url;
+                    return;
+                } catch (e) { /* cross-origin parent — use postMessage below */ }
             }
             try {
                 window.parent.postMessage({ type: "g4f-language:changed", action, language: language || null }, "*");
@@ -591,9 +607,12 @@
                     toast(tpl("Loaded {0} translations for \"{1}\" — \"{2}\" unloaded", entry.count, lang, previous && previous !== lang ? previous : "nothing"));
                     notifyParent("load", lang);
                 } else if (action === "unload") {
+                    const wasSelected = framework.getSelectedLanguage
+                        ? framework.getSelectedLanguage() === lang
+                        : false;
                     const cleared = framework.clearTranslations(lang);
                     if (framework.deleteAllTranslations) framework.deleteAllTranslations();
-                    if (cleared) notifyParent("unload", lang);
+                    if (cleared || wasSelected) notifyParent("unload", lang);
                     toast(cleared ? tpl("Unloaded \"{0}\"", lang) : tpl("\"{0}\" was not loaded", lang), !cleared);
                 }
                 render();
@@ -636,8 +655,11 @@
             btn.disabled = true;
             try {
                 const selected = framework.getSelectedLanguage ? framework.getSelectedLanguage() : null;
+                // Always forget the selection, even when the community store
+                // no longer holds the package: otherwise the language can
+                // never be unloaded after the store was cleared elsewhere.
                 const cleared = selected ? framework.clearTranslations(selected) : false;
-                if (cleared) {
+                if (selected) {
                     framework.setSelectedLanguage(null);
                     notifyParent("unload", selected);
                 }

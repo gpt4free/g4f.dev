@@ -312,10 +312,17 @@ framework.clearTranslations = (language = null, clearLocal = false) => {
         }
         if (framework.getSelectedLanguage && framework.getSelectedLanguage() === base) {
             framework.translations = {};
+            // Unloading a package must also drop the persisted selection;
+            // otherwise the next page load silently re-applies it and the
+            // language appears to be impossible to unload.
+            framework.setSelectedLanguage(null);
         }
     } else if (framework.globalTranslations && Object.keys(framework.globalTranslations).length) {
         framework.globalTranslations = {};
         framework.translations = {};
+        if (framework.getSelectedLanguage && framework.getSelectedLanguage()) {
+            framework.setSelectedLanguage(null);
+        }
         cleared = true;
     }
     if (clearLocal) {

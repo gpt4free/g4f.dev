@@ -7,6 +7,7 @@ import {
   escapeAttribute,
   localize,
   normalizeText,
+  rewriteRelativeUrls,
   translateHtml,
   translateText,
 } from "./build-locales.mjs";
@@ -81,13 +82,50 @@ test("localize injects all locale alternates and the runtime bootstrap", () => {
     translations,
   );
   assert.match(result, /<html lang="de" dir="ltr">/);
-  assert.match(result, /<base href="\/chat\/">/);
+  assert.doesNotMatch(result, /<base\b/i);
   assert.match(result, /<p>Startseite<\/p>/);
   for (const locale of ALL_LOCALES) {
     assert.match(result, new RegExp(`hreflang="${locale}"`));
   }
   assert.match(result, /const supported = \[[\s\S]*"zh"[\s\S]*\]/);
   assert.match(result, /data-g4f-locale-runtime="1"/);
+});
+
+test("localize keeps fragment links on the localized page", () => {
+  const result = localize(
+    '<!doctype html><html lang="en"><body><a href="#login">Login</a><a href="#">Menu</a></body></html>',
+    "chat/index.html",
+    "de",
+  );
+  // A <base> element or an absolute rewrite would drop the locale prefix and
+  // send #login to /chat/ instead of /de/chat/.
+  assert.match(result, /href="#login"/);
+  assert.match(result, /href="#"/);
+});
+
+test("rewriteRelativeUrls makes relative assets root-absolute", () => {
+  const html = [
+    '<link rel="manifest" href="./manifest.webmanifest">',
+    '<a href="sr.html">Screen reader</a>',
+    '<a href="../chat/pro.html">Pro</a>',
+    '<img src="images/strawberry.jpg">',
+    '<a href="https://example.com/x">external</a>',
+    '<a href="/already/absolute">absolute</a>',
+  ].join("");
+  const result = rewriteRelativeUrls(html, "docs/image_editing.html");
+  assert.match(result, /href="\/docs\/manifest.webmanifest"/);
+  assert.match(result, /href="\/docs\/sr.html"/);
+  assert.match(result, /href="\/chat\/pro.html"/);
+  assert.match(result, /src="\/docs\/images\/strawberry.jpg"/);
+  assert.match(result, /href="https:\/\/example.com\/x"/);
+  assert.match(result, /href="\/already\/absolute"/);
+});
+
+test("rewriteRelativeUrls ignores script and style content", () => {
+  const html = '<script>const a = \'<a href="x">\';</script><a href="x">x</a>';
+  const result = rewriteRelativeUrls(html, "docs/guide.html");
+  assert.match(result, /const a = '<a href="x">'/);
+  assert.match(result, /<a href="\/docs\/x">x<\/a>/);
 });
 
 test("all API locales are unique and include the wider catalog", () => {

@@ -3,8 +3,7 @@
 // middleware in g4f/gui/server/locale.py cannot run here. Instead we mirror
 // every HTML page under each locale with:
 //   - the document language set to the locale,
-//   - a <base> pointing at the original page directory (so relative assets,
-//     manifests and links keep working without duplicating static files),
+//   - relative links and asset references rewritten to root-absolute URLs,
 //   - canonical + hreflang alternates,
 //   - text nodes and visible attributes translated from the community
 //     translation store at build time, and
@@ -191,6 +190,48 @@ export function pagePath(rel) {
   return "/" + clean;
 }
 
+const STATE_ATTR = /(\s(?:href|src|action|poster)\s*=\s*)(["'])([^"']*)\2/gi;
+const ABSOLUTE_OR_SPECIAL = /^(?:#|\/|\\|(?:[a-z][a-z0-9+.-]*:)|$)/i;
+
+/** Resolve relative `href`/`src` references to root-absolute URLs.
+ *
+ *  Locale pages used to inject `<base href="/chat/">` so relative assets kept
+ *  working. A base element also changes how fragment-only links and
+ *  `history.pushState("#settings")` resolve: `#login` became
+ *  `/chat/#login`, so /de/chat/ silently dropped back to /chat/ (breaking the
+ *  language choice and the login round-trip). Rewriting the few relative
+ *  references at build time lets the locale page keep its own URL instead.
+ *  Fragment-only links are left untouched so they stay on the current page. */
+export function rewriteRelativeUrls(html, rel) {
+  const base = "https://g4f.dev" + originalDir(rel);
+  const parts = html.split(PROTECTED_BLOCKS);
+  for (let index = 0; index < parts.length; index += 2) {
+    parts[index] = parts[index].replace(TAG, (tag) =>
+      tag.replace(STATE_ATTR, (match, prefix, quote, value) => {
+        const trimmed = value.trim();
+        if (!trimmed || trimmed.startsWith("#") || ABSOLUTE_OR_SPECIAL.test(trimmed)) {
+          return match;
+        }
+        if (trimmed.startsWith("{{") || trimmed.startsWith("${")) {
+          return match;
+        }
+        let resolved;
+        try {
+          resolved = new URL(trimmed, base);
+        } catch (e) {
+          return match;
+        }
+        if (resolved.origin !== "https://g4f.dev") {
+          return match;
+        }
+        const target = resolved.pathname + resolved.search + resolved.hash;
+        return prefix + quote + escapeAttribute(target) + quote;
+      }),
+    );
+  }
+  return parts.join("");
+}
+
 export function originalDir(rel) {
   const dir = posix.dirname(rel.replace(/\\/g, "/"));
   return dir === "." ? "/" : "/" + dir.replace(/\/?$/, "/");
@@ -290,13 +331,13 @@ export function localize(html, rel, locale, translations = {}) {
   let result = setHtmlLang(html, locale);
   result = stripSeoTags(result);
   result = removeBase(result);
-  // Translate the original markup first, so the injected <base>, canonical
-  // and runtime script are never treated as translatable content.
+  // Translate the original markup first, so the injected canonical and
+  // runtime script are never treated as translatable content.
   result = translateHtml(result, translations);
-  result = insertHead(
-    result,
-    `<base href="${escapeAttribute(originalDir(rel))}">\n    ${seoMarkup(rel, locale)}`
-  );
+  // Resolve relative references at build time instead of injecting a <base>
+  // element, which would break fragment links and history.pushState().
+  result = rewriteRelativeUrls(result, rel);
+  result = insertHead(result, seoMarkup(rel, locale));
   const script = runtimeScript(locale);
   if (!/data-g4f-locale-runtime/.test(result)) {
     if (/<\/body>/i.test(result)) {

@@ -100,6 +100,31 @@ test("stored packages are not applied to the browser language without a selectio
     assert.equal(context.framework.getSelectedLanguage(), null);
 });
 
+test("clearTranslations also clears the persisted selection", () => {
+    const context = loadFramework({
+        store: {
+            selectedTranslationLanguage: "de",
+            globalTranslations: JSON.stringify({
+                de: {language: "de", translations: {Hello: "Hallo"}},
+            }),
+        },
+    });
+    assert.equal(context.framework.getSelectedLanguage(), "de");
+    assert.equal(context.framework.clearTranslations("de"), true);
+    assert.equal(context.framework.getSelectedLanguage(), null);
+    assert.deepEqual(JSON.parse(JSON.stringify(context.framework.translations)), {});
+});
+
+test("unloading a selected language works without a stored package", () => {
+    const context = loadFramework({
+        store: {selectedTranslationLanguage: "de"},
+    });
+    // No community entry in localStorage: the selection must still be
+    // removable, otherwise the language can never be unloaded.
+    assert.equal(context.framework.clearTranslations("de"), false);
+    assert.equal(context.framework.getSelectedLanguage(), null);
+});
+
 function fakeElement(text, {marked = false, attrs = {}, children = []} = {}) {
     const element = {
         nodeType: 1,
