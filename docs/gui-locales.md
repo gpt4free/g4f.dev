@@ -60,9 +60,22 @@ Each copy gets the locale `lang` attribute (`dir="rtl"` for Arabic, Persian,
 Hebrew, and Urdu), a `<base>` pointing at the original page directory (so
 relative assets and manifests keep working without duplicating them), canonical
 and `hreflang` alternates for every generated language, and the same runtime
-translation bootstrap used by the GUI. Unprefixed URLs stay canonical for
-English, and `/en/...` is not generated; selecting English from a locale page
-returns to the unprefixed path.
+translation bootstrap used by the GUI. Before writing each page, the generator
+fetches the community translation package for that language and translates
+static text nodes plus visible attributes (`alt`, `title`, `placeholder`,
+`aria-label`, SEO `content`, and button values) at build time. The runtime
+bootstrap then covers dynamic copy for all 38 API languages, not just the four
+languages the Flask GUI serves. Unprefixed URLs stay canonical for English, and
+`/en/...` is not generated; selecting English from a locale page returns to the
+unprefixed path.
+
+The build reads `https://beta.g4f.dev/challenge/translations?lang=<lang>` by
+default. Set `G4F_TRANSLATIONS_URL`, `--translations-url`, or
+`--translations-file` to use another source, or pass `--no-translations` for an
+offline build. A language whose package cannot be fetched is still generated
+and keeps the runtime bootstrap, so a temporary API outage never breaks the
+deployment. The language selection page lists every API language and links to
+the matching generated locale route.
 
 The GitHub Pages workflows run the generator before uploading the artifact, and
 the mirror sync commits the generated routes (they are gitignored in the source

@@ -31,6 +31,7 @@ const handle_ask = async (do_ask_gpt = true, message = null) => {
             return;
         }
         userInput.value = "";
+        window.resizeUserInput?.();
         await count_input()
     }
 

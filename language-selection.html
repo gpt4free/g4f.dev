@@ -274,13 +274,18 @@
             );
         }
 
-        // Popular target languages shown even when nothing is translated yet,
-        // so every visitor can see where their language stands (0%).
-        const SEED_LANGUAGES = [
-            "de", "es", "fr", "it", "pt", "nl", "pl", "ru", "uk", "tr",
-            "zh", "ja", "ko", "hi", "ar", "id", "vi", "th", "sv", "da",
-            "fi", "nb", "cs", "el", "he", "hu", "ro", "bg",
+        // Every language in the community translation catalog. The API can
+        // grow; this static list keeps the picker complete when the worker is
+        // unreachable and matches scripts/build-locales.mjs.
+        const API_LANGUAGES = [
+            "ar", "bg", "cs", "da", "de", "el", "es", "et", "fa", "fi",
+            "fr", "he", "hi", "hr", "hu", "id", "it", "ja", "kk", "ko",
+            "nb", "nl", "pl", "pt", "ro", "ru", "sk", "sl", "sq", "sr",
+            "sv", "th", "tr", "uk", "ur", "uz", "vi", "zh",
         ];
+        // Every API language is shown even when nothing is translated yet, so
+        // every visitor can see where their language stands (0%).
+        const SEED_LANGUAGES = API_LANGUAGES;
 
         const baseLang = (tag) => String(tag || "").split(/[-_]/)[0].toLowerCase();
         const displayNames = (() => {
@@ -290,7 +295,7 @@
             try { return displayNames ? (displayNames.of(code) || code) : code; } catch { return code; }
         };
         const flagEmoji = (code) => {
-            const region = { de: "DE", es: "ES", fr: "FR", it: "IT", pt: "PT", nl: "NL", pl: "PL", ru: "RU", uk: "UA", tr: "TR", zh: "CN", ja: "JP", ko: "KR", hi: "IN", ar: "SA", id: "ID", vi: "VN", th: "TH", sv: "SE", da: "DK", fi: "FI", nb: "NO", cs: "CZ", el: "GR", he: "IL", hu: "HU", ro: "RO", bg: "BG" }[code];
+            const region = { ar: "SA", bg: "BG", cs: "CZ", da: "DK", de: "DE", el: "GR", es: "ES", et: "EE", fa: "IR", fi: "FI", fr: "FR", he: "IL", hi: "IN", hr: "HR", hu: "HU", id: "ID", it: "IT", ja: "JP", kk: "KZ", ko: "KR", nb: "NO", nl: "NL", pl: "PL", pt: "PT", ro: "RO", ru: "RU", sk: "SK", sl: "SI", sq: "AL", sr: "RS", sv: "SE", th: "TH", tr: "TR", uk: "UA", ur: "PK", uz: "UZ", vi: "VN", zh: "CN" }[code];
             if (!region) return "🌐";
             return String.fromCodePoint(...[...region].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
         };
@@ -310,47 +315,56 @@
             return div.innerHTML;
         }
 
-        const LOCALE_LANGUAGES = ["en", "es", "fr", "de"];
+        const LOCALE_LANGUAGES = ["en", ...API_LANGUAGES];
 
-        let localeRoutesPromise = null;
+        let localeLanguagesPromise = null;
 
-        // Does the site expose locale-prefixed routes? Localized pages carry
-        // hreflang alternates; the GUI also answers /meta with a locale route
-        // map. Static g4f.dev pages do neither.
-        function parentHasLocaleRoutes() {
-            if (localeRoutesPromise) return localeRoutesPromise;
-            localeRoutesPromise = (async () => {
+        // Which locale-prefixed routes does the surrounding site expose?
+        // Localized pages carry hreflang alternates (g4f.dev generates all API
+        // languages; the Flask GUI serves its smaller set). The GUI also
+        // answers /meta with a route map. An empty set means the caller should
+        // fall back to the static API language list.
+        function parentLocaleLanguages() {
+            if (localeLanguagesPromise) return localeLanguagesPromise;
+            localeLanguagesPromise = (async () => {
+                const languages = new Set();
+                const add = (code) => {
+                    const base = String(code || "").trim().toLowerCase();
+                    if (/^[a-z]{2}$/.test(base)) languages.add(base);
+                };
                 try {
                     const links = window.parent.document.querySelectorAll(
                         'link[rel="alternate"][hreflang]'
                     );
-                    if (Array.from(links).some((link) => LOCALE_LANGUAGES.includes(
-                        String(link.getAttribute("hreflang") || "").toLowerCase()
-                    ))) {
-                        return true;
-                    }
+                    links.forEach((link) => add(link.getAttribute("hreflang")));
+                    if (languages.size) return languages;
                 } catch (e) { /* cross-origin parent */ }
                 try {
                     const response = await fetch("/meta", {
                         cache: "no-store",
                         signal: AbortSignal.timeout(1500),
                     });
-                    if (!response.ok) return false;
+                    if (!response.ok) return languages;
                     const data = await response.json();
-                    return Boolean(data && data.locale && data.routes);
-                } catch (e) {
-                    return false;
-                }
+                    const routes = data && data.routes ? Object.values(data.routes) : [];
+                    for (const route of routes) {
+                        for (const code of Object.keys(route.alternates || {})) add(code);
+                    }
+                } catch (e) { /* static hosting has no /meta */ }
+                return languages;
             })();
-            return localeRoutesPromise;
+            return localeLanguagesPromise;
         }
 
         // Build the parent's URL for the selected language. Existing locale
         // prefixes are replaced; an unprefixed parent only gets a prefix when
-        // its site actually serves localized routes.
+        // its site actually serves localized routes for that language.
         async function parentLocaleUrl(language) {
             const base = String(language || "").split(/[-_]/)[0].toLowerCase();
-            const isLocale = LOCALE_LANGUAGES.includes(base);
+            const routes = await parentLocaleLanguages();
+            const isLocale = routes.size
+                ? routes.has(base)
+                : LOCALE_LANGUAGES.includes(base);
             let parentLocation;
             try {
                 parentLocation = window.parent.location;
@@ -364,9 +378,6 @@
                     return hadLocale
                         ? path + (parentLocation.search || "") + (parentLocation.hash || "")
                         : null;
-                }
-                if (!hadLocale && base !== "en" && !(await parentHasLocaleRoutes())) {
-                    return null;
                 }
                 if (base !== "en") {
                     path = "/" + base + (path.startsWith("/") ? path : "/" + path);
@@ -410,14 +421,16 @@
         // English users), so the first-time overlay can be passed without
         // loading any translation package.
         const CONTINUE_LABELS = {
-            en: "Continue", de: "Fortfahren", es: "Continuar", fr: "Continuer",
-            it: "Continua", pt: "Continuar", nl: "Doorgaan", pl: "Kontynuuj",
-            ru: "Продолжить", uk: "Продовжити", tr: "Devam et", zh: "继续",
-            ja: "続ける", ko: "계속", hi: "जारी रखें", ar: "متابعة",
-            id: "Lanjutkan", vi: "Tiếp tục", th: "ต่อไป", sv: "Fortsätt",
-            da: "Fortsæt", fi: "Jatka", nb: "Fortsett", no: "Fortsett",
-            cs: "Pokračovat", el: "Συνέχεια", he: "המשך", hu: "Folytatás",
-            ro: "Continuare", bg: "Продължи",
+            en: "Continue", ar: "متابعة", bg: "Продължи", cs: "Pokračovat",
+            da: "Fortsæt", de: "Fortfahren", el: "Συνέχεια", es: "Continuar",
+            et: "Jätka", fa: "ادامه", fi: "Jatka", fr: "Continuer",
+            he: "המשך", hi: "जारी रखें", hr: "Nastavi", hu: "Folytatás",
+            id: "Lanjutkan", it: "Continua", ja: "続ける", kk: "Жалғастыру",
+            ko: "계속", nb: "Fortsett", nl: "Doorgaan", pl: "Kontynuuj",
+            pt: "Continuar", ro: "Continuare", ru: "Продолжить",
+            sk: "Pokračovať", sl: "Nadaljuj", sq: "Vazhdo", sr: "Настави",
+            sv: "Fortsätt", th: "ต่อไป", tr: "Devam et", uk: "Продовжити",
+            ur: "جاری رکھیں", uz: "Davom etish", vi: "Tiếp tục", zh: "继续",
         };
         function continueLabel() {
             const lang = (window.framework && framework.getLanguage)

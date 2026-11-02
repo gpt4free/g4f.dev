@@ -113,7 +113,7 @@ async function api(ressource, args=null, files=null, message_id=null, finish_mes
             }
             error_storage[message_id] = message;
             await finish_message();
-            return;
+            return {ok: false, status: response.status, message};
         } else {
             try {
                 await read_response(response, message_id, args.provider || null, finish_message);
@@ -862,6 +862,7 @@ if (SpeechRecognition) {
         if (buffer) {
             userInput.value += `${startValue ? startValue + "\n" : ""}${buffer}`;
             buffer = "";
+            window.resizeUserInput?.();
             count_input();
         }
         if (microLabel.classList.contains("recognition")) {

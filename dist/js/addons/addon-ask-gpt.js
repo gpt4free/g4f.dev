@@ -458,6 +458,10 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     }
                     if (response.error) {
                         add_message_chunk({type: "error", ...response.error}, message_id, null, finish_message);
+                        if (typeof window.tryNextProvider === 'function' && action !== "continue") {
+                            const retried = await window.tryNextProvider(message_id, messages, action, message);
+                            if (retried) return;
+                        }
                         return;
                     }
                     if (response.conversation) {
@@ -506,6 +510,10 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     }
                     if (chunk.error) {
                         add_message_chunk({type: "error", ...chunk.error}, message_id, null, finish_message);
+                        if (typeof window.tryNextProvider === 'function' && action !== "continue") {
+                            const retried = await window.tryNextProvider(message_id, messages, action, message);
+                            if (retried) return;
+                        }
                         return;
                     }
                     if (chunk.conversation) {
@@ -553,6 +561,21 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
                     delete tool_calls_storage[message_id];
                     await handleToolCalls(toolCalls, messages, selectedModel, provider, message_id, finish_message);
                 }
+                // Auto/default selections can occasionally return an empty
+                // stream. Give the router another chance before finishing.
+                const autoSelection = !selectedModel
+                    || provider == "AnyProvider"
+                    || !provider
+                    || ["auto", "default", "none"].includes(String(selectedModel).toLowerCase());
+                if (autoSelection
+                    && !message_storage[message_id]
+                    && !reasoning_storage[message_id]
+                    && !tool_calls_storage[message_id]
+                    && action !== "continue"
+                    && typeof window.tryNextProvider === 'function') {
+                    const retried = await window.tryNextProvider(message_id, messages, action, message);
+                    if (retried) return;
+                }
             }
         } catch (err) {
             add_error(err, true);
@@ -595,7 +618,7 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
         const mcpTools = mcpClient && mcpClient.selectedTools.length > 0 
             ? mcpClient.getSelectedToolsForAPI() 
             : undefined;
-        await api("conversation", {
+        const result = await api("conversation", {
             id: message_id,
             conversation_id: window.conversation_id,
             conversation: conversationData,
@@ -614,6 +637,12 @@ const ask_gpt = async (message_id, message_index = -1, regenerate = false, provi
             ...(mcpTools && mcpTools.length > 0 ? { tools: mcpTools } : {}),
             ...extraBody
         }, Object.values(image_storage), message_id, finish_message);
+        if (result && result.ok === false
+            && [429, 500, 502, 503, 504].includes(result.status)
+            && action !== "continue"
+            && typeof window.tryNextProvider === 'function') {
+            await window.tryNextProvider(message_id, messages, action, message);
+        }
     } catch (e) {
         add_error(e, true);
         // Auto-fallback to next provider/model if available

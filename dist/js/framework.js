@@ -354,7 +354,48 @@ framework.translateElements = function (elements = null) {
         if (element.placeholder) {
             element.placeholder = framework.translate(element.placeholder, false);
         }
+        // Accessibility and tooltip attributes use getAttribute because they
+        // have no matching DOM property.
+        for (const attribute of ["aria-label", "aria-description", "aria-placeholder", "data-tooltip", "data-title"]) {
+            const value = element.getAttribute ? element.getAttribute(attribute) : null;
+            if (value && hasWords(value) && element.setAttribute) {
+                element.setAttribute(attribute, framework.translate(value, false));
+            }
+        }
     });
+}
+
+/** Translate only elements explicitly marked with data-translate="true".
+ *  Useful for UI that is cloned or inserted after the initial page-wide
+ *  translateElements() pass (for example the chat empty state), while user
+ *  and model messages stay untouched. */
+framework.translateMarked = function (root = document) {
+    if (!framework.translations || Object.keys(framework.translations).length === 0 || !root) {
+        return 0;
+    }
+    const selector = '[data-translate="true"]';
+    const marked = [];
+    if (root.nodeType === 1 && root.matches && root.matches(selector)) {
+        marked.push(root);
+    }
+    if (typeof root.querySelectorAll === "function") {
+        marked.push(...root.querySelectorAll(selector));
+    }
+    if (marked.length === 0) {
+        return 0;
+    }
+    const seen = new Set();
+    for (const element of marked) {
+        if (seen.has(element)) continue;
+        const tree = [element];
+        if (typeof element.querySelectorAll === "function") {
+            tree.push(...element.querySelectorAll("*"));
+        }
+        const pending = tree.filter((node) => !seen.has(node));
+        pending.forEach((node) => seen.add(node));
+        framework.translateElements(pending);
+    }
+    return marked.length;
 }
 // ---- Language detection & consent prompt --------------------------------
 // Translations are never applied just because the browser reports a

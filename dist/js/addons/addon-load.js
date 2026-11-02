@@ -11,6 +11,20 @@ const generateUUID = () => {
     });
 };
 
+// Keep the composer compact while it is empty and grow it with the text.
+// The userInput-height setting acts as the maximum height in pixels.
+function resizeUserInput() {
+    if (!userInput) return;
+    userInput.style.height = "auto";
+    const configuredMax = parseInt(userInputHeight?.value, 10) || 320;
+    const viewportMax = Math.max(56, Math.floor(window.innerHeight * 0.4));
+    const maxHeight = Math.max(56, Math.min(configuredMax, viewportMax));
+    const height = Math.min(userInput.scrollHeight, maxHeight);
+    userInput.style.height = height + "px";
+    userInput.style.overflowY = userInput.scrollHeight > maxHeight ? "auto" : "hidden";
+}
+window.resizeUserInput = resizeUserInput;
+
 async function on_api() {
     let prompt_lock = false;
     userInput.addEventListener("keydown", async (evt) => {
@@ -25,18 +39,11 @@ async function on_api() {
             await handle_ask(!do_enter);
         }
     });
-    let timeoutBlur = null;
-    userInput.addEventListener("focus", async (evt) => {
-        userInput.style.minHeight = (userInputHeight?.value || 200) + "px";
-    });
-    userInput.addEventListener("blur", async (evt) => {
-        timeoutBlur = setTimeout(() => {
-            userInput.style.minHeight = "";
-            userInput.style.height = "";
-        }, 200);
-    });
+    userInput.addEventListener("input", resizeUserInput);
+    userInput.addEventListener("focus", resizeUserInput);
+    window.addEventListener("resize", resizeUserInput);
+    resizeUserInput();
     codeButton?.addEventListener("click", async () => {
-        clearTimeout(timeoutBlur);
         insertBackticksInTextarea(userInput);
     });
     sendButton.addEventListener(`click`, async () => {
@@ -161,20 +168,33 @@ async function on_api() {
         await initClient();
     }
 
-    const update_systemPrompt_icon = (checked) => {
-        slide_systemPrompt_icon.classList[checked ? "remove": "add"]("fa-angles-up");
-        slide_systemPrompt_icon.classList[checked ? "add": "remove"]("fa-angles-down");
-        chatPrompt.classList[checked ? "add": "remove"]("hidden");
-    };
-    if (appStorage.getItem("hide-systemPrompt") == "true") {
-        update_systemPrompt_icon(true);
+    if (slide_systemPrompt_icon && chatPrompt) {
+        const update_systemPrompt_icon = (hidden) => {
+            hidden = !!hidden;
+            slide_systemPrompt_icon.classList.toggle("fa-angles-up", !hidden);
+            slide_systemPrompt_icon.classList.toggle("fa-angles-down", hidden);
+            chatPrompt.classList.toggle("hidden", hidden);
+            const button = slide_systemPrompt_icon.closest("button");
+            if (button) {
+                button.setAttribute("aria-expanded", String(!hidden));
+                button.setAttribute("aria-label", hidden ? "Show system prompt" : "Hide system prompt");
+            }
+            if (hide_systemPrompt) {
+                hide_systemPrompt.checked = hidden;
+            }
+            appStorage.setItem("hide-systemPrompt", hidden);
+        };
+        update_systemPrompt_icon(appStorage.getItem("hide-systemPrompt") == "true");
+        // Bind to the whole button, not just the small icon inside it, so
+        // clicks anywhere on the arrow control toggle the prompt.
+        const slide_systemPrompt_button = slide_systemPrompt_icon.closest("button");
+        (slide_systemPrompt_button || slide_systemPrompt_icon).addEventListener("click", () => {
+            update_systemPrompt_icon(!chatPrompt.classList.contains("hidden"));
+        });
+        hide_systemPrompt ? hide_systemPrompt.addEventListener('change', async (event) => {
+            update_systemPrompt_icon(event.target.checked);
+        }) : null;
     }
-    slide_systemPrompt_icon.addEventListener("click", ()=>{
-        update_systemPrompt_icon(slide_systemPrompt_icon.classList.contains("fa-angles-up"));
-    });
-    hide_systemPrompt ? hide_systemPrompt.addEventListener('change', async (event) => {
-        update_systemPrompt_icon(event.target.checked);
-    }) : null;
     const darkMode = document.getElementById("darkMode");
     if (darkMode) {
         darkMode.addEventListener('change', async (event) => {
@@ -397,6 +417,7 @@ async function on_load() {
     let chatParams = new URLSearchParams(window.location.search);
     if (chatParams.has("prompt")) {
         userInput.value = chatParams.get("prompt");
+        resizeUserInput();
         userInput.focus();
         window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
     }
@@ -549,4 +570,5 @@ export default {
     hide_sidebar,
     hide_settings,
     generateUUID,
+    resizeUserInput,
 };

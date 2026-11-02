@@ -36,6 +36,8 @@ DISCORD_GUILD_NAME = "g4f support"
 # Routes - configure these to match your domain
 routes = [
   { pattern = "g4f.dev/members/*", zone_name = "g4f.dev" },
+  { pattern = "auth.g4f.space/members.html", zone_name = "g4f.space" },
+  { pattern = "auth.g4f.space/members", zone_name = "g4f.space" },
   { pattern = "auth.g4f.space/v1/secret/*", zone_name = "g4f.space" },
   { pattern = "auth.g4f.space/members/*", zone_name = "g4f.space" }
 ]

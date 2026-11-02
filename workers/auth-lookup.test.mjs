@@ -147,3 +147,54 @@ const session = await authWorker.fetch(
 );
 assert.equal(session.status, 401);
 console.log("PASS: auth worker split deployment still answers directly");
+
+// Browsers that block third-party cookies can still use the members area on
+// auth.g4f.space. The probe sets a cookie and then reports whether it came
+// back, so the page can redirect only when cookies are actually blocked.
+const probeUrl = "https://auth.g4f.space/members/api/cookie-check";
+const probeOrigin = { Origin: "https://g4f.dev" };
+const probeSet = await authWorker.fetch(
+  new Request(`${probeUrl}?set=probe-nonce-123`, { headers: probeOrigin }),
+  {},
+  ctx
+);
+assert.equal(probeSet.status, 200);
+assert.match(probeSet.headers.get("Set-Cookie"), /g4f_cookie_probe=probe-nonce-123/);
+const probeBlocked = await authWorker.fetch(
+  new Request(`${probeUrl}?expect=probe-nonce-123`, { headers: probeOrigin }),
+  {},
+  ctx
+);
+assert.deepEqual(await probeBlocked.json(), { cookies: false, reason: "cookie_blocked" });
+const probeAllowed = await authWorker.fetch(
+  new Request(`${probeUrl}?expect=probe-nonce-123`, {
+    headers: { ...probeOrigin, Cookie: "g4f_cookie_probe=probe-nonce-123" }
+  }),
+  {},
+  ctx
+);
+assert.deepEqual(await probeAllowed.json(), { cookies: true });
+console.log("PASS: cookie probe distinguishes blocked and allowed cookies");
+
+// The auth host serves the static members page with a base for its assets so
+// it can run first-party there.
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async () =>
+  new Response("<html><head><title>Members</title></head><body><a href=\"/members.html\">Members</a></body></html>", {
+    status: 200,
+    headers: { "Content-Type": "text/html" }
+  });
+try {
+  const page = await authWorker.fetch(
+    new Request("https://auth.g4f.space/members.html", { headers: probeOrigin }),
+    {},
+    ctx
+  );
+  assert.equal(page.status, 200);
+  const html = await page.text();
+  assert.match(html, /<base href="https:\/\/g4f.dev\/">/);
+  assert.match(html, /href="https:\/\/auth.g4f.space\/members.html"/);
+} finally {
+  globalThis.fetch = originalFetch;
+}
+console.log("PASS: auth host serves the members page first-party");

@@ -39,6 +39,7 @@ questions, and both are served back to every visitor — see
 | POST   | `/challenge/redeem`   | Body: `{token}` (or `Authorization: Bearer <token>`). Proxy — verifies locally, then credits via the cake worker's `POST /cake/redeem` (`CAKE_WORKER_URL`). |
 | GET    | `/challenge/translations?lang=<lang>` | Serves the community translation store for the UI (`Cache-Control: public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400`), plus progress fields: `total` (catalog size), `remaining`, `percent` translated. |
 | GET    | `/challenge/translations/languages` | Lists every language in the store: `{languages: [{language, count, total, remaining, percent}], total_snippets}`, sorted by count descending (same `Cache-Control` as above). |
+| GET    | `/challenge/translations/check[?lang=<lang>][&remove=1]` | Audits sources that are no longer in the snippet catalog (renamed or removed UI copy). The same stale entries are pruned automatically whenever a store is read or solved; `remove=1` remains available for an explicit admin audit. |
 | DELETE | `/challenge/translations[?lang=<lang>]` | Clears the community store — one language, or all when `lang` is omitted. Admin only (`Authorization: Bearer <ADMIN_API_KEY>`). |
 | GET    | `/challenge/followups?lang=<lang>&count=<n>` | Serves random follow-up questions from the community pool (same `Cache-Control` as above; 404 `{error: "no_followups"}` when empty). |
 | GET    | `/challenge/status`   | Current IP's `solved_today`, `credit_cents`, limits. |
@@ -118,7 +119,13 @@ use, and every visitor benefits:
    store (server-side clearing is the admin `DELETE` above).
 
 Submissions are filtered (non-empty strings, must differ from the source,
-≤100 entries, `en` excluded) and merged into the per-language store.
+≤100 entries, `en` excluded) and merged into the per-language store. Before
+merging, and whenever a translation store is served by
+`GET /challenge/translations` or listed by `/challenge/translations/languages`,
+sources that are no longer in the snippet catalog are removed automatically so
+the store never grows with dead snippets. The admin
+`/challenge/translations/check?remove=1` endpoint remains available to audit
+those removals explicitly.
 
 ## Community follow-ups
 
@@ -229,7 +236,7 @@ cd g4f.dev
 node dist/js/challenge-client.smoke.test.cjs
 ```
 
-51 checks covering: issue (encrypted, no plaintext leak), client-side decrypt
+78 checks covering: issue (encrypted, no plaintext leak), client-side decrypt
 via the real client code path, solve, token issuance, replay rejection,
 redeem + ledger credit (both via the `/challenge/redeem` proxy and directly
 on the cake worker's `/cake/redeem`, sharing one in-memory KV), double-redeem
@@ -239,4 +246,5 @@ serves shuffled questions, `count` respected, empty pool 404) — plus the full
 translations round: batch issue from the raw catalog (headline-led string
 items), solve with store feeding, serving via
 `GET /challenge/translations?lang=…`, skip-already-translated on the next
-batch, and rejection of the `en` store.
+batch, automatic removal of stale snippet sources, and rejection of the `en`
+store.

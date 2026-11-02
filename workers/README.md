@@ -58,6 +58,14 @@ https://ollama.g4f.space                 API worker -> Ollama module
 https://auth.g4f.space                   Auth / members worker
 ```
 
+### First-party members page
+
+Browsers that block third-party cookies cannot use the `auth.g4f.space`
+session cookie from `g4f.dev/members.html`. The auth worker therefore serves
+the members page at `https://auth.g4f.space/members.html` (fetched from the
+static g4f.dev page with a `<base>` for assets). The g4f.dev page probes
+`/members/api/cookie-check` and redirects there when cookies are blocked.
+
 ```bash
 curl https://g4f.space/api/ollama/models
 curl https://g4f.space/api/puter/models

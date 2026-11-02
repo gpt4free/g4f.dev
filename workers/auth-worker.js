@@ -32,6 +32,14 @@ const CORS_HEADERS = {
   };
   
   const OAUTH_REDIRECT_URI = "https://g4f.dev/members.html";
+
+  // First-party members page for browsers that block third-party cookies.
+  // The static page lives on g4f.dev; this worker serves a copy on
+  // auth.g4f.space so the session cookie is first-party there.
+  const MEMBERS_PAGE_URL = "https://g4f.dev/members.html";
+  const MEMBERS_PAGE_CACHE_KEY = "https://auth.g4f.space/__g4f_members_page__";
+  const MEMBERS_PAGE_CACHE_TTL = 300;
+  const COOKIE_PROBE_NAME = "g4f_cookie_probe";
   
   // Extended rate limiting configuration with time windows
   const RATE_LIMITS = {
@@ -277,6 +285,125 @@ function getSafeUser(user) {
         safeUser.discord = publicDiscord;
     }
     return safeUser;
+}
+
+function getCookieValue(request, name) {
+    const header = request.headers.get("Cookie") || "";
+    for (const part of header.split(";")) {
+        const trimmed = part.trim();
+        const separator = trimmed.indexOf("=");
+        if (separator === -1) continue;
+        if (trimmed.slice(0, separator) === name) {
+            return trimmed.slice(separator + 1);
+        }
+    }
+    return null;
+}
+
+/**
+ * Probe whether the browser accepts the SameSite=None auth cookie when the
+ * members page is embedded on another site (for example g4f.dev). The client
+ * calls this twice: ?set=<nonce> sets the probe, then ?expect=<nonce> checks
+ * that it came back.
+ */
+function handleCookieCheck(request) {
+    const url = new URL(request.url);
+    const setValue = url.searchParams.get("set");
+    const expectValue = url.searchParams.get("expect");
+    const headers = {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        ...getCorsHeaders(request)
+    };
+
+    if (setValue && /^[A-Za-z0-9_-]{8,64}$/.test(setValue)) {
+        headers["Set-Cookie"] =
+            `${COOKIE_PROBE_NAME}=${setValue}; domain=${SESSION_COOKIE_DOMAIN}; ` +
+            "Path=/; Max-Age=60; SameSite=None; Secure; HttpOnly";
+    }
+
+    const storedValue = getCookieValue(request, COOKIE_PROBE_NAME);
+    const result = {
+        cookies: expectValue ? storedValue === expectValue : Boolean(storedValue)
+    };
+    if (expectValue && !result.cookies) {
+        result.reason = "cookie_blocked";
+    }
+    return new Response(JSON.stringify(result), { status: 200, headers });
+}
+
+/**
+ * Serve the members page on auth.g4f.space. The page itself is static and
+ * deployed to g4f.dev, so fetch it, add a <base> for its assets, and cache
+ * the result. Running it on the auth host makes the session cookie
+ * first-party for browsers that block third-party cookies.
+ */
+async function handleMembersPage(request, ctx) {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+        return new Response("Method Not Allowed", {
+            status: 405,
+            headers: { Allow: "GET, HEAD", "Cache-Control": "no-store" }
+        });
+    }
+
+    const cache = globalThis.caches && globalThis.caches.default;
+    const cacheKey = new Request(MEMBERS_PAGE_CACHE_KEY);
+    let cached = null;
+    if (cache) {
+        try {
+            cached = await cache.match(cacheKey);
+        } catch (e) {
+            // Cache API can be unavailable in local/preview runtimes.
+        }
+    }
+
+    if (!cached) {
+        let upstream = null;
+        try {
+            upstream = await fetch(MEMBERS_PAGE_URL, {
+                cf: { cacheTtl: MEMBERS_PAGE_CACHE_TTL, cacheEverything: true }
+            });
+        } catch (e) {
+            console.error("Failed to fetch the members page:", e);
+        }
+
+        if (!upstream || !upstream.ok) {
+            return new Response("Members page is temporarily unavailable. Please try again.", {
+                status: 502,
+                headers: {
+                    "Content-Type": "text/plain; charset=utf-8",
+                    "Cache-Control": "no-store",
+                    ...getCorsHeaders(request)
+                }
+            });
+        }
+
+        let html = await upstream.text();
+        if (!/<base\b/i.test(html)) {
+            html = html.replace(/<head\b([^>]*)>/i, (match) => `${match}\n    <base href="https://g4f.dev/">`);
+        }
+        // Keep the self-link on the first-party host instead of bouncing
+        // back to g4f.dev via the <base>.
+        html = html.replaceAll('href="/members.html"', 'href="https://auth.g4f.space/members.html"');
+
+        cached = new Response(html, {
+            status: 200,
+            headers: {
+                "Content-Type": "text/html; charset=utf-8",
+                "Cache-Control": `public, max-age=${MEMBERS_PAGE_CACHE_TTL}`,
+                ...getCorsHeaders(request)
+            }
+        });
+
+        if (cache && ctx && typeof ctx.waitUntil === "function") {
+            ctx.waitUntil(cache.put(cacheKey, cached.clone()).catch(() => {}));
+        }
+    }
+
+    if (request.method === "HEAD") {
+        return new Response(null, { status: cached.status, headers: cached.headers });
+    }
+    return new Response(cached.body, { status: cached.status, headers: cached.headers });
 }
 
 /**
@@ -528,6 +655,16 @@ var USER_TIER_LIMITS = {
         // Handle CORS preflight
         if (request.method === "OPTIONS") {
             return new Response(null, { headers: getCorsHeaders(request) });
+        }
+
+        // First-party members page + third-party cookie probe. These are
+        // intentionally handled before the auth/API routes so they work
+        // without a session on the canonical auth host.
+        if (pathname === "/members.html" || pathname === "/members/" || pathname === "/members") {
+            return handleMembersPage(request, ctx);
+        }
+        if (pathname === "/members/api/cookie-check") {
+            return handleCookieCheck(request);
         }
   
         try {
@@ -2744,7 +2881,9 @@ ${buttonsHtml}
     return jsonResponse({
       ...membership,
       invite: DISCORD_SUPPORT_INVITE,
-      can_upgrade: user.tier === "new" || user.tier === "anonymous"
+      // Keep the connect prompt visible for accounts that have not linked
+      // Discord yet, even when their tier is already above "new".
+      can_upgrade: user.tier === "new" || user.tier === "anonymous" || !membership.connected
     }, 200, getCorsHeaders(request));
   }
 

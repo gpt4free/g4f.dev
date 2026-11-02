@@ -383,6 +383,20 @@ function check(name, cond) {
     check("languages listing sorted by count desc",
         listing.languages.every((l, i, arr) => i === 0 || arr[i - 1].count >= l.count));
 
+    // Stale snippet sources are pruned automatically when a store is served.
+    const pruneKv = makeKv();
+    await pruneKv.put("challenge:translations:pt", JSON.stringify({
+        "Home": "Início",
+        "Removed UI Copy": "Text entfernt",
+    }));
+    const pruneEnv = { ...env, CAKE_KV: pruneKv, CHALLENGE_TRANSLATIONS_KV: undefined };
+    res = await worker.fetch(makeRequest("https://g4f.dev/challenge/translations?lang=pt"), pruneEnv, {});
+    const prunedServed = await res.json();
+    check("stale translation source not served", !("Removed UI Copy" in prunedServed.translations));
+    check("valid translation source still served", prunedServed.translations.Home === "Início");
+    const prunedStored = JSON.parse(pruneKv.store.get("challenge:translations:pt"));
+    check("stale translation source removed from KV", !("Removed UI Copy" in prunedStored));
+
     res = await worker.fetch(makeRequest("https://g4f.dev/challenge/translations", "DELETE"), env, {});
     check("clear without admin key rejected", res.status === 401);
     res = await worker.fetch(
@@ -424,12 +438,12 @@ function check(name, cond) {
 
     // The translation mirror stays readable while Upstash is down.
     const mirrorReadKv = makeKv();
-    await mirrorReadKv.put("challenge:translations:xx", JSON.stringify({ "Hallo": "Hello" }));
+    await mirrorReadKv.put("challenge:translations:xx", JSON.stringify({ "Home": "Startseite" }));
     const mirrorReadEnv = { ...env, CAKE_KV: downKv, CHALLENGE_TRANSLATIONS_KV: mirrorReadKv };
     res = await worker.fetch(makeRequest("https://g4f.dev/challenge/translations?lang=xx"), mirrorReadEnv, {});
     check("translations fall back to Blob", res.status === 200);
     const mirrorServed = await res.json();
-    check("Blob fallback translations served", mirrorServed.translations.Hallo === "Hello");
+    check("Blob fallback translations served", mirrorServed.translations.Home === "Startseite");
 
     // Solved translations are written to both the primary KV and the mirror.
     const writePrimary = makeKv();

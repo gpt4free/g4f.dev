@@ -1664,6 +1664,18 @@ const apiExport = {};
         retryCount: 0,        // safety cap on total retries per message
     };
     const MAX_FALLBACK_RETRIES = 10;
+    const MAX_AUTO_RETRIES = 2;
+
+    // True for the "Provider: Auto" and "Model: Default" selections, which
+    // have no concrete provider/model pair to fall back to.
+    function isAutoOrNoneSelection(providerName, modelId) {
+        const provider = String(providerName || '').trim().toLowerCase();
+        const model = String(modelId || '').trim().toLowerCase();
+        return !provider
+            || ['anyprovider', 'default', 'auto'].includes(provider)
+            || !model
+            || ['default', 'none', 'auto'].includes(model);
+    }
 
     // Build an ordered list of candidate {provider, model} pairs from the
     // picker's loaded providers. Excludes disabled/hidden providers and
@@ -1710,13 +1722,44 @@ const apiExport = {};
     // selects it in the dropdown and re-invokes ask_gpt. Returns true if
     // a retry was started, false if no candidates remain.
     async function tryNextProvider(messageId, messages, action, message) {
-        if (!state.loaded) return false;
         // Reset retry count when the message_id changes (new user message)
         if (fallback.lastMessageId !== messageId) {
             fallback.tried.clear();
             fallback.retryCount = 0;
             fallback.lastMessageId = messageId;
         }
+        const providerSelect = document.getElementById('provider');
+        const modelSelect = document.getElementById('model');
+        const failedProvider = providerSelect?.value;
+        const failedModel = window.get_selected_model ? window.get_selected_model() : modelSelect?.value;
+
+        // Auto/default selections do not name a concrete provider/model.
+        // Retry the same request a few times: the router picks a new
+        // provider on each attempt, so a transient failure can recover.
+        if (isAutoOrNoneSelection(failedProvider, failedModel)) {
+            if (fallback.retryCount >= MAX_AUTO_RETRIES) {
+                console.warn('Picker: auto selection retry limit reached, stopping');
+                fallback.active = false;
+                return false;
+            }
+            fallback.retryCount += 1;
+            fallback.active = true;
+            fallback.lastMessageId = messageId;
+            console.info(`Picker: retrying auto model selection (attempt ${fallback.retryCount}/${MAX_AUTO_RETRIES})`);
+            notify(`Retrying request (${fallback.retryCount}/${MAX_AUTO_RETRIES})`, 'info');
+            // Reload to flush any partial response before retrying.
+            await load_conversation(window.conversation_id);
+            if (typeof window.ask_gpt === 'function') {
+                const retryProvider = failedProvider && failedProvider !== 'default' ? failedProvider : undefined;
+                const retryModel = failedModel && !['default', 'none', 'auto'].includes(String(failedModel).toLowerCase())
+                    ? failedModel
+                    : undefined;
+                window.ask_gpt(messageId, -1, false, retryProvider, retryModel, action, message);
+            }
+            return true;
+        }
+
+        if (!state.loaded) return false;
         // Safety cap to prevent infinite loops
         if (fallback.retryCount >= MAX_FALLBACK_RETRIES) {
             console.warn('Picker: fallback retry limit reached, stopping');
@@ -1726,10 +1769,6 @@ const apiExport = {};
         // Reload the conversation to flush any partial responses from the failed provider/model
         await load_conversation(window.conversation_id);
         // Mark the just-failed provider/model as tried
-        const providerSelect = document.getElementById('provider');
-        const modelSelect = document.getElementById('model');
-        const failedProvider = providerSelect?.value;
-        const failedModel = window.get_selected_model ? window.get_selected_model() : modelSelect?.value;
         if (failedProvider && failedModel) {
             markTried(failedProvider, failedModel);
         }

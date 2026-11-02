@@ -290,6 +290,7 @@ const SNIPPET_PAGES = [
 ];
 let snippetsCache = null;
 let snippetsKeys = null;
+let snippetsKeySet = new Set();
 async function loadSnippets(env) {
     if (snippetsCache) return snippetsCache;
     const base = env.SNIPPETS_URL || "/dist/js/snippets/chat.json";
@@ -319,6 +320,7 @@ async function loadSnippets(env) {
     });
     snippetsKeys = [...new Set(snippetsKeys)];
     delete snippetsKeys["..."];
+    snippetsKeySet = new Set(snippetsKeys);
     return snippetsCache;
 }
 
@@ -601,6 +603,46 @@ async function getTranslationStore(env, language) {
     try { store = raw ? JSON.parse(raw) : {}; } catch { /* fresh store */ }
     memoryCacheSet(key, store);
     return store;
+}
+
+/** Drop entries that can no longer be served by a challenge: sources that
+ *  left the snippet catalog (renamed/removed UI copy) and empty values. The
+ *  catalog must be loaded first; without it every entry would look stale, so
+ *  callers skip pruning while snippetsKeys is empty. */
+function pruneTranslationStore(store) {
+    const cleaned = {};
+    let removed = 0;
+    for (const [source, translated] of Object.entries(store || {})) {
+        if (!snippetsKeySet.has(source) || typeof translated !== "string" || !translated.trim()) {
+            removed += 1;
+            continue;
+        }
+        cleaned[source] = translated;
+    }
+    return { store: cleaned, removed };
+}
+
+/** Persist a translation store to the primary KV and its optional mirror. */
+async function writeTranslationStore(env, language, store) {
+    const storeKey = `challenge:translations:${language}`;
+    const serialized = JSON.stringify(store);
+    const targets = [env.CAKE_KV, translationFallbackKv(env)].filter(Boolean);
+    await Promise.allSettled(
+        targets.map((kv) => kv.put(storeKey, serialized, { expirationTtl: 86400 * 365 }))
+    );
+    memoryCacheSet(`translations:${language}`, store);
+}
+
+/** Automatically prune stale entries whenever a store is read with the
+ *  snippet catalog loaded. This keeps every response from carrying dead
+ *  weight without requiring the admin /challenge/translations/check call. */
+async function pruneStaleTranslations(env, language, store) {
+    if (!snippetsKeySet.size || !store || typeof store !== "object") return store;
+    const { store: cleaned, removed } = pruneTranslationStore(store);
+    if (removed === 0) return store;
+    await writeTranslationStore(env, language, cleaned);
+    memoryCacheDelete("languages");
+    return cleaned;
 }
 
 /** Read the community follow-up pool for a language, memoized per isolate. */
@@ -947,24 +989,22 @@ async function handleTranslationsSubmit(language, translations, env) {
         throw new Error("too_many_translations");
     }
 
-    // Merge into the per-language community store.
-    const storeKey = `challenge:translations:${language}`;
+    // Merge into the per-language community store. Prune sources that are no
+    // longer in the catalog before writing so a solve also cleans up old copy.
     const raw = await readTranslationRaw(env, language);
     let store = {};
     try { store = raw ? JSON.parse(raw) : {}; } catch { /* fresh store */ }
+    store = pruneTranslationStore(store).store;
     let added = 0;
     for (const [source, translated] of knownTranslations) {
         if (!store[source]) added += 1;
         store[source] = translated.trim();
     }
-    const serialized = JSON.stringify(store);
-    const targets = [env.CAKE_KV, translationFallbackKv(env)].filter(Boolean);
-    await Promise.allSettled(
-        targets.map((kv) => kv.put(storeKey, serialized, { expirationTtl: 86400 * 365 }))
-    );
+    await writeTranslationStore(env, language, store);
     // The store changed — drop the memoized copies so the next read (and the
     // next /challenge/issue batch) sees the new translations immediately.
     memoryCacheDelete("translations:");
+    memoryCacheDelete("languages");
 
     return { ok: true, language, added, total: Object.keys(store).length };
 }
@@ -980,14 +1020,19 @@ async function handleTranslationsGet(request, env) {
     if (!language || language === "en") {
         return json({ error: "invalid_language" }, 400, {}, request);
     }
-    const translations = await getTranslationStore(env, language);
-    const result = { language, count: Object.keys(translations).length, translations };
+    let translations = await getTranslationStore(env, language);
+    let result;
     try {
         await loadSnippets(env);
+        translations = await pruneStaleTranslations(env, language, translations);
+        result = { language, count: Object.keys(translations).length, translations };
         result.total = snippetsKeys.length;
         result.remaining = Math.max(0, result.total - result.count);
         result.percent = result.total ? Math.round((result.count / result.total) * 1000) / 10 : 100;
-    } catch { /* catalog unavailable — progress fields omitted */ }
+    } catch {
+        /* catalog unavailable — serve the store unchanged without progress fields */
+        result = { language, count: Object.keys(translations).length, translations };
+    }
     return json(
         result,
         200,
@@ -1047,7 +1092,8 @@ async function handleTranslationsLanguages(request, env) {
         const language = name.slice(prefix.length);
         if (!language) continue;
         // Memoized per language — the list endpoint reads every store.
-        const store = await getTranslationStore(env, language);
+        let store = await getTranslationStore(env, language);
+        if (total !== null) store = await pruneStaleTranslations(env, language, store);
         const count = Object.keys(store).length;
         const entry = { language, count };
         if (total !== null) {
@@ -1059,9 +1105,10 @@ async function handleTranslationsLanguages(request, env) {
     }
     const languageKeys = languages.map(entry => entry.language);
     const seedLanguages = [
-        "de", "es", "fr", "it", "pt", "nl", "pl", "ru", "uk", "tr",
-        "zh", "ja", "ko", "hi", "ar", "id", "vi", "th", "sv", "da",
-        "fi", "nb", "cs", "el", "he", "hu", "ro", "bg",
+        "ar", "bg", "cs", "da", "de", "el", "es", "et", "fa", "fi",
+        "fr", "he", "hi", "hr", "hu", "id", "it", "ja", "kk", "ko",
+        "nb", "nl", "pl", "pt", "ro", "ru", "sk", "sl", "sq", "sr",
+        "sv", "th", "tr", "uk", "ur", "uz", "vi", "zh",
     ];
     const missingSeedLanguages = seedLanguages.filter(lang => !languageKeys.includes(lang));
     languages.sort((a, b) => b.count - a.count || (a.language < b.language ? -1 : 1));
@@ -1135,19 +1182,11 @@ async function handleTranslationsCheck(request, env) {
         let store = {};
         try { store = raw ? JSON.parse(raw) : {}; } catch { /* skip broken store */ }
         const sources = Object.keys(store);
-        const stale = sources.filter((source) => !snippetsKeys.includes(source));
+        const stale = sources.filter((source) => !snippetsKeySet.has(source));
         const entry = { language: lang, total: sources.length, valid: sources.length - stale.length, stale: stale.length, stale_keys: stale };
         if (remove && stale.length > 0) {
-            const cleaned = {};
-            for (const source of sources) {
-                if (!snippetsKeys.includes(source)) continue;
-                cleaned[source] = store[source];
-            }
-            const serialized = JSON.stringify(cleaned);
-            const targets = [env.CAKE_KV, translationFallbackKv(env)].filter(Boolean);
-            await Promise.allSettled(
-                targets.map((kv) => kv.put(name, serialized, { expirationTtl: 86400 * 365 }))
-            );
+            const cleaned = pruneTranslationStore(store).store;
+            await writeTranslationStore(env, lang, cleaned);
             entry.removed = stale.length;
         }
         staleTotal += stale.length;

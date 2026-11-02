@@ -54,6 +54,7 @@ function loadFramework({languages = ["en-US"], country = null, store = {}} = {})
         setTimeout,
         clearTimeout,
         Intl,
+        Node: {TEXT_NODE: 3, ELEMENT_NODE: 1},
     };
     context.window = context;
     context.globalThis = context;
@@ -97,4 +98,42 @@ test("stored packages are not applied to the browser language without a selectio
     });
     assert.deepEqual(JSON.parse(JSON.stringify(context.framework.translations)), {});
     assert.equal(context.framework.getSelectedLanguage(), null);
+});
+
+function fakeElement(text, {marked = false, attrs = {}, children = []} = {}) {
+    const element = {
+        nodeType: 1,
+        tagName: "DIV",
+        classList: {contains: () => false},
+        childNodes: [{nodeType: 3, textContent: text}],
+        attrs: {...attrs},
+        children,
+        matches: (selector) => selector === '[data-translate="true"]'
+            && element.attrs["data-translate"] === "true",
+        querySelectorAll: (selector) => selector === "*"
+            ? children
+            : children.filter((child) => child.matches && child.matches(selector)),
+        getAttribute(name) { return this.attrs[name] ?? null; },
+        setAttribute(name, value) { this.attrs[name] = value; },
+    };
+    if (marked) element.attrs["data-translate"] = "true";
+    return element;
+}
+
+test("translateMarked translates cloned UI but not unmarked content", () => {
+    const context = loadFramework({languages: ["de-DE"]});
+    context.framework.translations = {
+        "How can I help you today?": "Wie kann ich dir heute helfen?",
+        "Send message": "Nachricht senden",
+        "Unrelated model output": "Sollte unübersetzt bleiben",
+    };
+    const title = fakeElement("How can I help you today?");
+    const button = fakeElement("Send message", {attrs: {"aria-label": "Send message"}});
+    const message = fakeElement("Unrelated model output");
+    const root = fakeElement("", {marked: true, children: [title, button]});
+
+    assert.equal(context.framework.translateMarked(root), 1);
+    assert.equal(title.childNodes[0].textContent, "Wie kann ich dir heute helfen?");
+    assert.equal(button.attrs["aria-label"], "Nachricht senden");
+    assert.equal(message.childNodes[0].textContent, "Unrelated model output");
 });

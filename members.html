@@ -1722,6 +1722,9 @@
         const API_URL = 'https://g4f.space';
         const MEMBERS_API = `${API_BASE}/members/api`;
         const SECRET_API = 'https://auth.g4f.space';
+        const AUTH_MEMBERS_URL = 'https://auth.g4f.space/members.html';
+        const AUTH_HOSTNAME = 'auth.g4f.space';
+        const IS_AUTH_HOST = window.location.hostname === AUTH_HOSTNAME;
 
         // DOM Elements
         const loginSection = document.getElementById('loginSection');
@@ -1836,6 +1839,50 @@
             setTimeout(() => {
                 toast.classList.remove('show');
             }, 3000);
+        }
+
+        // Browsers that block third-party cookies cannot use the session
+        // cookie set by auth.g4f.space while this page runs on g4f.dev.
+        // Probe for cookie support and, when it is missing, move to the
+        // first-party copy of this page on auth.g4f.space.
+        async function thirdPartyCookiesBlocked() {
+            if (IS_AUTH_HOST || !/^https?:$/.test(window.location.protocol)) {
+                return false;
+            }
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return false;
+            }
+            const nonce = (window.crypto && crypto.randomUUID)
+                ? crypto.randomUUID()
+                : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            const probeUrl = `${MEMBERS_API}/cookie-check`;
+            try {
+                const setResponse = await fetch(`${probeUrl}?set=${encodeURIComponent(nonce)}`, {
+                    credentials: 'include',
+                    cache: 'no-store'
+                });
+                if (!setResponse.ok) return false;
+                const checkResponse = await fetch(`${probeUrl}?expect=${encodeURIComponent(nonce)}`, {
+                    credentials: 'include',
+                    cache: 'no-store'
+                });
+                if (!checkResponse.ok) return false;
+                const result = await checkResponse.json();
+                return result && result.cookies === false;
+            } catch (e) {
+                console.warn('Could not verify cookie access:', e);
+                return false;
+            }
+        }
+
+        function redirectToAuthMembersPage() {
+            if (IS_AUTH_HOST) return;
+            const target = new URL(AUTH_MEMBERS_URL);
+            target.search = window.location.search;
+            target.hash = window.location.hash;
+            if (target.toString() !== window.location.href) {
+                window.location.replace(target.toString());
+            }
         }
 
         // Check if user is logged in
@@ -2100,10 +2147,12 @@
             const requestBtn = document.getElementById('secretRequestBtn');
             if (!statusEl) return;
             if (secret) {
-                statusEl.innerHTML = '<i class="fas fa-check-circle" style="color: var(--success);"></i> Workspace secret active — this device can confirm requests from other devices.';
+                statusEl.innerHTML = '<i class="fas fa-check-circle" style="color: var(--success);"></i> ' +
+                    framework.translate('Workspace secret active — this device can confirm requests from other devices.');
                 if (requestBtn) requestBtn.style.display = 'none';
             } else {
-                statusEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i> No workspace secret. Request one from an online device.';
+                statusEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i> ' +
+                    framework.translate('No workspace secret. Request one from an online device.');
                 if (requestBtn) requestBtn.style.display = 'inline-flex';
             }
         }
@@ -2485,8 +2534,17 @@
             }
         }
 
+        function hasDiscordConnection(user) {
+            if (!user) return false;
+            if (user.provider === 'discord' || user.discord_id) return true;
+            return !!(user.discord && (user.discord.id || user.discord.username));
+        }
+
         function isDiscordUpgradeEligible(user) {
-            return !!user && (user.tier === 'new' || user.tier === 'anonymous');
+            if (!user) return false;
+            // Show the banner to new/anonymous accounts that can be upgraded,
+            // and to any account that has not connected Discord yet.
+            return user.tier === 'new' || user.tier === 'anonymous' || !hasDiscordConnection(user);
         }
 
         function renderDiscordUpgradeBanner(user, status) {
@@ -2509,20 +2567,20 @@
             discordStepDone('upgrade', status.tier !== 'new' && status.tier !== 'anonymous');
 
             if (reconnect) {
-                discordUpgradeText.textContent = 'Reconnect Discord so we can verify your support server membership, then upgrade to the Free tier.';
+                discordUpgradeText.textContent = framework.translate('Reconnect Discord so we can verify your support server membership, then upgrade to the Free tier.');
             } else if (!connected) {
-                discordUpgradeText.textContent = 'Connect Discord and join the G4F support server — we will verify your membership and upgrade your account right away.';
+                discordUpgradeText.textContent = framework.translate('Connect Discord and join the G4F support server — we will verify your membership and upgrade your account right away.');
             } else if (!joined) {
-                discordUpgradeText.textContent = 'Almost there! Join the G4F support server, then click Verify to unlock the Free tier.';
+                discordUpgradeText.textContent = framework.translate('Almost there! Join the G4F support server, then click Verify to unlock the Free tier.');
             } else {
-                discordUpgradeText.textContent = 'Support server membership confirmed. Verify now to upgrade your account to the Free tier.';
+                discordUpgradeText.textContent = framework.translate('Support server membership confirmed. Verify now to upgrade your account to the Free tier.');
             }
 
             const redirect = encodeURIComponent(window.location.origin + '/members.html');
             discordConnectBtn.href = `${API_BASE}/members/auth/discord?link=1&redirect=${redirect}`;
             discordConnectBtn.innerHTML = reconnect || connected
-                ? '<i class="fab fa-discord"></i> Reconnect Discord'
-                : '<i class="fab fa-discord"></i> Connect Discord';
+                ? `<i class="fab fa-discord"></i> ${framework.translate('Reconnect Discord')}`
+                : `<i class="fab fa-discord"></i> ${framework.translate('Connect Discord')}`;
             discordConnectBtn.style.display = connected && !reconnect ? 'none' : '';
             if (discordJoinBtn) {
                 discordJoinBtn.href = status.invite || DISCORD_INVITE_URL;
@@ -2556,7 +2614,7 @@
                 const cached = JSON.parse(localStorage.getItem('g4f_user') || '{}');
                 discordBannerLoading = true;
                 discordVerifyBtn.disabled = true;
-                discordVerifyBtn.innerHTML = '<span class="loading"></span> Verifying...';
+                discordVerifyBtn.innerHTML = '<span class="loading"></span> ' + framework.translate('Verifying...');
                 try {
                     const result = await apiRequest('/discord/verify', {
                         method: 'POST',
@@ -2581,7 +2639,7 @@
                     showToastFormat('Verification failed: {0}', 'error', error.message);
                 } finally {
                     discordBannerLoading = false;
-                    discordVerifyBtn.innerHTML = '<i class="fas fa-check"></i> Verify &amp; Upgrade';
+                    discordVerifyBtn.innerHTML = '<i class="fas fa-check"></i> ' + framework.translate('Verify & Upgrade');
                     if (discordMembership) {
                         discordVerifyBtn.disabled = !discordMembership.connected || discordMembership.needs_reconnect;
                     }
@@ -2707,6 +2765,14 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
+            // Third-party cookie blocking prevents the auth.g4f.space session
+            // cookie from reaching this origin. Use the first-party members
+            // page instead so sign-in and API access keep working.
+            if (await thirdPartyCookiesBlocked()) {
+                redirectToAuthMembersPage();
+                return;
+            }
+
             // Connect to backend
             if (typeof framework !== 'undefined') {
                 framework.connectToBackend();
@@ -3377,14 +3443,14 @@
             const prefix    = key.prefix || (key.api_key ? key.api_key.substring(0, 10) : null);
             const masked    = prefix ? `${prefix}${'•'.repeat(18)}` : '••••••••••••••••••••••••••••';
             const created   = key.created_at ? new Date(key.created_at).toLocaleDateString() : '-';
-            const expires   = expiresMs !== null ? new Date(expiresMs).toLocaleDateString() : 'Never';
+            const expires   = expiresMs !== null ? new Date(expiresMs).toLocaleDateString() : framework.translate('Never');
 
             return `
                 <div class="api-key-item" data-key-id="${escapeHtml(String(key.id))}">
                     <div class="api-key-info">
-                        <div class="api-key-name">${escapeHtml(key.name || key.label || 'Unnamed Key')}</div>
+                        <div class="api-key-name">${escapeHtml(key.name || key.label || framework.translate('Unnamed Key'))}</div>
                         <div class="api-key-masked">${escapeHtml(masked)}</div>
-                        <div class="api-key-meta">Created: ${created} &bull; Expires: ${expires}</div>
+                        <div class="api-key-meta">${framework.translate('Created:')} ${created} &bull; ${framework.translate('Expires:')} ${expires}</div>
                     </div>
                     <span class="key-status ${isExpired ? 'expired' : 'active'}">
                         <i class="fas fa-circle" style="font-size:0.45rem;"></i>

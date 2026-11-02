@@ -2319,7 +2319,9 @@ form textarea {
 }
 
 #userInput {
-    height: 106px;
+    height: auto;
+    min-height: 56px;
+    max-height: 40vh;
     flex: 1;
     padding: 16px 36px 16px 42px;
     color: var(--colour-3);
@@ -2327,6 +2329,7 @@ form textarea {
     font-size: 15px;
     width: calc(100% - 88px);
     resize: none;
+    overflow-y: hidden;
     line-height: 1.5;
     transition: height 0.15s ease;
 }

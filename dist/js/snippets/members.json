@@ -29,6 +29,24 @@
         "Manage your API keys and monitor your usage",
         "Sign Out"
     ],
+    "Discord Upgrade": [
+        "Unlock the Free tier instantly",
+        "Connect Discord and join the G4F support server — we'll verify your membership and upgrade your account right away.",
+        "Connect Discord",
+        "Join support server",
+        "Upgrade to Free",
+        "Join Support Server",
+        "Verify & Upgrade",
+        "Reconnect Discord",
+        "Reconnect Discord so we can verify your support server membership, then upgrade to the Free tier.",
+        "Connect Discord and join the G4F support server — we will verify your membership and upgrade your account right away.",
+        "Almost there! Join the G4F support server, then click Verify to unlock the Free tier.",
+        "Support server membership confirmed. Verify now to upgrade your account to the Free tier.",
+        "Verifying...",
+        "Discord verified — your account was upgraded to the Free tier!",
+        "Discord membership verified!",
+        "Verification failed: {0}"
+    ],
     "Usage Statistics": [
         "Usage Statistics",
         "API Requests",

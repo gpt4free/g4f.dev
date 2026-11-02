@@ -317,7 +317,7 @@
                       <label for="automaticOrientation" class="toogle" title="Auto-orient generated media"></label>
                   </div>
                   <div class="field box">
-                      <label for="userInput-height" class="label" title="Set minimum height of input box">Input Min Height (px)</label>
+                      <label for="userInput-height" class="label" title="Set maximum height of the input box as it grows">Input Max Height (px)</label>
                       <input type="number" id="userInput-height" value="200" min="100" max="500" />
                   </div>
                   <div class="field box">
@@ -577,7 +577,7 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
             <label for="chatPrompt" class="sr-only">System prompt textarea</label>
             <textarea id="chatPrompt" class="box" placeholder="System prompt" aria-multiline="true" rows="3"></textarea>
 
-            <button class="slide-header" aria-label="Collapse chat header">
+            <button class="slide-header" type="button" aria-label="Hide system prompt" aria-expanded="true">
                 <i class="fa-solid fa-angles-up" aria-hidden="true"></i>
             </button>
 
@@ -659,8 +659,8 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                           class="box"
                           placeholder="Type a message..."
                           cols="30"
-                          rows="4"
-                          style="white-space: pre-wrap;resize: none;"
+                          rows="1"
+                          style="white-space: pre-wrap;resize: none;overflow-y: hidden;"
                           autocomplete="off"
                         ></textarea>
 
@@ -838,7 +838,7 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
 
     <!-- Modern empty state template (cloned into chatBody when no messages exist) -->
     <template id="empty-state-template">
-        <div id="chat-empty-state" class="chat-empty-state" aria-label="Start a conversation">
+        <div id="chat-empty-state" class="chat-empty-state" data-translate="true" aria-label="Start a conversation">
             <div class="empty-state-content">
                 <div class="empty-state-icon">
                     <img src="/dist/img/g4f.svg" alt="" aria-hidden="true" />
@@ -889,6 +889,11 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
             if (!template) return null;
             const clone = template.content.firstElementChild.cloneNode(true);
             chatBody.appendChild(clone);
+            // The template is cloned after the page-wide translation pass, so
+            // translate the marked empty-state copy now (and on every rebuild).
+            if (window.framework && framework.translateMarked) {
+                framework.translateMarked(clone);
+            }
             return clone;
         };
 
@@ -1115,5 +1120,6 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
         });
     })();
     </script>
+    <script src="/chat/g4f-browsing.js?v=1" defer></script>
 </body>
 </html>
