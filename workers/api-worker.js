@@ -1547,6 +1547,17 @@ async function updatePublicServers(env) {
           s.auto_update_models = fullServer.auto_update_models;
           if (fullServer.auto_update_models !== false && validationResult.models && validationResult.models.length > 0) {
             s.allowed_models = validationResult.models;
+            const ownerId = fullServer.owner_id || s.owner_id;
+            if (ownerId) {
+              const owner = await getUser(env, ownerId);
+              const ownedServer = owner?.custom_servers?.find((entry) => entry.id === s.id);
+              if (ownedServer) {
+                ownedServer.allowed_models = validationResult.models;
+                owner.updated_at = new Date().toISOString();
+                await saveUser(env, owner);
+                await env.MEMBERS_KV.delete(`server:${s.id}`);
+              }
+            }
           }
           if (validationResult.base_url) {
             s.base_url = validationResult.base_url;
@@ -1588,7 +1599,7 @@ async function handleGetServerModels(request, env, serverId, user) {
     if (apiKey) {
       headers["Authorization"] = apiKey.includes("Bearer") ? apiKey : `Bearer ${apiKey}`;
     }
-    const response = await fetch(`${server.base_url}/models`, { headers });
+    const response = await fetchModelEndpoint(env, `${server.base_url}/models`, headers);
     if (response.ok) {
       const data = await response.json();
       // Auto-update stored allowed_models when enabled (default)
@@ -3277,6 +3288,17 @@ async function validateServer(env, baseUrl, apiKeysStr, defaultModel = null, ski
   validateServerCache.set(cacheKey, { time: now, value: result });
   return result;
 }
+async function fetchModelEndpoint(env, endpoint, headers, signal) {
+  const providerWorker = getProviderWorker(env, { base_url: endpoint });
+  if (!providerWorker) {
+    return fetch(endpoint, { headers, signal });
+  }
+  return providerWorker.fetch(
+    new Request(endpoint, { headers, signal }),
+    env,
+    { waitUntil() {} }
+  );
+}
 async function validateServerUncached(env, baseUrl, apiKeysStr, defaultModel=null) {
   if (baseUrl == "https://api.you.com/v1") {
     return {
@@ -3365,12 +3387,10 @@ async function validateServerUncached(env, baseUrl, apiKeysStr, defaultModel=nul
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 1e4);
-      const response = await fetch(endpoint, {
-        headers,
-        signal: controller.signal
-      });
+      const response = await fetchModelEndpoint(env, endpoint, headers, controller.signal);
       clearTimeout(timeout);
       if (response.ok) {
+        const responseBaseUrl = (response.url || endpoint).replace("/models", "");
         const contentType = response.headers.get("content-type") || "";
         if (contentType.includes("application/json")) {
           const data = await response.json();
@@ -3387,14 +3407,14 @@ async function validateServerUncached(env, baseUrl, apiKeysStr, defaultModel=nul
               valid: true,
               is_loading: ["no-store", "no-cache"].includes(response.headers.get("Cache-Control")),
               models: models,
-              base_url: response.url.replace("/models", ""),
+              base_url: responseBaseUrl,
               test_url: testUrl
             };
           }
           return {
             valid: false,
             note: "No models discovered",
-            base_url: response.url.replace("/models", ""),
+            base_url: responseBaseUrl,
             test_url: testUrl
           };
         }
@@ -4068,7 +4088,7 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, user, cacheK
       if (!randomServer) continue;
       requestBody.model = DEFAULT_MODELS[serverId];
       const response = await handleProxyToServer(request, env, ctx, randomServer, "/chat/completions", cacheKey, user, pathname, null, rateCheck, requestBody);
-      if (response.status == 429 || response.status == 503 || response.status == 404) continue;
+      if ([429, 503, 403, 404].includes(response.status)) continue;
       return response;
     }
   }

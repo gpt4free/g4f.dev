@@ -27,6 +27,7 @@
         "your language",
         "selected",
         "loaded",
+        "detected",
         "{0} translations",
         "{0}% translated — {1}{2} texts, {3} remaining",
         "⬇️ Load",

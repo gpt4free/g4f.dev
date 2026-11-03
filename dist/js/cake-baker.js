@@ -1559,7 +1559,7 @@ fn sha256_batch(@builtin(global_invocation_id) gid: vec3<u32>) {
         const w = panelEl.offsetWidth;
         const h = panelEl.offsetHeight;
         const margin = 8;
-        const maxX = Math.max(margin, window.innerWidth - w - margin);
+        const maxX = Math.max(margin, window.innerWidth - w - margin) + 64;
         const maxY = Math.max(margin, window.innerHeight - h - margin);
         return {
             x: Math.min(Math.max(x, margin), maxX),
