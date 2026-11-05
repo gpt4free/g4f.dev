@@ -1178,6 +1178,14 @@ fileInput.addEventListener('change', async (event) => {
                 const reader = new FileReader();
                 reader.addEventListener('load', async (event) => {
                     const data = JSON.parse(event.target.result);
+                    if (!(data.options && "g4f" in data.options) && window.detect_chat_format?.(data)) {
+                        const result = await window.import_external_chats(data);
+                        fileInput.value = "";
+                        inputCount.innerText = result.count
+                            ? framework.translate('{0} Conversations/Settings were imported successfully').replace('{0}', result.count)
+                            : framework.translate('Nothing imported. Enable the source in Import / Export Chats first.');
+                        return;
+                    }
                     if (data.options && "g4f" in data.options) {
                         let count = 0;
                         Object.keys(data).forEach(async key => {

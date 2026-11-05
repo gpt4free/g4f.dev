@@ -2374,7 +2374,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     // so record them here for /api/stats. Only completion calls are tracked;
     // quota/health/model probes stay out of the success-rate denominator.
     if (!response.ok && chatUrls.includes(subPath)) {
-      ctx.waitUntil(persistErrorToDb(env, new Error(`Upstream ${response.status}`), {
+      const errorContext = {
         source: "upstream",
         status: response.status,
         pathname,
@@ -2385,6 +2385,14 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
         server: request._g4fServer || null,
         model: request._g4fModel || null,
         context: { upstream_status: response.status }
+      };
+      ctx.waitUntil(response.clone().text().then((body) => {
+        const upstreamMessage = body.trim().substring(0, 900);
+        const message = `Upstream ${response.status}${upstreamMessage ? `: ${upstreamMessage}` : ""}`;
+        return persistErrorToDb(env, new Error(message), errorContext);
+      }).catch((error) => {
+        console.error("Failed to read upstream error body:", error);
+        return persistErrorToDb(env, new Error(`Upstream ${response.status}`), errorContext);
       }));
     }
     const contentType = (response.headers.get("content-type") || "").split(";")[0];

@@ -216,7 +216,7 @@
     </style>
     <script src="/dist/js/framework.js" defer></script>
 </head>
-<body class="translate">
+<body class="translate noads">
     <div class="wrap">
         <header>
             <h1>🌐 Language Selection</h1>
@@ -663,36 +663,6 @@
                 }
                 toast(cleared ? tpl("Unloaded \"{0}\" — reload pages to re-translate", selected) : t("No language selected"), !cleared);
                 render();
-            } finally {
-                btn.disabled = false;
-            }
-        });
-
-        document.getElementById("clear-server").addEventListener("click", async (event) => {
-            const btn = event.currentTarget;
-            const key = document.getElementById("admin-key").value.trim();
-            if (!key) {
-                toast(t("Enter the admin key first"), true);
-                return;
-            }
-            if (!confirm(t("Clear the WHOLE community translation store on the server?"))) return;
-            btn.disabled = true;
-            try {
-                const res = await fetch(TRANSLATIONS_URL, {
-                    method: "DELETE",
-                    headers: { "Authorization": `Bearer ${key}` },
-                });
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok) {
-                    toast(tpl("Server clear failed: {0}", data.error || res.status), true);
-                    return;
-                }
-                framework.clearTranslations();
-                framework.setSelectedLanguage(null);
-                toast(tpl("Server store cleared ({0} language(s))", data.count));
-                await refresh();
-            } catch (e) {
-                toast(String(e.message || e), true);
             } finally {
                 btn.disabled = false;
             }
