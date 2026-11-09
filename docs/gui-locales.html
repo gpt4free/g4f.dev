@@ -486,10 +486,16 @@ unprefixed path.</p>
 <p>The build reads <code>https://beta.g4f.dev/challenge/translations?lang=&lt;lang&gt;</code> by
 default. Set <code>G4F_TRANSLATIONS_URL</code>, <code>--translations-url</code>, or
 <code>--translations-file</code> to use another source, or pass <code>--no-translations</code> for an
-offline build. A language whose package cannot be fetched is still generated
-and keeps the runtime bootstrap, so a temporary API outage never breaks the
-deployment. The language selection page lists every API language and links to
-the matching generated locale route.</p>
+offline build. When the API fails or returns an empty package, the build falls
+back to the restored stores in <code>dist/js/translations/&lt;lang&gt;.json</code>, so a
+translation-storage outage does not strip the static site. A language with
+neither source is still generated and keeps the runtime bootstrap, so a
+temporary API outage never breaks the deployment. The worker returns <code>503</code> with
+<code>Cache-Control: no-store</code> when its translation storage is unavailable (for
+example an Upstash plan-limit error), so the build never treats an outage as an
+empty translation package. The
+language selection page lists every API language and links to the matching
+generated locale route.</p>
 <p>The GitHub Pages workflows run the generator before uploading the artifact, and
 the mirror sync commits the generated routes (they are gitignored in the source
 repository) so the mirror's own deploy publishes them.</p>

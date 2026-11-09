@@ -23,7 +23,8 @@
     "dist/js/model.js"
   ],
   "scripts": {
-    "test": "node --test scripts/build-locales.test.mjs",
+    "test": "node --test scripts/build-locales.test.mjs workers/challenge-worker.test.mjs",
+    "restore:translations": "node scripts/restore-translations-blob.mjs",
     "test:locales": "node --test scripts/build-locales.test.mjs",
     "check:js": "node scripts/check-js.mjs",
     "deploy": "wrangler deploy",

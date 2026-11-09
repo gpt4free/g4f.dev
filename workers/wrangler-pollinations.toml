@@ -8,12 +8,15 @@
 #   https://pollinations.g4f.space/*         (dedicated subdomain)
 #
 # Optional secrets:
+#   wrangler secret put POLLINATIONS_ACCOUNT_KEY --config wrangler-pollinations.toml
 #   wrangler secret put POLLINATIONS_API_KEY --config wrangler-pollinations.toml
 #   wrangler secret put POLLINATIONS_SESSION_TOKEN --config wrangler-pollinations.toml
 # A key unlocks the premium gen.pollinations.ai endpoints; anonymous requests
-# still work with the free tier. The scheduled trigger below also uses the key
-# (or POLLINATIONS_SESSION_TOKEN when set) to keep the account key's pollen
-# budget at its minimum.
+# still work with the free tier. The scheduled trigger below uses
+# POLLINATIONS_ACCOUNT_KEY (a separate secret key with the account:keys
+# permission) to keep the target key's pollen budget at its minimum. The
+# POLLINATIONS_API_KEY and POLLINATIONS_SESSION_TOKEN names are compatibility
+# fallbacks; a key cannot update itself and sessions expire quickly.
 
 name = "pollinations"
 main = "pollinations.js"

@@ -70,44 +70,105 @@ try {
 // Upstash REST API. Enabled by setting UPSTASH_REDIS_REST_URL and
 // UPSTASH_REDIS_REST_TOKEN; without them the binding stays undefined and
 // the worker degrades gracefully (feature disabled).
-class UpstashKv {
+//
+// Upstash reports Redis errors in the JSON body, sometimes with HTTP 200
+// (`{"error": "ERR ..."}`). Treating those as success returned `undefined`
+// and made the worker cache an empty translation store. Plan-limit errors
+// are also sticky: retrying every request keeps burning the exhausted quota
+// and hides the outage. We therefore throw on any `error` field and back off
+// for a few minutes after a quota error. The instance is reused per isolate
+// so the cooldown survives across requests.
+const UPSTASH_COOLDOWN_MS = 5 * 60 * 1000;
+const QUOTA_ERROR_RE = /plan limits|upgrade|quota|out of memory|max memory|limit reached|too many requests/i;
+
+export class UpstashKv {
   constructor(url, token) {
     this.url = url.replace(/\/$/, "");
     this.token = token;
     this.lastError = null;
+    this.quotaExceeded = false;
+    this.cooldownUntil = 0;
+  }
+  get coolingDown() {
+    return this.cooldownUntil > Date.now();
+  }
+  noteError(error) {
+    this.lastError = String(error && error.message ? error.message : error);
+    this.quotaExceeded = QUOTA_ERROR_RE.test(this.lastError);
+    // Plan limits only clear when the operator upgrades or the billing
+    // window resets; a short cooldown stops a request storm in the meantime.
+    if (this.quotaExceeded) {
+      this.cooldownUntil = Date.now() + UPSTASH_COOLDOWN_MS;
+    }
   }
   async command(args) {
-    const res = await fetch(this.url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${this.token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(args)
-    });
-    if (!res.ok) {
-      throw new Error(`Upstash ${res.status}: ${await res.text()}`);
+    if (this.coolingDown) {
+      throw new Error(this.lastError || "Upstash KV is cooling down after a quota error");
+    }
+    let res;
+    try {
+      res = await fetch(this.url, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${this.token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(args)
+      });
+    } catch (e) {
+      this.noteError(e);
+      throw e;
+    }
+    const text = await res.text();
+    let payload = null;
+    try {
+      payload = text ? JSON.parse(text) : null;
+    } catch {
+      payload = null;
+    }
+    if (!res.ok || (payload && payload.error)) {
+      const detail = payload && payload.error ? payload.error : (text || `HTTP ${res.status}`);
+      const error = new Error(`Upstash ${res.status}: ${detail}`);
+      this.noteError(error);
+      throw error;
     }
     this.lastError = null;
-    return (await res.json()).result;
+    this.quotaExceeded = false;
+    return payload ? payload.result : undefined;
   }
   /** Lightweight reachability probe used by /challenge/health and before
-   *  issuing challenges. */
+   *  issuing challenges. Reports the quota state so clients can show a
+   *  useful message instead of a generic outage. */
   async health() {
+    if (this.coolingDown) {
+      return {
+        ok: false,
+        error: this.lastError,
+        quota_exceeded: this.quotaExceeded,
+        retry_after_s: Math.max(1, Math.ceil((this.cooldownUntil - Date.now()) / 1000)),
+      };
+    }
     try {
       await this.command(["PING"]);
       return { ok: true };
     } catch (e) {
-      this.lastError = String(e);
       console.error("KV health check failed:", e);
-      return { ok: false, error: this.lastError };
+      return {
+        ok: false,
+        error: this.lastError || String(e),
+        quota_exceeded: this.quotaExceeded,
+      };
     }
+  }
+  /** Strict read that propagates storage errors. The translation store uses
+   *  this to distinguish an empty store from an unreachable one. */
+  async getStrict(key) {
+    return await this.command(["GET", key]);
   }
   async get(key) {
     try {
       return await this.command(["GET", key]);
     } catch (e) {
-      this.lastError = String(e);
       console.error("KV get failed:", e);
       return null;
     }
@@ -120,7 +181,6 @@ class UpstashKv {
     try {
       await this.command(args);
     } catch (e) {
-      this.lastError = String(e);
       console.error("KV put failed:", e);
     }
   }
@@ -128,7 +188,6 @@ class UpstashKv {
     try {
       await this.command(["DEL", key]);
     } catch (e) {
-      this.lastError = String(e);
       console.error("KV delete failed:", e);
     }
   }
@@ -160,18 +219,54 @@ class UpstashKv {
 // and get() treats expired entries as missing (lazily deleting them).
 // Only BLOB_READ_WRITE_TOKEN is required — the token is store-scoped.
 class BlobKv {
-  constructor(token) {
+  constructor(token, options = {}) {
     this.token = token;
     this.base = "https://blob.vercel-storage.com";
+    this.api = "https://vercel.com/api/blob";
+    // Blob stores are either public or private at creation time. Private
+    // stores require the access header and serve reads from the store's
+    // authenticated host, so keep the store id and detect the mode lazily.
+    this.storeId = String(options.storeId || process.env.BLOB_STORE_ID || "")
+      .trim()
+      .replace(/^store_/, "");
+    this.access = options.access || process.env.BLOB_ACCESS || null;
+  }
+  headers(extra = {}) {
+    const headers = {
+      "Authorization": `Bearer ${this.token}`,
+      "x-api-version": "12",
+      ...extra
+    };
+    if (this.storeId) headers["x-vercel-blob-store-id"] = this.storeId;
+    if (this.access) headers["x-vercel-blob-access"] = this.access;
+    return headers;
+  }
+  url(key, access = this.access) {
+    const encoded = encodeURIComponent(key);
+    if (this.storeId && access) {
+      return `https://${this.storeId}.${access}.blob.vercel-storage.com/${encoded}`;
+    }
+    return `${this.base}/${encoded}`;
   }
   async get(key) {
     try {
-      const res = await fetch(`${this.base}/${encodeURIComponent(key)}`, {
-        headers: { "Authorization": `Bearer ${this.token}` }
-      });
-      if (res.status === 404) return null;
-      if (!res.ok) throw new Error(`Blob ${res.status}: ${await res.text()}`);
-      const raw = await res.text();
+      // Reads live on the store host, one subdomain per access mode. Try the
+      // configured mode first; without one, probe private and public so a
+      // private store works even before the first write detected its mode.
+      const attempts = this.access ? [this.access] : ["private", "public"];
+      let response = null;
+      for (const access of attempts) {
+        const res = await fetch(this.url(key, access), {
+          headers: { "Authorization": `Bearer ${this.token}` }
+        });
+        if (res.status === 404) continue;
+        if (!res.ok) throw new Error(`Blob ${res.status}: ${await res.text()}`);
+        this.access = access;
+        response = res;
+        break;
+      }
+      if (!response) return null;
+      const raw = await response.text();
       try {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === "object" && "v" in parsed) {
@@ -195,17 +290,31 @@ class BlobKv {
     const body = ttl
       ? JSON.stringify({ v: String(value), e: Date.now() + Math.max(1, Math.floor(ttl)) * 1000 })
       : String(value);
+    const params = new URLSearchParams({ pathname: key });
+    const attempt = (access) => fetch(`${this.api}/?${params.toString()}`, {
+      method: "PUT",
+      headers: this.headers({
+        "x-content-type": "text/plain; charset=utf-8",
+        // Deterministic paths — a KV key must overwrite, not version.
+        "x-add-random-suffix": "0",
+        "x-allow-overwrite": "1",
+        ...(access ? { "x-vercel-blob-access": access } : {})
+      }),
+      body
+    });
     try {
-      const res = await fetch(`${this.base}/${encodeURIComponent(key)}`, {
-        method: "PUT",
-        headers: {
-          "Authorization": `Bearer ${this.token}`,
-          "x-vercel-blob-content-type": "text/plain; charset=utf-8",
-          // Deterministic paths — a KV key must overwrite, not version.
-          "x-vercel-blob-add-random-suffix": "0"
-        },
-        body
-      });
+      let res = await attempt(this.access);
+      if (!res.ok && !this.access) {
+        const detail = await res.text();
+        // An unconfigured access mode defaults to public. Retry a private
+        // store once with the matching header, then remember the mode.
+        if (/private store/i.test(detail)) {
+          this.access = "private";
+          res = await attempt("private");
+        } else {
+          throw new Error(`Blob ${res.status}: ${detail}`);
+        }
+      }
       if (!res.ok) throw new Error(`Blob ${res.status}: ${await res.text()}`);
     } catch (e) {
       console.error("Blob KV put failed:", e);
@@ -213,9 +322,10 @@ class BlobKv {
   }
   async delete(key) {
     try {
-      await fetch(`${this.base}/${encodeURIComponent(key)}`, {
+      const params = new URLSearchParams({ pathname: key });
+      await fetch(`${this.api}/?${params.toString()}`, {
         method: "DELETE",
-        headers: { "Authorization": `Bearer ${this.token}` }
+        headers: this.headers()
       });
     } catch (e) {
       console.error("Blob KV delete failed:", e);
@@ -230,15 +340,14 @@ class BlobKv {
     if (prefix) params.set("prefix", prefix);
     if (options.cursor) params.set("cursor", options.cursor);
     try {
-      const res = await fetch(`${this.base}?${params.toString()}`, {
-        headers: { "Authorization": `Bearer ${this.token}` }
+      const res = await fetch(`${this.api}?${params.toString()}`, {
+        headers: this.headers()
       });
       if (!res.ok) throw new Error(`Blob ${res.status}: ${await res.text()}`);
       const data = await res.json();
       return {
         keys: (data.blobs || []).map((blob) => ({
-          // Blob pathnames may carry the percent-encoding used for the URL.
-          name: decodeURIComponent(String(blob.pathname || "").replace(/^\/+/, "")),
+          name: String(blob.pathname || "").replace(/^\/+/, ""),
         })),
         list_complete: !data.hasMore,
         ...(data.cursor ? { cursor: data.cursor } : {}),
@@ -250,8 +359,8 @@ class BlobKv {
   }
   async health() {
     try {
-      const res = await fetch(`${this.base}?limit=1`, {
-        headers: { "Authorization": `Bearer ${this.token}` }
+      const res = await fetch(`${this.api}?limit=1`, {
+        headers: this.headers()
       });
       if (!res.ok) throw new Error(`Blob ${res.status}: ${await res.text()}`);
       return { ok: true };
@@ -260,6 +369,19 @@ class BlobKv {
       return { ok: false, error: String(e) };
     }
   }
+}
+
+// Reuse the shim per isolate so its quota cooldown/error state is preserved
+// across requests. Tokens stay in memory only and are never logged.
+const upstashInstances = new Map();
+function upstashKv(url, token) {
+  const key = `${url}\n${token}`;
+  let kv = upstashInstances.get(key);
+  if (!kv) {
+    kv = new UpstashKv(url, token);
+    upstashInstances.set(key, kv);
+  }
+  return kv;
 }
 
 function buildEnv() {
@@ -310,10 +432,13 @@ function buildEnv() {
   upstashCandidates.sort((a, b) => (b.readWrite - a.readWrite) || (b.source < a.source ? -1 : 1));
   const upstash = upstashCandidates[0];
   const blob = process.env.BLOB_READ_WRITE_TOKEN
-    ? new BlobKv(process.env.BLOB_READ_WRITE_TOKEN)
+    ? new BlobKv(process.env.BLOB_READ_WRITE_TOKEN, {
+        storeId: process.env.BLOB_STORE_ID,
+        access: process.env.BLOB_ACCESS
+      })
     : null;
   if (upstash && upstash.token) {
-    env.CAKE_KV = new UpstashKv(upstash.url, upstash.token);
+    env.CAKE_KV = upstashKv(upstash.url, upstash.token);
     // Non-secret diagnostic for /challenge/health: which variable pair backed
     // the binding (values are never exposed).
     env.CHALLENGE_KV_SOURCE = upstash.source;

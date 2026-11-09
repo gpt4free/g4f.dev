@@ -63,9 +63,16 @@
  *
  * Environment variables:
  *   CAKE_KV               — KV namespace binding (shared with cake-worker)
- *   CHALLENGE_TRANSLATIONS_KV — optional translation mirror (Vercel: Blob).
- *                           Translation writes go to both stores; reads fall
- *                           back to the mirror when CAKE_KV is offline.
+ *   CHALLENGE_TRANSLATIONS_KV — translation store (Vercel: Blob). When set it
+ *                           is read first and written before CAKE_KV, so
+ *                           community translations keep working even while the
+ *                           shared challenge KV is unavailable.
+ *   TRANSLATIONS_SEED_URL — static seed directory with one `<lang>.json` per
+ *                           language plus `index.json` (default:
+ *                           https://g4f.dev/dist/js/translations). A language
+ *                           missing from both KVs is hydrated from the seed
+ *                           and written to the translation store. Set to
+ *                           "off" to disable.
  *   CHALLENGE_SECRET      — AES-GCM key material (base64 or passphrase) for
  *                           sealing/unsealing challenges
  *   CHALLENGE_JWT_SECRET  — HMAC-SHA256 secret for signing the credit JWTs
@@ -474,9 +481,10 @@ async function addFollowups(env, language, topic, questions) {
 // KV helpers
 // ---------------------------------------------------------------------------
 
-/** Optional secondary KV used only for the community translation store.
- *  The Vercel adapter points this at Blob storage so translations stay
- *  readable even while the primary Upstash KV is down. */
+/** Dedicated KV used only for the community translation store. The Vercel
+ *  adapter points this at Blob storage, which is the preferred store for
+ *  translations so they stay readable and writable even while the shared
+ *  challenge KV (Upstash) is down or over its plan limit. */
 function translationFallbackKv(env) {
     const fallback = env.CHALLENGE_TRANSLATIONS_KV;
     if (!fallback || fallback === env.CAKE_KV) return null;
@@ -583,32 +591,123 @@ function memoryCacheDelete(prefix) {
     }
 }
 
-/** Read the raw translation store from the primary KV, falling back to the
- *  translation mirror (Blob) when the primary is missing or offline. */
-async function readTranslationRaw(env, language) {
-    const storeKey = `challenge:translations:${language}`;
-    let raw = null;
-    try {
-        raw = await env.CAKE_KV.get(storeKey);
-    } catch { /* primary is offline — try the mirror below */ }
-    if (raw !== null && raw !== undefined) return raw;
-    const fallback = translationFallbackKv(env);
-    if (fallback) {
-        try {
-            raw = await fallback.get(storeKey);
-        } catch { /* mirror unavailable too */ }
-    }
-    return raw;
+/** Static seed directory with restored community translations. It is used
+ *  when neither KV has a copy (e.g. after an Upstash plan-limit outage) and
+ *  then written into the translation store so later reads hit Blob. */
+const DEFAULT_SEED_TRANSLATIONS_URL = "https://g4f.dev/dist/js/translations";
+
+function seedTranslationsBase(env) {
+    const value = env.TRANSLATIONS_SEED_URL;
+    if (value === "off" || value === false) return null;
+    return (value || DEFAULT_SEED_TRANSLATIONS_URL).replace(/\/$/, "");
 }
 
-/** Read a community translation store, memoized per isolate. */
+function parseTranslationStore(raw) {
+    let parsed;
+    try { parsed = raw ? JSON.parse(raw) : {}; } catch { return {}; }
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        && parsed.translations && typeof parsed.translations === "object") {
+        parsed = parsed.translations;
+    }
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+}
+
+/** Read one bundled seed store. `ok: false` means the seed file could not be
+ *  fetched (outage or bad response), while `raw: null` with `ok: true` means
+ *  there is genuinely no seed for this language. */
+async function loadSeedTranslation(env, language) {
+    const base = seedTranslationsBase(env);
+    if (!base) return { raw: null, ok: true };
+    try {
+        const response = await fetch(`${base}/${encodeURIComponent(language)}.json`);
+        if (response.status === 404) return { raw: null, ok: true };
+        if (!response.ok) throw new Error(`seed fetch failed: HTTP ${response.status}`);
+        const raw = await response.text();
+        return { raw: raw.trim() ? raw : null, ok: true };
+    } catch (err) {
+        console.error(`translation seed fetch failed (${language}):`, err);
+        return { raw: null, ok: false };
+    }
+}
+
+/** Read the seed language index (counts per language) used by the languages
+ *  endpoint while Blob is still being hydrated. Cached per isolate. */
+async function loadSeedLanguageIndex(env) {
+    const cached = memoryCacheGet("seed:languages");
+    if (cached !== undefined) return cached;
+    const base = seedTranslationsBase(env);
+    if (!base) return null;
+    try {
+        const response = await fetch(`${base}/index.json`);
+        if (!response.ok) return null;
+        const data = await response.json();
+        if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+        memoryCacheSet("seed:languages", data);
+        return data;
+    } catch {
+        return null;
+    }
+}
+
+/** Read the raw translation store from the dedicated translation KV (Blob)
+ *  first, then the shared challenge KV. Blob is the durable home for the
+ *  community store; CAKE_KV remains a secondary copy for Cloudflare and for
+ *  deployments that only have the shared KV.
+ *
+ *  Returns `{ raw, ok }`. `ok: false` means no source could be read, which
+ *  must not be confused with a genuinely empty store: caching or overwriting
+ *  an empty store during an outage would silently discard translations. The
+ *  shims expose `getStrict()` so storage errors propagate instead of turning
+ *  into `null`; native Cloudflare KV throws on failure already. */
+async function readTranslationRaw(env, language) {
+    const storeKey = `challenge:translations:${language}`;
+    const sources = [];
+    const fallback = translationFallbackKv(env);
+    if (fallback) sources.push({ name: "translations", kv: fallback });
+    if (env.CAKE_KV && typeof env.CAKE_KV.get === "function") {
+        sources.push({ name: "challenge", kv: env.CAKE_KV });
+    }
+
+    let anyOk = false;
+    for (const { name, kv } of sources) {
+        try {
+            const raw = typeof kv.getStrict === "function"
+                ? await kv.getStrict(storeKey)
+                : await kv.get(storeKey);
+            anyOk = true;
+            if (raw !== null && raw !== undefined) return { raw, ok: true };
+        } catch (err) {
+            console.error(`translation ${name} read failed (${language}):`, err);
+        }
+    }
+    return { raw: null, ok: anyOk };
+}
+
+/** Read a community translation store, memoized per isolate. Returns `null`
+ *  when the store cannot be read; callers must not cache or write then.
+ *
+ *  A KV miss falls back to the bundled seed (restored from the Upstash RDB)
+ *  and hydrates the translation store, so the site recovers from a lost or
+ *  quota-blocked database without an upload step. */
 async function getTranslationStore(env, language) {
     const key = `translations:${language}`;
     const cached = memoryCacheGet(key);
     if (cached !== undefined) return cached;
-    const raw = await readTranslationRaw(env, language);
-    let store = {};
-    try { store = raw ? JSON.parse(raw) : {}; } catch { /* fresh store */ }
+    let read = await readTranslationRaw(env, language);
+    if (read.ok && !read.raw) {
+        const seed = await loadSeedTranslation(env, language);
+        if (seed.raw) {
+            read = { raw: seed.raw, ok: true };
+            const store = parseTranslationStore(seed.raw);
+            if (Object.keys(store).length) {
+                await writeTranslationStore(env, language, store);
+            }
+        } else if (!seed.ok) {
+            read = { raw: null, ok: false };
+        }
+    }
+    if (!read.ok) return null;
+    const store = parseTranslationStore(read.raw);
     memoryCacheSet(key, store);
     return store;
 }
@@ -630,11 +729,13 @@ function pruneTranslationStore(store) {
     return { store: cleaned, removed };
 }
 
-/** Persist a translation store to the primary KV and its optional mirror. */
+/** Persist a translation store to the dedicated translation KV (Blob) and
+ *  the shared challenge KV. Blob is written first; a failing secondary copy
+ *  never prevents the durable store from being updated. */
 async function writeTranslationStore(env, language, store) {
     const storeKey = `challenge:translations:${language}`;
     const serialized = JSON.stringify(store);
-    const targets = [env.CAKE_KV, translationFallbackKv(env)].filter(Boolean);
+    const targets = [translationFallbackKv(env), env.CAKE_KV].filter(Boolean);
     await Promise.allSettled(
         targets.map((kv) => kv.put(storeKey, serialized, { expirationTtl: 86400 * 365 }))
     );
@@ -708,7 +809,7 @@ async function handleIssue(request, env) {
         } catch (err) {
             return json({ error: "snippets_unavailable", message: String(err) }, 503, {}, request);
         }
-        const existing = await getTranslationStore(env, baseLanguage(language));
+        const existing = (await getTranslationStore(env, baseLanguage(language))) || {};
         const batch = Math.min(Math.max(Number(env.TRANSLATIONS_BATCH) || 8, 2), 50);        const candidates = [];
         for (const [headline, texts] of Object.entries(snippets)) {
             if (headline.startsWith("_") || !Array.isArray(texts)) continue;
@@ -999,9 +1100,14 @@ async function handleTranslationsSubmit(language, translations, env) {
 
     // Merge into the per-language community store. Prune sources that are no
     // longer in the catalog before writing so a solve also cleans up old copy.
-    const raw = await readTranslationRaw(env, language);
-    let store = {};
-    try { store = raw ? JSON.parse(raw) : {}; } catch { /* fresh store */ }
+    const read = await readTranslationRaw(env, language);
+    if (!read.ok) {
+        // Never overwrite the store with only the new entries when the
+        // existing copy could not be read — that would erase translations
+        // during an outage. The solve itself is still credited.
+        throw new Error("translations_unavailable");
+    }
+    let store = parseTranslationStore(read.raw);
     store = pruneTranslationStore(store).store;
     let added = 0;
     for (const [source, translated] of knownTranslations) {
@@ -1029,6 +1135,21 @@ async function handleTranslationsGet(request, env) {
         return json({ error: "invalid_language" }, 400, {}, request);
     }
     let translations = await getTranslationStore(env, language);
+    if (translations === null) {
+        // Primary storage is unreachable and the mirror has no copy. Do not
+        // cache an empty body: that would hide the outage for an hour and
+        // make the build/localization consumers believe nothing is translated.
+        return json(
+            {
+                error: "translations_unavailable",
+                message: "Translation storage is temporarily unavailable.",
+                language,
+            },
+            503,
+            { "Retry-After": "60" },
+            request
+        );
+    }
     let result;
     try {
         await loadSnippets(env);
@@ -1050,9 +1171,11 @@ async function handleTranslationsGet(request, env) {
 }
 /** List KV keys with a prefix via the KV list API. The Upstash shim
  *  implements list() with SCAN; stores without list support (e.g. the
- *  Vercel Blob shim) yield an empty list — callers degrade gracefully. */
+ *  Vercel Blob shim) yield an empty list — callers degrade gracefully.
+ *  Returns `{ names, ok }` so callers can tell an empty store from an
+ *  unreachable one (the shims swallow errors and would otherwise look empty). */
 async function listKvKeys(env, prefix, kv = env.CAKE_KV) {
-    if (!kv || typeof kv.list !== "function") return [];
+    if (!kv || typeof kv.list !== "function") return { names: [], ok: false };
     const names = [];
     let cursor;
     try {
@@ -1061,22 +1184,33 @@ async function listKvKeys(env, prefix, kv = env.CAKE_KV) {
             for (const key of page.keys || []) names.push(key.name);
             cursor = page.list_complete ? undefined : page.cursor;
         } while (cursor);
-    } catch { /* listing is best-effort */ }
-    return names;
+    } catch {
+        return { names, ok: false };
+    }
+    // The Upstash shim records command errors instead of throwing, so a failed
+    // SCAN yields an empty page with `lastError` set.
+    return { names, ok: !kv.lastError };
 }
 
-/** List translation-store keys from the primary KV plus the Blob mirror,
- *  de-duplicated. Lets the admin/index endpoints keep working when the
- *  primary is offline but the mirror is reachable. */
+/** List translation-store keys from the dedicated translation KV (Blob)
+ *  first, then the shared challenge KV, de-duplicated. Blob is the durable
+ *  store; `ok` is true when at least one listing worked, so an empty Blob is
+ *  an empty store, not an outage. */
 async function listTranslationKeys(env, prefix) {
-    const names = await listKvKeys(env, prefix);
+    const names = [];
+    let ok = false;
     const fallback = translationFallbackKv(env);
     if (fallback) {
-        for (const name of await listKvKeys(env, prefix, fallback)) {
-            if (!names.includes(name)) names.push(name);
-        }
+        const mirror = await listKvKeys(env, prefix, fallback);
+        names.push(...mirror.names);
+        ok = mirror.ok;
     }
-    return names;
+    const primary = await listKvKeys(env, prefix);
+    ok = ok || primary.ok;
+    for (const name of primary.names) {
+        if (!names.includes(name)) names.push(name);
+    }
+    return { names, ok };
 }
 
 /** GET /challenge/translations/languages — every language in the community
@@ -1089,7 +1223,19 @@ async function handleTranslationsLanguages(request, env) {
         return json(cached, 200, { "Cache-Control": CACHE_HEADERS.LANGUAGES }, request);
     }
     const prefix = "challenge:translations:";
-    const names = await listTranslationKeys(env, prefix);
+    const listing = await listTranslationKeys(env, prefix);
+    if (!listing.ok) {
+        return json(
+            {
+                error: "translations_unavailable",
+                message: "Translation storage is temporarily unavailable.",
+            },
+            503,
+            { "Retry-After": "60" },
+            request
+        );
+    }
+    const names = listing.names;
     let total = null;
     try {
         await loadSnippets(env);
@@ -1101,6 +1247,18 @@ async function handleTranslationsLanguages(request, env) {
         if (!language) continue;
         // Memoized per language — the list endpoint reads every store.
         let store = await getTranslationStore(env, language);
+        if (store === null) {
+            return json(
+                {
+                    error: "translations_unavailable",
+                    message: "Translation storage is temporarily unavailable.",
+                    language,
+                },
+                503,
+                { "Retry-After": "60" },
+                request
+            );
+        }
         if (total !== null) store = await pruneStaleTranslations(env, language, store);
         const count = Object.keys(store).length;
         const entry = { language, count };
@@ -1112,18 +1270,27 @@ async function handleTranslationsLanguages(request, env) {
         languages.push(entry);
     }
     const languageKeys = languages.map(entry => entry.language);
-    const seedLanguages = [
+    const seedIndex = await loadSeedLanguageIndex(env);
+    const fallbackSeedLanguages = [
         "ar", "bg", "cs", "da", "de", "el", "es", "et", "fa", "fi",
         "fr", "he", "hi", "hr", "hu", "id", "it", "ja", "kk", "ko",
         "nb", "nl", "pl", "pt", "ro", "ru", "sk", "sl", "sq", "sr",
         "sv", "th", "tr", "uk", "ur", "uz", "vi", "zh",
     ];
+    const seedLanguages = seedIndex ? Object.keys(seedIndex) : fallbackSeedLanguages;
     const missingSeedLanguages = seedLanguages.filter(lang => !languageKeys.includes(lang));
     languages.sort((a, b) => b.count - a.count || (a.language < b.language ? -1 : 1));
-    if (missingSeedLanguages.length > 0) {
-        for (const lang of missingSeedLanguages) {
-            languages.push({ language: lang, count: 0, total, remaining: total, percent: 0 });
+    for (const lang of missingSeedLanguages) {
+        // The seed is not hydrated on the index request: report its known
+        // count and let the per-language GET write it into Blob on demand.
+        const count = seedIndex ? Math.max(0, Number(seedIndex[lang]) || 0) : 0;
+        const entry = { language: lang, count };
+        if (total !== null) {
+            entry.total = total;
+            entry.remaining = Math.max(0, total - count);
+            entry.percent = total ? Math.round((count / total) * 1000) / 10 : 100;
         }
+        languages.push(entry);
     }
     const payload = { languages, count: languages.length, total_snippets: total };
     memoryCacheSet("languages", payload);
@@ -1146,7 +1313,16 @@ async function handleTranslationsDelete(request, env) {
     const url = new URL(request.url);
     const language = baseLanguage(url.searchParams.get("lang") || "");
     const prefix = "challenge:translations:";
-    const names = await listTranslationKeys(env, prefix);
+    const listing = await listTranslationKeys(env, prefix);
+    if (!listing.ok) {
+        return json(
+            { error: "translations_unavailable", message: "Translation storage is temporarily unavailable." },
+            503,
+            { "Retry-After": "60" },
+            request
+        );
+    }
+    const names = listing.names;
     const deleted = [];
     const targets = [env.CAKE_KV, translationFallbackKv(env)].filter(Boolean);
     for (const name of names) {
@@ -1180,15 +1356,31 @@ async function handleTranslationsCheck(request, env) {
         return json({ error: "snippets_unavailable", message: String(err) }, 503, {}, request);
     }
     const prefix = "challenge:translations:";
-    const names = (await listTranslationKeys(env, prefix))
+    const listing = await listTranslationKeys(env, prefix);
+    if (!listing.ok) {
+        return json(
+            { error: "translations_unavailable", message: "Translation storage is temporarily unavailable." },
+            503,
+            { "Retry-After": "60" },
+            request
+        );
+    }
+    const names = listing.names
         .filter((name) => !language || name.slice(prefix.length) === language);
     const languages = [];
     let staleTotal = 0;
     for (const name of names) {
         const lang = name.slice(prefix.length);
-        const raw = await readTranslationRaw(env, lang);
-        let store = {};
-        try { store = raw ? JSON.parse(raw) : {}; } catch { /* skip broken store */ }
+        const read = await readTranslationRaw(env, lang);
+        if (!read.ok) {
+            return json(
+                { error: "translations_unavailable", message: "Translation storage is temporarily unavailable.", language: lang },
+                503,
+                { "Retry-After": "60" },
+                request
+            );
+        }
+        const store = parseTranslationStore(read.raw);
         const sources = Object.keys(store);
         const stale = sources.filter((source) => !snippetsKeySet.has(source));
         const entry = { language: lang, total: sources.length, valid: sources.length - stale.length, stale: stale.length, stale_keys: stale };
@@ -1323,10 +1515,12 @@ export default {
                 return json(
                     {
                         error: "kv_unavailable",
-                        message: "Challenge storage is offline; challenges are paused.",
+                        message: kv.quota_exceeded
+                            ? "Challenge storage has reached its provider quota; challenges are paused until it is restored."
+                            : "Challenge storage is offline; challenges are paused.",
                     },
                     503,
-                    { "Retry-After": "60" },
+                    { "Retry-After": String(kv.retry_after_s || 60) },
                     request
                 );
             }

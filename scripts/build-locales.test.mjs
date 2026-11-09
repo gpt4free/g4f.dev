@@ -9,6 +9,7 @@ import {
   escapeAttribute,
   localize,
   normalizeText,
+  readBundledTranslation,
   rewriteRelativeUrls,
   translateHtml,
   translateText,
@@ -185,6 +186,15 @@ test("the generated metadata catalog covers the landing pages", () => {
   assert.ok(catalog.Metadata.includes("GPT4Free - Next Gen AI Access"));
   assert.ok(catalog.Metadata.some((text) => text.startsWith("G4F Chat - Conversational")));
   assert.ok(catalog.Metadata.some((text) => text.startsWith("GPT4Free offers free, fast")));
+});
+
+test("restored translation stores are available as a build fallback", () => {
+  const root = new URL("..", import.meta.url).pathname;
+  const german = readBundledTranslation(root, "de");
+  assert.ok(Object.keys(german).length > 100);
+  assert.equal(typeof german.with, "string");
+  // Unknown languages fall back to an empty catalog instead of throwing.
+  assert.deepEqual(readBundledTranslation(root, "xx"), {});
 });
 
 test("all API locales are unique and include the wider catalog", () => {

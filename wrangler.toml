@@ -78,6 +78,8 @@ PUTER_WORKER_URL = "https://puter.g4f.space"
 POLLINATIONS_WORKER_URL = "https://pollinations.g4f.space"
 OLLAMA_WORKER_URL = "https://ollama.g4f.space"
 # Account key kept at the minimum pollen budget by the scheduled trigger.
+# Set POLLINATIONS_ACCOUNT_KEY to a separate sk_ secret with account:keys:
+#   npx wrangler secret put POLLINATIONS_ACCOUNT_KEY
 POLLINATIONS_KEY_ID = "udAgkmDyDv1RhpHWrF2Az9insQWi0Q3X"
 POLLINATIONS_MIN_POLLEN_BUDGET = "0.00001"
 

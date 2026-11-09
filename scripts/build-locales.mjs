@@ -41,6 +41,10 @@ const TRANSLATIONS_CONCURRENCY = 6;
 // Write the collected English strings into the snippet store so community
 // translation challenges can cover <title> and the SEO meta tags too.
 const META_CATALOG = "dist/js/snippets/meta.json";
+// Restored community stores (recovered from the challenge KV RDB). The build
+// falls back to these files when the API is unavailable or returns an empty
+// package, so a translation-storage outage never strips the static site.
+const BUNDLED_TRANSLATIONS_DIR = "dist/js/translations";
 
 const PROTECTED_BLOCKS = /(<script\b[\s\S]*?<\/script\s*>|<style\b[\s\S]*?<\/style\s*>|<!--[\s\S]*?-->)/i;
 const TEXT_NODE = />([^<]+)</g;
@@ -442,6 +446,16 @@ function normalizeTranslations(value) {
   return translations;
 }
 
+/** Read one restored `<locale>.json` store bundled with the repository. */
+export function readBundledTranslation(root, locale) {
+  try {
+    const path = join(root, BUNDLED_TRANSLATIONS_DIR, `${locale}.json`);
+    return normalizeTranslations(JSON.parse(readFileSync(path, "utf8")));
+  } catch {
+    return {};
+  }
+}
+
 function readTranslationsFile(path) {
   const data = JSON.parse(readFileSync(path, "utf8"));
   const stores = {};
@@ -458,7 +472,7 @@ function readTranslationsFile(path) {
   return stores;
 }
 
-async function fetchTranslations(locales, url) {
+async function fetchTranslations(locales, url, root = ROOT) {
   const stores = {};
   const queue = [...locales];
 
@@ -478,12 +492,21 @@ async function fetchTranslations(locales, url) {
           throw new Error(`HTTP ${response.status}`);
         }
         const data = await response.json();
-        stores[locale] = normalizeTranslations(data);
+        const remote = normalizeTranslations(data);
+        stores[locale] = Object.keys(remote).length
+          ? remote
+          : readBundledTranslation(root, locale);
       } catch (error) {
         const reason = error && error.name === "AbortError"
           ? `timed out after ${TRANSLATIONS_TIMEOUT_MS / 1000}s`
           : String(error && error.message ? error.message : error);
-        console.warn(`  ! ${locale}: ${reason}`);
+        const bundled = readBundledTranslation(root, locale);
+        if (Object.keys(bundled).length) {
+          stores[locale] = bundled;
+          console.warn(`  ! ${locale}: ${reason} (using bundled translations)`);
+        } else {
+          console.warn(`  ! ${locale}: ${reason}`);
+        }
       } finally {
         clearTimeout(timer);
       }
@@ -504,7 +527,7 @@ export async function loadTranslations(options = {}) {
   }
   const url = options.translationsUrl || DEFAULT_TRANSLATIONS_URL;
   console.log(`Loading community translations from ${url} ...`);
-  return fetchTranslations(LOCALES, url);
+  return fetchTranslations(LOCALES, url, options.root || ROOT);
 }
 
 function parseArgs(argv) {

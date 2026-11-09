@@ -249,25 +249,29 @@ index; hourly runs also prune the D1 tables.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `POLLINATIONS_API_KEY` | unset | Optional key for the premium `gen.pollinations.ai` endpoints and the budget cron |
-| `POLLINATIONS_SESSION_TOKEN` | unset | Optional enter.pollinations.ai session token used for the budget cron when no `POLLINATIONS_API_KEY` is set |
+| `POLLINATIONS_ACCOUNT_KEY` | unset | Secret `sk_` key with the `account:keys` permission used by the budget cron. Must not be the key being updated |
+| `POLLINATIONS_API_KEY` | unset | Optional key for the premium `gen.pollinations.ai` endpoints; used by the budget cron as a compatibility fallback |
+| `POLLINATIONS_SESSION_TOKEN` | unset | Optional enter.pollinations.ai session token used for the budget cron when no key is set |
 | `POLLINATIONS_KEY_ID` | `udAgkmDyDv1RhpHWrF2Az9insQWi0Q3X` | Account key whose pollen budget the scheduled trigger updates |
 | `POLLINATIONS_MIN_POLLEN_BUDGET` | `0.00001` | Minimum pollen budget written by the scheduled trigger |
 | `RATE_LIMIT_PER_MINUTE` | `30` | Per-IP request cap per 60 seconds (`0` disables) |
 
 The scheduled trigger runs every 15 minutes and sends
 `PATCH https://gen.pollinations.ai/account/keys/<POLLINATIONS_KEY_ID>` with
-`{"pollenBudget": <POLLINATIONS_MIN_POLLEN_BUDGET>}`. It authenticates with
-`POLLINATIONS_API_KEY` when set, otherwise with `POLLINATIONS_SESSION_TOKEN`:
+`{"pollenBudget": <POLLINATIONS_MIN_POLLEN_BUDGET>}`. Pollinations requires the
+caller to have the `account:keys` permission, and a key cannot update itself,
+so use a separate admin key:
 
 ```bash
-npx wrangler secret put POLLINATIONS_API_KEY --config wrangler-pollinations.toml
-# or, for a browser session token:
-npx wrangler secret put POLLINATIONS_SESSION_TOKEN --config wrangler-pollinations.toml
+npx wrangler secret put POLLINATIONS_ACCOUNT_KEY --config wrangler-pollinations.toml
 ```
 
-A secret `sk_` key is preferred because browser session tokens expire after a
-few minutes. The session-token fallback is mainly useful for a manual run.
+`POLLINATIONS_API_KEY` is still accepted as a fallback, but it must also belong
+to a different key with `account:keys`. A browser session token
+(`POLLINATIONS_SESSION_TOKEN`) is short-lived and mainly useful for a manual
+run. When the credential is missing, expired, under-scoped, or the target key
+changed in flight, the cron logs a warning and skips that run instead of
+reporting a failure.
 
 When deployed through the root `wrangler.toml`, the router's scheduled handler
 runs the same update alongside the API worker's cleanup tasks.

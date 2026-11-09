@@ -99,6 +99,11 @@ const POLLINATIONS_ACCOUNT_KEYS = "https://gen.pollinations.ai/account/keys";
 const DEFAULT_POLLINATIONS_KEY_ID = "udAgkmDyDv1RhpHWrF2Az9insQWi0Q3X";
 const DEFAULT_MIN_POLLEN_BUDGET = 0.00001;
 
+// Statuses that mean the cron cannot update the key right now, rather than
+// that the Worker or Pollinations generation APIs are unhealthy. A 409 means
+// the key changed while the update was in flight; the next run retries.
+const POLLINATIONS_BUDGET_SKIPPED_STATUSES = new Set([401, 403, 404, 409]);
+
 const POLLINATIONS_GEN_TEXT_API = "https://gen.pollinations.ai/v1/chat/completions";
 const POLLINATIONS_GEN_API = "https://gen.pollinations.ai";
 
@@ -1887,26 +1892,41 @@ function getMinPollenBudget(env) {
 }
 
 /**
+ * Credential used by the budget cron.
+ *
+ * Pollinations API keys only have the account permissions granted to them,
+ * and a key cannot edit itself. The cron therefore prefers a separate
+ * `POLLINATIONS_ACCOUNT_KEY` secret with the `account:keys` permission. The
+ * older `POLLINATIONS_API_KEY` name is kept as a compatibility fallback, and
+ * `POLLINATIONS_SESSION_TOKEN` only works while the short-lived dashboard
+ * session is valid.
+ */
+function getPollinationsBudgetToken(env) {
+  return env?.POLLINATIONS_ACCOUNT_KEY ||
+    env?.POLLINATIONS_API_KEY ||
+    env?.POLLINATIONS_SESSION_TOKEN ||
+    "";
+}
+
+/**
  * Set the shared Pollinations key's pollen budget to its minimum value.
  *
- * Pollinations key management uses the account session API:
+ * Pollinations key management uses the account API:
  *   PATCH https://gen.pollinations.ai/account/keys/<key-id>
- *   Authorization: Bearer <session or secret key>
+ *   Authorization: Bearer <secret key with account:keys>
  *   {"pollenBudget": 0.00001}
  *
- * A secret `sk_` key has full account access, so the cron prefers the
- * worker's `POLLINATIONS_API_KEY` and falls back to a dedicated
- * `POLLINATIONS_SESSION_TOKEN` secret (browser sessions expire quickly).
- * Without either credential the update is skipped instead of failing the
- * whole scheduled invocation.
+ * The credential must belong to a different key than `POLLINATIONS_KEY_ID`.
+ * Missing, expired, or under-scoped credentials are reported as a skipped
+ * update instead of failing the whole scheduled invocation.
  */
 async function updatePollinationsKeyBudget(env) {
   const keyId = env?.POLLINATIONS_KEY_ID || DEFAULT_POLLINATIONS_KEY_ID;
-  const token = env?.POLLINATIONS_API_KEY || env?.POLLINATIONS_SESSION_TOKEN;
+  const token = getPollinationsBudgetToken(env);
   const pollenBudget = getMinPollenBudget(env);
 
   if (!token) {
-    console.warn("Cron: no POLLINATIONS_API_KEY or POLLINATIONS_SESSION_TOKEN set; skipping key budget update");
+    console.warn("Cron: no POLLINATIONS_ACCOUNT_KEY, POLLINATIONS_API_KEY, or POLLINATIONS_SESSION_TOKEN set; skipping key budget update");
     return { skipped: true, reason: "missing_credentials", keyId };
   }
 
@@ -1925,7 +1945,10 @@ async function updatePollinationsKeyBudget(env) {
 
   const body = await response.text();
   if (!response.ok) {
-    throw new Error(`Pollinations key budget update failed (${response.status}): ${body.slice(0, 300)}`);
+    const error = new Error(`Pollinations key budget update failed (${response.status}): ${body.slice(0, 300)}`);
+    error.status = response.status;
+    error.keyId = keyId;
+    throw error;
   }
 
   console.log(`Cron: set Pollinations key ${keyId} pollenBudget to ${pollenBudget}`);
@@ -2051,6 +2074,26 @@ export default {
 
   async scheduled(event, env, ctx) {
     const task = updatePollinationsKeyBudget(env).catch((error) => {
+      const status = error?.status;
+      if (POLLINATIONS_BUDGET_SKIPPED_STATUSES.has(status)) {
+        const reason = status === 409
+          ? "the key changed while the update was in flight; the next run retries"
+          : status === 404
+            ? "the target key was not found; check POLLINATIONS_KEY_ID"
+            : "the credential is expired or lacks account:keys; use a different secret key with that permission";
+        console.warn(
+          `Cron: skipping Pollinations key budget update for ${error.keyId || "unknown key"} (${status}): ${reason}.`,
+          error.message
+        );
+        return {
+          ok: false,
+          skipped: true,
+          reason: status === 409 ? "key_changed" : "credentials_or_key_state",
+          status,
+          keyId: error.keyId,
+          error: error.message
+        };
+      }
       console.error("Cron: Pollinations key budget update failed:", error);
       return { ok: false, error: error.message };
     });
