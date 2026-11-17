@@ -5582,9 +5582,10 @@ const body = await request.json().catch(() => ({}));
     const key = secretConversationKey(user.id, conversationId);
     const object = await env.MEMBERS_BUCKET.get(key);
     if (!object) {
-      return jsonResponse({ error: "Conversation not found" }, 404, getCorsHeaders(request));
+      // return jsonResponse({ error: "Conversation not found" }, 404, getCorsHeaders(request));
+    } else {
+      await env.MEMBERS_BUCKET.delete(key);
     }
-    await env.MEMBERS_BUCKET.delete(key);
     try {
       await updateSecretConversationIndex(env, user.id, { id: conversationId }, true, workspaceSecret);
     } catch (e) {
