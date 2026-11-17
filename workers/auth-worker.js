@@ -837,7 +837,7 @@ var USER_TIER_LIMITS = {
                 return handleSyncSecretConversations(request, env);
             }
             if (pathname.startsWith("/v1/secret/conversations/") && pathname !== "/v1/secret/conversations/sync") {
-                const conversationId = pathname.replace("/v1/secret/conversations/", "");
+                const conversationId = decodeURIComponent(pathname.replace("/v1/secret/conversations/", ""));
                 if (request.method === "GET") {
                     return handleGetSecretConversation(request, env, conversationId);
                 } else if (request.method === "DELETE") {
