@@ -379,9 +379,9 @@ async function handleMembersPage(request, ctx) {
         }
 
         let html = await upstream.text();
-        if (!/<base\b/i.test(html)) {
+        // if (!/<base\b/i.test(html)) {
             html = html.replace(/<head\b([^>]*)>/i, (match) => `${match}\n    <base href="https://g4f.dev/">`);
-        }
+        // }
         // Keep the self-link on the first-party host instead of bouncing
         // back to g4f.dev via the <base>.
         html = html.replaceAll('href="/members.html"', 'href="https://auth.g4f.space/members.html"');
