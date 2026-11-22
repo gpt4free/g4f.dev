@@ -1086,7 +1086,7 @@ async function authenticateRequest(request, env) {
   }
   if (apiKey && env.MEMBERS_KV && apiKey.startsWith("g4f_")) {
     const keyHash = await hashString(apiKey);
-    const keyDataStr = await env.MEMBERS_KV.get(`api_key:${keyHash}`);
+    const keyDataStr = await getAuthKv(env, `api_key:${keyHash}`);
     if (keyDataStr) {
       try {
         const keyData = JSON.parse(keyDataStr);
@@ -1099,7 +1099,7 @@ async function authenticateRequest(request, env) {
   }
   const resolveSession = async (token) => {
     if (!token || token.startsWith("g4f_") || !env.MEMBERS_KV) return null;
-    const sessionData = await env.MEMBERS_KV.get(`session:${token}`);
+    const sessionData = await getAuthKv(env, `session:${token}`);
     if (!sessionData) return null;
     const session = JSON.parse(sessionData);
     if (new Date(session.expires_at) > /* @__PURE__ */ new Date()) {
@@ -1152,7 +1152,25 @@ async function getUser(env, userId) {
   return user;
 }
 var USER_CACHE_TTL = 60 * 1e3;
+var AUTH_KV_CACHE_TTL = 30 * 1e3;
+var AUTH_KV_CACHE_MAX = 500;
 var userMemoryCache = new Map();
+var authKvMemoryCache = new Map();
+async function getAuthKv(env, key) {
+  const now = Date.now();
+  const memo = authKvMemoryCache.get(key);
+  if (memo && now - memo.time < AUTH_KV_CACHE_TTL) {
+    return memo.value;
+  }
+  const value = await env.MEMBERS_KV.get(key);
+  if (value) {
+    if (authKvMemoryCache.size >= AUTH_KV_CACHE_MAX && !authKvMemoryCache.has(key)) {
+      authKvMemoryCache.delete(authKvMemoryCache.keys().next().value);
+    }
+    authKvMemoryCache.set(key, { time: now, value });
+  }
+  return value;
+}
 async function saveUser(env, user) {
   if (env.MEMBERS_BUCKET) {
     await env.MEMBERS_BUCKET.put(

@@ -952,7 +952,7 @@ var USER_TIER_LIMITS = {
 
                             // Update API key tier in KV
                             for (const keyData of user.api_keys || []) {
-                                const keyInfo = await env.MEMBERS_KV.get(`api_key:${keyData.key_hash}`);
+                                const keyInfo = await getAuthKv(env, `api_key:${keyData.key_hash}`);
                                 if (keyInfo) {
                                     const parsed = JSON.parse(keyInfo);
                                     parsed.tier = newTier;
@@ -2055,7 +2055,7 @@ ${buttonsHtml}
       const sessionToken = url.searchParams.get("session") || authRequest.sessionToken;
 
       if (!user && sessionToken) {
-          const sessionData = await env.MEMBERS_KV.get(`session:${sessionToken}`);
+          const sessionData = await getAuthKv(env, `session:${sessionToken}`);
           if (sessionData) {
               const session = JSON.parse(sessionData);
               if (new Date(session.expires_at) > new Date()) {
@@ -2325,7 +2325,7 @@ ${buttonsHtml}
       if (!token || !token.startsWith("g4f_")) return null;
 
       const keyHash = await hashApiKey(token);
-      const keyDataStr = await env.MEMBERS_KV.get(`api_key:${keyHash}`);
+      const keyDataStr = await getAuthKv(env, `api_key:${keyHash}`);
       if (!keyDataStr) return null;
 
       let keyInfo;
@@ -2454,7 +2454,7 @@ ${buttonsHtml}
           if (token.startsWith("gfs_")) {
               // Session token — delete the session and drop it from the
               // owner's session index so it can no longer be used.
-              const sessionDataStr = await env.MEMBERS_KV.get(`session:${token}`);
+              const sessionDataStr = await getAuthKv(env, `session:${token}`);
               if (sessionDataStr) {
                   try {
                       const session = JSON.parse(sessionDataStr);
@@ -2857,7 +2857,7 @@ ${buttonsHtml}
 
   async function updateApiKeyCacheTier(env, user, tier) {
     for (const keyData of user.api_keys || []) {
-      const keyInfo = await env.MEMBERS_KV.get(`api_key:${keyData.key_hash}`);
+      const keyInfo = await getAuthKv(env, `api_key:${keyData.key_hash}`);
       if (!keyInfo) continue;
       try {
         const parsed = JSON.parse(keyInfo);
@@ -3250,7 +3250,30 @@ ${buttonsHtml}
   // session-authenticated requests from the same browser.
   const USER_CACHE_TTL = 60 * 1000;
   const USER_CACHE_MAX = 500;
+  const AUTH_KV_CACHE_TTL = 30 * 1000;
+  const AUTH_KV_CACHE_MAX = 500;
   const userMemoryCache = new Map();
+  const authKvMemoryCache = new Map();
+
+  async function getAuthKv(env, key) {
+    const now = Date.now();
+    const memo = authKvMemoryCache.get(key);
+    if (memo && now - memo.time < AUTH_KV_CACHE_TTL) {
+      return memo.value;
+    }
+    const value = await env.MEMBERS_KV.get(key);
+    if (value) {
+      if (authKvMemoryCache.size >= AUTH_KV_CACHE_MAX && !authKvMemoryCache.has(key)) {
+        authKvMemoryCache.delete(authKvMemoryCache.keys().next().value);
+      }
+      authKvMemoryCache.set(key, { time: now, value });
+    }
+    return value;
+  }
+
+  function invalidateAuthKv(key) {
+    authKvMemoryCache.delete(key);
+  }
 
   function memoizeUser(user) {
     if (!user || !user.id) return;
@@ -3919,7 +3942,7 @@ const body = await request.json().catch(() => ({}));
 
     apiKey = apiKey.trim();
     const keyHash = await hashApiKey(apiKey);
-    const keyDataStr = await env.MEMBERS_KV.get(`api_key:${keyHash}`);
+    const keyDataStr = await getAuthKv(env, `api_key:${keyHash}`);
 
     if (!keyDataStr) {
       return new Response(REVOKE_BY_KEY_RESULT_HTML("error", "Invalid API key — not found in system"), {
@@ -3943,6 +3966,7 @@ const body = await request.json().catch(() => ({}));
     if (keyIndex === -1) {
       // Key mapping exists but not in user's list — clean up the orphaned mapping
       await env.MEMBERS_KV.delete(`api_key:${keyHash}`);
+      invalidateAuthKv(`api_key:${keyHash}`);
       return new Response(REVOKE_BY_KEY_RESULT_HTML("error", "API key mapping was orphaned — cleaned up"), {
         status: 404,
         headers: { "Content-Type": "text/html; charset=utf-8", ...getCorsHeaders(request) }
@@ -3953,6 +3977,7 @@ const body = await request.json().catch(() => ({}));
 
     // Remove from KV lookup
     await env.MEMBERS_KV.delete(`api_key:${keyHash}`);
+    invalidateAuthKv(`api_key:${keyHash}`);
 
     // Remove from user's keys
     user.api_keys.splice(keyIndex, 1);
@@ -3988,7 +4013,7 @@ const body = await request.json().catch(() => ({}));
     }
   
     const keyHash = await hashApiKey(apiKey);
-    const keyData = await env.MEMBERS_KV.get(`api_key:${keyHash}`);
+    const keyData = await getAuthKv(env, `api_key:${keyHash}`);
   
     if (!keyData) {
         return jsonResponse({ valid: false, error: "Invalid API key" }, 401, getCorsHeaders(request));
@@ -4129,7 +4154,7 @@ const body = await request.json().catch(() => ({}));
     }
   
     const keyHash = await hashApiKey(apiKey);
-    const keyDataStr = await env.MEMBERS_KV.get(`api_key:${keyHash}`);
+    const keyDataStr = await getAuthKv(env, `api_key:${keyHash}`);
   
     if (!keyDataStr) {
         return jsonResponse({ error: "Invalid API key" }, 401, getCorsHeaders(request));
@@ -4253,7 +4278,7 @@ const body = await request.json().catch(() => ({}));
     }
   
     if (sessionToken) {
-        const sessionData = await env.MEMBERS_KV.get(`session:${sessionToken}`);
+        const sessionData = await getAuthKv(env, `session:${sessionToken}`);
         if (sessionData) {
             const session = JSON.parse(sessionData);
             if (new Date(session.expires_at) > new Date()) {
@@ -4271,7 +4296,7 @@ const body = await request.json().catch(() => ({}));
   }
   
   async function refreshSessionExpiry(env, sessionToken) {
-    const sessionData = await env.MEMBERS_KV.get(`session:${sessionToken}`);
+    const sessionData = await getAuthKv(env, `session:${sessionToken}`);
     if (sessionData) {
         const session = JSON.parse(sessionData);
         const newExpiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
@@ -4710,7 +4735,7 @@ const body = await request.json().catch(() => ({}));
   
       if (apiKey && apiKey.startsWith('g4f_')) {
           const keyHash = await hashApiKey(apiKey);
-          const keyDataStr = await env.MEMBERS_KV.get(`api_key:${keyHash}`);
+          const keyDataStr = await getAuthKv(env, `api_key:${keyHash}`);
           
           if (keyDataStr) {
               const keyData = JSON.parse(keyDataStr);

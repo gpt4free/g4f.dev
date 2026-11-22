@@ -92,4 +92,4 @@ crons = ["*/15 * * * *"]
 port = 8788
 
 [observability]
-enabled = true
+enabled = false
