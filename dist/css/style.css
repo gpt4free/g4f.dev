@@ -689,6 +689,238 @@ body.liquid:not(.no-animations):not(.white) {
     background: var(--accent-hover, #9d56ff);
 }
 
+/* Chat import / export dialog */
+.chat-transfer-dialog {
+    width: min(680px, calc(100% - 32px));
+    max-height: calc(100dvh - 32px);
+    margin: auto;
+    overflow: auto;
+    color: var(--colour-3);
+    background: var(--colour-5);
+    border: 1px solid var(--blur-border);
+    border-radius: var(--border-radius-2);
+    padding: 0;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+}
+
+.chat-transfer-dialog::backdrop {
+    background: rgba(5, 3, 10, 0.72);
+    backdrop-filter: blur(5px);
+}
+
+.chat-transfer-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 24px 24px 18px;
+    border-bottom: 1px solid var(--blur-border);
+}
+
+.chat-transfer-header h2 {
+    margin: 0 0 5px;
+    font-size: 1.3rem;
+    color: var(--colour-3);
+}
+
+.chat-transfer-header p,
+.chat-transfer-help {
+    margin: 0;
+    color: var(--colour-2);
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.chat-transfer-close {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    color: var(--colour-2);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.chat-transfer-close:hover {
+    color: var(--colour-3);
+    background: var(--conversations-hover);
+    border-color: var(--blur-border);
+}
+
+.chat-transfer-section {
+    padding: 18px 24px 0;
+}
+
+.chat-transfer-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 9px;
+}
+
+.chat-transfer-section-heading h3 {
+    margin: 0;
+    font-size: 0.82rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--colour-3);
+}
+
+.chat-transfer-section-heading span {
+    padding: 3px 8px;
+    color: var(--colour-2);
+    background: var(--colour-6);
+    border-radius: 999px;
+    font-size: 0.7rem;
+}
+
+.chat-transfer-source-grid,
+.chat-transfer-export-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.chat-transfer-source {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 10px 12px;
+    color: var(--colour-2);
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid var(--blur-border);
+    border-radius: var(--border-radius-1);
+    cursor: pointer;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
+}
+
+.chat-transfer-source:has(input:checked) {
+    color: var(--colour-3);
+    background: var(--conversations-hover);
+    border-color: var(--accent);
+}
+
+.chat-transfer-source input,
+.chat-transfer-auto input {
+    accent-color: var(--accent);
+}
+
+.chat-transfer-source-mark {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    flex: 0 0 auto;
+    color: #fff;
+    background: var(--accent);
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.chat-transfer-auto {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 18px 24px 0;
+    padding: 14px;
+    background: rgba(139, 61, 255, 0.1);
+    border: 1px solid rgba(139, 61, 255, 0.35);
+    border-radius: var(--border-radius-1);
+    cursor: pointer;
+}
+
+.chat-transfer-auto input {
+    margin-top: 2px;
+}
+
+.chat-transfer-auto span {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.chat-transfer-auto strong {
+    font-size: 0.9rem;
+    color: var(--colour-3);
+}
+
+.chat-transfer-auto small {
+    color: var(--colour-2);
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+.chat-transfer-primary,
+.chat-transfer-export-grid button {
+    color: var(--colour-3);
+    background: transparent;
+    border: 1px solid var(--blur-border);
+    border-radius: var(--border-radius-1);
+    cursor: pointer;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
+}
+
+.chat-transfer-primary {
+    padding: 10px 15px;
+}
+
+.chat-transfer-primary:hover,
+.chat-transfer-export-grid button:hover {
+    background: var(--conversations-hover);
+    border-color: var(--conversations);
+}
+
+.chat-transfer-export-grid button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 12px;
+    text-align: left;
+}
+
+.chat-transfer-export-grid button strong {
+    font-size: 0.88rem;
+}
+
+.chat-transfer-export-grid button span {
+    color: var(--colour-2);
+    font-size: 0.74rem;
+}
+
+.chat-transfer-status {
+    min-height: 20px;
+    margin: 0;
+    padding: 14px 24px 22px;
+    color: var(--colour-2);
+    font-size: 0.82rem;
+}
+
+@media (max-width: 520px) {
+    .chat-transfer-header,
+    .chat-transfer-section {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+
+    .chat-transfer-auto {
+        margin-left: 18px;
+        margin-right: 18px;
+    }
+
+    .chat-transfer-source-grid,
+    .chat-transfer-export-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .message .content .count {
     font-size: 12px;
     display: flex;
@@ -1596,6 +1828,13 @@ select:hover,
     flex-shrink: 0;
 }
 
+.addon-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
 .addon-panel-title {
     font-size: 11px;
     font-weight: 600;
@@ -1607,10 +1846,34 @@ select:hover,
     user-select: none;
 }
 
+.addon-panel-toggle {
+    width: 28px;
+    height: 24px;
+    padding: 0;
+    color: var(--colour-2);
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.addon-panel-toggle:hover {
+    color: var(--colour-3);
+    background: var(--conversations-hover);
+}
+
 .addon-panel-items {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    max-height: 240px;
+    overflow: hidden;
+    transition: max-height 0.22s ease, opacity 0.18s ease;
+}
+
+.addon-panel-collapsed .addon-panel-items {
+    max-height: 0;
+    opacity: 0;
 }
 
 .addon-panel-items:empty {
@@ -1637,12 +1900,6 @@ select:hover,
 .addon-panel-item:hover {
     background-color: var(--conversations-hover);
     border-color: var(--conversations);
-}
-
-.addon-panel-item i {
-    width: 16px;
-    text-align: center;
-    font-size: 1em;
 }
 
 .addon-panel-item span {
@@ -3895,4 +4152,3 @@ body.wco-active .log-top-bar button {
     -webkit-app-region: no-drag;
     app-region: no-drag;
 }
-

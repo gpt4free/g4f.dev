@@ -29,7 +29,7 @@ function transfer_set_optin(source, value) {
 }
 
 function transfer_tracking_enabled() {
-    return appStorage.getItem(TRANSFER_TRACK_KEY) === "true";
+    return appStorage.getItem(TRANSFER_TRACK_KEY) !== "false";
 }
 
 function _text(value) {
@@ -162,7 +162,9 @@ function parse_google_activity(data, allowed) {
 
 // Conversations tracked by the browser extension.
 function parse_tracked(data, allowed) {
-    return data.filter((c) => allowed(c.source) && Array.isArray(c.messages) && c.messages.length)
+    return data.filter((c) =>
+        TRANSFER_SOURCES[c.source] && allowed(c.source) &&
+        Array.isArray(c.messages) && c.messages.length)
         .map((c) => _conversation(c.source, c.id, c.title,
             c.messages.map((m) => ({role: m.role, content: m.content})).filter((m) => m.content),
             c.created, c.updated));
@@ -268,10 +270,27 @@ async function export_conversations(format = "g4f", conversationId = null) {
 window.addEventListener("message", async (event) => {
     if (event.source !== window || event.origin !== window.location.origin) return;
     const msg = event.data;
+    if (msg?.type === "g4f-tracked-chats-ready") {
+        const status = document.getElementById("transfer-status");
+        if (status) status.textContent = "Automatic saving enabled. No new tracked chats.";
+        return;
+    }
+    if (msg?.type === "g4f-tracked-chats-ack") {
+        const status = document.getElementById("transfer-status");
+        if (status) {
+            status.textContent = msg.count
+                ? `Automatically imported ${msg.count} conversation${msg.count === 1 ? "" : "s"}.`
+                : "Automatic sync is up to date.";
+        }
+        return;
+    }
     if (msg?.type !== "g4f-tracked-chats" || !transfer_tracking_enabled()) return;
-    const result = await import_external_chats(msg.conversations || [], transfer_optin);
+    const result = await import_external_chats(msg.conversations || [], () => true);
     window.postMessage({type: "g4f-tracked-chats-ack", count: result?.count || 0, ids: (msg.conversations || []).map((c) => c.id)}, window.location.origin);
 });
+if (transfer_tracking_enabled()) {
+    window.postMessage({type: "g4f-tracked-chats-request"}, window.location.origin);
+}
 
 // UI --------------------------------------------------------------------
 
@@ -279,28 +298,68 @@ function open_chat_transfer() {
     document.getElementById("chat-transfer-dialog")?.remove();
     const dialog = document.createElement("dialog");
     dialog.id = "chat-transfer-dialog";
+    dialog.className = "chat-transfer-dialog";
+    dialog.setAttribute("aria-labelledby", "chat-transfer-title");
     const rows = Object.entries(TRANSFER_SOURCES).map(([key, label]) =>
-        `<label style="display:block"><input type="checkbox" data-source="${key}" ${transfer_optin(key) ? "checked" : ""}> ${label}</label>`).join("");
+        `<label class="chat-transfer-source">
+            <input type="checkbox" data-source="${key}" ${transfer_optin(key) ? "checked" : ""}>
+            <span class="chat-transfer-source-mark" aria-hidden="true">${label.slice(0, 1)}</span>
+            <span>${label}</span>
+        </label>`).join("");
     dialog.innerHTML = `
-        <h3>Import / Export chats</h3>
-        <p><b>Import sources</b> (opt-in, nothing is imported from unchecked sources):</p>
-        ${rows}
-        <label style="display:block;margin-top:8px"><input type="checkbox" id="transfer-track" ${transfer_tracking_enabled() ? "checked" : ""}>
-            Track new conversations from my ChatGPT/Gemini accounts (needs the g4f browser extension)</label>
-        <p style="margin:12px 0 4px"><button type="button" id="transfer-import">Import file…</button>
-        <input type="file" id="transfer-file" accept=".json" hidden></p>
-        <p>Export:
-            <button type="button" data-export="g4f">g4f JSON</button>
-            <button type="button" data-export="chatgpt">ChatGPT JSON</button>
-            <button type="button" data-export="markdown">Markdown</button></p>
-        <p id="transfer-status" aria-live="polite"></p>
-        <button type="button" id="transfer-close">Close</button>`;
+        <div class="chat-transfer-header">
+            <div>
+                <h2 id="chat-transfer-title">Import / Export chats</h2>
+                <p>Bring conversations from other assistants into this browser.</p>
+            </div>
+            <button type="button" class="chat-transfer-close" id="transfer-close" aria-label="Close">×</button>
+        </div>
+        <section class="chat-transfer-section">
+            <div class="chat-transfer-section-heading">
+                <h3>Import sources</h3>
+                <span>Manual files</span>
+            </div>
+            <p class="chat-transfer-help">Choose which sources may be read from an imported ChatGPT, Claude or Google Takeout file.</p>
+            <div class="chat-transfer-source-grid">${rows}</div>
+        </section>
+        <label class="chat-transfer-auto">
+            <input type="checkbox" id="transfer-track" ${transfer_tracking_enabled() ? "checked" : ""}>
+            <span>
+                <strong>Automatically save extension-tracked chats</strong>
+                <small>Sources enabled in the g4f browser extension are saved to local chat history without file imports.</small>
+            </span>
+        </label>
+        <section class="chat-transfer-section">
+            <div class="chat-transfer-section-heading">
+                <h3>Import a file</h3>
+            </div>
+            <button type="button" class="chat-transfer-primary" id="transfer-import">Choose JSON file…</button>
+            <input type="file" id="transfer-file" accept=".json,application/json" hidden>
+        </section>
+        <section class="chat-transfer-section">
+            <div class="chat-transfer-section-heading">
+                <h3>Export chats</h3>
+            </div>
+            <div class="chat-transfer-export-grid">
+                <button type="button" data-export="g4f"><strong>g4f JSON</strong><span>Chats and settings backup</span></button>
+                <button type="button" data-export="chatgpt"><strong>ChatGPT JSON</strong><span>Conversations only</span></button>
+                <button type="button" data-export="markdown"><strong>Markdown</strong><span>Readable text files</span></button>
+            </div>
+        </section>
+        <p class="chat-transfer-status" id="transfer-status" aria-live="polite"></p>`;
     document.body.appendChild(dialog);
     const status = dialog.querySelector("#transfer-status");
     dialog.querySelectorAll("input[data-source]").forEach((box) =>
         box.addEventListener("change", () => transfer_set_optin(box.dataset.source, box.checked)));
-    dialog.querySelector("#transfer-track").addEventListener("change", (e) =>
-        appStorage.setItem(TRANSFER_TRACK_KEY, e.target.checked ? "true" : "false"));
+    dialog.querySelector("#transfer-track").addEventListener("change", (e) => {
+        appStorage.setItem(TRANSFER_TRACK_KEY, e.target.checked ? "true" : "false");
+        status.textContent = e.target.checked
+            ? "Automatic saving enabled."
+            : "Automatic saving disabled.";
+        if (e.target.checked) {
+            window.postMessage({type: "g4f-tracked-chats-request"}, window.location.origin);
+        }
+    });
     const file = dialog.querySelector("#transfer-file");
     dialog.querySelector("#transfer-import").addEventListener("click", () => file.click());
     file.addEventListener("change", async () => {

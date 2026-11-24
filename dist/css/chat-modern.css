@@ -345,6 +345,14 @@ input, select, textarea, button {
     padding: 0 6px 6px;
 }
 
+.addon-panel-header {
+    padding-right: 4px;
+}
+
+.addon-panel-toggle {
+    color: var(--text-3);
+}
+
 .addon-panel-item {
     border-radius: 10px;
     border-color: transparent;

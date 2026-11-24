@@ -61,7 +61,7 @@ const ADMIN_USERS = {
 };
 const EXTRA_CONTRIBUTERS = ["Screenmax1234", "kirill670", "georgedorn", "yakovexplorer", "tak-gamingYT", "sasaiber", "redac1ed", "AskingAcake", "tringtoblinbus", "Yatin-Code", "meow18838"];
 
-const ALLOWED_REDIRECT_HOSTNAMES = ["localhost", "127.0.0.1", "llmplayground.net", "g4f.dev", "gpt4free.github.io"];
+const ALLOWED_REDIRECT_HOSTNAMES = ["localhost", "127.0.0.1", "g4f.dev", "gpt4free.github.io"];
 
 // Discord community onboarding. Users who connect Discord and join the
 // support server are upgraded from "new" to "free" immediately instead of

@@ -246,6 +246,24 @@ const host = {
     })(),
 };
 
+const addonPanelSection = document.querySelector('.addon-panel');
+const addonPanelToggle = document.getElementById('addon-panel-toggle');
+if (addonPanelSection && addonPanelToggle) {
+    const setCollapsed = (collapsed) => {
+        addonPanelSection.classList.toggle('addon-panel-collapsed', collapsed);
+        addonPanelToggle.setAttribute('aria-expanded', String(!collapsed));
+        addonPanelToggle.setAttribute('aria-label', collapsed ? 'Show addons' : 'Hide addons');
+        addonPanelToggle.title = collapsed ? 'Show addons' : 'Hide addons';
+        addonPanelToggle.textContent = collapsed ? '⌄' : '⌃';
+    };
+    setCollapsed(localStorage.getItem('addonPanelCollapsed') === 'true');
+    addonPanelToggle.addEventListener('click', () => {
+        const collapsed = !addonPanelSection.classList.contains('addon-panel-collapsed');
+        setCollapsed(collapsed);
+        localStorage.setItem('addonPanelCollapsed', String(collapsed));
+    });
+}
+
 addonsLoaded.then(() => {
     ChatAddons.boot().then(() => ChatAddons.enableAll());
 });

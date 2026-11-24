@@ -610,12 +610,12 @@ async function safe(request, env, ctx) {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: getCorsHeaders(request) });
     }
-    if (["/models", "/api/auto/v1/models", "/api/default/models"].includes(pathname)) {
+    if (["/models", "/api/auto/v1/models", "/api/default/models", "/api/v1/models"].includes(pathname)) {
       // Response.redirect() requires an absolute URL; a relative path throws
       // "Unable to parse URL" in workerd and turned this redirect into a 500.
       return Response.redirect(new URL("/v1/models", url).toString(), 302);
     }
-    if (["/", "/chat", "/chat/", "/chat/v2", "/playground", "/playground/"].includes(pathname) && request.method != "POST") {
+    if (["/", "/chat", "/chat/", "/playground", "/playground/", "/members", "/members.html"].includes(pathname) && request.method != "POST") {
       const newUrl = new URL(request.url);
       newUrl.hostname = "g4f.dev";
       return Response.redirect(newUrl.toString(), 302);

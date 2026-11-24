@@ -204,7 +204,11 @@
                     <div id="box_conversations" class="conversations" role="region" aria-live="polite" aria-label="List of conversations"></div>
                 </nav>
                 <section class="addon-panel" aria-label="Addon features and options">
-                    <h2 class="addon-panel-title" data-translate="true">Addons</h2>
+                    <div class="addon-panel-header">
+                        <h2 class="addon-panel-title" data-translate="true">Addons</h2>
+                        <button type="button" class="addon-panel-toggle" id="addon-panel-toggle"
+                            aria-controls="addon-panel" aria-expanded="true" aria-label="Hide addons" title="Hide addons">⌃</button>
+                    </div>
                     <div id="addon-panel" class="addon-panel-items"></div>
                 </section>
                 <section class="bottom_buttons" aria-label="Support and links">
