@@ -630,16 +630,6 @@ async function safe(request, env, ctx) {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: getCorsHeaders(request) });
     }
-    if (["/models", "/api/auto/v1/models", "/api/default/models", "/api/v1/models"].includes(pathname)) {
-      // Response.redirect() requires an absolute URL; a relative path throws
-      // "Unable to parse URL" in workerd and turned this redirect into a 500.
-      return Response.redirect(new URL("/v1/models", url).toString(), 302);
-    }
-    if (["/", "/chat", "/chat/", "/playground", "/playground/", "/members", "/members.html"].includes(pathname) && request.method != "POST") {
-      const newUrl = new URL(request.url);
-      newUrl.hostname = "g4f.dev";
-      return Response.redirect(newUrl.toString(), 302);
-    }
     if (pathname == "/api/audio/models") {
       return Response.json({ data: [{ id: "gpt-audio", audio: true }, ...GPT_AUDIO_VOICES.map((voice) => {
         return { id: voice, audio: true };
@@ -649,11 +639,7 @@ async function safe(request, env, ctx) {
       waitForProviders ? await waitForProviders() : null;
       return Response.json(URL_MAP, { headers: ACCESS_CONTROL_ALLOW_ORIGIN });
     }
-    if (pathname === "/public") {
-      return Response.redirect(new URL("/custom/api/servers/public", url).toString(), 302);
-    } else if (pathname === "/usage") {
-      return Response.redirect(new URL("/custom/api/servers/usage", url).toString(), 302);
-    } else if (pathname.startsWith("/srv_")) {
+    if (pathname.startsWith("/srv_")) {
       pathname = "/custom" + pathname;
     }
     let user = null;
@@ -3051,6 +3037,9 @@ async function isOllama(url) {
   }
 }
 async function isOnline(env, baseUrl, apiKeysStr, model) {
+  if (model === "auto") {
+    return model;
+  }
   let data = {};
   for (let i = 0; i <= 1; i++) {
     let response;
