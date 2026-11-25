@@ -29,8 +29,7 @@
         "puter": "anthropic:anthropic/claude-opus-4-7",
         "webgpu": "Llama-3.1-8B-Instruct-q4f32_1-MLC",
         "bonsai2": "27b",
-        "chromeai": "gemini-nano",
-        "kilo": "kilo-auto/free"
+        "chromeai": "gemini-nano"
     },
     "serverDefaultModels": {
         "srv_mp3lmkuad07322459f47": "unmoderated-gpt",

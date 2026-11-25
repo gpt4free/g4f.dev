@@ -1685,7 +1685,7 @@ class Kilo extends Client {
                 }
                 // Anonymous requests are restricted to the free tier
                 return models.filter((model) =>
-                    model.id === "kilo-auto/free" || model.id.endsWith(":free")
+                    model.id.endsWith("/free") || model.id.endsWith(":free")
                 );
             }
         };

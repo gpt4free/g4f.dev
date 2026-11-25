@@ -543,13 +543,19 @@ const BLOCKED_USERS = [
   "11451499A", "xs886_", "XSis666",
 ];
 const GPT_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "marin", "cedar", "amuch", "dan", "elan", "breeze", "cove", "ember", "fathom", "glimmer", "harp", "juniper", "maple", "orbit", "vale"];
-function getDefaultModel(s) {
+function getDefaultModel(s, messages) {
   if (s.default_model) {
     return s.default_model;
   }
   let defaultModel = DEFAULT_MODELS[s.id];
   if (s.allowed_models.includes(defaultModel)) {
     return defaultModel;
+  }
+  if (s.allowed_models.includes("kilo-auto/free")) {
+    const hasImage = messages && messages.some(msg => msg.type === "image_url");
+    if (!hasImage) {
+      return "kilo-auto/free";
+    }
   }
   defaultModel = s.allowed_models.find(m=>["auto", "big-pickle"].includes(m) || m.endsWith("/free") || m.endsWith("/auto"));
   if (defaultModel) {
@@ -559,7 +565,10 @@ function getDefaultModel(s) {
   if (defaultModel) {
     return defaultModel;
   }
-  return s.allowed_models.length > 0 ? s.allowed_models[0] : null;
+  if (s.allowed_models.length > 0 && !s.allowed_models[0].startsWith("bigcode/")) {
+    return s.allowed_models[0];
+  }
+  return null;
 }
 // Find the closest match for a requested model within a server's
 // allowed_models list. Handles renamed/deprecated upstream models by
@@ -2158,7 +2167,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     // Upstream failures returned verbatim are not run through jsonResponse,
     // so record them here for /api/stats. Only completion calls are tracked;
     // quota/health/model probes stay out of the success-rate denominator.
-    if (!response.ok && chatUrls.includes(subPath) && response.status !== 429) {
+    if (!response.ok && chatUrls.includes(subPath) && response.status !== 429 && response.status !== 503) {
       const errorContext = {
         source: "upstream",
         status: response.status,
@@ -2884,13 +2893,13 @@ async function getServerById(env, serverId, user = null) {
   if (user && user.custom_servers) {
     const ownedServer = user.custom_servers.find((s) => s.id === serverId);
     if (ownedServer) {
-      return { ...ownedServer, owner_id: user.id, api_key, default_model: server?.default_model };
+      return { ...ownedServer, owner_id: user.id, api_key, default_model: server?.default_model, allowed_models: ownedServer.allowed_models || server?.allowed_models || [] };
     }
   }
   if (env.MEMBERS_KV) {
     const cached = await getCachedKv(env, `server:${serverId}`);
     if (cached) {
-      return { ...JSON.parse(cached), api_key, default_model: server?.default_model };
+      return { ...JSON.parse(cached), api_key, default_model: server?.default_model, allowed_models: JSON.parse(cached).allowed_models || server?.allowed_models || [] };
     }
   }
   if (publicServers) {
@@ -2898,6 +2907,7 @@ async function getServerById(env, serverId, user = null) {
       const owner = await getUser(env, server.owner_id);
       if (owner) {
         const fullServer = (owner.custom_servers || []).find((s) => s.id === serverId);
+        fullServer.allowed_models = fullServer.allowed_models || server?.allowed_models || [];
         if (fullServer && fullServer.is_public) {
           fullServer.owner_id = owner.id;
           await putMembersKv(
@@ -2918,16 +2928,16 @@ async function getServerByLabel(env, label, user = null) {
   if (!label) {
     return null;
   }
-  if (label === "huggingface") {
-    return { id: "huggingface", base_url: `https://router.huggingface.co/v1`, allowed_models: []};
-  }
-  if (label === "puter") {
-    return { id: "puter", base_url: env.PUTER_WORKER_URL || `https://puter.g4f.space`, allowed_models: [], provider_worker: "puter"};
-  }
-  if (label === "community") {
-    const pollinationsBase = (env.POLLINATIONS_WORKER_URL || "https://pollinations.g4f.space").replace(/\/+$/, "");
-    return { id: "community", base_url: `${pollinationsBase}/community`, allowed_models: [], provider_worker: "pollinations"};
-  }
+  // if (label === "huggingface") {
+  //   return { id: "huggingface", base_url: `https://router.huggingface.co/v1`, allowed_models: []};
+  // }
+  // if (label === "puter") {
+  //   return { id: "puter", base_url: env.PUTER_WORKER_URL || `https://puter.g4f.space`, allowed_models: [], provider_worker: "puter"};
+  // }
+  // if (label === "community") {
+  //   const pollinationsBase = (env.POLLINATIONS_WORKER_URL || "https://pollinations.g4f.space").replace(/\/+$/, "");
+  //   return { id: "community", base_url: `${pollinationsBase}/community`, allowed_models: [], provider_worker: "pollinations"};
+  // }
   if (label.startsWith("pa:")) {
     return { id: "core", base_url: `https://pass.g4f.space/api/${label}`, allowed_models: []};
   }
