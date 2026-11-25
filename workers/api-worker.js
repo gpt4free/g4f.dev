@@ -2568,8 +2568,7 @@ async function handleApiStats(request, env, user, ctx) {
               COALESCE(SUM(tokens_total), 0) AS tokens
        FROM usage_logs
        WHERE timestamp > ?
-       GROUP BY provider, model
-       HAVING COUNT(*) > 0`
+       GROUP BY provider, model`
     ).bind(since).all().catch((e) => {
       usageFailed = true;
       console.error("Failed to aggregate usage stats:", e);
@@ -2642,7 +2641,7 @@ async function handleApiStats(request, env, user, ctx) {
     error_count: value.errors,
     tokens: value.tokens,
     success_rate: statsSuccessRate(value.requests, value.errors)
-  })).sort((a, b) => (b.requests + b.errors) - (a.requests + a.errors));
+  })).sort((a, b) => (b.requests + b.errors) - (a.requests + a.errors)).filter(row => row.requests > 0);
 
   const payload = {
     since,
