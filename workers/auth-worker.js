@@ -3008,8 +3008,8 @@ ${buttonsHtml}
 
   function getLinkedGitHubUsername(user) {
     if (!user) return null;
-    if (user.provider === "github" && user.username) {
-      return user.username;
+    if (user.provider === "github") {
+      return user.username || (user.github && user.github.username) || user.name || null;
     }
     if (user.github && user.github.username) {
       return user.github.username;

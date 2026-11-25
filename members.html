@@ -2834,6 +2834,16 @@
             }
         }
 
+        function isGitHubUser(user) {
+            return !!(
+                user && (
+                    user.provider === 'github' ||
+                    (user.github && (user.github.username || user.github.id)) ||
+                    user.github_id
+                )
+            );
+        }
+
         function isProUpgradeEligible(user) {
             const tier = user && user.tier ? String(user.tier).toLowerCase() : '';
             return !['pro', 'sponsor', 'admin'].includes(tier) && user?.pro_approved !== true;
@@ -2853,9 +2863,7 @@
                 return;
             }
 
-            const githubConnected = status
-                ? !!status.github_connected
-                : (user.provider === 'github' || !!(user.github && user.github.username));
+            const githubConnected = Boolean((status && status.github_connected) || isGitHubUser(user));
             const ticketSubmitted = !!(status && (status.status === 'pending' || status.status === 'needs_info' || status.pro_approved));
 
             proUpgradeBanner.hidden = false;
@@ -2915,6 +2923,7 @@
                 proUpgradeBanner.hidden = true;
                 return;
             }
+            renderProUpgradeBanner(user, null);
             try {
                 const status = await apiRequest('/pro/status');
                 if (!localStorage.getItem('g4f_user')) {
