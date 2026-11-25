@@ -8,3 +8,4 @@ https://g4f.space/members.html,https://g4f.dev/members.html,301,true,false,false
 https://g4f.space/public,https://g4f.space/custom/api/servers/public,301,true,false,false,false
 https://g4f.space/usage,https://g4f.space/custom/api/servers/usage,301,true,false,false,false
 "https://g4f.space/api/%7Bpollinations,openrouter,cloudflare%7D/models",https://g4f.space/v1/models,301,true,false,false,false
+https://g4f.space/custom/Pollinations,301,true,false,true,false

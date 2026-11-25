@@ -1295,9 +1295,7 @@ function toSafeServer(s) {
 async function handleListServers(request, env, user) {
   let servers = [];
   if (user) {
-    servers = (user.custom_servers || []).map((server) =>
-      sanitizeProviderServer(structuredClone(server))
-    );
+    servers = user.custom_servers || [];
   }
   const safeServers = user && user.tier === "admin" ? servers : servers.map(toSafeServer);
   // A server can be published to the public index without being present in
@@ -1364,12 +1362,9 @@ async function handleCreateServer(request, env) {
   const serverId = generateServerId();
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const autoUpdateModels = body.auto_update_models !== false;
-  const allowedModels = filterProviderAllowedModels(
-    { base_url: body.base_url },
-    autoUpdateModels
-      ? validationResult.models || []
-      : body.allowed_models && body.allowed_models.length > 0 ? body.allowed_models : validationResult.models || []
-  );
+  const allowedModels = autoUpdateModels
+    ? validationResult.models || []
+    : body.allowed_models && body.allowed_models.length > 0 ? body.allowed_models : validationResult.models || [];
   const server = {
     id: serverId,
     label: body.label || `Server ${(user.custom_servers || []).length + 1}`,
@@ -1475,7 +1470,6 @@ async function handleUpdateServer(request, env) {
       console.error("Failed to refresh models on update:", e);
     }
   }
-  sanitizeProviderServer(server);
   // use the (possibly updated) server.base_url — body.base_url is undefined
   // when only other fields like label were updated, and isOllama would throw
   server.is_ollama = await isOllama(server.base_url);
@@ -1836,6 +1830,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       requestBody = await request.clone().json();
     }
     requestModel = requestBody.model;
+    request._g4fModel = requestModel;
     try {
       const messages = requestBody.messages;
       if (messages) {
@@ -2029,9 +2024,6 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     }
   }
 
-  if (requestModel) {
-    request._g4fModel = requestModel;
-  }
   const apiKey = userProvidedKey || server.api_key || getRandomApiKey(server.api_keys);
   const ip = request.headers.get('cf-connecting-ip') || '';
   const country = request.headers.get('cf-ipcountry') || 'XX';
@@ -2247,7 +2239,8 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
         model: request._g4fModel || null,
         context: { upstream_status: response.status },
         userId: user ? user.id : null,
-        userTier: user ? user.tier : (rateCheck ? `${rateCheck.centsToCharge}/${rateCheck.cakeCreditCents}` : userProvidedKey ? (userProvidedKey.startsWith("sk-d1d1c") || userProvidedKey.startsWith("g4f-local") ? userProvidedKey : userProvidedKey.substring(0, 8)) : request.cf?.country)
+        userTier: user ? user.tier : (rateCheck ? `${rateCheck.centsToCharge}/${rateCheck.cakeCreditCents}` : userProvidedKey ? (userProvidedKey.startsWith("sk-d1d1c") || userProvidedKey.startsWith("g4f-local") ? userProvidedKey : userProvidedKey.substring(0, 8)) : request.cf?.country),
+        colo: request.cf?.colo
       };
       ctx.waitUntil(response.clone().text().then((body) => {
         let upstreamMessage = body.trim().substring(0, 900);
@@ -2523,6 +2516,7 @@ async function persistErrorToDb(env, error, context = {}) {
       : {};
     if (context.server) meta.server = context.server;
     if (context.model) meta.model = context.model;
+    if (context.colo) meta.colo = context.colo;
     await env.ERRORS_DB.prepare(
       `INSERT INTO error_logs (timestamp, source, status, message, stack, pathname, method, ip, user_id, user_tier, user_agent, request_id, context)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
