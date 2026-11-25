@@ -655,6 +655,9 @@ async function safe(request, env, ctx) {
         const tokens = authHeader.substring(7).split(/\s+/);
         userProvidedKey = tokens.find((t) => t && !t.startsWith("g4f_") && !t.startsWith("gfs_") && t.length > 7);
       }
+      if (userProvidedKey && ["sk-dummy", "sk-shim-", "g4f-local-free"].includes(userProvidedKey)) {
+        userProvidedKey = null;
+      }
     } catch (error) {
         console.error("User error:", error);
         ctx.waitUntil(persistErrorToDb(env, error, {
