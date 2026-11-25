@@ -1664,7 +1664,7 @@ const apiExport = {};
         retryCount: 0,        // safety cap on total retries per message
     };
     const MAX_FALLBACK_RETRIES = 10;
-    const MAX_AUTO_RETRIES = 2;
+    const MAX_AUTO_RETRIES = 1;
 
     // True for the "Provider: Auto" and "Model: Default" selections, which
     // have no concrete provider/model pair to fall back to.
@@ -1748,13 +1748,9 @@ const apiExport = {};
             console.info(`Picker: retrying auto model selection (attempt ${fallback.retryCount}/${MAX_AUTO_RETRIES})`);
             notify(`Retrying request (${fallback.retryCount}/${MAX_AUTO_RETRIES})`, 'info');
             // Reload to flush any partial response before retrying.
-            await load_conversation(window.conversation_id);
+            // await load_conversation(window.conversation_id);
             if (typeof window.ask_gpt === 'function') {
-                const retryProvider = failedProvider && failedProvider !== 'default' ? failedProvider : undefined;
-                const retryModel = failedModel && !['default', 'none', 'auto'].includes(String(failedModel).toLowerCase())
-                    ? failedModel
-                    : undefined;
-                window.ask_gpt(messageId, -1, false, retryProvider, retryModel, action, message);
+                window.ask_gpt(messageId, -1, false, "kilo", "kilo-auto/free", action, message);
             }
             return true;
         }
