@@ -54,6 +54,25 @@
         "Discord membership verified!",
         "Verification failed: {0}"
     ],
+    "Pro Upgrade": [
+        "Upgrade to the Pro tier",
+        "Connect GitHub and submit a quick Pro tier request ticket — our automated review model checks your request and upgrades your account automatically.",
+        "Connect GitHub",
+        "Submit GitHub ticket",
+        "Auto upgrade to Pro",
+        "Request Pro Tier",
+        "Verify Pro Upgrade",
+        "Your Pro tier ticket needs more details. Update your GitHub issue and our review model will re-check it automatically.",
+        "Your previous Pro tier request was not approved. You can submit an updated GitHub issue with more details about your project.",
+        "Your Pro tier ticket is being reviewed. Once approved, your account upgrades automatically — or click Verify Pro Upgrade.",
+        "GitHub connected! Open a Pro tier request ticket on GitHub — our decision model will review it and upgrade your account automatically.",
+        "Pro ticket verified — your account was upgraded to the Pro tier!",
+        "Pro tier verified!",
+        "No approved Pro tier ticket found yet.",
+        "Prefer instant Pro-level limits while supporting G4F?",
+        "Become a GitHub Sponsor",
+        "Become a Sponsor (Pro Limits)"
+    ],
     "Usage Statistics": [
         "Usage Statistics",
         "API Requests",

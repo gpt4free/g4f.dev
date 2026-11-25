@@ -32,6 +32,7 @@ DISCORD_GUILD_NAME = "g4f support"
 # wrangler secret put HUGGINGFACE_CLIENT_ID
 # wrangler secret put HUGGINGFACE_CLIENT_SECRET
 # wrangler secret put GITHUB_TOKEN
+# wrangler secret put PRO_UPGRADE_SECRET
 
 # Routes - configure these to match your domain
 routes = [

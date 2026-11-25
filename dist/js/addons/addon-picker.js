@@ -1750,7 +1750,13 @@ const apiExport = {};
             // Reload to flush any partial response before retrying.
             // await load_conversation(window.conversation_id);
             if (typeof window.ask_gpt === 'function') {
-                window.ask_gpt(messageId, -1, false, "kilo", "kilo-auto/free", action, message);
+                function isSupported() {
+                    const mod = window.G4FClient
+                        || (window.Client && window.ChromeAI && window);
+                    if (mod && mod.ChromeAI) return mod.isSupported;
+                    return false;
+                }
+                window.ask_gpt(messageId, -1, false, isSupported() ? "chromeai" : "kilo", null, action, message);
             }
             return true;
         }

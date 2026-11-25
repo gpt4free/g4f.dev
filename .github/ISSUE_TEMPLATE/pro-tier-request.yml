@@ -1,0 +1,72 @@
+name: Pro Tier Upgrade Request
+description: Request an automatic Pro tier upgrade for your G4F Members account.
+title: "[Pro Request]: "
+labels: ["pro-tier-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Fill out this form to request a **Pro tier** upgrade on [g4f.dev/members.html](https://g4f.dev/members.html).
+        An automated review model will check your request and upgrade your linked G4F account automatically.
+        **Requirement:** Your GitHub account must be linked to your G4F Members account so we can verify ownership.
+        **Tip:** GitHub Sponsors ([github.com/sponsors/hlohaus](https://github.com/sponsors/hlohaus)) also receive Pro-level limits automatically.
+
+  - type: input
+    id: g4f_user_id
+    attributes:
+      label: G4F Member ID
+      description: Pre-filled automatically when opened from g4f.dev/members.html. Your GitHub account must be linked to this G4F account.
+      placeholder: "e.g. user_abc123..."
+    validations:
+      required: false
+
+  - type: dropdown
+    id: expected_usage
+    attributes:
+      label: Primary Use Case
+      description: Select the category that best describes how you will use G4F.
+      options:
+        - Personal / Hobby project
+        - Open-source project
+        - Research / Education
+        - Developer tooling / Bot
+        - App / Prototype evaluation
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Project & Use Case Description
+      description: Describe what you are building or using G4F for, and which models/endpoints you plan to use.
+      placeholder: "I am building an open-source CLI assistant that..."
+    validations:
+      required: true
+
+  - type: input
+    id: project_url
+    attributes:
+      label: Project / Repository / Website URL (optional)
+      description: Link to your GitHub repo, website, or demo if available.
+      placeholder: "https://github.com/username/project"
+    validations:
+      required: false
+
+  - type: textarea
+    id: why_pro
+    attributes:
+      label: Why do you need Pro tier limits?
+      description: Explain why Free tier limits are not sufficient for your workflow.
+      placeholder: "My workflow runs batch evaluations / multi-step agent loops requiring higher daily token and request limits..."
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: agreement
+    attributes:
+      label: Verification & Terms
+      options:
+        - label: I confirm my GitHub account is linked to my G4F Members account.
+          required: true
+        - label: I agree not to abuse the API (no automated scraping, credential sharing, or spam).
+          required: true

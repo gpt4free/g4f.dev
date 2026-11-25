@@ -351,7 +351,8 @@
         }
 
         @media (max-width: 720px) {
-            .discord-upgrade-banner {
+            .discord-upgrade-banner,
+            .pro-upgrade-banner {
                 flex-wrap: wrap;
             }
             .discord-banner-actions {
@@ -359,6 +360,48 @@
                 flex-direction: row;
                 min-width: 0;
             }
+        }
+
+        /* Pro tier upgrade banner */
+        .pro-upgrade-banner {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(157, 80, 187, 0.55);
+            background:
+                radial-gradient(circle at top right, rgba(157, 80, 187, 0.28), transparent 45%),
+                rgba(110, 72, 170, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        }
+
+        .pro-upgrade-banner[hidden] {
+            display: none;
+        }
+
+        .pro-banner-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff;
+            font-size: 1.5rem;
+        }
+
+        .btn-github {
+            background: #24292e;
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-github:hover {
+            background: #2f363d;
         }
         
         /* Dashboard Grid */
@@ -1339,7 +1382,7 @@
             </div>
             
             <p style="margin-top: 2rem; font-size: 0.9rem; color: rgba(255,255,255,0.5);">
-                By signing in, you agree to our <a href="#" style="color: var(--secondary);">Terms of Service</a> and <a href="#" style="color: var(--secondary);">Privacy Policy</a>.
+                By signing in, you agree to our <a href="/terms.html" style="color: var(--secondary);">Terms of Service</a> and <a href="/privacy.html" style="color: var(--secondary);">Privacy Policy</a>.
             </p>
         </section>
 
@@ -1367,6 +1410,38 @@
                 </a>
                 <button class="btn" id="discordVerifyBtn" type="button">
                     <i class="fas fa-check"></i> Verify &amp; Upgrade
+                </button>
+            </div>
+        </div>
+
+        <!-- Pro tier upgrade banner (shown to logged-in new/free members) -->
+        <div class="pro-upgrade-banner" id="proUpgradeBanner" hidden>
+            <div class="pro-banner-icon"><i class="fas fa-crown" aria-hidden="true"></i></div>
+            <div class="discord-banner-content">
+                <h2 id="proUpgradeTitle">Upgrade to the Pro tier</h2>
+                <p id="proUpgradeText">
+                    Connect GitHub and submit a quick Pro tier request ticket — our automated review model checks your request and upgrades your account automatically.
+                </p>
+                <div class="discord-steps" id="proUpgradeSteps">
+                    <span class="discord-step" data-pro-step="connect"><i class="fas fa-circle" aria-hidden="true"></i> Connect GitHub</span>
+                    <span class="discord-step" data-pro-step="ticket"><i class="fas fa-circle" aria-hidden="true"></i> Submit GitHub ticket</span>
+                    <span class="discord-step" data-pro-step="upgrade"><i class="fas fa-circle" aria-hidden="true"></i> Auto upgrade to Pro</span>
+                </div>
+                <p style="margin: 0.65rem 0 0; font-size: 0.85rem; color: rgba(255,255,255,0.65);">
+                    <i class="fas fa-heart" style="color: #f0a8d0;" aria-hidden="true"></i>
+                    Prefer instant Pro-level limits while supporting G4F?
+                    <a href="https://github.com/sponsors/hlohaus" target="_blank" rel="noopener noreferrer" style="color: #f0a8d0; text-decoration: underline;">Become a GitHub Sponsor</a>.
+                </p>
+            </div>
+            <div class="discord-banner-actions">
+                <a class="btn-github btn" id="proGithubConnectBtn" href="#" rel="noopener">
+                    <i class="fab fa-github"></i> Connect GitHub
+                </a>
+                <a class="btn" id="proCreateTicketBtn" href="https://github.com/gpt4free/g4f.dev/issues/new?template=pro-tier-request.yml" target="_blank" rel="noopener noreferrer">
+                    <i class="fas fa-ticket"></i> Request Pro Tier
+                </a>
+                <button class="btn btn-secondary" id="proVerifyBtn" type="button">
+                    <i class="fas fa-check"></i> Verify Pro Upgrade
                 </button>
             </div>
         </div>
@@ -1655,8 +1730,8 @@
                         <button class="btn btn-secondary">
                             <i class="fas fa-book"></i> <a href="/docs/">API Documentation</a>
                         </button>
-                        <button class="btn btn-secondary">
-                            <i class="fas fa-heart"></i> <a href="https://github.com/sponsors/hlohaus" target="_blank">Become a Sponsor</a>
+                        <button class="btn btn-secondary" title="GitHub Sponsors receive Pro-level limits automatically">
+                            <i class="fas fa-heart"></i> <a href="https://github.com/sponsors/hlohaus" target="_blank" rel="noopener noreferrer">Become a Sponsor (Pro Limits)</a>
                         </button>
                         <button class="btn btn-secondary">
                             <i class="fab fa-github"></i> <a href="https://github.com/xtekky/gpt4free" target="_blank">View on GitHub</a>
@@ -1762,6 +1837,16 @@
         const DISCORD_INVITE_URL = 'https://discord.gg/qXA4Wf4Fsm';
         let discordMembership = null;
         let discordBannerLoading = false;
+        const proUpgradeBanner = document.getElementById('proUpgradeBanner');
+        const proUpgradeTitle = document.getElementById('proUpgradeTitle');
+        const proUpgradeText = document.getElementById('proUpgradeText');
+        const proUpgradeSteps = document.getElementById('proUpgradeSteps');
+        const proGithubConnectBtn = document.getElementById('proGithubConnectBtn');
+        const proCreateTicketBtn = document.getElementById('proCreateTicketBtn');
+        const proVerifyBtn = document.getElementById('proVerifyBtn');
+        const PRO_ISSUE_BASE_URL = 'https://github.com/gpt4free/g4f.dev/issues/new?template=pro-tier-request.yml';
+        let proStatusState = null;
+        let proBannerLoading = false;
         
         // Check for redirect parameter (external login request)
         const urlParams = new URLSearchParams(window.location.search);
@@ -1942,6 +2027,9 @@
             // Visitors who have not signed in yet should still see the
             // community banner and can join the Discord server right away.
             void renderDiscordJoinBanner();
+            if (proUpgradeBanner) {
+                proUpgradeBanner.hidden = true;
+            }
         }
 
         // Show dashboard
@@ -2007,6 +2095,7 @@
 
             // Show the Discord community onboarding banner for new members
             void refreshDiscordUpgradeBanner(user);
+            void refreshProUpgradeBanner(user);
             
             // Load existing API key if any
             const existingKey = localStorage.getItem('g4f_api_key');
@@ -2716,6 +2805,161 @@
                     setDiscordVerifyLabel();
                     if (discordMembership) {
                         discordVerifyBtn.disabled = !discordMembership.connected || discordMembership.needs_reconnect;
+                    }
+                }
+            });
+        }
+
+        // ============================================
+        // Pro Tier Upgrade Banner
+        // ============================================
+
+        function proStepDone(step, done) {
+            if (!proUpgradeSteps) return;
+            const el = proUpgradeSteps.querySelector(`[data-pro-step="${step}"]`);
+            if (!el) return;
+            el.classList.toggle('done', !!done);
+            const icon = el.querySelector('i');
+            if (icon) {
+                icon.className = done ? 'fas fa-check-circle' : 'fas fa-circle';
+            }
+        }
+
+        function isProUpgradeEligible(user) {
+            const tier = user && user.tier ? String(user.tier).toLowerCase() : '';
+            return !['pro', 'sponsor', 'admin'].includes(tier) && user?.pro_approved !== true;
+        }
+
+        function setProVerifyLabel(label) {
+            if (!proVerifyBtn) return;
+            proVerifyBtn.innerHTML = `<i class="fas fa-check"></i> ${framework.translate(label || 'Verify Pro Upgrade')}`;
+        }
+
+        function renderProUpgradeBanner(user, status) {
+            if (!proUpgradeBanner) return;
+            proStatusState = status || null;
+
+            if (!user || !isProUpgradeEligible(user) || (status && status.can_upgrade === false)) {
+                proUpgradeBanner.hidden = true;
+                return;
+            }
+
+            const githubConnected = status
+                ? !!status.github_connected
+                : (user.provider === 'github' || !!(user.github && user.github.username));
+            const ticketSubmitted = !!(status && (status.status === 'pending' || status.status === 'needs_info' || status.pro_approved));
+
+            proUpgradeBanner.hidden = false;
+            if (proUpgradeTitle) {
+                proUpgradeTitle.textContent = framework.translate('Upgrade to the Pro tier');
+            }
+            proStepDone('connect', githubConnected);
+            proStepDone('ticket', ticketSubmitted);
+            proStepDone('upgrade', !isProUpgradeEligible(user));
+
+            if (!githubConnected) {
+                proUpgradeText.textContent = framework.translate(
+                    'Connect GitHub and submit a quick Pro tier request ticket — our automated review model checks your request and upgrades your account automatically.'
+                );
+            } else if (status && status.status === 'needs_info') {
+                proUpgradeText.textContent = framework.translate(
+                    'Your Pro tier ticket needs more details. Update your GitHub issue and our review model will re-check it automatically.'
+                );
+            } else if (status && status.status === 'rejected') {
+                proUpgradeText.textContent = framework.translate(
+                    'Your previous Pro tier request was not approved. You can submit an updated GitHub issue with more details about your project.'
+                );
+            } else if (status && status.status === 'pending') {
+                proUpgradeText.textContent = framework.translate(
+                    'Your Pro tier ticket is being reviewed. Once approved, your account upgrades automatically — or click Verify Pro Upgrade.'
+                );
+            } else {
+                proUpgradeText.textContent = framework.translate(
+                    'GitHub connected! Open a Pro tier request ticket on GitHub — our decision model will review it and upgrade your account automatically.'
+                );
+            }
+
+            const redirect = encodeURIComponent(window.location.origin + '/members.html');
+            if (proGithubConnectBtn) {
+                proGithubConnectBtn.href = `${API_BASE}/members/auth/github?link=1&redirect=${redirect}`;
+                proGithubConnectBtn.style.display = githubConnected ? 'none' : '';
+            }
+            if (proCreateTicketBtn) {
+                const fallbackUrl = user.id
+                    ? `${PRO_ISSUE_BASE_URL}&g4f_user_id=${encodeURIComponent(user.id)}`
+                    : PRO_ISSUE_BASE_URL;
+                proCreateTicketBtn.href = (status && status.issue_url) || fallbackUrl;
+                proCreateTicketBtn.style.display = githubConnected ? '' : 'none';
+            }
+            if (proVerifyBtn) {
+                proVerifyBtn.style.display = githubConnected ? '' : 'none';
+                proVerifyBtn.disabled = !githubConnected || proBannerLoading;
+                if (!proBannerLoading) {
+                    setProVerifyLabel();
+                }
+            }
+        }
+
+        async function refreshProUpgradeBanner(user) {
+            if (!proUpgradeBanner) return;
+            if (!user || !isProUpgradeEligible(user)) {
+                proUpgradeBanner.hidden = true;
+                return;
+            }
+            try {
+                const status = await apiRequest('/pro/status');
+                if (!localStorage.getItem('g4f_user')) {
+                    proUpgradeBanner.hidden = true;
+                    return;
+                }
+                if (!status || status.error) {
+                    renderProUpgradeBanner(user, null);
+                    return;
+                }
+                renderProUpgradeBanner(user, status);
+            } catch (error) {
+                console.error('Failed to load Pro upgrade status:', error);
+                renderProUpgradeBanner(user, null);
+            }
+        }
+
+        if (proVerifyBtn) {
+            proVerifyBtn.addEventListener('click', async () => {
+                const cached = JSON.parse(localStorage.getItem('g4f_user') || '{}');
+                proBannerLoading = true;
+                proVerifyBtn.disabled = true;
+                proVerifyBtn.innerHTML = '<span class="loading"></span> ' + framework.translate('Verifying...');
+                try {
+                    const result = await apiRequest('/pro/verify', {
+                        method: 'POST',
+                        body: JSON.stringify({})
+                    });
+
+                    if (result.error) {
+                        renderProUpgradeBanner(cached, result);
+                        showToast(result.error, 'error');
+                        return;
+                    }
+
+                    if (result.verified && result.user) {
+                        localStorage.setItem('g4f_user', JSON.stringify(result.user));
+                        showToast(result.upgraded
+                            ? 'Pro ticket verified — your account was upgraded to the Pro tier!'
+                            : 'Pro tier verified!');
+                        await showDashboard(result.user);
+                        return;
+                    }
+
+                    renderProUpgradeBanner(cached, result);
+                    showToast(result.message || 'No approved Pro tier ticket found yet.', 'info');
+                } catch (error) {
+                    console.error('Pro verification failed:', error);
+                    showToastFormat('Verification failed: {0}', 'error', error.message);
+                } finally {
+                    proBannerLoading = false;
+                    setProVerifyLabel();
+                    if (proStatusState) {
+                        proVerifyBtn.disabled = !proStatusState.github_connected;
                     }
                 }
             });

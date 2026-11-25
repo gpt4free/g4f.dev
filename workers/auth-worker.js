@@ -284,6 +284,10 @@ function getSafeUser(user) {
         const { access_token, refresh_token, token_expires_at, ...publicDiscord } = safeUser.discord;
         safeUser.discord = publicDiscord;
     }
+    if (safeUser.github && typeof safeUser.github === "object") {
+        const { access_token, refresh_token, token_expires_at, ...publicGithub } = safeUser.github;
+        safeUser.github = publicGithub;
+    }
     return safeUser;
 }
 
@@ -543,6 +547,11 @@ async function calculateUserTier(userData, contributors, sponsors) {
     if (userData.provider === "github" && contributors.includes(userData.username)) {
         return "pro";
     }
+
+    // Preserve Pro tier granted via approved GitHub Pro-tier request
+    if (userData.pro_approved === true) {
+        return "pro";
+    }
     
     // Check sponsor status (GitHub only)
     if (userData.provider === "github" && sponsors.includes(userData.username)) {
@@ -763,6 +772,17 @@ var USER_TIER_LIMITS = {
             }
             if (pathname === "/members/api/discord/verify") {
                 return handleDiscordVerify(request, env);
+            }
+
+            // Pro tier request & automatic upgrade endpoints
+            if (pathname === "/members/api/pro/status") {
+                return handleProStatus(request, env);
+            }
+            if (pathname === "/members/api/pro/upgrade") {
+                return handleProUpgradeWebhook(request, env);
+            }
+            if (pathname === "/members/api/pro/verify") {
+                return handleProVerify(request, env);
             }
   
             // Anonymous tier upgrade endpoint
@@ -1069,6 +1089,16 @@ var USER_TIER_LIMITS = {
     const scope = "user:email read:user";
     const redirect = url.searchParams.get("redirect") || null;
     const conversation = url.searchParams.get("conversation") || null;
+    const wantsLink = url.searchParams.get("link") === "1" || url.searchParams.get("link") === "true";
+
+    let linkUserId = null;
+    if (wantsLink) {
+        const currentUser = await authenticateRequest(request, env);
+        if (!currentUser) {
+            return redirectWithError("Sign in to your G4F account before connecting GitHub");
+        }
+        linkUserId = currentUser.id;
+    }
 
     const authUrl = new URL("https://github.com/login/oauth/authorize");
     authUrl.searchParams.set("client_id", env.GITHUB_CLIENT_ID);
@@ -1077,7 +1107,7 @@ var USER_TIER_LIMITS = {
     authUrl.searchParams.set("state", state);
   
     // Store state in KV for verification, include redirect URL if present
-    const stateData = JSON.stringify({ provider: "github", redirect, conversation });
+    const stateData = JSON.stringify({ provider: "github", redirect, conversation, linkUserId });
     await env.MEMBERS_KV.put(`oauth_state:${state}`, stateData, { expirationTtl: 600 });
   
     return Response.redirect(authUrl.toString(), 302);
@@ -1145,16 +1175,32 @@ var USER_TIER_LIMITS = {
     const emails = await emailResponse.json();
     const primaryEmail = emails.find(e => e.primary)?.email || emails[0]?.email;
   
-    // Create or update user
-    const user = await createOrUpdateUser(env, {
-        provider: "github",
-        provider_id: githubUser.id,
-        username: githubUser.login,
-        name: githubUser.name || githubUser.login,
-        email: primaryEmail,
-        avatar: githubUser.avatar_url,
-        access_token: tokenData.access_token
-    });
+    // Create, update, or link user
+    let user;
+    if (stateData.linkUserId) {
+        const linked = await linkGitHubToUser(env, stateData.linkUserId, {
+            id: githubUser.id,
+            username: githubUser.login,
+            name: githubUser.name || githubUser.login,
+            email: primaryEmail,
+            avatar: githubUser.avatar_url,
+            access_token: tokenData.access_token
+        });
+        if (linked.error) {
+            return redirectWithError(linked.error);
+        }
+        user = linked.user;
+    } else {
+        user = await createOrUpdateUser(env, {
+            provider: "github",
+            provider_id: githubUser.id,
+            username: githubUser.login,
+            name: githubUser.name || githubUser.login,
+            email: primaryEmail,
+            avatar: githubUser.avatar_url,
+            access_token: tokenData.access_token
+        });
+    }
   
     // Generate session token
     const { sessionToken, expires } = await createSession(env, user.id);
@@ -1973,6 +2019,7 @@ var USER_TIER_LIMITS = {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sign in to ${clientName} — G4F</title>
+  <script src="https://g4f.dev/dist/js/framework.js" defer></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -2013,14 +2060,16 @@ var USER_TIER_LIMITS = {
     .btn.airforce { background: #0a84ff; }
     .btn.pollinations { background: #f59e0b; color: #000; }
     .divider { margin: 8px 0 20px; font-size: 0.75rem; color: #484f58; }
+    .divider a { color: #8b949e; text-decoration: underline; }
+    .divider a:hover { color: #c9d1d9; }
   </style>
 </head>
-<body>
+<body class="translate">
   <div class="card">
     <h1>Sign in to G4F</h1>
-    <p class="sub">to continue to <strong>${clientName}</strong></p>
+    <p class="sub">to continue to <strong class="notranslate">${clientName}</strong></p>
 ${buttonsHtml}
-    <div class="divider">By signing in you agree to G4F's terms of service</div>
+    <div class="divider">By signing in, you agree to our <a href="https://g4f.dev/terms.html" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="https://g4f.dev/privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</div>
   </div>
 </body>
 </html>`;
@@ -2947,6 +2996,364 @@ ${buttonsHtml}
       guild: membership.guild,
       invite: DISCORD_SUPPORT_INVITE,
       user: getSafeUser(user)
+    }, 200, getCorsHeaders(request));
+  }
+
+  // ============================================
+  // Pro Tier Request & Automatic Upgrade
+  // ============================================
+
+  const PRO_REQUEST_REPO = "gpt4free/g4f.dev";
+  const PRO_REQUEST_TEMPLATE = "pro-tier-request.yml";
+
+  function getLinkedGitHubUsername(user) {
+    if (!user) return null;
+    if (user.provider === "github" && user.username) {
+      return user.username;
+    }
+    if (user.github && user.github.username) {
+      return user.github.username;
+    }
+    return null;
+  }
+
+  function buildProIssueUrl(user) {
+    const base = `https://github.com/${PRO_REQUEST_REPO}/issues/new`;
+    const params = new URLSearchParams({ template: PRO_REQUEST_TEMPLATE });
+    if (user && user.id) {
+      params.set("g4f_user_id", user.id);
+    }
+    return `${base}?${params.toString()}`;
+  }
+
+  /**
+   * Attach a GitHub identity to an existing member (used by ?link=1 OAuth).
+   */
+  async function linkGitHubToUser(env, userId, profile) {
+    const user = await getUser(env, userId);
+    if (!user) return { error: "G4F account not found" };
+    if (!profile || !profile.username) return { error: "GitHub profile is incomplete" };
+
+    const lookupKey = `user_lookup:github:${profile.username}`;
+    const idLookupKey = profile.id ? `user_lookup_id:github:${profile.id}` : null;
+    const existingByUsername = await env.MEMBERS_KV.get(lookupKey);
+    const existingById = idLookupKey ? await env.MEMBERS_KV.get(idLookupKey) : null;
+    const existingId = existingByUsername || existingById;
+    if (existingId && existingId !== user.id) {
+      return { error: "This GitHub account is already linked to another G4F account" };
+    }
+
+    const previousUsername = user.provider === "github" ? user.username : null;
+    const now = new Date().toISOString();
+
+    if (user.provider === "github") {
+      user.username = profile.username || user.username;
+      user.name = profile.name || user.name;
+      user.email = profile.email || user.email;
+      user.avatar = profile.avatar || user.avatar;
+      user.access_token = profile.access_token;
+      user.github_id = profile.id || user.github_id || null;
+    } else {
+      user.github = {
+        id: profile.id || null,
+        username: profile.username,
+        name: profile.name || profile.username,
+        email: profile.email || null,
+        avatar: profile.avatar || null,
+        access_token: profile.access_token,
+        linked_at: now
+      };
+    }
+    user.updated_at = now;
+
+    if (previousUsername && previousUsername !== profile.username) {
+      const oldKey = `user_lookup:github:${previousUsername}`;
+      const oldValue = await env.MEMBERS_KV.get(oldKey);
+      if (oldValue === user.id) {
+        await env.MEMBERS_KV.delete(oldKey);
+      }
+    }
+
+    await env.MEMBERS_KV.put(lookupKey, user.id);
+    if (profile.id) {
+      await env.MEMBERS_KV.put(`user_lookup_id:github:${profile.id}`, user.id);
+    }
+    await saveUser(env, user);
+    return { user };
+  }
+
+  /**
+   * Constant-time string comparison for webhook bearer tokens.
+   */
+  function timingSafeEqualString(a, b) {
+    if (typeof a !== "string" || typeof b !== "string") return false;
+    const aBytes = new TextEncoder().encode(a);
+    const bBytes = new TextEncoder().encode(b);
+    if (aBytes.length !== bBytes.length) return false;
+    let diff = 0;
+    for (let i = 0; i < aBytes.length; i++) {
+      diff |= aBytes[i] ^ bBytes[i];
+    }
+    return diff === 0;
+  }
+
+  /**
+   * Apply a Pro tier upgrade to a user record and refresh KV + API key caches.
+   */
+  async function applyProUpgrade(env, user, metadata = {}) {
+    const previousTier = user.tier;
+    const now = new Date().toISOString();
+    const upgraded = !["pro", "sponsor", "admin"].includes(previousTier);
+
+    if (upgraded) {
+      user.tier = "pro";
+      await updateApiKeyCacheTier(env, user, "pro");
+    }
+
+    user.pro_approved = true;
+    user.pro_approved_at = user.pro_approved_at || now;
+    if (metadata.issue_number != null) user.pro_issue_number = metadata.issue_number;
+    if (metadata.issue_url) user.pro_issue_url = metadata.issue_url;
+    if (metadata.reason) user.pro_review_reason = metadata.reason;
+    if (metadata.model) user.pro_review_model = metadata.model;
+    user.updated_at = now;
+
+    await saveUser(env, user);
+    return { upgraded, previousTier, user };
+  }
+
+  /**
+   * GET /members/api/pro/status
+   * Reports whether GitHub is linked and whether the user can request/verify Pro.
+   */
+  async function handleProStatus(request, env) {
+    const user = await authenticateRequest(request, env);
+    if (!user) {
+      return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
+    }
+
+    const githubUsername = getLinkedGitHubUsername(user);
+    const alreadyPro = ["pro", "sponsor", "admin"].includes(user.tier) || user.pro_approved === true;
+
+    return jsonResponse({
+      tier: user.tier,
+      pro_approved: user.pro_approved === true,
+      github_connected: !!githubUsername,
+      github_username: githubUsername,
+      can_upgrade: !alreadyPro,
+      issue_url: buildProIssueUrl(user),
+      pro_issue_url: user.pro_issue_url || null,
+      repo: PRO_REQUEST_REPO
+    }, 200, getCorsHeaders(request));
+  }
+
+  /**
+   * POST /members/api/pro/upgrade
+   * Protected webhook called by the GitHub Actions decision model workflow
+   * when a pro-tier-request issue is approved.
+   */
+  async function handleProUpgradeWebhook(request, env) {
+    if (request.method !== "POST") {
+      return jsonResponse({ error: "Method not allowed" }, 405, getCorsHeaders(request));
+    }
+
+    const secret = env.PRO_UPGRADE_SECRET;
+    if (!secret) {
+      return jsonResponse({ error: "PRO_UPGRADE_SECRET is not configured" }, 503, getCorsHeaders(request));
+    }
+
+    const authHeader = request.headers.get("Authorization") || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+    if (!token || !timingSafeEqualString(token, secret)) {
+      return jsonResponse({ error: "Forbidden" }, 403, getCorsHeaders(request));
+    }
+
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return jsonResponse({ error: "Invalid JSON body" }, 400, getCorsHeaders(request));
+    }
+
+    const githubUsername = normalizeLookupValue(body.github_username);
+    const githubId = normalizeLookupValue(body.github_id);
+    const userIdParam = normalizeLookupValue(body.user_id);
+
+    if (!githubUsername && !githubId) {
+      return jsonResponse({ error: "github_username or github_id is required" }, 400, getCorsHeaders(request));
+    }
+
+    let user = null;
+    for (const key of userLookupKeys("github", githubUsername, githubId)) {
+      const foundId = await env.MEMBERS_KV.get(key);
+      if (foundId) {
+        user = await getUser(env, foundId);
+        if (user) break;
+      }
+    }
+
+    if (!user && userIdParam) {
+      const candidate = await getUser(env, userIdParam);
+      const candidateGithub = getLinkedGitHubUsername(candidate);
+      if (candidate && candidateGithub && githubUsername &&
+          candidateGithub.toLowerCase() === githubUsername.toLowerCase()) {
+        user = candidate;
+      }
+    }
+
+    if (!user) {
+      user = await findUserByProviderIdentity(env, "github", githubId, null);
+    }
+
+    if (!user) {
+      return jsonResponse({
+        error: "No G4F account found linked to this GitHub user",
+        github_username: githubUsername || null
+      }, 404, getCorsHeaders(request));
+    }
+
+    const result = await applyProUpgrade(env, user, {
+      issue_number: body.issue_number,
+      issue_url: body.issue_url,
+      reason: body.reason,
+      model: body.model
+    });
+
+    return jsonResponse({
+      upgraded: result.upgraded,
+      previous_tier: result.previousTier,
+      tier: result.user.tier,
+      user_id: result.user.id,
+      github_username: getLinkedGitHubUsername(result.user)
+    }, 200, getCorsHeaders(request));
+  }
+
+  /**
+   * POST /members/api/pro/verify
+   * Pull-based fallback: checks GitHub Issues on gpt4free/g4f.dev for an
+   * approved pro-tier-request authored by the user's linked GitHub account.
+   */
+  async function handleProVerify(request, env) {
+    const user = await authenticateRequest(request, env);
+    if (!user) {
+      return jsonResponse({ error: "Unauthorized" }, 401, getCorsHeaders(request));
+    }
+    if (request.method !== "POST") {
+      return jsonResponse({ error: "Method not allowed" }, 405, getCorsHeaders(request));
+    }
+
+    const githubUsername = getLinkedGitHubUsername(user);
+    if (!githubUsername) {
+      return jsonResponse({
+        error: "Connect GitHub first",
+        github_connected: false,
+        issue_url: buildProIssueUrl(user)
+      }, 400, getCorsHeaders(request));
+    }
+
+    if (["pro", "sponsor", "admin"].includes(user.tier) || user.pro_approved === true) {
+      return jsonResponse({
+        verified: true,
+        upgraded: false,
+        tier: user.tier,
+        github_connected: true,
+        github_username: githubUsername,
+        user: getSafeUser(user)
+      }, 200, getCorsHeaders(request));
+    }
+
+    const headers = {
+      "Accept": "application/vnd.github+json",
+      "User-Agent": "G4F-Members-Worker"
+    };
+    if (env.GITHUB_TOKEN) {
+      headers["Authorization"] = `Bearer ${env.GITHUB_TOKEN}`;
+    }
+
+    const issuesUrl = `https://api.github.com/repos/${PRO_REQUEST_REPO}/issues?` +
+      new URLSearchParams({
+        creator: githubUsername,
+        labels: "pro-tier-request",
+        state: "all",
+        per_page: "10"
+      }).toString();
+
+    let issues;
+    try {
+      const resp = await fetch(issuesUrl, { headers });
+      if (!resp.ok) {
+        return jsonResponse({
+          error: `GitHub API returned ${resp.status}`,
+          github_connected: true,
+          github_username: githubUsername
+        }, 502, getCorsHeaders(request));
+      }
+      issues = await resp.json();
+    } catch (err) {
+      return jsonResponse({
+        error: `Failed to query GitHub issues: ${err.message}`,
+        github_connected: true,
+        github_username: githubUsername
+      }, 502, getCorsHeaders(request));
+    }
+
+    const matchingIssues = Array.isArray(issues)
+      ? issues.filter((issue) =>
+          !issue.pull_request &&
+          issue.user &&
+          issue.user.login &&
+          issue.user.login.toLowerCase() === githubUsername.toLowerCase()
+        )
+      : [];
+
+    const approvedIssue = matchingIssues.find((issue) =>
+      Array.isArray(issue.labels) &&
+      issue.labels.some((label) => (typeof label === "string" ? label : label.name) === "pro-approved")
+    );
+
+    if (approvedIssue) {
+      const result = await applyProUpgrade(env, user, {
+        issue_number: approvedIssue.number,
+        issue_url: approvedIssue.html_url
+      });
+      return jsonResponse({
+        verified: true,
+        upgraded: result.upgraded,
+        previous_tier: result.previousTier,
+        tier: result.user.tier,
+        github_connected: true,
+        github_username: githubUsername,
+        issue_number: approvedIssue.number,
+        issue_url: approvedIssue.html_url,
+        user: getSafeUser(result.user)
+      }, 200, getCorsHeaders(request));
+    }
+
+    const latestIssue = matchingIssues[0] || null;
+    const latestLabels = latestIssue && Array.isArray(latestIssue.labels)
+      ? latestIssue.labels.map((l) => (typeof l === "string" ? l : l.name))
+      : [];
+    let status = "none";
+    if (latestIssue) {
+      if (latestLabels.includes("pro-rejected")) status = "rejected";
+      else if (latestLabels.includes("needs-info")) status = "needs_info";
+      else status = "pending";
+    }
+
+    return jsonResponse({
+      verified: false,
+      upgraded: false,
+      status,
+      github_connected: true,
+      github_username: githubUsername,
+      issue_url: latestIssue ? latestIssue.html_url : buildProIssueUrl(user),
+      message: status === "rejected"
+        ? "Your latest Pro tier request was not approved."
+        : status === "needs_info"
+          ? "Your Pro tier ticket needs more information. Please update the GitHub issue."
+          : status === "pending"
+            ? "Your Pro tier ticket is still being reviewed. Please wait a moment and try again."
+            : "No approved Pro tier request issue found for your GitHub account."
     }, 200, getCorsHeaders(request));
   }
 
@@ -5622,6 +6029,7 @@ const body = await request.json().catch(() => ({}));
 
   // Exported for the worker smoke tests. Not used at runtime.
   export const __test = {
+    calculateUserTier,
     createOrUpdateUser,
     ensureUserLookupIndexes,
     findUserByProviderIdentity,

@@ -198,3 +198,123 @@ try {
   globalThis.fetch = originalFetch;
 }
 console.log("PASS: auth host serves the members page first-party");
+
+// Pro tier upgrade path: calculateUserTier preservation, webhook, status, and verify fallback.
+{
+  const env = { ...makeEnv(), PRO_UPGRADE_SECRET: "test-pro-secret" };
+  const created = await __test.createOrUpdateUser(env, {
+    provider: "github",
+    provider_id: "gh-pro-1",
+    username: "pro-applicant",
+    name: "Pro Applicant",
+    email: "pro@example.com"
+  });
+  created.tier = "free";
+  created.api_keys = [{ key_hash: "hash-key-1" }];
+  await env.MEMBERS_KV.put("api_key:hash-key-1", JSON.stringify({ user_id: created.id, tier: "free" }));
+  await env.MEMBERS_BUCKET.put(`users/${created.id}.json`, JSON.stringify(created));
+
+  // Unauthenticated / bad secret webhook calls are rejected
+  const badWebhook = await authWorker.fetch(
+    new Request("https://auth.g4f.space/members/api/pro/upgrade", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer wrong" },
+      body: JSON.stringify({ github_username: "pro-applicant" })
+    }),
+    env,
+    ctx
+  );
+  assert.equal(badWebhook.status, 403);
+
+  // Valid webhook upgrades user and API key cache, and calculateUserTier preserves it
+  const goodWebhook = await authWorker.fetch(
+    new Request("https://auth.g4f.space/members/api/pro/upgrade", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer test-pro-secret" },
+      body: JSON.stringify({
+        github_username: "pro-applicant",
+        github_id: "gh-pro-1",
+        issue_number: 42,
+        issue_url: "https://github.com/gpt4free/g4f.dev/issues/42",
+        reason: "Open-source CLI assistant"
+      })
+    }),
+    env,
+    ctx
+  );
+  assert.equal(goodWebhook.status, 200);
+  const webhookJson = await goodWebhook.json();
+  assert.equal(webhookJson.tier, "pro");
+  assert.equal(webhookJson.upgraded, true);
+
+  const updatedUser = await (await env.MEMBERS_BUCKET.get(`users/${created.id}.json`)).json();
+  assert.equal(updatedUser.tier, "pro");
+  assert.equal(updatedUser.pro_approved, true);
+  assert.equal(await __test.calculateUserTier(updatedUser, [], []), "pro");
+
+  const keyCache = await env.MEMBERS_KV.get("api_key:hash-key-1", { type: "json" });
+  assert.equal(keyCache.tier, "pro");
+}
+console.log("PASS: pro upgrade webhook upgrades user, updates API key cache, and survives cron");
+
+{
+  const env = makeEnv();
+  const created = await __test.createOrUpdateUser(env, {
+    provider: "github",
+    provider_id: "gh-pro-2",
+    username: "verify-applicant",
+    name: "Verify Applicant",
+    email: "verify@example.com"
+  });
+  created.tier = "free";
+  await env.MEMBERS_BUCKET.put(`users/${created.id}.json`, JSON.stringify(created));
+  await env.MEMBERS_KV.put("session:sess-pro-2", JSON.stringify({
+    user_id: created.id,
+    expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString()
+  }));
+
+  const statusResp = await authWorker.fetch(
+    new Request("https://auth.g4f.space/members/api/pro/status", {
+      headers: { "Authorization": "Bearer sess-pro-2" }
+    }),
+    env,
+    ctx
+  );
+  assert.equal(statusResp.status, 200);
+  const statusJson = await statusResp.json();
+  assert.equal(statusJson.github_connected, true);
+  assert.equal(statusJson.can_upgrade, true);
+  assert.match(statusJson.issue_url, /gpt4free\/g4f\.dev\/issues\/new\?template=pro-tier-request\.yml/);
+
+  const prevFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    assert.match(String(url), /api\.github\.com\/repos\/gpt4free\/g4f\.dev\/issues/);
+    return new Response(JSON.stringify([
+      {
+        number: 99,
+        html_url: "https://github.com/gpt4free/g4f.dev/issues/99",
+        user: { login: "verify-applicant" },
+        labels: [{ name: "pro-tier-request" }, { name: "pro-approved" }]
+      }
+    ]), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  try {
+    const verifyResp = await authWorker.fetch(
+      new Request("https://auth.g4f.space/members/api/pro/verify", {
+        method: "POST",
+        headers: { "Authorization": "Bearer sess-pro-2", "Content-Type": "application/json" },
+        body: "{}"
+      }),
+      env,
+      ctx
+    );
+    assert.equal(verifyResp.status, 200);
+    const verifyJson = await verifyResp.json();
+    assert.equal(verifyJson.verified, true);
+    assert.equal(verifyJson.upgraded, true);
+    assert.equal(verifyJson.tier, "pro");
+  } finally {
+    globalThis.fetch = prevFetch;
+  }
+}
+console.log("PASS: pro status and verify fallback upgrade user from approved GitHub issue");
