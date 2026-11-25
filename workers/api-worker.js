@@ -2556,11 +2556,6 @@ function ensureStatsRow(map, key) {
   return row;
 }
 async function handleApiStats(request, env, user, ctx) {
-  if (!user) {
-    // authentication_required is in UNLOGGED_ERROR_TYPES: anonymous probes
-    // must not inflate the error statistics they are trying to read.
-    return jsonResponse({ error: { message: "Unauthorized", type: "authentication_required" } }, 401);
-  }
   if (!env.USAGE_DB && !env.ERRORS_DB) {
     return jsonResponse({ error: "Statistics not configured (USAGE_DB/ERRORS_DB bindings missing)" }, 503);
   }
