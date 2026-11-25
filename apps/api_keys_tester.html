@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>G4F API Keys Tester</title>
+<style>
+  :root {
+    --bg: #0d0d12;
+    --surface: #16161f;
+    --surface2: #1e1e2a;
+    --border: #2a2a3a;
+    --text: #e0e0f0;
+    --text-dim: #9090a8;
+    --accent: #8b5cf6;
+    --success: #22c55e;
+    --fail: #ef4444;
+    --warn: #f59e0b;
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  button, input, select, textarea { font: inherit; }
+  button {
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:disabled { cursor: not-allowed; opacity: .5; }
+  .primary { color: white; background: var(--accent); box-shadow: 0 0 20px #8b5cf640; }
+  .secondary { color: var(--text); background: var(--surface2); border: 1px solid var(--border); }
+  .danger { color: var(--fail); background: #ef444425; border: 1px solid #ef444450; }
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px 24px;
+    background: #16161ff0;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+  }
+  h1 {
+    font-size: 1.35rem;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    background-clip: text;
+    color: transparent;
+  }
+  .header-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .config {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) minmax(280px, 2fr);
+    gap: 12px;
+    padding: 16px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  label { display: flex; flex-direction: column; gap: 6px; color: var(--text-dim); font-size: .75rem; font-weight: 600; }
+  input, select, textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    outline: none;
+    background: var(--surface2);
+    color: var(--text);
+    padding: 10px 12px;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  textarea {
+    min-height: 82px;
+    resize: vertical;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: .8rem;
+  }
+  .hint { margin-top: 4px; color: var(--text-dim); font-size: .7rem; font-weight: 400; }
+
+  .stats-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    padding: 12px 24px;
+    background: var(--surface);
+  }
+  .stat { display: flex; gap: 7px; align-items: center; color: var(--text-dim); font-size: .82rem; }
+  .stat strong { color: var(--text); font-size: 1.05rem; }
+  .stat.ok strong { color: var(--success); }
+  .stat.fail strong { color: var(--fail); }
+  .stat.pending strong { color: var(--warn); }
+  .progress-wrap { padding: 0 24px 12px; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .progress { height: 6px; overflow: hidden; border-radius: 3px; background: var(--surface2); }
+  .progress-fill { width: 0; height: 100%; background: linear-gradient(90deg, var(--accent), #a78bfa); transition: width .25s; }
+  .progress-label { margin-top: 6px; color: var(--text-dim); font-size: .72rem; }
+
+  .table-wrap { flex: 1; overflow: auto; padding: 16px 24px; }
+  table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+  th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 12px 14px;
+    text-align: left;
+    color: var(--text-dim);
+    background: var(--surface2);
+    border-bottom: 2px solid var(--border);
+    font-size: .68rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+  td { padding: 12px 14px; vertical-align: middle; border-bottom: 1px solid var(--border); }
+  tr:hover td { background: #8b5cf60a; }
+  .key { font-family: "JetBrains Mono", "Fira Code", monospace; font-size: .8rem; }
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: .68rem; font-weight: 700; }
+  .badge-ok { color: var(--success); background: #22c55e25; }
+  .badge-error { color: var(--fail); background: #ef444425; }
+  .badge-pending { color: var(--warn); background: #f59e0b25; }
+  .badge-testing { color: #a78bfa; background: #8b5cf625; }
+  .mono { font-family: "JetBrains Mono", "Fira Code", monospace; font-size: .78rem; }
+  .preview { max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-dim); }
+  .empty { padding: 40px !important; text-align: center; color: var(--text-dim); }
+
+  .toast {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 20;
+    max-width: 420px;
+    padding: 14px 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface2);
+    box-shadow: 0 8px 32px #0008;
+    font-size: .84rem;
+  }
+  @media (max-width: 900px) {
+    .config { grid-template-columns: 1fr; padding: 14px 16px; }
+    header, .stats-bar, .progress-wrap { padding-left: 16px; padding-right: 16px; }
+    .table-wrap { padding: 10px 12px; }
+    th, td { padding: 9px 10px; }
+    .preview { max-width: 180px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>⚡ G4F API Keys Tester</h1>
+  <div class="header-actions">
+    <button class="secondary" id="fetchModels">📡 Fetch Models</button>
+    <button class="primary" id="testKeys">▶ Test Keys</button>
+    <button class="danger" id="stopTests" disabled>⏹ Stop</button>
+  </div>
+</header>
+
+<section class="config">
+  <label>
+    API base URL
+    <input id="apiBase" type="url" value="https://g4f.space" spellcheck="false">
+  </label>
+  <label>
+    Model
+    <select id="model"><option value="auto">auto</option></select>
+    <input id="customModel" type="text" placeholder="Or enter a model name" spellcheck="false">
+  </label>
+  <label>
+    API keys (one per line)
+    <textarea id="apiKeys" placeholder="Paste API keys or Authorization: Bearer values here" spellcheck="false" autocomplete="off"></textarea>
+    <span class="hint">Keys stay in memory, are masked in the table, and are never saved.</span>
+  </label>
+</section>
+
+<div class="stats-bar">
+  <div class="stat"><span>Total:</span><strong id="total">0</strong></div>
+  <div class="stat ok"><span>Valid:</span><strong id="valid">0</strong></div>
+  <div class="stat fail"><span>Invalid:</span><strong id="invalid">0</strong></div>
+  <div class="stat pending"><span>Pending:</span><strong id="pending">0</strong></div>
+  <div class="stat"><span>Testing:</span><strong id="testing">0</strong></div>
+  <div class="stat"><span>Avg Time:</span><strong id="average">-</strong></div>
+</div>
+<div class="progress-wrap">
+  <div class="progress"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-label" id="progressLabel">Paste API keys to begin</div>
+</div>
+
+<main class="table-wrap">
+  <table>
+    <thead><tr><th>#</th><th>Key</th><th>Status</th><th>HTTP</th><th>Time</th><th>Response</th></tr></thead>
+    <tbody id="tableBody">
+      <tr><td colspan="6" class="empty">Paste one or more API keys above, then click <strong>Test Keys</strong>.</td></tr>
+    </tbody>
+  </table>
+</main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const CONCURRENCY = 3;
+  const TIMEOUT_MS = 30000;
+  const TEST_MESSAGE = 'Reply with OK only.';
+  let results = [];
+  let stopRequested = false;
+  let testing = false;
+
+  function toast(message, duration = 3500) {
+    const element = document.createElement('div');
+    element.className = 'toast';
+    element.textContent = message;
+    document.body.appendChild(element);
+    setTimeout(() => element.remove(), duration);
+  }
+
+  function parseKeys(value) {
+    const entries = value.split(/[\n,\s;]+/).map((entry) => entry.trim());
+    const cleaned = entries
+      .filter((entry) => entry && !/^authorization:?$/i.test(entry) && !/^bearer$/i.test(entry))
+      .map((entry) => entry.replace(/^authorization:\s*/i, '').replace(/^bearer\s+/i, ''));
+    return [...new Set(cleaned.filter(Boolean))];
+  }
+
+  function maskKey(key) {
+    if (key.length <= 12) return `${key.slice(0, 2)}••••${key.slice(-2)}`;
+    return `${key.slice(0, 5)}••••••${key.slice(-4)}`;
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[char]);
+  }
+
+  function statusBadge(status) {
+    const labels = { pending: 'Pending', testing: 'Testing', ok: 'Valid', error: 'Invalid' };
+    return `<span class="badge badge-${status}">${labels[status] || status}</span>`;
+  }
+
+  function renderTable() {
+    if (!results.length) {
+      $('tableBody').innerHTML = '<tr><td colspan="6" class="empty">No API keys to test.</td></tr>';
+      return;
+    }
+    $('tableBody').innerHTML = results.map((result, index) => `
+      <tr id="key-row-${index}">
+        <td>${index + 1}</td>
+        <td class="key">${escapeHtml(maskKey(result.key))}</td>
+        <td>${statusBadge(result.status)}</td>
+        <td class="mono">${result.httpStatus ?? '-'}</td>
+        <td class="mono">${result.timeMs != null ? `${result.timeMs} ms` : '-'}</td>
+        <td class="preview" title="${escapeHtml(result.detail)}">${escapeHtml(result.detail || '-')}</td>
+      </tr>`).join('');
+  }
+
+  function updateRow(index) {
+    const row = $(`key-row-${index}`);
+    const result = results[index];
+    if (!row || !result) return;
+    row.children[2].innerHTML = statusBadge(result.status);
+    row.children[3].textContent = result.httpStatus ?? '-';
+    row.children[4].textContent = result.timeMs != null ? `${result.timeMs} ms` : '-';
+    row.children[5].textContent = result.detail || '-';
+    row.children[5].title = result.detail || '';
+  }
+
+  function updateStats() {
+    const valid = results.filter((item) => item.status === 'ok').length;
+    const invalid = results.filter((item) => item.status === 'error').length;
+    const pending = results.filter((item) => item.status === 'pending').length;
+    const running = results.filter((item) => item.status === 'testing').length;
+    const completed = results.filter((item) => item.timeMs != null);
+    const average = completed.length
+      ? Math.round(completed.reduce((sum, item) => sum + item.timeMs, 0) / completed.length)
+      : null;
+    $('total').textContent = results.length;
+    $('valid').textContent = valid;
+    $('invalid').textContent = invalid;
+    $('pending').textContent = pending;
+    $('testing').textContent = running;
+    $('average').textContent = average != null ? `${average} ms` : '-';
+    const done = valid + invalid;
+    const percent = results.length ? Math.round(done / results.length * 100) : 0;
+    $('progressFill').style.width = `${percent}%`;
+    $('progressLabel').textContent = results.length
+      ? `${done} / ${results.length} tested (${percent}%)`
+      : 'Paste API keys to begin';
+  }
+
+  function endpoint(path) {
+    return `${$('apiBase').value.trim().replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
+  }
+
+  async function fetchModels() {
+    const button = $('fetchModels');
+    button.disabled = true;
+    button.textContent = '⏳ Loading...';
+    try {
+      const response = await fetch(endpoint('/models'));
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      const data = payload.data || payload;
+      if (!Array.isArray(data)) throw new Error('The models endpoint did not return a list');
+      const models = data
+        .map((item) => typeof item === 'string' ? item : item.id || item.model || item.name)
+        .filter(Boolean);
+      const current = $('customModel').value.trim() || $('model').value;
+      $('model').innerHTML = [...new Set(['auto', ...models])]
+        .map((model) => `<option value="${escapeHtml(model)}">${escapeHtml(model)}</option>`)
+        .join('');
+      if ([...$('model').options].some((option) => option.value === current)) $('model').value = current;
+      toast(`Loaded ${models.length} models`);
+    } catch (error) {
+      toast(`Unable to fetch models: ${error.message}`, 5000);
+    } finally {
+      button.disabled = false;
+      button.textContent = '📡 Fetch Models';
+    }
+  }
+
+  async function testKey(index) {
+    if (stopRequested) return;
+    const result = results[index];
+    const controller = new AbortController();
+    result.controller = controller;
+    result.status = 'testing';
+    updateRow(index);
+    updateStats();
+    const timeout = setTimeout(() => controller.abort('timeout'), TIMEOUT_MS);
+    const started = performance.now();
+    try {
+      const model = $('customModel').value.trim() || $('model').value;
+      const response = await fetch(endpoint('/chat/completions'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${result.key}`
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: TEST_MESSAGE }],
+          max_tokens: 10,
+          temperature: 0
+        }),
+        signal: controller.signal
+      });
+      result.httpStatus = response.status;
+      const text = await response.text();
+      if (!response.ok) throw new Error(text ? text.slice(0, 300) : `HTTP ${response.status}`);
+      let content = text;
+      try {
+        const json = JSON.parse(text);
+        content = json.choices?.[0]?.message?.content || json.choices?.[0]?.text || text;
+      } catch (error) {
+        // A successful plain-text response is still a valid key.
+      }
+      result.status = 'ok';
+      result.detail = String(content).trim().slice(0, 300) || 'Request succeeded';
+    } catch (error) {
+      result.status = 'error';
+      result.detail = error.name === 'AbortError'
+        ? (stopRequested ? 'Stopped' : `Timed out after ${TIMEOUT_MS / 1000}s`)
+        : error.message.slice(0, 300);
+    } finally {
+      clearTimeout(timeout);
+      result.timeMs = Math.round(performance.now() - started);
+      delete result.controller;
+      updateRow(index);
+      updateStats();
+    }
+  }
+
+  async function testKeys() {
+    if (testing) return;
+    const keys = parseKeys($('apiKeys').value);
+    if (!keys.length) {
+      toast('Paste at least one API key');
+      $('apiKeys').focus();
+      return;
+    }
+    if (!$('apiBase').value.trim()) {
+      toast('Enter an API base URL');
+      $('apiBase').focus();
+      return;
+    }
+
+    testing = true;
+    stopRequested = false;
+    $('testKeys').disabled = true;
+    $('fetchModels').disabled = true;
+    $('stopTests').disabled = false;
+    results = keys.map((key) => ({
+      key, status: 'pending', httpStatus: null, timeMs: null, detail: ''
+    }));
+    renderTable();
+    updateStats();
+
+    const queue = results.map((_, index) => index);
+    const worker = async () => {
+      while (queue.length && !stopRequested) await testKey(queue.shift());
+    };
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, results.length) }, worker));
+
+    testing = false;
+    $('testKeys').disabled = false;
+    $('fetchModels').disabled = false;
+    $('stopTests').disabled = true;
+    const valid = results.filter((item) => item.status === 'ok').length;
+    const invalid = results.filter((item) => item.status === 'error').length;
+    toast(`Done: ${valid} valid, ${invalid} invalid`);
+  }
+
+  function stopTests() {
+    stopRequested = true;
+    results.forEach((result) => result.controller?.abort());
+    $('stopTests').disabled = true;
+  }
+
+  $('apiKeys').addEventListener('input', () => {
+    const count = parseKeys($('apiKeys').value).length;
+    $('progressLabel').textContent = count ? `${count} unique key${count === 1 ? '' : 's'} ready` : 'Paste API keys to begin';
+  });
+  $('apiBase').addEventListener('change', fetchModels);
+  $('fetchModels').addEventListener('click', fetchModels);
+  $('testKeys').addEventListener('click', testKeys);
+  $('stopTests').addEventListener('click', stopTests);
+  document.addEventListener('keydown', (event) => {
+    if (event.ctrlKey && event.key === 'Enter' && !testing) {
+      event.preventDefault();
+      testKeys();
+    }
+  });
+</script>
+</body>
+</html>

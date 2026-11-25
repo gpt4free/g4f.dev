@@ -1228,7 +1228,7 @@ async function handleListServers(request, env, user) {
   if (user) {
     servers = user.custom_servers || [];
   }
-  const safeServers = servers.map(toSafeServer);
+  const safeServers = user && user.tier === "admin" ? servers : servers.map(toSafeServer);
   // A server can be published to the public index without being present in
   // user.custom_servers (e.g. published from another account, or the private
   // record was lost). Surface the user's own public servers here as well so
@@ -1506,23 +1506,12 @@ async function handleGetServerUsage(request, env) {
     "Cache-Control": "no-store"
   });
 }
-// ---- Per-isolate memory caches ----
-// Workers isolates stay warm across requests; short-lived in-memory caches
-// here cut KV/R2 reads dramatically without serving stale data for long.
-var PUBLIC_SERVERS_CACHE_TTL = 30 * 1e3;
-var publicServersCache = { time: 0, value: null };
-
 async function getPublicServers(env, blocklist = true) {
   let publicServers = [];
-  const now = Date.now();
-  if (publicServersCache.value && now - publicServersCache.time < PUBLIC_SERVERS_CACHE_TTL) {
-    publicServers = publicServersCache.value;
-  } else if (env.MEMBERS_KV) {
-    const indexStr = await getMembersKv(env, "public_servers_index");
+  if (env.MEMBERS_KV) {
+    const indexStr = await getCachedKv(env, "public_servers_index");
     if (indexStr) {
       publicServers = JSON.parse(indexStr);
-      publicServersCache.time = now;
-      publicServersCache.value = publicServers;
     }
   }
   if (blocklist) {
@@ -2179,11 +2168,11 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
         model: request._g4fModel || null,
         context: { upstream_status: response.status },
         userId: user ? user.id : null,
-        userTier: user ? user.tier : (rateCheck ? `${rateCheck.centsToCharge}/${rateCheck.cakeCreditCents}` : userProvidedKey.substring(0, 8))
+        userTier: user ? user.tier : (rateCheck ? `${rateCheck.centsToCharge}/${rateCheck.cakeCreditCents}` : userProvidedKey ? userProvidedKey.substring(0, 8) : null)
       };
       ctx.waitUntil(response.clone().text().then((body) => {
         let upstreamMessage = body.trim().substring(0, 900);
-        if (response.status === 400) {
+        if (response.status === 400 && firstMessage) {
           upstreamMessage = `Bad Request: ${JSON.stringify(firstMessage.split("\n")[0])}`;
         }
         const message = `Upstream ${response.status}${upstreamMessage ? `: ${upstreamMessage}` : ""}`;
@@ -2579,7 +2568,8 @@ async function handleApiStats(request, env, user, ctx) {
               COALESCE(SUM(tokens_total), 0) AS tokens
        FROM usage_logs
        WHERE timestamp > ?
-       GROUP BY provider, model`
+       GROUP BY provider, model
+       HAVING requests > 0`
     ).bind(since).all().catch((e) => {
       usageFailed = true;
       console.error("Failed to aggregate usage stats:", e);
