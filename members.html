@@ -1420,10 +1420,10 @@
             <div class="discord-banner-content">
                 <h2 id="proUpgradeTitle">Upgrade to the Pro tier</h2>
                 <p id="proUpgradeText">
-                    Connect GitHub and submit a quick Pro tier request ticket — our automated review model checks your request and upgrades your account automatically.
+                    Sign in with GitHub and submit a quick Pro tier request ticket — our automated review model checks your request and upgrades your account automatically.
                 </p>
                 <div class="discord-steps" id="proUpgradeSteps">
-                    <span class="discord-step" data-pro-step="connect"><i class="fas fa-circle" aria-hidden="true"></i> Connect GitHub</span>
+                    <span class="discord-step" data-pro-step="connect"><i class="fas fa-circle" aria-hidden="true"></i> Sign in with GitHub</span>
                     <span class="discord-step" data-pro-step="ticket"><i class="fas fa-circle" aria-hidden="true"></i> Submit GitHub ticket</span>
                     <span class="discord-step" data-pro-step="upgrade"><i class="fas fa-circle" aria-hidden="true"></i> Auto upgrade to Pro</span>
                 </div>
@@ -1435,7 +1435,7 @@
             </div>
             <div class="discord-banner-actions">
                 <a class="btn-github btn" id="proGithubConnectBtn" href="#" rel="noopener">
-                    <i class="fab fa-github"></i> Connect GitHub
+                    <i class="fab fa-github"></i> Sign in with GitHub
                 </a>
                 <a class="btn" id="proCreateTicketBtn" href="https://github.com/gpt4free/g4f.dev/issues/new?template=pro-tier-request.yml" target="_blank" rel="noopener noreferrer">
                     <i class="fas fa-ticket"></i> Request Pro Tier
@@ -2868,7 +2868,7 @@
 
             if (!githubConnected) {
                 proUpgradeText.textContent = framework.translate(
-                    'Connect GitHub and submit a quick Pro tier request ticket — our automated review model checks your request and upgrades your account automatically.'
+                    'Sign in with GitHub and submit a quick Pro tier request ticket — our automated review model checks your request and upgrades your account automatically.'
                 );
             } else if (status && status.status === 'needs_info') {
                 proUpgradeText.textContent = framework.translate(
@@ -2890,7 +2890,7 @@
 
             const redirect = encodeURIComponent(window.location.origin + '/members.html');
             if (proGithubConnectBtn) {
-                proGithubConnectBtn.href = `${API_BASE}/members/auth/github?link=1&redirect=${redirect}`;
+                proGithubConnectBtn.href = `${API_BASE}/members/auth/github?redirect=${redirect}`;
                 proGithubConnectBtn.style.display = githubConnected ? 'none' : '';
             }
             if (proCreateTicketBtn) {
