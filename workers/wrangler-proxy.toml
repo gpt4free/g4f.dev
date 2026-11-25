@@ -20,7 +20,7 @@
 # to two different Workers at the same time.
 
 name = "proxy"
-main = "workers/g4f-space-router.js"
+main = "g4f-space-router.js"
 compatibility_date = "2025-05-30"
 
 # The deployed g4f.space Workers use custom domains, so keep the same shape
