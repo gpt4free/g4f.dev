@@ -121,9 +121,21 @@ curl https://g4f.space/api/stats?hours=24 \
   "models": [
     { "model": "gpt-4o", "requests": 100, "errors": 10, "error_count": 10, "success_rate": 0.9091 }
   ],
+  "kv": [
+    { "key_type": "session", "lookups": 80, "kv_reads": 20, "kv_writes": 0, "kv_deletes": 0, "cache_hits": 60, "missing": 2 }
+  ],
   "partial": false
 }
 ```
+
+The `kv` list reports this API worker isolate's `MEMBERS_KV` operations grouped
+by the first colon-delimited segment of each key. Reads, writes, and deletes
+count attempted operations, including failures; `missing` counts reads that
+return null. `lookups` includes KV reads and authentication-cache hits.
+Counters reset when the isolate restarts, are not aggregated across isolates,
+and are subject to the response cache. They do not include other workers or
+other KV namespaces. Only the key type is included; session tokens, API-key
+hashes, and user identifiers are never exposed.
 
 `hours` defaults to 24 and is capped at 336 (14 days, matching usage-log
 retention); `since` accepts an explicit ISO timestamp. The response is cached

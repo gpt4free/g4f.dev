@@ -72,8 +72,8 @@ function makeEnv(usageRows, errorRows) {
 const pending = [];
 const ctx = { waitUntil(promise) { pending.push(Promise.resolve(promise)); } };
 
-async function getStats(path, env, headers = { Authorization: `Bearer ${SESSION}` }) {
-  const response = await worker.fetch(
+async function getStats(path, env, headers = { Authorization: `Bearer ${SESSION}` }, targetWorker = worker) {
+  const response = await targetWorker.fetch(
     new Request(`https://g4f.space${path}`, { headers }),
     env,
     ctx
@@ -167,3 +167,80 @@ assert.equal(body.partial, true);
 assert.equal(body.totals.requests, 4);
 assert.equal(body.totals.errors, 0);
 console.log("PASS: partial database failures are reported without dropping data");
+
+// 5. All MEMBERS_KV operation types are reported by prefix, without key values.
+const kvEnv = makeEnv([], []);
+const { default: kvWorker } = await import("./api-worker.js?kv-metrics-test");
+const kvSession = "gfs_kv-metrics-secret";
+const kvUser = {
+  id: "user_kv_metrics_secret",
+  username: "kv-metrics",
+  tier: "pro",
+  custom_servers: [{ id: "server_kv_secret", is_public: true, auto_update_models: false }]
+};
+const calls = [];
+kvEnv.MEMBERS_KV = {
+  async get(key) {
+    calls.push(["get", key]);
+    if (key === `session:${kvSession}`) {
+      return JSON.stringify({ user_id: kvUser.id, expires_at: new Date(Date.now() + 3600e3).toISOString() });
+    }
+    if (key === "public_servers_index") return "[]";
+    return null;
+  },
+  async put(key, value, options) { calls.push(["put", key, value, options]); },
+  async delete(key) { calls.push(["delete", key]); }
+};
+kvEnv.MEMBERS_BUCKET = {
+  async get(key) {
+    assert.equal(key, `users/${kvUser.id}.json`);
+    return { async json() { return structuredClone(kvUser); } };
+  },
+  async put() {}
+};
+
+response = await getStats("/api/stats?hours=2", kvEnv, { Authorization: "Bearer gfs_missing-secret" }, kvWorker);
+assert.equal(response.status, 401);
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async (url) => {
+  assert.equal(String(url), "https://g4f.dev/dist/js/providers.json");
+  return Response.json({ providers: {} });
+};
+try {
+  response = await kvWorker.fetch(new Request("https://g4f.space/custom/api/servers/update", {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${kvSession}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ server_id: "server_kv_secret" })
+  }), kvEnv, ctx);
+} finally {
+  globalThis.fetch = originalFetch;
+}
+await Promise.all(pending.splice(0));
+assert.equal(response.status, 200);
+response = await getStats("/api/stats?hours=2", kvEnv, { Authorization: `Bearer ${kvSession}` }, kvWorker);
+assert.equal(response.status, 200);
+body = await response.json();
+const kvRows = Object.fromEntries(body.kv.map(({ key_type, ...counts }) => [key_type, counts]));
+for (const [, key] of calls) {
+  assert.ok(kvRows[key.split(":")[0]], `missing stats for ${key.split(":")[0]}`);
+}
+for (const [prefix, counts] of Object.entries(kvRows)) {
+  for (const [method, field] of [["get", "kv_reads"], ["put", "kv_writes"], ["delete", "kv_deletes"]]) {
+    assert.equal(
+      counts[field],
+      calls.filter(([operation, key]) => operation === method && key.split(":")[0] === prefix).length,
+      `${prefix} ${field} must match MEMBERS_KV operations`
+    );
+  }
+}
+assert.equal(kvRows.session.missing, 1);
+assert.ok(kvRows.session.cache_hits >= 2);
+assert.equal(kvRows.session.lookups, kvRows.session.kv_reads + kvRows.session.cache_hits);
+assert.equal(kvRows.user.missing, 1);
+assert.equal(kvRows.user.kv_writes, 2);
+assert.equal(kvRows.public_servers_index.kv_reads, 1);
+assert.equal(kvRows.public_servers_index.kv_writes, 1);
+assert.equal(kvRows.server.kv_deletes, 1);
+assert.equal(calls.find(([operation, key]) => operation === "put" && key.startsWith("user:"))[3].expirationTtl, 3600);
+assert.doesNotMatch(JSON.stringify(body.kv), /gfs_|user_kv_metrics_secret|server_kv_secret/);
+console.log("PASS: /api/stats reports MEMBERS_KV operations by key prefix");

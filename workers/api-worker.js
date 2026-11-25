@@ -961,7 +961,7 @@ async function safe(request, env, ctx) {
         delete entry.api_keys;
         delete entry.is_loading;
         if (result.is_loading) entry.is_loading = true;
-        await env.MEMBERS_KV.put("public_servers_index", JSON.stringify(publicServers));
+        await putMembersKv(env, "public_servers_index", JSON.stringify(publicServers));
         return jsonResponse(entry);
       }
       if (pathname.startsWith("/custom/") && pathname.split("/").length >= 3) {
@@ -1132,7 +1132,7 @@ async function getUser(env, userId) {
   }
   let user = null;
   if (env.MEMBERS_KV) {
-    const cached = await env.MEMBERS_KV.get(`user:${userId}`);
+    const cached = await getMembersKv(env, `user:${userId}`);
     if (cached) {
       user = JSON.parse(cached);
     }
@@ -1142,7 +1142,7 @@ async function getUser(env, userId) {
     if (object) {
       user = await object.json();
       if (env.MEMBERS_KV) {
-        await env.MEMBERS_KV.put(`user:${userId}`, JSON.stringify(user), { expirationTtl: 3600 });
+        await putMembersKv(env, `user:${userId}`, JSON.stringify(user), { expirationTtl: 3600 });
       }
     }
   }
@@ -1156,13 +1156,47 @@ var AUTH_KV_CACHE_TTL = 30 * 1e3;
 var AUTH_KV_CACHE_MAX = 500;
 var userMemoryCache = new Map();
 var authKvMemoryCache = new Map();
+var membersKvUsageStats = new Map();
+
+function getMembersKvStats(key) {
+  const keyType = key.split(":")[0] || "unknown";
+  let stats = membersKvUsageStats.get(keyType);
+  if (!stats) {
+    stats = { lookups: 0, kv_reads: 0, kv_writes: 0, kv_deletes: 0, cache_hits: 0, missing: 0 };
+    membersKvUsageStats.set(keyType, stats);
+  }
+  return stats;
+}
+
+async function getMembersKv(env, key) {
+  const stats = getMembersKvStats(key);
+  stats.lookups += 1;
+  stats.kv_reads += 1;
+  const value = await env.MEMBERS_KV.get(key);
+  if (value === null) stats.missing += 1;
+  return value;
+}
+
+async function putMembersKv(env, key, value, options) {
+  getMembersKvStats(key).kv_writes += 1;
+  return env.MEMBERS_KV.put(key, value, options);
+}
+
+async function deleteMembersKv(env, key) {
+  getMembersKvStats(key).kv_deletes += 1;
+  return env.MEMBERS_KV.delete(key);
+}
+
 async function getAuthKv(env, key) {
   const now = Date.now();
   const memo = authKvMemoryCache.get(key);
   if (memo && now - memo.time < AUTH_KV_CACHE_TTL) {
+    const stats = getMembersKvStats(key);
+    stats.lookups += 1;
+    stats.cache_hits += 1;
     return memo.value;
   }
-  const value = await env.MEMBERS_KV.get(key);
+  const value = await getMembersKv(env, key);
   if (value) {
     if (authKvMemoryCache.size >= AUTH_KV_CACHE_MAX && !authKvMemoryCache.has(key)) {
       authKvMemoryCache.delete(authKvMemoryCache.keys().next().value);
@@ -1181,7 +1215,7 @@ async function saveUser(env, user) {
     );
   }
   if (env.MEMBERS_KV) {
-    await env.MEMBERS_KV.put(`user:${user.id}`, JSON.stringify(user), { expirationTtl: 3600 });
+    await putMembersKv(env, `user:${user.id}`, JSON.stringify(user), { expirationTtl: 3600 });
   }
   userMemoryCache.set(user.id, { time: Date.now(), value: user });
 }
@@ -1493,7 +1527,7 @@ async function getPublicServers(env, blocklist = true) {
   if (publicServersCache.value && now - publicServersCache.time < PUBLIC_SERVERS_CACHE_TTL) {
     publicServers = publicServersCache.value;
   } else if (env.MEMBERS_KV) {
-    const indexStr = await env.MEMBERS_KV.get("public_servers_index");
+    const indexStr = await getMembersKv(env, "public_servers_index");
     if (indexStr) {
       publicServers = JSON.parse(indexStr);
       publicServersCache.time = now;
@@ -1573,7 +1607,7 @@ async function updatePublicServers(env) {
                 ownedServer.allowed_models = validationResult.models;
                 owner.updated_at = new Date().toISOString();
                 await saveUser(env, owner);
-                await env.MEMBERS_KV.delete(`server:${s.id}`);
+                await deleteMembersKv(env, `server:${s.id}`);
               }
             }
           }
@@ -1599,7 +1633,7 @@ async function updatePublicServers(env) {
     return aCreated - bCreated;
   });
   if (ct > 0) {
-    await env.MEMBERS_KV.put("public_servers_index", JSON.stringify(publicServers));
+    await putMembersKv(env, "public_servers_index", JSON.stringify(publicServers));
     // keep the in-memory index in sync so follow-up reads skip the KV get
     publicServersCache.time = Date.now();
     publicServersCache.value = publicServers;
@@ -2891,6 +2925,10 @@ async function handleApiStats(request, env, user, ctx) {
     },
     servers: toList(servers, "server"),
     models: toList(models, "model"),
+    kv: Array.from(membersKvUsageStats, ([key_type, stats]) => ({
+      key_type,
+      ...stats
+    })).sort((a, b) => (b.kv_reads + b.kv_writes + b.kv_deletes) - (a.kv_reads + a.kv_writes + a.kv_deletes)),
     partial: usageFailed || errorsFailed
   };
   const response = jsonResponse(payload, 200, {
@@ -3117,7 +3155,7 @@ async function getServerById(env, serverId, user = null) {
     }
   }
   if (env.MEMBERS_KV) {
-    const cached = await env.MEMBERS_KV.get(`server:${serverId}`);
+    const cached = await getMembersKv(env, `server:${serverId}`);
     if (cached) {
       return { ...JSON.parse(cached), api_key, default_model: server?.default_model };
     }
@@ -3129,7 +3167,8 @@ async function getServerById(env, serverId, user = null) {
         const fullServer = (owner.custom_servers || []).find((s) => s.id === serverId);
         if (fullServer && fullServer.is_public) {
           fullServer.owner_id = owner.id;
-          await env.MEMBERS_KV.put(
+          await putMembersKv(
+            env,
             `server:${serverId}`,
             JSON.stringify(fullServer),
             { expirationTtl: 300 }
@@ -3224,8 +3263,8 @@ async function updatePublicServerIndex(env, server, ownerId, action) {
       servers.push(server);
     }
   }
-  await env.MEMBERS_KV.put("public_servers_index", JSON.stringify(servers));
-  await env.MEMBERS_KV.delete(`server:${server.id}`);
+  await putMembersKv(env, "public_servers_index", JSON.stringify(servers));
+  await deleteMembersKv(env, `server:${server.id}`);
   publicServersCache.time = Date.now();
   publicServersCache.value = servers;
 }
@@ -3678,7 +3717,7 @@ async function checkUserRateLimits(env, user, request) {
   let limitRequests = parseInt(request.headers.get("x-ratelimit-limit-requests") || "0");
   for (const window of windows) {
     const key = `rate_limit:${userId}:${window.name}`;
-    const stored = await env.MEMBERS_KV.get(key);
+    const stored = await getMembersKv(env, key);
     const usage = stored ? JSON.parse(stored) : { tokens: 0, requests: 0, timestamp: now };
     if (now - usage.timestamp > window.duration) {
       usage.tokens = 0;
@@ -4013,7 +4052,7 @@ async function flushRateLimitBuffer(env, userId) {
     }
     for (const window of windows) {
       const key = `rate_limit:${userId}:${window.name}`;
-      const stored = await env.MEMBERS_KV.get(key);
+      const stored = await getMembersKv(env, key);
       let data = stored ? JSON.parse(stored) : null;
       if (!data || now - (data.timestamp || 0) >= window.duration) {
         data = { requests: 0, tokens: 0, timestamp: now };
@@ -4022,7 +4061,7 @@ async function flushRateLimitBuffer(env, userId) {
       data.tokens = (data.tokens || 0) + window.tokens;
       const elapsed = now - data.timestamp;
       const ttl = Math.max(60, Math.ceil((window.duration - elapsed) / 1e3) + 60);
-      await env.MEMBERS_KV.put(key, JSON.stringify(data), { expirationTtl: ttl });
+      await putMembersKv(env, key, JSON.stringify(data), { expirationTtl: ttl });
     }
   } catch (e) {
     console.error("Failed to flush rate-limit buffer:", userId, e);
