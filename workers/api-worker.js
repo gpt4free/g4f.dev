@@ -3053,7 +3053,7 @@ async function getServerByLabel(env, label, user = null) {
       }
       return server;
     } else {
-      return { id: "core", base_url: `https://pass.g4f.space/api/${label}`, allowed_models: []};
+      return null; // { id: "core", base_url: `https://pass.g4f.space/api/${label}`, allowed_models: []};
     }
   }
   return null;
