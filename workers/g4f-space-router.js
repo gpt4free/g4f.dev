@@ -70,7 +70,7 @@ const G4F_SPACE_API_PATHS = [
 function isG4fSpaceApiPath(pathname) {
   return G4F_SPACE_API_PATHS.some((prefix) =>
     pathname === prefix || pathname.startsWith(`${prefix}/`)
-  );
+  ) || pathname.endsWith("/chat/");
 }
 
 function notFoundResponse() {
