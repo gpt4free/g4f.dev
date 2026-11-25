@@ -20,8 +20,10 @@ jobs:
         env:
           G4F_DECISION_API_URL: ${{ vars.G4F_DECISION_API_URL || 'https://g4f.space/v1/chat/completions' }}
           G4F_DECISION_FALLBACK_URL: ${{ vars.G4F_DECISION_FALLBACK_URL || 'https://gen.pollinations.ai/v1/chat/completions' }}
-          G4F_DECISION_MODEL: ${{ vars.G4F_DECISION_MODEL || 'openai' }}
+          G4F_DECISION_MODEL: ${{ vars.G4F_DECISION_MODEL || 'deepseek/deepseek-v4.1-flash-1017' }}
+          G4F_DECISION_FALLBACK_MODEL: ${{ vars.G4F_DECISION_FALLBACK_MODEL || 'openai/gpt-oss-120b' }}
           G4F_API_KEY: ${{ secrets.G4F_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           G4F_AUTH_URL: ${{ vars.G4F_AUTH_URL || 'https://auth.g4f.space' }}
           PRO_UPGRADE_SECRET: ${{ secrets.PRO_UPGRADE_SECRET }}
         with:
@@ -92,16 +94,52 @@ jobs:
               '</issue_body>'
             ].join('\n');
 
-            async function callDecisionModel(endpoint) {
+            function parseDecisionJson(rawText) {
+              const jsonMatch = String(rawText || '').match(/\{[\s\S]*\}/);
+              if (!jsonMatch) return null;
+              const obj = JSON.parse(jsonMatch[0]);
+              if (!obj || !['approve', 'reject', 'needs_info'].includes(obj.decision)) {
+                return null;
+              }
+              return obj;
+            }
+
+            function extractContentFromBody(rawBody) {
+              const trimmed = String(rawBody || '').trim();
+              if (!trimmed) return '';
+              if (trimmed.startsWith('data:')) {
+                let combined = '';
+                for (const line of trimmed.split(/\r?\n/)) {
+                  const dataLine = line.trim();
+                  if (!dataLine.startsWith('data:')) continue;
+                  const payload = dataLine.slice(5).trim();
+                  if (!payload || payload === '[DONE]') continue;
+                  try {
+                    const chunk = JSON.parse(payload);
+                    const part = chunk?.choices?.[0]?.delta?.content ?? chunk?.choices?.[0]?.message?.content ?? '';
+                    if (part) combined += part;
+                  } catch {}
+                }
+                return combined;
+              }
+              const data = JSON.parse(trimmed);
+              if (data?.model && /guard/i.test(data.model)) {
+                throw new Error(`Routed to safety-guard model ${data.model}`);
+              }
+              return data?.choices?.[0]?.message?.content || '';
+            }
+
+            async function callDecisionModel(endpoint, model, apiKey) {
               const headers = { 'Content-Type': 'application/json' };
-              if (process.env.G4F_API_KEY) {
-                headers['Authorization'] = `Bearer ${process.env.G4F_API_KEY}`;
+              if (apiKey) {
+                headers['Authorization'] = `Bearer ${apiKey}`;
               }
               const resp = await fetch(endpoint, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({
-                  model: process.env.G4F_DECISION_MODEL || 'openai',
+                  model,
+                  stream: false,
                   temperature: 0.1,
                   messages: [
                     { role: 'system', content: systemPrompt },
@@ -109,42 +147,55 @@ jobs:
                   ]
                 })
               });
+              const rawBody = await resp.text();
               if (!resp.ok) {
-                const text = await resp.text();
-                throw new Error(`HTTP ${resp.status} from ${endpoint}: ${text.slice(0, 300)}`);
+                throw new Error(`HTTP ${resp.status} from ${endpoint}: ${rawBody.slice(0, 300)}`);
               }
-              const data = await resp.json();
-              const content = data?.choices?.[0]?.message?.content || '';
+              const content = extractContentFromBody(rawBody);
               if (!content) {
-                throw new Error(`Empty response from ${endpoint}`);
+                throw new Error(`Empty response from ${endpoint} (${model})`);
               }
-              return content;
+              const parsedObj = parseDecisionJson(content);
+              if (!parsedObj) {
+                throw new Error(`Non-decision response from ${endpoint} (${model}): ${content.slice(0, 200)}`);
+              }
+              return parsedObj;
             }
 
-            let rawDecision = '';
             const primaryUrl = process.env.G4F_DECISION_API_URL;
             const fallbackUrl = process.env.G4F_DECISION_FALLBACK_URL;
+            const primaryModel = process.env.G4F_DECISION_MODEL || 'deepseek/deepseek-v4.1-flash-1017';
+            const fallbackModel = process.env.G4F_DECISION_FALLBACK_MODEL || 'openai/gpt-oss-120b';
+            const g4fKey = process.env.G4F_API_KEY || '';
+            const ghToken = process.env.GITHUB_TOKEN || '';
 
-            try {
-              rawDecision = await callDecisionModel(primaryUrl);
-            } catch (primaryErr) {
-              core.warning(`Primary decision endpoint failed: ${primaryErr.message}`);
-              if (fallbackUrl && fallbackUrl !== primaryUrl) {
-                rawDecision = await callDecisionModel(fallbackUrl);
-              } else {
-                throw primaryErr;
+            const candidates = [
+              [primaryUrl, primaryModel, g4fKey],
+              [primaryUrl, fallbackModel, g4fKey],
+              [fallbackUrl, primaryModel, g4fKey],
+              [fallbackUrl, fallbackModel, g4fKey],
+              ['https://models.github.ai/inference/chat/completions', 'openai/gpt-4o-mini', ghToken]
+            ].filter(([url, model, key], idx, arr) =>
+              url && model && (url.includes('g4f.space') || key) &&
+              arr.findIndex(([u, m]) => u === url && m === model) === idx
+            );
+
+            let parsed;
+            let usedModel = primaryModel;
+            for (const [endpoint, model, key] of candidates) {
+              try {
+                parsed = await callDecisionModel(endpoint, model, key);
+                usedModel = model;
+                break;
+              } catch (err) {
+                core.warning(`Decision candidate (${endpoint}, ${model}) failed: ${err.message}`);
               }
             }
 
-            let parsed;
-            try {
-              const jsonMatch = rawDecision.match(/\{[\s\S]*\}/);
-              parsed = JSON.parse(jsonMatch ? jsonMatch[0] : rawDecision);
-            } catch (parseErr) {
-              core.warning(`Failed to parse decision JSON (${rawDecision}); falling back to needs_info`);
+            if (!parsed) {
               parsed = {
                 decision: 'needs_info',
-                reason: 'Automated review could not parse a clear decision. Please add more detail about your use case or wait for a maintainer.',
+                reason: 'Automated review could not obtain a structured decision. Please wait for a maintainer or edit the issue to retry.',
                 confidence: 0
               };
             }
@@ -197,7 +248,7 @@ jobs:
                       issue_number: issue.number,
                       issue_url: issue.html_url,
                       reason,
-                      model: process.env.G4F_DECISION_MODEL || 'openai'
+                      model: usedModel
                     })
                   });
                   const upgradeData = await upgradeResp.json().catch(() => ({}));
