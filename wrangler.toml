@@ -36,6 +36,7 @@ routes = [
   { pattern = "community.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
   { pattern = "ollama.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
   { pattern = "openrouter.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
+  { pattern = "gemini.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
   { pattern = "groq.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
   { pattern = "nvidia.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
   { pattern = "huggingface.g4f.space", custom_domain = true, enabled = true, previews_enabled = false }
@@ -77,6 +78,7 @@ PUTER_WORKER_URL = "https://puter.g4f.space"
 POLLINATIONS_WORKER_URL = "https://pollinations.g4f.space"
 OLLAMA_WORKER_URL = "https://ollama.g4f.space"
 OPENROUTER_WORKER_URL = "https://openrouter.g4f.space"
+GEMINI_WORKER_URL = "https://gemini.g4f.space"
 # Account key kept at the minimum pollen budget by the scheduled trigger.
 # Set POLLINATIONS_ACCOUNT_KEY to a separate sk_ secret with account:keys:
 #   npx wrangler secret put POLLINATIONS_ACCOUNT_KEY

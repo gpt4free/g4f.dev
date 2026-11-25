@@ -309,6 +309,10 @@ const OPENROUTER_HOSTS = new Set([
   "openrouter.g4f.space",
   "open.g4f.dev"
 ]);
+const GEMINI_HOSTS = new Set([
+  "generativelanguage.googleapis.com",
+  "gemini.g4f.space"
+]);
 function isPollinationsBaseUrl(baseUrl) {
   let url;
   try {
@@ -332,6 +336,11 @@ function inferProviderWorkerName(server) {
   if (server.provider_worker) return server.provider_worker;
   try {
     const baseUrl = new URL(String(server.base_url || ""));
+    if (GEMINI_HOSTS.has(baseUrl.hostname.toLowerCase()) ||
+      ((baseUrl.hostname === "g4f.space" || baseUrl.hostname === "api.g4f.space") &&
+        (baseUrl.pathname === "/api/gemini" || baseUrl.pathname.startsWith("/api/gemini/")))) {
+      return "gemini";
+    }
     if (OPENROUTER_HOSTS.has(baseUrl.hostname.toLowerCase()) ||
       ((baseUrl.hostname === "g4f.space" || baseUrl.hostname === "api.g4f.space") &&
         (baseUrl.pathname === "/api/openrouter" || baseUrl.pathname.startsWith("/api/openrouter/")))) {
@@ -346,6 +355,30 @@ function inferProviderWorkerName(server) {
 function getProviderWorker(env, server) {
   const name = inferProviderWorkerName(server);
   return name && env.PROVIDER_WORKERS ? env.PROVIDER_WORKERS[name] : null;
+}
+function filterProviderAllowedModels(server, models) {
+  if (!Array.isArray(models) || models.length === 0) return models || [];
+  const provider = inferProviderWorkerName(server);
+  if (provider === "openrouter") {
+    return models.filter((model) =>
+      model === "openrouter/free" || String(model).endsWith(":free")
+    );
+  }
+  if (provider === "gemini") {
+    return models.filter((model) => {
+      const id = String(model).replace(/^models\//, "").toLowerCase();
+      return id.startsWith("gemini-") &&
+        !/(?:embedding|imagen|image|veo|audio|speech|tts|live|robotics|computer-use|deep-research)/.test(id) &&
+        !/(?:^|[-_.])(?:pro|ultra)(?:$|[-_.])/.test(id);
+    });
+  }
+  return models;
+}
+function sanitizeProviderServer(server) {
+  if (server?.allowed_models) {
+    server.allowed_models = filterProviderAllowedModels(server, server.allowed_models);
+  }
+  return server;
 }
 // Build the request handed to a bundled provider module. Provider workers may
 // rate-limit or geo-tag by client IP, so carry the Cloudflare request headers
@@ -1700,6 +1733,7 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey,
   if (!server) {
     return jsonResponse({ error: "Server not found" }, 404);
   }
+  sanitizeProviderServer(server);
   const apiKey = userProvidedKey|| server.api_key || getRandomApiKey(server.api_keys);
   const headers = { "Content-Type": "application/json" };
   if (apiKey) {
@@ -1784,6 +1818,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   if (!server) {
     return jsonResponse({ error: "Server not found" }, 404);
   }
+  sanitizeProviderServer(server);
   // Attach the resolved server/model to the request so error responses
   // logged by jsonResponse can be aggregated per server and model.
   request._g4fServer = `custom:${server.id}`;
@@ -2982,7 +3017,7 @@ async function getServerByLabel(env, label, user = null) {
   }
   if (SERVER_MAP[label]) {
     const server = await getServerById(env, SERVER_MAP[label], user);
-    if (server && ["puter", "pollinations", "ollama", "openrouter"].includes(label)) {
+    if (server && ["puter", "pollinations", "ollama", "openrouter", "gemini"].includes(label)) {
       server.provider_worker = label;
     }
     if (server) {
@@ -2991,12 +3026,13 @@ async function getServerByLabel(env, label, user = null) {
     // The KV-backed public server index may be empty (fresh deployment or
     // local dev). Fall back to the bundled provider worker so /api/<provider>
     // still works without a KV record.
-    if (env.PROVIDER_WORKERS && ["puter", "pollinations", "ollama", "openrouter"].includes(label)) {
+    if (env.PROVIDER_WORKERS && ["puter", "pollinations", "ollama", "openrouter", "gemini"].includes(label)) {
       const baseUrls = {
         puter: env.PUTER_WORKER_URL,
         pollinations: env.POLLINATIONS_WORKER_URL,
         ollama: env.OLLAMA_WORKER_URL,
-        openrouter: env.OPENROUTER_WORKER_URL
+        openrouter: env.OPENROUTER_WORKER_URL,
+        gemini: env.GEMINI_WORKER_URL
       };
       return {
         id: label,
@@ -3012,7 +3048,7 @@ async function getServerByLabel(env, label, user = null) {
     const serverIndex = publicServers.find((s) => s.label.includes(label));
     if (serverIndex) {
       const server = await getServerById(env, serverIndex.id, user);
-      if (server && ["puter", "pollinations", "ollama", "openrouter"].includes(label)) {
+      if (server && ["puter", "pollinations", "ollama", "openrouter", "gemini"].includes(label)) {
         server.provider_worker = label;
       }
       return server;
@@ -3142,10 +3178,12 @@ async function validateServer(env, baseUrl, apiKeysStr, skipCache = false) {
   return result;
 }
 async function fetchModelEndpoint(env, endpoint, headers, signal) {
-  const providerWorker = getProviderWorker(env, { base_url: endpoint });
+  const server = { base_url: endpoint };
+  const providerWorker = getProviderWorker(env, server);
   if (!providerWorker) {
     return fetch(endpoint, { headers, signal });
   }
+  headers = { ...headers, "X-G4F-Server-Key": "1" };
   return providerWorker.fetch(
     new Request(endpoint, { headers, signal }),
     env,
@@ -3199,7 +3237,7 @@ async function validateServerUncached(env, baseUrl, apiKeysStr) {
             models = data.map((m) => typeof m === "string" ? m : m.id || m.name).filter(Boolean);
           }
           if (models.length > 0) {
-            models = models.filter(m => !m.startsWith("models/gemini-2.5"))
+            models = filterProviderAllowedModels({ base_url: baseUrl }, models);
             return {
               valid: true,
               is_loading: ["no-store", "no-cache"].includes(response.headers.get("Cache-Control")),
@@ -3942,6 +3980,7 @@ async function handleV1ChatCompletions(request, env, ctx, pathname, user, cacheK
     const checkModel = model.split("/").pop().toLowerCase().replace(/[:.]+/, '-').trim();
     for (const serverIndex of publicServersIndex) {
       if (serverIndex.is_hidden || serverIndex.is_offline) continue;
+      sanitizeProviderServer(serverIndex);
       let foundModel = null;
       if (serverIndex.allowed_models) {
         // for...in yielded array indexes ("0", "1", ...) instead of model

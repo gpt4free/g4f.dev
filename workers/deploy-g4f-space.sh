@@ -30,12 +30,13 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-ORDER=(puter pollinations ollama openrouter api)
+ORDER=(puter pollinations ollama openrouter gemini api)
 declare -A CONFIGS=(
   [puter]="wrangler-puter.toml"
   [pollinations]="wrangler-pollinations.toml"
   [ollama]="wrangler-ollama.toml"
   [openrouter]="wrangler-openrouter.toml"
+  [gemini]="wrangler-gemini.toml"
   [api]="wrangler-custom.toml"
 )
 
@@ -62,7 +63,7 @@ for arg in "$@"; do
       exit 0
       ;;
     -h|--help) usage; exit 0 ;;
-    all|api|puter|pollinations|ollama|openrouter) target="$arg" ;;
+    all|api|puter|pollinations|ollama|openrouter|gemini) target="$arg" ;;
     *)
       echo "Unknown argument: $arg" >&2
       usage >&2
@@ -99,3 +100,4 @@ echo "  curl -fsS https://g4f.space/api/puter/models"
 echo "  curl -fsS https://g4f.space/api/pollinations/models"
 echo "  curl -fsS https://g4f.space/api/ollama/models"
 echo "  curl -fsS https://g4f.space/api/openrouter/models"
+echo "  curl -fsS https://g4f.space/api/gemini/models"

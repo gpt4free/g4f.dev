@@ -2,13 +2,13 @@
 
 This directory contains the Cloudflare Worker sources and Wrangler
 configurations that power **`g4f.space`**. The API worker and the Puter,
-Pollinations, Ollama, and OpenRouter provider workers can all live on
+Pollinations, Ollama, OpenRouter, and Gemini provider workers can all live on
 `g4f.space` at the same time, either as path prefixes on the main host or on
 dedicated subdomains.
 
 The default deployment is a single Worker (`api`) with
 `workers/g4f-space-router.js` as its entry point. It imports the API, auth,
-Puter, Pollinations, Ollama, and OpenRouter modules and dispatches requests by
+Puter, Pollinations, Ollama, OpenRouter, and Gemini modules and dispatches requests by
 host and path, so deploying from the repository root covers everything:
 
 ```bash
@@ -38,6 +38,7 @@ npm run deploy:404
 | Pollinations community tier | `pollinations.js` | `wrangler-pollinations.toml` | `g4f.space/api/community/*` | `community.g4f.space/*` |
 | Ollama | `ollama.js` | `wrangler-ollama.toml` | `g4f.space/api/ollama/*` | `ollama.g4f.space/*` |
 | OpenRouter | `openrouter.js` | `wrangler-openrouter.toml` | `g4f.space/api/openrouter/*` | `openrouter.g4f.space/*` |
+| Gemini | `gemini.js` | `wrangler-gemini.toml` | `g4f.space/api/gemini/*` | `gemini.g4f.space/*` |
 
 Every public API request goes through the API worker first. It authenticates the
 caller, applies API keys, rate limits, the anonymous credit gate, and usage
@@ -69,6 +70,7 @@ https://g4f.space/api/pollinations       API worker -> Pollinations module
 https://g4f.space/api/community          API worker -> Pollinations community tier
 https://g4f.space/api/ollama             API worker -> Ollama module
 https://g4f.space/api/openrouter         API worker -> OpenRouter module
+https://g4f.space/api/gemini            API worker -> Gemini module
 https://g4f.space/members                Auth / members worker
 https://g4f.space/v1/secret              Auth / members worker
 
@@ -77,6 +79,7 @@ https://pollinations.g4f.space           API worker -> Pollinations module
 https://community.g4f.space              API worker -> Pollinations community tier
 https://ollama.g4f.space                 API worker -> Ollama module
 https://openrouter.g4f.space             API worker -> OpenRouter module
+https://gemini.g4f.space                 API worker -> Gemini module
 https://auth.g4f.space                   Auth / members worker
 ```
 
@@ -94,6 +97,7 @@ curl https://g4f.space/api/puter/models
 curl https://g4f.space/api/pollinations/models
 curl https://g4f.space/api/community/models
 curl https://g4f.space/api/openrouter/models
+curl https://g4f.space/api/gemini/models
 
 curl https://g4f.space/api/ollama/chat/completions \
   -H 'content-type: application/json' \
@@ -105,6 +109,13 @@ OpenRouter requests without a caller-provided key use the configured
 metadata is zero. Auto requests rank those models by required input/output
 capabilities, supported parameters, context length, and observed success
 health, then retry the next compatible model after an invalid response.
+
+Gemini requests use Google's OpenAI-compatible endpoint. The worker filters
+the advertised catalog to Gemini chat models and adds
+`extra_content.google.thought_signature` to replayed assistant function calls
+when the client did not preserve the signature. The Gemini API accepts a
+caller-provided `Authorization: Bearer ...`, `X-Api-Key`, or `X-Goog-Api-Key`;
+when none is present, the worker uses `GEMINI_API_KEY` or `GOOGLE_API_KEY`.
 
 ### CORS proxy
 
@@ -214,6 +225,7 @@ was added fall back to their pathname or `unknown`.
    ```bash
    wrangler secret put OLLAMA_API_KEY        --config wrangler-ollama.toml
    wrangler secret put POLLINATIONS_API_KEY  --config wrangler-pollinations.toml
+   wrangler secret put GEMINI_API_KEY         --config wrangler-gemini.toml
 
    # API worker only — set the ones you actually use:
    wrangler secret put API_KEY_SALT          --config wrangler-custom.toml
@@ -259,6 +271,8 @@ configs in this directory instead:
 ./workers/deploy-g4f-space.sh puter
 ./workers/deploy-g4f-space.sh pollinations
 ./workers/deploy-g4f-space.sh ollama
+./workers/deploy-g4f-space.sh openrouter
+./workers/deploy-g4f-space.sh gemini
 ./workers/deploy-g4f-space.sh api
 # auth/members has its own config:
 wrangler deploy --config workers/wrangler-members.toml
@@ -282,6 +296,8 @@ from whichever Worker currently owns them before switching modes.
 | `ERRORS_DB` | D1 | `error_logs` (30-day retention) |
 | `PUTER_WORKER_URL` | var | Base URL used when `/v1` routes to Puter |
 | `POLLINATIONS_WORKER_URL` | var | Base URL used for Pollinations model checks |
+| `OPENROUTER_WORKER_URL` | var | Base URL used for OpenRouter model checks |
+| `GEMINI_WORKER_URL` | var | Base URL used for Gemini model checks |
 
 The scheduled trigger runs every 15 minutes to refresh the public server
 index; hourly runs also prune the D1 tables.

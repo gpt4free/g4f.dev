@@ -2,7 +2,7 @@
 //
 // This is the entry point used by `npx wrangler deploy` from the repository
 // root. It keeps the API worker, auth/members worker, Puter worker,
-// Pollinations worker and Ollama worker in one Cloudflare Worker deployment so
+// Pollinations, Ollama, OpenRouter, and Gemini workers in one deployment so
 // that a single command can serve all of them:
 //
 //   https://g4f.space/v1                     -> API worker
@@ -10,6 +10,8 @@
 //   https://g4f.space/api/pollinations/*     -> API worker -> Pollinations
 //   https://g4f.space/api/community/*        -> API worker -> Pollinations (community tier)
 //   https://g4f.space/api/ollama/*           -> API worker -> Ollama
+//   https://g4f.space/api/openrouter/*       -> API worker -> OpenRouter
+//   https://g4f.space/api/gemini/*           -> API worker -> Gemini
 //   https://g4f.space/members/*              -> auth/members worker
 //   https://g4f.space/v1/secret/*            -> auth/members worker
 //
@@ -17,6 +19,8 @@
 //   https://pollinations.g4f.space/*         -> API worker -> Pollinations
 //   https://community.g4f.space/*            -> API worker -> Pollinations (community tier)
 //   https://ollama.g4f.space/*               -> API worker -> Ollama
+//   https://openrouter.g4f.space/*           -> API worker -> OpenRouter
+//   https://gemini.g4f.space/*               -> API worker -> Gemini
 //   https://auth.g4f.space/*                 -> auth/members worker
 //
 // Every public API request goes through the API worker first, so its auth,
@@ -36,14 +40,16 @@ import puterWorker from "./puter-worker.js";
 import pollinationsWorker from "./pollinations.js";
 import ollamaWorker from "./ollama.js";
 import openrouterWorker from "./openrouter.js";
+import geminiWorker from "./gemini.js";
 
-const WORKER_VERSION = "2026-11-25-openrouter-1";
+const WORKER_VERSION = "2026-11-25-gemini-1";
 
 const PROVIDER_WORKERS = {
   puter: puterWorker,
   pollinations: pollinationsWorker,
   ollama: ollamaWorker,
-  openrouter: openrouterWorker
+  openrouter: openrouterWorker,
+  gemini: geminiWorker
 };
 
 const PROVIDERS = [
@@ -51,7 +57,8 @@ const PROVIDERS = [
   { name: "pollinations", hosts: new Set(["pollinations.g4f.space"]), prefix: "/api/pollinations" },
   { name: "community", hosts: new Set(["community.g4f.space"]), prefix: "/api/community" },
   { name: "ollama", hosts: new Set(["ollama.g4f.space"]), prefix: "/api/ollama" },
-  { name: "openrouter", hosts: new Set(["openrouter.g4f.space"]), prefix: "/api/openrouter" }
+  { name: "openrouter", hosts: new Set(["openrouter.g4f.space"]), prefix: "/api/openrouter" },
+  { name: "gemini", hosts: new Set(["gemini.g4f.space"]), prefix: "/api/gemini" }
 ];
 
 const MAIN_HOSTS = new Set(["g4f.space", "www.g4f.space", "api.g4f.space"]);
@@ -199,8 +206,8 @@ function versionResponse(env) {
     worker: "g4f.space-router",
     version: WORKER_VERSION,
     providerWorkers: Object.keys(env.PROVIDER_WORKERS || PROVIDER_WORKERS),
-    workers: ["api", "auth", "puter", "pollinations", "ollama", "openrouter"],
-    hosts: ["g4f.space", "www.g4f.space", "api.g4f.space", "auth.g4f.space", "puter.g4f.space", "pollinations.g4f.space", "community.g4f.space", "ollama.g4f.space", "openrouter.g4f.space"]
+    workers: ["api", "auth", "puter", "pollinations", "ollama", "openrouter", "gemini"],
+    hosts: ["g4f.space", "www.g4f.space", "api.g4f.space", "auth.g4f.space", "puter.g4f.space", "pollinations.g4f.space", "community.g4f.space", "ollama.g4f.space", "openrouter.g4f.space", "gemini.g4f.space"]
   }, {
     headers: { "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" }
   });

@@ -3,12 +3,14 @@
 #
 # This is the main OpenAI-compatible API worker (`/v1/*`, `/api/*`,
 # `/custom/*`, auth, usage tracking). The provider workers (puter,
-# pollinations, ollama) are deployed separately with their own configs and
+# pollinations, ollama, openrouter, gemini) are deployed separately and
 # take precedence for their more specific routes:
 #
 #   wrangler-puter.toml         g4f.space/api/puter/*       puter.g4f.space/*
 #   wrangler-pollinations.toml  g4f.space/api/pollinations/* pollinations.g4f.space/*
 #   wrangler-ollama.toml        g4f.space/api/ollama/*      ollama.g4f.space/*
+#   wrangler-openrouter.toml    g4f.space/api/openrouter/* openrouter.g4f.space/*
+#   wrangler-gemini.toml        g4f.space/api/gemini/*     gemini.g4f.space/*
 #
 # Deploy the provider workers before this one (or remove stale routes from the
 # old `api` worker first) so the route patterns do not overlap.
@@ -84,6 +86,8 @@ API_KEY_SALT = ""  # Set via: wrangler secret put API_KEY_SALT
 PUTER_WORKER_URL = "https://puter.g4f.space"
 POLLINATIONS_WORKER_URL = "https://pollinations.g4f.space"
 OLLAMA_WORKER_URL = "https://ollama.g4f.space"
+OPENROUTER_WORKER_URL = "https://openrouter.g4f.space"
+GEMINI_WORKER_URL = "https://gemini.g4f.space"
 
 # Scheduled triggers: refresh the public servers index (validation + model
 # auto-update) via updatePublicServers() in the scheduled handler. DB

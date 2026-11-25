@@ -1,0 +1,12 @@
+name = "gemini"
+main = "gemini.js"
+compatibility_date = "2025-05-30"
+
+routes = [
+  { pattern = "g4f.space/api/gemini/*", zone_name = "g4f.space" },
+  { pattern = "api.g4f.space/api/gemini/*", zone_name = "g4f.space" },
+  { pattern = "gemini.g4f.space", custom_domain = true, enabled = true, previews_enabled = false }
+]
+
+[dev]
+port = 8796
