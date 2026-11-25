@@ -1086,7 +1086,7 @@ async function authenticateRequest(request, env) {
   }
   if (apiKey && env.MEMBERS_KV && apiKey.startsWith("g4f_")) {
     const keyHash = await hashString(apiKey);
-    const keyDataStr = await getAuthKv(env, `api_key:${keyHash}`);
+    const keyDataStr = await getCachedKv(env, `api_key:${keyHash}`);
     if (keyDataStr) {
       try {
         const keyData = JSON.parse(keyDataStr);
@@ -1098,8 +1098,8 @@ async function authenticateRequest(request, env) {
     }
   }
   const resolveSession = async (token) => {
-    if (!token || token.startsWith("g4f_") || !env.MEMBERS_KV) return null;
-    const sessionData = await getAuthKv(env, `session:${token}`);
+    if (!token || !token.startsWith("gfs_") || !env.MEMBERS_KV) return null;
+    const sessionData = await getCachedKv(env, `session:${token}`);
     if (!sessionData) return null;
     const session = JSON.parse(sessionData);
     if (new Date(session.expires_at) > /* @__PURE__ */ new Date()) {
@@ -1125,14 +1125,9 @@ async function authenticateRequest(request, env) {
   return null;
 }
 async function getUser(env, userId) {
-  const now = Date.now();
-  const memo = userMemoryCache.get(userId);
-  if (memo && now - memo.time < USER_CACHE_TTL) {
-    return memo.value;
-  }
   let user = null;
   if (env.MEMBERS_KV) {
-    const cached = await getMembersKv(env, `user:${userId}`);
+    const cached = await getCachedKv(env, `user:${userId}`);
     if (cached) {
       user = JSON.parse(cached);
     }
@@ -1146,16 +1141,12 @@ async function getUser(env, userId) {
       }
     }
   }
-  if (user) {
-    userMemoryCache.set(userId, { time: now, value: user });
-  }
   return user;
 }
-var USER_CACHE_TTL = 60 * 1e3;
-var AUTH_KV_CACHE_TTL = 30 * 1e3;
-var AUTH_KV_CACHE_MAX = 500;
+var KV_CACHE_TTL = 60 * 1e3;
+var KV_CACHE_MAX = 500;
 var userMemoryCache = new Map();
-var authKvMemoryCache = new Map();
+var kvMemoryCache = new Map();
 var membersKvUsageStats = new Map();
 
 function getMembersKvStats(key) {
@@ -1187,10 +1178,10 @@ async function deleteMembersKv(env, key) {
   return env.MEMBERS_KV.delete(key);
 }
 
-async function getAuthKv(env, key) {
+async function getCachedKv(env, key) {
   const now = Date.now();
-  const memo = authKvMemoryCache.get(key);
-  if (memo && now - memo.time < AUTH_KV_CACHE_TTL) {
+  const memo = kvMemoryCache.get(key);
+  if (memo && now - memo.time < KV_CACHE_TTL) {
     const stats = getMembersKvStats(key);
     stats.lookups += 1;
     stats.cache_hits += 1;
@@ -1198,10 +1189,10 @@ async function getAuthKv(env, key) {
   }
   const value = await getMembersKv(env, key);
   if (value) {
-    if (authKvMemoryCache.size >= AUTH_KV_CACHE_MAX && !authKvMemoryCache.has(key)) {
-      authKvMemoryCache.delete(authKvMemoryCache.keys().next().value);
+    if (kvMemoryCache.size >= KV_CACHE_MAX && !kvMemoryCache.has(key)) {
+      kvMemoryCache.delete(kvMemoryCache.keys().next().value);
     }
-    authKvMemoryCache.set(key, { time: now, value });
+    kvMemoryCache.set(key, { time: now, value });
   }
   return value;
 }
@@ -2901,7 +2892,7 @@ async function getServerById(env, serverId, user = null) {
     }
   }
   if (env.MEMBERS_KV) {
-    const cached = await getMembersKv(env, `server:${serverId}`);
+    const cached = await getCachedKv(env, `server:${serverId}`);
     if (cached) {
       return { ...JSON.parse(cached), api_key, default_model: server?.default_model };
     }
@@ -3044,40 +3035,56 @@ async function isOllama(url) {
   }
 }
 async function isOnline(env, baseUrl, apiKeysStr, model) {
-  if (baseUrl == "https://llmplayground.net/api") {
-    return true;
-  }
-  // Health check: GET only. Never POST /chat/completions — that would spend
-  // quota just to find out whether a server is reachable.
-  const apiKey = getRandomApiKey(apiKeysStr);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-  let response;
-  try {
-    response = await fetch(`${baseUrl}/models`, {
-      method: "GET",
-      signal: controller.signal,
-      headers: {
-        "Accept": "application/json",
-        ...apiKey ? {"Authorization": `Bearer ${apiKey}`} : {},
-        ...(baseUrl.startsWith("https://pass.g4f.space/") && !baseUrl.includes("/logs")) ? {"g4f-api-key": env.PASS_API_KEY} : {}
-      }
-    });
-    clearTimeout(timeout);
-  } catch (e) {
-    return {error: e.message};
-  }
-  let data;
-  try {
-    data = await response.json();
-  } catch (e) {
-    if (!response.ok) {
-      return {error: `Status ${response.status}: ${response.statusText}`};
+  let data = {};
+  for (let i = 0; i <= 1; i++) {
+    let response;
+    try {
+      const apiKey = getRandomApiKey(apiKeysStr);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      response = await fetch(`${baseUrl}/chat/completions`, {
+        method: "POST",
+        signal: controller.signal,
+        body: JSON.stringify({
+          model,
+          messages: [{"role": "user", "content": "Hello"}],
+          stream: false
+        }),
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          ...apiKey ? {"Authorization": `Bearer ${apiKey}`} : {},
+          ...baseUrl.startsWith("https://pass.g4f.space/") ? {"g4f-api-key": env.PASS_API_KEY} : {}
+        }
+      });
+      clearTimeout(timeout);
+    } catch (e) {
+      data = {error: e.message};
+      continue;
     }
-    return {error: e.message};
-  }
-  if (!response.ok) {
-    return {error: `Status ${response.status}: ${response.statusText}`, ...data};
+    
+    try {
+      data = await response.json();
+    } catch (e) {
+      if (!response.ok) {
+        data = {error: `Status ${response.status}: ${response.statusText}`};
+        continue;
+      }
+      data = {error: e.message};
+      continue;
+    }
+    if (!response.ok) {
+      data = {error: `Status ${response.status}: ${response.statusText}`, ...data};
+      continue;
+    }
+    if(data.choices && data.choices[0].message?.content) {
+      return data.choices[0].message.content;
+    }
+    if(data.choices && data.choices[0].message?.reasoning) {
+      return data.choices[0].message.reasoning;
+    }
+    data = {error: "No content", ...data};
+    continue;
   }
   return data;
 }
