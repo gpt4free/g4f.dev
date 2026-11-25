@@ -3163,14 +3163,12 @@ async function validateServerUncached(env, baseUrl, apiKeysStr, defaultModel=nul
               is_loading: ["no-store", "no-cache"].includes(response.headers.get("Cache-Control")),
               models: models,
               base_url: responseBaseUrl,
-              test_url: testUrl
             };
           }
           return {
             valid: false,
             note: "No models discovered",
             base_url: responseBaseUrl,
-            test_url: testUrl
           };
         }
       } else if (response.status === 401 || response.status === 403) {
@@ -3179,7 +3177,6 @@ async function validateServerUncached(env, baseUrl, apiKeysStr, defaultModel=nul
           error: "Authentication failed - check your API keys",
           details: { status: response.status, endpoint },
           base_url: baseUrl,
-          test_url: testUrl
         };
       }
     } catch (e) {
@@ -3189,7 +3186,6 @@ async function validateServerUncached(env, baseUrl, apiKeysStr, defaultModel=nul
           error: "Server timeout - server did not respond within 10 seconds",
           details: { timeout: true },
           base_url: baseUrl,
-          test_url: testUrl
         };
       }
     }
@@ -3198,7 +3194,6 @@ async function validateServerUncached(env, baseUrl, apiKeysStr, defaultModel=nul
     valid: false,
     error: "Cannot connect to server - check URL and network accessibility",
     base_url: baseUrl,
-    test_url: testUrl,
   };
 }
 async function hashString(str) {
