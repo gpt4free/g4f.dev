@@ -1860,6 +1860,15 @@
         function showConnectionError(message) {
             const errorBanner = document.getElementById('connectionError');
             errorBanner.textContent = `Connection failed: ${message}`;
+            if (/GitHub account.*already linked to another G4F account/i.test(message)) {
+                const switchLink = document.createElement('a');
+                const redirect = encodeURIComponent(window.location.origin + '/members.html');
+                switchLink.href = `${API_BASE}/members/auth/github?redirect=${redirect}`;
+                switchLink.className = 'btn btn-small btn-github';
+                switchLink.style.marginLeft = '0.75rem';
+                switchLink.innerHTML = '<i class="fab fa-github"></i> Sign in with GitHub';
+                errorBanner.appendChild(switchLink);
+            }
             errorBanner.hidden = false;
         }
 

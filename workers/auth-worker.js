@@ -3040,7 +3040,12 @@ ${buttonsHtml}
     const existingById = idLookupKey ? await env.MEMBERS_KV.get(idLookupKey) : null;
     const existingId = existingByUsername || existingById;
     if (existingId && existingId !== user.id) {
-      return { error: "This GitHub account is already linked to another G4F account" };
+      const existingUser = await getUser(env, existingId);
+      if (existingUser) {
+        return {
+          error: `This GitHub account (@${profile.username}) is already linked to another G4F account. Sign in with GitHub directly or unlink it from the other account first.`
+        };
+      }
     }
 
     const previousUsername = user.provider === "github" ? user.username : null;
