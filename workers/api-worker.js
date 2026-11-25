@@ -653,10 +653,7 @@ async function safe(request, env, ctx) {
       const authHeader = request.headers.get("authorization");
       if (authHeader && authHeader.startsWith("Bearer ")) {
         const tokens = authHeader.substring(7).split(/\s+/);
-        userProvidedKey = tokens.find((t) => t && !t.startsWith("g4f_") && !t.startsWith("gfs_") && t.length > 7);
-      }
-      if (userProvidedKey && ["sk-dummy", "sk-shim-", "g4f-local-free"].includes(userProvidedKey)) {
-        userProvidedKey = null;
+        userProvidedKey = tokens.find((t) => t && !t.startsWith("g4f_") && !t.startsWith("gfs_") && t.length > 8 && t !== "g4f-local-free");
       }
     } catch (error) {
         console.error("User error:", error);
@@ -4151,7 +4148,8 @@ function jsonResponse(data, status = 200, headers = {}) {
         userAgent: request.headers.get("user-agent"),
         requestId: request.headers.get("cf-ray") || null,
         server: request._g4fServer || null,
-        model: request._g4fModel || null
+        model: request._g4fModel || null,
+        userTier: request.cf?.country
       }));
     }
   }
