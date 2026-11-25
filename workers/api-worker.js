@@ -304,6 +304,11 @@ const POLLINATIONS_HOSTS = new Set([
 ]);
 // g4f.space path mounts handled by the Pollinations worker.
 const POLLINATIONS_PATH_MOUNTS = ["/api/pollinations", "/api/community"];
+const OPENROUTER_HOSTS = new Set([
+  "openrouter.ai",
+  "openrouter.g4f.space",
+  "open.g4f.dev"
+]);
 function isPollinationsBaseUrl(baseUrl) {
   let url;
   try {
@@ -325,6 +330,14 @@ function isPollinationsBaseUrl(baseUrl) {
 function inferProviderWorkerName(server) {
   if (!server) return null;
   if (server.provider_worker) return server.provider_worker;
+  try {
+    const baseUrl = new URL(String(server.base_url || ""));
+    if (OPENROUTER_HOSTS.has(baseUrl.hostname.toLowerCase()) ||
+      ((baseUrl.hostname === "g4f.space" || baseUrl.hostname === "api.g4f.space") &&
+        (baseUrl.pathname === "/api/openrouter" || baseUrl.pathname.startsWith("/api/openrouter/")))) {
+      return "openrouter";
+    }
+  } catch (e) {}
   if (isPollinationsBaseUrl(String(server.base_url || ""))) {
     return "pollinations";
   }
@@ -1692,6 +1705,9 @@ async function handleModels(request, env, ctx, serverId, user, server, cacheKey,
   if (apiKey) {
     headers["Authorization"] = `Bearer ${apiKey}`;
   }
+  if (apiKey && !userProvidedKey) {
+    headers["X-G4F-Server-Key"] = "1";
+  }
   if (server.base_url.startsWith("https://pass.g4f.space/")) {
     headers["g4f-api-key"] = env.PASS_API_KEY;
   }
@@ -1991,6 +2007,9 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   };
   if (apiKey) {
     proxyHeaders["Authorization"] = `Bearer ${apiKey}`;
+  }
+  if (apiKey && !userProvidedKey) {
+    proxyHeaders["X-G4F-Server-Key"] = "1";
   }
   // Preserve the router hop counter so a provider path that points back into
   // this Worker is rejected as a routing loop instead of timing out (522).
@@ -2963,7 +2982,7 @@ async function getServerByLabel(env, label, user = null) {
   }
   if (SERVER_MAP[label]) {
     const server = await getServerById(env, SERVER_MAP[label], user);
-    if (server && ["puter", "pollinations", "ollama"].includes(label)) {
+    if (server && ["puter", "pollinations", "ollama", "openrouter"].includes(label)) {
       server.provider_worker = label;
     }
     if (server) {
@@ -2972,11 +2991,12 @@ async function getServerByLabel(env, label, user = null) {
     // The KV-backed public server index may be empty (fresh deployment or
     // local dev). Fall back to the bundled provider worker so /api/<provider>
     // still works without a KV record.
-    if (env.PROVIDER_WORKERS && ["puter", "pollinations", "ollama"].includes(label)) {
+    if (env.PROVIDER_WORKERS && ["puter", "pollinations", "ollama", "openrouter"].includes(label)) {
       const baseUrls = {
         puter: env.PUTER_WORKER_URL,
         pollinations: env.POLLINATIONS_WORKER_URL,
-        ollama: env.OLLAMA_WORKER_URL
+        ollama: env.OLLAMA_WORKER_URL,
+        openrouter: env.OPENROUTER_WORKER_URL
       };
       return {
         id: label,
@@ -2992,7 +3012,7 @@ async function getServerByLabel(env, label, user = null) {
     const serverIndex = publicServers.find((s) => s.label.includes(label));
     if (serverIndex) {
       const server = await getServerById(env, serverIndex.id, user);
-      if (server && ["puter", "pollinations", "ollama"].includes(label)) {
+      if (server && ["puter", "pollinations", "ollama", "openrouter"].includes(label)) {
         server.provider_worker = label;
       }
       return server;

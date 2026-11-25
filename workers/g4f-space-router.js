@@ -35,20 +35,23 @@ import authWorker from "./auth-worker.js";
 import puterWorker from "./puter-worker.js";
 import pollinationsWorker from "./pollinations.js";
 import ollamaWorker from "./ollama.js";
+import openrouterWorker from "./openrouter.js";
 
-const WORKER_VERSION = "2026-11-01-auth-1";
+const WORKER_VERSION = "2026-11-25-openrouter-1";
 
 const PROVIDER_WORKERS = {
   puter: puterWorker,
   pollinations: pollinationsWorker,
-  ollama: ollamaWorker
+  ollama: ollamaWorker,
+  openrouter: openrouterWorker
 };
 
 const PROVIDERS = [
   { name: "puter", hosts: new Set(["puter.g4f.space"]), prefix: "/api/puter" },
   { name: "pollinations", hosts: new Set(["pollinations.g4f.space"]), prefix: "/api/pollinations" },
   { name: "community", hosts: new Set(["community.g4f.space"]), prefix: "/api/community" },
-  { name: "ollama", hosts: new Set(["ollama.g4f.space"]), prefix: "/api/ollama" }
+  { name: "ollama", hosts: new Set(["ollama.g4f.space"]), prefix: "/api/ollama" },
+  { name: "openrouter", hosts: new Set(["openrouter.g4f.space"]), prefix: "/api/openrouter" }
 ];
 
 const MAIN_HOSTS = new Set(["g4f.space", "www.g4f.space", "api.g4f.space"]);
@@ -196,8 +199,8 @@ function versionResponse(env) {
     worker: "g4f.space-router",
     version: WORKER_VERSION,
     providerWorkers: Object.keys(env.PROVIDER_WORKERS || PROVIDER_WORKERS),
-    workers: ["api", "auth", "puter", "pollinations", "ollama"],
-    hosts: ["g4f.space", "www.g4f.space", "api.g4f.space", "auth.g4f.space", "puter.g4f.space", "pollinations.g4f.space", "community.g4f.space", "ollama.g4f.space"]
+    workers: ["api", "auth", "puter", "pollinations", "ollama", "openrouter"],
+    hosts: ["g4f.space", "www.g4f.space", "api.g4f.space", "auth.g4f.space", "puter.g4f.space", "pollinations.g4f.space", "community.g4f.space", "ollama.g4f.space", "openrouter.g4f.space"]
   }, {
     headers: { "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" }
   });

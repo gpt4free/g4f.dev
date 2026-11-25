@@ -76,6 +76,7 @@ API_KEY_SALT = ""  # Set via: npx wrangler secret put API_KEY_SALT
 PUTER_WORKER_URL = "https://puter.g4f.space"
 POLLINATIONS_WORKER_URL = "https://pollinations.g4f.space"
 OLLAMA_WORKER_URL = "https://ollama.g4f.space"
+OPENROUTER_WORKER_URL = "https://openrouter.g4f.space"
 # Account key kept at the minimum pollen budget by the scheduled trigger.
 # Set POLLINATIONS_ACCOUNT_KEY to a separate sk_ secret with account:keys:
 #   npx wrangler secret put POLLINATIONS_ACCOUNT_KEY

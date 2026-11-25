@@ -1,0 +1,15 @@
+name = "openrouter"
+main = "openrouter.js"
+compatibility_date = "2025-05-30"
+
+routes = [
+  { pattern = "g4f.space/api/openrouter/*", zone_name = "g4f.space" },
+  { pattern = "api.g4f.space/api/openrouter/*", zone_name = "g4f.space" },
+  { pattern = "openrouter.g4f.space", custom_domain = true, enabled = true, previews_enabled = false }
+]
+
+[vars]
+RATE_LIMIT_PER_MINUTE = "15"
+
+[dev]
+port = 8795

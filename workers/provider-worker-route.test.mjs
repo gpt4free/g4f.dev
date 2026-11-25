@@ -44,6 +44,13 @@ const providerWorker = {
   }
 };
 
+const openrouterWorker = {
+  async fetch(request) {
+    providerCalls.push(String(request.url));
+    return Response.json({ data: [{ id: "openrouter-bundled" }] });
+  }
+};
+
 const servers = [
   ...POLLINATIONS_BASE_URLS.map((baseUrl, index) => ({
     id: `srv_pollinations_fixture_${index}`,
@@ -60,6 +67,14 @@ const servers = [
     allowed_models: [],
     is_public: true,
     is_valid: true
+  },
+  {
+    id: "srv_openrouter_fixture",
+    label: "openrouter-fixture",
+    base_url: "https://openrouter.ai/api/v1",
+    allowed_models: [],
+    is_public: true,
+    is_valid: true
   }
 ];
 
@@ -72,7 +87,7 @@ const env = {
     async put() {},
     async delete() {}
   },
-  PROVIDER_WORKERS: { pollinations: providerWorker }
+  PROVIDER_WORKERS: { pollinations: providerWorker, openrouter: openrouterWorker }
 };
 
 async function modelsFor(label) {
@@ -99,6 +114,14 @@ assert.equal(fetchCalls[0], "https://api.example.com/v1/models");
 const otherBody = await otherResponse.json();
 assert.deepEqual(otherBody.data, [{ id: "network" }]);
 console.log("PASS: non-pollinations servers still use the network");
+
+providerCalls = [];
+fetchCalls = [];
+const openrouterResponse = await modelsFor("openrouter-fixture");
+assert.equal(openrouterResponse.status, 200);
+assert.deepEqual(providerCalls, ["https://openrouter.ai/api/v1/models"]);
+assert.equal(fetchCalls.length, 0, "OpenRouter must not be fetched over the network");
+console.log("PASS: OpenRouter base URL uses bundled provider worker");
 
 // /quota for the new hosts maps to the Pollinations balance endpoint so a
 // health check never turns into a chat completion.
