@@ -22,6 +22,14 @@ globalThis.caches = {
 };
 
 const ctx = { waitUntil() {} };
+for (const path of ["/", "/version", "/apix", "/unknown/path"]) {
+  const response = await router.fetch(new Request(`https://g4f.space${path}`), {}, ctx);
+  assert.equal(response.status, 404, `${path} should not be routed to a worker`);
+  const body = await response.json();
+  assert.equal(body.error.type, "not_found", `${path} should return the router 404`);
+}
+console.log("Router rejects paths outside the g4f.space API allowlist.");
+
 const workers = [
   ["puter", puter, /puter/i],
   ["pollinations", pollinations, /pollinations/i],
@@ -71,7 +79,7 @@ console.log(`Router version smoke test passed (${versionBody.version}).`);
 // A second pass through the router is a provider self-fetch loop. It must
 // return a clear 508 JSON error instead of timing out as Cloudflare 522.
 const loop = await router.fetch(
-  new Request("https://g4f.space/", { headers: { "x-g4f-worker-hop": "3" } }),
+  new Request("https://g4f.space/v1", { headers: { "x-g4f-worker-hop": "3" } }),
   {},
   ctx
 );

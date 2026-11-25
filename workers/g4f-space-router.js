@@ -53,6 +53,37 @@ const PROVIDERS = [
 
 const MAIN_HOSTS = new Set(["g4f.space", "www.g4f.space", "api.g4f.space"]);
 const AUTH_HOSTS = new Set(["auth.g4f.space"]);
+const G4F_SPACE_API_PATHS = [
+  "/v1",
+  "/api",
+  "/custom",
+  "/members",
+  "/backend-api",
+  "/media",
+  "/thumbnail",
+  "/search",
+  "/files",
+  "/pa",
+  "/proxy"
+];
+
+function isG4fSpaceApiPath(pathname) {
+  return G4F_SPACE_API_PATHS.some((prefix) =>
+    pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
+
+function notFoundResponse() {
+  return Response.json({
+    error: {
+      message: "Not Found",
+      type: "not_found"
+    }
+  }, {
+    status: 404,
+    headers: { "Cache-Control": "no-store" }
+  });
+}
 
 // The auth/members worker owns member management and the encrypted secret
 // conversation store. Dispatch these before the API worker so member routes
@@ -169,6 +200,10 @@ function withVersion(response) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const host = url.hostname.toLowerCase();
+    if (host === "g4f.space" && !isG4fSpaceApiPath(url.pathname)) {
+      return withVersion(notFoundResponse());
+    }
     if (url.pathname === "/api/version" || url.pathname === "/version") {
       return versionResponse(apiEnv(env));
     }
@@ -181,7 +216,6 @@ export default {
       }
       return loopResponse();
     }
-    const host = url.hostname.toLowerCase();
     if (isAuthRequest(url)) {
       return withVersion(await authWorker.fetch(authRequest(request), env, ctx));
     }

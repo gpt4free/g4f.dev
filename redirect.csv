@@ -78,4 +78,4 @@ https://g4f.space/usage,https://g4f.space/custom/api/servers/usage,301,true,fals
 https://g4f.space/api/gemini/v1/models,https://g4f.space/api/gemini/models,301,true,false,false,false
 https://gemini.g4f.space/v1/models,https://g4f.space/api/gemini/models,301,true,false,false,false
 https://g4f.space/api/gemini-v1beta/models,https://g4f.space/api/gemini/models,301,true,false,false,false
-
+https://g4f.space/custom/srv_mkombumpae45db46dcb8/*,https://g4f.space/api/nvidia/*

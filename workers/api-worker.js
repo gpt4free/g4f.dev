@@ -449,7 +449,8 @@ var SERVER_TO_PROVIDER = {
 }
 var BLOCKED_SERVERS = [
   "srv_msfze3578f1a961f37b1",
-  "srv_msg6b1n69fc6b9b64156"
+  "srv_msg6b1n69fc6b9b64156",
+  "srv_mkombumpae45db46dcb8"
 ];
 var HIDDEN_SERVERS = [];
 // organizations (from Cloudflare `asOrganization`) that should be blocked

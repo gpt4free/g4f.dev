@@ -17,6 +17,18 @@ npx wrangler deploy
 
 The separate configs below are still used for split deployments.
 
+## Static 404 deployment
+
+`workers/404.json` is an isolated static-assets configuration. It sets
+`assets.not_found_handling` to `404-page`, so an unknown path is answered with
+the root `404.html` and a `404 Not Found` status. The `.assetsignore` file
+allows only that page, keeping the static 404 deployment separate from the
+root code-only API Worker and avoiding uploading the full site.
+
+```bash
+npm run deploy:404
+```
+
 | Module | Source | Split config | Same-host route | Subdomain route |
 | --- | --- | --- | --- | --- |
 | API / OpenAI-compatible API | `api-worker.js` | `wrangler-custom.toml` | `g4f.space/*`, `api.g4f.space/*` | — |
@@ -34,6 +46,12 @@ provider calls stay in the same isolate (no service binding, no network hop,
 and no recursion). Provider subdomain requests are rewritten to the equivalent
 `/api/<provider>` path before reaching the API worker, so they get exactly the
 same limits as the shared-host path.
+
+On the `g4f.space` apex, Wrangler binds the router only to `/v1`, `/api`,
+`/custom`, `/members`, `/backend-api`, `/media`, `/thumbnail`, `/search`,
+`/files`, `/pa`, and `/proxy`, including their subpaths. Other paths do not
+invoke this Worker and are handled by the host's normal origin/404 behavior.
+Provider and auth subdomains retain their dedicated routing.
 
 Each provider module also strips its `/api/<provider>` mount prefix at the edge
 of its `fetch` handler, which keeps it usable in split deployments.

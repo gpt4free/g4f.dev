@@ -1,4 +1,9 @@
 {
-  "status": 404,
-  "message": "Not Found"
+  "$schema": "https://www.unpkg.com/wrangler/config-schema.json",
+  "name": "g4f-dev-404",
+  "compatibility_date": "2026-11-25",
+  "assets": {
+    "directory": "..",
+    "not_found_handling": "404-page"
+  }
 }

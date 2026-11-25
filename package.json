@@ -28,6 +28,7 @@
     "test:locales": "node --test scripts/build-locales.test.mjs",
     "check:js": "node scripts/check-js.mjs",
     "deploy": "wrangler deploy",
+    "deploy:404": "wrangler deploy --config workers/404.json",
     "deploy:split": "bash workers/deploy-g4f-space.sh"
   },
   "repository": {
