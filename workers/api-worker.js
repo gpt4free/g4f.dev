@@ -539,6 +539,8 @@ const BLOCKED_USERS = [
   "SteamPunk001", "steampunk001", "steeampunk002-cmyk", "steeampunk004-cmyk",
   "denmos221-cpu", "vlintz",
   "luciazamora99", "valrab_",
+  "Genshinimpect15", "Avarisko", "genshinimpect15", "theburakct_v9nhik",
+  "11451499A", "xs886_", "XSis666",
 ];
 const GPT_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "marin", "cedar", "amuch", "dan", "elan", "breeze", "cove", "ember", "fathom", "glimmer", "harp", "juniper", "maple", "orbit", "vale"];
 function getDefaultModel(s) {
@@ -4214,7 +4216,9 @@ async function generatePostBodyHash(body) {
       "what's 1 + 1?",
       "what is 2+2? reply in one short sentence",
       "respond with exactly the single word: ready",
-      "hello, are you gpt 3.5?"
+      "hello, are you gpt 3.5?",
+      "what is 1 + 1? reply with only the number",
+      "reply with exactly: pong"
     ].includes(lastContent)
     || lastContent.endsWith("reply with the result only")
     || lastContent.startsWith("reply with just:")
