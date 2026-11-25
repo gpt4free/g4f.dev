@@ -552,7 +552,7 @@ function getDefaultModel(s, messages = []) {
     return defaultModel;
   }
   if (s.allowed_models.includes("kilo-auto/free")) {
-    const hasImage = false;
+    let hasImage = false;
     for (const msg of messages) {
       if (!Array.isArray(msg.content)) continue;
       for (const part of msg.content) {
