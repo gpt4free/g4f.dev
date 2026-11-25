@@ -66,6 +66,18 @@ const G4F_SPACE_API_PATHS = [
   "/pa",
   "/proxy"
 ];
+const G4F_API_PATHS = [
+  "/v1",
+  "/api",
+  "/custom",
+  "/backend-api",
+];
+
+function isApiPath(pathname) {
+  return G4F_API_PATHS.some((prefix) =>
+    pathname.startsWith(`${prefix}/`)
+  );
+}
 
 function isG4fSpaceApiPath(pathname) {
   return G4F_SPACE_API_PATHS.some((prefix) =>
@@ -202,7 +214,10 @@ export default {
     const url = new URL(request.url);
     const host = url.hostname.toLowerCase();
     if (host === "g4f.space" && !isG4fSpaceApiPath(url.pathname)) {
-      return withVersion(notFoundResponse());
+      if (isApiPath(url.pathname)) {
+        return withVersion(notFoundResponse());
+      }
+      return Response.redirect("https://g4f.dev/404", 301);
     }
     if (url.pathname === "/api/version" || url.pathname === "/version") {
       return versionResponse(apiEnv(env));
