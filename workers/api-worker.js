@@ -2176,7 +2176,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       ctx.waitUntil(response.clone().text().then((body) => {
         let upstreamMessage = body.trim().substring(0, 900);
         if (response.status === 400 && firstMessage) {
-          upstreamMessage = `Bad Request: ${JSON.stringify(firstMessage.split("\n")[0])}`;
+          upstreamMessage = `Bad Request: ${upstreamMessage} with ${JSON.stringify(firstMessage.split("\n")[0])}`;
         }
         const message = `Upstream ${response.status}${upstreamMessage ? `: ${upstreamMessage}` : ""}`;
         return persistErrorToDb(env, new Error(message), errorContext);
