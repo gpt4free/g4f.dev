@@ -3126,63 +3126,6 @@ async function validateServerUncached(env, baseUrl, apiKeysStr, defaultModel=nul
   if (baseUrl.startsWith("https://pass.g4f.space/")) {
     headers["g4f-api-key"] = env.PASS_API_KEY;
   }
-  let testUrl = defaultModel ? baseUrl : null
-  baseUrl = baseUrl.replace("/chat/completions", "")
-  if (URL_MAP[`${baseUrl}/quota`]) {
-    testUrl = URL_MAP[`${baseUrl}/quota`];
-  }
-  if (testUrl) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
-      const extra = testUrl.includes("/chat/completions") ? {
-        method: "POST",
-        body: JSON.stringify({ "model": defaultModel, "messages": [{ "role": "user", "content": "Hello" }] }),
-      } : {};
-      const response = await fetch(testUrl, {
-        ...extra,
-        headers,
-        signal: controller.signal
-      });
-      clearTimeout(timeout);
-      if (response.ok) {
-        const contentType = response.headers.get("content-type") || "";
-        if (!contentType.includes("application/json")) {
-          return {
-            valid: false,
-            base_url: baseUrl,
-            test_url: testUrl,
-          };
-        }
-      } else if (response.status === 401 || response.status === 403) {
-        return {
-          valid: false,
-          error: "Authentication failed - check your API keys",
-          details: { status: response.status },
-          base_url: baseUrl,
-          test_url: testUrl,
-        };
-      } else if (!testUrl.includes("/chat/completions") || response.status == 404) {
-        return {
-          valid: false,
-          error: `Error ${response.status}: ${response.statusText}`,
-          details: { status: response.status },
-          base_url: baseUrl,
-          test_url: testUrl,
-        };
-      }
-    } catch (e) {
-      if (e.name === "AbortError") {
-        return {
-          valid: false,
-          error: "Server timeout - server did not respond within 10 seconds",
-          details: { timeout: true },
-          base_url: baseUrl,
-          test_url: testUrl,
-        };
-      }
-    }
-  }
   const modelsEndpoints = [
     baseUrl + "/models"
   ];
