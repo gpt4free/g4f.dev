@@ -23,31 +23,11 @@ name = "api"
 main = "workers/g4f-space-router.js"
 compatibility_date = "2025-05-30"
 
-# The apex API routes are path-scoped so unrelated g4f.space requests do not
-# invoke this Worker. Dedicated hostnames remain custom domains.
+# The apex uses a custom domain so Cloudflare provisions and maintains its DNS
+# record. The router forwards only allowlisted paths to its API/auth modules
+# and returns 404 for other paths before invoking any module.
 routes = [
-  { pattern = "g4f.space/v1", zone_name = "g4f.space" },
-  { pattern = "g4f.space/v1/*", zone_name = "g4f.space" },
-  { pattern = "g4f.space/api", zone_name = "g4f.space" },
-  { pattern = "g4f.space/api/*", zone_name = "g4f.space" },
-  { pattern = "g4f.space/custom", zone_name = "g4f.space" },
-  { pattern = "g4f.space/custom/*", zone_name = "g4f.space" },
-  { pattern = "g4f.space/members", zone_name = "g4f.space" },
-  { pattern = "g4f.space/members/*", zone_name = "g4f.space" },
-  { pattern = "g4f.space/backend-api", zone_name = "g4f.space" },
-  { pattern = "g4f.space/backend-api/*", zone_name = "g4f.space" },
-  { pattern = "g4f.space/media", zone_name = "g4f.space" },
-  { pattern = "g4f.space/media/*", zone_name = "g4f.space" },
-  { pattern = "g4f.space/thumbnail", zone_name = "g4f.space" },
-  { pattern = "g4f.space/thumbnail/*", zone_name = "g4f.space" },
-  { pattern = "g4f.space/search", zone_name = "g4f.space" },
-  { pattern = "g4f.space/search/*", zone_name = "g4f.space" },
-  { pattern = "g4f.space/files", zone_name = "g4f.space" },
-  { pattern = "g4f.space/files/*", zone_name = "g4f.space" },
-  { pattern = "g4f.space/pa", zone_name = "g4f.space" },
-  { pattern = "g4f.space/pa/*", zone_name = "g4f.space" },
-  { pattern = "g4f.space/proxy", zone_name = "g4f.space" },
-  { pattern = "g4f.space/proxy/*", zone_name = "g4f.space" },
+  { pattern = "g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
   { pattern = "www.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
   { pattern = "api.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },
   { pattern = "auth.g4f.space", custom_domain = true, enabled = true, previews_enabled = false },

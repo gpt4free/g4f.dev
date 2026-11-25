@@ -47,11 +47,12 @@ and no recursion). Provider subdomain requests are rewritten to the equivalent
 `/api/<provider>` path before reaching the API worker, so they get exactly the
 same limits as the shared-host path.
 
-On the `g4f.space` apex, Wrangler binds the router only to `/v1`, `/api`,
-`/custom`, `/members`, `/backend-api`, `/media`, `/thumbnail`, `/search`,
-`/files`, `/pa`, and `/proxy`, including their subpaths. Other paths do not
-invoke this Worker and are handled by the host's normal origin/404 behavior.
-Provider and auth subdomains retain their dedicated routing.
+The `g4f.space` apex remains a custom domain so Cloudflare manages its DNS.
+The router forwards only `/v1`, `/api`, `/custom`, `/members`, `/backend-api`,
+`/media`, `/thumbnail`, `/search`, `/files`, `/pa`, and `/proxy` (including
+their subpaths) to the API/auth modules. Other paths receive a router 404
+without invoking those modules. Provider and auth subdomains retain their
+dedicated routing.
 
 Each provider module also strips its `/api/<provider>` mount prefix at the edge
 of its `fetch` handler, which keeps it usable in split deployments.
