@@ -1251,6 +1251,11 @@ async function getBestFreeTextModels(limit = 4) {
   const candidates = [];
   for (const entry of registry) {
     if (entry.category === "decision") continue;
+    if (entry.aliases && Array.isArray(entry.aliases)) {
+      if (entry.aliases.includes("qwen-safety")) {
+        continue;
+      }
+    }
     if (!isFreeRegistryEntry(entry, "text")) continue;
     const health = entry.health || {};
     candidates.push({ name: entry.name, score: Number(health.success_rate) || 0 });
