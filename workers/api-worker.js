@@ -1172,11 +1172,13 @@ async function getMembersKv(env, key) {
 
 async function putMembersKv(env, key, value, options) {
   getMembersKvStats(key).kv_writes += 1;
+  kvMemoryCache.delete(key);
   return env.MEMBERS_KV.put(key, value, options);
 }
 
 async function deleteMembersKv(env, key) {
   getMembersKvStats(key).kv_deletes += 1;
+  kvMemoryCache.delete(key);
   return env.MEMBERS_KV.delete(key);
 }
 
@@ -1458,7 +1460,6 @@ async function handleDeleteServer(request, env) {
     );
   }
   user.updated_at = (/* @__PURE__ */ new Date()).toISOString();
-  user.custom_servers.splice(serverIndex, 1);
   await saveUser(env, user);
   return jsonResponse({ message: "Server deleted successfully" });
 }
