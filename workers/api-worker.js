@@ -2902,13 +2902,13 @@ async function getServerById(env, serverId, user = null) {
   if (user && user.custom_servers) {
     const ownedServer = user.custom_servers.find((s) => s.id === serverId);
     if (ownedServer) {
-      return { ...ownedServer, owner_id: user.id, api_key, default_model: server?.default_model, allowed_models: ownedServer.allowed_models || server?.allowed_models || [] };
+      return { ...ownedServer, owner_id: user.id, api_key, default_model: server?.default_model || ownedServer.default_model, allowed_models: ownedServer.allowed_models || server?.allowed_models || [] };
     }
   }
   if (env.MEMBERS_KV) {
     const cached = await getCachedKv(env, `server:${serverId}`);
     if (cached) {
-      return { ...JSON.parse(cached), api_key, default_model: server?.default_model, allowed_models: JSON.parse(cached).allowed_models || server?.allowed_models || [] };
+      return { ...JSON.parse(cached), api_key, default_model: server?.default_model || cached.default_model, allowed_models: JSON.parse(cached).allowed_models || server?.allowed_models || [] };
     }
   }
   if (publicServers) {
@@ -2917,6 +2917,7 @@ async function getServerById(env, serverId, user = null) {
       if (owner) {
         const fullServer = (owner.custom_servers || []).find((s) => s.id === serverId);
         fullServer.allowed_models = server?.allowed_models || fullServer.allowed_models || [];
+        fullServer.default_model = server?.default_model || fullServer.default_model;
         if (fullServer && fullServer.is_public) {
           fullServer.owner_id = owner.id;
           await putMembersKv(
