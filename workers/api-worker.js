@@ -1015,7 +1015,7 @@ async function safe(request, env, ctx) {
         const result = await validateServer(env, server.base_url, fullServer.api_keys, true);
         entry.base_url = result.base_url || server.base_url;
         if (result.models && result.models.length > 0) {
-          if (entry.auto_update_models === true && !entry.allowed_models || entry.allowed_models.length === 0) {
+          if (entry.auto_update_models === true || !entry.allowed_models || entry.allowed_models.length === 0) {
               entry.allowed_models = result.models;
           }
         }
