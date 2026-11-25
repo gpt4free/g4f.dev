@@ -1616,9 +1616,6 @@ async function updatePublicServers(env) {
   });
   if (ct > 0) {
     await putMembersKv(env, "public_servers_index", JSON.stringify(publicServers));
-    // keep the in-memory index in sync so follow-up reads skip the KV get
-    publicServersCache.time = Date.now();
-    publicServersCache.value = publicServers;
   }
   return ct;
 }
@@ -1911,7 +1908,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       if (requestModel) {
           requestBody.model = requestModel;
       }
-      if (!userProvidedKey && !server.api_key)
+      // if (!userProvidedKey && !server.api_key)
       if (server.allowed_models && server.allowed_models.length > 0) {
         if (!server.allowed_models.includes(requestModel)) {
           // Requested model is not served here — usually a deprecated or
@@ -2998,8 +2995,6 @@ async function updatePublicServerIndex(env, server, ownerId, action) {
   }
   await putMembersKv(env, "public_servers_index", JSON.stringify(servers));
   await deleteMembersKv(env, `server:${server.id}`);
-  publicServersCache.time = Date.now();
-  publicServersCache.value = servers;
 }
 function getRandomApiKey(apiKeysStr) {
   if (!apiKeysStr) return null;
