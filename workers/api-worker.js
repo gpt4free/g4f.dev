@@ -2569,7 +2569,7 @@ async function handleApiStats(request, env, user, ctx) {
        FROM usage_logs
        WHERE timestamp > ?
        GROUP BY provider, model
-       HAVING requests > 0`
+       HAVING COUNT(*) > 0`
     ).bind(since).all().catch((e) => {
       usageFailed = true;
       console.error("Failed to aggregate usage stats:", e);
