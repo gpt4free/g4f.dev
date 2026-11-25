@@ -960,6 +960,9 @@ async function safe(request, env, ctx) {
         entry.is_offline = !!(entry.test_result && entry.test_result.error);
         entry.is_online = !entry.is_offline;
         entry.is_hidden = HIDDEN_SERVERS.includes(entry.id);
+        if (entry.auto_update_models === true && result.models) {
+            entry.allowed_models = result.models;
+        }
         delete entry.api_keys;
         delete entry.is_loading;
         if (result.is_loading) entry.is_loading = true;
