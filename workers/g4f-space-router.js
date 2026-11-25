@@ -223,11 +223,12 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const host = url.hostname.toLowerCase();
-    if (host === "g4f.space" && !isG4fSpaceApiPath(url.pathname)) {
-      if (isApiPath(url.pathname)) {
+    const pathname = url.pathname;
+    if ((host === "g4f.space" && !isG4fSpaceApiPath(pathname)) || pathname.startsWith("/.") || pathname.startsWith("/_") || pathname.endsWith(".py") || pathname.endsWith(".php")) {
+      if (isApiPath(pathname)) {
         return withVersion(notFoundResponse());
       }
-      return Response.redirect("https://g4f.dev/404", 301);
+      return Response.redirect(`https://g4f.dev/${pathname}`, 301);
     }
     if (url.pathname === "/api/version" || url.pathname === "/version") {
       return versionResponse(apiEnv(env));
