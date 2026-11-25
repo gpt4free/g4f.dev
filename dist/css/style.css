@@ -1881,7 +1881,7 @@ select:hover,
 }
 
 .addon-panel-item {
-    padding: 8px 12px;
+    padding: 8px;
     display: flex;
     gap: 12px;
     align-items: center;

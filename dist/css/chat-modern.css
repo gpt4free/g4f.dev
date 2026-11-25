@@ -366,6 +366,7 @@ input, select, textarea, button {
 
 .addon-panel-item i {
     color: var(--accent);
+    width: 10px;
 }
 
 /* Compact chips for the browsing addon buttons (Live Feed, Trigger) */
