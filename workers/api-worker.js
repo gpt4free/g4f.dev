@@ -2168,7 +2168,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
         model: request._g4fModel || null,
         context: { upstream_status: response.status },
         userId: user ? user.id : null,
-        userTier: user ? user.tier : (rateCheck ? `${rateCheck.centsToCharge}/${rateCheck.cakeCreditCents}` : userProvidedKey ? (userProvidedKey.startsWith("g4f-") ? userProvidedKey :userProvidedKey.substring(0, 8)) : null)
+        userTier: user ? user.tier : (rateCheck ? `${rateCheck.centsToCharge}/${rateCheck.cakeCreditCents}` : userProvidedKey ? (userProvidedKey.startsWith("g4f-") ? userProvidedKey : userProvidedKey.substring(0, 8)) : request.cf?.country)
       };
       ctx.waitUntil(response.clone().text().then((body) => {
         let upstreamMessage = body.trim().substring(0, 900);
