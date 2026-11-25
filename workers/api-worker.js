@@ -1295,7 +1295,9 @@ function toSafeServer(s) {
 async function handleListServers(request, env, user) {
   let servers = [];
   if (user) {
-    servers = user.custom_servers || [];
+    servers = (user.custom_servers || []).map((server) =>
+      sanitizeProviderServer(structuredClone(server))
+    );
   }
   const safeServers = user && user.tier === "admin" ? servers : servers.map(toSafeServer);
   // A server can be published to the public index without being present in
@@ -1362,9 +1364,12 @@ async function handleCreateServer(request, env) {
   const serverId = generateServerId();
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const autoUpdateModels = body.auto_update_models !== false;
-  const allowedModels = autoUpdateModels
-    ? validationResult.models || []
-    : body.allowed_models && body.allowed_models.length > 0 ? body.allowed_models : validationResult.models || [];
+  const allowedModels = filterProviderAllowedModels(
+    { base_url: body.base_url },
+    autoUpdateModels
+      ? validationResult.models || []
+      : body.allowed_models && body.allowed_models.length > 0 ? body.allowed_models : validationResult.models || []
+  );
   const server = {
     id: serverId,
     label: body.label || `Server ${(user.custom_servers || []).length + 1}`,
@@ -1470,6 +1475,7 @@ async function handleUpdateServer(request, env) {
       console.error("Failed to refresh models on update:", e);
     }
   }
+  sanitizeProviderServer(server);
   // use the (possibly updated) server.base_url — body.base_url is undefined
   // when only other fields like label were updated, and isOllama would throw
   server.is_ollama = await isOllama(server.base_url);
@@ -4488,5 +4494,6 @@ async function proxyToPassG4f(request, env, pathname, search, user, cacheKey, ct
   return newResponse;
 }
 export {
-  custom_worker_default as default
+  custom_worker_default as default,
+  filterProviderAllowedModels
 };

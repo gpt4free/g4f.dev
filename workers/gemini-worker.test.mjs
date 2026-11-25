@@ -3,6 +3,7 @@ import test from "node:test";
 
 import worker from "./gemini.js";
 import { isFreeModelId } from "./gemini.js";
+import { filterProviderAllowedModels } from "./api-worker.js";
 
 test("Gemini worker adds missing thought signatures without replacing existing ones", async () => {
   const originalFetch = globalThis.fetch;
@@ -79,7 +80,7 @@ test("Gemini worker filters its model list to Gemini chat models", async () => {
     const payload = await response.json();
     assert.deepEqual(
       payload.data.map((model) => model.id),
-      ["models/gemini-2.5-flash", "gemini-2.5-flash-lite"]
+      ["models/gemini-2.5-flash", "models/gemini-2.5-flash-lite"]
     );
   } finally {
     globalThis.fetch = originalFetch;
@@ -92,4 +93,26 @@ test("Gemini free-model policy excludes priced model families", () => {
   assert.equal(isFreeModelId("models/gemini-2.5-pro"), false);
   assert.equal(isFreeModelId("models/gemini-ultra-latest"), false);
   assert.equal(isFreeModelId("models/imagen-4.0-generate-001"), false);
+});
+
+test("server allowed model lists exclude paid OpenRouter and Gemini models", () => {
+  assert.deepEqual(
+    filterProviderAllowedModels(
+      { base_url: "https://openrouter.ai/api/v1" },
+      ["openrouter/free", "alpha/free:free", "paid/model", "beta/request-fee"]
+    ),
+    ["openrouter/free", "alpha/free:free"]
+  );
+  assert.deepEqual(
+    filterProviderAllowedModels(
+      { base_url: "https://generativelanguage.googleapis.com/v1beta/openai" },
+      [
+        "models/gemini-flash-latest",
+        "models/gemini-2.5-flash",
+        "models/gemini-2.5-pro",
+        "models/gemini-ultra-latest"
+      ]
+    ),
+    ["models/gemini-flash-latest", "models/gemini-2.5-flash"]
+  );
 });
