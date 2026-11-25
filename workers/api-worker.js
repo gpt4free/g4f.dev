@@ -543,7 +543,7 @@ const BLOCKED_USERS = [
   "11451499A", "xs886_", "XSis666",
 ];
 const GPT_AUDIO_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "marin", "cedar", "amuch", "dan", "elan", "breeze", "cove", "ember", "fathom", "glimmer", "harp", "juniper", "maple", "orbit", "vale"];
-function getDefaultModel(s, messages) {
+function getDefaultModel(s, messages = []) {
   if (s.default_model) {
     return s.default_model;
   }
@@ -552,7 +552,16 @@ function getDefaultModel(s, messages) {
     return defaultModel;
   }
   if (s.allowed_models.includes("kilo-auto/free")) {
-    const hasImage = messages && messages.some(msg => msg.type === "image_url");
+    const hasImage = false;
+    for (const msg of messages) {
+      if (!Array.isArray(msg.content)) continue;
+      for (const part of msg.content) {
+        if (part.type === "image_url") {
+          hasImage = true;
+          break;
+        }
+      }
+    }
     if (!hasImage) {
       return "kilo-auto/free";
     }
@@ -662,7 +671,7 @@ async function safe(request, env, ctx) {
       const authHeader = request.headers.get("authorization");
       if (authHeader && authHeader.startsWith("Bearer ")) {
         const tokens = authHeader.substring(7).split(/\s+/);
-        userProvidedKey = tokens.find((t) => t && !t.startsWith("g4f_") && !t.startsWith("gfs_") && t.length > 8 && t !== "g4f-local-free");
+        userProvidedKey = tokens.find((t) => t && !t.startsWith("g4f_") && !t.startsWith("gfs_") && t.length > 8 && ["g4f-local-free", "sk-keyle"].includes(t));
       }
     } catch (error) {
         console.error("User error:", error);
@@ -1916,7 +1925,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
   if (chatUrls.includes(subPath)) {
     try {
       if (!requestModel || requestModel === "auto" || requestModel === "default") {
-        requestModel = getDefaultModel(server);
+        requestModel = getDefaultModel(server, requestBody.messages);
       }
       if (requestModel) {
           requestBody.model = requestModel;
@@ -2180,7 +2189,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
         model: request._g4fModel || null,
         context: { upstream_status: response.status },
         userId: user ? user.id : null,
-        userTier: user ? user.tier : (rateCheck ? `${rateCheck.centsToCharge}/${rateCheck.cakeCreditCents}` : userProvidedKey ? (userProvidedKey.startsWith("sk-d1d1c") ? userProvidedKey : userProvidedKey.substring(0, 8)) : request.cf?.country)
+        userTier: user ? user.tier : (rateCheck ? `${rateCheck.centsToCharge}/${rateCheck.cakeCreditCents}` : userProvidedKey ? (userProvidedKey.startsWith("sk-d1d1c") || userProvidedKey.startsWith("g4f-local") ? userProvidedKey : userProvidedKey.substring(0, 8)) : request.cf?.country)
       };
       ctx.waitUntil(response.clone().text().then((body) => {
         let upstreamMessage = body.trim().substring(0, 900);
@@ -2907,7 +2916,7 @@ async function getServerById(env, serverId, user = null) {
       const owner = await getUser(env, server.owner_id);
       if (owner) {
         const fullServer = (owner.custom_servers || []).find((s) => s.id === serverId);
-        fullServer.allowed_models = fullServer.allowed_models || server?.allowed_models || [];
+        fullServer.allowed_models = server?.allowed_models || fullServer.allowed_models || [];
         if (fullServer && fullServer.is_public) {
           fullServer.owner_id = owner.id;
           await putMembersKv(
@@ -3168,6 +3177,7 @@ async function validateServerUncached(env, baseUrl, apiKeysStr, defaultModel=nul
             models = data.map((m) => typeof m === "string" ? m : m.id || m.name).filter(Boolean);
           }
           if (models.length > 0) {
+            models = models.filter(m => !m.startsWith("models/gemini-2.5"))
             return {
               valid: true,
               is_loading: ["no-store", "no-cache"].includes(response.headers.get("Cache-Control")),
