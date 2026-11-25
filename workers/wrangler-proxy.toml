@@ -21,6 +21,8 @@
 name = "proxy"
 main = "g4f-space-router.js"
 compatibility_date = "2025-05-30"
+placement = { mode = "targeted", region = "aws:eu-central-1" }
+cache = { enabled = true }
 
 # The deployed g4f.space Workers use custom domains, so keep the same shape
 # here. Using `pattern = "host/*", zone_name = ...` instead would make the

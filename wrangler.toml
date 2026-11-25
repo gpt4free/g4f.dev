@@ -22,6 +22,7 @@
 name = "api"
 main = "workers/g4f-space-router.js"
 compatibility_date = "2025-05-30"
+cache = { enabled = true }
 
 # The apex uses a custom domain so Cloudflare provisions and maintains its DNS
 # record. The router forwards only allowlisted paths to its API/auth modules

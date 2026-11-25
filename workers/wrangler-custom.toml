@@ -18,6 +18,7 @@
 name = "api"
 main = "api-worker.js"
 compatibility_date = "2025-05-30"
+cache = { enabled = true }
 
 # Routes. The main host is attached as a custom domain, matching the deployed
 # g4f.space setup. Provider paths stay on their own Workers in split mode.
