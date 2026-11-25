@@ -1148,7 +1148,7 @@ async function getUser(env, userId) {
   }
   return user;
 }
-var KV_CACHE_TTL = 60 * 1e3;
+var KV_CACHE_TTL = 6e5; // 10min
 var KV_CACHE_MAX = 500;
 var userMemoryCache = new Map();
 var kvMemoryCache = new Map();
