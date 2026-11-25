@@ -970,17 +970,19 @@ async function safe(request, env, ctx) {
             return jsonResponse(entry);
         }
         const fullServer = await getServerById(env, server.id, user);
-        entry.default_model = url.searchParams.get("model") || entry.default_model || getDefaultModel(entry);
-        const result = await validateServer(env, server.base_url, fullServer.api_keys, entry.default_model, true);
+        const result = await validateServer(env, server.base_url, fullServer.api_keys, true);
         entry.base_url = result.base_url || server.base_url;
+        if (result.models && result.models.length > 0) {
+          if (entry.auto_update_models === true && !entry.allowed_models || entry.allowed_models.length === 0) {
+              entry.allowed_models = result.models;
+          }
+        }
+        entry.default_model = url.searchParams.get("model") || entry.default_model || fullServer.default_model || getDefaultModel(entry);
         if (!result.is_loading) entry.allowed_models = result.models || entry.allowed_models;
         entry.test_result = await isOnline(env, result.base_url, fullServer.api_keys, entry.default_model);
         entry.is_offline = !!(entry.test_result && entry.test_result.error);
         entry.is_online = !entry.is_offline;
         entry.is_hidden = HIDDEN_SERVERS.includes(entry.id);
-        if (entry.auto_update_models === true && result.models) {
-            entry.allowed_models = result.models;
-        }
         delete entry.api_keys;
         delete entry.is_loading;
         if (result.is_loading) entry.is_loading = true;
@@ -1298,7 +1300,7 @@ async function handleCreateServer(request, env) {
   body.base_url = baseUrl.toString().replace(/\/$/, "");
   // skip the validation memo — a user creating a server right after fixing it
   // must not be served a stale (up to 5 min old) failure result
-  const validationResult = await validateServer(env, body.base_url, body.api_keys, null, true);
+  const validationResult = await validateServer(env, body.base_url, body.api_keys, true);
   if (!validationResult.valid) {
     return jsonResponse({
       error: `Server validation failed: ${validationResult.error}`,
@@ -1415,7 +1417,7 @@ async function handleUpdateServer(request, env) {
   // When auto_update_models is enabled, refresh the allowed_models from the upstream server
   if (server.auto_update_models !== false) {
     try {
-      const refreshResult = await validateServer(env, server.base_url, server.api_keys, null, true);
+      const refreshResult = await validateServer(env, server.base_url, server.api_keys, true);
       if (refreshResult.valid && refreshResult.models && refreshResult.models.length > 0) {
         server.allowed_models = refreshResult.models;
       }
@@ -3107,8 +3109,8 @@ var validateServerCache = new Map();
 // Memoized wrapper — validateServer is called per server in the public-list
 // refresh loop and on every create/update; a short TTL avoids re-fetching the
 // same upstream repeatedly across requests in a warm isolate.
-async function validateServer(env, baseUrl, apiKeysStr, defaultModel = null, skipCache = false) {
-  const cacheKey = `${baseUrl}|${defaultModel || ""}`;
+async function validateServer(env, baseUrl, apiKeysStr, skipCache = false) {
+  const cacheKey = `${baseUrl}|${apiKeysStr || ""}`;
   const now = Date.now();
   if (!skipCache) {
     const cached = validateServerCache.get(cacheKey);
@@ -3116,7 +3118,7 @@ async function validateServer(env, baseUrl, apiKeysStr, defaultModel = null, ski
       return cached.value;
     }
   }
-  const result = await validateServerUncached(env, baseUrl, apiKeysStr, defaultModel);
+  const result = await validateServerUncached(env, baseUrl, apiKeysStr);
   validateServerCache.set(cacheKey, { time: now, value: result });
   return result;
 }
@@ -3131,7 +3133,7 @@ async function fetchModelEndpoint(env, endpoint, headers, signal) {
     { waitUntil() {} }
   );
 }
-async function validateServerUncached(env, baseUrl, apiKeysStr, defaultModel=null) {
+async function validateServerUncached(env, baseUrl, apiKeysStr) {
   if (baseUrl == "https://api.you.com/v1") {
     return {
       valid: true,
