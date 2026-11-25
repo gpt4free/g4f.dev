@@ -1250,6 +1250,7 @@ async function getBestFreeTextModels(limit = 4) {
   const registry = await getPricingRegistry("text");
   const candidates = [];
   for (const entry of registry) {
+    if (entry.category === "decision") continue;
     if (!isFreeRegistryEntry(entry, "text")) continue;
     const health = entry.health || {};
     candidates.push({ name: entry.name, score: Number(health.success_rate) || 0 });
