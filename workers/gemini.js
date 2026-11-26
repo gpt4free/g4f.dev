@@ -73,7 +73,7 @@ function normalizeModelId(value) {
 }
 
 function isChatModel(model) {
-  if (model.startsWith("models/gemini-2.5")) return false;
+  if (model.id.startsWith("models/gemini-2.5")) return false;
   const id = normalizeModelId(model?.id || model?.name);
   return id.toLowerCase().startsWith("gemini-") &&
     !NON_CHAT_MODEL_PATTERN.test(id) &&
