@@ -1200,7 +1200,6 @@ async function getUser(env, userId) {
 }
 var KV_CACHE_TTL = 6e5; // 10min
 var KV_CACHE_MAX = 500;
-var userMemoryCache = new Map();
 var kvMemoryCache = new Map();
 var membersKvUsageStats = new Map();
 
@@ -1235,10 +1234,10 @@ async function deleteMembersKv(env, key) {
   return env.MEMBERS_KV.delete(key);
 }
 
-async function getCachedKv(env, key) {
+async function getCachedKv(env, key, refresh=false) {
   const now = Date.now();
   const memo = kvMemoryCache.get(key);
-  if (memo && now - memo.time < KV_CACHE_TTL) {
+  if (!refresh && memo && now - memo.time < KV_CACHE_TTL) {
     const stats = getMembersKvStats(key);
     stats.lookups += 1;
     stats.cache_hits += 1;
@@ -1265,7 +1264,6 @@ async function saveUser(env, user) {
   if (env.MEMBERS_KV) {
     await putMembersKv(env, `user:${user.id}`, JSON.stringify(user), { expirationTtl: 3600 });
   }
-  userMemoryCache.set(user.id, { time: Date.now(), value: user });
 }
 function toSafeServer(s) {
   return {
@@ -1283,7 +1281,8 @@ function toSafeServer(s) {
 async function handleListServers(request, env, user) {
   let servers = [];
   if (user) {
-    servers = user.custom_servers || [];
+    const newUser = await getCachedKv(env, `user:${user.id}`, true);
+    servers = (newUser && newUser.custom_servers) || [];
   }
   const safeServers = user && user.tier === "admin" ? servers : servers.map(toSafeServer);
   // A server can be published to the public index without being present in
