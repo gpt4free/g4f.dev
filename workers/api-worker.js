@@ -1984,8 +1984,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
           // of rejecting, otherwise outdated client model names keep 400-ing
           // and flood the error log.
           const defaultModel = getDefaultModel(server);
-          const remappedModel = findAllowedModel(server.allowed_models, requestModel)
-            || (defaultModel && server.allowed_models.includes(defaultModel) ? defaultModel : null);
+          const remappedModel = findAllowedModel(server.allowed_models, requestModel) || defaultModel;
           if (remappedModel) {
             logs["model-remap"] = `${requestModel} -> ${remappedModel}`;
             requestModel = remappedModel;
