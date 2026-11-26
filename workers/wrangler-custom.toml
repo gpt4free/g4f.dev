@@ -99,3 +99,9 @@ crons = ["*/15 * * * *"]  # Every 15 minutes
 # Development settings
 [dev]
 port = 8788
+
+[observability]
+enabled = false
+
+[observability.issues]
+enabled = true

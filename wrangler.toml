@@ -96,3 +96,6 @@ port = 8788
 
 [observability]
 enabled = false
+
+[observability.issues]
+enabled = true

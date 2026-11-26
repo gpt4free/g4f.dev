@@ -30,7 +30,7 @@ const USER = {
   custom_servers: []
 };
 
-function makeEnv(usageRows, errorRows) {
+function makeEnv(usageRows, errorEntries) {
   let usageCalls = 0;
   let errorCalls = 0;
   const db = (rows, onCall) => ({
@@ -57,13 +57,16 @@ function makeEnv(usageRows, errorRows) {
           });
         }
         if (key === `user:${USER.id}`) return JSON.stringify(USER);
+        if (key === "error_logs_index") {
+          errorCalls++;
+          return JSON.stringify(errorEntries);
+        }
         return null;
       },
       async put() {},
       async delete() {}
     },
     USAGE_DB: db(usageRows, () => usageCalls++),
-    ERRORS_DB: db(errorRows, () => errorCalls++),
     get usageCalls() { return usageCalls; },
     get errorCalls() { return errorCalls; }
   };
@@ -84,14 +87,20 @@ async function getStats(path, env, headers = { Authorization: `Bearer ${SESSION}
 
 // 1. Usage and error rows are merged into per-server and per-model success
 // rates. A server/model pair with no errors keeps a rate of 1.
+const recentTs = new Date().toISOString();
 const env = makeEnv(
   [
     { server: "custom:srv_a", model: "model-a", requests: 90, tokens: 900 },
     { server: "custom:srv_b", model: "model-b", requests: 10, tokens: 100 }
   ],
-  [
-    { server: "custom:srv_a", model: "model-a", errors: 10 }
-  ]
+  Array.from({ length: 10 }, (_, i) => ({
+    id: `err_${i}`,
+    timestamp: recentTs,
+    source: "upstream",
+    status: 500,
+    message: "fail",
+    context: { server: "custom:srv_a", model: "model-a" }
+  }))
 );
 
 let response = await getStats("/api/stats", env);
@@ -141,24 +150,18 @@ assert.equal(anonymousEnv.usageCalls, 0);
 assert.equal(anonymousEnv.errorCalls, 0);
 console.log("PASS: /api/stats requires authentication");
 
-// 4. If one database is unavailable the other half is still returned and the
+// 4. If error index lookup fails the usage half is still returned and the
 // payload is marked partial.
 const partialEnv = makeEnv(
   [{ server: "custom:srv_a", model: "model-a", requests: 4, tokens: 0 }],
   []
 );
-partialEnv.ERRORS_DB = {
-  prepare() {
-    return {
-      bind() {
-        return {
-          async all() {
-            throw new Error("ERRORS_DB unavailable");
-          }
-        };
-      }
-    };
+const origGet = partialEnv.MEMBERS_KV.get;
+partialEnv.MEMBERS_KV.get = async (key) => {
+  if (key === "error_logs_index") {
+    throw new Error("MEMBERS_KV unavailable");
   }
+  return origGet(key);
 };
 response = await getStats("/api/stats?hours=1", partialEnv);
 assert.equal(response.status, 200);

@@ -259,7 +259,7 @@ async function handleCorsProxy(request, env, ctx, pathname, rateCheck) {
   try {
     response = await fetch(targetUrl.toString(), init);
   } catch (error) {
-    ctx.waitUntil(persistErrorToDb(env, error, {
+    ctx.waitUntil(persistErrorToKv(env, error, {
       source: "proxy",
       status: 502,
       pathname,
@@ -681,7 +681,7 @@ async function safe(request, env, ctx) {
     const url = new URL(request.url);
     let pathname = url.pathname;
     // Set the module-level request context so jsonResponse can persist any
-    // error response (status >= 400) to ERRORS_DB. Reset on every fetch.
+    // error response (status >= 400) to the KV error index. Reset on every fetch.
     currentRequestContext = { request, env, ctx, pathname, skipErrorLog: false };
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: getCorsHeaders(request) });
@@ -717,7 +717,7 @@ async function safe(request, env, ctx) {
       }
     } catch (error) {
         console.error("User error:", error);
-        ctx.waitUntil(persistErrorToDb(env, error, {
+        ctx.waitUntil(persistErrorToKv(env, error, {
           source: "authenticate",
           status: 500,
           pathname,
@@ -787,7 +787,7 @@ async function safe(request, env, ctx) {
         }
       } catch (error) {
         console.error("Rate check error:", error);
-        ctx.waitUntil(persistErrorToDb(env, error, {
+        ctx.waitUntil(persistErrorToKv(env, error, {
           source: "rate_check",
           status: 500,
           pathname,
@@ -852,7 +852,7 @@ async function safe(request, env, ctx) {
             try {
               return await handleModels(request, env, ctx, server.id, user, server, cacheKey, userProvidedKey);
             } catch(error) {
-              ctx.waitUntil(persistErrorToDb(env, error, {
+              ctx.waitUntil(persistErrorToKv(env, error, {
                 source: "server_model",
                 status: 500,
                 pathname,
@@ -872,7 +872,7 @@ async function safe(request, env, ctx) {
         }
       } catch (error) {
         console.error("Server map error:", error);
-        ctx.waitUntil(persistErrorToDb(env, error, {
+        ctx.waitUntil(persistErrorToKv(env, error, {
           source: "server_map",
           status: 500,
           pathname, 
@@ -1054,7 +1054,7 @@ async function safe(request, env, ctx) {
       return await proxyToPassG4f(request, env, pathname, url.search, user, cacheKey, ctx);
     } catch (error) {
       console.error("Custom worker error:", error);
-      ctx.waitUntil(persistErrorToDb(env, error, {
+      ctx.waitUntil(persistErrorToKv(env, error, {
         source: "fetch",
         status: 500,
         pathname,
@@ -1111,18 +1111,6 @@ var custom_worker_default = {
         console.log(`Cron cleanup: Deleted ${result.meta?.changes || 0} usage logs older than 14 days`);
       } catch (e) {
         console.error("Failed to cleanup old usage logs:", e);
-      }
-    }
-    // Delete error logs older than 30 days (hourly runs only)
-    if (hourly && env.ERRORS_DB) {
-      try {
-        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-        const result = await env.ERRORS_DB.prepare(
-          `DELETE FROM error_logs WHERE timestamp < ?`
-        ).bind(thirtyDaysAgo).run();
-        console.log(`Cron cleanup: Deleted ${result.meta?.changes || 0} error logs older than 30 days`);
-      } catch (e) {
-        console.error("Failed to cleanup old error logs:", e);
       }
     }
   }
@@ -1977,6 +1965,13 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
       if (!requestModel || requestModel === "auto" || requestModel === "default") {
         requestModel = getDefaultModel(server, requestBody.messages);
       }
+      if (requestModel === "llama-3.3-70b-versatile") {
+        requestModel = "openai/gpt-oss-120b";
+      } else if (requestModel === "models/gemini-2.5-flash-lite") {
+        requestModel = "models/gemini-3.5-flash-lite";
+      } else if (requestModel === "models/gemini-2.5-flash") {
+        requestModel = "models/gemini-3.5-flash";
+      }
       if (requestModel) {
           requestBody.model = requestModel;
       }
@@ -2005,10 +2000,11 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
                 type: "model_not_allowed"
               }
             }, 400, {
-              "X-Url": server.base_url + subPath,
-              "X-Server": server.id,
-              "X-Provider": server.label,
-              "X-User-Id": user && user.id,
+              "x-url": server.base_url + subPath,
+              "x-model": requestModel,
+              "x-server": server.id,
+              "x-provider": server.label,
+              "x-user-id": user && user.id,
               ...getCorsHeaders(request)
             });
             ctx.waitUntil(setCachedModelError(request, ctx, notAllowedPathname, requestModel, notAllowedResponse, server.id, user?.id));
@@ -2033,6 +2029,7 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
     "accept": request.headers.get("accept"),
     "user-agent": request.headers.get("user-agent"),
     "content-type": request.headers.get("content-type") || "application/json",
+    "x-model": requestBody.model,
     "x-secret": request.headers.get("x-secret"),
     "x-user": xUser,
     "x-user-tier": user && user.tier,
@@ -2248,10 +2245,10 @@ async function handleProxyToServer(request, env, ctx, server, subPath, cacheKey,
           upstreamMessage = `Bad Request: ${upstreamMessage} with ${JSON.stringify(firstMessage.split("\n")[0])}`;
         }
         const message = `Upstream ${response.status}${upstreamMessage ? `: ${upstreamMessage}` : ""}`;
-        return persistErrorToDb(env, new Error(message), errorContext);
+        return persistErrorToKv(env, new Error(message), errorContext);
       }).catch((error) => {
         console.error("Failed to read upstream error body:", error);
-        return persistErrorToDb(env, new Error(`Upstream ${response.status}`), errorContext);
+        return persistErrorToKv(env, new Error(`Upstream ${response.status}`), errorContext);
       }));
     }
     const contentType = (response.headers.get("content-type") || "").split(";")[0];
@@ -2501,82 +2498,102 @@ async function persistUsageToDb(env, clientIP, provider, model, tokensUsed, prom
     console.error("Failed to persist usage:", e);
   }
 }
-// Persist an error event to the ERRORS_DB D1 table so it can be inspected
-// via the /api/errors endpoint. Mirrors persistUsageToDb but stores error
-// metadata (status, message, stack, source) instead of token usage. Best-effort:
-// never throws to the caller.
-async function persistErrorToDb(env, error, context = {}) {
-  if (!env.ERRORS_DB) return;
-  try {
+var ERROR_LOGS_KV_KEY = "error_logs_index";
+var ERROR_LOGS_MAX = 200;
+var errorLogWriteChain = Promise.resolve();
+
+// Persist an error event to the MEMBERS_KV error index (retaining only the
+// last ERROR_LOGS_MAX entries) so it can be inspected via /api/errors and
+// aggregated by /api/stats. Best-effort: never throws to the caller.
+async function persistErrorToKv(env, error, context = {}) {
+  if (!env.MEMBERS_KV) return;
+  const run = errorLogWriteChain.then(async () => {
     const ts = (/* @__PURE__ */ new Date()).toISOString();
-    // Keep server/model machine-readable inside the existing `context` JSON
-    // column so /api/stats can group errors without a schema migration.
+    // Keep server/model machine-readable inside `context` so /api/stats can
+    // group errors consistently.
     const meta = context.context && typeof context.context === "object"
       ? { ...context.context }
       : {};
     if (context.server) meta.server = context.server;
     if (context.model) meta.model = context.model;
     if (context.colo) meta.colo = context.colo;
-    await env.ERRORS_DB.prepare(
-      `INSERT INTO error_logs (timestamp, source, status, message, stack, pathname, method, ip, user_id, user_tier, user_agent, request_id, context)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(
-      ts,
-      context.source || "unknown",
-      context.status || 500,
-      (error && error.message) ? String(error.message).substring(0, 1000) : String(error).substring(0, 1000),
-      (error && error.stack) ? String(error.stack).substring(0, 4000) : null,
-      context.pathname || null,
-      context.method || null,
-      context.ip || null,
-      context.userId || null,
-      context.userTier || null,
-      context.userAgent ? String(context.userAgent).substring(0, 500) : null,
-      context.requestId || null,
-      Object.keys(meta).length ? JSON.stringify(meta).substring(0, 2000) : null
-    ).run();
-  } catch (e) {
+    const entry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: ts,
+      source: context.source || "unknown",
+      status: context.status || 500,
+      message: (error && error.message) ? String(error.message).substring(0, 1000) : String(error).substring(0, 1000),
+      stack: (error && error.stack) ? String(error.stack).substring(0, 4000) : null,
+      pathname: context.pathname || null,
+      method: context.method || null,
+      ip: context.ip || null,
+      user_id: context.userId || null,
+      user_tier: context.userTier || null,
+      user_agent: context.userAgent ? String(context.userAgent).substring(0, 500) : null,
+      request_id: context.requestId || null,
+      context: Object.keys(meta).length ? meta : null
+    };
+    let entries = [];
+    try {
+      const raw = await getMembersKv(env, ERROR_LOGS_KV_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) entries = parsed;
+      }
+    } catch (e) {
+      entries = [];
+    }
+    entries.unshift(entry);
+    if (entries.length > ERROR_LOGS_MAX) {
+      entries.length = ERROR_LOGS_MAX;
+    }
+    await putMembersKv(env, ERROR_LOGS_KV_KEY, JSON.stringify(entries));
+  }).catch((e) => {
     console.error("Failed to persist error:", e);
-  }
+  });
+  errorLogWriteChain = run;
+  return run;
 }
-// GET /api/errors — list recent tracked errors from the ERRORS_DB D1 table.
+// GET /api/errors — list recent tracked errors from the KV error index.
 // Query params:
 //   limit  (1-200, default 50)  — max rows to return
 //   source (string)             — filter by source (fetch, handleV1ChatCompletions, ...)
 //   status (number)             — filter by HTTP status code
 //   since  (ISO 8601)           — only rows newer than this timestamp
-// Requires a signed-in user (the same gate as /api/logs). Returns newest first.
+// Returns newest first.
 async function handleApiErrors(request, env, user) {
-  // Error logs contain IPs, user agents, user IDs and stack traces — the
-  // comment below promised a sign-in gate but none was ever enforced and the
-  // endpoint was called before authentication ran (user was always null).
-  if (!env.ERRORS_DB) {
-    return jsonResponse({ error: "Error tracking not configured (ERRORS_DB binding missing)" }, 503);
+  if (!env.MEMBERS_KV) {
+    return jsonResponse({ error: "Error tracking not configured (MEMBERS_KV binding missing)" }, 503);
   }
   const url = new URL(request.url);
-  const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "50", 10) || 50, 1), 200);
-  const where = [];
-  const binds = [];
+  const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "50", 10) || 50, 1), ERROR_LOGS_MAX);
   const source = url.searchParams.get("source");
-  if (source) { where.push("source = ?"); binds.push(source); }
-  const status = url.searchParams.get("status");
-  if (status) { where.push("status = ?"); binds.push(parseInt(status, 10)); }
+  const statusParam = url.searchParams.get("status");
+  const statusFilter = statusParam ? parseInt(statusParam, 10) : null;
   const since = url.searchParams.get("since");
-  if (since) { where.push("timestamp > ?"); binds.push(since); }
-  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
   try {
-    const result = await env.ERRORS_DB.prepare(
-      `SELECT id, timestamp, source, status, message, pathname, method, user_id, user_tier, request_id, context
-       FROM error_logs ${whereSql}
-       ORDER BY timestamp DESC
-       LIMIT ?`
-    ).bind(...binds, limit).all();
-    const countResult = await env.ERRORS_DB.prepare(
-      `SELECT COUNT(*) AS total FROM error_logs ${whereSql}`
-    ).bind(...binds).first();
+    const raw = await getMembersKv(env, ERROR_LOGS_KV_KEY);
+    let entries = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(entries)) entries = [];
+    if (source) entries = entries.filter((e) => e && e.source === source);
+    if (statusParam) entries = entries.filter((e) => e && e.status === statusFilter);
+    if (since) entries = entries.filter((e) => e && e.timestamp > since);
+    const data = entries.slice(0, limit).map((e) => ({
+      id: e.id ?? null,
+      timestamp: e.timestamp,
+      source: e.source,
+      status: e.status,
+      message: e.message,
+      pathname: e.pathname,
+      method: e.method,
+      user_id: e.user_id,
+      user_tier: e.user_tier,
+      request_id: e.request_id,
+      context: e.context && typeof e.context === "object" ? JSON.stringify(e.context) : (e.context ?? null)
+    }));
     return jsonResponse({
-      data: result.results || [],
-      total: countResult?.total || 0,
+      data,
+      total: entries.length,
       limit
     });
   } catch (e) {
@@ -2585,18 +2602,18 @@ async function handleApiErrors(request, env, user) {
   }
 }
 // GET /api/stats — aggregate request/error counts and success rates per
-// server and per model from the existing D1 tables (USAGE_DB + ERRORS_DB).
+// server and per model from USAGE_DB and the KV error index.
 //
 // Query params:
 //   hours (1-336, default 24) — lookback window
 //   since (ISO 8601)          — explicit lower bound, overrides hours
 //
-// Resource usage: both tables are aggregated with GROUP BY in D1 instead of
+// Resource usage: USAGE_DB is aggregated with GROUP BY in D1 instead of
 // streaming raw rows into the Worker, and the JSON result is cached at the
 // edge for API_STATS_CACHE_TTL seconds, so dashboards can poll cheaply.
 //
-// Errors are tagged with their server/model in the `context` JSON column by
-// persistErrorToDb (see jsonResponse/handleProxyToServer). Older rows that
+// Errors are tagged with their server/model in `context` by
+// persistErrorToKv (see jsonResponse/handleProxyToServer). Older entries that
 // lack those fields fall back to the pathname / "unknown".
 var API_STATS_CACHE_TTL = 60;
 var STATS_MAX_HOURS = 14 * 24;
@@ -2613,8 +2630,8 @@ function ensureStatsRow(map, key) {
   return row;
 }
 async function handleApiStats(request, env, user, ctx) {
-  if (!env.USAGE_DB && !env.ERRORS_DB) {
-    return jsonResponse({ error: "Statistics not configured (USAGE_DB/ERRORS_DB bindings missing)" }, 503);
+  if (!env.USAGE_DB && !env.MEMBERS_KV) {
+    return jsonResponse({ error: "Statistics not configured (USAGE_DB/MEMBERS_KV bindings missing)" }, 503);
   }
   const url = new URL(request.url);
   const explicitSince = url.searchParams.get("since");
@@ -2649,25 +2666,34 @@ async function handleApiStats(request, env, user, ctx) {
     })
     : Promise.resolve(null);
 
-  // json_valid() guards older rows whose context is not JSON.
-  const errorsQuery = env.ERRORS_DB
-    ? env.ERRORS_DB.prepare(
-      `SELECT
-         COALESCE(
-           NULLIF(CASE WHEN json_valid(context) THEN json_extract(context, '$.server') END, ''),
-           NULLIF(CASE WHEN json_valid(context) THEN json_extract(context, '$.provider') END, ''),
-           NULLIF(pathname, ''),
-           'unknown'
-         ) AS server,
-         COALESCE(
-           NULLIF(CASE WHEN json_valid(context) THEN json_extract(context, '$.model') END, ''),
-           'unknown'
-         ) AS model,
-         COUNT(*) AS errors
-       FROM error_logs
-       WHERE timestamp > ?
-       GROUP BY server, model`
-    ).bind(since).all().catch((e) => {
+  const errorsQuery = env.MEMBERS_KV
+    ? getMembersKv(env, ERROR_LOGS_KV_KEY).then((raw) => {
+      if (!raw) return [];
+      const entries = JSON.parse(raw);
+      if (!Array.isArray(entries)) return [];
+      const counts = new Map();
+      for (const entry of entries) {
+        if (!entry || !entry.timestamp || entry.timestamp <= since) continue;
+        let meta = entry.context;
+        if (typeof meta === "string") {
+          try {
+            meta = JSON.parse(meta);
+          } catch {
+            meta = null;
+          }
+        }
+        const server = (meta && typeof meta === "object" && (meta.server || meta.provider)) || entry.pathname || "unknown";
+        const model = (meta && typeof meta === "object" && meta.model) || "unknown";
+        const key = `${server}\0${model}`;
+        let row = counts.get(key);
+        if (!row) {
+          row = { server, model, errors: 0 };
+          counts.set(key, row);
+        }
+        row.errors += 1;
+      }
+      return Array.from(counts.values());
+    }).catch((e) => {
       errorsFailed = true;
       console.error("Failed to aggregate error stats:", e);
       return null;
@@ -2680,7 +2706,7 @@ async function handleApiStats(request, env, user, ctx) {
     return jsonResponse({ error: "Failed to calculate statistics" }, 500);
   }
   usageRows = (usageResult && usageResult.results) || [];
-  errorRows = (errorResult && errorResult.results) || [];
+  errorRows = errorResult || [];
 
   const servers = new Map();
   const models = new Map();
@@ -4132,13 +4158,13 @@ async function handleV1Models(request, env, user) {
   return jsonResponse(payload);
 }
 // Module-level request context set at the start of each fetch. jsonResponse
-// reads this to persist any error response (status >= 400) to ERRORS_DB.
-// catch blocks that already call persistErrorToDb set `skipErrorLog` to avoid
+// reads this to persist any error response (status >= 400) to the KV error index.
+// catch blocks that already call persistErrorToKv set `skipErrorLog` to avoid
 // double-logging the same event.
 var currentRequestContext = null;
 // Error types that are client-side misconfigurations and repeat constantly
 // (each unique user/IP logs once per error-cache TTL). They are returned to
-// the caller but not persisted to ERRORS_DB, which they previously flooded.
+// the caller but not persisted to the error index, which they previously flooded.
 var UNLOGGED_ERROR_TYPES = new Set([
   "authentication_required",
   "model_not_allowed",
@@ -4161,7 +4187,7 @@ function jsonResponse(data, status = 200, headers = {}) {
       const message = typeof data?.error === "string"
         ? data.error
         : (data?.error?.message || JSON.stringify(data?.error || data));
-      ctx.waitUntil(persistErrorToDb(env, new Error(message), {
+      ctx.waitUntil(persistErrorToKv(env, new Error(message), {
         source: "jsonResponse",
         status,
         pathname: currentRequestContext.pathname,
@@ -4355,7 +4381,7 @@ async function getCachedModelError(request, pathname, model, serverId = null, us
   return null;
 }
 // Store an error response created by jsonResponse (which logged it once to
-// ERRORS_DB). Cached hits bypass jsonResponse, so repeats are not logged.
+// the KV error index). Cached hits bypass jsonResponse, so repeats are not logged.
 async function setCachedModelError(request, ctx, pathname, model, response, serverId = null, userId = null) {
   try {
     const responseToCache = response.clone();
