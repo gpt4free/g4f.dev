@@ -907,22 +907,65 @@ var USER_TIER_LIMITS = {
         console.log("Starting scheduled tier update...");
         
         try {
-            // Fetch contributors and sponsors
-            const [contributors, sponsors] = await Promise.all([
-                fetchContributors(env),
-                fetchSponsors()
-            ]);
+            const CRON_CURSOR_KEY = "cron:tier_update_cursor";
+            const CRON_TIER_LISTS_CACHE_KEY = "cron:tier_lists_cache";
+            const batchSize = Math.max(
+                1,
+                Math.min(parseInt(env.CRON_USER_BATCH_SIZE || "8", 10) || 8, 100)
+            );
+
+            // Fetch contributors and sponsors (cached in KV for 1 hour to stay
+            // within Cloudflare Workers' per-invocation subrequest limit).
+            let contributors = null;
+            let sponsors = null;
+            if (env.MEMBERS_KV) {
+                try {
+                    const cachedLists = await env.MEMBERS_KV.get(CRON_TIER_LISTS_CACHE_KEY, { type: "json" });
+                    if (cachedLists && Array.isArray(cachedLists.contributors) && Array.isArray(cachedLists.sponsors)) {
+                        contributors = cachedLists.contributors;
+                        sponsors = cachedLists.sponsors;
+                    }
+                } catch (e) { /* fall through to fetch */ }
+            }
+            if (!contributors || !sponsors) {
+                [contributors, sponsors] = await Promise.all([
+                    fetchContributors(env),
+                    fetchSponsors()
+                ]);
+                if (env.MEMBERS_KV) {
+                    try {
+                        await env.MEMBERS_KV.put(
+                            CRON_TIER_LISTS_CACHE_KEY,
+                            JSON.stringify({ contributors, sponsors }),
+                            { expirationTtl: 3600 }
+                        );
+                    } catch (e) { /* non-fatal */ }
+                }
+            }
             
-            console.log(`Fetched ${contributors.length} contributors and ${sponsors.length} sponsors`);
-            
-            // Iterate through all users in R2, handling pagination.
-            let listResult = await env.MEMBERS_BUCKET.list({ prefix: "users/", limit: 100 });
+            console.log(`Loaded ${contributors.length} contributors and ${sponsors.length} sponsors`);
+
+            // Process one bounded batch of users per invocation using a persisted
+            // R2 cursor so large user buckets never exceed Cloudflare's API
+            // request limit per Worker invocation.
+            let cursor = undefined;
+            if (env.MEMBERS_KV) {
+                try {
+                    cursor = (await env.MEMBERS_KV.get(CRON_CURSOR_KEY)) || undefined;
+                } catch (e) { /* start from beginning */ }
+            }
+
+            const listResult = await env.MEMBERS_BUCKET.list({
+                prefix: "users/",
+                limit: batchSize,
+                ...(cursor ? { cursor } : {})
+            });
             let updatedCount = 0;
             let errorCount = 0;
             let deletedCount = 0;
             let unusedCount = 0;
             
-            while (listResult && Array.isArray(listResult.objects)) {
+            if (listResult && Array.isArray(listResult.objects)) {
                 for (const object of listResult.objects) {
                     try {
                         // Skip non-JSON files
@@ -953,11 +996,13 @@ var USER_TIER_LIMITS = {
                             continue;
                         }
 
-                        // Repair missing lookup indexes (accounts created before
-                        // the index existed, or profiles without a username).
-                        const lookupChanged = await ensureUserLookupIndexes(env, user);
-                        if (lookupChanged) {
-                            await saveUser(env, user);
+                        // Repair missing lookup indexes only when username is missing
+                        // to avoid extra KV round-trips on every user every run.
+                        if (!user.username) {
+                            const lookupChanged = await ensureUserLookupIndexes(env, user);
+                            if (lookupChanged) {
+                                await saveUser(env, user);
+                            }
                         }
 
                         const newTier = await calculateUserTier(user, contributors, sponsors);
@@ -991,41 +1036,45 @@ var USER_TIER_LIMITS = {
                         errorCount++;
                     }
                 }
-                
-                if (!listResult.truncated || !listResult.cursor) {
-                    break;
+            }
+
+            if (env.MEMBERS_KV) {
+                try {
+                    if (listResult && listResult.truncated && listResult.cursor) {
+                        await env.MEMBERS_KV.put(CRON_CURSOR_KEY, listResult.cursor, {
+                            expirationTtl: 24 * 60 * 60
+                        });
+                    } else if (cursor) {
+                        await env.MEMBERS_KV.delete(CRON_CURSOR_KEY);
+                    }
+                } catch (e) {
+                    console.error("Failed to persist cron cursor:", e);
                 }
-                listResult = await env.MEMBERS_BUCKET.list({ prefix: "users/", limit: 100, cursor: listResult.cursor });
             }
             
-            console.log(`Scheduled tier update complete: ${updatedCount} users updated, ${deletedCount} deleted, ${unusedCount} unused removed, ${errorCount} errors`);
+            console.log(`Scheduled tier update batch complete: ${updatedCount} users updated, ${deletedCount} deleted, ${unusedCount} unused removed, ${errorCount} errors${listResult?.truncated ? " (more remaining)" : " (scan complete)"}`);
 
-            // Proactively refresh the recent-users feed cache so public
-            // requests stay on the fast path after the cron run
-            if (env.MEMBERS_BUCKET && env.MEMBERS_KV) {
+            // Proactively refresh the recent-users feed cache from the KV
+            // registration index so public requests stay on the fast path
+            // without triggering an expensive R2 scan.
+            if (env.MEMBERS_KV) {
                 try {
-                    const users = await refreshRecentUsersCache(env, 20);
-                    await env.MEMBERS_KV.put(RECENT_USERS_CACHE_KEY, JSON.stringify({ users }), {
-                        expirationTtl: RECENT_USERS_CACHE_TTL
-                    });
-                    // Keep the registration index aligned with the scan
-                    // (covers users created before the index existed)
-                    const index = await readRecentUserIndex(env) || [];
-                    const known = new Set(index.map(u => u && u.id));
-                    for (const u of users) {
-                        if (!known.has(u.id)) {
-                            index.push(u);
-                            known.add(u.id);
-                        }
+                    const index = await readRecentUserIndex(env);
+                    if (index && index.length > 0) {
+                        await env.MEMBERS_KV.put(
+                            RECENT_USERS_CACHE_KEY,
+                            JSON.stringify({ users: index.slice(0, 20) }),
+                            { expirationTtl: RECENT_USERS_CACHE_TTL }
+                        );
+                    } else if (env.MEMBERS_BUCKET) {
+                        const users = await refreshRecentUsersCache(env, 20);
+                        await env.MEMBERS_KV.put(RECENT_USERS_CACHE_KEY, JSON.stringify({ users }), {
+                            expirationTtl: RECENT_USERS_CACHE_TTL
+                        });
+                        await env.MEMBERS_KV.put(RECENT_USERS_INDEX_KEY, JSON.stringify({ users: users.slice(0, RECENT_USERS_INDEX_MAX) }), {
+                            expirationTtl: 30 * 24 * 60 * 60
+                        });
                     }
-                    index.sort((a, b) => {
-                        const ta = a && a.created_at ? new Date(a.created_at).getTime() : 0;
-                        const tb = b && b.created_at ? new Date(b.created_at).getTime() : 0;
-                        return tb - ta;
-                    });
-                    await env.MEMBERS_KV.put(RECENT_USERS_INDEX_KEY, JSON.stringify({ users: index.slice(0, RECENT_USERS_INDEX_MAX) }), {
-                        expirationTtl: 30 * 24 * 60 * 60
-                    });
                 } catch (e) {
                     console.error("Failed to refresh recent-users cache:", e);
                 }
@@ -3777,7 +3826,7 @@ ${buttonsHtml}
       pages++;
     } while (cursor && pages < 100);
 
-    for (let i = keys.length - 1; i >= 0 && users.length < limit * 4; i--) {
+    for (let i = keys.length - 1; i >= 0 && users.length < limit; i--) {
       try {
         const userObject = await env.MEMBERS_BUCKET.get(keys[i]);
         if (!userObject) continue;

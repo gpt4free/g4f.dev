@@ -318,3 +318,91 @@ console.log("PASS: pro upgrade webhook upgrades user, updates API key cache, and
   }
 }
 console.log("PASS: pro status and verify fallback upgrade user from approved GitHub issue");
+
+// Scheduled tier update paginates across runs via KV cursor and stays within
+// Cloudflare Workers' per-invocation API/subrequest limit.
+{
+  let apiRequests = 0;
+  const baseEnv = makeEnv();
+  const countingKv = {
+    get: async (k, opts) => { apiRequests++; return baseEnv.MEMBERS_KV.get(k, opts); },
+    put: async (k, v, opts) => { apiRequests++; return baseEnv.MEMBERS_KV.put(k, v, opts); },
+    delete: async (k) => { apiRequests++; return baseEnv.MEMBERS_KV.delete(k); },
+    list: async (opts) => { apiRequests++; return baseEnv.MEMBERS_KV.list(opts); }
+  };
+  const countingBucket = {
+    get: async (k) => { apiRequests++; return baseEnv.MEMBERS_BUCKET.get(k); },
+    put: async (k, v) => { apiRequests++; return baseEnv.MEMBERS_BUCKET.put(k, v); },
+    delete: async (k) => { apiRequests++; return baseEnv.MEMBERS_BUCKET.delete(k); },
+    list: async (opts) => { apiRequests++; return baseEnv.MEMBERS_BUCKET.list(opts); }
+  };
+  const env = {
+    MEMBERS_KV: countingKv,
+    MEMBERS_BUCKET: countingBucket,
+    CRON_USER_BATCH_SIZE: "5"
+  };
+
+  // Seed 12 users (> batchSize of 5) that are older than 24h and still "new"
+  const oldDate = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  const recentIndex = [];
+  for (let i = 0; i < 12; i++) {
+    const id = `u_cron_${String(i).padStart(2, "0")}`;
+    await baseEnv.MEMBERS_BUCKET.put(`users/${id}.json`, JSON.stringify({
+      id,
+      username: `user-${i}`,
+      provider: "github",
+      provider_id: `gh-${i}`,
+      tier: "new",
+      created_at: oldDate,
+      last_login: oldDate,
+      api_keys: []
+    }));
+    recentIndex.push({ id, username: `user-${i}`, provider: "github", tier: "new", created_at: oldDate });
+  }
+  await baseEnv.MEMBERS_KV.put("recent_users_index", JSON.stringify({ users: recentIndex }));
+
+  let fetchCalls = 0;
+  const prevFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    fetchCalls++;
+    apiRequests++;
+    if (String(url).includes("contributors")) {
+      return new Response(JSON.stringify([]), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    return new Response(JSON.stringify({ sponsors: { current: [], past: [] } }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  };
+
+  try {
+    // Run 1: processes first 5 users, saves cursor, caches contributors/sponsors
+    apiRequests = 0;
+    await authWorker.scheduled({ scheduledTime: Date.now() }, env, ctx);
+    assert.ok(apiRequests <= 30, `Run 1 should stay well under 50 API requests (got ${apiRequests})`);
+    assert.equal(fetchCalls, 2, "Run 1 fetches contributors and sponsors once");
+    assert.ok(await baseEnv.MEMBERS_KV.get("cron:tier_update_cursor"), "Run 1 persists cursor");
+
+    // Run 2: processes next 5 users using cached contributors/sponsors
+    apiRequests = 0;
+    await authWorker.scheduled({ scheduledTime: Date.now() }, env, ctx);
+    assert.ok(apiRequests <= 30, `Run 2 should stay well under 50 API requests (got ${apiRequests})`);
+    assert.equal(fetchCalls, 2, "Run 2 reuses cached contributors and sponsors");
+    assert.ok(await baseEnv.MEMBERS_KV.get("cron:tier_update_cursor"), "Run 2 persists cursor");
+
+    // Run 3: processes remaining 2 users and clears cursor
+    apiRequests = 0;
+    await router.scheduled({ scheduledTime: Date.now() }, env, ctx);
+    assert.ok(apiRequests <= 30, `Run 3 should stay well under 50 API requests (got ${apiRequests})`);
+    assert.equal(await baseEnv.MEMBERS_KV.get("cron:tier_update_cursor"), null, "Run 3 clears cursor at end of scan");
+
+    for (let i = 0; i < 12; i++) {
+      const id = `u_cron_${String(i).padStart(2, "0")}`;
+      const saved = await (await baseEnv.MEMBERS_BUCKET.get(`users/${id}.json`)).json();
+      assert.equal(saved.tier, "free", `User ${id} should be upgraded to free across paginated runs`);
+    }
+  } finally {
+    globalThis.fetch = prevFetch;
+  }
+}
+console.log("PASS: scheduled tier update paginates across runs within subrequest limits");
