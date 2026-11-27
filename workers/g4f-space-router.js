@@ -228,7 +228,7 @@ export default {
       if (isApiPath(pathname)) {
         return withVersion(notFoundResponse());
       }
-      return Response.redirect(`https://g4f.dev/${pathname}`, 301);
+      return Response.redirect(`https://g4f.dev${pathname}`, 301);
     }
     if (url.pathname === "/api/version" || url.pathname === "/version") {
       return versionResponse(apiEnv(env));
