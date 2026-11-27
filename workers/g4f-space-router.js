@@ -229,7 +229,7 @@ export default {
         return withVersion(Response.json({...Object.fromEntries(request.headers.entries())}, {headers: {"Cache-Control": "no-store"}}));
     }
     if (pathname === "/country-ip") {
-        return withVersion(Response.json({country: request.cf.country}, {headers: {"Cache-Control": "no-store"}}));
+        return withVersion(Response.json({country: request.cf.country, colo: request.cf.colo}, {headers: {"Cache-Control": "no-store"}}));
     }
     if ((host === "g4f.space" && !isG4fSpaceApiPath(pathname)) || pathname.startsWith("/.") || pathname.startsWith("/_") || pathname.endsWith(".py") || pathname.endsWith(".php")) {
       if (isApiPath(pathname)) {
