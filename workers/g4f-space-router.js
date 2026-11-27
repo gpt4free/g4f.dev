@@ -225,6 +225,12 @@ export default {
     const url = new URL(request.url);
     const host = url.hostname.toLowerCase();
     const pathname = url.pathname;
+    if (pathname === "/headers") {
+        return withVersion(Response.json({...Object.fromEntries(request.headers.entries(}));
+    }
+    if (pathname === "/country-ip") {
+        return withVersion(Response.json({country: request.cf.country}));
+    }
     if ((host === "g4f.space" && !isG4fSpaceApiPath(pathname)) || pathname.startsWith("/.") || pathname.startsWith("/_") || pathname.endsWith(".py") || pathname.endsWith(".php")) {
       if (isApiPath(pathname)) {
         return withVersion(notFoundResponse());
