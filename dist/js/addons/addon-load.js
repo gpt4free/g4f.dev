@@ -162,10 +162,12 @@ async function on_api() {
         }
 
         set_favorite_providers();
+        removeUrlParams(["provider", "model"]);
     } else {
         await load_provider_login_urls(providersListContainer, providers);
         await load_settings({});
         await initClient();
+        removeUrlParams(["provider", "model"]);
     }
 
     if (slide_systemPrompt_icon && chatPrompt) {
@@ -384,9 +386,35 @@ window.addEventListener("load", (event) => {
     }
 });
 
+function removeUrlParams(keys) {
+    const url = new URL(window.location.href);
+    let changed = false;
+    for (const key of keys) {
+        if (url.searchParams.has(key)) {
+            url.searchParams.delete(key);
+            changed = true;
+        }
+    }
+    if (changed) {
+        window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+    }
+}
+
 async function on_load() {
     count_input();
     const locationHash = window.location.hash.substring(1);
+    let chatParams = new URLSearchParams(window.location.search);
+    const urlProvider = chatParams.get("provider");
+    const urlModel = chatParams.get("model");
+    if (urlProvider) {
+        appStorage.setItem("provider", urlProvider);
+    }
+    if (urlModel) {
+        appStorage.setItem("model", urlModel);
+    }
+    if ((urlProvider || urlModel) && typeof seedSavedSelection === "function") {
+        seedSavedSelection();
+    }
     if (locationHash === "login") {
         if (window.G4FOAuth) {
             window.G4FOAuth.authorize(window.location.origin + window.location.pathname, {
@@ -414,12 +442,11 @@ async function on_load() {
     if (chatPrompt) {
         chatPrompt.value = document.getElementById("systemPrompt")?.value || "";
     }
-    let chatParams = new URLSearchParams(window.location.search);
     if (chatParams.has("prompt")) {
         userInput.value = chatParams.get("prompt");
         resizeUserInput();
         userInput.focus();
-        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+        removeUrlParams(["prompt"]);
     }
     if (isNewConversation) {
         await new_conversation(locationHash === "private");

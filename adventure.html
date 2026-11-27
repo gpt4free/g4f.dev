@@ -1,0 +1,2186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G4F Web Adventure — AI &amp; Live Web Expedition</title>
+    <meta name="description" content="Embark on an interactive AI-guided expedition across the live web. Start with a prompt or URL, inspect real pages, and chart your discovery trail.">
+    <link rel="icon" href="/dist/img/g4f.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
+    <style>
+        :root {
+            --bg-abyss: #070913;
+            --bg-surface: rgba(15, 20, 36, 0.78);
+            --bg-surface-strong: rgba(18, 25, 46, 0.94);
+            --bg-glass: rgba(255, 255, 255, 0.035);
+            --border-subtle: rgba(148, 163, 184, 0.16);
+            --border-glow: rgba(56, 189, 248, 0.45);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-cyan: #38bdf8;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-violet: #a78bfa;
+            --gradient-hero: linear-gradient(135deg, #38bdf8 0%, #a78bfa 50%, #f59e0b 100%);
+            --gradient-btn: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+            --shadow-glow: 0 20px 60px -15px rgba(56, 189, 248, 0.22);
+            --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+            --font-display: 'Space Grotesk', 'Inter', sans-serif;
+            --font-mono: 'Fira Code', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            min-height: 100%;
+            background-color: var(--bg-abyss);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Atmospheric Starfield & Grid Background */
+        .cosmos-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(ellipse 80% 50% at 20% 10%, rgba(56, 189, 248, 0.14), transparent 60%),
+                radial-gradient(ellipse 65% 55% at 85% 20%, rgba(167, 139, 250, 0.13), transparent 60%),
+                radial-gradient(ellipse 70% 50% at 50% 95%, rgba(16, 185, 129, 0.10), transparent 65%);
+        }
+
+        .cosmos-grid {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+            background-size: 48px 48px;
+            mask-image: radial-gradient(circle at 50% 35%, black 30%, transparent 85%);
+        }
+
+        #starfield {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Top Navigation */
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.85rem 1.75rem;
+            background: rgba(7, 9, 19, 0.78);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .brand-orb {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: var(--gradient-btn);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.05rem;
+            color: #fff;
+            box-shadow: 0 0 24px rgba(56, 189, 248, 0.35);
+        }
+
+        .brand-text {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1.15rem;
+            letter-spacing: -0.02em;
+        }
+
+        .brand-tag {
+            font-size: 0.68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 0.18rem 0.55rem;
+            border-radius: 999px;
+            background: rgba(56, 189, 248, 0.12);
+            color: var(--accent-cyan);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        .pill-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.48rem 0.9rem;
+            border-radius: 10px;
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-glass);
+            color: var(--text-secondary);
+            font-size: 0.84rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .pill-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--border-glow);
+            background: rgba(56, 189, 248, 0.09);
+            transform: translateY(-1px);
+        }
+
+        .pill-btn.active {
+            color: var(--accent-cyan);
+            border-color: var(--border-glow);
+            background: rgba(56, 189, 248, 0.14);
+        }
+
+        /* Main Layout */
+        .app-shell {
+            position: relative;
+            z-index: 1;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem;
+        }
+
+        /* Hero / Start Section */
+        .hero-stage {
+            max-width: 860px;
+            margin: 2.5rem auto 2rem;
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .hero-stage.compact {
+            margin: 0.5rem auto 1.75rem;
+            max-width: 100%;
+            text-align: left;
+        }
+
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.9rem;
+            border-radius: 999px;
+            background: rgba(167, 139, 250, 0.12);
+            border: 1px solid rgba(167, 139, 250, 0.3);
+            color: #ddd6fe;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 1.15rem;
+        }
+
+        .hero-stage.compact .hero-eyebrow,
+        .hero-stage.compact .hero-subtitle {
+            display: none;
+        }
+
+        .hero-title {
+            font-family: var(--font-display);
+            font-size: clamp(2.1rem, 4.5vw, 3.4rem);
+            font-weight: 700;
+            line-height: 1.12;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.9rem;
+            background: var(--gradient-hero);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .hero-stage.compact .hero-title {
+            font-size: 1.45rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .hero-subtitle {
+            font-size: 1.06rem;
+            color: var(--text-secondary);
+            max-width: 650px;
+            margin: 0 auto 2rem;
+        }
+
+        /* Input Textarea Portal */
+        .portal-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 1.15rem;
+            backdrop-filter: blur(20px);
+            box-shadow: var(--shadow-glow);
+            transition: border-color 0.25s ease, box-shadow 0.25s ease;
+            text-align: left;
+        }
+
+        .portal-card:focus-within {
+            border-color: var(--border-glow);
+            box-shadow: 0 24px 70px -15px rgba(56, 189, 248, 0.32);
+        }
+
+        .portal-textarea {
+            width: 100%;
+            min-height: 120px;
+            max-height: 300px;
+            resize: vertical;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-size: 1.05rem;
+            line-height: 1.6;
+            padding: 0.35rem 0.5rem;
+        }
+
+        .hero-stage.compact .portal-textarea {
+            min-height: 72px;
+        }
+
+        .portal-textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .portal-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            padding-top: 0.85rem;
+            margin-top: 0.65rem;
+            border-top: 1px solid rgba(148, 163, 184, 0.12);
+        }
+
+        .portal-controls {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .select-chip {
+            appearance: none;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            border-radius: 10px;
+            padding: 0.42rem 0.75rem;
+            font-size: 0.82rem;
+            font-family: var(--font-sans);
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s, color 0.2s;
+        }
+
+        .select-chip:hover, .select-chip:focus {
+            border-color: var(--border-glow);
+            color: var(--text-primary);
+        }
+
+        .toggle-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.42rem 0.75rem;
+            border-radius: 10px;
+            border: 1px solid var(--border-subtle);
+            background: rgba(15, 23, 42, 0.85);
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        }
+
+        .toggle-chip.enabled {
+            border-color: rgba(16, 185, 129, 0.5);
+            background: rgba(16, 185, 129, 0.14);
+            color: #6ee7b7;
+        }
+
+        .launch-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.65rem 1.35rem;
+            border: none;
+            border-radius: 12px;
+            background: var(--gradient-btn);
+            color: #fff;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.94rem;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.35);
+            transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+        }
+
+        .launch-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 30px rgba(14, 165, 233, 0.48);
+        }
+
+        .launch-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .shortcut-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Mode Switcher */
+        .mode-tabs {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem;
+            border-radius: 12px;
+            background: rgba(7, 9, 19, 0.72);
+            border: 1px solid var(--border-subtle);
+            margin-bottom: 0.85rem;
+        }
+
+        .mode-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.45rem 0.9rem;
+            border-radius: 9px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: var(--font-sans);
+            font-size: 0.84rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mode-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .mode-tab.active {
+            background: var(--gradient-btn);
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(14, 165, 233, 0.32);
+        }
+
+        /* Classic Search Results */
+        .classic-results-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .classic-result-item {
+            background: rgba(7, 9, 19, 0.68);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 1rem 1.15rem;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+
+        .classic-result-item:hover {
+            border-color: var(--border-glow);
+            transform: translateY(-1px);
+        }
+
+        .classic-result-domain {
+            font-size: 0.75rem;
+            font-family: var(--font-mono);
+            color: var(--accent-emerald);
+            margin-bottom: 0.25rem;
+            word-break: break-all;
+        }
+
+        .classic-result-title {
+            display: inline-block;
+            font-family: var(--font-display);
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            text-decoration: none;
+            margin-bottom: 0.35rem;
+        }
+
+        .classic-result-title:hover {
+            text-decoration: underline;
+        }
+
+        .classic-result-snippet {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+            margin-bottom: 0.65rem;
+        }
+
+        .classic-result-snippet.markdown-body p:last-child,
+        .artifact-snippet.markdown-body p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Special Response Widgets (AsyncImageGroup, Link, Tag) */
+        .async-image-group {
+            margin: 0.85rem 0;
+            padding: 0.9rem 1rem;
+            border-radius: 14px;
+            background: rgba(7, 9, 19, 0.72);
+            border: 1px solid rgba(56, 189, 248, 0.28);
+        }
+
+        .async-image-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+        }
+
+        .async-image-title {
+            font-size: 0.86rem;
+            font-weight: 600;
+            color: #bae6fd;
+        }
+
+        .async-image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.6rem;
+            margin-top: 0.75rem;
+        }
+
+        .async-image-grid img {
+            width: 100%;
+            height: 110px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid var(--border-subtle);
+            display: block;
+        }
+
+        .rich-link-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.12rem 0.5rem;
+            margin: 0 0.12rem;
+            border-radius: 7px;
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.32);
+            color: var(--accent-cyan) !important;
+            font-size: 0.86em;
+            text-decoration: none !important;
+            transition: background 0.15s, border-color 0.15s;
+        }
+
+        .rich-link-pill:hover {
+            background: rgba(56, 189, 248, 0.22);
+            border-color: var(--accent-cyan);
+        }
+
+        .tag-chip {
+            display: inline-block;
+            padding: 0.1rem 0.45rem;
+            border-radius: 6px;
+            background: rgba(167, 139, 250, 0.14);
+            border: 1px solid rgba(167, 139, 250, 0.3);
+            color: #ddd6fe;
+            font-size: 0.78em;
+            font-family: var(--font-mono);
+            margin: 0 0.15rem;
+        }
+
+        .cite-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.05rem 0.4rem;
+            margin: 0 0.12rem;
+            border-radius: 999px;
+            background: rgba(16, 185, 129, 0.14);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: #6ee7b7;
+            font-size: 0.74em;
+            font-family: var(--font-mono);
+            vertical-align: middle;
+        }
+
+        .badge-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.14rem 0.55rem;
+            margin: 0.15rem 0.15rem;
+            border-radius: 999px;
+            font-size: 0.78em;
+            font-weight: 600;
+            background: rgba(56, 189, 248, 0.16);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            color: #bae6fd;
+        }
+
+        .badge-pill[data-color="discovery"] {
+            background: rgba(245, 158, 11, 0.16);
+            border-color: rgba(245, 158, 11, 0.45);
+            color: #fde68a;
+        }
+
+        .badge-pill[data-color="success"] {
+            background: rgba(16, 185, 129, 0.16);
+            border-color: rgba(16, 185, 129, 0.45);
+            color: #6ee7b7;
+        }
+
+        /* Starter Quests */
+        .starter-quests {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.6rem;
+            margin-top: 1.25rem;
+        }
+
+        .hero-stage.compact .starter-quests {
+            display: none;
+        }
+
+        .quest-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.5rem 0.9rem;
+            border-radius: 999px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            font-size: 0.83rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .quest-chip:hover {
+            color: var(--text-primary);
+            border-color: var(--border-glow);
+            background: rgba(56, 189, 248, 0.1);
+            transform: translateY(-1px);
+        }
+
+        /* Expedition Workspace (2-column when active) */
+        .expedition-grid {
+            display: none;
+            grid-template-columns: minmax(0, 1fr) 330px;
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        .expedition-grid.active {
+            display: grid;
+        }
+
+        @media (max-width: 980px) {
+            .expedition-grid.active {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Story / Discovery Feed */
+        .chronicle-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .chapter-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 18px;
+            padding: 1.35rem 1.5rem;
+            backdrop-filter: blur(18px);
+            animation: riseIn 0.35s ease-out;
+        }
+
+        @keyframes riseIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .chapter-card.user-turn {
+            border-color: rgba(56, 189, 248, 0.35);
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.10), rgba(15, 20, 36, 0.82));
+        }
+
+        .chapter-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .chapter-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--accent-cyan);
+        }
+
+        .chapter-card.user-turn .chapter-badge {
+            color: #bae6fd;
+        }
+
+        .chapter-meta {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        /* Web Sources Strip inside a Chapter */
+        .web-artifacts {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .artifact-card {
+            background: rgba(7, 9, 19, 0.68);
+            border: 1px solid rgba(16, 185, 129, 0.24);
+            border-radius: 12px;
+            padding: 0.75rem 0.9rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+
+        .artifact-card:hover {
+            border-color: rgba(16, 185, 129, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .artifact-title {
+            font-size: 0.86rem;
+            font-weight: 600;
+            color: #ecfdf5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .artifact-url {
+            font-size: 0.74rem;
+            color: var(--accent-emerald);
+            font-family: var(--font-mono);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .artifact-snippet {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .artifact-actions {
+            display: flex;
+            gap: 0.45rem;
+            margin-top: 0.3rem;
+        }
+
+        .mini-action {
+            font-size: 0.74rem;
+            padding: 0.25rem 0.55rem;
+            border-radius: 7px;
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-glass);
+            color: var(--text-secondary);
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.15s;
+        }
+
+        .mini-action:hover {
+            color: var(--text-primary);
+            border-color: var(--border-glow);
+            background: rgba(56, 189, 248, 0.12);
+        }
+
+        /* Markdown Content */
+        .markdown-body {
+            font-size: 0.96rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+            font-family: var(--font-display);
+            margin: 1rem 0 0.5rem;
+            color: #fff;
+        }
+
+        .markdown-body h2 { font-size: 1.2rem; }
+        .markdown-body h3 { font-size: 1.05rem; color: #bae6fd; }
+        .markdown-body p { margin-bottom: 0.75rem; }
+        .markdown-body ul, .markdown-body ol { margin: 0.5rem 0 0.85rem 1.35rem; }
+        .markdown-body li { margin-bottom: 0.35rem; }
+        .markdown-body a {
+            color: var(--accent-cyan);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+        .markdown-body code {
+            font-family: var(--font-mono);
+            font-size: 0.86em;
+            background: rgba(148, 163, 184, 0.14);
+            padding: 0.15rem 0.38rem;
+            border-radius: 6px;
+        }
+        .markdown-body pre {
+            background: #04060e;
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 0.9rem 1rem;
+            overflow-x: auto;
+            margin: 0.75rem 0;
+        }
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+        }
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent-violet);
+            padding-left: 0.9rem;
+            color: var(--text-secondary);
+            margin: 0.75rem 0;
+        }
+
+        /* Next Paths / Branching Choices */
+        .next-paths {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            margin-top: 1rem;
+            padding-top: 0.9rem;
+            border-top: 1px solid rgba(148, 163, 184, 0.12);
+        }
+
+        .path-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.48rem 0.85rem;
+            border-radius: 10px;
+            border: 1px solid rgba(167, 139, 250, 0.32);
+            background: rgba(167, 139, 250, 0.1);
+            color: #ede9fe;
+            font-size: 0.83rem;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+        }
+
+        .path-btn:hover {
+            background: rgba(167, 139, 250, 0.22);
+            border-color: rgba(167, 139, 250, 0.65);
+            transform: translateY(-1px);
+        }
+
+        /* Sidebar: Trail Map & Live Inspector */
+        .sidebar-panel {
+            position: sticky;
+            top: 4.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .side-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 18px;
+            padding: 1.15rem;
+            backdrop-filter: blur(18px);
+        }
+
+        .side-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-family: var(--font-display);
+            font-size: 0.94rem;
+            font-weight: 600;
+            margin-bottom: 0.85rem;
+            color: var(--text-primary);
+        }
+
+        .trail-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .trail-node {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            padding: 0.55rem 0.65rem;
+            border-radius: 10px;
+            background: rgba(7, 9, 19, 0.55);
+            border: 1px solid transparent;
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .trail-node:hover {
+            border-color: var(--border-glow);
+        }
+
+        .trail-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-top: 0.42rem;
+            flex-shrink: 0;
+            background: var(--accent-cyan);
+            box-shadow: 0 0 8px var(--accent-cyan);
+        }
+
+        .trail-node.web .trail-dot {
+            background: var(--accent-emerald);
+            box-shadow: 0 0 8px var(--accent-emerald);
+        }
+
+        .trail-text {
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .inspector-box {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .inspector-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            margin-top: 0.7rem;
+        }
+
+        .inspector-link-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.4rem;
+            padding: 0.4rem 0.55rem;
+            border-radius: 8px;
+            background: rgba(7, 9, 19, 0.6);
+            border: 1px solid var(--border-subtle);
+            font-size: 0.77rem;
+        }
+
+        .inspector-link-item span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text-primary);
+        }
+
+        /* Status Pulse */
+        .status-line {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            font-size: 0.84rem;
+            color: var(--accent-cyan);
+            margin-bottom: 0.65rem;
+        }
+
+        .pulse-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            animation: pulse 1.2s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(0.85); opacity: 0.5; }
+            50% { transform: scale(1.25); opacity: 1; }
+        }
+
+        /* Settings Modal */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: rgba(4, 6, 14, 0.75);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-backdrop.open {
+            display: flex;
+        }
+
+        .modal-card {
+            width: 100%;
+            max-width: 480px;
+            background: var(--bg-surface-strong);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.15rem;
+        }
+
+        .modal-header h3 {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+        }
+
+        .field-group {
+            margin-bottom: 1rem;
+        }
+
+        .field-group label {
+            display: block;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.35rem;
+        }
+
+        .field-input {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border-radius: 10px;
+            border: 1px solid var(--border-subtle);
+            background: rgba(7, 9, 19, 0.8);
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.84rem;
+            outline: none;
+        }
+
+        .field-input:focus {
+            border-color: var(--border-glow);
+        }
+
+        .empty-hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 0.75rem 0;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="starfield"></canvas>
+    <div class="cosmos-bg"></div>
+    <div class="cosmos-grid"></div>
+
+    <header class="topbar">
+        <a href="/" class="brand">
+            <div class="brand-orb">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+            </div>
+            <span class="brand-text">G4F Web Adventure</span>
+            <span class="brand-tag">AI + Live Web</span>
+        </a>
+        <div class="topbar-actions">
+            <a href="/browser.html" class="pill-btn">🌐 Browser</a>
+            <a href="/agent.html" class="pill-btn">🤖 Agent</a>
+            <button type="button" class="pill-btn" id="export-btn" title="Export Expedition Log as Markdown">
+                📤 Export
+            </button>
+            <button type="button" class="pill-btn" id="reset-btn" title="Start a fresh expedition">
+                ↺ New Quest
+            </button>
+            <button type="button" class="pill-btn" id="settings-btn">
+                ⚙ Config
+            </button>
+        </div>
+    </header>
+
+    <main class="app-shell">
+        <section class="hero-stage" id="hero-stage">
+            <div class="hero-eyebrow">
+                <span>✨ Chart the live internet with an AI expedition guide</span>
+            </div>
+            <h1 class="hero-title">Where shall we explore today?</h1>
+            <p class="hero-subtitle">
+                Enter a curiosity, a research quest, or any live URL. Switch between AI-guided expeditions and classic live web search.
+            </p>
+
+            <form class="portal-card" id="adventure-form">
+                <div class="mode-tabs" role="tablist" aria-label="Exploration Mode">
+                    <button type="button" class="mode-tab active" id="mode-adventure-btn" data-mode="adventure" role="tab" aria-selected="true">
+                        🧭 AI Adventure
+                    </button>
+                    <button type="button" class="mode-tab" id="mode-classic-btn" data-mode="classic" role="tab" aria-selected="false">
+                        🔍 Classic Web Search
+                    </button>
+                </div>
+
+                <textarea
+                    id="adventure-input"
+                    class="portal-textarea"
+                    placeholder="Type a quest, question, or paste a URL to explore (e.g. 'Explore https://news.ycombinator.com and summarize the top AI stories' or 'Chart the most fascinating discoveries in deep-sea bioluminescence')..."
+                    autofocus
+                ></textarea>
+
+                <div class="portal-toolbar">
+                    <div class="portal-controls">
+                        <select id="persona-select" class="select-chip" title="Expedition Guide Persona">
+                            <option value="cartographer">🧭 Web Cartographer</option>
+                            <option value="researcher">🔬 Deep Researcher</option>
+                            <option value="storyteller">✨ Sci-Fi Chronicler</option>
+                            <option value="scout">⚡ Tech &amp; Code Scout</option>
+                        </select>
+
+                        <select id="model-select" class="select-chip" title="AI Model">
+                            <option value="auto">Model: auto</option>
+                            <option value="gpt-4o-mini">gpt-4o-mini</option>
+                            <option value="deepseek-chat">deepseek-chat</option>
+                            <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                        </select>
+
+                        <select id="search-provider-select" class="select-chip" title="Web Search Provider">
+                            <option value="">Search: Auto (All)</option>
+                            <option value="wikipedia">Search: Wikipedia</option>
+                            <option value="hackernews">Search: Hacker News</option>
+                            <option value="duckduckgo">Search: DuckDuckGo</option>
+                            <option value="google">Search: Google Search</option>
+                            <option value="google_ai">Search: Google AI Mode</option>
+                            <option value="youtube">Search: YouTube</option>
+                            <option value="reddit">Search: Reddit</option>
+                            <option value="github">Search: GitHub</option>
+                            <option value="arxiv">Search: arXiv</option>
+                            <option value="exa">Search: Exa</option>
+                            <option value="tavily">Search: Tavily</option>
+                            <option value="brave">Search: Brave</option>
+                            <option value="searxng">Search: SearXNG</option>
+                        </select>
+
+                        <button type="button" id="web-toggle" class="toggle-chip enabled" title="Use Web Search API for live sources">
+                            <span>📡 Live Web: ON</span>
+                        </button>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span class="shortcut-hint">Ctrl + Enter</span>
+                        <button type="submit" id="launch-btn" class="launch-btn">
+                            <span id="launch-btn-label">🚀 Embark</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="starter-quests" id="starter-quests">
+                <button type="button" class="quest-chip" data-prompt="Explore https://news.ycombinator.com and highlight the most intriguing tech &amp; AI discussions today.">
+                    🔥 Scout Hacker News
+                </button>
+                <button type="button" class="quest-chip" data-prompt="Investigate https://en.wikipedia.org/wiki/Bioluminescence and map out nature's strangest glowing creatures.">
+                    🌊 Deep-Sea Bioluminescence
+                </button>
+                <button type="button" class="quest-chip" data-prompt="Search the web for the latest open-source local LLM breakthroughs and compare the top contenders.">
+                    🧠 Open-Source LLM Frontier
+                </button>
+                <button type="button" class="quest-chip" data-prompt="Take me on a surprise expedition to an unusual corner of science or history on Wikipedia, and give me 3 wild rabbit holes to follow.">
+                    🎲 Random Rabbit Hole
+                </button>
+            </div>
+        </section>
+
+        <section class="expedition-grid" id="expedition-grid">
+            <div class="chronicle-feed" id="chronicle-feed"></div>
+
+            <aside class="sidebar-panel">
+                <div class="side-card">
+                    <div class="side-title">
+                        <span>🗺 Expedition Trail</span>
+                        <span id="step-count" style="font-size: 0.78rem; color: var(--text-muted);">0 steps</span>
+                    </div>
+                    <div class="trail-list" id="trail-list">
+                        <div class="empty-hint">Your journey nodes will appear here.</div>
+                    </div>
+                </div>
+
+                <div class="side-card">
+                    <div class="side-title">
+                        <span>🔭 Live Page Inspector</span>
+                        <span id="inspector-host" style="font-size: 0.74rem; color: var(--text-muted); font-family: var(--font-mono);">idle</span>
+                    </div>
+                    <div class="inspector-box" id="inspector-box">
+                        <div class="empty-hint">Click <strong>Inspect</strong> on any discovered web artifact to view extracted text &amp; outbound links.</div>
+                    </div>
+                </div>
+            </aside>
+        </section>
+    </main>
+
+    <!-- Settings Modal -->
+    <div class="modal-backdrop" id="settings-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>⚙ Expedition Configuration</h3>
+                <button type="button" class="pill-btn" id="close-settings">✕</button>
+            </div>
+            <div class="field-group">
+                <label for="api-base-input">API Base URL (leave empty for same-origin)</label>
+                <input type="text" id="api-base-input" class="field-input" placeholder="e.g. https://g4f.dev or http://localhost:8080">
+            </div>
+            <div class="field-group">
+                <label for="api-key-input">Optional API Key (Bearer token)</label>
+                <input type="password" id="api-key-input" class="field-input" placeholder="g4f_... (optional)">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.6rem;">
+                <button type="button" class="launch-btn" id="save-settings">Save Config</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (() => {
+            const md = window.markdownit
+                ? window.markdownit({ html: false, linkify: true, typographer: true })
+                : {
+                    render: (txt) => `<pre style="white-space:pre-wrap;font-family:inherit;background:transparent;border:none;padding:0;">${escapeHtml(txt)}</pre>`
+                };
+
+            if (window.markdownit && md.renderer?.rules) {
+                const defaultLinkRender = md.renderer.rules.link_open || function(tokens, idx, options, env, self) {
+                    return self.renderToken(tokens, idx, options);
+                };
+                md.renderer.rules.link_open = function(tokens, idx, options, env, self) {
+                    tokens[idx].attrSet('target', '_blank');
+                    tokens[idx].attrSet('rel', 'noopener noreferrer');
+                    return defaultLinkRender(tokens, idx, options, env, self);
+                };
+            }
+
+            const state = {
+                mode: 'adventure',
+                liveWeb: true,
+                busy: false,
+                messages: [],
+                trail: [],
+                artifacts: new Map(),
+                apiBase: localStorage.getItem('g4f_adv_api_base') || '',
+                apiKey: localStorage.getItem('g4f_adv_api_key') || ''
+            };
+
+            const els = {
+                heroStage: document.getElementById('hero-stage'),
+                form: document.getElementById('adventure-form'),
+                input: document.getElementById('adventure-input'),
+                modeAdventureBtn: document.getElementById('mode-adventure-btn'),
+                modeClassicBtn: document.getElementById('mode-classic-btn'),
+                persona: document.getElementById('persona-select'),
+                model: document.getElementById('model-select'),
+                searchProvider: document.getElementById('search-provider-select'),
+                webToggle: document.getElementById('web-toggle'),
+                launchBtn: document.getElementById('launch-btn'),
+                launchBtnLabel: document.getElementById('launch-btn-label'),
+                grid: document.getElementById('expedition-grid'),
+                feed: document.getElementById('chronicle-feed'),
+                trailList: document.getElementById('trail-list'),
+                stepCount: document.getElementById('step-count'),
+                inspectorBox: document.getElementById('inspector-box'),
+                inspectorHost: document.getElementById('inspector-host'),
+                exportBtn: document.getElementById('export-btn'),
+                resetBtn: document.getElementById('reset-btn'),
+                settingsBtn: document.getElementById('settings-btn'),
+                settingsModal: document.getElementById('settings-modal'),
+                closeSettings: document.getElementById('close-settings'),
+                saveSettings: document.getElementById('save-settings'),
+                apiBaseInput: document.getElementById('api-base-input'),
+                apiKeyInput: document.getElementById('api-key-input')
+            };
+
+            const PERSONAS = {
+                cartographer: 'You are an enthusiastic AI Web Cartographer. Synthesize live web findings into a vivid, well-structured expedition log with clear headings, key discoveries, and verified links.',
+                researcher: 'You are a rigorous Deep Researcher. Analyze the fetched web sources critically, cite specific facts and URLs, highlight nuances, and suggest sharp follow-up investigations.',
+                storyteller: 'You are a Sci-Fi Chronicler turning real-world web exploration into an evocative, atmospheric voyage of discovery while staying 100% faithful to the real facts and URLs found.',
+                scout: 'You are a pragmatic Tech & Code Scout. Focus on architecture, tools, releases, and actionable technical takeaways from the live web.'
+            };
+
+            // Starfield animation
+            function initStarfield() {
+                const canvas = document.getElementById('starfield');
+                const ctx = canvas.getContext('2d');
+                let stars = [];
+                const resize = () => {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                    stars = Array.from({ length: 85 }, () => ({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * canvas.height,
+                        r: Math.random() * 1.4 + 0.3,
+                        a: Math.random() * 0.6 + 0.2,
+                        s: (Math.random() - 0.5) * 0.15
+                    }));
+                };
+                resize();
+                window.addEventListener('resize', resize);
+                const tick = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    for (const star of stars) {
+                        star.y += star.s;
+                        if (star.y < 0) star.y = canvas.height;
+                        if (star.y > canvas.height) star.y = 0;
+                        ctx.beginPath();
+                        ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(226, 232, 240, ${star.a})`;
+                        ctx.fill();
+                    }
+                    requestAnimationFrame(tick);
+                };
+                tick();
+            }
+            initStarfield();
+
+            function apiUrl(path) {
+                const base = state.apiBase.replace(/\/+$/, '');
+                return `${base}${path}`;
+            }
+
+            function escapeHtml(str) {
+                return String(str || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            }
+
+            // Load available models from /v1/models
+            async function loadModels() {
+                try {
+                    const res = await fetch(apiUrl('/v1/models'));
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const list = Array.isArray(data?.data) ? data.data : [];
+                    if (!list.length) return;
+                    const current = els.model.value;
+                    els.model.innerHTML = '<option value="auto">Model: auto</option>';
+                    const seen = new Set(['auto']);
+                    for (const item of list.slice(0, 40)) {
+                        const id = item.id || item;
+                        if (!id || seen.has(id)) continue;
+                        seen.add(id);
+                        const opt = document.createElement('option');
+                        opt.value = id;
+                        opt.textContent = id;
+                        els.model.appendChild(opt);
+                    }
+                    if (seen.has(current)) els.model.value = current;
+                } catch (_) {
+                    // Keep default fallback options
+                }
+            }
+            loadModels();
+
+            async function loadSearchProviders() {
+                try {
+                    const res = await fetch(apiUrl('/v1/browsing/apis?capability=search'));
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const list = Array.isArray(data?.data) ? data.data : [];
+                    if (!list.length) return;
+                    const current = els.searchProvider.value;
+                    els.searchProvider.innerHTML = '<option value="">Search: Auto (All)</option>';
+                    const seen = new Set(['']);
+                    for (const item of list) {
+                        if (!item?.id || seen.has(item.id)) continue;
+                        seen.add(item.id);
+                        const opt = document.createElement('option');
+                        opt.value = item.id;
+                        opt.textContent = `Search: ${item.name || item.id}${item.available === false ? ' (key needed)' : ''}`;
+                        els.searchProvider.appendChild(opt);
+                    }
+                    if (seen.has(current)) els.searchProvider.value = current;
+                } catch (_) {
+                    // Keep built-in fallback list
+                }
+            }
+            loadSearchProviders();
+
+            function extractUrls(text) {
+                const matches = text.match(/https?:\/\/[^\s<>"')]+/gi) || [];
+                return [...new Set(matches.map(u => u.replace(/[.,;:!?]+$/, '')))];
+            }
+
+            function parseHtmlPage(html, url) {
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                const title = (doc.querySelector('title')?.textContent || url).trim();
+                const desc = (doc.querySelector('meta[name="description"]')?.getAttribute('content') || '').trim();
+
+                const rawLinks = [];
+                doc.querySelectorAll('a[href]').forEach(a => {
+                    try {
+                        const resolved = new URL(a.getAttribute('href'), url).href;
+                        const label = a.textContent.replace(/\s+/g, ' ').trim();
+                        if (/^https?:\/\//i.test(resolved) && label.length > 3) {
+                            rawLinks.push({ url: resolved, label: label.slice(0, 90) });
+                        }
+                    } catch (_) {}
+                });
+
+                doc.querySelectorAll('script, style, noscript, svg, nav, footer').forEach(el => el.remove());
+                const text = (doc.body?.textContent || '').replace(/\s+/g, ' ').trim();
+                const uniqueLinks = [];
+                const seen = new Set([url]);
+                for (const l of rawLinks) {
+                    if (!seen.has(l.url)) {
+                        seen.add(l.url);
+                        uniqueLinks.push(l);
+                    }
+                    if (uniqueLinks.length >= 16) break;
+                }
+
+                return {
+                    url,
+                    title: title.slice(0, 140),
+                    snippet: (desc || text.slice(0, 260)),
+                    text: text.slice(0, 4500),
+                    links: uniqueLinks
+                };
+            }
+
+            async function fetchViaProxy(targetUrl) {
+                const headers = { 'Content-Type': 'application/json' };
+                if (state.apiKey) headers['Authorization'] = `Bearer ${state.apiKey}`;
+
+                // Prefer G4F Browsing API (/v1/browsing/browse)
+                try {
+                    const browseRes = await fetch(apiUrl('/v1/browsing/browse'), {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({ urls: [targetUrl], max_words: 800, timeout: 15 })
+                    });
+                    if (browseRes.ok) {
+                        const data = await browseRes.json();
+                        const row = Array.isArray(data?.results) ? data.results[0] : (Array.isArray(data) ? data[0] : null);
+                        if (row && !row.error) {
+                            const text = row.text || row.content || row.snippet || '';
+                            return {
+                                url: row.url || targetUrl,
+                                title: row.title || targetUrl,
+                                snippet: text.slice(0, 260),
+                                text: text.slice(0, 4500),
+                                links: Array.isArray(row.links) ? row.links : []
+                            };
+                        }
+                    }
+                } catch (_) {}
+
+                // Fallback to /proxy only for direct URL inspection on static worker deployments
+                const proxied = apiUrl(`/proxy?url=${encodeURIComponent(targetUrl)}`);
+                const res = await fetch(proxied);
+                if (!res.ok) {
+                    throw new Error(`Fetch HTTP ${res.status} for ${targetUrl}`);
+                }
+                const contentType = res.headers.get('content-type') || '';
+                const raw = await res.text();
+                if (contentType.includes('application/json')) {
+                    return {
+                        url: targetUrl,
+                        title: targetUrl,
+                        snippet: raw.slice(0, 240),
+                        text: raw.slice(0, 4500),
+                        links: []
+                    };
+                }
+                return parseHtmlPage(raw, targetUrl);
+            }
+
+            async function searchLiveWeb(query, limit = 6) {
+                const headers = { 'Content-Type': 'application/json' };
+                if (state.apiKey) headers['Authorization'] = `Bearer ${state.apiKey}`;
+
+                const selectedApi = els.searchProvider?.value?.trim();
+                const payload = {
+                    query,
+                    apis: selectedApi ? [selectedApi] : [],
+                    limit
+                };
+
+                for (const endpoint of ['/v1/search', '/v1/browsing/search']) {
+                    try {
+                        const res = await fetch(apiUrl(endpoint), {
+                            method: 'POST',
+                            headers,
+                            body: JSON.stringify(payload)
+                        });
+                        if (!res.ok) continue;
+                        const data = await res.json();
+                        const rows = Array.isArray(data?.results) ? data.results : [];
+                        return rows.slice(0, limit).map(r => ({
+                            source: r.source || selectedApi || 'web',
+                            url: r.url || '',
+                            title: r.title || r.url || 'Untitled',
+                            snippet: r.snippet || r.text || '',
+                            text: r.text || r.snippet || '',
+                            links: []
+                        })).filter(r => /^https?:\/\//i.test(r.url));
+                    } catch (_) {}
+                }
+
+                throw new Error('Web Search API (/v1/search) is unavailable on the configured endpoint.');
+            }
+
+            function addTrailNode(label, kind = 'ai', cardId = '') {
+                state.trail.push({ label, kind, cardId });
+                els.stepCount.textContent = `${state.trail.length} step${state.trail.length === 1 ? '' : 's'}`;
+                els.trailList.innerHTML = '';
+                state.trail.forEach((node, idx) => {
+                    const div = document.createElement('div');
+                    div.className = `trail-node ${node.kind}`;
+                    div.innerHTML = `<span class="trail-dot"></span><span class="trail-text">${idx + 1}. ${escapeHtml(node.label)}</span>`;
+                    div.addEventListener('click', () => {
+                        if (node.cardId) {
+                            document.getElementById(node.cardId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    });
+                    els.trailList.appendChild(div);
+                });
+            }
+
+            function renderInspector(artifact) {
+                try {
+                    els.inspectorHost.textContent = new URL(artifact.url).hostname;
+                } catch (_) {
+                    els.inspectorHost.textContent = 'page';
+                }
+
+                const linksHtml = (artifact.links || []).slice(0, 8).map(l => `
+                    <div class="inspector-link-item">
+                        <span title="${escapeHtml(l.url)}">${escapeHtml(l.label)}</span>
+                        <button type="button" class="mini-action explore-url-btn" data-url="${escapeHtml(l.url)}">
+                            🧭 Go
+                        </button>
+                    </div>
+                `).join('');
+
+                els.inspectorBox.innerHTML = `
+                    <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.35rem;">${escapeHtml(artifact.title)}</div>
+                    <div style="font-size: 0.75rem; color: var(--accent-emerald); font-family: var(--font-mono); margin-bottom: 0.6rem; word-break: break-all;">${escapeHtml(artifact.url)}</div>
+                    <div class="markdown-body" style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.65rem;">${md.render((artifact.text || artifact.snippet || '').slice(0, 1200) + ((artifact.text || '').length > 1200 ? '...' : ''))}</div>
+                    ${linksHtml ? `<div style="font-weight: 600; color: var(--text-primary); margin-top: 0.6rem;">Discovered Links</div><div class="inspector-links">${linksHtml}</div>` : ''}
+                `;
+
+                els.inspectorBox.querySelectorAll('.explore-url-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const target = btn.getAttribute('data-url');
+                        runAdventure(`Explore ${target} and connect what you find to our expedition.`);
+                    });
+                });
+            }
+
+            async function inspectUrl(url) {
+                els.inspectorHost.textContent = 'fetching...';
+                els.inspectorBox.innerHTML = `<div class="status-line"><span class="pulse-dot"></span><span>Fetching ${escapeHtml(url)}...</span></div>`;
+                try {
+                    const artifact = await fetchViaProxy(url);
+                    state.artifacts.set(url, artifact);
+                    renderInspector(artifact);
+                } catch (err) {
+                    els.inspectorHost.textContent = 'error';
+                    els.inspectorBox.innerHTML = `<p style="color: #f87171;">Could not inspect URL: ${escapeHtml(err.message)}</p>`;
+                }
+            }
+
+            function renderArtifactsStrip(container, artifacts) {
+                if (!artifacts.length) return;
+                const strip = document.createElement('div');
+                strip.className = 'web-artifacts';
+                for (const item of artifacts) {
+                    state.artifacts.set(item.url, item);
+                    const card = document.createElement('div');
+                    card.className = 'artifact-card';
+                    card.innerHTML = `
+                        <div class="artifact-title">${escapeHtml(item.title)}</div>
+                        <div class="artifact-url">${escapeHtml(item.url)}</div>
+                        <div class="artifact-snippet markdown-body">${md.render(item.snippet || 'Live web source')}</div>
+                        <div class="artifact-actions">
+                            <button type="button" class="mini-action inspect-btn">🔭 Inspect</button>
+                            <button type="button" class="mini-action dive-btn">✨ Dive In</button>
+                            <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" class="mini-action">↗</a>
+                        </div>
+                    `;
+                    card.querySelector('.inspect-btn').addEventListener('click', () => inspectUrl(item.url));
+                    card.querySelector('.dive-btn').addEventListener('click', () => {
+                        runAdventure(`Explore ${item.url} in detail and tell me the most surprising insights.`);
+                    });
+                    strip.appendChild(card);
+                }
+                container.appendChild(strip);
+            }
+
+            function parseNextPaths(rawText) {
+                const paths = [];
+                const cleaned = rawText.replace(/\[NEXT_PATHS\]([\s\S]*?)\[\/NEXT_PATHS\]/i, (_, block) => {
+                    block.split(/\r?\n/).forEach(line => {
+                        const item = line.replace(/^[-*\d.)\s]+/, '').trim();
+                        if (item.length > 4) paths.push(item);
+                    });
+                    return '';
+                });
+                return { cleaned: cleaned.trim(), paths: paths.slice(0, 4) };
+            }
+
+            function stripAttrQuotes(val) {
+                return String(val || '')
+                    .trim()
+                    .replace(/^[\{\["'“‘]+/, '')
+                    .replace(/[\}\]"'”’]+$/, '')
+                    .trim();
+            }
+
+            function extractTagAttr(attrs, name) {
+                const re = new RegExp(`${name}\\s*=\\s*(?:\\{([^}]*)\\}|["“]([^"”]*)["”]|['‘]([^'’]*)['’]|([^\\s>]+))`, 'i');
+                const m = String(attrs || '').match(re);
+                if (!m) return '';
+                return stripAttrQuotes(m[1] ?? m[2] ?? m[3] ?? m[4] ?? '');
+            }
+
+            function parseQueryList(raw) {
+                const s = String(raw || '').trim();
+                const quoted = [...s.matchAll(/["“]([^"”]+)["”]|['‘]([^'’]+)['’]/g)]
+                    .map(m => (m[1] ?? m[2] ?? '').trim())
+                    .filter(Boolean);
+                if (quoted.length) return quoted;
+                const clean = stripAttrQuotes(s);
+                return clean ? [clean] : [];
+            }
+
+            function renderRichMarkdown(rawText, containerEl) {
+                const widgets = [];
+                let text = String(rawText || '');
+
+                // Unwrap <text> / </text> tags
+                text = text.replace(/<\/?text(?:\s[^>]*)?>/gi, '');
+
+                // Handle <AsyncImageGroup .../> and <AsyncImage .../>
+                text = text.replace(/<AsyncImage(?:Group)?\b([\s\S]*?)(?:\/>|>([\s\S]*?)<\/AsyncImage(?:Group)?>)/gi, (_, attrs) => {
+                    const rawQuery = extractTagAttr(attrs, 'query') || extractTagAttr(attrs, 'prompt') || 'Visual search';
+                    const queries = parseQueryList(rawQuery);
+                    const token = `@@G4F_WIDGET_${widgets.length}@@`;
+                    widgets.push({ type: 'image_group', queries: queries.length ? queries : ['Visual search'] });
+                    return `\n\n${token}\n\n`;
+                });
+
+                // Handle <Cite refs={[...]}/>
+                text = text.replace(/<Cite\b([^>]*?)(?:\/>|>([\s\S]*?)<\/Cite>)/gi, (_, attrs, inner) => {
+                    const rawRefs = extractTagAttr(attrs, 'refs') || inner || '';
+                    const refs = parseQueryList(rawRefs);
+                    if (!refs.length) return '';
+                    const token = `@@G4F_WIDGET_${widgets.length}@@`;
+                    widgets.push({ type: 'cite', refs });
+                    return token;
+                });
+
+                // Handle <badge color="...">...</badge> (even if wrapped in ```)
+                text = text.replace(/```(?:\w+)?\s*(<badge\b[\s\S]*?<\/badge>)\s*```/gi, '$1');
+                text = text.replace(/<badge\b([^>]*)>([\s\S]*?)<\/badge>/gi, (_, attrs, inner) => {
+                    const color = extractTagAttr(attrs, 'color') || 'info';
+                    const token = `@@G4F_WIDGET_${widgets.length}@@`;
+                    widgets.push({ type: 'badge', color, text: inner.trim() });
+                    return token;
+                });
+
+                // Handle <Link url="..." ...>label</Link> or <Link url="..." />
+                text = text.replace(/<Link\b([^>]*?)(?:\/>|>([\s\S]*?)<\/Link>)/gi, (_, attrs, inner) => {
+                    const url = extractTagAttr(attrs, 'url') || extractTagAttr(attrs, 'href');
+                    const label = (inner || '').trim() || extractTagAttr(attrs, 'title') || extractTagAttr(attrs, 'label') || url;
+                    if (!url) return label;
+                    const token = `@@G4F_WIDGET_${widgets.length}@@`;
+                    widgets.push({ type: 'link', url, label });
+                    return token;
+                });
+
+                // Handle <# ... #> or <#tag> annotations
+                text = text.replace(/<#([\s\S]*?)#>/g, (_, inner) => {
+                    const clean = inner.trim();
+                    if (!clean) return '';
+                    const token = `@@G4F_WIDGET_${widgets.length}@@`;
+                    widgets.push({ type: 'tag', text: clean });
+                    return token;
+                });
+                text = text.replace(/<#([^\s>]+)>/g, (_, inner) => {
+                    const token = `@@G4F_WIDGET_${widgets.length}@@`;
+                    widgets.push({ type: 'tag', text: inner.trim() });
+                    return token;
+                });
+
+                // Hide incomplete trailing special tags during streaming
+                text = text.replace(/<(?:AsyncImage(?:Group)?|Link|Cite|badge|text|\/text|#)[\s\S]{0,200}$/i, '');
+
+                let html = md.render(text);
+
+                widgets.forEach((w, idx) => {
+                    const token = `@@G4F_WIDGET_${idx}@@`;
+                    let replacement = '';
+                    if (w.type === 'link') {
+                        const safeUrl = /^https?:\/\//i.test(w.url) ? w.url : '#';
+                        replacement = `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer" class="rich-link-pill">🔗 ${escapeHtml(w.label)}</a>`;
+                    } else if (w.type === 'tag') {
+                        replacement = `<span class="tag-chip"># ${escapeHtml(w.text)}</span>`;
+                    } else if (w.type === 'cite') {
+                        replacement = w.refs.map((r, i) => `<span class="cite-pill" title="${escapeHtml(r)}">📎 ${i + 1}</span>`).join('');
+                    } else if (w.type === 'badge') {
+                        replacement = `<span class="badge-pill" data-color="${escapeHtml(w.color)}">${escapeHtml(w.text)}</span>`;
+                    } else if (w.type === 'image_group') {
+                        const label = w.queries.length > 1
+                            ? `${w.queries[0]} (+${w.queries.length - 1} more)`
+                            : w.queries[0];
+                        replacement = `
+                            <div class="async-image-group" data-queries="${escapeHtml(JSON.stringify(w.queries))}">
+                                <div class="async-image-header">
+                                    <span class="async-image-title">🖼️ Visuals: ${escapeHtml(label)}</span>
+                                    <div style="display:flex;gap:0.45rem;">
+                                        <button type="button" class="mini-action load-img-group-btn">✨ Load Visuals</button>
+                                        <button type="button" class="mini-action search-img-group-btn">🔍 Search Web</button>
+                                    </div>
+                                </div>
+                                <div class="async-image-grid"></div>
+                            </div>
+                        `;
+                    }
+                    html = html.split(token).join(replacement);
+                });
+
+                containerEl.innerHTML = html;
+
+                containerEl.querySelectorAll('.async-image-group').forEach(groupEl => {
+                    let queries = [];
+                    try {
+                        queries = JSON.parse(groupEl.getAttribute('data-queries') || '[]');
+                    } catch (_) {}
+                    const primary = queries[0] || '';
+                    const gridEl = groupEl.querySelector('.async-image-grid');
+                    const loadBtn = groupEl.querySelector('.load-img-group-btn');
+                    const searchBtn = groupEl.querySelector('.search-img-group-btn');
+
+                    loadBtn?.addEventListener('click', async () => {
+                        loadBtn.disabled = true;
+                        loadBtn.textContent = '⏳ Loading...';
+                        try {
+                            const headers = { 'Content-Type': 'application/json' };
+                            if (state.apiKey) headers['Authorization'] = `Bearer ${state.apiKey}`;
+                            const targets = queries.slice(0, 3);
+                            const imgUrls = [];
+                            for (const q of targets) {
+                                const res = await fetch(apiUrl('/v1/images/generations'), {
+                                    method: 'POST',
+                                    headers,
+                                    body: JSON.stringify({ prompt: q, model: 'flux', n: 1 })
+                                });
+                                if (!res.ok) continue;
+                                const data = await res.json();
+                                const imgs = Array.isArray(data?.data) ? data.data : [];
+                                imgs.forEach(img => {
+                                    const src = img.url || (img.b64_json ? `data:image/png;base64,${img.b64_json}` : '');
+                                    if (src) imgUrls.push({ src, alt: q });
+                                });
+                            }
+                            if (!imgUrls.length) throw new Error('No images returned');
+                            gridEl.innerHTML = imgUrls.map(item =>
+                                `<a href="${escapeHtml(item.src)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.alt)}" title="${escapeHtml(item.alt)}" loading="lazy"></a>`
+                            ).join('');
+                            loadBtn.textContent = '✓ Loaded';
+                        } catch (err) {
+                            gridEl.innerHTML = `<span style="font-size:0.8rem;color:var(--text-muted);">Could not load image (${escapeHtml(err.message)}). Try Search Web.</span>`;
+                            loadBtn.disabled = false;
+                            loadBtn.textContent = '✨ Retry';
+                        }
+                    });
+
+                    searchBtn?.addEventListener('click', () => {
+                        runAdventure(`Search the web for images and details about: ${primary}`);
+                    });
+                });
+            }
+
+            async function streamChatCompletion(messages, onToken) {
+                const headers = { 'Content-Type': 'application/json' };
+                if (state.apiKey) headers['Authorization'] = `Bearer ${state.apiKey}`;
+
+                const res = await fetch(apiUrl('/v1/chat/completions'), {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        model: els.model.value || 'auto',
+                        messages,
+                        stream: true
+                    })
+                });
+
+                if (!res.ok) {
+                    const errText = await res.text().catch(() => '');
+                    throw new Error(`API ${res.status}${errText ? ': ' + errText.slice(0, 180) : ''}`);
+                }
+
+                const contentType = res.headers.get('content-type') || '';
+                if (!contentType.includes('text/event-stream') && res.body) {
+                    const text = await res.text();
+                    try {
+                        const json = JSON.parse(text);
+                        const content = json.choices?.[0]?.message?.content || text;
+                        onToken(content);
+                        return content;
+                    } catch (_) {
+                        onToken(text);
+                        return text;
+                    }
+                }
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let fullText = '';
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split(/\r?\n/);
+                    buffer = lines.pop() || '';
+                    for (const line of lines) {
+                        const trimmed = line.trim();
+                        if (!trimmed.startsWith('data:')) continue;
+                        const payload = trimmed.slice(5).trim();
+                        if (!payload || payload === '[DONE]') continue;
+                        try {
+                            const chunk = JSON.parse(payload);
+                            const delta = chunk.choices?.[0]?.delta?.content ?? chunk.choices?.[0]?.message?.content ?? '';
+                            if (delta) {
+                                fullText += delta;
+                                onToken(fullText);
+                            }
+                        } catch (_) {}
+                    }
+                }
+                return fullText;
+            }
+
+            function setMode(mode) {
+                state.mode = mode === 'classic' ? 'classic' : 'adventure';
+                const isClassic = state.mode === 'classic';
+                els.modeAdventureBtn.classList.toggle('active', !isClassic);
+                els.modeAdventureBtn.setAttribute('aria-selected', String(!isClassic));
+                els.modeClassicBtn.classList.toggle('active', isClassic);
+                els.modeClassicBtn.setAttribute('aria-selected', String(isClassic));
+
+                els.launchBtnLabel.textContent = isClassic ? '🔍 Search Web' : '🚀 Embark';
+                els.input.placeholder = isClassic
+                    ? "Enter a classic web search query or paste a URL (e.g. 'open source local llm' or 'https://news.ycombinator.com')..."
+                    : "Type a quest, question, or paste a URL to explore (e.g. 'Explore https://news.ycombinator.com and summarize the top AI stories' or 'Chart the most fascinating discoveries in deep-sea bioluminescence')...";
+            }
+
+            async function runClassicSearch(promptText) {
+                const query = (promptText ?? els.input.value).trim();
+                if (!query || state.busy) return;
+
+                state.busy = true;
+                els.launchBtn.disabled = true;
+                els.input.value = '';
+                els.heroStage.classList.add('compact');
+                els.grid.classList.add('active');
+
+                const cardId = `search-${Date.now()}`;
+                const card = document.createElement('article');
+                card.id = cardId;
+                card.className = 'chapter-card';
+                card.innerHTML = `
+                    <div class="chapter-header">
+                        <span class="chapter-badge">🔍 Classic Web Search: ${escapeHtml(query)}</span>
+                        <span class="chapter-meta">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div class="status-line"><span class="pulse-dot"></span><span class="status-msg">Searching live web...</span></div>
+                    <div class="classic-results-slot"></div>
+                `;
+                els.feed.appendChild(card);
+                card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                addTrailNode(`Search: ${query}`, 'web', cardId);
+
+                const statusLine = card.querySelector('.status-line');
+                const resultsSlot = card.querySelector('.classic-results-slot');
+
+                try {
+                    const urls = extractUrls(query);
+                    let results = [];
+                    if (urls.length > 0) {
+                        for (const u of urls.slice(0, 3)) {
+                            const page = await fetchViaProxy(u);
+                            results.push(page);
+                        }
+                    } else {
+                        results = await searchLiveWeb(query, 8);
+                    }
+
+                    statusLine.remove();
+
+                    if (!results.length) {
+                        resultsSlot.innerHTML = `
+                            <p style="color: var(--text-secondary);">No direct results returned from proxy search. Try another query, paste a direct URL, or switch to <strong>AI Adventure</strong> mode.</p>
+                        `;
+                        return;
+                    }
+
+                    renderInspector(results[0]);
+
+                    const headerActions = document.createElement('div');
+                    headerActions.style.cssText = 'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.6rem;margin-bottom:0.75rem;';
+                    headerActions.innerHTML = `
+                        <span style="font-size:0.84rem;color:var(--text-secondary);">Found ${results.length} live result${results.length === 1 ? '' : 's'}</span>
+                        <button type="button" class="path-btn summarize-all-btn">✨ Summarize Results with AI</button>
+                    `;
+                    headerActions.querySelector('.summarize-all-btn').addEventListener('click', () => {
+                        setMode('adventure');
+                        const urlsText = results.slice(0, 3).map(r => r.url).join(' ');
+                        runAdventure(`Summarize and connect these search results for "${query}": ${urlsText}`);
+                    });
+                    resultsSlot.appendChild(headerActions);
+
+                    const list = document.createElement('div');
+                    list.className = 'classic-results-list';
+                    for (const item of results) {
+                        state.artifacts.set(item.url, item);
+                        const row = document.createElement('div');
+                        row.className = 'classic-result-item';
+                        row.innerHTML = `
+                            <div class="classic-result-domain">${item.source ? `[${escapeHtml(item.source)}] ` : ''}${escapeHtml(item.url)}</div>
+                            <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" class="classic-result-title">${escapeHtml(item.title || item.url)}</a>
+                            <div class="classic-result-snippet markdown-body">${md.render(item.snippet || 'No description available.')}</div>
+                            <div class="artifact-actions">
+                                <button type="button" class="mini-action inspect-btn">🔭 Inspect</button>
+                                <button type="button" class="mini-action dive-btn">🧭 Explore with AI</button>
+                                <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" class="mini-action">↗ Open</a>
+                            </div>
+                        `;
+                        row.querySelector('.inspect-btn').addEventListener('click', () => inspectUrl(item.url));
+                        row.querySelector('.dive-btn').addEventListener('click', () => {
+                            setMode('adventure');
+                            runAdventure(`Explore ${item.url} in detail and tell me the key takeaways.`);
+                        });
+                        list.appendChild(row);
+                    }
+                    resultsSlot.appendChild(list);
+                } catch (err) {
+                    statusLine.remove();
+                    resultsSlot.innerHTML = `
+                        <p style="color: #fca5a5;"><strong>Search failed:</strong> ${escapeHtml(err.message)}</p>
+                        <p style="color: var(--text-secondary); font-size: 0.86rem;">Make sure you are running on G4F / Wrangler with <code>/proxy</code> enabled, or configure your API base URL in <strong>Config</strong>.</p>
+                    `;
+                } finally {
+                    state.busy = false;
+                    els.launchBtn.disabled = false;
+                }
+            }
+
+            async function runAdventure(promptText) {
+                const query = (promptText ?? els.input.value).trim();
+                if (!query || state.busy) return;
+
+                state.busy = true;
+                els.launchBtn.disabled = true;
+                els.input.value = '';
+                els.heroStage.classList.add('compact');
+                els.grid.classList.add('active');
+
+                const userCardId = `turn-${Date.now()}-u`;
+                const aiCardId = `turn-${Date.now()}-a`;
+
+                const userCard = document.createElement('article');
+                userCard.id = userCardId;
+                userCard.className = 'chapter-card user-turn';
+                userCard.innerHTML = `
+                    <div class="chapter-header">
+                        <span class="chapter-badge">🧑‍🚀 Explorer Prompt</span>
+                        <span class="chapter-meta">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div class="markdown-body">${md.render(query)}</div>
+                `;
+                els.feed.appendChild(userCard);
+                addTrailNode(query, 'ai', userCardId);
+
+                const aiCard = document.createElement('article');
+                aiCard.id = aiCardId;
+                aiCard.className = 'chapter-card';
+                aiCard.innerHTML = `
+                    <div class="chapter-header">
+                        <span class="chapter-badge">🧭 AI Expedition Guide</span>
+                        <span class="chapter-meta">${escapeHtml(els.model.value || 'auto')}</span>
+                    </div>
+                    <div class="status-line"><span class="pulse-dot"></span><span class="status-msg">Scanning the live web...</span></div>
+                    <div class="artifacts-slot"></div>
+                    <div class="markdown-body"></div>
+                    <div class="paths-slot"></div>
+                `;
+                els.feed.appendChild(aiCard);
+                aiCard.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+                const statusLine = aiCard.querySelector('.status-line');
+                const statusMsg = aiCard.querySelector('.status-msg');
+                const artifactsSlot = aiCard.querySelector('.artifacts-slot');
+                const bodySlot = aiCard.querySelector('.markdown-body');
+                const pathsSlot = aiCard.querySelector('.paths-slot');
+
+                try {
+                    const webArtifacts = [];
+                    if (state.liveWeb) {
+                        const urls = extractUrls(query);
+                        for (const u of urls.slice(0, 2)) {
+                            try {
+                                statusMsg.textContent = `Fetching ${u}...`;
+                                const page = await fetchViaProxy(u);
+                                webArtifacts.push(page);
+                                addTrailNode(page.title || u, 'web', aiCardId);
+                            } catch (e) {
+                                console.warn('Proxy fetch failed:', e);
+                            }
+                        }
+
+                        if (urls.length === 0) {
+                            statusMsg.textContent = 'Searching live web sources...';
+                            const found = await searchLiveWeb(query);
+                            webArtifacts.push(...found);
+                            if (found.length) {
+                                renderInspector(found[0]);
+                            }
+                        } else if (webArtifacts[0]) {
+                            renderInspector(webArtifacts[0]);
+                        }
+                    }
+
+                    renderArtifactsStrip(artifactsSlot, webArtifacts);
+
+                    const webContext = webArtifacts.length
+                        ? '\n\n[LIVE WEB SOURCES FETCHED]\n' + webArtifacts.map((a, i) =>
+                            `Source ${i + 1}: ${a.title}\nURL: ${a.url}\nContent: ${(a.text || a.snippet || '').slice(0, 1400)}`
+                        ).join('\n---\n')
+                        : '';
+
+                    const systemPrompt = `${PERSONAS[els.persona.value] || PERSONAS.cartographer}
+Always conclude your response with a block of 3 concise, clickable follow-up expedition prompts wrapped exactly like this:
+[NEXT_PATHS]
+- First follow-up quest or URL to explore
+- Second follow-up quest
+- Third follow-up quest
+[/NEXT_PATHS]`;
+
+                    const conversation = [
+                        { role: 'system', content: systemPrompt },
+                        ...state.messages.slice(-6),
+                        { role: 'user', content: query + webContext }
+                    ];
+
+                    statusMsg.textContent = 'Synthesizing expedition chapter...';
+                    const rawReply = await streamChatCompletion(conversation, (partial) => {
+                        const { cleaned } = parseNextPaths(partial);
+                        renderRichMarkdown(cleaned, bodySlot);
+                    });
+
+                    statusLine.remove();
+                    const { cleaned, paths } = parseNextPaths(rawReply);
+                    renderRichMarkdown(cleaned || rawReply, bodySlot);
+
+                    state.messages.push({ role: 'user', content: query });
+                    state.messages.push({ role: 'assistant', content: cleaned || rawReply });
+
+                    if (paths.length) {
+                        const nextWrap = document.createElement('div');
+                        nextWrap.className = 'next-paths';
+                        paths.forEach(p => {
+                            const btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.className = 'path-btn';
+                            btn.innerHTML = `<span>↳ ${escapeHtml(p)}</span>`;
+                            btn.addEventListener('click', () => runAdventure(p));
+                            nextWrap.appendChild(btn);
+                        });
+                        pathsSlot.appendChild(nextWrap);
+                    }
+                } catch (err) {
+                    statusLine.remove();
+                    bodySlot.innerHTML = `
+                        <p style="color: #fca5a5;">
+                            <strong>Expedition interrupted:</strong> ${escapeHtml(err.message)}
+                        </p>
+                        <p style="color: var(--text-secondary); font-size: 0.88rem;">
+                            Tip: Open <strong>Config</strong> in the top-right to point to a running G4F API server (e.g. <code>http://localhost:8080</code>) or check your connection.
+                        </p>
+                    `;
+                } finally {
+                    state.busy = false;
+                    els.launchBtn.disabled = false;
+                }
+            }
+
+            // Event Listeners
+            els.modeAdventureBtn.addEventListener('click', () => setMode('adventure'));
+            els.modeClassicBtn.addEventListener('click', () => setMode('classic'));
+
+            function handleSubmit() {
+                if (state.mode === 'classic') {
+                    runClassicSearch();
+                } else {
+                    runAdventure();
+                }
+            }
+
+            els.form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                handleSubmit();
+            });
+
+            els.input.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSubmit();
+                }
+            });
+
+            document.querySelectorAll('.quest-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    const p = chip.getAttribute('data-prompt') || '';
+                    els.input.value = p;
+                    if (state.mode === 'classic') {
+                        runClassicSearch(p);
+                    } else {
+                        runAdventure(p);
+                    }
+                });
+            });
+
+            els.webToggle.addEventListener('click', () => {
+                state.liveWeb = !state.liveWeb;
+                els.webToggle.classList.toggle('enabled', state.liveWeb);
+                els.webToggle.querySelector('span').textContent = state.liveWeb ? '📡 Live Web: ON' : '📡 Live Web: OFF';
+            });
+
+            els.resetBtn.addEventListener('click', () => {
+                if (state.busy) return;
+                state.messages = [];
+                state.trail = [];
+                state.artifacts.clear();
+                els.feed.innerHTML = '';
+                els.trailList.innerHTML = '<div class="empty-hint">Your journey nodes will appear here.</div>';
+                els.stepCount.textContent = '0 steps';
+                els.inspectorHost.textContent = 'idle';
+                els.inspectorBox.innerHTML = '<div class="empty-hint">Click <strong>Inspect</strong> on any discovered web artifact to view extracted text &amp; outbound links.</div>';
+                els.heroStage.classList.remove('compact');
+                els.grid.classList.remove('active');
+                els.input.focus();
+            });
+
+            els.exportBtn.addEventListener('click', () => {
+                if (!state.messages.length) return;
+                const lines = ['# G4F Web Adventure Log\n'];
+                state.messages.forEach(m => {
+                    lines.push(`## ${m.role === 'user' ? 'Explorer' : 'AI Expedition Guide'}\n\n${m.content}\n`);
+                });
+                const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `g4f-adventure-${new Date().toISOString().slice(0, 10)}.md`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+            });
+
+            els.settingsBtn.addEventListener('click', () => {
+                els.apiBaseInput.value = state.apiBase;
+                els.apiKeyInput.value = state.apiKey;
+                els.settingsModal.classList.add('open');
+            });
+
+            els.closeSettings.addEventListener('click', () => {
+                els.settingsModal.classList.remove('open');
+            });
+
+            els.settingsModal.addEventListener('click', (e) => {
+                if (e.target === els.settingsModal) els.settingsModal.classList.remove('open');
+            });
+
+            els.saveSettings.addEventListener('click', () => {
+                state.apiBase = els.apiBaseInput.value.trim();
+                state.apiKey = els.apiKeyInput.value.trim();
+                localStorage.setItem('g4f_adv_api_base', state.apiBase);
+                localStorage.setItem('g4f_adv_api_key', state.apiKey);
+                els.settingsModal.classList.remove('open');
+                loadModels();
+                loadSearchProviders();
+            });
+        })();
+    </script>
+</body>
+</html>
