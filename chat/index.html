@@ -43,6 +43,8 @@
 
     <link rel="stylesheet" href="/dist/css/style.css?v={{ v }}" />
     <link rel="stylesheet" href="/dist/css/chat-modern.css?v={{ v }}" />
+    <link rel="stylesheet" href="/dist/css/social-links.css?v={{ v }}" />
+    <script src="/dist/js/social-links.js?v={{ v }}" defer></script>
     <script>
       // "Switch back to classic": disable the modern UI layer (chat-modern.css)
       // before first paint when the user turned it off in the settings.
@@ -875,6 +877,7 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                         <small data-translate="true">A friendly team update email</small>
                     </button>
                 </div>
+                <social-links placement="top" aria-label="G4F social media"></social-links>
             </div>
         </div>
     </template>
