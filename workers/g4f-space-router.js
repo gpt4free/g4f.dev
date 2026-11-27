@@ -226,10 +226,10 @@ export default {
     const host = url.hostname.toLowerCase();
     const pathname = url.pathname;
     if (pathname === "/headers") {
-        return withVersion(Response.json({...Object.fromEntries(request.headers.entries())}));
+        return withVersion(Response.json({...Object.fromEntries(request.headers.entries())}, {headers: {"Cache-Control": "no-store"}}));
     }
     if (pathname === "/country-ip") {
-        return withVersion(Response.json({country: request.cf.country}));
+        return withVersion(Response.json({country: request.cf.country}, {headers: {"Cache-Control": "no-store"}}));
     }
     if ((host === "g4f.space" && !isG4fSpaceApiPath(pathname)) || pathname.startsWith("/.") || pathname.startsWith("/_") || pathname.endsWith(".py") || pathname.endsWith(".php")) {
       if (isApiPath(pathname)) {
