@@ -29,6 +29,7 @@ const G4F_HOST_PASS = "https://g4f.space";
 const DB_NAME = 'chat-db';
 const STORE_NAME = 'conversations';
 const VERSION = 1;
+const COUNTRY_IP_URL = "https://g4f.space/country-ip";
 
 const isG4fHost = window.location.origin === G4F_HOST || window.location.origin.endsWith(G4F_WILDCARD);
 
@@ -473,7 +474,7 @@ framework.detectLanguage = async () => {
     }
     if (!country) {
         try {
-            const response = await fetch("/country-ip", {
+            const response = await fetch(COUNTRY_IP_URL, {
                 cache: "no-store",
                 signal: AbortSignal.timeout(2500),
             });
