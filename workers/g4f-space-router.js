@@ -74,7 +74,8 @@ const G4F_SPACE_API_PATHS = [
   "/search",
   "/files",
   "/pa",
-  "/proxy"
+  "/proxy",
+  "/headers"
 ];
 const G4F_API_PATHS = [
   "/v1",
