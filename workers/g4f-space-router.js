@@ -226,7 +226,7 @@ export default {
     const host = url.hostname.toLowerCase();
     const pathname = url.pathname;
     if (pathname === "/headers") {
-        return withVersion(Response.json({...Object.fromEntries(request.headers.entries(}));
+        return withVersion(Response.json({...Object.fromEntries(request.headers.entries()}));
     }
     if (pathname === "/country-ip") {
         return withVersion(Response.json({country: request.cf.country}));
