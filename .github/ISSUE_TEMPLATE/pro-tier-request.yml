@@ -61,6 +61,15 @@ body:
     validations:
       required: true
 
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Feedback for gpt4free (ideas or issues)
+      description: Share ideas for improvements, feature requests, or any issues you have encountered.
+      placeholder: "Tell us about your ideas, suggestions, bugs, or other feedback..."
+    validations:
+      required: false
+
   - type: checkboxes
     id: agreement
     attributes:
