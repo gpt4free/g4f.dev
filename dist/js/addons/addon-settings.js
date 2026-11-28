@@ -292,6 +292,7 @@ function count_words_and_tokens(text, model, completion_tokens, prompt_tokens, e
 }
 
 let countFocus = userInput;
+let tokenCounterLoading = false;
 
 const count_input = async () => {
     const countTokensEnabled = appStorage.getItem("countTokens") != "false" && count_words_and_tokens instanceof Function;
@@ -303,6 +304,15 @@ const count_input = async () => {
         }
     } else {
         inputCount.innerText = "";
+    }
+    // The tokenizer now loads on first interaction; refresh the displayed
+    // count once it is ready instead of leaving the word-only estimate.
+    if (countTokensEnabled && countFocus.value && !tokenCounterLoading && !window.GPTTokenizer_o200k_base && typeof window.loadTokenCounter === "function") {
+        tokenCounterLoading = true;
+        window.loadTokenCounter().finally(() => {
+            tokenCounterLoading = false;
+            if (countFocus.value) count_input();
+        });
     }
 };
 addonsLoaded.then(() => {

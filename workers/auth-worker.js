@@ -72,6 +72,10 @@ const DISCORD_API_BASE = "https://discord.com/api/v10";
 const DISCORD_SUPPORT_GUILD_CACHE_KEY = "discord_support_guild";
 const DISCORD_SUPPORT_GUILD_TTL = 7 * 24 * 60 * 60;
 const DISCORD_OAUTH_SCOPES = "identify email guilds";
+// A Discord identity may be connected to several G4F accounts. The legacy
+// single-value lookup keys still point at the primary account (used by plain
+// Discord sign-in); this index tracks every account that linked the identity.
+const DISCORD_ACCOUNTS_INDEX_PREFIX = "discord_accounts:";
 
 // Hash-to-tier upgrade mappings for anonymous users
 // Maps hash values to tier upgrades
@@ -2893,22 +2897,24 @@ ${buttonsHtml}
 
   /**
    * Attach a Discord identity to an existing member (used by ?link=1 OAuth).
+   * The same Discord identity can be linked to multiple G4F accounts; each
+   * account keeps its own tokens and can verify guild membership separately.
    */
   async function linkDiscordToUser(env, userId, profile) {
     const user = await getUser(env, userId);
     if (!user) return { error: "G4F account not found" };
     if (!profile || !profile.username) return { error: "Discord profile is incomplete" };
 
-    const lookupKey = `user_lookup:discord:${profile.username}`;
-    const idLookupKey = profile.id ? `user_lookup_id:discord:${profile.id}` : null;
-    const existingByUsername = await env.MEMBERS_KV.get(lookupKey);
-    const existingById = idLookupKey ? await env.MEMBERS_KV.get(idLookupKey) : null;
-    const existingId = existingByUsername || existingById;
-    if (existingId && existingId !== user.id) {
-      return { error: "This Discord account is already linked to another G4F account" };
-    }
-
-    const previousUsername = user.provider === "discord" ? user.username : null;
+    const previousLink = getDiscordLink(user);
+    // A Discord login uses the top-level identity; a stale linked object must
+    // not make us release the wrong multi-account index entry.
+    const previousId = user.provider === "discord"
+      ? (user.discord_id || (previousLink && previousLink.id))
+      : (previousLink && previousLink.id);
+    const previousUsername = user.provider === "discord"
+      ? user.username
+      : (previousLink && previousLink.username);
+    const profileId = profile.id ? String(profile.id) : null;
 
     const now = new Date().toISOString();
     if (user.provider === "discord") {
@@ -2923,7 +2929,7 @@ ${buttonsHtml}
       user.discord_scope = profile.scope || DISCORD_OAUTH_SCOPES;
     } else {
       user.discord = {
-        id: profile.id || null,
+        id: profileId,
         username: profile.username,
         name: profile.name || profile.username,
         email: profile.email || null,
@@ -2936,20 +2942,20 @@ ${buttonsHtml}
       };
     }
     user.updated_at = now;
+    await saveUser(env, user);
 
+    // Replacing a Discord identity releases the old one before indexing the
+    // new one, without taking the primary slot from a different member.
+    if (previousId && previousId !== profileId) {
+      await unregisterDiscordAccount(env, user.id, { id: previousId, username: previousUsername });
+    }
     if (previousUsername && previousUsername !== profile.username) {
       const oldKey = `user_lookup:discord:${previousUsername}`;
-      const oldValue = await env.MEMBERS_KV.get(oldKey);
-      if (oldValue === user.id) {
+      if (await env.MEMBERS_KV.get(oldKey) === user.id) {
         await env.MEMBERS_KV.delete(oldKey);
       }
     }
-
-    await env.MEMBERS_KV.put(lookupKey, user.id);
-    if (profile.id) {
-        await env.MEMBERS_KV.put(`user_lookup_id:discord:${profile.id}`, user.id);
-    }
-    await saveUser(env, user);
+    await registerDiscordAccount(env, user.id, { id: profileId, username: profile.username });
     return { user };
   }
 
@@ -3475,6 +3481,96 @@ ${buttonsHtml}
     return keys;
   }
 
+  // Discord is the only provider that can be linked to multiple accounts.
+  // `user_lookup_id:discord:<id>` / `user_lookup:discord:<name>` keep pointing
+  // at the primary account, while `discord_accounts:<id>` lists every member
+  // that connected the identity via the authenticated ?link=1 flow.
+  function discordAccountsKey(providerId) {
+    return `${DISCORD_ACCOUNTS_INDEX_PREFIX}${providerId}`;
+  }
+
+  async function readDiscordAccountIds(env, providerId, legacyOwner) {
+    if (!providerId) return [];
+    const raw = await env.MEMBERS_KV.get(discordAccountsKey(providerId));
+    let ids;
+    if (!raw) {
+      ids = legacyOwner ? [legacyOwner] : [];
+    } else {
+      try {
+        ids = JSON.parse(raw);
+      } catch (e) {
+        ids = [raw];
+      }
+    }
+    if (!Array.isArray(ids)) ids = [ids];
+    return [...new Set(ids.filter(Boolean).map(String))];
+  }
+
+  async function writeDiscordAccountIds(env, providerId, ids) {
+    if (!providerId) return;
+    await env.MEMBERS_KV.put(
+      discordAccountsKey(providerId),
+      JSON.stringify([...new Set(ids.filter(Boolean).map(String))])
+    );
+  }
+
+  /**
+   * Register a Discord identity for a member without stealing the primary
+   * account from another member. The first account recorded stays primary, so
+   * signing in with Discord alone always opens the same G4F account.
+   */
+  async function registerDiscordAccount(env, memberId, profile) {
+    const providerId = normalizeLookupValue(profile && profile.id);
+    const username = normalizeLookupValue(profile && profile.username);
+    const idKey = providerId ? `user_lookup_id:discord:${providerId}` : null;
+    const nameKey = username ? `user_lookup:discord:${username}` : null;
+    const idOwner = idKey ? await env.MEMBERS_KV.get(idKey) : null;
+    const nameOwner = nameKey ? await env.MEMBERS_KV.get(nameKey) : null;
+
+    const ids = await readDiscordAccountIds(env, providerId, idOwner);
+    if (!ids.includes(memberId)) ids.push(memberId);
+    const primaryId = ids[0];
+    await writeDiscordAccountIds(env, providerId, ids);
+
+    if (idKey && (!idOwner || ids.includes(idOwner))) {
+      await env.MEMBERS_KV.put(idKey, primaryId);
+    }
+    // Only refresh the username alias when it belongs to this Discord
+    // identity; a different identity that happens to use the name wins.
+    if (nameKey && (!nameOwner || ids.includes(nameOwner))) {
+      await env.MEMBERS_KV.put(nameKey, primaryId);
+    }
+  }
+
+  /**
+   * Remove a member from a Discord identity. The single-value lookup keys are
+   * handed to the next linked account, or deleted when this was the last one.
+   */
+  async function unregisterDiscordAccount(env, memberId, profile) {
+    const providerId = normalizeLookupValue(profile && profile.id);
+    const username = normalizeLookupValue(profile && profile.username);
+    const idKey = providerId ? `user_lookup_id:discord:${providerId}` : null;
+    const nameKey = username ? `user_lookup:discord:${username}` : null;
+    const idOwner = idKey ? await env.MEMBERS_KV.get(idKey) : null;
+    const nameOwner = nameKey ? await env.MEMBERS_KV.get(nameKey) : null;
+
+    const ids = (await readDiscordAccountIds(env, providerId, idOwner)).filter((id) => id !== memberId);
+    if (ids.length) {
+      await writeDiscordAccountIds(env, providerId, ids);
+      if (idKey && (!idOwner || ids.includes(idOwner))) {
+        await env.MEMBERS_KV.put(idKey, ids[0]);
+      }
+      if (nameKey && (!nameOwner || ids.includes(nameOwner))) {
+        await env.MEMBERS_KV.put(nameKey, ids[0]);
+      }
+      return;
+    }
+
+    if (providerId) await env.MEMBERS_KV.delete(discordAccountsKey(providerId));
+    if (idKey && (!idOwner || idOwner === memberId)) await env.MEMBERS_KV.delete(idKey);
+    if (nameKey && (!nameOwner || nameOwner === memberId)) await env.MEMBERS_KV.delete(nameKey);
+  }
+
   /**
    * Repair lookup indexes for a stored user. Runs during the scheduled scan
    * so accounts created before the index existed become reachable again.
@@ -3647,12 +3743,18 @@ ${buttonsHtml}
         user.updated_at = now;
     }
 
-    // Store the username and stable-id lookup indexes for this user.
+    // Store the username and stable-id lookup indexes for this user. Discord
+    // keeps a single primary account for sign-in even when the identity is
+    // connected to other members through ?link=1.
     const finalUsername = normalizeLookupValue(user.username) || lookupUsername;
     const finalProviderId = getUserProviderId(user) || providerId;
     const finalKeys = userLookupKeys(user.provider, finalUsername, finalProviderId);
-    for (const key of finalKeys) {
-        await env.MEMBERS_KV.put(key, user.id);
+    if (user.provider === "discord") {
+        await registerDiscordAccount(env, user.id, { id: finalProviderId, username: finalUsername });
+    } else {
+        for (const key of finalKeys) {
+            await env.MEMBERS_KV.put(key, user.id);
+        }
     }
 
     // Drop a stale username alias after a provider-side rename so it cannot
@@ -4040,13 +4142,27 @@ ${buttonsHtml}
     for (const provider of linkedProviders) {
         if (user[provider]) {
             const linked = user[provider];
-            for (const key of userLookupKeys(provider, linked.username, getUserProviderId({
-                ...linked,
-                provider
-            }))) {
-                await env.MEMBERS_KV.delete(key);
+            if (provider === "discord") {
+                await unregisterDiscordAccount(env, user.id, {
+                    id: linked.id || linked.discord_id || getUserProviderId({ ...linked, provider }),
+                    username: linked.username
+                });
+            } else {
+                for (const key of userLookupKeys(provider, linked.username, getUserProviderId({
+                    ...linked,
+                    provider
+                }))) {
+                    await env.MEMBERS_KV.delete(key);
+                }
             }
         }
+    }
+    // A Discord login is the main provider, not a linked one.
+    if (user.provider === "discord") {
+        await unregisterDiscordAccount(env, user.id, {
+            id: getUserProviderId(user) || user.discord_id,
+            username: user.username
+        });
     }
   
     // Delete all API keys
@@ -4102,16 +4218,24 @@ ${buttonsHtml}
         return jsonResponse({ error: `Provider ${provider} is not linked to your account` }, 400, getCorsHeaders(request));
     }
   
-    // Remove the provider link and its lookup indexes
+    // Remove the provider link and its lookup indexes. Discord can be shared,
+    // so only release its lookup keys when no other account still uses it.
     const linkedData = user[provider];
     if (linkedData) {
-        const linkedIdentity = { ...linkedData, provider };
-        for (const key of userLookupKeys(
-            provider,
-            linkedData.username,
-            getUserProviderId(linkedIdentity)
-        )) {
-            await env.MEMBERS_KV.delete(key);
+        if (provider === "discord") {
+            await unregisterDiscordAccount(env, user.id, {
+                id: linkedData.id || linkedData.discord_id || getUserProviderId({ ...linkedData, provider }),
+                username: linkedData.username
+            });
+        } else {
+            const linkedIdentity = { ...linkedData, provider };
+            for (const key of userLookupKeys(
+                provider,
+                linkedData.username,
+                getUserProviderId(linkedIdentity)
+            )) {
+                await env.MEMBERS_KV.delete(key);
+            }
         }
     }
     delete user[provider];
@@ -6087,5 +6211,8 @@ const body = await request.json().catch(() => ({}));
     createOrUpdateUser,
     ensureUserLookupIndexes,
     findUserByProviderIdentity,
-    getUserProviderId
+    getDiscordLink,
+    getUserProviderId,
+    linkDiscordToUser,
+    unregisterDiscordAccount
   };

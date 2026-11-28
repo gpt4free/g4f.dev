@@ -497,7 +497,9 @@
 
         async function refresh() {
             const listEl = document.getElementById("lang-list");
-            listEl.innerHTML = `<div class="loading">${escapeHtml(t("Loading languages…"))}</div>`;
+            // Keep the seed list rendered while the store loads: replacing it
+            // with a one-line loader caused a large layout shift in the chat
+            // overlay (CLS ~0.7 on first visit).
             await detectOnce();
             try {
                 listing = await framework.listGlobalTranslations();
@@ -518,9 +520,11 @@
         function render() {
             const listEl = document.getElementById("lang-list");
             const total = listing.total_snippets;
-            const store = framework.globalTranslations || {};
-            const current = baseLang(framework.getLanguage());
-            const selected = framework.getSelectedLanguage ? framework.getSelectedLanguage() : null;
+            // framework.js is deferred, so the first synchronous render may
+            // run before it is available. The refresh below fills in details.
+            const store = (window.framework && framework.globalTranslations) || {};
+            const current = baseLang((window.framework && framework.getLanguage) ? framework.getLanguage() : "");
+            const selected = window.framework && framework.getSelectedLanguage ? framework.getSelectedLanguage() : null;
             const detected = detectedLanguage ? baseLang(detectedLanguage) : null;
 
             // Merge the server listing with the seed languages (0% entries).
@@ -586,6 +590,10 @@
                 listEl.appendChild(row);
             }
         }
+
+        // Paint the full seed list immediately so first load has a stable
+        // height; refresh() only updates percentages when the store answers.
+        render();
 
         document.getElementById("lang-list").addEventListener("click", async (event) => {
             const btn = event.target.closest("button[data-action]");

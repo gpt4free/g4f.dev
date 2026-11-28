@@ -41,6 +41,17 @@
     <!-- Canonical URL to avoid duplicate content issues -->
     <link rel="canonical" href="https://g4f.dev/chat/" />
 
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://g4f.space" crossorigin />
+    <link rel="preconnect" href="https://www.youtube.com" crossorigin />
+
+    <!-- style.css and chat-modern.css @import these; preloading starts the
+         requests during HTML parsing instead of after the CSS is fetched. -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" />
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" />
+
     <link rel="stylesheet" href="/dist/css/style.css?v={{ v }}" />
     <link rel="stylesheet" href="/dist/css/chat-modern.css?v={{ v }}" />
     <link rel="stylesheet" href="/dist/css/social-links.css?v={{ v }}" />
@@ -53,22 +64,29 @@
         if (modernLink) modernLink.disabled = true;
       }
     </script>
+    <!-- Font Awesome uses font-display:block; keeping it blocking avoids a
+         late icon-font swap that shifts the empty state on desktop. -->
     <link rel="stylesheet" href="/dist/css/all.min.css" />
-    <link rel="stylesheet" href="/dist/css/dracula.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe/dist/photoswipe.css" />
+    <link rel="stylesheet" href="/dist/css/dracula.min.css" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe/dist/photoswipe.css" media="print" onload="this.media='all'" />
 
+    <!-- The empty-state logo is the LCP image on a fresh visit; its markup is
+         cloned from a template, so preload it to make the request discoverable. -->
+    <link rel="preload" as="image" href="/dist/img/g4f.svg" fetchpriority="high" />
     <link rel="icon" href="/dist/img/g4f.svg" type="image/svg+xml">
     <link rel="shortcut icon" href="/dist/img/g4f.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" sizes="180x180" href="/dist/img/g4f-180x180.png">
     <link rel="manifest" href="./manifest.webmanifest">
     <meta name="theme-color" content="#0b0a10">
 
-    <script src="/dist/js/web-mcp.js?v={{ v }}"></script>
-    <script src="/dist/js/mcp-client.js?v={{ v }}"></script>
-    <script src="/dist/js/oauth-client.js?v={{ v }}"></script>
-    <script src="/dist/js/framework.js?v={{ v }}"></script>
+    <!-- Deferred classic scripts keep document order, so framework.js is still
+         ready before the v2.js module starts loading addons. -->
+    <script src="/dist/js/web-mcp.js?v={{ v }}" defer></script>
+    <script src="/dist/js/mcp-client.js?v={{ v }}" defer></script>
+    <script src="/dist/js/oauth-client.js?v={{ v }}" defer></script>
+    <script src="/dist/js/framework.js?v={{ v }}" defer></script>
     <script src="/dist/js/v2.js?v={{ v }}" type="module" defer></script>
-    <script src="/dist/js/cake-baker.js?v={{ v }}"></script>
+    <script src="/dist/js/cake-baker.js?v={{ v }}" defer></script>
     <script src="/dist/js/challenge-client.js?v={{ v }}" defer></script>
     <script src="/dist/js/recorder.js" async></script>
     <script src="/dist/js/highlight.min.js" async></script>
@@ -102,7 +120,32 @@
         },
       };
     </script>
-    <script id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <script>
+      // MathJax costs ~200 KiB and several seconds of script evaluation on
+      // mobile. Load it only when a rendered message actually contains math.
+      let mathJaxPromise;
+      window.loadMathJax = function () {
+        if (window.MathJax && window.MathJax.typesetPromise) return Promise.resolve();
+        if (!mathJaxPromise) {
+          mathJaxPromise = new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.id = 'MathJax-script';
+            script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+            script.async = true;
+            script.onload = () => {
+              if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+                window.MathJax.startup.promise.then(resolve, resolve);
+              } else {
+                resolve();
+              }
+            };
+            script.onerror = resolve;
+            document.head.appendChild(script);
+          });
+        }
+        return mathJaxPromise;
+      };
+    </script>
     <script>
       var tag = document.createElement('script');
       tag.src = "https://www.youtube.com/iframe_api";
@@ -110,17 +153,29 @@
       firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
     </script>
 
-    <template>
-      <script src="https://cdn.jsdelivr.net/npm/gpt-tokenizer/dist/o200k_base.js" async></script>
-    </template>
-    <script async>
-      if (localStorage.getItem("countTokens") !== "false") {
-        const template = document.head.querySelector('template');
-        if (template) {
-          document.head.appendChild(template.content);
-          template.remove();
+    <script>
+      // The tokenizer is ~780 KiB and was the biggest startup long task.
+      // Fetch it on first interaction, or explicitly from the counting code.
+      let tokenCounterPromise;
+      window.loadTokenCounter = function () {
+        if (window.GPTTokenizer_o200k_base) return Promise.resolve();
+        try {
+          if (localStorage.getItem("countTokens") === "false") return Promise.resolve();
+        } catch (e) { /* storage can be unavailable in private mode */ }
+        if (!tokenCounterPromise) {
+          tokenCounterPromise = new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/gpt-tokenizer/dist/o200k_base.js';
+            script.async = true;
+            script.onload = resolve;
+            script.onerror = resolve;
+            document.head.appendChild(script);
+          });
         }
-      }
+        return tokenCounterPromise;
+      };
+      window.addEventListener('pointerdown', () => window.loadTokenCounter(), { once: true, passive: true });
+      window.addEventListener('keydown', () => window.loadTokenCounter(), { once: true });
     </script>
 
     <script>
@@ -768,6 +823,29 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
                 <button type="button" id="ai-consent-accept" data-translate="true">I understand — Continue</button>
             </div>
         </div>
+        <script>
+          // The consent dialog is the largest above-the-fold text on a fresh
+          // visit. Reveal it as soon as its markup exists instead of waiting
+          // for all addons to load (Lighthouse LCP render delay was ~98%).
+          (function () {
+            const dialog = document.getElementById("ai-consent-dialog");
+            const overlay = document.getElementById("ai-consent-overlay");
+            const accept = document.getElementById("ai-consent-accept");
+            if (!dialog || !overlay || !accept) return;
+            let accepted = false;
+            try { accepted = localStorage.getItem("aiConsentAccepted") === "true"; } catch (e) {}
+            if (accepted) return;
+            dialog.dataset.consentBound = "true";
+            dialog.classList.remove("hidden");
+            overlay.classList.remove("hidden");
+            accept.addEventListener("click", () => {
+              try { localStorage.setItem("aiConsentAccepted", "true"); } catch (e) {}
+              dialog.classList.add("hidden");
+              overlay.classList.add("hidden");
+              document.getElementById("userInput")?.focus();
+            }, { once: true });
+          })();
+        </script>
 
         <!-- Logs -->
         <section class="log hidden" aria-label="Application logs" tabindex="-1">
@@ -851,7 +929,7 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
         <div id="chat-empty-state" class="chat-empty-state" data-translate="true" aria-label="Start a conversation">
             <div class="empty-state-content">
                 <div class="empty-state-icon">
-                    <img src="/dist/img/g4f.svg" alt="" aria-hidden="true" />
+                    <img src="/dist/img/g4f.svg" alt="" aria-hidden="true" fetchpriority="high" />
                 </div>
                 <h2 class="empty-state-title" data-translate="true">How can I help you today?</h2>
                 <p class="empty-state-subtitle" data-translate="true">Ask anything — brainstorm, write, code, or explore. Pick a suggestion to get started.</p>
@@ -923,6 +1001,10 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
         });
         observer.observe(chatBody, { childList: true, subtree: false });
 
+        // Build the empty state during parsing, not from the mutation observer,
+        // so its height is present at first paint (avoids a large CLS).
+        buildEmptyState();
+
         // Suggestion cards fill the composer and send.
         chatBody.addEventListener("click", async (event) => {
             const card = event.target.closest(".suggestion-card");
@@ -961,10 +1043,18 @@ Render audio URLs as HTML: &lt;audio controls src=&quot;http://example/audio.mp3
         window.domReady?.then(() => {
             if (!hasMessages()) buildEmptyState();
             updateEmptyState();
-            window.addonsLoaded?.then(() => setTimeout(() => {
-                updateEmptyState();
-                if (!hasMessages()) buildEmptyState();
-            }, 300));
+            window.addonsLoaded?.then(() => {
+                // The empty state now exists before framework.js runs, so
+                // translate it once the addon/framework globals are ready.
+                const emptyState = document.getElementById(EMPTY_STATE_ID);
+                if (emptyState && window.framework && framework.translateMarked) {
+                    framework.translateMarked(emptyState);
+                }
+                setTimeout(() => {
+                    updateEmptyState();
+                    if (!hasMessages()) buildEmptyState();
+                }, 300);
+            });
         });
     })();
     </script>

@@ -327,6 +327,11 @@ function show_ai_consent() {
     if (!dialog || !overlay || !accept) {
         return;
     }
+    // The inline bootstrap in chat/index.html may already have shown and
+    // wired the dialog so it can paint before addons finish loading.
+    if (dialog.dataset.consentBound === "true") {
+        return;
+    }
     const storage = window.appStorage || window.localStorage;
     if (storage.getItem("aiConsentAccepted") === "true") {
         return;
@@ -464,6 +469,13 @@ async function on_load() {
 }
 
 function render_startup_questions() {
+    // The modern empty state already offers suggestion cards. Appending the
+    // AI-generated chip list behind it would replace a large element with a
+    // small one and cause a big layout shift on first visit.
+    const emptyState = document.getElementById("chat-empty-state");
+    if (emptyState && !emptyState.classList.contains("hidden")) {
+        return;
+    }
     if (!Array.isArray(startup_questions) || !startup_questions.length) {
         return;
     }
@@ -588,6 +600,10 @@ async function hide_settings() {
 }
 
 addonsLoaded.then(() => {
+    const emptyState = document.getElementById("chat-empty-state");
+    if (emptyState && !emptyState.classList.contains("hidden")) {
+        return;
+    }
     load_startup_questions();
 });
 export default {

@@ -406,3 +406,128 @@ console.log("PASS: pro status and verify fallback upgrade user from approved Git
   }
 }
 console.log("PASS: scheduled tier update paginates across runs within subrequest limits");
+
+// One Discord identity can be connected to several G4F accounts. The primary
+// account stays the target of a plain Discord sign-in.
+{
+  const env = makeEnv();
+  const profile = {
+    id: "disc-shared-1",
+    username: "shared-discord",
+    name: "Shared Discord",
+    email: "shared@example.com"
+  };
+  const primary = await __test.createOrUpdateUser(env, {
+    provider: "discord",
+    provider_id: profile.id,
+    username: profile.username,
+    name: profile.name,
+    email: profile.email
+  });
+  const alice = await __test.createOrUpdateUser(env, {
+    provider: "github", provider_id: "gh-alice", username: "alice", email: "alice@example.com"
+  });
+  const bob = await __test.createOrUpdateUser(env, {
+    provider: "huggingface", provider_id: "hf-bob", username: "bob", email: "bob@example.com"
+  });
+
+  for (const member of [alice, bob]) {
+    const linked = await __test.linkDiscordToUser(env, member.id, {
+      ...profile,
+      access_token: `token-${member.id}`,
+      scope: "identify email guilds"
+    });
+    assert.ok(!linked.error, `linking should succeed for ${member.username}: ${linked.error || ""}`);
+    const stored = await (await env.MEMBERS_BUCKET.get(`users/${member.id}.json`)).json();
+    assert.equal(stored.discord.id, profile.id);
+    assert.equal(__test.getDiscordLink(stored).access_token, `token-${member.id}`);
+  }
+
+  assert.equal(
+    await env.MEMBERS_KV.get(`user_lookup_id:discord:${profile.id}`),
+    primary.id,
+    "sign-in index must keep pointing at the primary account"
+  );
+  assert.equal(
+    await env.MEMBERS_KV.get(`user_lookup:discord:${profile.username}`),
+    primary.id,
+    "username index must keep pointing at the primary account"
+  );
+  assert.deepEqual(
+    JSON.parse(await env.MEMBERS_KV.get(`discord_accounts:${profile.id}`)),
+    [primary.id, alice.id, bob.id]
+  );
+
+  const relogin = await __test.createOrUpdateUser(env, {
+    provider: "discord", provider_id: profile.id, username: profile.username
+  });
+  assert.equal(relogin.id, primary.id, "Discord sign-in must still open the primary account");
+
+  const renamed = await __test.createOrUpdateUser(env, {
+    provider: "discord", provider_id: profile.id, username: "renamed-discord"
+  });
+  assert.equal(renamed.id, primary.id, "renaming the Discord user must not create another account");
+  assert.equal(await env.MEMBERS_KV.get(`user_lookup:discord:${profile.username}`), null);
+  assert.equal(await env.MEMBERS_KV.get("user_lookup:discord:renamed-discord"), primary.id);
+}
+console.log("PASS: one Discord identity links to multiple accounts without changing sign-in");
+
+// Unlinking one member must not break the shared identity for the others.
+{
+  const env = makeEnv();
+  const profile = { id: "disc-shared-2", username: "shared-two", name: "Shared Two" };
+  const primary = await __test.createOrUpdateUser(env, {
+    provider: "discord", provider_id: profile.id, username: profile.username, name: profile.name
+  });
+  const alice = await __test.createOrUpdateUser(env, {
+    provider: "github", provider_id: "gh-unlink", username: "unlink-alice"
+  });
+  await __test.linkDiscordToUser(env, alice.id, { ...profile, access_token: "token-alice" });
+  await env.MEMBERS_KV.put("session:sess-unlink", JSON.stringify({
+    user_id: alice.id,
+    expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString()
+  }));
+
+  const unlink = await authWorker.fetch(
+    new Request("https://auth.g4f.space/members/api/user/unlink", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sess-unlink"
+      },
+      body: JSON.stringify({ provider: "discord" })
+    }),
+    env,
+    ctx
+  );
+  assert.equal(unlink.status, 200);
+  const unlinked = await (await env.MEMBERS_BUCKET.get(`users/${alice.id}.json`)).json();
+  assert.equal(unlinked.discord, undefined);
+  assert.deepEqual(JSON.parse(await env.MEMBERS_KV.get(`discord_accounts:${profile.id}`)), [primary.id]);
+  assert.equal(await env.MEMBERS_KV.get(`user_lookup_id:discord:${profile.id}`), primary.id);
+
+  await __test.unregisterDiscordAccount(env, primary.id, profile);
+  assert.equal(await env.MEMBERS_KV.get(`discord_accounts:${profile.id}`), null);
+  assert.equal(await env.MEMBERS_KV.get(`user_lookup_id:discord:${profile.id}`), null);
+  assert.equal(await env.MEMBERS_KV.get(`user_lookup:discord:${profile.username}`), null);
+}
+console.log("PASS: unlinking a shared Discord account keeps the other accounts connected");
+
+// Replacing the Discord identity on one account must not strand it in the
+// old identity's multi-account index.
+{
+  const env = makeEnv();
+  const member = await __test.createOrUpdateUser(env, {
+    provider: "github", provider_id: "gh-switch", username: "switch-user"
+  });
+  const oldProfile = { id: "disc-old", username: "old-name" };
+  const newProfile = { id: "disc-new", username: "new-name" };
+  await __test.linkDiscordToUser(env, member.id, oldProfile);
+  await __test.linkDiscordToUser(env, member.id, newProfile);
+
+  assert.equal(await env.MEMBERS_KV.get("discord_accounts:disc-old"), null);
+  assert.equal(await env.MEMBERS_KV.get("user_lookup_id:discord:disc-old"), null);
+  assert.deepEqual(JSON.parse(await env.MEMBERS_KV.get("discord_accounts:disc-new")), [member.id]);
+  assert.equal(await env.MEMBERS_KV.get("user_lookup_id:discord:disc-new"), member.id);
+}
+console.log("PASS: replacing a Discord link moves the account to the new identity");

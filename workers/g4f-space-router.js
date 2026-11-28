@@ -75,13 +75,15 @@ const G4F_SPACE_API_PATHS = [
   "/files",
   "/pa",
   "/proxy",
-  "/headers"
+  "/headers",
+  "/openapi.json"
 ];
 const G4F_API_PATHS = [
   "/v1",
   "/api",
   "/custom",
   "/backend-api",
+  "/openapi.json"
 ];
 
 function isApiPath(pathname) {

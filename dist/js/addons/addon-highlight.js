@@ -45,10 +45,18 @@ const highlight = (container) => {
             }
         });
     }
-    if (window.MathJax && window.MathJax.typesetPromise) {
-        typesetPromise = typesetPromise.then(
-            () => MathJax.typesetPromise([container])
-        ).catch(
+    // MathJax is loaded on demand by chat/index.html; only request it when a
+    // rendered message actually contains math.
+    if (/\$|\\\(|\\\[/.test(container.textContent || "")) {
+        const mathJaxReady = typeof window.loadMathJax === "function"
+            ? window.loadMathJax()
+            : Promise.resolve();
+        typesetPromise = typesetPromise.then(async () => {
+            await mathJaxReady;
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                await MathJax.typesetPromise([container]);
+            }
+        }).catch(
             (err) => console.log('Typeset failed: ' + err.message)
         );
     }
